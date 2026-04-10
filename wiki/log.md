@@ -28,3 +28,18 @@ updated: 2026-04-10
 - 엔티티 업데이트: [[andrej-karpathy]], [[qmd]] (소스 추가)
 - 개념 업데이트: [[llm-wiki]], [[knowledge-compounding]], [[rag-vs-wiki]], [[memex]] (커뮤니티 사례 반영)
 - 인덱스 갱신: 15개 항목 등재
+
+## [2026-04-10] ingest | Karpathy Append-and-Review Note
+
+- 원시 소스: `raw/articles/append-and-review-note.md` (웹 기사, defuddle로 추출)
+- 소스 요약 생성: [[source-append-and-review]]
+- 개념 생성: [[append-and-review]]
+- 엔티티 업데이트: [[andrej-karpathy]] (소스 추가, append-and-review 섹션 추가)
+- 인덱스 갱신
+
+## [2026-04-10] ingest | Wikey 설계 의사결정
+
+- 원시 소스: `raw/notes/wikey-design-decisions.md` (개인 메모)
+- 소스 요약 생성: [[source-wikey-design-decisions]]
+- 기존 개념/엔티티에 교차참조 추가 (ADR → byoai, schema-layer, rag-vs-wiki)
+- 인덱스 갱신

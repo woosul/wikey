@@ -3,7 +3,7 @@ title: Andrej Karpathy
 type: entity
 created: 2026-04-10
 updated: 2026-04-10
-sources: [source-llm-wiki-gist.md, source-llm-wiki-community.md]
+sources: [source-llm-wiki-gist.md, source-llm-wiki-community.md, source-append-and-review.md]
 tags: [person, ai-researcher]
 ---
 
@@ -25,8 +25,14 @@ AI 연구자이자 교육자. [[llm-wiki]] 패턴의 창시자.
 
 원문에서 [[memex|Vannevar Bush의 Memex]] (1945)를 LLM Wiki의 정신적 선조로 언급. Bush가 풀지 못한 "누가 유지보수하는가" 문제를 LLM이 해결한다는 관점.
 
+## [[append-and-review]] 패턴
+
+LLM Wiki 이전(2025-03-19)에 공개한 노트 테이킹 방법. 단일 노트에 추가하고 주기적으로 검토하는 극단적으로 단순한 시스템. 커뮤니티에서 LLM Wiki와의 결합 가능성이 제안됨.
+
 ## 관련 항목
 
-- [[source-llm-wiki-gist]] — 원문
+- [[source-llm-wiki-gist]] — LLM Wiki 원문
 - [[source-llm-wiki-community]] — 커뮤니티 반응
+- [[source-append-and-review]] — Append-and-Review 원문
 - [[llm-wiki]] — 패턴 상세
+- [[append-and-review]] — 노트 테이킹 패턴
