@@ -41,3 +41,4 @@ updated: 2026-04-10
 ## 분석
 
 - [[risks-of-llm-wiki]] — LLM Wiki의 5대 리스크 심각도 분석 (2026-04-10)
+- [[vision-vs-reality]] — Karpathy 비전 vs 커뮤니티 현실 비교 (2026-04-10)
