@@ -98,7 +98,7 @@ wikey/
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| **Phase 1** | Zero-setup personal wiki + BYOAI | In progress |
+| **Phase 1** | Zero-setup personal wiki + BYOAI | **Complete** |
 | **Phase 2** | Korean search + LLM multi-layer search + Community | Planned |
 | **Phase 3** | Team server + Web UI | Planned |
 | **Phase 4** | Korean enterprise tech KB | Planned |

@@ -2,7 +2,7 @@
 title: 활동 로그
 type: log
 created: 2026-04-10
-updated: 2026-04-10
+updated: 2026-04-11
 ---
 
 # 활동 로그
@@ -73,3 +73,11 @@ updated: 2026-04-10
 - validate-wiki.sh 감지: 깨진 위키링크 1건, 인덱스 미등재 1건 (exit 1)
 - 고아 페이지(인바운드 링크 부재)는 스크립트 범위 외 → LLM 린트로 보완 필요
 - 결함 수정 후 재검증: PASS
+
+## [2026-04-11] ingest | NanoVNA V2 개인 노트
+
+- 원시 소스: `raw/notes/nanovna-v2-notes.md`
+- 소스 요약 생성: [[source-nanovna-v2-notes]]
+- 엔티티 생성: [[nanovna-v2]]
+- 기존 엔티티/개념과 교차참조 연결: [[dji-o3-air-unit]], [[fpv-digital-transmission]]
+- 인덱스 갱신

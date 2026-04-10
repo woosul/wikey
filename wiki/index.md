@@ -2,7 +2,7 @@
 title: 콘텐츠 인덱스
 type: index
 created: 2026-04-10
-updated: 2026-04-10
+updated: 2026-04-11
 ---
 
 # 콘텐츠 인덱스
@@ -16,6 +16,7 @@ updated: 2026-04-10
 - [[obsidian]] — 마크다운 지식 관리 도구, LLM Wiki의 브라우저 역할 (소스: 1개)
 - [[qmd]] — 로컬 마크다운 검색 엔진, BM25/벡터 하이브리드 + LLM 리랭킹 (소스: 2개)
 - [[dji-o3-air-unit]] — DJI 3세대 디지털 FPV 영상 전송 장치 (소스: 1개)
+- [[nanovna-v2]] — 안테나 SWR·임피던스를 측정하는 소형 VNA 도구 (소스: 1개)
 
 ## 개념
 
@@ -37,6 +38,7 @@ updated: 2026-04-10
 - [[source-append-and-review]] — Karpathy "The Append-and-Review Note" 블로그 (2025-03-19)
 - [[source-wikey-design-decisions]] — Wikey 설계 의사결정 7개 ADR (2026-04-10)
 - [[source-dji-o3-air-unit]] — DJI O3 Air Unit 사용자 매뉴얼 33p PDF (2023-03)
+- [[source-nanovna-v2-notes]] — NanoVNA V2 사용 경험 + 매뉴얼 기반 개인 노트 (2026-04-11)
 
 ## 분석
 
