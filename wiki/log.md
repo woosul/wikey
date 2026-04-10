@@ -43,3 +43,9 @@ updated: 2026-04-10
 - 소스 요약 생성: [[source-wikey-design-decisions]]
 - 기존 개념/엔티티에 교차참조 추가 (ADR → byoai, schema-layer, rag-vs-wiki)
 - 인덱스 갱신
+
+## [2026-04-10] query | LLM Wiki의 가장 큰 리스크는 무엇인가?
+
+- 분석 저장: [[risks-of-llm-wiki]]
+- 참조 페이지: source-llm-wiki-community, source-wikey-design-decisions, llm-wiki, byoai
+- 인덱스 갱신: 분석 카테고리에 1건 추가

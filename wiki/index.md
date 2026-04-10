@@ -36,3 +36,5 @@ updated: 2026-04-10
 - [[source-wikey-design-decisions]] — Wikey 설계 의사결정 7개 ADR (2026-04-10)
 
 ## 분석
+
+- [[risks-of-llm-wiki]] — LLM Wiki의 5대 리스크 심각도 분석 (2026-04-10)
