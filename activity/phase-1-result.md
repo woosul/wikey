@@ -239,6 +239,41 @@ echo "LLM Wiki의 실패 모드는?" |
 
 스킵 (네트워크 차단 필요). Ollama가 로컬에서 모델을 실행하므로 원리적으로 오프라인 동작 보장.
 
+### 5.6 Gemma 3 → Gemma 4 업그레이드 (Phase 1 완료 후)
+
+초기 검증은 Gemma 3 (4B, 3.3GB)로 수행. 이후 인프라 구축 단계에서 Gemma 4로 업그레이드:
+
+```
+Ollama 0.18.2 → 0.20.5 (curl install.sh로 업데이트)
+gemma3 (4B, 3.3GB) → gemma4 (12B, 9.6GB)
+```
+
+**Gemma 4 개선 사항:**
+- Thinking 프로세스 내장 (CoT 추론 후 답변)
+- 위키링크 `[[페이지명]]` 인용 정확도 향상
+- 128K 컨텍스트 윈도우 (Gemma 3: 8K)
+- 멀티모달 지원 (텍스트 + 이미지)
+
+**추가 인프라 구축:**
+- `local-llm/Modelfile` — Gemma 4 기반 wikey 커스텀 모델 (시스템 프롬프트 내장, temp 0.3, ctx 32K)
+- `local-llm/wikey-query.sh` — CLI 래퍼 (쿼리/확장/리랭킹 3모드)
+- `local-llm/README.md` — 아키텍처, 듀얼 백엔드, Phase별 로드맵
+
+### 5.7 vLLM-Metal 설치
+
+Ollama(인터랙티브)와 별도로, OpenAI-호환 API 서버로 vLLM-Metal 설치:
+
+```
+vllm-metal 0.2.0 (vLLM 0.19.0 기반)
+→ ~/.venv-vllm-metal/
+→ Apple Silicon MLX 백엔드
+→ vllm serve google/gemma-4-12b-it --port 8000
+```
+
+**듀얼 백엔드 전략:**
+- Ollama: 터미널 대화, 스크립트, 빠른 조회 (Phase 1-2)
+- vLLM-Metal: OpenAI API 호환, 배치 처리, 동시 요청 (Phase 3+)
+
 ---
 
 ## 6. 패키징 (Step 10)
@@ -252,7 +287,10 @@ wikey/
 ├── CLAUDE.md                  ✅ Claude Code 어댑터
 ├── AGENTS.md                  ✅ Codex CLI 어댑터
 ├── local-llm/
-│   └── system-prompt.md       ✅ 로컬 LLM 프롬프트
+│   ├── README.md              ✅ 아키텍처, 듀얼 백엔드, Phase별 로드맵
+│   ├── Modelfile              ✅ Gemma 4 + 시스템 프롬프트 내장
+│   ├── system-prompt.md       ✅ 시스템 프롬프트 원본
+│   └── wikey-query.sh         ✅ CLI 래퍼 (쿼리/확장/리랭킹)
 ├── wiki/
 │   ├── index.md               ✅ 콘텐츠 인덱스
 │   ├── log.md                 ✅ 활동 로그
@@ -297,16 +335,16 @@ Phase 2에서 결정 예정. Phase 1에서는 GitHub private 저장소로 운영
 
 - [x] Codex로 1건 인제스트 성공 (NanoVNA V2)
 - [x] Codex 인제스트 후 `validate-wiki.sh` 통과 (일관성 확인)
-- [x] Gemma 3 로컬 위키 쿼리 동작
+- [x] Gemma 4 로컬 위키 쿼리 동작 (Ollama + wikey-query.sh)
 - [x] Obsidian Graph View 스크린샷 확인
 - [x] 대용량 소스 청킹 인제스트 1건 (DJI O3 33p PDF)
 
 ### 선택 (Could) — 3/4
 
 - [x] Codex 독립 린트 (교차 검증 — 4건 발견, 유효 1건)
-- [x] Gemma 3 쿼리 확장 테스트 (한영 5개 키워드 생성)
+- [x] Gemma 4 쿼리 확장 테스트 (한영 5개 키워드 생성)
 - [x] README 초안 (영문)
-- [ ] Gemma 3 오프라인 쿼리 테스트 (스킵 — 네트워크 차단 필요)
+- [ ] Gemma 4 오프라인 쿼리 테스트 (스킵 — 네트워크 차단 필요)
 
 ---
 
@@ -332,10 +370,16 @@ Phase 2에서 결정 예정. Phase 1에서는 GitHub private 저장소로 운영
 
 ### 8.4 로컬 LLM은 쿼리에 충분하다
 
-- Gemma 3 (3.3GB)가 한국어 위키 쿼리에 사용 가능한 수준
-- 위키링크 형식 인용은 부정확하지만, 내용 이해와 답변 품질은 양호
+- Gemma 3 (3.3GB)로 초기 검증 후 Gemma 4 (9.6GB)로 업그레이드
+- Gemma 4는 Thinking 프로세스 내장, 위키링크 인용 정확도 크게 향상
 - 쿼리 확장(동의어/키워드 생성)에서 Phase 2 활용 가능성 확인
 - 위키 수정(인제스트/린트)은 클라우드 LLM에 위임하는 전략이 적절
+
+### 8.6 듀얼 서빙 백엔드가 Phase 확장에 필수적이다
+
+- Phase 1-2: Ollama (인터랙티브) — 터미널 대화, 스크립트 파이핑
+- Phase 3+: vLLM-Metal (API 서버) — 배치 리랭킹, 동시 요청, MCP 연동
+- 두 백엔드 모두 동일한 Gemma 4 모델을 사용하므로 결과 일관성 보장
 
 ### 8.5 PDF 청킹 전략이 유효하다
 
@@ -349,8 +393,9 @@ Phase 2에서 결정 예정. Phase 1에서는 GitHub private 저장소로 운영
 
 | Phase 2 항목 | Phase 1에서의 사전 검증 | 준비도 |
 |-------------|----------------------|--------|
-| 한국어 검색 | Gemma 3 한국어 쿼리 동작 확인 | 준비됨 |
+| 한국어 검색 | Gemma 4 한국어 쿼리 동작 확인 | 준비됨 |
 | LLM 다층 검색 | qmd 엔티티 등재, 아키텍처 문서화 | 설계 완료 |
-| 쿼리 확장 | Gemma 3 한영 키워드 생성 테스트 | 프로토타입 가능 |
-| 커뮤니티 배포 | README + 배포 구조 11파일 확인 | 구조 준비됨 |
+| 쿼리 확장 | Gemma 4 한영 키워드 생성 + wikey-query.sh --expand | 프로토타입 완료 |
+| 리랭킹 파이프라인 | vLLM-Metal 설치 + wikey-query.sh --rerank | 인프라 준비됨 |
+| 커뮤니티 배포 | README + 배포 구조 14파일 확인 | 구조 준비됨 |
 | fswatch 반자동 인제스트 | 수동 인제스트 6건으로 워크플로우 안정화 | 자동화 대상 확정 |

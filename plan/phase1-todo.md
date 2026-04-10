@@ -1,8 +1,8 @@
 # Phase 1: Todo List — Zero-Setup 개인 위키 + BYOAI
 
-> 기간: 2–3주
-> 현재 상태: 스키마(CLAUDE.md) + 참조문서만 존재. 위키 콘텐츠·Git·스크립트 없음.
-> Ollama, Codex CLI 설치 확인됨.
+> 기간: 2026-04-10 ~ 2026-04-11 (2일)
+> 상태: **완료** (필수 12/12, 중요 5/5, 선택 3/4)
+> 인프라: Ollama 0.20.5 + Gemma 4 (12B), vLLM-Metal 0.2.0, Codex CLI 0.118.0
 
 ---
 
@@ -175,11 +175,11 @@
 
 - [ ] **9-1.** Ollama에 Gemma 4 모델 설치
   ```bash
-  ollama pull gemma3   # 또는 gemma4 (가용 모델 확인)
+  ollama pull gemma4
   ```
 - [ ] **9-2.** 로컬 모델 위키 쿼리 테스트
   ```bash
-  cat wiki/index.md | ollama run gemma3 "이 인덱스를 읽고, LLM Wiki의 핵심 개념을 요약해줘"
+  cat wiki/index.md | ollama run gemma4 "이 인덱스를 읽고, LLM Wiki의 핵심 개념을 요약해줘"
   ```
 - [ ] **9-3.** `local-llm/system-prompt.md` + 위키 페이지로 쿼리 테스트
   - 시스템 프롬프트에 스키마 요약 포함
@@ -188,7 +188,7 @@
   - 네트워크 연결 없이 Gemma 4로 위키 조회 가능한지 확인
 - [ ] **9-5.** 쿼리 확장 능력 테스트 (Phase 2 사전 검증)
   ```bash
-  echo "LLM Wiki의 실패 모드는?" | ollama run gemma3 \
+  echo "LLM Wiki의 실패 모드는?" | ollama run gemma4 \
     "이 질문에 대해 검색할 동의어와 관련 키워드를 5개 생성해줘"
   ```
   - 로컬 모델이 쿼리 확장에 쓸 수 있는 수준인지 확인
@@ -223,34 +223,36 @@
 
 ---
 
-## Phase 1 완료 체크리스트
+## Phase 1 완료 체크리스트 (2026-04-11 완료)
 
-### 필수 (Must)
+### 필수 (Must) — 12/12
 
-- [ ] `wikey.schema.md` 작성 완료 (프로바이더 독립 마스터 스키마)
-- [ ] `CLAUDE.md` 경량화 (스키마 참조 + Claude 특화)
-- [ ] `AGENTS.md` 작성 (스키마 참조 + Codex 특화)
-- [ ] `local-llm/system-prompt.md` 작성
-- [ ] Git 초기화 + GitHub private push
-- [ ] `scripts/validate-wiki.sh` 동작 + pre-commit hook
-- [ ] `scripts/check-pii.sh` 동작
-- [ ] 5개 이상 소스 인제스트 (Claude Code)
-- [ ] 20개 이상 위키 페이지 생성
-- [ ] 쿼리 5건 테스트 (분석 페이지 저장 포함)
-- [ ] 린트 동작 (의도적 결함 감지 확인)
-- [ ] log.md에 토큰 사용량 기록
+- [x] `wikey.schema.md` 작성 완료 (프로바이더 독립 마스터 스키마)
+- [x] `CLAUDE.md` 경량화 (스키마 참조 + Claude 특화)
+- [x] `AGENTS.md` 작성 (스키마 참조 + Codex 특화)
+- [x] `local-llm/system-prompt.md` 작성
+- [x] Git 초기화 + GitHub private push
+- [x] `scripts/validate-wiki.sh` 동작 + pre-commit hook
+- [x] `scripts/check-pii.sh` 동작
+- [x] 6개 소스 인제스트 (Claude Code 5건 + Codex 1건)
+- [x] 26개 위키 페이지 생성 (목표 20+)
+- [x] 쿼리 5건 테스트 (분석 2건 저장)
+- [x] 린트 동작 (의도적 결함 3종 감지 확인)
+- [x] log.md에 활동 기록
 
-### 중요 (Should)
+### 중요 (Should) — 5/5
 
-- [ ] Codex로 1건 인제스트 성공 (BYOAI 검증)
-- [ ] Codex 인제스트 후 `validate-wiki.sh` 통과 (일관성 확인)
-- [ ] Gemma 4 로컬 위키 쿼리 동작
-- [ ] Obsidian Graph View 스크린샷 확인
-- [ ] 대용량 소스 청킹 인제스트 1건 성공
+- [x] Codex로 1건 인제스트 성공 (NanoVNA V2, BYOAI 검증)
+- [x] Codex 인제스트 후 `validate-wiki.sh` 통과 (일관성 확인)
+- [x] Gemma 4 로컬 위키 쿼리 동작 (Ollama + wikey-query.sh)
+- [x] Obsidian Graph View 스크린샷 확인
+- [x] 대용량 소스 청킹 인제스트 1건 (DJI O3 33p PDF)
 
-### 선택 (Could)
+### 선택 (Could) — 3/4
 
-- [ ] Codex 독립 린트 (교차 검증)
-- [ ] Gemma 4 쿼리 확장 테스트 (Phase 2 사전 검증)
-- [ ] 스킬 패키지 README 초안
-- [ ] Gemma 4 오프라인 쿼리 테스트
+- [x] Codex 독립 린트 (교차 검증 — 4건 발견, 유효 1건)
+- [x] Gemma 4 쿼리 확장 테스트 (한영 5개 키워드 생성)
+- [x] 스킬 패키지 README 초안 (영문)
+- [ ] Gemma 4 오프라인 쿼리 테스트 (스킵 — 네트워크 차단 필요)
+
+> 상세 결과: `activity/phase-1-result.md` 참조

@@ -140,7 +140,7 @@ ollama run wikey "테스트"
 
 # vLLM (API)
 source ~/.venv-vllm-metal/bin/activate
-vllm --version           # 0.19.0+
+vllm --version           # 0.19.0+ (vllm-metal 0.2.0)
 ```
 
 ## 사용법 — wikey-query.sh (Ollama 래퍼)

@@ -47,8 +47,8 @@ wikey-query.sh — 로컬 LLM 위키 쿼리
   --pages PAGES   컨텍스트에 포함할 페이지 (쉼표 구분)
   --expand        쿼리 확장 모드 (동의어/키워드 생성)
   --rerank        리랭킹 모드 (stdin에서 후보 읽기)
-  --model MODEL   사용할 모델 (기본: wikey, 폴백: gemma3)
-  --raw           시스템 프롬프트 없이 gemma3 직접 호출
+  --model MODEL   사용할 모델 (기본: wikey, 폴백: gemma4)
+  --raw           시스템 프롬프트 없이 gemma4 직접 호출
   --help          도움말
 USAGE
   exit 0
@@ -67,7 +67,7 @@ check_model() {
       log_warn "시스템 프롬프트 내장 모델 생성: ollama create wikey -f local-llm/Modelfile"
       MODEL="$FALLBACK_MODEL"
     else
-      log_error "모델 없음. 먼저 실행: ollama pull gemma3"
+      log_error "모델 없음. 먼저 실행: ollama pull gemma4"
       exit 1
     fi
   fi
