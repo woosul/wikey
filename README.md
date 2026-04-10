@@ -1,32 +1,32 @@
 # Wikey — LLM-Agnostic Knowledge Wiki
 
-> LLM이 점진적으로 구축·유지하는 개인 지식 베이스. [Andrej Karpathy의 LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 패턴 기반.
+> A personal knowledge base that LLMs incrementally build and maintain. Based on [Andrej Karpathy's LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) pattern.
 
 ## What is Wikey?
 
-RAG는 매 쿼리마다 지식을 재검색합니다. Wikey는 다릅니다. LLM이 소스를 읽고, 구조화된 위키를 **점진적으로 구축·유지**합니다. 교차참조는 이미 존재하고, 모순은 이미 표시되어 있으며, 종합 분석은 이미 반영된 상태입니다.
+RAG rediscovers knowledge from scratch on every query. Wikey is different. The LLM reads your sources and **incrementally builds a persistent wiki** — cross-references already exist, contradictions are already flagged, and the synthesis already reflects everything you've read.
 
 ```
-사용자 → 소스 추가 → LLM이 위키 구축 → Obsidian으로 브라우징
-         (raw/)       (wiki/)            (그래프 뷰, 백링크)
+User → Add source → LLM builds wiki → Browse in Obsidian
+        (raw/)       (wiki/)            (graph view, backlinks)
 ```
 
 ## Differentiators
 
 | | Wikey | llmbase | seCall | qmd |
 |---|---|---|---|---|
-| **Setup** | Obsidian 스킬 설치 + 스키마 복사 | React 앱 설치 | Rust 빌드 | npm 설치 |
-| **BYOAI** | Claude, Codex, Gemini, Gemma 4 | OpenAI 종속 | - | - |
-| **Korean** | 한영 혼합 기술 용어 정규화 (Phase 2) | - | 형태소 분석 | - |
-| **Wiki Builder** | 인제스트/쿼리/린트 | 인제스트/쿼리/린트 | 세션→위키 | 검색만 |
-| **Enterprise Path** | Phase 3-4 로드맵 | - | - | - |
+| **Setup** | Install Obsidian skill + copy schema | Install React app | Build from Rust | npm install |
+| **BYOAI** | Claude, Codex, Gemini, Gemma 4 | OpenAI-dependent | - | - |
+| **Korean** | KR/EN tech term normalization (Phase 2) | - | Morphological analysis | - |
+| **Wiki Builder** | Ingest / Query / Lint | Ingest / Query / Lint | Session-to-wiki | Search only |
+| **Enterprise Path** | Phase 3-4 roadmap | - | - | - |
 
 ## Quick Start
 
 ### 1. Prerequisites
 
-- [Obsidian](https://obsidian.md) 1.12+ (CLI 활성화)
-- LLM 에이전트: [Claude Code](https://claude.com/claude-code), [Codex CLI](https://github.com/openai/codex), 또는 [Ollama](https://ollama.com) (Gemma 4)
+- [Obsidian](https://obsidian.md) 1.12+ (with CLI enabled)
+- An LLM agent: [Claude Code](https://claude.com/claude-code), [Codex CLI](https://github.com/openai/codex), or [Ollama](https://ollama.com) (Gemma 4)
 
 ### 2. Setup
 
@@ -35,28 +35,28 @@ RAG는 매 쿼리마다 지식을 재검색합니다. Wikey는 다릅니다. LLM
 git clone https://github.com/woosul/wikey.git
 cd wikey
 
-# Obsidian에서 이 폴더를 볼트로 열기
-# (좌하단 금고 아이콘 → Open folder as vault → wikey 선택)
+# Open this folder as a vault in Obsidian
+# (vault icon at bottom-left → Open folder as vault → select wikey)
 
-# raw/ 디렉토리 생성 (gitignore 대상)
+# Create raw/ directories (gitignored — not committed)
 mkdir -p raw/{articles,papers,notes,assets}
 ```
 
 ### 3. First Ingest
 
-Claude Code 세션에서:
+In a Claude Code session:
 ```
-이 프로젝트의 CLAUDE.md를 읽고, raw/articles/에 있는 소스를 인제스트해줘.
+Read the CLAUDE.md in this project and ingest the sources in raw/articles/.
 ```
 
-Codex CLI에서:
+In Codex CLI:
 ```
-AGENTS.md를 읽고, raw/articles/에 있는 소스를 인제스트해줘.
+Read AGENTS.md and ingest the sources in raw/articles/.
 ```
 
 ### 4. Browse
 
-Obsidian에서 `wiki/` 디렉토리를 브라우징. 그래프 뷰로 연결 구조를 확인.
+Open Obsidian and browse `wiki/`. Use Graph View to visualize connections.
 
 ## Architecture
 
@@ -98,7 +98,7 @@ wikey/
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| **Phase 1** | Zero-Setup personal wiki + BYOAI | In progress |
+| **Phase 1** | Zero-setup personal wiki + BYOAI | In progress |
 | **Phase 2** | Korean search + LLM multi-layer search + Community | Planned |
 | **Phase 3** | Team server + Web UI | Planned |
 | **Phase 4** | Korean enterprise tech KB | Planned |
