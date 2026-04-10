@@ -3,11 +3,13 @@
 # 종료 코드: 0=통과, 1=실패
 
 WIKI_DIR="wiki"
-ERRORS=0
+ERROR_FILE=$(mktemp)
+echo 0 > "$ERROR_FILE"
 
 error() {
   echo "FAIL: $1"
-  ERRORS=$((ERRORS + 1))
+  count=$(cat "$ERROR_FILE")
+  echo $((count + 1)) > "$ERROR_FILE"
 }
 
 # ──────────────────────────────────────────────
@@ -23,7 +25,6 @@ done
 # ──────────────────────────────────────────────
 echo "=== 검증 2: 위키링크 확인 ==="
 find "$WIKI_DIR" -name "*.md" -print0 | while IFS= read -r -d '' file; do
-  # perl로 [[link]] 또는 [[link|display]] 에서 link 부분 추출
   perl -ne 'while (/\[\[([^\]|]+)/g) { print "$1\n" }' "$file" | while read -r link; do
     found=$(find "$WIKI_DIR" -name "${link}.md" -print -quit 2>/dev/null)
     if [ -z "$found" ]; then
@@ -58,7 +59,6 @@ fi
 echo "=== 검증 4: log.md 형식 확인 ==="
 LOG_FILE="$WIKI_DIR/log.md"
 if [ -f "$LOG_FILE" ]; then
-  # 프론트매터 이후의 ## 헤더가 날짜 형식인지 확인
   in_body=false
   count=0
   while IFS= read -r line; do
@@ -91,6 +91,9 @@ fi
 # ──────────────────────────────────────────────
 # 결과
 # ──────────────────────────────────────────────
+ERRORS=$(cat "$ERROR_FILE")
+rm -f "$ERROR_FILE"
+
 echo ""
 if [ "$ERRORS" -eq 0 ]; then
   echo "PASS: 모든 검증 통과"
