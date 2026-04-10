@@ -49,3 +49,12 @@ updated: 2026-04-10
 - 분석 저장: [[risks-of-llm-wiki]]
 - 참조 페이지: source-llm-wiki-community, source-wikey-design-decisions, llm-wiki, byoai
 - 인덱스 갱신: 분석 카테고리에 1건 추가
+
+## [2026-04-10] ingest | DJI O3 Air Unit 사용자 매뉴얼 (PDF 청킹 테스트)
+
+- 원시 소스: `raw/manual/00.게임기기/830 FPV/DJI O3 Air Unit/DJI_O3_Air_Unit_User_Manual_v1.0_EN.pdf` (33p)
+- 청킹 방법: 3분할 읽기 (p1-5 TOC+경고, p6-15 본체+설치+고글UI, p16-33 호환장비+스펙)
+- 소스 요약 생성: [[source-dji-o3-air-unit]]
+- 엔티티 생성: [[dji-o3-air-unit]]
+- 개념 생성: [[fpv-digital-transmission]]
+- 인덱스 갱신
