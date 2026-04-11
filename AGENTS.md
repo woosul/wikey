@@ -96,7 +96,8 @@ git commit -m "ingest: 소스 제목 — N개 페이지 생성/수정"
 8. wiki/overview.md 갱신 (필요시)
 9. ./scripts/validate-wiki.sh 실행 → 통과 확인
 10. ./scripts/check-pii.sh 실행 → 통과 확인
-11. Git 커밋
+11. python3 scripts/korean-tokenize.py --batch → FTS5 한국어 형태소 전처리 갱신
+12. Git 커밋
 ```
 
 ### 쿼리 세션
@@ -121,6 +122,49 @@ git commit -m "ingest: 소스 제목 — N개 페이지 생성/수정"
 6. log.md에 lint 항목 추가
 7. validate-wiki.sh → Git 커밋
 ```
+
+### 소스 삭제 세션
+
+```
+1. wikey.schema.md 읽기
+2. 삭제된 소스의 wiki/sources/source-{name}.md 확인
+3. grep -r "source-{name}" wiki/ 로 해당 소스를 인용하는 모든 페이지 검색
+4. 각 페이지에서 인용 제거 또는 "근거 삭제됨" 표시
+5. wiki/sources/source-{name}.md 삭제 또는 아카이브
+6. index.md, log.md 갱신
+7. validate-wiki.sh → Git 커밋
+```
+
+### 분류 세션
+
+```
+1. wikey.schema.md 읽기
+2. raw/CLASSIFY.md 읽기
+3. ls raw/0_inbox/ 파일/폴더 목록 확인
+4. 각 항목에 대해:
+   a. CLASSIFY.md 자동 규칙 매칭 시도
+   b. 매칭 실패 시 LLM 판단 가이드 참조
+   c. 분류 결과를 사용자에게 제안
+5. 사용자 승인 후 해당 PARA 카테고리로 이동
+6. CLASSIFY.md 하위폴더 정의에 새 폴더 추가 시 문서 업데이트
+7. 이동 완료 후 인제스트 세션 시작 (필요시)
+```
+
+## 대용량 소스 처리
+
+20페이지+ PDF, 2시간+ 회의록 등은 `wikey.schema.md`의 **2단계 인제스트** 절차를 따른다:
+
+```
+Phase A: 20p씩 순차 읽기 → 섹션 인덱스 생성
+Phase B: 핵심 섹션만 상세 읽기 → 위키 페이지 생성
+Phase C: 쿼리 시 섹션 인덱스 참조 → 해당 페이지만 온디맨드 읽기
+```
+
+## PII 주의사항
+
+- `./scripts/check-pii.sh`를 커밋 전 반드시 실행
+- 소스에 PII가 있을 경우 위키 페이지에 전파하지 않도록 주의
+- PII가 위키에 이미 전파된 경우, 사용자 지시에 따라 제거
 
 ## Claude Code와의 일관성 유지
 
