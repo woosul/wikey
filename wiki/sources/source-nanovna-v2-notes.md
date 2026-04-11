@@ -9,7 +9,7 @@ tags: [nanovna, vna, rf, fpv, notes]
 
 # NanoVNA V2 개인 노트
 
-> 원시 소스: `raw/notes/nanovna-v2-notes.md`
+> 원시 소스: `raw/areas/rf-measurement/nanovna-v2-notes.md`
 > 성격: 직접 사용 경험 + User Manual 기반 요약 메모
 
 ## 장비 개요

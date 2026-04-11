@@ -193,6 +193,57 @@ wikey/
 > 목표: 한국어 검색 특화 + LLM 참여형 검색 도입 + Obsidian 커뮤니티 공개
 > 차별화: qmd의 LLM 다층 검색 + seCall의 한국어 형태소 분석을 결합한 유일한 솔루션
 
+### 2-0. raw/ PARA 재구조화 + 분류 시스템 (Phase 2 기반 작업)
+
+> Phase 2-3 반자동 인제스트의 전제 조건. inbox 단일 진입점 + 분류 기준 문서 시스템 구축.
+
+**현황**: Phase 1에서 flat 구조(articles/papers/notes/assets/) 사용. 1,073개 파일(1.7GB) 중 99.5%가 manual/에 비체계적으로 적재.
+
+**변경**:
+```
+raw/
+├── inbox/           # 단일 진입점 — 모든 새 파일은 여기에 추가
+├── projects/        # 활성 프로젝트 (기한 있음)
+├── areas/           # 지속적 관심 영역
+├── resources/       # 주제별 참고 자료 (하드웨어 매뉴얼, 웹 기사, 논문)
+├── archive/         # 완료/비활성 항목
+├── assets/          # 이미지, 첨부파일 (Obsidian)
+└── CLASSIFY.md      # 분류 기준 문서 (규칙 + 자연어 가이드 + 피드백 로그)
+```
+
+**분류 워크플로우**:
+1. 사용자가 `raw/inbox/`에 파일 또는 폴더 드롭
+2. LLM이 `CLASSIFY.md` 참조하여 자동 분류 제안 (폴더는 번들 단위로 즉시 분류)
+3. 사용자 승인 후 해당 PARA 카테고리로 이동
+4. 사용자 이의 시 → `CLASSIFY.md` 피드백 로그에 기록 + 규칙 업데이트
+
+**URI 기반 등록 (Phase 3-4 기업용)**:
+- 기업 저장소(Confluence, SharePoint 등)의 소스는 복사 시 중복 문제 발생
+- 파일 복사 대신 `.meta.yaml`에 URI + 메타데이터만 등록 → LLM이 URI로 원본 접근하여 인제스트
+- CLASSIFY.md 분류 규칙은 메타데이터 기반으로 동일 적용
+
+**분류 기준 문서 (`raw/CLASSIFY.md`)** — 하이브리드 형식:
+- 자동 규칙: 확장자/경로 패턴 → 즉시 분류 (예: *.pdf + 제품폴더 → resources/{topic}/{product}/)
+- 자연어 가이드: 규칙 미매칭 시 LLM 판단 기준 (판단 순서, 애매한 경우 처리)
+- 하위폴더 정의: resources/ 내 11개 토픽 폴더 + 제품별 리프 폴더
+- 새 하위폴더 생성 규칙: LLM 제안 → 사용자 승인 → CLASSIFY.md에 즉시 등재
+- 피드백 로그: 분류 이의 기록 (사용자 수정 사유 → 규칙/가이드 업데이트 트리거)
+
+**네이밍**: 영문 kebab-case (카테고리: `rc-car/`, 제품: `Kyosho-Mini-Z/`)
+
+**마이그레이션**: `scripts/migrate-raw-to-para.sh`로 기존 1,073개 전체 재분류
+- articles/ (3개) → resources/wikey-design/
+- notes/wikey-design-decisions.md → projects/wikey/
+- notes/nanovna-v2-notes.md → areas/rf-measurement/
+- manual/00.게임기기/* → resources/{rc-car,fpv,bldc-motor,sim-racing,...}/
+- manual/02.무선통신/* → resources/{rf-measurement,ham-radio,sdr}/
+
+**문서 업데이트**: wikey.schema.md (디렉토리 구조, 소스 관리, LLM 권한), CLAUDE.md/AGENTS.md (분류 세션 추가), wiki/sources/ 6개 (경로 갱신), README.md
+
+**LLM 권한 변경**: raw/ "읽기만" → "내용 수정 금지, inbox→분류 이동은 허용 (사용자 승인 후)"
+
+**2-3과의 연결**: inbox 단일 진입점이 확보되면 fswatch 모니터링 대상이 `raw/inbox/` 하나로 단순화됨.
+
 ### 2-1. LLM 다층 검색 파이프라인 구축
 
 qmd MCP 서버 + 로컬 LLM(Gemma 4) 조합:

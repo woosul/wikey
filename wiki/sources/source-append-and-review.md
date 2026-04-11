@@ -10,7 +10,7 @@ tags: [karpathy, note-taking, productivity]
 # The Append-and-Review Note — Karpathy
 
 > 원본: [Karpathy Bear Blog](https://karpathy.bearblog.dev/the-append-and-review-note) (2025-03-19)
-> 원시 소스: `raw/articles/append-and-review-note.md`
+> 원시 소스: `raw/resources/wikey-design/append-and-review-note.md`
 
 ## 핵심 아이디어
 

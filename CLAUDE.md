@@ -11,7 +11,7 @@
 | 대상 | 권한 |
 |------|------|
 | `wiki/` | 읽기/쓰기 (페이지 생성·수정·삭제, 인덱스·로그 갱신) |
-| `raw/` | **읽기만** (절대 수정하지 않음) |
+| `raw/` | **내용 수정 금지** (inbox→PARA 분류 이동은 허용, 사용자 승인 후) |
 | `wikey.schema.md` | **사용자 승인 없이 수정 금지** |
 | `CLAUDE.md` | **사용자 승인 없이 수정 금지** |
 
@@ -111,6 +111,21 @@ git diff --name-only HEAD~5 -- wiki/
 5. wiki/sources/source-{name}.md 삭제 또는 아카이브
 6. index.md, log.md 갱신
 7. validate-wiki.sh → Git 커밋
+```
+
+### 분류 세션
+
+```
+1. wikey.schema.md 읽기
+2. raw/CLASSIFY.md 읽기
+3. raw/inbox/ 파일/폴더 목록 확인
+4. 각 항목에 대해:
+   a. CLASSIFY.md 자동 규칙 매칭 시도
+   b. 매칭 실패 시 LLM 판단 가이드 참조
+   c. 분류 결과를 사용자에게 제안
+5. 사용자 승인 후 해당 PARA 카테고리로 이동
+6. CLASSIFY.md 하위폴더 정의에 새 폴더 추가 시 문서 업데이트
+7. 이동 완료 후 인제스트 세션 시작 (필요시)
 ```
 
 ## 대용량 소스 처리

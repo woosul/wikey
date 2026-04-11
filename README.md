@@ -39,19 +39,19 @@ cd wikey
 # (vault icon at bottom-left → Open folder as vault → select wikey)
 
 # Create raw/ directories (gitignored — not committed)
-mkdir -p raw/{articles,papers,notes,assets}
+mkdir -p raw/{inbox,projects,areas,resources,archive,assets}
 ```
 
 ### 3. First Ingest
 
 In a Claude Code session:
 ```
-Read the CLAUDE.md in this project and ingest the sources in raw/articles/.
+Read the CLAUDE.md in this project and ingest the sources in raw/inbox/.
 ```
 
 In Codex CLI:
 ```
-Read AGENTS.md and ingest the sources in raw/articles/.
+Read AGENTS.md and ingest the sources in raw/inbox/.
 ```
 
 ### 4. Browse

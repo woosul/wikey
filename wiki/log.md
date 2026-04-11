@@ -74,6 +74,15 @@ updated: 2026-04-11
 - 고아 페이지(인바운드 링크 부재)는 스크립트 범위 외 → LLM 린트로 보완 필요
 - 결함 수정 후 재검증: PASS
 
+## [2026-04-11] restructure | raw/ PARA 마이그레이션
+
+- raw/ 디렉토리를 flat type-based 구조에서 PARA 구조로 재편
+- 1,073개 파일 재분류: inbox/ + projects/ + areas/ + resources/ + archive/
+- 분류 기준 문서 생성: `raw/CLASSIFY.md` (하이브리드 규칙+자연어 가이드+피드백 로그)
+- 기존 로그 항목의 raw/ 경로는 역사적 기록으로 유지
+- wiki/sources/ 페이지의 원시 소스 경로 6건 갱신
+- 영향 페이지: 모든 source-*.md, [[obsidian]], [[append-and-review]]
+
 ## [2026-04-11] ingest | NanoVNA V2 개인 노트
 
 - 원시 소스: `raw/notes/nanovna-v2-notes.md`
