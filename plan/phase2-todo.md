@@ -326,8 +326,9 @@
   - 로컬 모드: pdftotext → Ollama Gemma 4 → 섹션 인덱스
   - `--dry-run`: PDF 정보 + 권장 모드 출력
   - wikey.schema.md "2단계 인제스트 Phase A" 자동화
-- [ ] **4-2-2.** 대용량 처리 테스트 1건 (100p+ PDF)
-  - GEMINI_API_KEY 설정 후 실제 PDF로 테스트 필요
+- [x] **4-2-2.** 대용량 처리 테스트 2건
+  - Gemini 2.5 Flash로 파워디바이스 37p (3MB) + TCP/IP 56p (45MB) 성공
+  - `.env` 기반 API 키 관리 도입 (`.env.example` 템플릿 제공)
 - [x] **4-2-3.** 미승인 소스 대기 목록 관리
   - `watch-inbox.sh --status` + `classify-inbox.sh --dry-run`으로 대기 목록 확인
 
