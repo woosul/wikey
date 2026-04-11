@@ -843,35 +843,37 @@ idea-comment.md 미해결 과제 #6:
 이 문제는 wikey Step 2 벤치마크에서도 확인됨 (한국어 Top-1 정확도 0-1/5).
 원인: FTS5 porter 토크나이저의 한국어 형태소 미분리 + 영어 중심 쿼리 확장/리랭킹 모델.
 
-### 5.6 Step 3 사전 조사 필요 항목
+### 5.6 Step 3 사전 조사 결과 (2026-04-11 완료)
 
-> **중요**: 아래 항목들은 Step 3 진행 전에 정밀 조사 + 프로토타이핑이 필요하다.
-> 단순히 기존 방식을 교체하는 것이 아니라, wikey 특성에 맞는 혁신적 개선을 위해
-> 충분한 사전 조사 후 설계해야 한다.
+> 5개 병렬 조사 에이전트 + qmd 소스 직접 분석 + FTS5 실증 테스트로 확정.
+> 상세 결과: `plan/step3-0-research-report.md`
 
-1. **Chonkie SemanticChunker 프로토타이핑**
-   - wikey 위키 29페이지로 Chonkie 실행, qmd 기본 청킹과 청크 품질 비교
-   - 한국어 문서에서 cosine 유사도 기반 경계 탐지 효과 측정
-   - 다국어 임베딩 모델별 비교 (multilingual-e5-large vs EmbeddingGemma-300M)
+#### 확정된 개선 3건
 
-2. **Contextual Retrieval 프로토타이핑**
-   - 기존 청크에 Gemma 4로 맥락 프리픽스 생성 실험
-   - 프리픽스 추가 전/후 검색 정확도 비교 (10건 벤치마크 재활용)
-   - 로컬 LLM(Gemma 4)으로 Anthropic 방식 재현 가능성 검증
+| 순위 | 작업 | 기대 효과 | 등급 | 도구/기술 |
+|------|------|----------|------|----------|
+| 1 | 한국어 형태소 전처리 | BM25 recall 0%→60-80% | B+ | kiwipiepy (Python 서브프로세스) |
+| 2 | Contextual Retrieval | Top-20 실패 -49% | B | Gemma 4 12B via Ollama |
+| 3 | 임베딩 모델 교체 | 벡터 검색 한국어 개선 | B | jina-embeddings-v3 (GGUF 330MB) |
 
-3. **Late Chunking 가능성 조사**
-   - wikey 위키 평균 문서 길이 vs 임베딩 모델 컨텍스트 윈도우
-   - jina-embeddings-v3 또는 nomic-embed-text의 롱컨텍스트 성능
+#### 기각된 후보
 
-4. **한국어 특화 조사**
-   - 한국어 문장 분리 라이브러리 (kss, KoNLPy) 성능 비교
-   - 한국어 형태소 분석이 BM25 청킹에 미치는 영향 정량화
-   - 한영 혼합 문서에서의 최적 청킹 전략
+| 후보 | 기각 이유 |
+|------|----------|
+| Chonkie SemanticChunker | NAACL 2025 반증, 구조화 문서에서 이점 없음, Context Cliff 위험 |
+| Late Chunking | 문서 평균 550토큰(1청크), 현재 불필요 |
+| FTS5 커스텀 토크나이저 | 등급 C, SQLite 확장 빌드 필요, 유지보수 부담 |
+| mecab-ko | kiwipiepy가 설치/유지보수 우위 (정확도 유사) |
 
-5. **qmd 청킹 확장점 분석**
-   - `store.ts:chunkDocument` 함수의 확장 가능한 인터페이스 설계
-   - qmd upstream에 플러그인/훅 시스템이 추가될 가능성 (이슈/PR 모니터링)
-   - 전처리 레이어 vs 소스 직접 수정 트레이드오프
+#### 커스터마이징 아키텍처
+
+```
+[인덱싱] 문서 → qmd 청킹 → Gemma 4 맥락 프리픽스 → kiwipiepy 형태소 분리
+            → FTS5 body (분리됨)  +  jina-v3 embedding (원본+프리픽스)
+
+[검색]   쿼리 → kiwipiepy 분리 → FTS5 MATCH (BM25)
+                → jina-v3 embed  → sqlite-vec (벡터)  → RRF → Reranking
+```
 
 ---
 

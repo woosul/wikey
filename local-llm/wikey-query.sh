@@ -47,6 +47,29 @@ YELLOW='\033[0;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# --- 한국어 형태소 전처리 ---
+KOREAN_TOKENIZER="${PROJECT_DIR}/scripts/korean-tokenize.py"
+
+# 쿼리를 한국어 형태소 분리 (content words only)
+preprocess_korean_query() {
+  local text="$1"
+  if [ -f "$KOREAN_TOKENIZER" ] && command -v python3 &>/dev/null; then
+    echo "$text" | python3 "$KOREAN_TOKENIZER" --mode query
+  else
+    echo "$text"
+  fi
+}
+
+# 쿼리에서 FTS5 lex 쿼리 생성 (한국어 형태소 분리 적용)
+build_korean_lex() {
+  local text="$1"
+  if [ -f "$KOREAN_TOKENIZER" ] && command -v python3 &>/dev/null; then
+    echo "$text" | python3 "$KOREAN_TOKENIZER" --mode fts5
+  else
+    echo "$text"
+  fi
+}
+
 # --- 유틸리티 ---
 log_info()  { echo -e "${CYAN}[wikey]${NC} $*" >&2; }
 log_warn()  { echo -e "${YELLOW}[wikey]${NC} $*" >&2; }
@@ -172,8 +195,14 @@ backend_basic() {
   check_qmd
   log_info "backend: basic | qmd(확장→검색→리랭킹) → Gemma 4 합성"
 
+  # 한국어 전처리된 lex + 원본 vec 조합
+  local ko_query
+  ko_query=$(preprocess_korean_query "$query")
+  local multi_query
+  multi_query="lex: ${ko_query}"$'\n'"vec: ${query}"
+
   local json_result
-  json_result=$("$QMD_BIN" query "$query" --json -n "$QMD_TOP_N" -c "$QMD_COLLECTION" 2>/dev/null)
+  json_result=$("$QMD_BIN" query "$multi_query" --json -n "$QMD_TOP_N" -c "$QMD_COLLECTION" 2>/dev/null)
 
   if [ -z "$json_result" ] || [ "$json_result" = "[]" ]; then
     log_warn "qmd 검색 결과 없음. 폴백합니다."
@@ -220,9 +249,11 @@ backend_gemma4() {
     expanded="$raw_expanded"
   fi
 
-  # 확장 결과에서 lex/vec 쿼리 구성
+  # 확장 결과에서 lex/vec 쿼리 구성 (한국어 형태소 전처리 적용)
+  local ko_query
+  ko_query=$(preprocess_korean_query "$query")
   local qmd_query=""
-  qmd_query+="lex: ${query}"$'\n'
+  qmd_query+="lex: ${ko_query}"$'\n'
 
   while IFS= read -r line; do
     # 번호/불릿 제거, 특수문자 안전 처리
@@ -234,7 +265,12 @@ backend_gemma4() {
     local ko_part
     ko_part=$(echo "$line" | sed 's/ *(.*//' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
 
-    [ -n "$ko_part" ] && qmd_query+="lex: ${ko_part}"$'\n'
+    # 한국어 키워드는 형태소 전처리 후 lex 추가
+    if [ -n "$ko_part" ]; then
+      local ko_preprocessed
+      ko_preprocessed=$(preprocess_korean_query "$ko_part")
+      qmd_query+="lex: ${ko_preprocessed}"$'\n'
+    fi
     # vec 쿼리에서 하이픈 제거 (qmd가 negation으로 해석)
     [ -n "$en_part" ] && qmd_query+="vec: $(echo "$en_part" | sed 's/-/ /g')"$'\n'
   done <<< "$expanded"
@@ -330,8 +366,11 @@ fi
 case "$MODE" in
   search)
     check_qmd
-    log_info "모드: 검색만 (qmd 하이브리드)"
-    "$QMD_BIN" query "$QUERY" -n "$QMD_TOP_N" -c "$QMD_COLLECTION"
+    log_info "모드: 검색만 (qmd 하이브리드, 한국어 전처리)"
+    # 한국어 형태소 분리된 lex + 원본 vec 쿼리 조합
+    KO_LEX=$(preprocess_korean_query "$QUERY")
+    SEARCH_QUERY="lex: ${KO_LEX}"$'\n'"vec: ${QUERY}"
+    "$QMD_BIN" query "$SEARCH_QUERY" -n "$QMD_TOP_N" -c "$QMD_COLLECTION"
     ;;
 
   query)

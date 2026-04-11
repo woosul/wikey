@@ -354,8 +354,8 @@ Phase 2: qmd(검색 인프라) + LLM(지능 레이어) 분리
          backend=gemma4: Gemma 4가 확장+리랭킹, qmd는 검색만 (정확, 느림)
          (wikey.conf로 선택. 300p까지 가능)
 
-Phase 3: backend=gemma4 + 한국어 특화
-         Gemma 4 확장 시 한영 용어 정규화 사전 참조 + 형태소 분석
+Phase 3: backend=gemma4 + 한국어 특화 (진행 중)
+         kiwipiepy 형태소 전처리 (Step 3-1 완료) + Contextual Retrieval + jina-v3
          (3,000p까지 가능)
 
 Phase 4: vLLM 배치 처리 + 의도 분류 라우팅

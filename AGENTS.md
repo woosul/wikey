@@ -51,10 +51,13 @@ EOF
 # qmd 하이브리드 검색 (BM25+벡터+RRF — 권장)
 ./tools/qmd/bin/qmd query "검색어" -c wikey-wiki
 
-# wikey-query.sh (qmd 검색 → Gemma 4 합성)
+# wikey-query.sh (qmd 검색 → Gemma 4 합성, 한국어 형태소 전처리 포함)
 ./local-llm/wikey-query.sh "질문"
 ./local-llm/wikey-query.sh --backend gemma4 "한국어 질문"
 ./local-llm/wikey-query.sh --search "검색만"
+
+# 한국어 FTS5 인덱스 전처리 (qmd update 후 실행)
+python3 scripts/korean-tokenize.py --batch
 
 # 위키 내 키워드 검색 (단순)
 grep -r "검색어" wiki/ --include="*.md"

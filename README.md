@@ -17,7 +17,7 @@ User → Add source → LLM builds wiki → Browse in Obsidian
 |---|---|---|---|---|
 | **Setup** | Install Obsidian skill + copy schema | Install React app | Build from Rust | npm install |
 | **BYOAI** | Claude, Codex, Gemini, Gemma 4 | OpenAI-dependent | - | - |
-| **Korean** | KR/EN tech term normalization (Phase 2) | - | Morphological analysis | - |
+| **Korean** | kiwipiepy morpheme preprocessing + term normalization | - | kiwi-rs morpheme analysis | - |
 | **Wiki Builder** | Ingest / Query / Lint | Ingest / Query / Lint | Session-to-wiki | Search only |
 | **Enterprise Path** | Phase 3-4 roadmap | - | - | - |
 

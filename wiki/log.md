@@ -83,6 +83,19 @@ updated: 2026-04-11
 - wiki/sources/ 페이지의 원시 소스 경로 6건 갱신
 - 영향 페이지: 모든 source-*.md, [[obsidian]], [[append-and-review]]
 
+## [2026-04-11] feat | Phase 2 Step 3-0/3-1 — 한국어 검색 사전 조사 + 형태소 전처리
+
+- Step 3-0 사전 조사 완료: 5개 병렬 에이전트 + FTS5 실증 테스트
+  - 채택: kiwipiepy 형태소 전처리, Contextual Retrieval (Gemma 4), jina-embeddings-v3
+  - 기각: Chonkie SemanticChunker (NAACL 2025 반증), Late Chunking (문서 1청크), FTS5 커스텀 토크나이저
+- Step 3-1 형태소 전처리 구현 완료:
+  - `scripts/korean-tokenize.py` 신규 생성 (kiwipiepy, index/query/fts5/batch 모드)
+  - FTS5 인덱스 29문서 형태소 전처리 — 한국어 조사 분리로 BM25 recall +74 hits
+  - `wikey-query.sh` search/basic/gemma4 3개 모드에 lex 쿼리 전처리 통합
+  - 영어 토큰 보존 확인 (BM25, FPV 등)
+- 조사 결과 상세: `plan/step3-0-research-report.md`
+- 영향 페이지: [[qmd]], wikey-query.sh, qmd-comprehension-guide.md
+
 ## [2026-04-11] infra | Phase 2 Step 2 — qmd 다층 검색 파이프라인 구축
 
 - qmd 2.1.0 소스 클론 → `tools/qmd/`에 vendored (tobi/qmd@cfd640e)

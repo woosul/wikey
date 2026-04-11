@@ -41,6 +41,20 @@ qmd 내장 모델 3개 (총 ~2.2GB):
 - qmd-query-expansion-1.7B (쿼리 확장)
 - Qwen3-Reranker-0.6B (리랭킹)
 
+## 한국어 형태소 전처리 (Step 3-1, 2026-04-11)
+
+FTS5의 `porter unicode61` 토크나이저는 한국어 조사를 분리하지 못한다 ("위키의" ≠ "위키"). kiwipiepy 형태소 분석기로 전처리하여 해결.
+
+- **인덱싱**: 문서 텍스트를 형태소 분리 후 FTS5 body에 삽입 (`scripts/korean-tokenize.py --batch`)
+- **쿼리**: lex 쿼리를 content words만 추출 후 FTS5에 전달 (`wikey-query.sh` 통합)
+- **영어 보존**: BM25, FPV 등 알파벳+숫자 토큰은 분리하지 않음
+
+| 쿼리 유형 | 전처리 전 | 전처리 후 | 변화 |
+|----------|----------|----------|------|
+| 조사 포함 ("위키의", "검색을") | 0~5 hits | 14~21 hits | **+74 hits** |
+| 영어 (BM25, FPV) | 6~7 hits | 6~7 hits | 동일 |
+| 복합 ("주파수"+"대역") | 2~12 hits | 2~12 hits | 동일 |
+
 ## 벤치마크 (Phase 2, 2026-04-11)
 
 | backend | 한국어 Top-1 | 비고 |
@@ -48,7 +62,7 @@ qmd 내장 모델 3개 (총 ~2.2GB):
 | basic | 0/5 | qmd 내장 모델 영어 중심 |
 | gemma4 | 1/5 | Gemma 4 확장이 약간 나음 |
 
-→ Step 3에서 한국어 형태소 분석 + 청킹 혁신으로 개선 예정.
+→ Step 3-2 Contextual Retrieval + Step 3-3 jina-v3 임베딩 교체로 추가 개선 예정.
 
 ## 관련 항목
 

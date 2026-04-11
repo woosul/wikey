@@ -185,66 +185,88 @@
 > qmd의 현재 청킹(구조적 브레이크포인트 + 900토큰 고정 크기)은 의미 단위 파편화 문제가 있다.
 > 단순히 형태소 분석만 추가하는 것이 아니라, 검색 파이프라인 전체의 품질 개선을 설계해야 한다.
 
-- [ ] **3-0-0.** 기획 단계 사전 조사 참조 분석
-  - `raw/.../idea-comment.md` (→ `wiki/sources/source-llm-wiki-community.md`)
-  - [seCall](https://github.com/hang-in/seCall): 한국어 BM25 가드레일 구현체 — 구현 방식 분석
-  - Farzapedia: RAG < 직접 탐색 실전 교훈 — 청크 품질 자체가 핵심
-  - 커뮤니티 합의: "BM25가 한글에 약해 별도 가드레일 필요" (@kurthong, GeekNews)
-  - 상세: `tools/qmd-comprehension-guide.md` 섹션 5.5
-- [ ] **3-0-1.** Chonkie SemanticChunker 프로토타이핑
-  - wikey 위키 29페이지로 Chonkie 실행, qmd 기본 청킹과 청크 품질 비교
-  - 한국어 문서에서 cosine 유사도 기반 경계 탐지 효과 측정
-  - 다국어 임베딩 모델별 비교 (multilingual-e5-large vs EmbeddingGemma-300M)
-- [ ] **3-0-2.** Contextual Retrieval (Anthropic 방식) 프로토타이핑
-  - 기존 청크에 Gemma 4로 맥락 프리픽스 생성, 검색 정확도 비교
-  - 로컬 LLM으로 Anthropic 방식 재현 가능성 검증
-- [ ] **3-0-3.** Late Chunking 가능성 조사
-  - wikey 문서 길이 vs 롱컨텍스트 임베딩 모델 컨텍스트 윈도우
-  - jina-embeddings-v3 / nomic-embed-text 성능 조사
-- [ ] **3-0-4.** 한국어 특화 조사
-  - 한국어 문장 분리 (kss, KoNLPy) 성능 비교
-  - 형태소 분석이 BM25 + 청킹에 미치는 영향 정량화
-- [ ] **3-0-5.** qmd 소스 커스터마이징 범위 결정
-  - 전처리 레이어 vs 소스 직접 수정 트레이드오프 분석
-  - patch 전략 확정 (등급 B/C 분류, 충돌 위험 평가)
-  - 참조: `tools/qmd-comprehension-guide.md` 섹션 4
+- [x] **3-0-0.** 기획 단계 사전 조사 참조 분석
+  - seCall: kiwi-rs 형태소 분석 + FTS5 pre-tokenization 방식 검증. AutoRAG: OKT > Kiwi > KKMA
+  - Farzapedia: 청킹 품질 낮으면 RAG < 직접 탐색 → Contextual Retrieval로 청크 품질 향상 필요
+  - 커뮤니티 합의: FTS5 porter unicode61의 한국어 조사 미분리가 핵심 원인 (실증 확인)
+- [x] **3-0-1.** Chonkie SemanticChunker 조사 → **기각**
+  - NAACL 2025: 구조화 문서에서 고정 크기 ≥ 의미적 청킹 (Context Cliff 효과)
+  - wikey 문서 평균 550토큰(1청크) → 청킹 전략 변경 효과 미미
+  - qmd 구조적 breakpoint가 잘 구조화된 마크다운에 이미 효과적
+- [x] **3-0-2.** Contextual Retrieval 조사 → **최우선 채택**
+  - Top-20 실패율 -49% (Anthropic), Gemma 4 12B로 충분 (36청크 ~2분)
+  - 직교적 개선: 어떤 청킹과도 결합 가능, 한국어 키워드 풍부화 효과
+  - 통합 지점: store.ts generateEmbeddings() → chunkDocumentByTokens() 직후
+- [x] **3-0-3.** Late Chunking 조사 → **현재 불필요**, 임베딩 모델 교체 우선
+  - 문서 평균 550토큰(1청크) → 청크 간 맥락 손실 없음
+  - 대신 jina-embeddings-v3 채택 (30언어 명시 튜닝, 8K 컨텍스트, GGUF 330MB)
+- [x] **3-0-4.** 한국어 특화 조사
+  - kiwipiepy 채택 (`pip install kiwipiepy`, JVM 불필요, 86.7% 모호성 해소)
+  - 전처리기 방식: 인덱싱/쿼리 전에 형태소 분리 → 기존 FTS5 토크나이저 유지
+  - 기대 효과: 한국어 BM25 recall ~0% → 60-80%
+- [x] **3-0-5.** qmd 소스 커스터마이징 범위 결정
+  - 확정 3건: 형태소 전처리(B+), Contextual Retrieval(B), 임베딩 교체(B)
+  - 기각: Chonkie, Late Chunking, FTS5 커스텀 토크나이저(C)
+  - 전략: 전처리 레이어 최대 분리 → store.ts 직접 수정 최소화
+  - 상세: `plan/step3-0-research-report.md`, `tools/qmd-comprehension-guide.md` 섹션 5.6
 
-### 3-1. 형태소 분석 적용
+### 3-1. 한국어 형태소 전처리 (kiwipiepy)
 
-- [ ] **3-1-1.** mecab-ko (또는 kss) 설치
-- [ ] **3-1-2.** qmd BM25 인덱스에 형태소 분석 적용
-  - "쿠버네티스 배포 전략" → 형태소 분리 후 검색 정확도 개선 확인
-  - 적용 방식: 3-0-5 결정에 따라 전처리 레이어 또는 소스 수정
-- [ ] **3-1-3.** 형태소 분석 전/후 검색 품질 비교 5건
+> 3-0 조사 결과: kiwipiepy 채택 (mecab-ko 대비 설치 간편, JVM 불필요, 정확도 유사)
+> 접근법: 전처리 레이어 (FTS5 토크나이저 교체 없이, 인덱싱/쿼리 전 텍스트 변환)
 
-### 3-2. 한영 기술 용어 정규화
+- [ ] **3-1-1.** kiwipiepy 설치 + 전처리 스크립트 작성
+  - `pip install kiwipiepy`
+  - `scripts/korean-tokenize.py` — stdin 텍스트 → stdout 형태소 분리 결과
+  - 한영 혼합 처리: 한국어만 형태소 분석, 영어는 그대로 통과
+- [ ] **3-1-2.** qmd FTS5 인덱싱 파이프라인에 전처리 레이어 추가
+  - `store.ts` 트리거 (842행, 863행) 또는 insertContent 수정
+  - content.doc 원본 보존, FTS5 body만 전처리된 텍스트로 치환
+  - Python 서브프로세스 호출 패턴 구현
+- [ ] **3-1-3.** 쿼리 파이프라인에도 동일 전처리 적용
+  - `buildFTS5Query()` (2919행) 호출 전에 쿼리 텍스트 형태소 분리
+- [ ] **3-1-4.** 전/후 BM25 검색 품질 비교 10건
+  - 한국어 조사 포함 쿼리 ("위키의", "검색을")
+  - 한영 혼합 쿼리 ("DJI O3 주파수")
+  - 복합명사 쿼리
 
-- [ ] **3-2-1.** 용어 정규화 사전 초안 작성 (`local-llm/term-normalization.yaml`)
-  ```yaml
-  - ko: [쿠버네티스, 쿠베]
-    en: [Kubernetes, k8s, K8s]
-  - ko: [배포]
-    en: [deploy, deployment]
-  ```
-- [ ] **3-2-2.** 정규화 레이어를 쿼리 확장에 통합
-  - Gemma 4 쿼리 확장 시 정규화 사전 참조
-- [ ] **3-2-3.** 정규화 효과 테스트 5건 (한국어 쿼리 → 영어 위키 페이지 매칭)
+### 3-2. Contextual Retrieval (Gemma 4)
 
-### 3-3. 청킹 전략 개선 (3-0 조사 결과에 따라)
+> 3-0 조사 결과: 최우선 채택 (직교적 개선, Top-20 실패 -49%)
+> Gemma 4 12B로 50-100토큰 맥락 프리픽스 생성, 36청크 ~2분
 
-- [ ] **3-3-1.** 3-0 조사 결과 기반 최종 전략 결정
-  - Semantic chunking / Contextual Retrieval / Late Chunking 중 채택
-  - qmd 소스 수정 범위 확정 + patch 생성
-- [ ] **3-3-2.** 선택 전략 구현 + 기존 벤치마크 재실행
-- [ ] **3-3-3.** 전/후 비교 리포트
+- [ ] **3-2-1.** Ollama API를 통한 맥락 프리픽스 생성 프로토타입
+  - 프롬프트 템플릿: 전체 문서 + 청크 → 짧은 맥락 설명 요청
+  - 한국어/영어 혼합 프리픽스 생성 품질 확인
+- [ ] **3-2-2.** 프리픽스 품질 수동 검증 (5건)
+  - 한국어 문서, 영어 문서, 한영 혼합 문서에서 프리픽스 적절성 확인
+- [ ] **3-2-3.** qmd 인덱싱 파이프라인에 통합
+  - `store.ts:generateEmbeddings()` → `chunkDocumentByTokens()` 직후 후킹
+  - 프리픽스를 청크 앞에 prepend → BM25 + 벡터 양쪽 자동 반영
+- [ ] **3-2-4.** 전/후 검색 정확도 비교 10건
 
-### 3-4. 검색 벤치마크
+### 3-3. 임베딩 모델 교체 (jina-embeddings-v3)
+
+> 3-0 조사 결과: jina-v3 채택 (30언어 명시 튜닝, 8K 컨텍스트, GGUF 330MB)
+> Late Chunking은 현재 불필요 (문서 평균 550토큰)
+
+- [ ] **3-3-1.** jina-embeddings-v3 GGUF 다운로드
+  - Ollama 등록 또는 node-llama-cpp 직접 로드
+- [ ] **3-3-2.** qmd 임베딩 모델 설정 변경
+  - `QMD_EMBED_MODEL` 환경변수 또는 `llm.ts` DEFAULT_EMBED_MODEL 상수
+  - `formatQueryForEmbedding()`, `formatDocForEmbedding()` 모델별 분기 추가
+- [ ] **3-3-3.** 인덱스 재생성 (`qmd embed`)
+  - 768차원 → 1024차원 전환, sqlite-vec 호환 확인
+- [ ] **3-3-4.** 전/후 벡터 검색 품질 비교 5건
+
+### 3-4. 통합 벤치마크
 
 - [ ] **3-4-1.** 벤치마크 쿼리셋 50-100개 작성
   - 한글 단순 쿼리, 영문 단순 쿼리, 한영 혼합, 기술 약어, 엔티티 조회, 교차 문서 합성
 - [ ] **3-4-2.** 벤치마크 실행 및 정확도 측정
+  - 3-1 (형태소) + 3-2 (Contextual) + 3-3 (jina-v3) 통합 상태에서 테스트
 - [ ] **3-4-3.** **게이트**: 80%+ 정확도 달성 여부 판단
-  - 미달 시: 형태소 분석 튜닝, 정규화 사전 확장, 임베딩 모델 교체 검토
+  - 미달 시: 형태소 분석 튜닝, 용어 정규화 사전 추가, 프리픽스 프롬프트 개선
 
 ---
 
