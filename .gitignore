@@ -17,5 +17,8 @@ Thumbs.db
 /tmp/
 *.tmp
 
+# Tools — qmd (source clone, node_modules excluded)
+tools/qmd/node_modules/
+
 # Claude Code session
 .claude/settings.local.json

@@ -7,13 +7,13 @@
 
 ---
 
-## Step 0: raw/ PARA 재구조화 + 분류 시스템 (Phase 2 기반 작업)
+## Step 1: raw/ PARA 재구조화 + 분류 시스템 (Phase 2 기반 작업)
 
-> Step 3 반자동 인제스트의 전제 조건. inbox 단일 진입점 확보 + 분류 기준 문서 시스템 구축.
+> Step 4 반자동 인제스트의 전제 조건. inbox 단일 진입점 확보 + 분류 기준 문서 시스템 구축.
 
-### 0-1. 분류 기준 문서 생성
+### 1-1. 분류 기준 문서 생성
 
-- [ ] **0-1-1.** `raw/CLASSIFY.md` 생성 — 하이브리드 분류 기준 문서
+- [x] **1-1-1.** `raw/CLASSIFY.md` 생성 — 하이브리드 분류 기준 문서
   - PARA 카테고리 정의 (projects/areas/resources/archive)
   - inbox 처리 모드 (파일 단위 vs 폴더 단위 — 폴더는 번들로 즉시 분류)
   - URI 기반 등록 설계 (기업용, Phase 3-4 구현 — `.meta.yaml` 패턴)
@@ -24,9 +24,9 @@
   - 새 하위폴더 생성 규칙 (LLM 제안 → 사용자 승인 → CLASSIFY.md 등재)
   - 피드백 로그 섹션 (사용자 이의 기록 → 규칙 업데이트 트리거)
 
-### 0-2. 마이그레이션 스크립트 + 실행
+### 1-2. 마이그레이션 스크립트 + 실행
 
-- [ ] **0-2-1.** `scripts/migrate-raw-to-para.sh` 작성
+- [x] **1-2-1.** `scripts/migrate-raw-to-para.sh` 작성
   - PARA 스켈레톤 디렉토리 생성 (inbox, projects, areas, resources, archive)
   - resources/ 하위 토픽 디렉토리 생성 (11개)
   - 파일 매핑 규칙:
@@ -46,217 +46,279 @@
     - `raw/manual/02.무선통신/CW Pokemon` → `raw/resources/ham-radio/CW-Pokemon/`
     - `raw/manual/02.무선통신/MALAHIT-DSP SDR` → `raw/resources/sdr/MALAHIT-DSP/`
   - 빈 폴더 스킵 (300 Drone), 빈 구 디렉토리 삭제 (articles/, manual/, notes/, papers/)
-- [ ] **0-2-2.** 마이그레이션 전 파일 매니페스트 생성
+- [x] **1-2-2.** 마이그레이션 전 파일 매니페스트 생성
   ```bash
   find raw/ -type f > /tmp/wikey-raw-manifest-before.txt
   ```
-- [ ] **0-2-3.** 스크립트 실행
-- [ ] **0-2-4.** 마이그레이션 후 검증
+- [x] **1-2-3.** 스크립트 실행
+- [x] **1-2-4.** 마이그레이션 후 검증
   ```bash
   find raw/ -type f | wc -l   # 1,073 확인
   # 파일명 기준 전후 diff로 누락/추가 없음 확인
   ```
 
-### 0-3. 위키 소스 경로 갱신
+### 1-3. 위키 소스 경로 갱신
 
-- [ ] **0-3-1.** `wiki/sources/source-llm-wiki-gist.md` — `raw/articles/llm-wiki.md` → `raw/resources/wikey-design/llm-wiki.md`
-- [ ] **0-3-2.** `wiki/sources/source-llm-wiki-community.md` — `raw/articles/idea-comment.md` → `raw/resources/wikey-design/idea-comment.md`
-- [ ] **0-3-3.** `wiki/sources/source-append-and-review.md` — `raw/articles/append-and-review-note.md` → `raw/resources/wikey-design/append-and-review-note.md`
-- [ ] **0-3-4.** `wiki/sources/source-wikey-design-decisions.md` — `raw/notes/wikey-design-decisions.md` → `raw/projects/wikey/wikey-design-decisions.md`
-- [ ] **0-3-5.** `wiki/sources/source-dji-o3-air-unit.md` — `raw/manual/00.게임기기/830 FPV/DJI O3 Air Unit/...` → `raw/resources/fpv/DJI-O3-Air-Unit/...`
-- [ ] **0-3-6.** `wiki/sources/source-nanovna-v2-notes.md` — `raw/notes/nanovna-v2-notes.md` → `raw/areas/rf-measurement/nanovna-v2-notes.md`
+- [x] **1-3-1.** `wiki/sources/source-llm-wiki-gist.md` — `raw/articles/llm-wiki.md` → `raw/resources/wikey-design/llm-wiki.md`
+- [x] **1-3-2.** `wiki/sources/source-llm-wiki-community.md` — `raw/articles/idea-comment.md` → `raw/resources/wikey-design/idea-comment.md`
+- [x] **1-3-3.** `wiki/sources/source-append-and-review.md` — `raw/articles/append-and-review-note.md` → `raw/resources/wikey-design/append-and-review-note.md`
+- [x] **1-3-4.** `wiki/sources/source-wikey-design-decisions.md` — `raw/notes/wikey-design-decisions.md` → `raw/projects/wikey/wikey-design-decisions.md`
+- [x] **1-3-5.** `wiki/sources/source-dji-o3-air-unit.md` — `raw/manual/00.게임기기/830 FPV/DJI O3 Air Unit/...` → `raw/resources/fpv/DJI-O3-Air-Unit/...`
+- [x] **1-3-6.** `wiki/sources/source-nanovna-v2-notes.md` — `raw/notes/nanovna-v2-notes.md` → `raw/areas/rf-measurement/nanovna-v2-notes.md`
 
-### 0-4. 위키 페이지 및 로그 업데이트
+### 1-4. 위키 페이지 및 로그 업데이트
 
-- [ ] **0-4-1.** `wiki/entities/obsidian.md` — Web Clipper 경로 `raw/articles/` → `raw/inbox/`
-- [ ] **0-4-2.** `wiki/concepts/append-and-review.md` — `raw/notes/` → `raw/inbox/`
-- [ ] **0-4-3.** `wiki/log.md`에 마이그레이션 항목 추가 (append-only, 기존 항목 미수정)
+- [x] **1-4-1.** `wiki/entities/obsidian.md` — Web Clipper 경로 `raw/articles/` → `raw/inbox/`
+- [x] **1-4-2.** `wiki/concepts/append-and-review.md` — `raw/notes/` → `raw/inbox/`
+- [x] **1-4-3.** `wiki/log.md`에 마이그레이션 항목 추가 (append-only, 기존 항목 미수정)
   ```
   ## [2026-04-11] restructure | raw/ PARA 마이그레이션
   ```
 
-### 0-5. 스키마 및 설정 문서 업데이트
+### 1-5. 스키마 및 설정 문서 업데이트
 
-- [ ] **0-5-1.** `wikey.schema.md` 업데이트 (사용자 승인 필요)
+- [x] **1-5-1.** `wikey.schema.md` 업데이트 (사용자 승인 필요)
   - 디렉토리 구조도 (line 111-115): flat → PARA 구조
   - Obsidian Web Clipper (line 72): `raw/articles/` → `raw/inbox/`
   - 소스 유형 매핑 테이블 (line 418-426): 모든 소스 → `raw/inbox/` 진입
   - 인제스트 지시 예시 (line 430-433): inbox 기반으로 변경
   - 원시 소스 관리 섹션 (line 404-478): PARA 워크플로우 + CLASSIFY.md 참조 + 분류 세션 추가
   - LLM 쓰기 권한 (line 410): inbox→PARA 이동 허용 (내용 수정 금지 유지)
-- [ ] **0-5-2.** `CLAUDE.md` 업데이트
+- [x] **1-5-2.** `CLAUDE.md` 업데이트
   - raw/ 권한: "읽기만" → "내용 수정 금지, inbox→분류 이동은 허용 (사용자 승인 후)"
   - 분류 세션 체크리스트 추가
-- [ ] **0-5-3.** `AGENTS.md` 동일 업데이트
-- [ ] **0-5-4.** `README.md` 업데이트
+- [x] **1-5-3.** `AGENTS.md` 동일 업데이트
+- [x] **1-5-4.** `README.md` 업데이트
   - `mkdir -p raw/{articles,papers,notes,assets}` → `mkdir -p raw/{inbox,projects,areas,resources,archive,assets}`
   - 첫 인제스트 안내: `raw/articles/` → `raw/inbox/`
-- [ ] **0-5-5.** `.obsidian/app.json` — `attachmentFolderPath: "raw/assets"` 설정
-- [ ] **0-5-6.** Obsidian Web Clipper 저장 위치 변경 안내 (사용자가 브라우저에서 수동: → `raw/inbox`)
+- [x] **1-5-5.** `.obsidian/app.json` — `attachmentFolderPath: "raw/assets"` 설정
+- [x] **1-5-6.** Obsidian Web Clipper 저장 위치 변경 안내 (사용자가 브라우저에서 수동: → `raw/inbox`)
 
-### 0-6. 검증 + 커밋
+### 1-6. 검증 + 커밋
 
-- [ ] **0-6-1.** `./scripts/validate-wiki.sh` → PASS
-- [ ] **0-6-2.** `./scripts/check-pii.sh` → PASS
-- [ ] **0-6-3.** wiki/sources/ 6개 파일의 `원시 소스:` 경로가 실제 파일과 일치하는지 확인
-- [ ] **0-6-4.** Git 커밋 (wiki/ + 스키마 + 스크립트 + 설정 변경)
-
----
-
-## Step 1: LLM 다층 검색 파이프라인 구축
-
-> qmd MCP 서버 + Gemma 4 (로컬) 조합으로 쿼리확장→하이브리드검색→리랭킹→합성 파이프라인 구축
-
-### 1-1. qmd MCP 서버 설치 + 위키 인덱싱
-
-- [ ] **1-1-1.** qmd MCP 서버 설치 및 Claude Code 연동 확인
-  - `claude mcp add qmd ...` 또는 `.mcp.json`에 등록
-- [ ] **1-1-2.** `wiki/` 디렉토리를 qmd에 인덱싱
-  - BM25 인덱스 생성
-  - 벡터 인덱스 생성 (임베딩 모델 선택)
-- [ ] **1-1-3.** 기본 검색 테스트 5건 (qmd 단독)
-  - 단순 키워드, 한국어, 영어, 한영 혼합, 엔티티명
-
-### 1-2. Gemma 4 쿼리 확장 파이프라인
-
-- [ ] **1-2-1.** `local-llm/wikey-query.sh --expand` 개선
-  - 입력 쿼리 → Gemma 4에게 동의어/한영 변환/의미 변형 5개 생성 요청
-  - 출력: 원본 쿼리 + 확장 키워드 리스트
-- [ ] **1-2-2.** 쿼리 확장 품질 테스트 10건
-  - 한국어 기술 용어 → 영어 동의어 생성 확인
-  - 약어 → 풀네임 확장 확인
-
-### 1-3. Gemma 4 리랭킹 파이프라인
-
-- [ ] **1-3-1.** `local-llm/wikey-query.sh --rerank` 개선
-  - qmd 검색 결과 상위 30개 → Gemma 4에게 관련성 점수 부여 요청
-  - 출력: 재정렬된 상위 10개
-- [ ] **1-3-2.** vLLM-Metal API 서버 기반 리랭킹 (배치 처리)
-  - Ollama(인터랙티브) 대신 vLLM API로 동시 요청 처리
-- [ ] **1-3-3.** 리랭킹 전/후 비교 테스트 5건
-  - qmd 기본 순위 vs Gemma 4 리랭킹 후 순위 비교
-
-### 1-4. 통합 파이프라인 테스트
-
-- [ ] **1-4-1.** 전체 흐름 연결: 쿼리 → 확장 → qmd 검색 → 리랭킹 → 합성
-  ```
-  사용자 질문 → Gemma 4 확장 → qmd BM25+벡터 → RRF 융합 → Gemma 4 리랭킹 → Claude 합성
-  ```
-- [ ] **1-4-2.** 10건 쿼리 벤치마크 (파이프라인 유무 비교)
-  - 파이프라인 없이 (index.md 기반 직접 검색) vs 파이프라인 사용 시 답변 품질 비교
-- [ ] **1-4-3.** 지연 시간 측정 (쿼리 → 답변 완료)
+- [x] **1-6-1.** `./scripts/validate-wiki.sh` → PASS
+- [x] **1-6-2.** `./scripts/check-pii.sh` → PASS
+- [x] **1-6-3.** wiki/sources/ 6개 파일의 `원시 소스:` 경로가 실제 파일과 일치하는지 확인
+- [x] **1-6-4.** Git 커밋 (wiki/ + 스키마 + 스크립트 + 설정 변경)
 
 ---
 
-## Step 2: 한국어 검색 특화
+## Step 2: LLM 다층 검색 파이프라인 구축
 
-### 2-1. 형태소 분석 적용
+> qmd(검색 인프라) + LLM(지능 레이어) 분리 아키텍처로 다층 검색 파이프라인 구축.
+> qmd = BM25 + 벡터 + RRF 융합 (검색 인프라, 항상 사용).
+> LLM = 쿼리 확장 + 리랭킹 + 합성 (지능 레이어, backend 설정으로 선택).
+> **변경**: qmd 2.1.0 소스를 `tools/qmd/`에 vendored. backend 설정으로 basic(qmd 내장)/gemma4 선택 가능.
 
-- [ ] **2-1-1.** mecab-ko (또는 Lindera) 설치
-- [ ] **2-1-2.** qmd BM25 인덱스에 형태소 분석 적용 확인
+### 2-1. qmd 설치 + 위키 인덱싱
+
+- [x] **2-1-1.** qmd MCP 서버 설치 및 Claude Code 연동 확인
+  - `@tobilu/qmd@2.1.0` 소스를 `tools/qmd/`에 복사 (vendored)
+  - `~/.claude.json`에 글로벌 MCP 등록 (로컬 경로)
+- [x] **2-1-2.** `wiki/` 디렉토리를 qmd에 인덱싱
+  - BM25 인덱스: 29 문서 인덱싱 완료
+  - 벡터 인덱스: EmbeddingGemma-300M으로 36 청크 임베딩
+  - 컨텍스트 메타데이터 추가 (한국어+영어 혼합 컬렉션 설명)
+- [x] **2-1-3.** 기본 검색 테스트 5건 (qmd 단독)
+  - 5/5 PASS: 단순 키워드, 한국어, 영어, 한영 혼합, 엔티티명 모두 Top-1 정확
+
+### 2-2/2-3. 검색 파이프라인 구현 + backend 분리
+
+> **아키텍처 결정 (2026-04-11)**:
+> - qmd = **검색 인프라** (BM25 인덱스 + 벡터 인덱스 + RRF 융합). 항상 사용.
+> - LLM = **지능 레이어** (쿼리 확장 + 리랭킹 + 합성). backend 설정으로 선택.
+> - qmd 내장 모델(1.7B 확장 + 0.6B 리랭커)은 영어 중심 → 한국어 성능 낮음 (Top-1 40%).
+> - Gemma 4(12B)가 한국어 이해력 우수 → gemma4 backend에서 지능 부분 담당.
+
+- [x] **2-2/2-3.** `wikey-query.sh`를 qmd 연동으로 개선
+  - qmd 소스를 `tools/qmd/`에 vendored (글로벌 설치 제거)
+  - `--search` 모드 추가 (qmd 검색 결과만 출력, 합성 없이)
+  - `--pages` 수동 오버라이드 유지
+
+### 2-4. 통합 파이프라인 테스트
+
+- [x] **2-4-1.** 전체 흐름 연결: 쿼리 → qmd(확장→검색→리랭킹) → Gemma 4 합성
+  ```
+  사용자 질문 → qmd(확장 1.7B → BM25+벡터 → RRF → Reranker 0.6B) → 상위 5개 → Gemma 4 합성
+  ```
+- [x] **2-4-2.** 10건 쿼리 벤치마크
+  - Top-1 정확도: 4/10 (40%) — 영어/엔티티 정확, 한국어 부정확
+  - Top-3 정확도: 6/10 (60%)
+  - **진단**: 쿼리 확장 모델(1.7B) 영어 중심 → 한국어 쿼리 확장 품질 낮음
+  - **대응**: Step 3 한국어 특화에서 개선 (형태소 분석, 용어 정규화)
+- [x] **2-4-3.** 지연 시간 측정
+  - 평균 11.3초/쿼리 (검색+리랭킹, 합성 제외)
+  - 1위 캐시 히트 시 0.8초, 신규 확장 시 9-19초
+  - **대응**: `--no-rerank` 옵션으로 빠른 모드, vLLM 배치 처리 고려
+
+### 2-5. qmd upstream 관리 + backend 설정
+
+- [x] **2-5-1.** `scripts/update-qmd.sh` 작성 — qmd upstream 관리
+  - `--check`: git fetch + 커밋 수 비교
+  - `--apply`: git pull + 의존성 재설치 + 동작 검증
+  - 주기: 수동 (월 1회 권장)
+  - **변경**: npm pack → git pull 방식 (소스 클론으로 전환)
+- [x] **2-5-2.** `local-llm/wikey.conf` 작성 — 검색 파이프라인 환경 설정
+  ```
+  WIKEY_SEARCH_BACKEND=basic    # basic | gemma4
+  WIKEY_MODEL=wikey             # Ollama 모델명
+  WIKEY_QMD_TOP_N=5             # qmd 검색 결과 수
+  ```
+- [x] **2-5-3.** `wikey-query.sh` backend 분기 구현
+  - `basic`: qmd 내장 파이프라인(확장+검색+리랭킹) → Gemma 4 합성
+  - `gemma4`: Gemma 4 확장 → qmd 검색만(`--no-rerank`) → Gemma 4 리랭킹+합성
+- [x] **2-5-4.** backend 비교 테스트 5건 (basic vs gemma4, 동일 한국어 쿼리)
+  - basic: 0/5, gemma4: 1/5 — 두 backend 모두 한국어 정확도 매우 낮음
+  - **진단**: qmd 내장 모델(영어 중심) + 청킹 전략 한계
+  - **대응**: Step 3에서 청킹 혁신 + 한국어 특화 필수 (3-0 사전 조사 선행)
+
+---
+
+## Step 3: 한국어 검색 특화 + 청킹 혁신
+
+> Step 3 진행 전 **정밀 사전 조사**가 필요하다. 단순 한국어 형태소 분석 추가가 아니라,
+> 청킹 전략 자체의 혁신적 개선을 위해 커뮤니티 조사 + 프로토타이핑 선행 후 설계한다.
+> 사전 조사 결과: `tools/qmd-comprehension-guide.md` 섹션 5 참조.
+
+### 3-0. 사전 조사 — 청킹 + 검색 품질 혁신 (Step 3 선행 필수)
+
+> qmd의 현재 청킹(구조적 브레이크포인트 + 900토큰 고정 크기)은 의미 단위 파편화 문제가 있다.
+> 단순히 형태소 분석만 추가하는 것이 아니라, 검색 파이프라인 전체의 품질 개선을 설계해야 한다.
+
+- [ ] **3-0-1.** Chonkie SemanticChunker 프로토타이핑
+  - wikey 위키 29페이지로 Chonkie 실행, qmd 기본 청킹과 청크 품질 비교
+  - 한국어 문서에서 cosine 유사도 기반 경계 탐지 효과 측정
+  - 다국어 임베딩 모델별 비교 (multilingual-e5-large vs EmbeddingGemma-300M)
+- [ ] **3-0-2.** Contextual Retrieval (Anthropic 방식) 프로토타이핑
+  - 기존 청크에 Gemma 4로 맥락 프리픽스 생성, 검색 정확도 비교
+  - 로컬 LLM으로 Anthropic 방식 재현 가능성 검증
+- [ ] **3-0-3.** Late Chunking 가능성 조사
+  - wikey 문서 길이 vs 롱컨텍스트 임베딩 모델 컨텍스트 윈도우
+  - jina-embeddings-v3 / nomic-embed-text 성능 조사
+- [ ] **3-0-4.** 한국어 특화 조사
+  - 한국어 문장 분리 (kss, KoNLPy) 성능 비교
+  - 형태소 분석이 BM25 + 청킹에 미치는 영향 정량화
+- [ ] **3-0-5.** qmd 소스 커스터마이징 범위 결정
+  - 전처리 레이어 vs 소스 직접 수정 트레이드오프 분석
+  - patch 전략 확정 (등급 B/C 분류, 충돌 위험 평가)
+  - 참조: `tools/qmd-comprehension-guide.md` 섹션 4
+
+### 3-1. 형태소 분석 적용
+
+- [ ] **3-1-1.** mecab-ko (또는 kss) 설치
+- [ ] **3-1-2.** qmd BM25 인덱스에 형태소 분석 적용
   - "쿠버네티스 배포 전략" → 형태소 분리 후 검색 정확도 개선 확인
-- [ ] **2-1-3.** 형태소 분석 전/후 검색 품질 비교 5건
+  - 적용 방식: 3-0-5 결정에 따라 전처리 레이어 또는 소스 수정
+- [ ] **3-1-3.** 형태소 분석 전/후 검색 품질 비교 5건
 
-### 2-2. 한영 기술 용어 정규화
+### 3-2. 한영 기술 용어 정규화
 
-- [ ] **2-2-1.** 용어 정규화 사전 초안 작성 (`local-llm/term-normalization.yaml`)
+- [ ] **3-2-1.** 용어 정규화 사전 초안 작성 (`local-llm/term-normalization.yaml`)
   ```yaml
   - ko: [쿠버네티스, 쿠베]
     en: [Kubernetes, k8s, K8s]
   - ko: [배포]
     en: [deploy, deployment]
   ```
-- [ ] **2-2-2.** 정규화 레이어를 쿼리 확장에 통합
+- [ ] **3-2-2.** 정규화 레이어를 쿼리 확장에 통합
   - Gemma 4 쿼리 확장 시 정규화 사전 참조
-- [ ] **2-2-3.** 정규화 효과 테스트 5건 (한국어 쿼리 → 영어 위키 페이지 매칭)
+- [ ] **3-2-3.** 정규화 효과 테스트 5건 (한국어 쿼리 → 영어 위키 페이지 매칭)
 
-### 2-3. 검색 벤치마크
+### 3-3. 청킹 전략 개선 (3-0 조사 결과에 따라)
 
-- [ ] **2-3-1.** 벤치마크 쿼리셋 50-100개 작성
+- [ ] **3-3-1.** 3-0 조사 결과 기반 최종 전략 결정
+  - Semantic chunking / Contextual Retrieval / Late Chunking 중 채택
+  - qmd 소스 수정 범위 확정 + patch 생성
+- [ ] **3-3-2.** 선택 전략 구현 + 기존 벤치마크 재실행
+- [ ] **3-3-3.** 전/후 비교 리포트
+
+### 3-4. 검색 벤치마크
+
+- [ ] **3-4-1.** 벤치마크 쿼리셋 50-100개 작성
   - 한글 단순 쿼리, 영문 단순 쿼리, 한영 혼합, 기술 약어, 엔티티 조회, 교차 문서 합성
-- [ ] **2-3-2.** 벤치마크 실행 및 정확도 측정
-- [ ] **2-3-3.** **게이트**: 80%+ 정확도 달성 여부 판단
+- [ ] **3-4-2.** 벤치마크 실행 및 정확도 측정
+- [ ] **3-4-3.** **게이트**: 80%+ 정확도 달성 여부 판단
   - 미달 시: 형태소 분석 튜닝, 정규화 사전 확장, 임베딩 모델 교체 검토
 
 ---
 
-## Step 3: 반자동 인제스트 파이프라인
+## Step 4: 반자동 인제스트 파이프라인
 
 > Step 0의 inbox 단일 진입점 위에 구축
 
-### 3-1. inbox 모니터링
+### 4-1. inbox 모니터링
 
-- [ ] **3-1-1.** `scripts/watch-inbox.sh` 작성
+- [ ] **4-1-1.** `scripts/watch-inbox.sh` 작성
   - fswatch로 `raw/inbox/` 감시
   - 새 파일/폴더 감지 시 알림 (macOS Notification 또는 터미널 출력)
-- [ ] **3-1-2.** 알림 → 분류 → 인제스트 흐름 연결
+- [ ] **4-1-2.** 알림 → 분류 → 인제스트 흐름 연결
   - 파일 감지 → CLASSIFY.md 기반 분류 제안 → 사용자 승인 → 이동 → 인제스트 트리거
-- [ ] **3-1-3.** 폴더 단위 감지 테스트
+- [ ] **4-1-3.** 폴더 단위 감지 테스트
   - `inbox/`에 제품 매뉴얼 폴더 추가 → 번들 분류 → resources/ 이동 → 인제스트
 
-### 3-2. 대용량 소스 처리
+### 4-2. 대용량 소스 처리
 
-- [ ] **3-2-1.** Gemini API 연동 (1M+ 컨텍스트 활용)
+- [ ] **4-2-1.** Gemini API 연동 (1M+ 컨텍스트 활용)
   - 100p+ PDF → Gemini 1차 요약 → 요약본을 Claude Code에 전달하여 위키 통합
-- [ ] **3-2-2.** 대용량 처리 테스트 1건 (100p+ PDF)
-- [ ] **3-2-3.** 미승인 소스 대기 목록 관리 방안 정의
+- [ ] **4-2-2.** 대용량 처리 테스트 1건 (100p+ PDF)
+- [ ] **4-2-3.** 미승인 소스 대기 목록 관리 방안 정의
   - inbox에 체류 중인 미분류 파일 목록 출력 스크립트
 
 ---
 
-## Step 4: 멀티 LLM 워크플로우 최적화
+## Step 5: 멀티 LLM 워크플로우 최적화
 
-### 4-1. 프로바이더별 최적 배분 검증
+### 5-1. 프로바이더별 최적 배분 검증
 
-- [ ] **4-1-1.** 일상 인제스트 — Claude Code 5건 인제스트, 토큰 비용 기록
-- [ ] **4-1-2.** 대용량 소스 — Gemini 1차 요약 + Claude Code 통합 1건
-- [ ] **4-1-3.** 독립 린트 — Codex CLI로 교차 검증 1회
-- [ ] **4-1-4.** 오프라인 쿼리 — Gemma 4 로컬 쿼리 5건
+- [ ] **5-1-1.** 일상 인제스트 — Claude Code 5건 인제스트, 토큰 비용 기록
+- [ ] **5-1-2.** 대용량 소스 — Gemini 1차 요약 + Claude Code 통합 1건
+- [ ] **5-1-3.** 독립 린트 — Codex CLI로 교차 검증 1회
+- [ ] **5-1-4.** 오프라인 쿼리 — Gemma 4 로컬 쿼리 5건
 
-### 4-2. 비용 모니터링
+### 5-2. 비용 모니터링
 
-- [ ] **4-2-1.** 프로바이더별 토큰 사용량 + 비용 기록 시작
+- [ ] **5-2-1.** 프로바이더별 토큰 사용량 + 비용 기록 시작
   - 월간 목표: $50 이하 (개인)
-- [ ] **4-2-2.** 비용 효율 분석 (로컬 vs 클라우드 비율 최적화)
+- [ ] **5-2-2.** 비용 효율 분석 (로컬 vs 클라우드 비율 최적화)
 
 ---
 
-## Step 5: 커뮤니티 공개
+## Step 6: 커뮤니티 공개
 
-### 5-1. 배포 준비
+### 6-1. 배포 준비
 
-- [ ] **5-1-1.** GitHub 공개 저장소 전환 (private → public)
+- [ ] **6-1-1.** GitHub 공개 저장소 전환 (private → public)
   - raw/ .gitignore 확인 (PII 보호)
   - 민감 정보 커밋 이력 검사
-- [ ] **5-1-2.** README.md 최종화 (한국어 + 영어)
+- [ ] **6-1-2.** README.md 최종화 (한국어 + 영어)
   - "5분 안에 LLM Wiki 시작하기" 가이드
   - BYOAI 프로바이더 비교표
   - 스크린샷 (Obsidian Graph View, 인제스트 결과)
 
-### 5-2. 공개 + 홍보
+### 6-2. 공개 + 홍보
 
-- [ ] **5-2-1.** Obsidian 커뮤니티 포럼 게시
-- [ ] **5-2-2.** GeekNews 공유
-- [ ] **5-2-3.** 초기 피드백 수집 (GitHub Issues)
+- [ ] **6-2-1.** Obsidian 커뮤니티 포럼 게시
+- [ ] **6-2-2.** GeekNews 공유
+- [ ] **6-2-3.** 초기 피드백 수집 (GitHub Issues)
 
 ---
 
-## Step 6: 장기 운영 데이터 수집 (3개월)
+## Step 7: 장기 운영 + Phase 2→3 게이트 (3개월)
 
-### 6-1. 운영 목표
+### 7-1. 운영 목표
 
-- [ ] **6-1-1.** 100+ 소스 인제스트 (현재 6건)
-- [ ] **6-1-2.** 200+ 위키 페이지 (현재 26건)
-- [ ] **6-1-3.** 일관성 추이 기록 (lint 오류율)
-- [ ] **6-1-4.** 프로바이더별 토큰 비용 월간 기록
+- [ ] **7-1-1.** 100+ 소스 인제스트 (현재 6건)
+- [ ] **7-1-2.** 200+ 위키 페이지 (현재 26건)
+- [ ] **7-1-3.** 일관성 추이 기록 (lint 오류율)
+- [ ] **7-1-4.** 프로바이더별 토큰 비용 월간 기록
 
-### 6-2. Phase 2→3 게이트 평가
+### 7-2. Phase 2→3 게이트 평가
 
-- [ ] **6-2-1.** LLM 위키 일관성: lint 오류율 감소 추세인가?
-- [ ] **6-2-2.** 토큰 비용: 월 $50 이하인가?
-- [ ] **6-2-3.** 커뮤니티: 10+ GitHub stars, 사용자 피드백 있는가?
-- [ ] **6-2-4.** BYOAI: 2+ 프로바이더로 위키 교대 운영 성공했는가?
-- [ ] **6-2-5.** 팀 수요: 2-3명 파일럿 긍정적인가?
+- [ ] **7-2-1.** LLM 위키 일관성: lint 오류율 감소 추세인가?
+- [ ] **7-2-2.** 토큰 비용: 월 $50 이하인가?
+- [ ] **7-2-3.** 커뮤니티: 10+ GitHub stars, 사용자 피드백 있는가?
+- [ ] **7-2-4.** BYOAI: 2+ 프로바이더로 위키 교대 운영 성공했는가?
+- [ ] **7-2-5.** 팀 수요: 2-3명 파일럿 긍정적인가?
 
 ---
 
@@ -264,10 +326,10 @@
 
 ### 필수 (Must)
 
-- [ ] raw/ PARA 재구조화 완료 (1,073개 파일 재분류)
-- [ ] CLASSIFY.md 분류 기준 문서 동작
-- [ ] LLM 다층 검색 파이프라인 동작 (쿼리확장→검색→리랭킹→합성)
-- [ ] 한국어 벤치마크 80%+ 정확도
+- [x] raw/ PARA 재구조화 완료 (1,073개 파일 재분류)
+- [x] CLASSIFY.md 분류 기준 문서 동작
+- [x] LLM 다층 검색 파이프라인 동작 (qmd 내장: 쿼리확장→검색→리랭킹 + Gemma 4 합성)
+- [ ] 한국어 벤치마크 80%+ 정확도 (현재 Top-1 40% → Step 3에서 개선)
 - [ ] validate-wiki.sh + check-pii.sh 통과
 - [ ] wikey.schema.md, CLAUDE.md, AGENTS.md 업데이트 완료
 
@@ -275,7 +337,7 @@
 
 - [ ] inbox 모니터링 (fswatch) 동작
 - [ ] Gemini 대용량 소스 처리 1건+ 성공
-- [ ] Gemma 4 로컬 쿼리 확장/리랭킹 동작
+- [x] ~~Gemma 4 로컬 쿼리 확장/리랭킹~~ qmd 내장 파이프라인으로 대체
 - [ ] 50+ 소스, 100+ 위키 페이지
 - [ ] GitHub 공개 + README 최종화
 
