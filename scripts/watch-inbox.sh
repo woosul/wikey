@@ -41,41 +41,8 @@ notify() {
   fi
 }
 
-classify_hint() {
-  local path="$1"
-  local name
-  name=$(basename "$path")
-  local ext="${name##*.}"
-
-  case "$ext" in
-    pdf)
-      echo "3_resources/30_manual/ (PDF 문서)"
-      ;;
-    md)
-      if head -5 "$path" 2>/dev/null | grep -q "clipped\|source.*http"; then
-        echo "3_resources/10_article/ (웹 클리핑)"
-      else
-        echo "3_resources/60_note/ (마크다운 노트)"
-      fi
-      ;;
-    stl|step|obj|3mf)
-      echo "3_resources/40_cad/ (CAD 파일)"
-      ;;
-    c|h|cpp|ino|py)
-      echo "3_resources/50_firmware/ (소스코드)"
-      ;;
-    exe|dll|bin|hex)
-      echo "3_resources/50_firmware/ (바이너리/펌웨어)"
-      ;;
-    *)
-      if [ -d "$path" ]; then
-        echo "3_resources/{topic}/{product}/ (폴더 번들)"
-      else
-        echo "3_resources/ (CLASSIFY.md 참조)"
-      fi
-      ;;
-  esac
-}
+# 공유 분류 힌트 함수 로드
+source "${SCRIPT_DIR}/lib/classify-hint.sh"
 
 # --- 서브커맨드 ---
 

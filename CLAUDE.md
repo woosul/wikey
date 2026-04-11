@@ -24,7 +24,7 @@
 | **Read** | wiki/ 페이지 읽기, raw/ 소스 읽기, wikey.schema.md 참조 |
 | **Write** | 새 위키 페이지 생성 (프론트매터 포함) |
 | **Edit** | 기존 위키 페이지 부분 수정 (index.md 갱신, 내용 추가 등) |
-| **Bash** | Git 명령, `validate-wiki.sh`, `check-pii.sh`, `update-qmd.sh`, `korean-tokenize.py --batch` 실행 |
+| **Bash** | Git 명령, `validate-wiki.sh`, `check-pii.sh`, `update-qmd.sh`, `korean-tokenize.py --batch`, `watch-inbox.sh`, `classify-inbox.sh`, `summarize-large-source.sh` 실행 |
 | **Glob** | wiki/ 내 파일 목록 확인 |
 | **Grep** | 위키링크 추적, 소스 인용 검색 |
 | **qmd MCP** | 위키 하이브리드 검색 (BM25+벡터+RRF). 쿼리 세션에서 관련 페이지 탐색 시 활용. FTS5 인덱스는 한국어 형태소 전처리 적용됨 (`korean-tokenize.py --batch`) |
@@ -121,12 +121,12 @@ git diff --name-only HEAD~5 -- wiki/
 ```
 1. wikey.schema.md 읽기
 2. raw/CLASSIFY.md 읽기
-3. raw/0_inbox/ 파일/폴더 목록 확인
+3. `scripts/watch-inbox.sh --status` 또는 `scripts/classify-inbox.sh --dry-run` 실행 → 자동 분류 힌트 확인
 4. 각 항목에 대해:
    a. CLASSIFY.md 자동 규칙 매칭 시도
    b. 매칭 실패 시 LLM 판단 가이드 참조
    c. 분류 결과를 사용자에게 제안
-5. 사용자 승인 후 해당 PARA 카테고리로 이동
+5. 사용자 승인 후 `scripts/classify-inbox.sh --move <src> <dst>` 실행
 6. CLASSIFY.md 하위폴더 정의에 새 폴더 추가 시 문서 업데이트
 7. 이동 완료 후 인제스트 세션 시작 (필요시)
 ```
@@ -142,10 +142,23 @@ Phase C: 쿼리 시 섹션 인덱스 참조 → 해당 페이지만 온디맨드
 ```
 
 Claude Code에서의 구체적 실행:
-1. `Read` 도구 + `pages` 파라미터로 20p씩 분할 (`pages: "1-20"`, `"21-40"`, ...)
-2. 각 패스에서 섹션 제목 + 키워드 + 페이지 범위 기록
-3. source 페이지에 섹션 인덱스 테이블 포함
-4. 핵심 섹션을 재읽기하여 위키 페이지 생성
+1. `scripts/summarize-large-source.sh <pdf> --dry-run` 으로 페이지 수 확인
+2. 20p+ 이면 `scripts/summarize-large-source.sh <pdf>` 실행 (Gemini 자동 요약)
+3. Gemini 미사용 시: `Read` 도구 + `pages` 파라미터로 20p씩 분할
+4. source 페이지에 섹션 인덱스 테이블 포함
+5. 핵심 섹션을 재읽기하여 위키 페이지 생성
+
+## API 키 설정
+
+클라우드 LLM API 키는 `.env` 파일로 관리한다:
+
+```bash
+cp .env.example .env    # 템플릿 복사
+# .env 파일에 실제 API 키 입력 (GEMINI_API_KEY 등)
+# .env는 .gitignore에 포함되어 git에 커밋되지 않음
+```
+
+**주의: `.env` 파일을 Read 도구로 절대 열지 않는다.** API 키가 대화 컨텍스트에 노출된다. 키 존재 여부 확인은 `source .env && echo "length: ${#GEMINI_API_KEY}"` 사용.
 
 ## PII 주의사항
 

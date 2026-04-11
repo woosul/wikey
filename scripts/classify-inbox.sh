@@ -28,50 +28,8 @@ log_ok()    { echo -e "${GREEN}[classify]${NC} $*"; }
 log_warn()  { echo -e "${YELLOW}[classify]${NC} $*"; }
 log_error() { echo -e "${RED}[classify]${NC} $*"; }
 
-# --- 분류 힌트 (CLASSIFY.md 자동 규칙 기반) ---
-
-classify_hint() {
-  local path="$1"
-  local name
-  name=$(basename "$path")
-  local ext="${name##*.}"
-
-  # Rule 1: .meta.yaml
-  if [[ "$name" == *.meta.yaml ]]; then
-    echo "URI 참조 — classification 필드 확인"
-    return
-  fi
-
-  # Rule 2: Obsidian Web Clipper
-  if [[ "$ext" == "md" ]] && head -10 "$path" 2>/dev/null | grep -qi "clipped\|source.*http\|web.clipper"; then
-    echo "3_resources/10_article/ (웹 클리핑)"
-    return
-  fi
-
-  # Rule 3: Product folder (contains PDF + other files)
-  if [ -d "$path" ]; then
-    local has_pdf=false
-    if find "$path" -maxdepth 2 -name "*.pdf" 2>/dev/null | head -1 | grep -q .; then
-      has_pdf=true
-    fi
-    if $has_pdf; then
-      echo "3_resources/30_manual/{topic}/{product}/ (제품 매뉴얼 번들)"
-    else
-      echo "3_resources/{topic}/ (폴더 — LLM 판단 필요)"
-    fi
-    return
-  fi
-
-  # Rule 4-7: Extension-based
-  case "$ext" in
-    pdf)   echo "3_resources/30_manual/ (PDF)" ;;
-    md)    echo "3_resources/60_note/ (마크다운)" ;;
-    stl|step|obj|3mf) echo "3_resources/40_cad/ (CAD)" ;;
-    c|h|cpp|ino|py)   echo "3_resources/50_firmware/ (소스코드)" ;;
-    exe|dll|bin|hex)   echo "3_resources/50_firmware/ (바이너리)" ;;
-    *)     echo "3_resources/ (LLM 판단 필요)" ;;
-  esac
-}
+# 공유 분류 힌트 함수 로드
+source "${SCRIPT_DIR}/lib/classify-hint.sh"
 
 # --- 서브커맨드 ---
 

@@ -59,6 +59,15 @@ EOF
 # 한국어 FTS5 인덱스 전처리 (qmd update 후 실행)
 python3 scripts/korean-tokenize.py --batch
 
+# inbox 상태 확인 + 분류
+./scripts/watch-inbox.sh --status
+./scripts/classify-inbox.sh --dry-run
+./scripts/classify-inbox.sh --move <src> <dst>
+
+# 대용량 PDF 요약 (Gemini 또는 Ollama)
+./scripts/summarize-large-source.sh <pdf> --dry-run
+./scripts/summarize-large-source.sh <pdf>
+
 # 위키 내 키워드 검색 (단순)
 grep -r "검색어" wiki/ --include="*.md"
 
