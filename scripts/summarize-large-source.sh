@@ -20,6 +20,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# .env 파일에서 API 키 로드 (이미 설정된 환경변수는 유지)
+if [ -f "${PROJECT_DIR}/.env" ]; then
+  set -a
+  source "${PROJECT_DIR}/.env"
+  set +a
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -100,26 +107,41 @@ cmd_gemini() {
   log_info "Gemini 요약 시작: $(basename "$pdf") (${size}, ${pages}p)"
   log_info "모델: ${model}"
 
-  local base64_pdf
-  base64_pdf=$(base64 -i "$pdf")
+  # Build JSON payload via Python (avoids shell argument length limits)
+  local payload_file
+  payload_file=$(mktemp /tmp/wikey-gemini-XXXXXX.json)
+  trap "rm -f '$payload_file'" EXIT
+
+  python3 - "$pdf" "$PROMPT_SECTION_INDEX" "$payload_file" <<'PYEOF'
+import json, sys, base64
+
+pdf_path = sys.argv[1]
+prompt = sys.argv[2]
+out_path = sys.argv[3]
+
+with open(pdf_path, "rb") as f:
+    b64 = base64.b64encode(f.read()).decode("ascii")
+
+payload = {
+    "contents": [{
+        "parts": [
+            {"inline_data": {"mime_type": "application/pdf", "data": b64}},
+            {"text": prompt}
+        ]
+    }],
+    "generationConfig": {"temperature": 0.1, "maxOutputTokens": 4096}
+}
+
+with open(out_path, "w") as f:
+    json.dump(payload, f)
+PYEOF
 
   local response
   response=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}" \
     -H 'Content-Type: application/json' \
-    -d "$(python3 -c "
-import json, sys
-prompt = sys.stdin.read()
-payload = {
-    'contents': [{
-        'parts': [
-            {'inline_data': {'mime_type': 'application/pdf', 'data': '${base64_pdf}'}},
-            {'text': prompt}
-        ]
-    }],
-    'generationConfig': {'temperature': 0.1, 'maxOutputTokens': 4096}
-}
-print(json.dumps(payload))
-" <<< "$PROMPT_SECTION_INDEX")" 2>&1)
+    -d @"$payload_file" 2>&1)
+
+  rm -f "$payload_file"
 
   local text
   text=$(echo "$response" | python3 -c "

@@ -9,6 +9,9 @@ raw/
 local-llm/*.gguf
 local-llm/*.bin
 
+# API keys
+.env
+
 # OS
 .DS_Store
 Thumbs.db
