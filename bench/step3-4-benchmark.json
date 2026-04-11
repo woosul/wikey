@@ -1,0 +1,407 @@
+{
+  "description": "Phase 2 Step 3-4 통합 벤치마크. 한국어+영어 혼합 위키 29문서 대상. 50건 쿼리 (exact/semantic/alias/cross-domain/korean).",
+  "version": 1,
+  "collection": "wikey-wiki",
+  "queries": [
+    {
+      "id": "exact-kr-01",
+      "query": "FPV 디지털 영상 전송",
+      "type": "exact",
+      "description": "한국어 정확 키워드 — 디지털 FPV 개념 페이지",
+      "expected_files": ["concepts/fpv-digital-transmission.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-02",
+      "query": "NanoVNA V2",
+      "type": "exact",
+      "description": "엔티티명 정확 매칭",
+      "expected_files": ["entities/nanovna-v2.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-03",
+      "query": "Obsidian",
+      "type": "exact",
+      "description": "영문 엔티티명 정확 매칭",
+      "expected_files": ["entities/obsidian.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-04",
+      "query": "qmd 검색 엔진",
+      "type": "exact",
+      "description": "한영 혼합 엔티티명",
+      "expected_files": ["entities/qmd.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-05",
+      "query": "DJI O3 Air Unit",
+      "type": "exact",
+      "description": "제품명 정확 매칭",
+      "expected_files": ["entities/dji-o3-air-unit.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-06",
+      "query": "seCall 한국어 LLM Wiki",
+      "type": "exact",
+      "description": "엔티티+키워드 조합",
+      "expected_files": ["entities/secall.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-07",
+      "query": "Andrej Karpathy",
+      "type": "exact",
+      "description": "인물명 정확 매칭",
+      "expected_files": ["entities/andrej-karpathy.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-08",
+      "query": "Farzapedia",
+      "type": "exact",
+      "description": "고유명사 정확 매칭",
+      "expected_files": ["entities/farzapedia.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-09",
+      "query": "llmbase 오픈소스",
+      "type": "exact",
+      "description": "엔티티+키워드 조합",
+      "expected_files": ["entities/llmbase.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "exact-kr-10",
+      "query": "3계층 아키텍처",
+      "type": "exact",
+      "description": "한국어 개념 키워드",
+      "expected_files": ["concepts/three-layer-architecture.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "semantic-kr-01",
+      "query": "LLM이 위키를 자동으로 만드는 방법",
+      "type": "semantic",
+      "description": "개념적 매칭 — LLM Wiki 핵심",
+      "expected_files": ["concepts/llm-wiki.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-02",
+      "query": "지식이 시간이 지날수록 더 커지는 원리",
+      "type": "semantic",
+      "description": "복리 효과 간접 표현",
+      "expected_files": ["concepts/knowledge-compounding.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-03",
+      "query": "RAG 검색보다 위키가 나은 이유",
+      "type": "semantic",
+      "description": "비교 개념 매칭",
+      "expected_files": ["concepts/rag-vs-wiki.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-04",
+      "query": "AI 모델을 자유롭게 바꿀 수 있는 설계",
+      "type": "semantic",
+      "description": "BYOAI 개념 간접 표현",
+      "expected_files": ["concepts/byoai.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-05",
+      "query": "원시 데이터와 가공된 위키의 분리",
+      "type": "semantic",
+      "description": "3계층 아키텍처 간접 표현",
+      "expected_files": ["concepts/three-layer-architecture.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-06",
+      "query": "노트를 나중에 검토하는 패턴",
+      "type": "semantic",
+      "description": "Append-and-Review 간접 표현",
+      "expected_files": ["concepts/append-and-review.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-07",
+      "query": "스키마로 LLM 행동을 제어하는 방법",
+      "type": "semantic",
+      "description": "스키마 레이어 개념 매칭",
+      "expected_files": ["concepts/schema-layer.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-08",
+      "query": "1945년 정보 기기 구상",
+      "type": "semantic",
+      "description": "Memex 연도 기반 간접 매칭",
+      "expected_files": ["concepts/memex.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-09",
+      "query": "소스를 넣고 쿼리하고 오류를 잡는 과정",
+      "type": "semantic",
+      "description": "인제스트·쿼리·린트 워크플로우 간접 표현",
+      "expected_files": ["concepts/ingest-query-lint.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-kr-10",
+      "query": "FPV 카메라에서 영상이 깨지는 문제",
+      "type": "semantic",
+      "description": "FPV 디지털 전송 기술 문제 간접 매칭",
+      "expected_files": ["concepts/fpv-digital-transmission.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-en-01",
+      "query": "how LLM builds persistent wiki",
+      "type": "semantic",
+      "description": "영문 의미 매칭 — LLM Wiki 핵심",
+      "expected_files": ["concepts/llm-wiki.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-en-02",
+      "query": "knowledge compounding like compound interest",
+      "type": "semantic",
+      "description": "영문 비유 매칭",
+      "expected_files": ["concepts/knowledge-compounding.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-en-03",
+      "query": "Vannevar Bush information machine",
+      "type": "semantic",
+      "description": "영문 인물+개념 매칭",
+      "expected_files": ["concepts/memex.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-en-04",
+      "query": "BM25 hybrid search with vector",
+      "type": "semantic",
+      "description": "qmd 검색 파이프라인 기술 매칭",
+      "expected_files": ["entities/qmd.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "semantic-en-05",
+      "query": "VNA antenna impedance measurement",
+      "type": "semantic",
+      "description": "영문 기술 용어 매칭",
+      "expected_files": ["entities/nanovna-v2.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "alias-01",
+      "query": "벡터 네트워크 분석기",
+      "type": "alias",
+      "description": "VNA 한국어 풀네임 → NanoVNA",
+      "expected_files": ["entities/nanovna-v2.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "alias-02",
+      "query": "개인 지식 베이스",
+      "type": "alias",
+      "description": "LLM Wiki 동의어",
+      "expected_files": ["concepts/llm-wiki.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "alias-03",
+      "query": "드론 카메라 영상 송출",
+      "type": "alias",
+      "description": "FPV 동의어 표현",
+      "expected_files": ["concepts/fpv-digital-transmission.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "alias-04",
+      "query": "마크다운 메모 앱",
+      "type": "alias",
+      "description": "Obsidian 동의어",
+      "expected_files": ["entities/obsidian.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "alias-05",
+      "query": "As We May Think",
+      "type": "alias",
+      "description": "Memex 논문 제목으로 매칭",
+      "expected_files": ["concepts/memex.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "cross-01",
+      "query": "Karpathy가 제안한 AI 노트 방법론",
+      "type": "cross-domain",
+      "description": "인물+개념 교차 — Karpathy → LLM Wiki 또는 Append-and-Review",
+      "expected_files": ["entities/andrej-karpathy.md", "concepts/llm-wiki.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "cross-02",
+      "query": "DJI O3의 디지털 전송 기술",
+      "type": "cross-domain",
+      "description": "엔티티+개념 교차",
+      "expected_files": ["entities/dji-o3-air-unit.md", "concepts/fpv-digital-transmission.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "cross-03",
+      "query": "LLM 위키 실패 위험 요소",
+      "type": "cross-domain",
+      "description": "개념+분석 교차 — risks-of-llm-wiki",
+      "expected_files": ["analyses/risks-of-llm-wiki.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "cross-04",
+      "query": "Karpathy 비전과 실제 구현 차이",
+      "type": "cross-domain",
+      "description": "분석 문서 매칭 — vision-vs-reality",
+      "expected_files": ["analyses/vision-vs-reality.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "cross-05",
+      "query": "NanoVNA 펌웨어 업데이트 후기",
+      "type": "cross-domain",
+      "description": "소스+엔티티 교차",
+      "expected_files": ["sources/source-nanovna-v2-notes.md", "entities/nanovna-v2.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "source-01",
+      "query": "Karpathy LLM Wiki gist 원문",
+      "type": "exact",
+      "description": "소스 페이지 직접 검색",
+      "expected_files": ["sources/source-llm-wiki-gist.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "source-02",
+      "query": "LLM Wiki 커뮤니티 반응 GeekNews",
+      "type": "exact",
+      "description": "소스 페이지 — 커뮤니티",
+      "expected_files": ["sources/source-llm-wiki-community.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "source-03",
+      "query": "DJI O3 Air Unit 매뉴얼 PDF",
+      "type": "exact",
+      "description": "소스 페이지 — 매뉴얼",
+      "expected_files": ["sources/source-dji-o3-air-unit.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "source-04",
+      "query": "wikey 설계 의사결정 ADR",
+      "type": "exact",
+      "description": "소스 페이지 — 설계 결정",
+      "expected_files": ["sources/source-wikey-design-decisions.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "source-05",
+      "query": "Append-and-Review 블로그 원문",
+      "type": "exact",
+      "description": "소스 페이지 — 블로그",
+      "expected_files": ["sources/source-append-and-review.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "korean-morph-01",
+      "query": "위키의 구조적 설계",
+      "type": "semantic",
+      "description": "조사 '의' 포함 — 형태소 분석 필수",
+      "expected_files": ["concepts/three-layer-architecture.md", "concepts/schema-layer.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "korean-morph-02",
+      "query": "검색엔진에서 한국어를 처리하는 방법",
+      "type": "semantic",
+      "description": "한국어 처리 관련 — qmd 또는 schema",
+      "expected_files": ["entities/qmd.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "korean-morph-03",
+      "query": "지식을 축적하는 시스템",
+      "type": "semantic",
+      "description": "명사형 어미 — 축적하는",
+      "expected_files": ["concepts/knowledge-compounding.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "korean-morph-04",
+      "query": "안테나를 측정했다",
+      "type": "semantic",
+      "description": "과거 시제 어미 — 측정했다",
+      "expected_files": ["entities/nanovna-v2.md", "sources/source-nanovna-v2-notes.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "korean-morph-05",
+      "query": "디지털로 전환된 FPV 영상",
+      "type": "semantic",
+      "description": "수동태 표현",
+      "expected_files": ["concepts/fpv-digital-transmission.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "abbrev-01",
+      "query": "SWR 측정",
+      "type": "exact",
+      "description": "기술 약어 — Standing Wave Ratio",
+      "expected_files": ["entities/nanovna-v2.md", "sources/source-nanovna-v2-notes.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "abbrev-02",
+      "query": "RRF 융합 검색",
+      "type": "exact",
+      "description": "기술 약어 — Reciprocal Rank Fusion",
+      "expected_files": ["entities/qmd.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "abbrev-03",
+      "query": "BYOAI",
+      "type": "exact",
+      "description": "약어 단독 검색",
+      "expected_files": ["concepts/byoai.md"],
+      "expected_in_top_k": 1
+    },
+    {
+      "id": "abbrev-04",
+      "query": "IMU 공진 문제",
+      "type": "exact",
+      "description": "기술 약어+키워드 — DJI O3 소스에 언급",
+      "expected_files": ["sources/source-dji-o3-air-unit.md"],
+      "expected_in_top_k": 3
+    },
+    {
+      "id": "abbrev-05",
+      "query": "BM25",
+      "type": "exact",
+      "description": "검색 알고리즘 약어",
+      "expected_files": ["entities/qmd.md", "entities/secall.md"],
+      "expected_in_top_k": 3
+    }
+  ]
+}
