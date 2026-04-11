@@ -392,4 +392,4 @@
 - [ ] 커뮤니티 피드백 반영 1회+
 - [ ] 3개월 운영 데이터 수집 완료
 
-> 상세 결과: `activity/phase-2-result.md`에 기록 예정
+> 상세 결과: `activity/phase-2-result.md` 참조 (Step 1~3-2 완료 시점 중간 보고서)
