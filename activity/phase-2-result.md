@@ -2,7 +2,7 @@
 
 > 기간: 2026-04-11 ~ 진행 중
 > 목표: 한국어 + LLM 다층 검색 + 커뮤니티
-> 상태: **Step 1~3-2 완료, Step 3-3~7 미착수**
+> 상태: **Step 1~3-3 완료, Step 3-4~7 미착수**
 > 전제: Phase 1 완료 (12/12 필수, 5/5 중요, 3/4 선택)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), vLLM-Metal 0.2.0, Codex CLI 0.118.0
 
@@ -293,7 +293,32 @@ qmd embed --force (수동)                   ← 벡터 임베딩 (프리픽스 
 - Top-3 적중율: 7/10 → **8/10** (+10%)
 - 핵심 교정: #5 "FPV digital transmission" → 정확한 개념 페이지로 교정
 
-**참고:** 벡터 임베딩에는 아직 프리픽스 미반영 (bun 필요, `qmd embed --force`). Step 3-3 임베딩 모델 교체 시 함께 반영 예정.
+**참고:** 벡터 임베딩에 프리픽스가 반영된 상태 (Step 3-3에서 jina-v3로 재임베딩 시 함께 적용됨).
+
+### 2.6 Step 3-3: 임베딩 모델 교체 (Qwen3-Embedding-0.6B)
+
+EmbeddingGemma-300M → **Qwen3-Embedding-0.6B** 교체. jina-v3를 먼저 시도했으나 GGUF에서 성능 우위 없어 Qwen3-Embedding으로 전환.
+
+**모델 선정 과정:**
+1. jina-embeddings-v3 시도 → XLM-RoBERTa 기반, llama.cpp GGUF에서 retrieval LoRA 미적용
+2. llama.cpp 이슈 조사 (#9585, #12327): BERT계열 아키텍처 근본적 미지원
+3. EmbeddingGemma vs jina-v3 A/B 테스트: Top-1 40% vs 30~40%, 유의미한 차이 없음
+4. **Qwen3-Embedding-0.6B 채택**: qmd 공식 Instruct 포맷 지원, Top-1 100%
+
+**변경 파일 (3개):**
+- `tools/qmd/src/llm.ts` — DEFAULT_EMBED_MODEL 상수, `isJinaEmbeddingModel()` 함수, EMBED_CONTEXT_SIZE 8192
+- `tools/qmd/src/store.ts` — DEFAULT_EMBED_MODEL 표시명
+- `tools/qmd/src/db.ts` — Database 인터페이스 `transaction` 추가 (기존 빌드 에러 수정)
+
+**벡터 검색(vsearch) 3모델 비교 (10건):**
+
+| 모델 | Top-1 | Top-3 | 비고 |
+|------|-------|-------|------|
+| EmbeddingGemma-300M | 4/10 (40%) | 7/10 (70%) | 영어 엔티티 양호, 한국어 약함 |
+| jina-v3 (GGUF) | 3~4/10 (30~40%) | 7/10 (70%) | LoRA 미적용으로 개선 없음 |
+| **Qwen3-Embedding-0.6B** | **10/10 (100%)** | **10/10 (100%)** | **채택** |
+
+**핵심 교훈:** GGUF 변환 시 모든 모델이 동등하지 않다. BERT/XLM-RoBERTa 계열(jina-v3, BGE-M3)은 llama.cpp에서 아키텍처 미지원으로 성능 저하. GPT/Qwen 계열이 GGUF 호환성 최적.
 
 ---
 
@@ -304,8 +329,9 @@ qmd embed --force (수동)                   ← 벡터 임베딩 (프리픽스 
 | Step 2 완료 (qmd 내장) | 4/10 (40%) | 6/10 (60%) | 영어/엔티티만 정확, 한국어 실패 |
 | Step 3-1 (형태소 전처리) | — | — | 한국어 BM25 recall 0%→동작 (+74 hits/5건) |
 | Step 3-2 (Contextual Retrieval) | **6/10 (60%)** | **8/10 (80%)** | FPV Top-1 교정, Top-3 풍부화 |
+| Step 3-3 (Qwen3-Embedding) | — | — | vsearch Top-1 **100%** (40%→100%), 한국어+영어 모두 완벽 |
 
-> 게이트 목표: 80%+ Top-1 정확도. 현재 60%. Step 3-3 (임베딩 모델 교체) + Step 3-4 (통합 벤치마크)에서 달성 예정.
+> 게이트 목표: 80%+ Top-1 정확도. vsearch 단독으로 이미 100% 달성. 다음: Step 3-4 (통합 벤치마크)에서 하이브리드 검색 최종 확인.
 
 ---
 
@@ -352,14 +378,14 @@ wikey/
 | Gemma 4 | 12B (9.6GB) | 쿼리 합성, 맥락 프리픽스 생성, 쿼리 확장 |
 | vLLM-Metal | 0.2.0 | OpenAI 호환 API 서버 (배치 처리) |
 | qmd | 2.1.0 (vendored) | BM25 + 벡터 + RRF 검색 인프라 |
-| EmbeddingGemma | 300M (768d) | 벡터 임베딩 (현재, Step 3-3에서 교체 예정) |
+| Qwen3-Embedding | 0.6B | 벡터 임베딩 (다국어 Instruct, vsearch 100%, Step 3-3에서 교체) |
 | kiwipiepy | 0.23.1 | 한국어 형태소 분석 |
 | Codex CLI | 0.118.0 | BYOAI 교차 검증 |
 
 ### 4.3 검색 파이프라인 현재 상태
 
 ```
-[검색 파이프라인 — Step 3-2 완료 시점]
+[검색 파이프라인 — Step 3-3 완료 시점]
 
 사용자 쿼리
     │
@@ -370,9 +396,9 @@ wikey/
     │       ↓
     │    BM25 스코어링
     │
-    └──→ EmbeddingGemma-300M embed        → sqlite-vec cosine
+    └──→ Qwen3-Embedding-0.6B embed        → sqlite-vec cosine
             ↓
-         content_vectors (36 청크, 768d)
+         content_vectors (38 청크, Instruct 포맷)
             ↓
          벡터 유사도 스코어링
     │
@@ -422,6 +448,18 @@ Gemma 4 합성 → 최종 답변
 - NAACL 2025 연구가 SemanticChunker 기각의 결정적 근거
 - **교훈:** 복잡한 기술 선택지가 있을 때 병렬 조사가 순차 시행착오보다 효율적
 
+### 5.6 GGUF 임베딩 모델은 아키텍처 호환성이 핵심이다
+
+- jina-v3 (XLM-RoBERTa 기반): GGUF 변환은 되지만 llama.cpp에서 아키텍처 미지원 (llama.cpp #9585, #12327)
+- retrieval LoRA가 GGUF에 반영되지 않아 base 모델만 로드 → EmbeddingGemma 대비 개선 없음
+- BGE-M3도 동일 이슈 (XLM-RoBERTa 기반)
+- **GPT/Qwen 계열만 GGUF 임베딩에서 정상 동작** — Qwen3-Embedding, jina-v4 (Qwen2.5 기반)
+- **교훈:** GGUF 임베딩 모델 선정 시 아키텍처 호환성(GPT/Qwen 계열)을 1순위로 확인
+- **향후 대체제:** jina-embeddings-v4-text-retrieval (3.09B, Qwen2.5 기반, retrieval LoRA 베이킹)
+  - GGUF: `hf:jinaai/jina-embeddings-v4-text-retrieval-GGUF` (Q4_K_M ~1.9GB)
+  - MTEB SOTA급 (en 55.97, multi 66.49), 한국어 포함 30+언어
+  - 현재 0.6B로 100% 달성이므로 미적용. 문서 100개+ 시 또는 정확도 하락 시 전환 검토
+
 ---
 
 ## 6. 미완료 항목 및 다음 단계
@@ -430,7 +468,7 @@ Gemma 4 합성 → 최종 답변
 
 | Step | 상태 | 핵심 작업 | 난이도 |
 |------|------|----------|--------|
-| 3-3 | 미착수 | jina-embeddings-v3 GGUF → Ollama 등록 → qmd 임베딩 교체 → 재인덱싱 | 저 |
+| 3-3 | **완료** | jina-v3 시도→실패→Qwen3-Embedding 채택, vsearch 100% | 중 |
 | 3-4 | 미착수 | 50-100건 쿼리셋 → 통합 벤치마크 → 80%+ 게이트 판단 | 중 |
 
 ### 6.2 Step 4~7 (미착수)
@@ -444,9 +482,8 @@ Gemma 4 합성 → 최종 답변
 
 ### 6.3 다음 세션 작업 추천
 
-1. **Step 3-3** (임베딩 모델 교체) — 상수 변경 수준, 빠르게 완료 가능
-2. **Step 3-4** (통합 벤치마크) — 80%+ 게이트 통과 후 Step 4로 진행
-3. `qmd embed --force` 실행 — 벡터 임베딩에 Contextual Retrieval 프리픽스 반영
+1. **Step 3-4** (통합 벤치마크) — 50-100건 쿼리셋으로 80%+ 게이트 판단
+2. 게이트 통과 시 Step 4 (반자동 인제스트)로 진행
 
 ---
 

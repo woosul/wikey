@@ -266,14 +266,28 @@
 > 3-0 조사 결과: jina-v3 채택 (30언어 명시 튜닝, 8K 컨텍스트, GGUF 330MB)
 > Late Chunking은 현재 불필요 (문서 평균 550토큰)
 
-- [ ] **3-3-1.** jina-embeddings-v3 GGUF 다운로드
-  - Ollama 등록 또는 node-llama-cpp 직접 로드
-- [ ] **3-3-2.** qmd 임베딩 모델 설정 변경
-  - `QMD_EMBED_MODEL` 환경변수 또는 `llm.ts` DEFAULT_EMBED_MODEL 상수
-  - `formatQueryForEmbedding()`, `formatDocForEmbedding()` 모델별 분기 추가
-- [ ] **3-3-3.** 인덱스 재생성 (`qmd embed`)
-  - 768차원 → 1024차원 전환, sqlite-vec 호환 확인
-- [ ] **3-3-4.** 전/후 벡터 검색 품질 비교 5건
+- [x] **3-3-1.** 임베딩 모델 선정
+  - jina-v3 GGUF 시도 → XLM-RoBERTa 아키텍처 llama.cpp 미지원 (LoRA 비적용)
+  - EmbeddingGemma 대비 우위 없음 확인 (Top-1 30~40% 동일)
+  - 커뮤니티 이슈 조사: llama.cpp#9585, #12327 (BERT계열 미지원)
+  - **Qwen3-Embedding-0.6B 채택** — qmd 공식 지원, Instruct 포맷, 다국어
+- [x] **3-3-2.** qmd 임베딩 모델 설정 변경
+  - `llm.ts` DEFAULT_EMBED_MODEL → Qwen3-Embedding-0.6B URI
+  - `isJinaEmbeddingModel()` 감지 함수 추가 (향후 jina-v4 대비)
+  - `EMBED_CONTEXT_SIZE` 2048 → 8192
+  - `store.ts` DEFAULT_EMBED_MODEL 표시명 → "Qwen3-Embedding-0.6B"
+  - `db.ts` Database 인터페이스에 `transaction` 추가 (기존 빌드 에러 수정)
+- [x] **3-3-3.** 인덱스 재생성 (`qmd embed -f`)
+  - 38 chunks, 29 documents, 9초
+- [x] **3-3-4.** 전/후 벡터 검색 품질 비교 10건
+  - EmbeddingGemma vsearch Top-1: 4/10 (40%)
+  - jina-v3 vsearch Top-1: 3~4/10 (30~40%) — 개선 없음
+  - **Qwen3-Embedding vsearch Top-1: 10/10 (100%)** ← 채택
+  - Top-3도 10/10 (100%)
+
+**향후 대체제:** jina-embeddings-v4-text-retrieval (3.09B, Qwen2.5 기반, retrieval LoRA 머지 완료)
+- GGUF: `hf:jinaai/jina-embeddings-v4-text-retrieval-GGUF` (Q4_K_M ~1.9GB)
+- 현재 100% 정확도이므로 미적용. 문서 100개+ 확장 시 또는 정확도 하락 시 전환 검토
 
 ### 3-4. 통합 벤치마크
 
