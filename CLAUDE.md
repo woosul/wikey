@@ -24,10 +24,10 @@
 | **Read** | wiki/ 페이지 읽기, raw/ 소스 읽기, wikey.schema.md 참조 |
 | **Write** | 새 위키 페이지 생성 (프론트매터 포함) |
 | **Edit** | 기존 위키 페이지 부분 수정 (index.md 갱신, 내용 추가 등) |
-| **Bash** | Git 명령, `validate-wiki.sh`, `check-pii.sh`, `update-qmd.sh` 실행 |
+| **Bash** | Git 명령, `validate-wiki.sh`, `check-pii.sh`, `update-qmd.sh`, `korean-tokenize.py --batch` 실행 |
 | **Glob** | wiki/ 내 파일 목록 확인 |
 | **Grep** | 위키링크 추적, 소스 인용 검색 |
-| **qmd MCP** | 위키 하이브리드 검색 (BM25+벡터+RRF). 쿼리 세션에서 관련 페이지 탐색 시 활용 |
+| **qmd MCP** | 위키 하이브리드 검색 (BM25+벡터+RRF). 쿼리 세션에서 관련 페이지 탐색 시 활용. FTS5 인덱스는 한국어 형태소 전처리 적용됨 (`korean-tokenize.py --batch`) |
 
 ### Obsidian CLI
 
@@ -76,7 +76,8 @@ git diff --name-only HEAD~5 -- wiki/
 8. wiki/overview.md 갱신 (필요시)
 9. scripts/validate-wiki.sh 실행 → 통과 확인
 10. scripts/check-pii.sh 실행 → 통과 확인
-11. Git 커밋
+11. python3 scripts/korean-tokenize.py --batch → FTS5 한국어 형태소 전처리 갱신
+12. Git 커밋
 ```
 
 ### 쿼리 세션
