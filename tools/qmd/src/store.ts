@@ -15,7 +15,7 @@ import { openDatabase, loadSqliteVec } from "./db.js";
 import type { Database } from "./db.js";
 import picomatch from "picomatch";
 import { createHash } from "crypto";
-import { readFileSync, realpathSync, statSync, mkdirSync } from "node:fs";
+import { readFileSync, realpathSync, statSync, mkdirSync, existsSync } from "node:fs";
 // Note: node:path resolve is not imported — we export our own cross-platform resolve()
 import fastGlob from "fast-glob";
 import {
@@ -64,6 +64,34 @@ export const CHUNK_WINDOW_CHARS = CHUNK_WINDOW_TOKENS * 4;  // 800 chars
  */
 function getLlm(store: Store): LlamaCpp {
   return store.llm ?? getDefaultLlamaCpp();
+}
+
+// =============================================================================
+// Contextual Retrieval — prefix cache for embedding enrichment
+// =============================================================================
+
+type ContextualPrefixCache = Record<string, { prefix: string }>;
+let _contextualPrefixCache: ContextualPrefixCache | null | undefined;
+
+/**
+ * Load contextual prefix cache from ~/.cache/qmd/contextual-prefixes.json.
+ * Returns empty object if file doesn't exist. Cached after first load.
+ */
+function loadContextualPrefixCache(): ContextualPrefixCache {
+  if (_contextualPrefixCache !== undefined) return _contextualPrefixCache ?? {};
+  const cachePath = `${HOME}/.cache/qmd/contextual-prefixes.json`;
+  if (!existsSync(cachePath)) {
+    _contextualPrefixCache = null;
+    return {};
+  }
+  try {
+    const data = JSON.parse(readFileSync(cachePath, "utf-8"));
+    _contextualPrefixCache = data;
+    return data;
+  } catch {
+    _contextualPrefixCache = null;
+    return {};
+  }
 }
 
 // =============================================================================
@@ -1466,15 +1494,21 @@ export async function generateEmbeddings(
           session.signal,
         );
 
+        // Contextual Retrieval: prepend prefix to chunk text for richer embeddings
+        const prefixCache = loadContextualPrefixCache();
+        const docPrefix = prefixCache[doc.hash]?.prefix;
+
         for (let seq = 0; seq < chunks.length; seq++) {
+          const rawText = chunks[seq]!.text;
+          const text = docPrefix ? `${docPrefix}\n\n${rawText}` : rawText;
           batchChunks.push({
             hash: doc.hash,
             title,
-            text: chunks[seq]!.text,
+            text,
             seq,
             pos: chunks[seq]!.pos,
             tokens: chunks[seq]!.tokens,
-            bytes: encoder.encode(chunks[seq]!.text).length,
+            bytes: encoder.encode(text).length,
           });
         }
       }

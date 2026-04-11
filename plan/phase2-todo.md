@@ -236,15 +236,30 @@
 > 3-0 조사 결과: 최우선 채택 (직교적 개선, Top-20 실패 -49%)
 > Gemma 4 12B로 50-100토큰 맥락 프리픽스 생성, 36청크 ~2분
 
-- [ ] **3-2-1.** Ollama API를 통한 맥락 프리픽스 생성 프로토타입
-  - 프롬프트 템플릿: 전체 문서 + 청크 → 짧은 맥락 설명 요청
-  - 한국어/영어 혼합 프리픽스 생성 품질 확인
-- [ ] **3-2-2.** 프리픽스 품질 수동 검증 (5건)
-  - 한국어 문서, 영어 문서, 한영 혼합 문서에서 프리픽스 적절성 확인
-- [ ] **3-2-3.** qmd 인덱싱 파이프라인에 통합
-  - `store.ts:generateEmbeddings()` → `chunkDocumentByTokens()` 직후 후킹
-  - 프리픽스를 청크 앞에 prepend → BM25 + 벡터 양쪽 자동 반영
-- [ ] **3-2-4.** 전/후 검색 정확도 비교 10건
+- [x] **3-2-1.** Ollama API를 통한 맥락 프리픽스 생성 프로토타입
+  - `scripts/contextual-retrieval.py` 작성 (--generate/--apply-fts/--batch/--verify 모드)
+  - Anthropic 권장 프롬프트 템플릿: `<document>` + `<chunk>` → 맥락 설명
+  - Gemma 4 thinking 모델 대응: `num_predict: 1024` (thinking ~500 + response ~100)
+  - 29/29 문서 프리픽스 생성 성공 (~7분, 평균 14초/문서)
+  - 캐시: `~/.cache/qmd/contextual-prefixes.json`
+- [x] **3-2-2.** 프리픽스 품질 수동 검증 (10건)
+  - 한국어 문서 (memex, fpv): 한국어 프리픽스 + 영어 용어 병기 ✓
+  - 영어 문서 (rag-vs-wiki, karpathy): 영어 프리픽스 + 한국어 병기 ✓
+  - 한영 혼합 (dji-o3, nanovna): 양방향 용어 병기 ✓
+  - 키워드 풍부화: ESC, FPV, BM25, BYOAI 등 약어 자동 포함 ✓
+- [x] **3-2-3.** qmd 인덱싱 파이프라인에 통합
+  - **FTS5**: `--apply-fts`가 content.doc 원본에 프리픽스 prepend → FTS5 재구성
+  - **임베딩**: `store.ts:generateEmbeddings()` → `chunkDocumentByTokens()` 직후
+    `loadContextualPrefixCache()`로 프리픽스 읽어 chunk.text에 prepend
+  - **파이프라인 순서**: contextual-retrieval.py --batch → korean-tokenize.py --batch
+  - CLAUDE.md, AGENTS.md 인제스트 체크리스트에 스텝 추가
+  - `tsc` 빌드 검증: 새 에러 없음, dist 업데이트 완료
+- [x] **3-2-4.** 전/후 BM25 검색 정확도 비교 10건
+  - Top-1: WITHOUT prefix 5/10 → WITH prefix 6/10 (+10%)
+  - Top-3: WITHOUT prefix 7/10 → WITH prefix 8/10 (+10%)
+  - 핵심 개선: "FPV digital transmission" Top-1이 dji-o3 → fpv-digital-transmission으로 교정
+  - 핵심 개선: "Contextual Retrieval 맥락" Top-3에 secall, qmd 진입
+  - 참고: 벡터 임베딩 재생성은 `qmd embed --force` 실행 필요 (bun 필요)
 
 ### 3-3. 임베딩 모델 교체 (jina-embeddings-v3)
 

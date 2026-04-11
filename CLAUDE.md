@@ -76,8 +76,9 @@ git diff --name-only HEAD~5 -- wiki/
 8. wiki/overview.md 갱신 (필요시)
 9. scripts/validate-wiki.sh 실행 → 통과 확인
 10. scripts/check-pii.sh 실행 → 통과 확인
-11. python3 scripts/korean-tokenize.py --batch → FTS5 한국어 형태소 전처리 갱신
-12. Git 커밋
+11. python3 scripts/contextual-retrieval.py --batch → Gemma 4 맥락 프리픽스 생성 + FTS5 적용
+12. python3 scripts/korean-tokenize.py --batch → FTS5 한국어 형태소 전처리 갱신
+13. Git 커밋
 ```
 
 ### 쿼리 세션

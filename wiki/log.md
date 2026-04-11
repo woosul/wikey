@@ -117,3 +117,13 @@ updated: 2026-04-11
 - 엔티티 생성: [[nanovna-v2]]
 - 기존 엔티티/개념과 교차참조 연결: [[dji-o3-air-unit]], [[fpv-digital-transmission]]
 - 인덱스 갱신
+
+## [2026-04-11] infra | Contextual Retrieval (Gemma 4) 구현
+
+- `scripts/contextual-retrieval.py` 생성 — Anthropic Contextual Retrieval 구현
+- Gemma 4 12B로 29개 문서 맥락 프리픽스 생성 (~7분)
+- FTS5 body에 프리픽스 prepend → BM25 키워드 풍부화
+- `store.ts` 임베딩 파이프라인에 프리픽스 후킹 추가
+- BM25 Top-1 정확도: 5/10 → 6/10, Top-3: 7/10 → 8/10
+- 핵심 교정: "FPV digital transmission" Top-1 → fpv-digital-transmission.md
+- 파이프라인: contextual-retrieval.py --batch → korean-tokenize.py --batch
