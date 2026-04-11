@@ -215,20 +215,21 @@
 > 3-0 조사 결과: kiwipiepy 채택 (mecab-ko 대비 설치 간편, JVM 불필요, 정확도 유사)
 > 접근법: 전처리 레이어 (FTS5 토크나이저 교체 없이, 인덱싱/쿼리 전 텍스트 변환)
 
-- [ ] **3-1-1.** kiwipiepy 설치 + 전처리 스크립트 작성
-  - `pip install kiwipiepy`
-  - `scripts/korean-tokenize.py` — stdin 텍스트 → stdout 형태소 분리 결과
-  - 한영 혼합 처리: 한국어만 형태소 분석, 영어는 그대로 통과
-- [ ] **3-1-2.** qmd FTS5 인덱싱 파이프라인에 전처리 레이어 추가
-  - `store.ts` 트리거 (842행, 863행) 또는 insertContent 수정
-  - content.doc 원본 보존, FTS5 body만 전처리된 텍스트로 치환
-  - Python 서브프로세스 호출 패턴 구현
-- [ ] **3-1-3.** 쿼리 파이프라인에도 동일 전처리 적용
-  - `buildFTS5Query()` (2919행) 호출 전에 쿼리 텍스트 형태소 분리
-- [ ] **3-1-4.** 전/후 BM25 검색 품질 비교 10건
-  - 한국어 조사 포함 쿼리 ("위키의", "검색을")
-  - 한영 혼합 쿼리 ("DJI O3 주파수")
-  - 복합명사 쿼리
+- [x] **3-1-1.** kiwipiepy 설치 + 전처리 스크립트 작성
+  - `pip install kiwipiepy` (v0.23.1)
+  - `scripts/korean-tokenize.py` — index/query/fts5/batch 4개 모드
+  - 알파뉴메릭 토큰 보존 (BM25, FPV, 5.8GHz 등 분리 방지)
+- [x] **3-1-2.** qmd FTS5 인덱싱 파이프라인에 전처리 레이어 추가
+  - 배치 후처리 방식: `korean-tokenize.py --batch` → FTS5 body를 형태소 분리 텍스트로 교체
+  - content.doc 원본 보존, FTS5 body만 전처리 (DELETE+INSERT)
+  - SQLite WAL 주의: 복원 시 VACUUM INTO 사용 필수
+- [x] **3-1-3.** 쿼리 파이프라인에도 동일 전처리 적용
+  - `wikey-query.sh` search/basic/gemma4 3개 모드에 lex 쿼리 전처리 통합
+  - preprocess_korean_query() → content words만 추출 (조사/어미 제거)
+- [x] **3-1-4.** 전/후 BM25 검색 품질 비교 10건
+  - 조사 분리 5건: +74 hits (0→14~21), "위키의"→"위키", "검색을"→"검색" 등
+  - 영어 보존 2건: BM25(6→6), FPV(7→7) 동일
+  - 복합 쿼리 3건: 주파수+대역(2→2), 지식+축적(8→8), 인제스트+린트(12→12) 동일
 
 ### 3-2. Contextual Retrieval (Gemma 4)
 

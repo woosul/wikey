@@ -27,6 +27,7 @@ User → Add source → LLM builds wiki → Browse in Obsidian
 
 - [Obsidian](https://obsidian.md) 1.12+ (with CLI enabled)
 - An LLM agent: [Claude Code](https://claude.com/claude-code), [Codex CLI](https://github.com/openai/codex), or [Ollama](https://ollama.com) (Gemma 4)
+- Python 3.9+ with kiwipiepy (`pip install kiwipiepy`) — Korean morpheme preprocessing
 
 ### 2. Setup
 
@@ -100,7 +101,7 @@ wikey/
 | Phase | Focus | Status |
 |-------|-------|--------|
 | **Phase 1** | Zero-setup personal wiki + BYOAI | **Complete** |
-| **Phase 2** | Korean search + LLM multi-layer search + Community | **In Progress** (Step 1-2 done) |
+| **Phase 2** | Korean search + LLM multi-layer search + Community | **In Progress** (Step 1-2, 3-0, 3-1 done) |
 | **Phase 3** | Team server + Web UI | Planned |
 | **Phase 4** | Korean enterprise tech KB | Planned |
 

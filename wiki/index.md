@@ -14,7 +14,7 @@ updated: 2026-04-11
 - [[llmbase]] — LLM Wiki 오픈소스 구현, React UI + 모델 폴백 체인 (소스: 1개)
 - [[secall]] — 한국어 지원 LLM Wiki 구현체, BM25 가드레일 (소스: 1개)
 - [[obsidian]] — 마크다운 지식 관리 도구, LLM Wiki의 브라우저 역할 (소스: 1개)
-- [[qmd]] — 로컬 마크다운 검색 인프라 (BM25+벡터+RRF), wikey 검색 파이프라인 핵심 (소스: 3개)
+- [[qmd]] — 로컬 마크다운 검색 인프라 (BM25+벡터+RRF+한국어 형태소), wikey 검색 파이프라인 핵심 (소스: 3개)
 - [[dji-o3-air-unit]] — DJI 3세대 디지털 FPV 영상 전송 장치 (소스: 1개)
 - [[nanovna-v2]] — 안테나 SWR·임피던스를 측정하는 소형 VNA 도구 (소스: 1개)
 
