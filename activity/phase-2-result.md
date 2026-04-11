@@ -350,6 +350,9 @@ wikey/
 │   ├── check-pii.sh               PII 스캔
 │   ├── korean-tokenize.py         kiwipiepy 형태소 전처리 (Step 3-1)
 │   ├── contextual-retrieval.py    Gemma 4 맥락 프리픽스 (Step 3-2)
+│   ├── watch-inbox.sh             inbox 실시간 감시 (Step 4-1)
+│   ├── classify-inbox.sh          inbox 분류 + 이동 (Step 4-1)
+│   ├── summarize-large-source.sh  대용량 PDF 섹션 인덱스 (Step 4-2)
 │   ├── migrate-raw-to-para.sh     PARA 마이그레이션 (Step 1)
 │   └── update-qmd.sh              qmd upstream 관리
 ├── tools/qmd/                     qmd 2.1.0 vendored (검색 인프라)
@@ -483,7 +486,7 @@ Gemma 4 합성 → 최종 답변
 
 ### 6.3 다음 세션 작업 추천
 
-1. **Step 4** (반자동 인제스트) — fswatch inbox 감시, Gemini 대용량 처리
+1. **Step 4-2-2** (대용량 처리 테스트) — GEMINI_API_KEY 설정 후 실제 PDF 테스트
 2. **Step 5** (멀티 LLM 워크플로우 최적화) — 프로바이더별 비용 분석
 
 ---

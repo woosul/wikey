@@ -308,21 +308,28 @@
 
 ### 4-1. inbox 모니터링
 
-- [ ] **4-1-1.** `scripts/watch-inbox.sh` 작성
-  - fswatch로 `raw/inbox/` 감시
-  - 새 파일/폴더 감지 시 알림 (macOS Notification 또는 터미널 출력)
-- [ ] **4-1-2.** 알림 → 분류 → 인제스트 흐름 연결
-  - 파일 감지 → CLASSIFY.md 기반 분류 제안 → 사용자 승인 → 이동 → 인제스트 트리거
-- [ ] **4-1-3.** 폴더 단위 감지 테스트
-  - `inbox/`에 제품 매뉴얼 폴더 추가 → 번들 분류 → resources/ 이동 → 인제스트
+- [x] **4-1-1.** `scripts/watch-inbox.sh` 작성
+  - fswatch로 `raw/0_inbox/` 실시간 감시 (Created/MovedTo/Renamed 이벤트)
+  - macOS Notification + 터미널 출력 (파일명, 추천 분류)
+  - `--status` 서브커맨드로 현재 inbox 상태 확인
+- [x] **4-1-2.** `scripts/classify-inbox.sh` 작성 — 분류 → 이동 흐름
+  - `--dry-run`: CLASSIFY.md 자동 규칙 기반 분류 제안 출력
+  - `--move <src> <dst>`: 항목 이동 (LLM 에이전트용 CLI)
+  - 확장자 기반 7개 자동 규칙 + 폴더 번들 감지
+- [x] **4-1-3.** 폴더 단위 감지 테스트
+  - 테스트 폴더 생성 → 번들 분류 → resources/ 이동 → 정리 완료
 
 ### 4-2. 대용량 소스 처리
 
-- [ ] **4-2-1.** Gemini API 연동 (1M+ 컨텍스트 활용)
-  - 100p+ PDF → Gemini 1차 요약 → 요약본을 Claude Code에 전달하여 위키 통합
+- [x] **4-2-1.** `scripts/summarize-large-source.sh` 작성 — Gemini/Ollama 대용량 요약
+  - Gemini 모드: PDF base64 → Gemini API → 섹션 인덱스 마크다운 생성
+  - 로컬 모드: pdftotext → Ollama Gemma 4 → 섹션 인덱스
+  - `--dry-run`: PDF 정보 + 권장 모드 출력
+  - wikey.schema.md "2단계 인제스트 Phase A" 자동화
 - [ ] **4-2-2.** 대용량 처리 테스트 1건 (100p+ PDF)
-- [ ] **4-2-3.** 미승인 소스 대기 목록 관리 방안 정의
-  - inbox에 체류 중인 미분류 파일 목록 출력 스크립트
+  - GEMINI_API_KEY 설정 후 실제 PDF로 테스트 필요
+- [x] **4-2-3.** 미승인 소스 대기 목록 관리
+  - `watch-inbox.sh --status` + `classify-inbox.sh --dry-run`으로 대기 목록 확인
 
 ---
 
