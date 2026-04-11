@@ -10,7 +10,7 @@ tags: [llm-wiki, karpathy, pattern]
 # LLM Wiki — Karpathy 원문
 
 > 원본: [Karpathy LLM Wiki gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) (2026-04-02)
-> 원시 소스: `raw/resources/wikey-design/llm-wiki.md`
+> 원시 소스: `raw/3_resources/10_article/901_wikey_design/llm-wiki.md`
 
 ## 핵심 아이디어
 

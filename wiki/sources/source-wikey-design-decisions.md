@@ -9,7 +9,7 @@ tags: [wikey, adr, design-decision]
 
 # Wikey 설계 의사결정
 
-> 원시 소스: `raw/projects/wikey/wikey-design-decisions.md`
+> 원시 소스: `raw/1_projects/wikey/wikey-design-decisions.md`
 
 ## 차별화 전략
 

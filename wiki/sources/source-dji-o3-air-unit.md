@@ -10,7 +10,7 @@ tags: [dji, fpv, hardware, manual]
 # DJI O3 Air Unit 사용자 매뉴얼
 
 > 원본: DJI O3 Air Unit User Manual v1.0 (2023.03), 33페이지 PDF
-> 원시 소스: `raw/resources/fpv/DJI-O3-Air-Unit/DJI_O3_Air_Unit_User_Manual_v1.0_EN.pdf`
+> 원시 소스: `raw/3_resources/30_manual/102_build_fpv/DJI-O3-Air-Unit/DJI_O3_Air_Unit_User_Manual_v1.0_EN.pdf`
 > 인제스트 방법: 3청크 분할 읽기 (p1-5, p6-15, p16-33)
 
 ## 제품 개요

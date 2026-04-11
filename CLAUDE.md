@@ -118,7 +118,7 @@ git diff --name-only HEAD~5 -- wiki/
 ```
 1. wikey.schema.md 읽기
 2. raw/CLASSIFY.md 읽기
-3. raw/inbox/ 파일/폴더 목록 확인
+3. raw/0_inbox/ 파일/폴더 목록 확인
 4. 각 항목에 대해:
    a. CLASSIFY.md 자동 규칙 매칭 시도
    b. 매칭 실패 시 LLM 판단 가이드 참조

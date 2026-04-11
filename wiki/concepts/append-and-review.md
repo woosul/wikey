@@ -31,7 +31,7 @@ tags: [note-taking, productivity, pattern]
 | 수동 검토 | 자동 린트 | LLM이 검토 후보 제안 |
 | 관련 항목 수동 병합 | 자동 교차참조 | LLM이 병합 후보 추천 |
 
-가능한 워크플로우: 사용자가 append-and-review 스타일로 `raw/inbox/`에 간편하게 소스 추가 → LLM이 주기적으로 새 노트를 인제스트하여 위키에 통합.
+가능한 워크플로우: 사용자가 append-and-review 스타일로 `raw/0_inbox/`에 간편하게 소스 추가 → LLM이 주기적으로 새 노트를 인제스트하여 위키에 통합.
 
 ## 관련 항목
 

@@ -10,7 +10,7 @@ tags: [llm-wiki, community, use-cases]
 # LLM Wiki — 커뮤니티 반응과 사례
 
 > 원본: Karpathy gist 댓글 30개 (2026-04-04) + GeekNews 댓글 15개 + Hacker News 의견 (2026-04-05)
-> 원시 소스: `raw/resources/wikey-design/idea-comment.md`
+> 원시 소스: `raw/3_resources/10_article/901_wikey_design/idea-comment.md`
 
 ## 실제 사용 사례
 
