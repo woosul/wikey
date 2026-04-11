@@ -185,6 +185,12 @@
 > qmd의 현재 청킹(구조적 브레이크포인트 + 900토큰 고정 크기)은 의미 단위 파편화 문제가 있다.
 > 단순히 형태소 분석만 추가하는 것이 아니라, 검색 파이프라인 전체의 품질 개선을 설계해야 한다.
 
+- [ ] **3-0-0.** 기획 단계 사전 조사 참조 분석
+  - `raw/.../idea-comment.md` (→ `wiki/sources/source-llm-wiki-community.md`)
+  - [seCall](https://github.com/hang-in/seCall): 한국어 BM25 가드레일 구현체 — 구현 방식 분석
+  - Farzapedia: RAG < 직접 탐색 실전 교훈 — 청크 품질 자체가 핵심
+  - 커뮤니티 합의: "BM25가 한글에 약해 별도 가드레일 필요" (@kurthong, GeekNews)
+  - 상세: `tools/qmd-comprehension-guide.md` 섹션 5.5
 - [ ] **3-0-1.** Chonkie SemanticChunker 프로토타이핑
   - wikey 위키 29페이지로 Chonkie 실행, qmd 기본 청킹과 청크 품질 비교
   - 한국어 문서에서 cosine 유사도 기반 경계 탐지 효과 측정
