@@ -74,7 +74,8 @@ wikey/
 │   ├── sources/             # Source summaries
 │   └── analyses/            # Query results saved as pages
 ├── scripts/                 # Validation & automation
-└── local-llm/               # Local LLM prompts (Gemma 4)
+├── local-llm/               # Local LLM config & query pipeline
+└── tools/qmd/               # Search infrastructure (vendored, tobi/qmd)
 ```
 
 ### Three Layers
@@ -99,7 +100,7 @@ wikey/
 | Phase | Focus | Status |
 |-------|-------|--------|
 | **Phase 1** | Zero-setup personal wiki + BYOAI | **Complete** |
-| **Phase 2** | Korean search + LLM multi-layer search + Community | Planned |
+| **Phase 2** | Korean search + LLM multi-layer search + Community | **In Progress** (Step 1-2 done) |
 | **Phase 3** | Team server + Web UI | Planned |
 | **Phase 4** | Korean enterprise tech KB | Planned |
 

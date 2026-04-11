@@ -48,10 +48,18 @@ EOF
 ### 검색
 
 ```bash
-# 위키 내 키워드 검색
+# qmd 하이브리드 검색 (BM25+벡터+RRF — 권장)
+./tools/qmd/bin/qmd query "검색어" -c wikey-wiki
+
+# wikey-query.sh (qmd 검색 → Gemma 4 합성)
+./local-llm/wikey-query.sh "질문"
+./local-llm/wikey-query.sh --backend gemma4 "한국어 질문"
+./local-llm/wikey-query.sh --search "검색만"
+
+# 위키 내 키워드 검색 (단순)
 grep -r "검색어" wiki/ --include="*.md"
 
-# 위키링크 추적 (특정 페이지를 참조하는 파일 찾기)
+# 위키링크 추적
 grep -r "\[\[page-name\]\]" wiki/ --include="*.md"
 
 # 파일 목록

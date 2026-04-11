@@ -83,6 +83,20 @@ updated: 2026-04-11
 - wiki/sources/ 페이지의 원시 소스 경로 6건 갱신
 - 영향 페이지: 모든 source-*.md, [[obsidian]], [[append-and-review]]
 
+## [2026-04-11] infra | Phase 2 Step 2 — qmd 다층 검색 파이프라인 구축
+
+- qmd 2.1.0 소스 클론 → `tools/qmd/`에 vendored (tobi/qmd@cfd640e)
+- `~/.claude.json`에 MCP 서버 글로벌 등록
+- wiki/ 인덱싱: 29 문서, 36 청크, EmbeddingGemma-300M
+- `wikey-query.sh` backend 분리: basic(qmd 내장) / gemma4(Gemma 4 지능 레이어)
+- `local-llm/wikey.conf` 환경 설정 파일 생성
+- `scripts/update-qmd.sh` upstream 관리 스크립트 (git pull 기반)
+- `tools/qmd-comprehension-guide.md` 소스 완전 분석 가이드 (아키텍처+평가+커스터마이징)
+- 벤치마크: basic Top-1 0/5, gemma4 Top-1 1/5 (한국어) → Step 3 청킹 혁신 필요
+- Semantic Chunking 커뮤니티 조사 완료 (Contextual Retrieval 유력)
+- idea-comment.md 한국어 프로젝트 참조 추가 (seCall BM25 가드레일)
+- 영향 페이지: [[qmd]], wikey.schema.md, CLAUDE.md, local-llm/README.md
+
 ## [2026-04-11] ingest | NanoVNA V2 개인 노트
 
 - 원시 소스: `raw/notes/nanovna-v2-notes.md`
