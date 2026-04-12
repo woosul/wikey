@@ -264,74 +264,193 @@ export class WikeyChatView extends ItemView {
 
   // ── Ingest Panel ──
 
+  private pendingFiles: File[] = []
+
   private toggleIngestPanel() {
     if (this.ingestPanel) {
       this.ingestPanel.remove()
       this.ingestPanel = null
+      this.pendingFiles = []
       return
     }
 
-    // 메시지 영역 위 (헤더 아래)에 삽입
     this.ingestPanel = createDiv({ cls: 'wikey-ingest-panel' })
     this.messagesEl.parentElement?.insertBefore(this.ingestPanel, this.messagesEl)
 
-    // Drop zone
-    const dropZone = this.ingestPanel.createDiv({ cls: 'wikey-ingest-dropzone' })
-    dropZone.createEl('span', { text: '파일을 여기에 드래그하세요' })
+    // ── Action buttons (top) ──
+    const actionsBar = this.ingestPanel.createDiv({ cls: 'wikey-ingest-actions' })
 
-    const selectBtn = dropZone.createEl('button', { cls: 'wikey-ingest-select-btn', text: '파일 선택' })
-    selectBtn.addEventListener('click', () => {
-      new IngestFileSuggestModal(this.plugin).open()
+    const addBtn = actionsBar.createEl('button', { cls: 'wikey-ingest-action-btn', text: 'Add to inbox' })
+    addBtn.addEventListener('click', () => this.addPendingToInbox())
+
+    const ingestBtn = actionsBar.createEl('button', { cls: 'wikey-ingest-action-btn', text: 'Ingest inbox' })
+    ingestBtn.addEventListener('click', () => this.ingestInbox())
+
+    const addIngestBtn = actionsBar.createEl('button', { cls: 'wikey-ingest-action-btn wikey-ingest-action-primary', text: 'Add + Ingest' })
+    addIngestBtn.addEventListener('click', async () => {
+      await this.addPendingToInbox()
+      await this.ingestInbox()
     })
 
-    // Drag/drop events
+    // ── Drop zone ──
+    const dropZone = this.ingestPanel.createDiv({ cls: 'wikey-ingest-dropzone' })
+    dropZone.createEl('span', { text: '파일을 여기에 드래그하세요', cls: 'wikey-ingest-drop-label' })
+
+    // Hidden native file input
+    const fileInput = dropZone.createEl('input', {
+      attr: { type: 'file', multiple: 'true', accept: '.md,.txt,.pdf' },
+      cls: 'wikey-ingest-file-input',
+    })
+    const browseBtn = dropZone.createEl('button', { cls: 'wikey-ingest-browse-btn', text: '파일 탐색기' })
+    browseBtn.addEventListener('click', () => fileInput.click())
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files) this.onFilesSelected(fileInput.files)
+    })
+
+    // Drag/drop
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.addClass('wikey-ingest-dragover') })
     dropZone.addEventListener('dragleave', () => dropZone.removeClass('wikey-ingest-dragover'))
-    dropZone.addEventListener('drop', async (e) => {
+    dropZone.addEventListener('drop', (e) => {
       e.preventDefault()
       dropZone.removeClass('wikey-ingest-dragover')
-      const files = e.dataTransfer?.files
-      if (files && files.length > 0) {
-        new Notice(`${files.length}개 파일 감지 — Obsidian 내부 파일만 인제스트 가능해요. [파일 선택] 버튼을 사용하세요.`)
-      }
+      if (e.dataTransfer?.files) this.onFilesSelected(e.dataTransfer.files)
     })
 
-    // Inbox status
-    this.renderInboxStatus(this.ingestPanel)
+    // ── Pending files list ──
+    this.ingestPanel.createDiv({ cls: 'wikey-ingest-pending' })
+
+    // ── Inbox status ──
+    this.renderInboxStatus()
+
+    // ── Progress area ──
+    this.ingestPanel.createDiv({ cls: 'wikey-ingest-progress' })
   }
 
-  private async renderInboxStatus(panel: HTMLElement) {
-    const inboxDiv = panel.createDiv({ cls: 'wikey-ingest-inbox' })
+  private onFilesSelected(fileList: FileList) {
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i]
+      if (!this.pendingFiles.some((p) => p.name === f.name)) {
+        this.pendingFiles.push(f)
+      }
+    }
+    this.renderPendingFiles()
+  }
+
+  private renderPendingFiles() {
+    const container = this.ingestPanel?.querySelector('.wikey-ingest-pending')
+    if (!container) return
+    container.empty()
+
+    if (this.pendingFiles.length === 0) return
+
+    const el = container as HTMLElement
+    el.createEl('div', { text: `선택된 파일 (${this.pendingFiles.length})`, cls: 'wikey-ingest-section-label' })
+    for (const f of this.pendingFiles) {
+      const row = el.createDiv({ cls: 'wikey-ingest-file-row' })
+      row.createEl('span', { text: f.name, cls: 'wikey-ingest-file-name' })
+      const sizeKb = (f.size / 1024).toFixed(1)
+      row.createEl('span', { text: `${sizeKb} KB`, cls: 'wikey-ingest-file-size' })
+    }
+  }
+
+  private async addPendingToInbox() {
+    if (this.pendingFiles.length === 0) {
+      new Notice('추가할 파일을 선택하세요')
+      return
+    }
+
+    const progressEl = this.ingestPanel?.querySelector('.wikey-ingest-progress') as HTMLElement
+    if (progressEl) progressEl.setText('inbox에 복사 중...')
+
+    const basePath = (this.app.vault.adapter as any).basePath ?? ''
+    const { join } = require('node:path') as typeof import('node:path')
+    const { writeFileSync, mkdirSync, existsSync } = require('node:fs') as typeof import('node:fs')
+
+    const inboxDir = join(basePath, 'raw/0_inbox')
+    if (!existsSync(inboxDir)) mkdirSync(inboxDir, { recursive: true })
+
+    let count = 0
+    for (const f of this.pendingFiles) {
+      try {
+        const buffer = await f.arrayBuffer()
+        writeFileSync(join(inboxDir, f.name), Buffer.from(buffer))
+        count++
+      } catch (err: any) {
+        console.error('[Wikey] file copy failed:', f.name, err)
+      }
+    }
+
+    this.pendingFiles = []
+    this.renderPendingFiles()
+    this.renderInboxStatus()
+    if (progressEl) progressEl.setText(`${count}개 파일 inbox에 추가됨`)
+    new Notice(`${count}개 파일이 inbox에 추가됨`)
+  }
+
+  private async ingestInbox() {
+    const progressEl = this.ingestPanel?.querySelector('.wikey-ingest-progress') as HTMLElement
+
+    let inboxFiles: string[]
+    try {
+      const all = await this.plugin.wikiFS.list('raw/0_inbox')
+      inboxFiles = all.filter((f) => f.endsWith('.md') || f.endsWith('.txt'))
+    } catch {
+      new Notice('inbox 폴더를 찾을 수 없습니다')
+      return
+    }
+
+    if (inboxFiles.length === 0) {
+      new Notice('inbox에 인제스트할 파일이 없습니다')
+      return
+    }
+
+    for (let i = 0; i < inboxFiles.length; i++) {
+      const f = inboxFiles[i]
+      const name = f.split('/').pop() ?? f
+      if (progressEl) progressEl.setText(`인제스트 중 (${i + 1}/${inboxFiles.length}): ${name}`)
+      await runIngest(this.plugin, f)
+    }
+
+    if (progressEl) progressEl.setText(`완료: ${inboxFiles.length}개 파일 인제스트`)
+    this.renderInboxStatus()
+    new Notice(`${inboxFiles.length}개 파일 인제스트 완료`)
+  }
+
+  private async renderInboxStatus() {
+    const existing = this.ingestPanel?.querySelector('.wikey-ingest-inbox')
+    if (existing) existing.remove()
+
+    const container = this.ingestPanel
+    if (!container) return
+
+    const progressEl = container.querySelector('.wikey-ingest-progress')
+    const inboxDiv = createDiv({ cls: 'wikey-ingest-inbox' })
+    if (progressEl) container.insertBefore(inboxDiv, progressEl)
+    else container.appendChild(inboxDiv)
 
     try {
-      const files = await this.plugin.wikiFS.list('raw/0_inbox')
-      const mdFiles = files.filter((f) => f.endsWith('.md'))
-      if (mdFiles.length === 0) {
-        inboxDiv.createEl('span', { text: 'inbox: 비어있음', cls: 'wikey-ingest-inbox-empty' })
+      const all = await this.plugin.wikiFS.list('raw/0_inbox')
+      const files = all.filter((f) => f.endsWith('.md') || f.endsWith('.txt'))
+
+      inboxDiv.createEl('div', {
+        text: `inbox (${files.length}개)`,
+        cls: 'wikey-ingest-section-label',
+      })
+
+      if (files.length === 0) {
+        inboxDiv.createEl('span', { text: '비어있음', cls: 'wikey-ingest-inbox-empty' })
         return
       }
 
-      inboxDiv.createEl('span', { text: `inbox: ${mdFiles.length}개 파일 대기`, cls: 'wikey-ingest-inbox-label' })
-      for (const f of mdFiles.slice(0, 5)) {
+      for (const f of files.slice(0, 10)) {
         const name = f.split('/').pop() ?? f
-        inboxDiv.createEl('div', { text: `• ${name}`, cls: 'wikey-ingest-inbox-item' })
+        inboxDiv.createEl('div', { text: `• ${name}`, cls: 'wikey-ingest-file-row' })
       }
-      if (mdFiles.length > 5) {
-        inboxDiv.createEl('div', { text: `... 외 ${mdFiles.length - 5}개`, cls: 'wikey-ingest-inbox-item' })
+      if (files.length > 10) {
+        inboxDiv.createEl('div', { text: `... 외 ${files.length - 10}개`, cls: 'wikey-ingest-file-row' })
       }
-
-      const ingestAllBtn = inboxDiv.createEl('button', { cls: 'wikey-ingest-all-btn', text: '모두 인제스트' })
-      ingestAllBtn.addEventListener('click', async () => {
-        ingestAllBtn.setAttr('disabled', 'true')
-        ingestAllBtn.setText('처리 중...')
-        for (const f of mdFiles) {
-          await runIngest(this.plugin, f)
-        }
-        ingestAllBtn.setText('완료')
-        setTimeout(() => this.toggleIngestPanel(), 1500)
-      })
     } catch {
-      inboxDiv.createEl('span', { text: 'inbox 폴더를 찾을 수 없습니다', cls: 'wikey-ingest-inbox-empty' })
+      inboxDiv.createEl('span', { text: 'inbox 폴더 없음', cls: 'wikey-ingest-inbox-empty' })
     }
   }
 

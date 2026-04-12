@@ -349,104 +349,145 @@
 }
 
 /* ══════════════════════════════
-   Ingest Panel — Purple Theme
+   Ingest Panel
    ══════════════════════════════ */
 
 .wikey-ingest-panel {
   border-bottom: 1px solid var(--background-modifier-border);
-  padding: 12px 14px;
+  padding: 10px 14px;
   margin: 0 -12px;
   padding-left: 12px;
   padding-right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
+/* Action buttons bar */
+.wikey-ingest-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.wikey-ingest-action-btn {
+  flex: 1;
+  background: transparent !important;
+  border: 1px solid var(--interactive-accent) !important;
+  box-shadow: none !important;
+  border-radius: 6px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 0.8em;
+  font-weight: 500;
+  color: var(--interactive-accent);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.wikey-ingest-action-btn:hover {
+  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent) !important;
+}
+
+.wikey-ingest-action-primary {
+  background: var(--interactive-accent) !important;
+  color: white !important;
+}
+
+.wikey-ingest-action-primary:hover {
+  opacity: 0.85;
+  background: var(--interactive-accent) !important;
+}
+
+/* Drop zone */
 .wikey-ingest-dropzone {
   border: 2px dashed var(--interactive-accent);
   border-radius: 10px;
-  padding: 22px 16px;
+  padding: 20px 16px;
   text-align: center;
-  color: var(--text-normal);
+  color: var(--text-muted);
   font-size: 0.88em;
   transition: border-color 0.2s, background-color 0.2s;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
-  opacity: 0.9;
+  background: color-mix(in srgb, var(--interactive-accent) 6%, transparent);
 }
 
-.wikey-ingest-dropzone:hover {
-  opacity: 1;
-  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
+.wikey-ingest-drop-label {
+  color: var(--text-muted);
 }
 
 .wikey-ingest-dragover {
   border-color: var(--interactive-accent);
-  background: color-mix(in srgb, var(--interactive-accent) 18%, transparent) !important;
-  opacity: 1;
+  background: color-mix(in srgb, var(--interactive-accent) 15%, transparent) !important;
 }
 
-.wikey-ingest-select-btn {
+.wikey-ingest-file-input {
+  display: none;
+}
+
+.wikey-ingest-browse-btn {
   background: var(--interactive-accent) !important;
   color: white !important;
   border: none !important;
   box-shadow: none !important;
   border-radius: 6px;
-  padding: 7px 20px;
+  padding: 6px 18px;
   cursor: pointer;
   font-size: 0.85em;
   font-weight: 500;
   transition: opacity 0.15s;
 }
 
-.wikey-ingest-select-btn:hover {
+.wikey-ingest-browse-btn:hover {
   opacity: 0.85;
 }
 
-.wikey-ingest-inbox {
-  padding: 10px 0 0;
-  font-size: 0.82em;
-}
-
-.wikey-ingest-inbox-label {
+/* Section labels */
+.wikey-ingest-section-label {
   font-weight: 600;
+  font-size: 0.82em;
   color: var(--text-normal);
-  display: block;
   margin-bottom: 4px;
 }
 
-.wikey-ingest-inbox-empty {
+/* Pending & inbox file lists */
+.wikey-ingest-pending,
+.wikey-ingest-inbox {
+  font-size: 0.82em;
+}
+
+.wikey-ingest-file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
   color: var(--text-muted);
+}
+
+.wikey-ingest-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wikey-ingest-file-size {
+  font-size: 0.85em;
+  color: var(--text-faint);
+  margin-left: 8px;
+}
+
+.wikey-ingest-inbox-empty {
+  color: var(--text-faint);
   font-style: italic;
 }
 
-.wikey-ingest-inbox-item {
-  color: var(--text-muted);
-  padding: 2px 0;
-}
-
-.wikey-ingest-all-btn {
-  margin-top: 8px;
-  background: var(--interactive-accent) !important;
-  color: white !important;
-  border: none !important;
-  box-shadow: none !important;
-  border-radius: 6px;
-  padding: 7px 20px;
-  cursor: pointer;
+/* Progress */
+.wikey-ingest-progress {
   font-size: 0.82em;
-  font-weight: 500;
-  transition: opacity 0.15s;
-}
-
-.wikey-ingest-all-btn:hover {
-  opacity: 0.85;
-}
-
-.wikey-ingest-all-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  color: var(--interactive-accent);
+  min-height: 1.2em;
 }
 
 /* ══════════════════
