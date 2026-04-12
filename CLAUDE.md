@@ -12,6 +12,8 @@
 |------|------|
 | `wiki/` | 읽기/쓰기 (페이지 생성·수정·삭제, 인덱스·로그 갱신) |
 | `raw/` | **내용 수정 금지** (inbox→PARA 분류 이동은 허용, 사용자 승인 후) |
+| `wikey-core/` | 읽기/쓰기 (TypeScript 핵심 로직) |
+| `wikey-obsidian/` | 읽기/쓰기 (Obsidian 플러그인) |
 | `wikey.schema.md` | **사용자 승인 없이 수정 금지** |
 | `CLAUDE.md` | **사용자 승인 없이 수정 금지** |
 
@@ -186,3 +188,33 @@ cp .env.example .env    # 템플릿 복사
 - `scripts/check-pii.sh`를 커밋 전 반드시 실행
 - 소스에 PII가 있을 경우 위키 페이지에 전파하지 않도록 주의
 - PII가 위키에 이미 전파된 경우, 사용자 지시에 따라 제거
+
+## Obsidian 플러그인 (Phase 3)
+
+### 구조
+
+```
+wikey-core/       ← 핵심 로직 (프로바이더 독립)
+wikey-obsidian/   ← Obsidian 플러그인 (wikey-core 소비)
+```
+
+### 개발 명령어
+
+```bash
+npm run build          # 전체 빌드 (wikey-core + wikey-obsidian)
+npm run build:core     # wikey-core만
+npm run build:obsidian # wikey-obsidian만
+npm test               # wikey-core vitest
+npm run dev            # wikey-obsidian watch 모드
+```
+
+### 플러그인 개발 세션
+
+```
+1. npm run dev (watch 모드)
+2. Obsidian Cmd+R로 리로드
+3. 코드 수정 → 자동 빌드 → Cmd+R로 확인
+4. npm test → 0 failures 확인
+5. npm run build → 0 errors 확인
+6. Git 커밋
+```

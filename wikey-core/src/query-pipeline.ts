@@ -18,7 +18,10 @@ export async function query(
   const searchResults = await execQmdSearch(qmdBin, question, config)
 
   if (searchResults.length === 0) {
-    return { answer: '검색 결과가 없습니다.', sources: [] }
+    return {
+      answer: '검색 결과가 없습니다. 위키가 인덱싱되어 있는지 확인하세요 (`scripts/reindex.sh` 실행).',
+      sources: [],
+    }
   }
 
   const context = await buildContextFromResults(searchResults)

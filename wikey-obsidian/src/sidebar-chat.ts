@@ -205,14 +205,30 @@ export class WikeyChatView extends ItemView {
 
   private getErrorMessage(err: any): string {
     const msg = err?.message ?? String(err)
+
+    // API key missing
     if (msg.includes('API') && msg.includes('key')) {
-      return '⚠️ API 키가 설정되지 않았습니다. 설정 탭에서 키를 입력하세요.'
+      return '⚠️ API 키가 설정되지 않았습니다. 설정(Wikey) 탭에서 키를 입력하세요.'
     }
-    if (msg.includes('qmd')) {
-      return '⚠️ qmd를 찾을 수 없습니다. 설정에서 경로를 확인하세요.'
+    // qmd not found
+    if (msg.includes('qmd를 찾을 수 없습니다') || msg.includes('qmd')) {
+      return '⚠️ qmd를 찾을 수 없습니다. tools/qmd/bin/qmd가 있는지 확인하거나, 설정에서 경로를 지정하세요.'
     }
-    if (msg.includes('fetch') || msg.includes('network') || msg.includes('ECONNREFUSED')) {
-      return '⚠️ 네트워크 오류. Ollama 서버가 실행 중인지 확인하세요.'
+    // Ollama not running / network error
+    if (msg.includes('ECONNREFUSED') || msg.includes('connect')) {
+      return '⚠️ Ollama에 연결할 수 없습니다. `ollama serve`를 먼저 실행하세요.'
+    }
+    // Timeout
+    if (msg.includes('timeout') || msg.includes('Timeout') || msg.includes('aborted')) {
+      return '⚠️ 응답 시간 초과 (60초). 다시 시도하거나 모델을 확인하세요.'
+    }
+    // JSON parse failure (ingest)
+    if (msg.includes('JSON 파싱 실패')) {
+      return '⚠️ LLM 응답을 파싱할 수 없습니다. 다시 시도하거나 다른 모델로 변경하세요.'
+    }
+    // Network error
+    if (msg.includes('fetch') || msg.includes('network') || msg.includes('Network')) {
+      return '⚠️ 네트워크 오류. 인터넷 연결과 API 서버 상태를 확인하세요.'
     }
     return `⚠️ 오류: ${msg}`
   }

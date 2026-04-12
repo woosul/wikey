@@ -139,4 +139,40 @@ describe('resolveProvider', () => {
     const result = resolveProvider('default', config)
     expect(result.provider).toBe('gemini')
   })
+
+  it('resolves anthropic provider directly', () => {
+    const config = { ...baseConfig, WIKEY_BASIC_MODEL: 'anthropic' }
+    const result = resolveProvider('default', config)
+    expect(result.provider).toBe('anthropic')
+    expect(result.model).toBe('claude-sonnet-4-20250514')
+  })
+
+  it('resolves codex as openai', () => {
+    const config = { ...baseConfig, INGEST_PROVIDER: 'codex' }
+    const result = resolveProvider('ingest', config)
+    expect(result.provider).toBe('openai')
+  })
+
+  it('resolves local as ollama', () => {
+    const config = { ...baseConfig, WIKEY_BASIC_MODEL: 'local' }
+    const result = resolveProvider('default', config)
+    expect(result.provider).toBe('ollama')
+  })
+
+  it('falls back to ollama for unknown provider', () => {
+    const config = { ...baseConfig, WIKEY_BASIC_MODEL: 'unknown-provider' }
+    const result = resolveProvider('default', config)
+    expect(result.provider).toBe('ollama')
+  })
+
+  it('falls back to BASIC_MODEL for lint when no override', () => {
+    const result = resolveProvider('lint', baseConfig)
+    expect(result.provider).toBe('anthropic')
+  })
+
+  it('falls back to BASIC_MODEL for summarize when no override', () => {
+    const config = { ...baseConfig, SUMMARIZE_PROVIDER: '' }
+    const result = resolveProvider('summarize', config)
+    expect(result.provider).toBe('anthropic')
+  })
 })

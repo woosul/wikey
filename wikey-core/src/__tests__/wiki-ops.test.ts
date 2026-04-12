@@ -101,6 +101,15 @@ describe('appendLog', () => {
     const content = await fs.read('wiki/log.md')
     expect(content.indexOf('2026-04-12')).toBeLessThan(content.indexOf('2026-04-11'))
   })
+
+  it('appends to log without header separator', async () => {
+    const fs = createMockFS({
+      'wiki/log.md': '# Log',
+    })
+    await appendLog(fs, '## 2026-04-12\n\n- Entry')
+    const content = await fs.read('wiki/log.md')
+    expect(content).toContain('2026-04-12')
+  })
 })
 
 describe('extractWikilinks', () => {

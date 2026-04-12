@@ -31,8 +31,9 @@ tools/qmd/node_modules/
 # Node.js
 node_modules/
 
-# wikey-core build output
+# wikey-core build output + coverage
 wikey-core/dist/
+wikey-core/coverage/
 
 # wikey-obsidian build output
 wikey-obsidian/main.js
