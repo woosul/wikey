@@ -259,7 +259,7 @@ export class WikeyChatView extends ItemView {
 \`Cmd+,\` → Wikey 탭에서 모델, API 키, Ollama 연결을 관리해요.`
 
     MarkdownRenderer.render(this.app, helpMd, helpEl, '', this.plugin)
-    this.scrollToBottom()
+    helpEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   // ── Ingest Panel ──
@@ -271,11 +271,9 @@ export class WikeyChatView extends ItemView {
       return
     }
 
-    const inputWrapper = this.containerEl.querySelector('.wikey-chat-input-wrapper')
-    if (!inputWrapper) return
-
+    // 메시지 영역 위 (헤더 아래)에 삽입
     this.ingestPanel = createDiv({ cls: 'wikey-ingest-panel' })
-    inputWrapper.insertBefore(this.ingestPanel, inputWrapper.firstChild)
+    this.messagesEl.parentElement?.insertBefore(this.ingestPanel, this.messagesEl)
 
     // Drop zone
     const dropZone = this.ingestPanel.createDiv({ cls: 'wikey-ingest-dropzone' })
