@@ -145,6 +145,69 @@ export class LLMClient {
   }
 }
 
+export async function fetchModelList(
+  provider: LLMProvider,
+  config: WikeyConfig,
+  httpClient: HttpClient,
+): Promise<string[]> {
+  try {
+    switch (provider) {
+      case 'gemini': {
+        const key = config.GEMINI_API_KEY
+        if (!key) return []
+        const resp = await httpClient.request(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`,
+          { method: 'GET', headers: {}, timeout: 10000 },
+        )
+        const data = JSON.parse(resp.body)
+        return (data.models ?? [])
+          .map((m: { name: string }) => m.name.replace('models/', ''))
+          .filter((n: string) => n.startsWith('gemini'))
+          .sort()
+      }
+      case 'anthropic': {
+        const key = config.ANTHROPIC_API_KEY
+        if (!key) return []
+        const resp = await httpClient.request(
+          'https://api.anthropic.com/v1/models',
+          { method: 'GET', headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' }, timeout: 10000 },
+        )
+        const data = JSON.parse(resp.body)
+        return (data.data ?? [])
+          .map((m: { id: string }) => m.id)
+          .filter((n: string) => n.startsWith('claude'))
+          .sort()
+      }
+      case 'openai': {
+        const key = config.OPENAI_API_KEY
+        if (!key) return []
+        const resp = await httpClient.request(
+          'https://api.openai.com/v1/models',
+          { method: 'GET', headers: { Authorization: `Bearer ${key}` }, timeout: 10000 },
+        )
+        const data = JSON.parse(resp.body)
+        return (data.data ?? [])
+          .map((m: { id: string }) => m.id)
+          .filter((n: string) => /^(gpt-|o[0-9])/.test(n))
+          .sort()
+      }
+      case 'ollama': {
+        const baseUrl = config.OLLAMA_URL || 'http://localhost:11434'
+        const resp = await httpClient.request(
+          `${baseUrl}/api/tags`,
+          { method: 'GET', headers: {}, timeout: 5000 },
+        )
+        const data = JSON.parse(resp.body)
+        return (data.models ?? []).map((m: { name: string }) => m.name).sort()
+      }
+      default:
+        return []
+    }
+  } catch {
+    return []
+  }
+}
+
 function stripThinkingBlock(text: string): string {
   const marker = 'done thinking'
   const idx = text.toLowerCase().indexOf(marker)

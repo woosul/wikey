@@ -1,6 +1,6 @@
 import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
-import { query, resolveProvider } from 'wikey-core'
+import { query, resolveProvider, classifyFile, moveFile, fetchModelList } from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
 import type { IngestRunResult } from './commands'
 
@@ -13,6 +13,8 @@ interface ChatMessage {
 
 // Bootstrap SVG icons (inline, 16x16)
 const ICONS = {
+  dashboard: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 11H2v3h2zm5-4H7v7h2zm5-5h-2v12h2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"/></svg>',
+  audit: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg>',
   plus: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg>',
   question: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/></svg>',
   trash: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>',
@@ -25,12 +27,15 @@ const ICONS = {
   folder: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3H14a2 2 0 0 1 2 2v1.5a.5.5 0 0 1-1 0V5a1 1 0 0 0-1-1H9.828a3 3 0 0 1-2.12-.879l-.83-.828A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/><path d="M14.5 5.5a.5.5 0 0 0-.468.324L12.78 9H3.22l-1.252-3.176A.5.5 0 0 0 1.5 5.5a.5.5 0 0 0-.49.412L.008 11.91a.5.5 0 0 0 .49.588h15.004a.5.5 0 0 0 .49-.588l-1.002-5.998A.5.5 0 0 0 14.5 5.5"/></svg>',
 }
 
+type PanelName = 'dashboard' | 'audit' | 'ingest' | 'help' | null
+
 export class WikeyChatView extends ItemView {
   private messagesEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
   private sendBtn!: HTMLButtonElement
   private ingestPanel: HTMLElement | null = null
-  private helpVisible = false
+  private activePanel: PanelName = null
+  private panelBtns: Record<string, HTMLElement> = {}
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -53,8 +58,10 @@ export class WikeyChatView extends ItemView {
     header.createEl('span', { text: 'Wikey', cls: 'wikey-chat-title' })
     const actions = header.createDiv({ cls: 'wikey-chat-header-actions' })
 
-    this.makeHeaderBtn(actions, ICONS.plus, '인제스트', () => this.toggleIngestPanel())
-    this.makeHeaderBtn(actions, ICONS.question, '도움말', () => this.toggleHelp())
+    this.panelBtns.dashboard = this.makeHeaderBtn(actions, ICONS.dashboard, '대시보드', () => this.togglePanel('dashboard'))
+    this.panelBtns.audit = this.makeHeaderBtn(actions, ICONS.audit, '미인제스트', () => this.togglePanel('audit'))
+    this.panelBtns.ingest = this.makeHeaderBtn(actions, ICONS.plus, '인제스트', () => this.togglePanel('ingest'))
+    this.panelBtns.help = this.makeHeaderBtn(actions, ICONS.question, '도움말', () => this.togglePanel('help'))
     this.makeHeaderBtn(actions, ICONS.trash, '대화 초기화', () => this.clearChat())
     this.makeHeaderBtn(actions, ICONS.reload, '리로드', () => (this.app as any).commands?.executeCommandById?.('app:reload'))
     this.makeHeaderBtn(actions, ICONS.close, '닫기', () => this.leaf.detach())
@@ -80,11 +87,28 @@ export class WikeyChatView extends ItemView {
     })
     this.sendBtn.addEventListener('click', () => this.handleSend())
 
-    // Model tag
-    const modelTag = inputWrapper.createDiv({ cls: 'wikey-chat-model-tag' })
+    // Model selector: "AI Model : PROVIDER — model-name (V)"
+    const modelRow = inputWrapper.createDiv({ cls: 'wikey-chat-model-row' })
     const config = this.plugin.buildConfig()
-    const { provider, model } = resolveProvider('default', config)
-    modelTag.setText(`${provider}:${model}`)
+    const { provider, model: currentModel } = resolveProvider('default', config)
+
+    modelRow.createEl('span', { text: 'AI Model', cls: 'wikey-chat-model-label' })
+    modelRow.createEl('span', { text: ':', cls: 'wikey-chat-model-sep' })
+    modelRow.createEl('span', { text: provider.toUpperCase(), cls: 'wikey-chat-provider-label' })
+    modelRow.createEl('span', { text: '\u2014', cls: 'wikey-chat-model-sep' })
+
+    const modelSelect = modelRow.createEl('select', { cls: 'wikey-select' })
+    // 현재 모델을 초기 옵션으로 추가 (API 로드 전)
+    const savedModel = this.plugin.settings.cloudModel || currentModel
+    modelSelect.createEl('option', { text: savedModel, attr: { value: savedModel } })
+
+    modelSelect.addEventListener('change', async () => {
+      this.plugin.settings.cloudModel = modelSelect.value
+      await this.plugin.saveSettings()
+    })
+
+    // 비동기로 API에서 모델 목록 로드
+    this.loadModelList(provider, modelSelect, savedModel)
 
     if (this.plugin.chatHistory.length === 0) this.showWelcome()
   }
@@ -93,10 +117,61 @@ export class WikeyChatView extends ItemView {
 
   // ── Header Helpers ──
 
-  private makeHeaderBtn(parent: HTMLElement, icon: string, label: string, onClick: () => void) {
+  private makeHeaderBtn(parent: HTMLElement, icon: string, label: string, onClick: () => void): HTMLElement {
     const btn = parent.createEl('button', { cls: 'wikey-header-btn', attr: { 'aria-label': label, title: label } })
     btn.innerHTML = icon
     btn.addEventListener('click', onClick)
+    return btn
+  }
+
+  // ── Panel Toggle (exclusive) ──
+
+  private togglePanel(name: PanelName) {
+    if (this.activePanel === name) {
+      // 같은 패널 재클릭 → 닫기
+      this.closeActivePanel()
+      this.activePanel = null
+    } else {
+      // 다른 패널 → 기존 닫고 새로 열기
+      this.closeActivePanel()
+      this.activePanel = name
+      if (name === 'dashboard') this.openDashboard()
+      else if (name === 'audit') this.openAuditPanel()
+      else if (name === 'ingest') this.openIngestPanel()
+      else if (name === 'help') this.openHelp()
+    }
+    this.updatePanelBtnStates()
+    this.syncWelcomeVisibility()
+  }
+
+  private auditPanel: HTMLElement | null = null
+
+  private closeActivePanel() {
+    if (this.dashboardPanel) {
+      this.dashboardPanel.remove()
+      this.dashboardPanel = null
+    }
+    if (this.auditPanel) {
+      this.auditPanel.remove()
+      this.auditPanel = null
+      this.messagesEl.style.display = ''
+    }
+    if (this.helpPanel) {
+      this.helpPanel.remove()
+      this.helpPanel = null
+    }
+    if (this.ingestPanel) {
+      this.ingestPanel.remove()
+      this.ingestPanel = null
+      this.pendingFiles = []
+    }
+  }
+
+  private updatePanelBtnStates() {
+    for (const [key, btn] of Object.entries(this.panelBtns)) {
+      if (key === this.activePanel) btn.addClass('wikey-header-btn-active')
+      else btn.removeClass('wikey-header-btn-active')
+    }
   }
 
   // ── Chat Actions ──
@@ -104,6 +179,8 @@ export class WikeyChatView extends ItemView {
   private clearChat() {
     this.plugin.chatHistory = []
     this.messagesEl.empty()
+    this.activePanel = null
+    this.updatePanelBtnStates()
     this.showWelcome()
   }
 
@@ -111,6 +188,22 @@ export class WikeyChatView extends ItemView {
     const w = this.messagesEl.createDiv({ cls: 'wikey-chat-welcome' })
     w.createEl('p', { text: '위키에 대해 질문해보세요.' })
     w.createEl('p', { text: '예: "DJI O3의 주요 스펙은?", "RAG와 LLM Wiki 비교"', cls: 'wikey-chat-welcome-hint' })
+  }
+
+  /** 특수 패널이 열려 있으면 welcome 숨김, 모두 닫히고 대화 비어 있으면 복원 */
+  private syncWelcomeVisibility() {
+    const hasPanel = this.activePanel !== null
+    const welcomeEl = this.messagesEl.querySelector('.wikey-chat-welcome') as HTMLElement | null
+
+    if (hasPanel) {
+      if (welcomeEl) welcomeEl.style.display = 'none'
+    } else if (this.plugin.chatHistory.length === 0) {
+      if (welcomeEl) {
+        welcomeEl.style.display = ''
+      } else {
+        this.showWelcome()
+      }
+    }
   }
 
   private async handleSend() {
@@ -236,12 +329,12 @@ export class WikeyChatView extends ItemView {
 
   // ── Help ──
 
-  private toggleHelp() {
-    this.helpVisible = !this.helpVisible
-    const existing = this.messagesEl.querySelector('.wikey-chat-help')
-    if (existing) { existing.remove(); return }
+  private helpPanel: HTMLElement | null = null
 
-    const helpEl = this.messagesEl.createDiv({ cls: 'wikey-chat-help' })
+  private openHelp() {
+    this.helpPanel = createDiv({ cls: 'wikey-chat-help' })
+    this.messagesEl.parentElement?.insertBefore(this.helpPanel, this.messagesEl)
+    const helpEl = this.helpPanel
     const helpMd = `## Wikey 사용 가이드
 
 **질문하기**
@@ -260,21 +353,488 @@ export class WikeyChatView extends ItemView {
 \`Cmd+,\` → Wikey 탭에서 모델, API 키, Ollama 연결을 관리해요.`
 
     MarkdownRenderer.render(this.app, helpMd, helpEl, '', this.plugin)
-    helpEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  // ── Dashboard ──
+
+  private dashboardPanel: HTMLElement | null = null
+
+  private openDashboard() {
+    this.dashboardPanel = createDiv({ cls: 'wikey-dashboard' })
+    this.messagesEl.parentElement?.insertBefore(this.dashboardPanel, this.messagesEl)
+    this.renderDashboardContent(this.dashboardPanel)
+  }
+
+  private renderDashboardContent(el: HTMLElement) {
+    const vault = this.app.vault
+
+    // ── wiki/ 현황 ──
+    const wikiSection = el.createDiv({ cls: 'wikey-dashboard-section' })
+    wikiSection.createEl('h3', { text: 'Wiki 현황' })
+
+    const categories: Record<string, number> = { entities: 0, concepts: 0, sources: 0, analyses: 0 }
+    for (const cat of Object.keys(categories)) {
+      const folder = vault.getAbstractFileByPath(`wiki/${cat}`)
+      if (folder && (folder as any).children) {
+        categories[cat] = (folder as any).children.filter((c: any) => c.extension === 'md').length
+      }
+    }
+
+    const metaFolder = vault.getAbstractFileByPath('wiki')
+    let metaCount = 0
+    if (metaFolder && (metaFolder as any).children) {
+      metaCount = (metaFolder as any).children.filter((c: any) => c.extension === 'md').length
+    }
+
+    const totalWiki = Object.values(categories).reduce((a, b) => a + b, 0) + metaCount
+
+    const wikiGrid = wikiSection.createDiv({ cls: 'wikey-dashboard-grid' })
+    this.addStatCard(wikiGrid, String(totalWiki), '총 페이지')
+    this.addStatCard(wikiGrid, String(categories.entities), 'Entities')
+    this.addStatCard(wikiGrid, String(categories.concepts), 'Concepts')
+    this.addStatCard(wikiGrid, String(categories.sources), 'Sources')
+    this.addStatCard(wikiGrid, String(categories.analyses), 'Analyses')
+    this.addStatCard(wikiGrid, String(metaCount), 'Meta')
+
+    // ── raw/ 현황 ──
+    const rawSection = el.createDiv({ cls: 'wikey-dashboard-section' })
+    rawSection.createEl('h3', { text: 'Raw 소스 현황' })
+
+    const rawStats = this.collectRawStats()
+    const rawGrid = rawSection.createDiv({ cls: 'wikey-dashboard-grid' })
+    this.addStatCard(rawGrid, String(rawStats.total), '총 파일')
+    this.addStatCard(rawGrid, String(rawStats.inbox), 'Inbox 대기')
+    this.addStatCard(rawGrid, String(rawStats.projects), 'Projects')
+    this.addStatCard(rawGrid, String(rawStats.areas), 'Areas')
+    this.addStatCard(rawGrid, String(rawStats.resources), 'Resources')
+    this.addStatCard(rawGrid, String(rawStats.archive), 'Archive')
+
+    // ── 태그 랭킹 Top-10 ──
+    const tagSection = el.createDiv({ cls: 'wikey-dashboard-section' })
+    tagSection.createEl('h3', { text: '태그 랭킹 Top-10' })
+
+    const tagRanking = this.collectTagRanking()
+    if (tagRanking.length === 0) {
+      tagSection.createEl('span', { text: '태그 데이터 없음', cls: 'wikey-dashboard-empty' })
+    } else {
+      const tagList = tagSection.createDiv({ cls: 'wikey-dashboard-tag-list' })
+      for (const { tag, count } of tagRanking.slice(0, 10)) {
+        const row = tagList.createDiv({ cls: 'wikey-dashboard-tag-row' })
+        row.createEl('span', { text: `#${tag}`, cls: 'wikey-dashboard-tag-name' })
+        const barOuter = row.createDiv({ cls: 'wikey-dashboard-tag-bar' })
+        const maxCount = tagRanking[0].count
+        const pct = Math.round((count / maxCount) * 100)
+        const barInner = barOuter.createDiv({ cls: 'wikey-dashboard-tag-fill' })
+        barInner.style.width = `${pct}%`
+        row.createEl('span', { text: String(count), cls: 'wikey-dashboard-tag-count' })
+      }
+    }
+
+    // ── 최근 질문 ──
+    const querySection = el.createDiv({ cls: 'wikey-dashboard-section' })
+    querySection.createEl('h3', { text: '최근 질문' })
+
+    const recentQueries = this.plugin.chatHistory
+      .filter((m) => m.role === 'user')
+      .slice(-5)
+      .reverse()
+
+    if (recentQueries.length === 0) {
+      querySection.createEl('span', { text: '질문 기록 없음', cls: 'wikey-dashboard-empty' })
+    } else {
+      for (const q of recentQueries) {
+        const qEl = querySection.createDiv({ cls: 'wikey-dashboard-query' })
+        qEl.setText(q.content.length > 60 ? q.content.slice(0, 60) + '...' : q.content)
+        qEl.addEventListener('click', () => {
+          this.inputEl.value = q.content
+          this.inputEl.focus()
+        })
+      }
+    }
+
+    // ── 미인제스트 통계 (요약만) ──
+    const auditSummarySection = el.createDiv({ cls: 'wikey-dashboard-section' })
+    auditSummarySection.createEl('h3', { text: '미인제스트 문서' })
+    this.renderAuditSummaryOnly(auditSummarySection)
+
+    // ── Graph View 열기 ──
+    const graphSection = el.createDiv({ cls: 'wikey-dashboard-section' })
+    const graphBtn = graphSection.createEl('button', { cls: 'wikey-dashboard-graph-btn', text: 'Graph View 열기' })
+    graphBtn.addEventListener('click', () => {
+      (this.app as any).commands?.executeCommandById?.('graph:open')
+    })
+  }
+
+  private renderAuditSummaryOnly(container: HTMLElement) {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+    const { join } = require('node:path') as typeof import('node:path')
+    const basePath = (this.app.vault.adapter as any).basePath ?? ''
+    const env = this.plugin.getExecEnv()
+
+    try {
+      const script = join(basePath, 'scripts/audit-ingest.py')
+      const stdout = execFileSync('python3', [script, '--json'], {
+        cwd: basePath, timeout: 10000, env, encoding: 'utf-8',
+      })
+      const data = JSON.parse(stdout)
+      const grid = container.createDiv({ cls: 'wikey-dashboard-grid' })
+      this.addStatCard(grid, String(data.total_documents), '문서 총')
+      this.addStatCard(grid, String(data.ingested), '인제스트됨')
+      this.addStatCard(grid, String(data.missing), '미인제스트')
+
+      if (data.missing > 0) {
+        const hint = container.createDiv({ cls: 'wikey-dashboard-empty' })
+        hint.setText(`${data.missing}개 미처리 — ☑ 아이콘으로 관리`)
+      }
+    } catch {
+      container.createEl('span', { text: 'audit 실행 실패', cls: 'wikey-dashboard-empty' })
+    }
+  }
+
+  private openAuditPanel() {
+    this.auditPanel = createDiv({ cls: 'wikey-audit-panel' })
+    this.messagesEl.parentElement?.insertBefore(this.auditPanel, this.messagesEl)
+    this.messagesEl.style.display = 'none'
+    this.renderAuditSection(this.auditPanel)
+  }
+
+  private auditSelections: Set<string> = new Set()
+
+  private renderAuditSection(container: HTMLElement) {
+    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+    const { join } = require('node:path') as typeof import('node:path')
+    const basePath = (this.app.vault.adapter as any).basePath ?? ''
+    const env = this.plugin.getExecEnv()
+
+    let auditData: { total_documents: number; ingested: number; missing: number; files: string[] }
+    try {
+      const script = join(basePath, 'scripts/audit-ingest.py')
+      const stdout = execFileSync('python3', [script, '--json'], {
+        cwd: basePath, timeout: 10000, env, encoding: 'utf-8',
+      })
+      auditData = JSON.parse(stdout)
+    } catch {
+      container.createEl('span', { text: 'audit 스크립트 실행 실패', cls: 'wikey-dashboard-empty' })
+      return
+    }
+
+    // 요약 (동적 갱신)
+    const summaryRow = container.createDiv({ cls: 'wikey-audit-summary-row' })
+    const statTotal = summaryRow.createEl('span', { cls: 'wikey-audit-stat' })
+    const statIngested = summaryRow.createEl('span', { cls: 'wikey-audit-stat wikey-audit-stat-ok' })
+    const statMissing = summaryRow.createEl('span', { cls: 'wikey-audit-stat wikey-audit-stat-warn' })
+
+    const updateSummaryStats = () => {
+      statTotal.setText(`총 ${auditData.total_documents}`)
+      statIngested.setText(`인제스트 ${auditData.ingested}`)
+      statMissing.setText(`미처리 ${auditData.missing}`)
+    }
+    updateSummaryStats()
+
+    if (auditData.missing === 0) {
+      container.createEl('span', { text: '모든 문서가 인제스트되어 있습니다.', cls: 'wikey-dashboard-empty' })
+      return
+    }
+
+    this.auditSelections = new Set()
+
+    // ── 폴더 필터 ──
+    const filterRow = container.createDiv({ cls: 'wikey-audit-filter' })
+    filterRow.createEl('span', { text: '폴더', cls: 'wikey-audit-filter-label' })
+    const folderSelect = filterRow.createEl('select', { cls: 'wikey-select' })
+
+    const rebuildFolderOptions = () => {
+      const currentVal = folderSelect.value
+      folderSelect.empty()
+      folderSelect.createEl('option', { text: `전체 (${auditData.files.length})`, attr: { value: '' } })
+      for (const { folder, count } of this.extractFolders(auditData.files)) {
+        folderSelect.createEl('option', { text: `${folder} (${count})`, attr: { value: folder } })
+      }
+      folderSelect.value = currentVal
+    }
+    rebuildFolderOptions()
+
+    // ── 전체선택 + 목록 (스크롤 영역) ──
+    const listArea = container.createDiv({ cls: 'wikey-audit-list-area' })
+
+    const selectAllRow = listArea.createDiv({ cls: 'wikey-audit-selectall' })
+    const selectAllCb = selectAllRow.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
+    selectAllRow.createEl('span', { text: '전체 선택', cls: 'wikey-audit-selectall-label' })
+
+    const listEl = listArea.createDiv({ cls: 'wikey-audit-list' })
+    const rowMap = new Map<string, HTMLElement>()
+
+    // ── 하단 고정 영역 ──
+    const bottomBar = container.createDiv({ cls: 'wikey-audit-bottom' })
+    const applyBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar' })
+    const applySummary = applyBar.createEl('span', { cls: 'wikey-audit-apply-summary' })
+    const providerSelect = applyBar.createEl('select', { cls: 'wikey-select' })
+    const providerOptions = [
+      { value: 'ollama', text: 'ollama (로컬)' },
+      { value: 'gemini', text: 'gemini' },
+      { value: 'anthropic', text: 'anthropic' },
+      { value: 'openai', text: 'openai' },
+    ]
+    const currentBasic = this.plugin.settings.basicModel || 'ollama'
+    for (const opt of providerOptions) {
+      const el = providerSelect.createEl('option', { text: opt.text, attr: { value: opt.value } })
+      if (opt.value === currentBasic) el.selected = true
+    }
+    const applyBtn = applyBar.createEl('button', { text: '적용', cls: 'wikey-audit-apply-btn' })
+    const delayBtn = applyBar.createEl('button', { text: '보류', cls: 'wikey-audit-delay-action-btn' })
+    applyBtn.setAttr('disabled', 'true')
+    delayBtn.setAttr('disabled', 'true')
+
+    const getFiltered = (): string[] => {
+      const f = folderSelect.value
+      return f ? auditData.files.filter((p) => p.includes(f)) : auditData.files
+    }
+
+    const updateApply = () => {
+      const count = this.auditSelections.size
+      applySummary.setText(`${count}개 선택됨`)
+      if (count === 0) {
+        applyBtn.setAttr('disabled', 'true')
+        delayBtn.setAttr('disabled', 'true')
+      } else {
+        applyBtn.removeAttribute('disabled')
+        delayBtn.removeAttribute('disabled')
+      }
+    }
+
+    const renderList = () => {
+      listEl.empty()
+      rowMap.clear()
+      const filtered = getFiltered()
+
+      const allChecked = filtered.length > 0 && filtered.every((f) => this.auditSelections.has(f))
+      ;(selectAllCb as HTMLInputElement).checked = allChecked
+
+      for (const filePath of filtered) {
+        const name = filePath.split('/').pop() ?? filePath
+        const parentDir = filePath.split('/').slice(-2, -1)[0] ?? ''
+        const row = listEl.createDiv({ cls: 'wikey-audit-row' })
+        rowMap.set(filePath, row)
+
+        const cb = row.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
+        ;(cb as HTMLInputElement).checked = this.auditSelections.has(filePath)
+
+        const info = row.createDiv({ cls: 'wikey-audit-info' })
+        info.createEl('span', { text: name, cls: 'wikey-audit-name' })
+        info.createEl('span', { text: parentDir, cls: 'wikey-audit-path' })
+
+        const toggleCb = () => {
+          if ((cb as HTMLInputElement).checked) this.auditSelections.add(filePath)
+          else this.auditSelections.delete(filePath)
+          updateApply()
+          const all = getFiltered().every((f) => this.auditSelections.has(f))
+          ;(selectAllCb as HTMLInputElement).checked = all
+        }
+
+        cb.addEventListener('change', toggleCb)
+
+        // 행 클릭 시 체크박스 토글 (체크박스 자체 클릭은 제외)
+        row.addEventListener('click', (e) => {
+          if (e.target === cb) return
+          ;(cb as HTMLInputElement).checked = !(cb as HTMLInputElement).checked
+          toggleCb()
+        })
+      }
+      updateApply()
+    }
+
+    selectAllCb.addEventListener('change', () => {
+      const filtered = getFiltered()
+      const checked = (selectAllCb as HTMLInputElement).checked
+      for (const f of filtered) {
+        if (checked) this.auditSelections.add(f)
+        else this.auditSelections.delete(f)
+      }
+      renderList()
+    })
+
+    folderSelect.addEventListener('change', renderList)
+
+    // ── 적용 (인제스트) ──
+    applyBtn.addEventListener('click', async () => {
+      const selected = [...this.auditSelections]
+      if (selected.length === 0) return
+
+      applyBtn.setAttr('disabled', 'true')
+      delayBtn.setAttr('disabled', 'true')
+
+      const selectedProvider = providerSelect.value
+      const origModel = this.plugin.settings.basicModel
+      this.plugin.settings.basicModel = selectedProvider
+      this.plugin.llmClient = new (await import('wikey-core')).LLMClient(
+        this.plugin.httpClient, this.plugin.buildConfig(),
+      )
+
+      let done = 0
+      let failed = 0
+      const succeeded: string[] = []
+
+      for (const f of selected) {
+        const row = rowMap.get(f)
+
+        if (row) {
+          row.removeClass('wikey-audit-row-done')
+          row.addClass('wikey-audit-row-active')
+          row.style.setProperty('--progress', '0%')
+          row.scrollIntoView({ block: 'nearest' })
+        }
+
+        applySummary.setText(`${done + 1}/${selected.length} 처리 중...`)
+
+        const stepWeights = [0, 5, 80, 90, 100]
+        const result = await runIngest(this.plugin, f, (step, _total) => {
+          if (row) {
+            const pct = stepWeights[step] ?? Math.round((step / 4) * 100)
+            row.style.setProperty('--progress', `${pct}%`)
+          }
+        })
+
+        if (row) {
+          row.removeClass('wikey-audit-row-active')
+          row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
+          row.style.removeProperty('--progress')
+
+          // 에러 시 에러 메시지 행에 표시
+          if (!result.success && result.error) {
+            const errEl = row.createDiv({ cls: 'wikey-audit-error' })
+            errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
+          }
+        }
+
+        if (result.success) {
+          succeeded.push(f)
+          // 파일별 즉시 카운터 갱신
+          auditData.ingested++
+          auditData.files = auditData.files.filter((x) => x !== f)
+          auditData.missing = auditData.files.length
+          updateSummaryStats()
+        } else {
+          failed++
+        }
+        done++
+      }
+
+      this.plugin.settings.basicModel = origModel
+      await this.plugin.saveSettings()
+
+      const msg = failed > 0
+        ? `성공 ${succeeded.length} / 실패 ${failed} (${selectedProvider})`
+        : `${succeeded.length}개 완료 (${selectedProvider})`
+      applySummary.setText(msg)
+      new Notice(msg)
+
+      this.auditSelections = new Set()
+      rebuildFolderOptions()
+      // 성공한 행은 제거, 실패한 행은 유지
+      setTimeout(() => renderList(), 2000)
+    })
+
+    // ── 보류 (_delayed 이동) ──
+    delayBtn.addEventListener('click', () => {
+      const selected = [...this.auditSelections]
+      if (selected.length === 0) return
+
+      const { renameSync, mkdirSync, existsSync } = require('node:fs') as typeof import('node:fs')
+      const delayedDir = join(basePath, 'raw/_delayed')
+      if (!existsSync(delayedDir)) mkdirSync(delayedDir, { recursive: true })
+
+      let moved = 0
+      for (const f of selected) {
+        const name = f.split('/').pop() ?? f
+        try { renameSync(join(basePath, f), join(delayedDir, name)); moved++ } catch { /* skip */ }
+      }
+
+      new Notice(`${moved}개 → raw/_delayed/`)
+      const processed = new Set(selected)
+      auditData.files = auditData.files.filter((f) => !processed.has(f))
+      auditData.total_documents -= moved
+      auditData.missing = auditData.files.length
+      this.auditSelections = new Set()
+      updateSummaryStats()
+      rebuildFolderOptions()
+      renderList()
+    })
+
+    renderList()
+  }
+
+  private extractFolders(files: string[]): Array<{ folder: string; count: number }> {
+    const counts: Record<string, number> = {}
+    for (const f of files) {
+      // raw/3_resources/30_manual/101_build_rccar/... → 101_build_rccar
+      const parts = f.split('/')
+      // 3단계 이상이면 PARA 카테고리 하위 폴더 사용
+      const key = parts.length >= 4 ? parts.slice(0, 4).join('/') : parts.slice(0, 3).join('/')
+      counts[key] = (counts[key] ?? 0) + 1
+    }
+    return Object.entries(counts)
+      .map(([folder, count]) => ({ folder, count }))
+      .sort((a, b) => b.count - a.count)
+  }
+
+  private addStatCard(parent: HTMLElement, value: string, label: string) {
+    const card = parent.createDiv({ cls: 'wikey-dashboard-card' })
+    card.createEl('div', { text: value, cls: 'wikey-dashboard-card-value' })
+    card.createEl('div', { text: label, cls: 'wikey-dashboard-card-label' })
+  }
+
+  private collectRawStats(): { total: number; inbox: number; projects: number; areas: number; resources: number; archive: number } {
+    const { readdirSync, existsSync } = require('node:fs') as typeof import('node:fs')
+    const { join } = require('node:path') as typeof import('node:path')
+    const basePath = (this.app.vault.adapter as any).basePath ?? ''
+
+    // 최상위 항목만 카운트 (서브폴더 = 1개 문서 묶음으로 취급)
+    const countTopLevel = (dir: string): number => {
+      const full = join(basePath, dir)
+      if (!existsSync(full)) return 0
+      return readdirSync(full)
+        .filter((f: string) => !f.startsWith('.') && !f.startsWith('_'))
+        .length
+    }
+
+    const inbox = countTopLevel('raw/0_inbox')
+    const projects = countTopLevel('raw/1_projects')
+    const areas = countTopLevel('raw/2_areas')
+    const resources = countTopLevel('raw/3_resources')
+    const archive = countTopLevel('raw/4_archive')
+
+    return {
+      total: inbox + projects + areas + resources + archive,
+      inbox, projects, areas, resources, archive,
+    }
+  }
+
+  private collectTagRanking(): Array<{ tag: string; count: number }> {
+    const vault = this.app.vault
+    const tagCounts: Record<string, number> = {}
+
+    const wikiFiles = vault.getMarkdownFiles().filter((f) => f.path.startsWith('wiki/'))
+    for (const file of wikiFiles) {
+      const cache = this.app.metadataCache.getFileCache(file)
+      const fm = cache?.frontmatter
+      if (!fm?.tags) continue
+      const tags: string[] = Array.isArray(fm.tags) ? fm.tags : [fm.tags]
+      for (const t of tags) {
+        const tag = String(t).trim()
+        if (tag) tagCounts[tag] = (tagCounts[tag] ?? 0) + 1
+      }
+    }
+
+    return Object.entries(tagCounts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
   }
 
   // ── Ingest Panel ──
 
   private pendingFiles: File[] = []
 
-  private toggleIngestPanel() {
-    if (this.ingestPanel) {
-      this.ingestPanel.remove()
-      this.ingestPanel = null
-      this.pendingFiles = []
-      return
-    }
-
+  private openIngestPanel() {
     this.ingestPanel = createDiv({ cls: 'wikey-ingest-panel' })
     this.messagesEl.parentElement?.insertBefore(this.ingestPanel, this.messagesEl)
 
@@ -495,11 +1055,50 @@ export class WikeyChatView extends ItemView {
       return
     }
 
+    const basePath = (this.app.vault.adapter as any).basePath ?? ''
+    const paraFolders = [
+      { value: '', label: '분류...' },
+      { value: 'raw/1_projects', label: 'Projects' },
+      { value: 'raw/2_areas', label: 'Areas' },
+      { value: 'raw/3_resources', label: 'Resources' },
+      { value: 'raw/4_archive', label: 'Archive' },
+    ]
+
     for (const f of files.slice(0, 10)) {
-      inboxDiv.createEl('div', { text: `• ${f}`, cls: 'wikey-ingest-file-row' })
+      const { existsSync, statSync } = require('node:fs') as typeof import('node:fs')
+      const { join } = require('node:path') as typeof import('node:path')
+      const fullPath = join(basePath, 'raw/0_inbox', f)
+      const isDir = existsSync(fullPath) && statSync(fullPath).isDirectory()
+      const hint = classifyFile(f, isDir)
+
+      const row = inboxDiv.createDiv({ cls: 'wikey-classify-row' })
+      const info = row.createDiv({ cls: 'wikey-classify-info' })
+      info.createEl('span', { text: f, cls: 'wikey-classify-name' })
+      info.createEl('span', { text: hint.hint, cls: 'wikey-classify-hint' })
+
+      const select = row.createEl('select', { cls: 'wikey-select' })
+      for (const opt of paraFolders) {
+        const optEl = select.createEl('option', { text: opt.label, attr: { value: opt.value } })
+        if (hint.destination && opt.value && hint.destination.startsWith(opt.value)) {
+          optEl.selected = true
+        }
+      }
+
+      const moveBtn = row.createEl('button', { text: '이동', cls: 'wikey-classify-move-btn' })
+      moveBtn.addEventListener('click', () => {
+        const dest = select.value
+        if (!dest) { new Notice('분류 폴더를 선택하세요'); return }
+        try {
+          moveFile(basePath, `raw/0_inbox/${f}`, dest)
+          new Notice(`${f} → ${dest}`)
+          this.renderInboxStatus()
+        } catch (err: any) {
+          new Notice(`이동 실패: ${err?.message ?? err}`)
+        }
+      })
     }
     if (files.length > 10) {
-      inboxDiv.createEl('div', { text: `... 외 ${files.length - 10}개`, cls: 'wikey-ingest-file-row' })
+      inboxDiv.createEl('div', { text: `... 외 ${files.length - 10}개`, cls: 'wikey-classify-row' })
     }
   }
 
@@ -545,5 +1144,23 @@ export class WikeyChatView extends ItemView {
 
   private scrollToBottom() {
     this.messagesEl.scrollTop = this.messagesEl.scrollHeight
+  }
+
+  private async loadModelList(provider: string, selectEl: HTMLSelectElement, currentModel: string) {
+    const config = this.plugin.buildConfig()
+    const models = await fetchModelList(provider as any, config, this.plugin.httpClient)
+
+    if (models.length === 0) return
+
+    selectEl.empty()
+    for (const m of models) {
+      const opt = selectEl.createEl('option', { text: m, attr: { value: m } })
+      if (m === currentModel) opt.selected = true
+    }
+
+    // 현재 모델이 목록에 없으면 첫 번째 선택
+    if (!models.includes(currentModel) && models.length > 0) {
+      selectEl.value = models[0]
+    }
   }
 }

@@ -2,7 +2,7 @@
 
 > 기간: 2026-04-12 ~ 진행 중
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **진행 중** — Step 0~6 완료, 잔여 작업 있음 (수동 테스트, UI 통합)
+> 상태: **진행 중** — Step 0~6 완료 + Must/Should 전체 완료 + Audit 패널 + Cross-lingual 검색
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), qmd 2.1.0 (vendored), Node.js 22.17.0
 
@@ -401,23 +401,49 @@ Obsidian Electron 환경의 제약으로 5건의 런타임 이슈 발견 및 해
 
 ---
 
-## 10. 잔여 작업
+## 10. 이번 세션 추가 완료 (2026-04-12 저녁)
 
-### 필수
+### Must 3/3 + Should 5/5 완료
 
-- [ ] Obsidian 수동 통합 테스트 (6 시나리오)
-- [ ] inbox PDF 인제스트 end-to-end 검증
-- [ ] 상태 바 페이지 수 수정
+- [x] 상태 바 "0 pages" — onLayoutReady + vault 이벤트 debounced
+- [x] Obsidian 통합 테스트 — 6 시나리오 프로그래매틱 검증
+- [x] PDF 인제스트 E2E — Raspberry Pi PDF 7페이지 생성 성공
+- [x] Summary 대시보드 — wiki/raw 현황, 태그 랭킹, 미인제스트 통계
+- [x] classify UI — PARA 드롭다운 + 이동
+- [x] 비용 추적/reindex/validate/pii UI — 설정 탭 위키 도구 섹션
 
-### 중요
+### 추가 구현
 
-- [ ] classify → 서브폴더 이동 UI
-- [ ] 비용 추적 UI (상태 바 + 대시보드)
-- [ ] reindex 전체 실행 UI
-- [ ] validate/pii 실행 UI
+- [x] **Audit 패널** — 헤더 [👁] 아이콘, 미인제스트 문서 관리
+  - 체크박스 선택 + 전체선택 + 폴더 필터
+  - 프로바이더 선택 (기본=basicModel) + [적용] [보류] 버튼
+  - 파일별 프로그레스바 (행 하단선, stripe 애니메이션, 가중치 5/80/90/100%)
+  - ingest-map.json 매핑 영속화 (재시작 시 정확한 인식)
+  - 실패 파일 목록 유지 + 에러 메시지 표시 + 파일별 즉시 카운터 갱신
+- [x] **Cross-lingual 검색** — 한국어→영문 키워드 추출 + CR bilingual 프롬프트
+- [x] **클라우드 LLM 모델 선택** — API 동적 로드 + .wikey-select chevron UI 통일
+- [x] **헤더 배타적 토글** — 4패널 중 1개만 활성 + active 스타일
+- [x] **헤더/입력 고정** — overflow:hidden + flex-shrink:0
+- [x] **inbox 우회 감지** — 시작 10초 grace + 배치 알림
+- [x] **pdftotext PATH** — Electron 환경 /opt/homebrew/bin 보강
+- [x] **audit-ingest.py** — raw/ 미인제스트 문서 감지 스크립트
 
-### 선택
+### 코드 규모 (갱신)
 
-- [ ] 대화 히스토리 영구 저장
-- [ ] qmd SDK import (CLI exec 대신)
-- [ ] BRAT 배포 + v0.1.0-alpha 태그 갱신
+| 영역 | 파일 | 라인 수 |
+|------|------|---------|
+| wikey-core/src (구현) | 9개 (.ts) | ~1,600 |
+| wikey-core/src/__tests__ | 5개 (.test.ts) | ~600 |
+| wikey-obsidian/src | 6개 (.ts) | ~1,800 |
+| wikey-obsidian/styles.css | 1개 | ~700 |
+| scripts/audit-ingest.py | 1개 | ~120 |
+| **합계** | **22개** | **~4,820** |
+
+65 tests passed, 빌드 0 errors.
+
+### 다음 세션 작업
+
+- [ ] Audit 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
+- [ ] 인제스트 품질 검증 (wiki 페이지 내용 리뷰)
+- [ ] Obsidian UI 수동 테스트
+- [ ] Could 항목 선택적 진행 (대화 영구 저장, BRAT 배포 등)

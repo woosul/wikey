@@ -1,4 +1,5 @@
 import { App, Notice, PluginSettingTab, Setting, requestUrl } from 'obsidian'
+import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck } from 'wikey-core'
 import type WikeyPlugin from './main'
 
 export class WikeySettingTab extends PluginSettingTab {
@@ -17,6 +18,7 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderApiKeysSection(containerEl)
     this.renderSearchSection(containerEl)
     this.renderCostSection(containerEl)
+    this.renderToolsSection(containerEl)
     this.renderAdvancedSection(containerEl)
   }
 
@@ -239,9 +241,117 @@ export class WikeySettingTab extends PluginSettingTab {
             }
           }),
       )
+
+    // Cost summary display
+    const costBox = containerEl.createDiv({ cls: 'wikey-settings-result-box' })
+    costBox.createEl('span', { text: '비용 요약을 로드하려면 아래 버튼을 클릭하세요.', cls: 'wikey-settings-result-placeholder' })
+
+    new Setting(containerEl).addButton((btn) =>
+      btn.setButtonText('비용 요약 조회').onClick(async () => {
+        btn.setButtonText('조회 중...')
+        btn.setDisabled(true)
+        const basePath = (this.plugin.app.vault.adapter as any).basePath ?? ''
+        const env = this.plugin.getExecEnv()
+        const result = await costTrackerSummary(basePath, env)
+        costBox.empty()
+        if (result.success && result.stdout.trim()) {
+          costBox.createEl('pre', { text: result.stdout.trim(), cls: 'wikey-settings-result-output' })
+        } else if (!result.success) {
+          costBox.createEl('pre', { text: result.stderr || '비용 추적 스크립트 실행 실패', cls: 'wikey-settings-result-error' })
+        } else {
+          costBox.createEl('span', { text: '비용 기록 없음', cls: 'wikey-settings-result-placeholder' })
+        }
+        btn.setButtonText('비용 요약 조회')
+        btn.setDisabled(false)
+      }),
+    )
   }
 
-  // ── Section 6: Advanced (per-process LLM) ──
+  // ── Section 6: Wiki Tools ──
+  private renderToolsSection(containerEl: HTMLElement): void {
+    containerEl.createEl('h3', { text: '위키 도구' })
+
+    const basePath = (this.plugin.app.vault.adapter as any).basePath ?? ''
+    const env = this.plugin.getExecEnv()
+
+    // --- Reindex ---
+    const reindexBox = containerEl.createDiv({ cls: 'wikey-settings-result-box' })
+    reindexBox.createEl('span', { text: '인덱스 상태를 확인하려면 아래 버튼을 클릭하세요.', cls: 'wikey-settings-result-placeholder' })
+
+    const reindexSetting = new Setting(containerEl)
+    reindexSetting.addButton((btn) =>
+      btn.setButtonText('인덱스 상태 확인').onClick(async () => {
+        btn.setButtonText('확인 중...')
+        btn.setDisabled(true)
+        const result = await reindexCheck(basePath, env)
+        reindexBox.empty()
+        reindexBox.createEl('pre', {
+          text: result.stdout.trim() || result.stderr.trim() || '출력 없음',
+          cls: result.success ? 'wikey-settings-result-output' : 'wikey-settings-result-error',
+        })
+        btn.setButtonText('인덱스 상태 확인')
+        btn.setDisabled(false)
+      }),
+    )
+    reindexSetting.addButton((btn) =>
+      btn.setButtonText('전체 인덱싱').setCta().onClick(async () => {
+        btn.setButtonText('인덱싱 중...')
+        btn.setDisabled(true)
+        reindexBox.empty()
+        reindexBox.createEl('span', { text: '전체 인덱싱 실행 중... (최대 2분)', cls: 'wikey-settings-result-placeholder' })
+        const result = await reindexWiki(basePath, env, 'full')
+        reindexBox.empty()
+        reindexBox.createEl('pre', {
+          text: result.stdout.trim() || result.stderr.trim() || '완료',
+          cls: result.success ? 'wikey-settings-result-output' : 'wikey-settings-result-error',
+        })
+        if (result.success) new Notice('전체 인덱싱 완료')
+        else new Notice('인덱싱 실패 — 상세 내용은 설정 탭 확인')
+        btn.setButtonText('전체 인덱싱')
+        btn.setDisabled(false)
+      }),
+    )
+
+    // --- Validate Wiki ---
+    const validateBox = containerEl.createDiv({ cls: 'wikey-settings-result-box' })
+    validateBox.createEl('span', { text: '위키 검증 결과가 여기에 표시됩니다.', cls: 'wikey-settings-result-placeholder' })
+
+    const validateSetting = new Setting(containerEl)
+    validateSetting.addButton((btn) =>
+      btn.setButtonText('위키 검증').onClick(async () => {
+        btn.setButtonText('검증 중...')
+        btn.setDisabled(true)
+        const result = await validateWiki(basePath, env)
+        validateBox.empty()
+        validateBox.createEl('pre', {
+          text: result.stdout.trim() || result.stderr.trim() || '검증 완료 — 이슈 없음',
+          cls: result.success ? 'wikey-settings-result-output' : 'wikey-settings-result-error',
+        })
+        if (result.success) new Notice('위키 검증 통과')
+        else new Notice('위키 검증에서 이슈 발견')
+        btn.setButtonText('위키 검증')
+        btn.setDisabled(false)
+      }),
+    )
+    validateSetting.addButton((btn) =>
+      btn.setButtonText('PII 스캔').onClick(async () => {
+        btn.setButtonText('스캔 중...')
+        btn.setDisabled(true)
+        const result = await checkPii(basePath, env)
+        validateBox.empty()
+        validateBox.createEl('pre', {
+          text: result.stdout.trim() || result.stderr.trim() || 'PII 미발견',
+          cls: result.success ? 'wikey-settings-result-output' : 'wikey-settings-result-error',
+        })
+        if (result.success) new Notice('PII 스캔 통과')
+        else new Notice('PII 감지됨 — 상세 내용은 설정 탭 확인')
+        btn.setButtonText('PII 스캔')
+        btn.setDisabled(false)
+      }),
+    )
+  }
+
+  // ── Section 7: Advanced (per-process LLM) ──
   private renderAdvancedSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: '고급 설정' })
 

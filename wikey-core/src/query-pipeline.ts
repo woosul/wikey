@@ -40,7 +40,7 @@ export async function query(
   // Step 2: Search
   let searchResults: readonly SearchResult[]
   try {
-    searchResults = await execQmdSearch(qmdBin, qmdIsJs, question, config, basePath, execEnv, opts?.nodePath)
+    searchResults = await execQmdSearch(qmdBin, qmdIsJs, question, config, basePath, execEnv, opts?.nodePath, httpClient)
   } catch (err: any) {
     throw new Error(`[Step 2/4 qmd 검색] ${err?.message ?? err}`)
   }
@@ -89,11 +89,24 @@ async function execQmdSearch(
   basePath: string,
   execEnv: Record<string, string>,
   nodePath?: string,
+  httpClient?: HttpClient,
 ): Promise<readonly SearchResult[]> {
   const topN = String(config.WIKEY_QMD_TOP_N || 5)
 
   const koreanQuery = await tryKoreanPreprocess(question, basePath, execEnv)
-  const multiQuery = `lex: ${koreanQuery}\nvec: ${question}`
+
+  // Cross-lingual: 한국어 질문이면 영문 키워드도 추출
+  const queryLines: string[] = [`lex: ${koreanQuery}`, `vec: ${question}`]
+
+  if (containsKorean(question) && httpClient) {
+    const englishKeywords = await extractEnglishKeywords(question, config, httpClient)
+    if (englishKeywords) {
+      queryLines.push(`lex: ${englishKeywords}`)
+      console.log('[Wikey] cross-lingual lex added:', englishKeywords)
+    }
+  }
+
+  const multiQuery = queryLines.join('\n')
 
   // qmd.js를 시스템 node로 직접 실행 (Electron node ABI 불일치 방지)
   const cmd = isJs ? (nodePath || 'node') : qmdBin
@@ -226,6 +239,43 @@ function tryKoreanPreprocess(
       resolve(text)
     }
   })
+}
+
+function containsKorean(text: string): boolean {
+  return /[\uAC00-\uD7AF\u1100-\u11FF]/.test(text)
+}
+
+async function extractEnglishKeywords(
+  koreanQuestion: string,
+  config: WikeyConfig,
+  httpClient: HttpClient,
+): Promise<string> {
+  // Ollama 로컬 우선 (빠르고 무료), 없으면 기본 provider
+  const ollamaAvailable = config.OLLAMA_URL && config.OLLAMA_URL !== ''
+  const provider = ollamaAvailable ? 'ollama' as const : resolveProvider('default', config).provider
+  const model = ollamaAvailable ? (config.WIKEY_MODEL || 'gemma4') : resolveProvider('default', config).model
+
+  const llm = new LLMClient(httpClient, config)
+
+  const prompt = `Extract English search keywords from this Korean question. Return ONLY space-separated English keywords, nothing else. No explanation.
+
+Question: ${koreanQuestion}
+Keywords:`
+
+  try {
+    const result = await llm.call(prompt, {
+      provider,
+      model,
+      maxTokens: 50,
+      temperature: 0,
+      timeout: 15000,
+    })
+    const cleaned = result.replace(/[^a-zA-Z0-9\s\-]/g, ' ').replace(/\s+/g, ' ').trim()
+    return cleaned.length > 2 ? cleaned : ''
+  } catch (err: any) {
+    console.log('[Wikey] cross-lingual extraction failed:', err?.message ?? err)
+    return ''
+  }
 }
 
 function findQmdBin(

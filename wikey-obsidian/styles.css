@@ -3,13 +3,14 @@
    Purple accent theme
    ═══════════════════════════════════════ */
 
-/* ── Layout ── */
+/* ── Layout (header + input 고정) ── */
 
 .wikey-chat-container {
   display: flex;
   flex-direction: column;
   height: 100%;
   padding: 0;
+  overflow: hidden;
 }
 
 /* ── Header ── */
@@ -24,6 +25,7 @@
   margin: 0 -12px;
   padding-left: 12px;
   padding-right: 12px;
+  flex-shrink: 0;
 }
 
 .wikey-chat-title {
@@ -64,6 +66,13 @@
   background: var(--interactive-accent) !important;
   color: white !important;
   transform: scale(0.9);
+  border-radius: 4px;
+}
+
+.wikey-header-btn-active,
+.wikey-header-btn-active:hover {
+  background: var(--interactive-accent) !important;
+  color: white !important;
   border-radius: 4px;
 }
 
@@ -257,11 +266,388 @@
   color: var(--interactive-accent);
 }
 
+/* ── Dashboard ── */
+
+.wikey-dashboard {
+  padding: 14px;
+  background: var(--background-primary-alt, var(--background-secondary));
+  border-top: 1px solid var(--background-modifier-border);
+  border-bottom: 1px solid var(--background-modifier-border);
+  font-size: 0.88em;
+  color: var(--text-normal);
+}
+
+.wikey-dashboard-section {
+  margin-bottom: 14px;
+}
+
+.wikey-dashboard-section:last-child {
+  margin-bottom: 0;
+}
+
+.wikey-dashboard-section h3 {
+  font-size: 0.95em;
+  font-weight: 600;
+  margin: 0 0 8px;
+  color: var(--interactive-accent);
+}
+
+.wikey-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.wikey-dashboard-card {
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  padding: 8px 6px;
+  text-align: center;
+}
+
+.wikey-dashboard-card-value {
+  font-size: 1.3em;
+  font-weight: 700;
+  color: var(--text-normal);
+  line-height: 1.2;
+}
+
+.wikey-dashboard-card-label {
+  font-size: 0.8em;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Tag ranking */
+.wikey-dashboard-tag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wikey-dashboard-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wikey-dashboard-tag-name {
+  width: 120px;
+  font-size: 0.88em;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.wikey-dashboard-tag-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--background-modifier-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.wikey-dashboard-tag-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.wikey-dashboard-tag-count {
+  width: 24px;
+  text-align: right;
+  font-size: 0.88em;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.wikey-dashboard-empty {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* Recent queries */
+.wikey-dashboard-query {
+  padding: 4px 8px;
+  margin: 2px 0;
+  border-radius: 4px;
+  font-size: 0.92em;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wikey-dashboard-query:hover {
+  background: var(--background-modifier-border);
+  color: var(--text-normal);
+}
+
+/* Audit panel */
+.wikey-audit-panel {
+  padding: 10px 14px;
+  background: var(--background-primary-alt, var(--background-secondary));
+  font-size: 0.92em;
+  color: var(--text-normal);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wikey-audit-list-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.wikey-audit-summary-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.wikey-audit-stat {
+  font-size: 0.92em;
+  color: var(--text-muted);
+}
+
+.wikey-audit-stat-ok { color: #00c853; }
+.wikey-audit-stat-warn { color: #ffab00; }
+
+.wikey-audit-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.wikey-audit-filter-label {
+  font-size: 0.92em;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+/* folder select uses .wikey-select */
+
+/* 전체선택 */
+.wikey-audit-selectall {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--background-modifier-border);
+  margin-bottom: 2px;
+}
+
+.wikey-audit-selectall-label {
+  font-size: 0.92em;
+  color: var(--text-muted);
+}
+
+.wikey-audit-cb {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  accent-color: var(--interactive-accent);
+  cursor: pointer;
+}
+
+/* 파일 목록 */
+.wikey-audit-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.wikey-audit-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  position: relative;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.1s;
+}
+
+.wikey-audit-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+/* 행 하단 구분선 (기본: 1px) */
+.wikey-audit-row::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  background: var(--background-modifier-border-hover);
+}
+
+/* 진행 중: 2px + 진행률 + 줄무늬 애니메이션 */
+.wikey-audit-row-active::after {
+  height: 2px;
+  background:
+    linear-gradient(90deg,
+      var(--interactive-accent) var(--progress, 0%),
+      transparent var(--progress, 0%)
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 4px,
+      rgba(255,255,255,0.1) 4px,
+      rgba(255,255,255,0.1) 8px
+    );
+  background-color: var(--background-modifier-border-hover);
+  animation: wikey-stripe 0.6s linear infinite;
+}
+
+@keyframes wikey-stripe {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 0 0, 16px 0; }
+}
+
+/* 완료: 2px accent */
+.wikey-audit-row-done::after {
+  height: 2px;
+  background: var(--interactive-accent);
+}
+
+/* 실패: 2px error */
+.wikey-audit-row-fail::after {
+  height: 2px;
+  background: var(--text-error);
+}
+
+.wikey-audit-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wikey-audit-name {
+  font-size: 0.92em;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wikey-audit-path {
+  font-size: 0.72em;
+  color: var(--text-faint);
+}
+
+.wikey-audit-error {
+  font-size: 0.72em;
+  color: var(--text-error);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 하단 고정 영역 */
+.wikey-audit-bottom {
+  flex-shrink: 0;
+}
+
+/* 적용 바 (하단 고정) */
+.wikey-audit-apply-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+}
+
+.wikey-audit-apply-summary {
+  flex: 1;
+  font-size: 0.92em;
+  color: var(--text-muted);
+}
+
+/* provider select uses .wikey-select */
+
+.wikey-audit-apply-btn {
+  font-size: 0.92em;
+  padding: 4px 16px;
+  border: 1px solid var(--interactive-accent) !important;
+  background: var(--interactive-accent) !important;
+  color: white !important;
+  box-shadow: none !important;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.wikey-audit-apply-btn:hover { opacity: 0.85; }
+.wikey-audit-apply-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+.wikey-audit-delay-action-btn {
+  font-size: 0.92em;
+  padding: 4px 12px;
+  border: 1px solid var(--text-faint) !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  box-shadow: none !important;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.wikey-audit-delay-action-btn:hover {
+  border-color: var(--text-muted) !important;
+  color: var(--text-normal) !important;
+}
+
+.wikey-audit-delay-action-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+/* (파일별 프로그레스바는 .wikey-audit-row::after로 구현) */
+
+/* Graph View button */
+.wikey-dashboard-graph-btn {
+  width: 100%;
+  background: transparent !important;
+  border: 1px solid var(--interactive-accent) !important;
+  box-shadow: none !important;
+  border-radius: 6px;
+  padding: 8px;
+  color: var(--interactive-accent);
+  cursor: pointer;
+  font-size: 0.92em;
+  font-weight: 500;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.wikey-dashboard-graph-btn:hover {
+  background: var(--interactive-accent) !important;
+  color: white !important;
+}
+
 /* ── Input Area ── */
 
 .wikey-chat-input-wrapper {
   border-top: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
+  flex-grow: 0;
   margin: 0 -12px;
   padding: 0 12px;
 }
@@ -325,13 +711,53 @@
   cursor: not-allowed;
 }
 
-.wikey-chat-model-tag {
-  font-size: 0.92em;
-  color: var(--interactive-accent);
-  text-align: right;
+.wikey-chat-model-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 0 6px;
-  letter-spacing: 0.02em;
-  opacity: 0.8;
+}
+
+.wikey-chat-model-label {
+  font-size: 0.82em;
+  color: var(--text-faint);
+}
+
+.wikey-chat-model-sep {
+  font-size: 0.82em;
+  color: var(--text-faint);
+}
+
+.wikey-chat-provider-label {
+  font-size: 0.82em;
+  font-weight: 700;
+  color: var(--interactive-accent);
+  letter-spacing: 0.03em;
+}
+
+/* ── 공통 Select (chevron 스타일) ── */
+
+.wikey-select {
+  font-size: 0.88em;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 2px 22px 2px 8px;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 16 16'%3E%3Cpath fill='%23999' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+}
+
+.wikey-select:focus {
+  outline: none;
+  color: var(--text-normal);
+}
+
+.wikey-select:hover {
+  color: var(--text-normal);
 }
 
 /* ── Wikilinks ── */
@@ -495,6 +921,60 @@
   font-style: italic;
 }
 
+/* Classify */
+.wikey-classify-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+}
+
+.wikey-classify-row:last-child {
+  border-bottom: none;
+}
+
+.wikey-classify-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.wikey-classify-name {
+  font-size: 0.88em;
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wikey-classify-hint {
+  font-size: 0.78em;
+  color: var(--text-faint);
+}
+
+/* classify select uses .wikey-select */
+
+.wikey-classify-move-btn {
+  font-size: 0.75em;
+  padding: 2px 8px;
+  border: 1px solid var(--interactive-accent) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 4px;
+  color: var(--interactive-accent);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.wikey-classify-move-btn:hover {
+  background: var(--interactive-accent) !important;
+  color: white !important;
+}
+
 /* Progress */
 .wikey-ingest-progress {
   font-size: 0.92em;
@@ -634,4 +1114,45 @@
 
 .wikey-btn-error {
   color: var(--text-error) !important;
+}
+
+/* ══════════════════
+   Result Boxes (Settings)
+   ══════════════════ */
+
+.wikey-settings-result-box {
+  margin: 4px 0 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  min-height: 2em;
+}
+
+.wikey-settings-result-placeholder {
+  color: var(--text-faint);
+  font-size: 0.88em;
+  font-style: italic;
+}
+
+.wikey-settings-result-output {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--font-monospace);
+  font-size: 0.82em;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  color: var(--text-normal);
+}
+
+.wikey-settings-result-error {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--font-monospace);
+  font-size: 0.82em;
+  margin: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  color: var(--text-error);
 }

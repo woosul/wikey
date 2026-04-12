@@ -17,7 +17,7 @@ export type {
 } from './types.js'
 
 export { parseWikeyConf, loadConfig, resolveProvider } from './config.js'
-export { LLMClient } from './llm-client.js'
+export { LLMClient, fetchModelList } from './llm-client.js'
 export { createPage, updateIndex, appendLog, extractWikilinks } from './wiki-ops.js'
 export { query } from './query-pipeline.js'
 export type { QueryOptions } from './query-pipeline.js'

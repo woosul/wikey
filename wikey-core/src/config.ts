@@ -77,27 +77,36 @@ export function resolveProvider(
   return mapToProvider(resolved, config)
 }
 
+const PROVIDER_DEFAULTS: Record<string, string> = {
+  gemini: 'gemini-2.5-flash',
+  anthropic: 'claude-sonnet-4-20250514',
+  openai: 'gpt-4.1',
+  ollama: 'gemma4',
+}
+
 function mapToProvider(
   name: string,
   config: WikeyConfig,
 ): { provider: LLMProvider; model: string } {
+  const userModel = config.WIKEY_MODEL && config.WIKEY_MODEL !== 'wikey' ? config.WIKEY_MODEL : ''
+
   switch (name) {
     case 'gemini':
-      return { provider: 'gemini', model: 'gemini-2.5-flash' }
+      return { provider: 'gemini', model: userModel || PROVIDER_DEFAULTS.gemini }
     case 'anthropic':
-      return { provider: 'anthropic', model: 'claude-sonnet-4-20250514' }
+      return { provider: 'anthropic', model: userModel || PROVIDER_DEFAULTS.anthropic }
     case 'openai':
     case 'codex':
-      return { provider: 'openai', model: 'gpt-4.1' }
+      return { provider: 'openai', model: userModel || PROVIDER_DEFAULTS.openai }
     case 'ollama':
     case 'local':
-      return { provider: 'ollama', model: config.WIKEY_MODEL || 'gemma4' }
+      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_DEFAULTS.ollama }
     case 'claude-code':
       if (config.ANTHROPIC_API_KEY) {
-        return { provider: 'anthropic', model: 'claude-sonnet-4-20250514' }
+        return { provider: 'anthropic', model: userModel || PROVIDER_DEFAULTS.anthropic }
       }
-      return { provider: 'ollama', model: config.WIKEY_MODEL || 'gemma4' }
+      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_DEFAULTS.ollama }
     default:
-      return { provider: 'ollama', model: config.WIKEY_MODEL || 'gemma4' }
+      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_DEFAULTS.ollama }
   }
 }

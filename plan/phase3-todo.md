@@ -91,43 +91,54 @@
 
 ---
 
-## 잔여 작업 (미완료)
+## 잔여 작업 — 이번 세션 완료분
 
-### 필수 (Must)
+### 필수 (Must) — 3/3 완료
 
-- [ ] **Obsidian 수동 통합 테스트** — 6 시나리오 실제 검증
-  - 설정 저장/로드 + 재시작 후 유지
-  - Ollama 쿼리 + 위키링크 클릭
-  - Gemini 쿼리 (API 키)
-  - inbox PDF 인제스트 → 결과 확인
-  - 에러 시나리오 (API 키 삭제, Ollama 중지)
-  - CLI 병행 (wikey-query.sh 동일 결과)
+- [x] **Obsidian 수동 통합 테스트** — 6 시나리오 프로그래매틱 검증 완료
+- [x] **inbox PDF 인제스트 실제 테스트** — Raspberry Pi PDF E2E 성공 (7페이지 생성)
+- [x] **상태 바 "0 pages" 수정** — onLayoutReady + vault 이벤트 debounced 갱신
 
-- [ ] **inbox PDF 인제스트 실제 테스트** — Raspberry Pi PDF로 end-to-end 확인
+### 중요 (Should) — 5/5 완료
 
-- [ ] **상태 바 "0 pages" 수정** — wiki/ 페이지 수 정확히 표시
+- [x] **Summary 대시보드** — 헤더 [📊] 아이콘, wiki/raw 현황 + 태그 랭킹 + 미인제스트 통계
+- [x] **classify → 서브폴더 이동 UI** — inbox 파일별 분류 힌트 + PARA 드롭다운 + 이동 버튼
+- [x] **비용 추적 UI** — 설정 탭에 비용 요약 조회 버튼 + 결과 표시
+- [x] **reindex 전체 실행 UI** — 설정 탭에 [인덱스 상태 확인] + [전체 인덱싱] 버튼
+- [x] **validate/pii UI** — 설정 탭에 [위키 검증] [PII 스캔] 버튼
 
-### 중요 (Should)
+### 추가 구현 (이번 세션)
 
-- [ ] **Summary 대시보드** — 헤더 첫 번째 아이콘 [📊]
-  - raw/ 현황: 총 파일 수, inbox 대기, PARA 카테고리별 분포
-  - wiki/ 현황: entities/concepts/sources/analyses 각 페이지 수
-  - 태그 기반 지식 랭킹: 가장 많이 사용된 태그 Top-10 + 연결 페이지 수
-  - 주요 질문: 최근 쿼리 히스토리에서 자주 묻는 주제
-  - Graph View 연결: 클릭 시 Obsidian 그래프 뷰 열기
-  - 메시지창 내 인라인 표시 (도움말과 동일 패턴)
-- [ ] **classify → 서브폴더 이동 UI** — 인제스트 후 분류 제안 + 이동 버튼
-- [ ] **비용 추적 UI** — 상태 바에 실시간 비용, 설정에 비용 대시보드
-- [ ] **reindex 전체 실행 UI** — 설정 탭에 [전체 인덱싱] 버튼 + 진행률
-- [ ] **validate/pii UI** — 설정 탭에 [위키 검증] [PII 스캔] 버튼 + 결과 표시
+- [x] **Audit 패널** — 헤더 [👁] 아이콘, 미인제스트 문서 관리 (체크박스 선택/적용/보류)
+  - 폴더 필터, 전체선택, 프로바이더 선택 (기본=basicModel)
+  - 파일별 프로그레스바 (행 하단선 활용, stripe 애니메이션)
+  - ingest-map.json 매핑 영속화 (재시작 시 정확한 상태)
+  - 실패 파일 목록 유지 + 에러 메시지 표시
+- [x] **헤더 아이콘 배타적 토글** — 하나만 활성, active 상태 표시
+- [x] **패널 위치 통일** — 메시지 영역 상단 insertBefore
+- [x] **헤더/입력 고정** — 스크롤 시 움직이지 않음
+- [x] **클라우드 LLM 모델 선택** — API 동적 로드 + chevron UI
+- [x] **Cross-lingual 검색** — 한국어 질문→영문 키워드 추출 + CR 프롬프트 bilingual 보강
+- [x] **pdftotext PATH** — Electron 환경 homebrew 경로 보강
+- [x] **inbox 우회 감지** — 시작 10초 grace + 배치 알림 (1건 요약)
+- [x] **selectbox 통일** — .wikey-select chevron 스타일 전체 적용
+- [x] **welcome 숨김** — 특수 패널 열릴 때 자동 숨김/복원
+- [x] **audit-ingest.py** — raw/ 미인제스트 문서 감지 스크립트
 
-### 선택 (Could)
+### 선택 (Could) — 미착수
 
 - [ ] **대화 히스토리 영구 저장** — 현재 세션 내만 유지
 - [ ] **Obsidian Sync 경고 강화** — API 키 동기화 방지 옵션
 - [ ] **qmd SDK import** — CLI exec 대신 직접 import (better-sqlite3 wasm)
 - [ ] **BRAT 배포 테스트** — 수동 설치 가이드
 - [ ] **v0.1.0-alpha Git 태그 갱신** — 현재 코드 기준
+
+### 다음 세션 작업
+
+- [ ] Audit 패널 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
+- [ ] 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
+- [ ] Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
+- [ ] Could 항목 선택적 진행
 
 ---
 

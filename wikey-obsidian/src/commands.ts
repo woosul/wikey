@@ -76,7 +76,7 @@ export async function runIngest(
       (progress) => {
         onProgress?.(progress.step, progress.total, progress.message)
       },
-      { basePath },
+      { basePath, execEnv: plugin.getExecEnv() },
     )
 
     const createdPages = [
@@ -84,6 +84,9 @@ export async function runIngest(
       ...result.entities.map((e) => e.filename),
       ...result.concepts.map((c) => c.filename),
     ]
+
+    // 매핑 저장 (audit에서 인제스트 여부 판별용)
+    saveIngestMap(basePath, sourcePath, result.sourcePage.filename)
 
     // inbox 파일이면 processed로 이동
     if (sourcePath.startsWith('raw/0_inbox/')) {
@@ -95,6 +98,22 @@ export async function runIngest(
     const msg = err?.message ?? String(err)
     return { success: false, sourcePath, createdPages: [], error: msg }
   }
+}
+
+function saveIngestMap(basePath: string, rawPath: string, sourceFilename: string): void {
+  const { join } = require('node:path') as typeof import('node:path')
+  const { readFileSync, writeFileSync } = require('node:fs') as typeof import('node:fs')
+  const mapPath = join(basePath, 'wiki/.ingest-map.json')
+
+  let map: Record<string, string> = {}
+  try {
+    map = JSON.parse(readFileSync(mapPath, 'utf-8'))
+  } catch {
+    // 파일 없으면 빈 맵
+  }
+
+  map[rawPath] = sourceFilename
+  writeFileSync(mapPath, JSON.stringify(map, null, 2), 'utf-8')
 }
 
 function moveToProcessed(basePath: string, sourcePath: string): void {

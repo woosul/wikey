@@ -74,8 +74,15 @@ Here is a chunk from the above document:
 </chunk>
 
 Please give a short succinct context (50-100 tokens) to situate this chunk \
-within the overall document for improving search retrieval. \
-Include key terms in both Korean and English where applicable. \
+within the overall document for improving search retrieval.
+
+CRITICAL: The context MUST be bilingual.
+- If the document is in English, write the context in Korean AND include the original English key terms in parentheses.
+  Example: "라즈베리 파이 고화질 카메라 (Raspberry Pi High Quality Camera)의 백 포커스 조정 (back focus adjustment) 방법을 설명하는 문서..."
+- If the document is in Korean, include English translations of technical terms in parentheses.
+  Example: "DJI O3 에어 유닛 (Air Unit)의 디지털 영상 전송 (digital video transmission) 사양..."
+- Always include both Korean and English versions of product names, technical terms, and key concepts.
+
 Answer only with the context, nothing else."""
 
 

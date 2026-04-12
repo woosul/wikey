@@ -18,6 +18,7 @@ const MAX_JSON_RETRIES = 2
 
 export interface IngestOptions {
   readonly basePath?: string
+  readonly execEnv?: Record<string, string>
 }
 
 export async function ingest(
@@ -36,7 +37,7 @@ export async function ingest(
   let sourceContent: string
   if (isPdf) {
     onProgress?.({ step: 1, total: 4, message: 'PDF 텍스트 추출...' })
-    sourceContent = await extractPdfText(sourcePath, opts?.basePath)
+    sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv)
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`PDF 텍스트 추출 실패: ${sourceFilename} — pdftotext가 설치되어 있는지 확인하세요 (brew install poppler)`)
     }
@@ -243,16 +244,22 @@ tags: [태그1, 태그2]
   return cachedTemplate
 }
 
-async function extractPdfText(sourcePath: string, basePath?: string): Promise<string> {
+async function extractPdfText(sourcePath: string, basePath?: string, execEnv?: Record<string, string>): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const cwd = basePath ?? process.cwd()
   const fullPath = join(cwd, sourcePath)
+
+  // PATH 보강 (Electron 환경에서 homebrew 등 누락 방지)
+  const env = execEnv ? { ...execEnv } : { ...process.env } as Record<string, string>
+  const extraPaths = ['/opt/homebrew/bin', '/usr/local/bin']
+  env.PATH = [...extraPaths, env.PATH ?? ''].join(':')
 
   // 1. pdftotext (poppler)
   try {
     const { stdout } = await execFileAsync('pdftotext', [fullPath, '-'], {
       timeout: 30000,
       maxBuffer: 10 * 1024 * 1024,
+      env,
     })
     if (stdout.trim().length > 50) return stdout.trim()
   } catch {
@@ -261,7 +268,7 @@ async function extractPdfText(sourcePath: string, basePath?: string): Promise<st
 
   // 2. macOS textutil (basic extraction)
   try {
-    const { stdout } = await execFileAsync('mdimport', ['-d1', fullPath], { timeout: 10000 })
+    const { stdout } = await execFileAsync('mdimport', ['-d1', fullPath], { timeout: 10000, env })
     if (stdout.trim().length > 50) return stdout.trim()
   } catch {
     // fall through
@@ -288,7 +295,7 @@ except ImportError:
         print("")
 `,
       fullPath,
-    ], { timeout: 30000, maxBuffer: 10 * 1024 * 1024 })
+    ], { timeout: 30000, maxBuffer: 10 * 1024 * 1024, env })
     if (stdout.trim().length > 50) return stdout.trim()
   } catch {
     // fall through

@@ -6,19 +6,40 @@ const UPDATE_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 export class WikeyStatusBar {
   private statusEl: HTMLElement | null = null
   private intervalId: ReturnType<typeof setInterval> | null = null
+  private debounceTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(private readonly plugin: WikeyPlugin) {}
+
+  private debouncedUpdate(): void {
+    if (this.debounceTimer) clearTimeout(this.debounceTimer)
+    this.debounceTimer = setTimeout(() => this.update(), 500)
+  }
 
   register(): void {
     this.statusEl = this.plugin.addStatusBarItem()
     this.statusEl.addClass('wikey-status-bar')
     this.statusEl.addEventListener('click', () => this.showDetailModal())
 
-    this.update()
-    this.intervalId = setInterval(() => this.update(), UPDATE_INTERVAL_MS)
+    // vault가 완전히 로드된 후 첫 카운트 실행
+    this.plugin.app.workspace.onLayoutReady(() => {
+      this.update()
+      this.intervalId = setInterval(() => this.update(), UPDATE_INTERVAL_MS)
+    })
+
+    // vault 파일 변경 시 실시간 갱신
+    this.plugin.registerEvent(
+      this.plugin.app.vault.on('create', () => this.debouncedUpdate()),
+    )
+    this.plugin.registerEvent(
+      this.plugin.app.vault.on('delete', () => this.debouncedUpdate()),
+    )
+    this.plugin.registerEvent(
+      this.plugin.app.vault.on('rename', () => this.debouncedUpdate()),
+    )
 
     this.plugin.register(() => {
       if (this.intervalId) clearInterval(this.intervalId)
+      if (this.debounceTimer) clearTimeout(this.debounceTimer)
     })
   }
 

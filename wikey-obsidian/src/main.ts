@@ -10,6 +10,7 @@ import type { EnvStatus } from './env-detect'
 
 interface WikeySettings {
   basicModel: string
+  cloudModel: string
   geminiApiKey: string
   anthropicApiKey: string
   openaiApiKey: string
@@ -29,6 +30,7 @@ interface WikeySettings {
 
 const DEFAULT_SETTINGS: WikeySettings = {
   basicModel: 'ollama',
+  cloudModel: '',
   geminiApiKey: '',
   anthropicApiKey: '',
   openaiApiKey: '',
@@ -77,13 +79,37 @@ export default class WikeyPlugin extends Plugin {
     // 환경 자동 탐지 (백그라운드)
     this.runEnvDetection()
 
-    // inbox 파일 감시
+    // raw/ 파일 감시 (시작 직후 vault 인덱싱 무시 + 배치 알림)
+    const startTime = Date.now()
+    const STARTUP_GRACE_MS = 10_000
+    let bypassBatch: string[] = []
+    let bypassTimer: ReturnType<typeof setTimeout> | null = null
+
     this.registerEvent(
       this.app.vault.on('create', (file) => {
-        if (file.path.startsWith('raw/0_inbox/') && file.path.endsWith('.md')) {
-          const name = file.path.split('/').pop() ?? file.path
-          new Notice(`inbox에 새 파일: ${name} — [+] 버튼으로 인제스트하세요.`)
-          console.log('[Wikey] inbox 파일 감지:', file.path)
+        if (!file.path.startsWith('raw/')) return
+        if (Date.now() - startTime < STARTUP_GRACE_MS) return
+
+        const name = file.path.split('/').pop() ?? file.path
+        const isDoc = /\.(md|txt|pdf)$/i.test(file.path)
+
+        if (file.path.startsWith('raw/0_inbox/')) {
+          if (isDoc) {
+            new Notice(`inbox에 새 파일: ${name} — [+] 버튼으로 인제스트하세요.`)
+          }
+        } else if (isDoc && !file.path.includes('/_')) {
+          bypassBatch.push(name)
+          console.log('[Wikey] inbox 우회 감지:', file.path)
+          if (bypassTimer) clearTimeout(bypassTimer)
+          bypassTimer = setTimeout(() => {
+            const count = bypassBatch.length
+            if (count === 1) {
+              new Notice(`⚠ ${bypassBatch[0]}이 inbox를 거치지 않고 추가됨.\n인제스트 없이는 검색되지 않습니다.`, 8000)
+            } else {
+              new Notice(`⚠ ${count}개 문서가 inbox를 거치지 않고 추가됨.\n👁 아이콘에서 확인하세요.`, 8000)
+            }
+            bypassBatch = []
+          }, 2000)
         }
       }),
     )
@@ -138,7 +164,7 @@ export default class WikeyPlugin extends Plugin {
     return {
       WIKEY_BASIC_MODEL: this.settings.basicModel,
       WIKEY_SEARCH_BACKEND: 'basic',
-      WIKEY_MODEL: 'wikey',
+      WIKEY_MODEL: this.settings.cloudModel || 'wikey',
       WIKEY_QMD_TOP_N: 5,
       GEMINI_API_KEY: this.settings.geminiApiKey,
       ANTHROPIC_API_KEY: this.settings.anthropicApiKey,
