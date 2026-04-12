@@ -2,7 +2,7 @@
 
 > 기간: 2026-04-12 ~ 진행 중
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **진행 중** — Phase 3-0 완료, Phase 3-1 완료, Phase 3-2 완료, Phase 3-3 대기
+> 상태: **진행 중** — Step 0~6 완료, 잔여 작업 있음 (수동 테스트, UI 통합)
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), qmd 2.1.0 (vendored), Node.js 22.17.0
 
@@ -23,6 +23,12 @@
 | 04-12 | 3-2-C | sidebar-chat.ts — 채팅 UI, 마크다운 렌더링, 위키링크, CSS |
 | 04-12 | 3-2-D | commands.ts — Cmd+Shift+I, 파일 선택, URI 프로토콜, 진행률 |
 | 04-12 | 3-2-E | status-bar.ts — 페이지 수, 통계 모달 |
+| 04-12 | 3-3 | 디버깅 5건 (CORS, PATH, ABI, qmd 경로, localhost) |
+| 04-12 | 3-3 | 합성 프롬프트 3회 개선 (확정적 답변, 해요체) |
+| 04-12 | 3-3 | env-detect.ts — 로그인 셸 PATH + ABI 호환 node 자동 탐지 |
+| 04-12 | 4 | 채팅 UI 고도화 — Q/A 삭제, 질문 블록, purple 테마, 피드백 |
+| 04-12 | 5 | 인제스트 패널 — drag/drop, 3버튼, 프로그레스바, inbox 감시 |
+| 04-12 | 6 | CLI 포팅 — PDF 인제스트, classify, validate/pii/reindex/cost exec |
 
 ---
 
@@ -326,88 +332,92 @@ wikey/
 
 ---
 
-## 5. 코드 규모
+## 5. Step 3: 디버깅 (5건 해결)
+
+Obsidian Electron 환경의 제약으로 5건의 런타임 이슈 발견 및 해결:
+
+| # | 문제 | 원인 | 해결 |
+|---|------|------|------|
+| 1 | CORS 차단 | `import('node:path')` → 웹 fetch 취급 | `require()` 전환 |
+| 2 | node not found | Electron PATH에 nvm 미포함 | 로그인 셸 PATH 탐지 (`env-detect.ts`) |
+| 3 | ABI mismatch | Electron node ≠ 시스템 node | qmd 호환 node 자동 선택 (`findCompatibleNode`) |
+| 4 | localhost 차단 | `requestUrl()` CORS | Node.js `http` 모듈 직접 호출 |
+| 5 | 빈 검색 결과 | qmd URI에 `wiki/` 누락 | `parseQmdOutput`에 접두사 추가 |
+
+---
+
+## 6. Step 4: UI 고도화
+
+- Q/A 아이콘 삭제 → 질문=배경 블록(radius 8), 답변=전체 너비
+- 좌우 여백 0 (헤더~입력 전체)
+- 헤더 5개 plain icon: [+][?][🗑][↻][✕], hover=purple, active=purple bg+white
+- 입력창 x1.5 + 전송 plain icon 중앙 + 모델 태그(purple, 0.92em)
+- 답변 하단: 복사/좋아요/나빠요 (피드백 data.json 저장)
+- 테이블: 세로선 없음, 가로선 1px, 상하단 2px
+- 도움말 [?] 인라인 + scrollIntoView
+- Purple accent 테마 통일
+
+---
+
+## 7. Step 5: 인제스트 UI
+
+- [+] → 인제스트 패널 (상단 토글)
+- 3개 액션 버튼: Add to inbox / Ingest inbox / Add+Ingest
+- 네이티브 파일 탐색기 (input type=file), drag/drop
+- 파일별 프로그레스바 (2px) + 결과 wikilink
+- inbox→_processed/ 자동 이동
+- inbox 감시 (vault.on('create') + Notice)
+
+---
+
+## 8. Step 6: CLI 포팅
+
+| 스크립트 | 포팅 | 모듈 |
+|---------|------|------|
+| llm-ingest.sh | 완전 포팅 | `ingest-pipeline.ts` |
+| wikey-query.sh | 완전 포팅 | `query-pipeline.ts` |
+| llm-api.sh | 완전 포팅 | `llm-client.ts` + `config.ts` |
+| classify-inbox.sh | 규칙 엔진 포팅 | `classify.ts` |
+| summarize-large-source.sh | PDF 텍스트 추출 포팅 | `ingest-pipeline.ts` |
+| validate-wiki.sh | exec 래퍼 | `scripts-runner.ts` |
+| check-pii.sh | exec 래퍼 | `scripts-runner.ts` |
+| reindex.sh | exec 래퍼 | `scripts-runner.ts` |
+| cost-tracker.sh | exec 래퍼 | `scripts-runner.ts` |
+
+---
+
+## 9. 코드 규모 (현재)
 
 | 영역 | 파일 | 라인 수 |
 |------|------|---------|
-| wikey-core/src (구현) | 7개 (.ts) | 831 |
-| wikey-core/src/__tests__ (테스트) | 5개 (.test.ts) | 561 |
-| wikey-core/src/prompts (프롬프트) | 1개 (.txt) | ~60 |
-| wikey-obsidian/src (플러그인) | 5개 (.ts) | ~630 |
-| wikey-obsidian/styles.css | 1개 | ~155 |
-| **합계** | **19개** | **~2,237** |
-| 번들 크기 (main.js, minified) | — | 25KB |
+| wikey-core/src (구현) | 9개 (.ts) | ~1,300 |
+| wikey-core/src/__tests__ | 5개 (.test.ts) | ~600 |
+| wikey-obsidian/src | 6개 (.ts) | ~1,100 |
+| wikey-obsidian/styles.css | 1개 | ~400 |
+| **합계** | **21개** | **~3,400** |
+
+65 tests passed, 빌드 0 errors.
+커밋: 31개 (Phase 3 시작 이후)
 
 ---
 
-## 6. 테스트 현황
+## 10. 잔여 작업
 
-```
- ✓ src/__tests__/config.test.ts          17 tests
- ✓ src/__tests__/llm-client.test.ts      13 tests
- ✓ src/__tests__/wiki-ops.test.ts        11 tests
- ✓ src/__tests__/query-pipeline.test.ts   6 tests
- ✓ src/__tests__/ingest-pipeline.test.ts 10 tests
+### 필수
 
- Test Files  5 passed (5)
-      Tests  57 passed (57)
-   Duration  ~200ms
-```
+- [ ] Obsidian 수동 통합 테스트 (6 시나리오)
+- [ ] inbox PDF 인제스트 end-to-end 검증
+- [ ] 상태 바 페이지 수 수정
 
----
+### 중요
 
-## 7. 기존 CLI 미영향 확인
+- [ ] classify → 서브폴더 이동 UI
+- [ ] 비용 추적 UI (상태 바 + 대시보드)
+- [ ] reindex 전체 실행 UI
+- [ ] validate/pii 실행 UI
 
-| 항목 | 결과 |
-|------|------|
-| `llm-ingest.sh` syntax | OK |
-| `wikey-query.sh` syntax | OK |
-| `llm-api.sh` syntax | OK |
-| `git diff HEAD -- scripts/ local-llm/` | 변경 없음 |
+### 선택
 
----
-
-## 8. 다음 단계: Phase 3-3 (통합 테스트 + 마무리)
-
-| Step | 내용 | 상태 |
-|------|------|------|
-| 3-3-A | 단위 테스트 보강 (19+ 케이스) | 대기 |
-| 3-3-B | 수동 통합 테스트 (Obsidian에서 6 시나리오) | 대기 |
-| 3-3-C | 에러 케이스 처리 (8건) | 대기 |
-| 3-3-D | 배포 준비 (BRAT, 문서 업데이트) | 대기 |
-| 3-3-E | 최종 검증 + Git 태깅 (v0.1.0-alpha) | 대기 |
-
----
-
-## 9. Phase 3 전체 체크리스트
-
-### Phase 3-0: 스캐폴딩 — 4/4
-
-- [x] 루트 package.json + npm workspaces
-- [x] wikey-core 스캐폴딩 (package.json, tsconfig, 소스 파일, prompts)
-- [x] wikey-obsidian 스캐폴딩 (package.json, tsconfig, manifest, esbuild, 소스 파일)
-- [x] 개발 환경 설정 (심볼릭 링크, .gitignore, 빌드 검증)
-
-### Phase 3-1: wikey-core — 5/5
-
-- [x] config.ts (17 tests)
-- [x] llm-client.ts (13 tests)
-- [x] wiki-ops.ts (11 tests)
-- [x] query-pipeline.ts (6 tests)
-- [x] ingest-pipeline.ts (10 tests)
-
-### Phase 3-2: Obsidian 플러그인 MVP — 5/5
-
-- [x] main.ts + ObsidianWikiFS/HttpClient 어댑터
-- [x] settings-tab.ts (BASIC_MODEL, API 키, Ollama 연결, Sync 경고)
-- [x] sidebar-chat.ts (채팅 UI, query-pipeline, 위키링크, 대화 유지)
-- [x] commands.ts (Cmd+Shift+I, 파일 선택, URI 프로토콜, 진행률)
-- [x] status-bar.ts (페이지 수, 통계 모달)
-
-### Phase 3-3: 통합 테스트 + 마무리 — 0/5
-
-- [ ] 단위 테스트 보강
-- [ ] 수동 통합 테스트
-- [ ] 에러 케이스 처리
-- [ ] 배포 준비
-- [ ] 최종 검증 + Git 태깅
+- [ ] 대화 히스토리 영구 저장
+- [ ] qmd SDK import (CLI exec 대신)
+- [ ] BRAT 배포 + v0.1.0-alpha 태그 갱신
