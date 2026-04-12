@@ -165,8 +165,22 @@ export class WikeyChatView extends ItemView {
       loadingEl.remove()
       console.error('[Wikey] query error:', err)
 
-      // Show FULL error in UI for debugging
-      const fullError = err?.stack ?? err?.message ?? String(err)
+      // Build detailed error string — handle empty/undefined errors
+      let fullError: string
+      if (err == null) {
+        fullError = '[Wikey] Unknown error (null/undefined was thrown)'
+      } else if (err instanceof Error) {
+        fullError = `${err.name}: ${err.message}\n\n${err.stack ?? '(no stack)'}`
+      } else if (typeof err === 'object') {
+        fullError = JSON.stringify(err, null, 2)
+      } else {
+        fullError = String(err)
+      }
+
+      if (!fullError || fullError.trim() === '') {
+        fullError = '[Wikey] Empty error — check Obsidian DevTools (Cmd+Option+I) Console for details'
+      }
+
       const errorMsg: ChatMessage = { role: 'error', content: fullError }
       this.plugin.chatHistory.push(errorMsg)
       this.renderMessage(errorMsg)

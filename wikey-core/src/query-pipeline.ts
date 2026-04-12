@@ -20,38 +20,57 @@ export async function query(
   opts?: QueryOptions,
 ): Promise<QueryResult> {
   const basePath = opts?.basePath ?? process.cwd()
-  const qmdBin = await findQmdBin(config, basePath)
 
-  const searchResults = await execQmdSearch(qmdBin, question, config, basePath)
+  // Step 1: Find qmd
+  let qmdBin: string
+  try {
+    qmdBin = await findQmdBin(config, basePath)
+  } catch (err: any) {
+    throw new Error(`[Step 1/4 qmd 탐색] ${err?.message ?? err}`)
+  }
+
+  // Step 2: Search
+  let searchResults: readonly SearchResult[]
+  try {
+    searchResults = await execQmdSearch(qmdBin, question, config, basePath)
+  } catch (err: any) {
+    throw new Error(`[Step 2/4 qmd 검색] ${err?.message ?? err}`)
+  }
+
+  // Step 3: LLM call
+  const { provider, model } = resolveProvider('default', config)
+  const llm = new LLMClient(httpClient, config)
 
   if (searchResults.length === 0) {
-    // No search results — try direct LLM answer as fallback
-    const { provider, model } = resolveProvider('default', config)
-    const llm = new LLMClient(httpClient, config)
     try {
       const directAnswer = await llm.call(
         `당신은 wikey 위키 어시스턴트입니다. 위키 검색 결과가 없었습니다.\n\n질문: ${question}\n\n위키에 관련 내용이 없다면 솔직히 말하고, 일반적인 질문이면 간단히 답변하세요.`,
         { provider, model },
       )
       return { answer: directAnswer, sources: [] }
-    } catch {
-      return {
-        answer: '검색 결과가 없습니다. 위키가 인덱싱되어 있는지 확인하세요 (`scripts/reindex.sh` 실행).',
-        sources: [],
-      }
+    } catch (err: any) {
+      throw new Error(`[Step 3/4 LLM 호출 (fallback)] provider=${provider} model=${model}\n${err?.message ?? err}`)
     }
   }
 
-  const context = opts?.wikiFS
-    ? await buildContextWithWikiFS(searchResults, opts.wikiFS)
-    : await buildContextFromFS(searchResults, basePath)
+  // Step 3b: Build context
+  let context: string
+  try {
+    context = opts?.wikiFS
+      ? await buildContextWithWikiFS(searchResults, opts.wikiFS)
+      : await buildContextFromFS(searchResults, basePath)
+  } catch (err: any) {
+    throw new Error(`[Step 3/4 컨텍스트 구성] ${err?.message ?? err}`)
+  }
 
-  const prompt = buildSynthesisPrompt(context, question)
-  const { provider, model } = resolveProvider('default', config)
-  const llm = new LLMClient(httpClient, config)
-  const answer = await llm.call(prompt, { provider, model })
-
-  return { answer, sources: searchResults }
+  // Step 4: LLM synthesis
+  try {
+    const prompt = buildSynthesisPrompt(context, question)
+    const answer = await llm.call(prompt, { provider, model })
+    return { answer, sources: searchResults }
+  } catch (err: any) {
+    throw new Error(`[Step 4/4 LLM 합성] provider=${provider} model=${model}\n${err?.message ?? err}`)
+  }
 }
 
 async function execQmdSearch(
