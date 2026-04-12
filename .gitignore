@@ -38,5 +38,9 @@ wikey-core/coverage/
 # wikey-obsidian build output
 wikey-obsidian/main.js
 
+# Obsidian plugin data (사용자별 설정)
+.obsidian/plugins/wikey/data.json
+.obsidian/*.bak
+
 # Claude Code session
 .claude/settings.local.json
