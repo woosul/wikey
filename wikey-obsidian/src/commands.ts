@@ -13,7 +13,10 @@ export function registerCommands(plugin: WikeyPlugin): void {
       const file = plugin.app.workspace.getActiveFile()
       if (!file) return false
       if (checking) return true
-      runIngest(plugin, file.path)
+      runIngest(plugin, file.path, (s, t, m) => new Notice(`${s}/${t} ${m}`)).then((r) => {
+        if (r.success) new Notice(`인제스트 완료: ${r.createdPages.length}개 페이지`)
+        else new Notice(`인제스트 실패: ${r.error}`)
+      })
       return true
     },
   })
@@ -50,12 +53,18 @@ export function registerCommands(plugin: WikeyPlugin): void {
   })
 }
 
-export async function runIngest(plugin: WikeyPlugin, sourcePath: string): Promise<void> {
-  // Warn if outside raw/
-  if (!sourcePath.startsWith('raw/')) {
-    new Notice(`⚠️ 이 파일은 raw/ 디렉토리 밖에 있습니다: ${sourcePath}`)
-  }
+export interface IngestRunResult {
+  success: boolean
+  sourcePath: string
+  createdPages: string[]
+  error?: string
+}
 
+export async function runIngest(
+  plugin: WikeyPlugin,
+  sourcePath: string,
+  onProgress?: (step: number, total: number, message: string) => void,
+): Promise<IngestRunResult> {
   try {
     const config = plugin.buildConfig()
     const basePath = (plugin.app.vault.adapter as any).basePath ?? ''
@@ -65,26 +74,44 @@ export async function runIngest(plugin: WikeyPlugin, sourcePath: string): Promis
       config,
       plugin.httpClient,
       (progress) => {
-        new Notice(`${progress.step}/${progress.total} ${progress.message}`)
+        onProgress?.(progress.step, progress.total, progress.message)
       },
       { basePath },
     )
 
-    const createdNames = [
+    const createdPages = [
       result.sourcePage.filename,
       ...result.entities.map((e) => e.filename),
       ...result.concepts.map((c) => c.filename),
     ]
-    const links = createdNames.map((f) => `[[${f.replace('.md', '')}]]`).join(', ')
 
-    new Notice(`인제스트 완료: ${createdNames.length}개 페이지 — ${links}`)
+    // inbox 파일이면 processed로 이동
+    if (sourcePath.startsWith('raw/0_inbox/')) {
+      moveToProcessed(basePath, sourcePath)
+    }
+
+    return { success: true, sourcePath, createdPages }
   } catch (err: any) {
     const msg = err?.message ?? String(err)
-    if (msg.includes('API') && msg.includes('key')) {
-      new Notice('인제스트 실패: API 키를 확인하세요 (설정 → Wikey)')
-    } else {
-      new Notice(`인제스트 실패: ${msg}`)
-    }
+    return { success: false, sourcePath, createdPages: [], error: msg }
+  }
+}
+
+function moveToProcessed(basePath: string, sourcePath: string): void {
+  const { join } = require('node:path') as typeof import('node:path')
+  const { renameSync, mkdirSync, existsSync } = require('node:fs') as typeof import('node:fs')
+
+  const processedDir = join(basePath, 'raw/0_inbox/_processed')
+  if (!existsSync(processedDir)) mkdirSync(processedDir, { recursive: true })
+
+  const fileName = sourcePath.split('/').pop() ?? sourcePath
+  const src = join(basePath, sourcePath)
+  const dst = join(processedDir, fileName)
+
+  try {
+    renameSync(src, dst)
+  } catch {
+    // 이동 실패해도 인제스트 결과에 영향 없음
   }
 }
 

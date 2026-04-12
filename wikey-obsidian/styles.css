@@ -498,8 +498,72 @@
 /* Progress */
 .wikey-ingest-progress {
   font-size: 0.82em;
-  color: var(--interactive-accent);
   min-height: 1.2em;
+}
+
+.wikey-ingest-progress-label {
+  color: var(--text-normal);
+  margin-bottom: 4px;
+}
+
+.wikey-ingest-progress-bar {
+  height: 4px;
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.wikey-ingest-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--interactive-accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* File-level progress */
+.wikey-ingest-file-progress {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--background-modifier-border-hover);
+}
+
+.wikey-ingest-file-progress:last-child {
+  border-bottom: none;
+}
+
+.wikey-ingest-fp-name {
+  font-size: 0.85em;
+  color: var(--text-normal);
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wikey-ingest-fp-status {
+  font-size: 0.78em;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.wikey-ingest-fp-active {
+  color: var(--interactive-accent);
+}
+
+.wikey-ingest-fp-done {
+  color: #00c853;
+}
+
+.wikey-ingest-fp-fail {
+  color: var(--text-error);
+}
+
+.wikey-ingest-fp-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+  font-size: 0.85em;
 }
 
 /* ══════════════════

@@ -2,6 +2,7 @@ import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
 import { query, resolveProvider } from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
+import type { IngestRunResult } from './commands'
 
 export const WIKEY_CHAT_VIEW = 'wikey-chat'
 
@@ -403,23 +404,71 @@ export class WikeyChatView extends ItemView {
   }
 
   private async ingestInbox() {
-    const progressEl = this.ingestPanel?.querySelector('.wikey-ingest-progress') as HTMLElement
-    const files = this.listInboxFiles()
+    const progressContainer = this.ingestPanel?.querySelector('.wikey-ingest-progress') as HTMLElement
+    if (!progressContainer) return
 
+    const files = this.listInboxFiles()
     if (files.length === 0) {
       new Notice('inbox에 인제스트할 파일이 없습니다')
       return
     }
 
-    for (let i = 0; i < files.length; i++) {
-      const name = files[i]
-      if (progressEl) progressEl.setText(`인제스트 중 (${i + 1}/${files.length}): ${name}`)
-      await runIngest(this.plugin, `raw/0_inbox/${name}`)
+    // 파일별 프로그레스 UI 생성
+    progressContainer.empty()
+    progressContainer.createEl('div', { text: `인제스트 (${files.length}개 파일)`, cls: 'wikey-ingest-section-label' })
+
+    const fileRows: Array<{ label: HTMLElement; bar: HTMLElement; status: HTMLElement }> = []
+    for (const name of files) {
+      const row = progressContainer.createDiv({ cls: 'wikey-ingest-file-progress' })
+      const label = row.createEl('div', { text: name, cls: 'wikey-ingest-fp-name' })
+      const barOuter = row.createDiv({ cls: 'wikey-ingest-progress-bar' })
+      const barInner = barOuter.createDiv({ cls: 'wikey-ingest-progress-fill' })
+      const status = row.createEl('div', { cls: 'wikey-ingest-fp-status', text: '대기' })
+      fileRows.push({ label, bar: barInner, status })
     }
 
-    if (progressEl) progressEl.setText(`완료: ${files.length}개 파일 인제스트`)
+    // 순차 실행
+    const results: IngestRunResult[] = []
+    for (let i = 0; i < files.length; i++) {
+      const name = files[i]
+      const row = fileRows[i]
+      row.status.setText('처리 중...')
+      row.status.addClass('wikey-ingest-fp-active')
+
+      const result = await runIngest(this.plugin, `raw/0_inbox/${name}`, (step, total) => {
+        const pct = ((step / total) * 100).toFixed(0)
+        row.bar.style.width = `${pct}%`
+      })
+
+      row.bar.style.width = '100%'
+      row.status.removeClass('wikey-ingest-fp-active')
+
+      if (result.success) {
+        row.status.setText(`${result.createdPages.length}개 페이지`)
+        row.status.addClass('wikey-ingest-fp-done')
+        // 결과 링크 추가
+        const linksEl = row.label.parentElement!.createDiv({ cls: 'wikey-ingest-fp-links' })
+        for (const page of result.createdPages) {
+          const link = linksEl.createEl('a', {
+            text: `[[${page.replace('.md', '')}]]`,
+            cls: 'wikey-wikilink',
+            attr: { 'data-href': page.replace('.md', '') },
+          })
+          link.addEventListener('click', (e) => {
+            e.preventDefault()
+            const href = link.getAttribute('data-href')
+            if (href) this.app.workspace.openLinkText(href, '')
+          })
+        }
+      } else {
+        row.status.setText('실패')
+        row.status.addClass('wikey-ingest-fp-fail')
+      }
+
+      results.push(result)
+    }
+
     this.renderInboxStatus()
-    new Notice(`${files.length}개 파일 인제스트 완료`)
   }
 
   private renderInboxStatus() {
