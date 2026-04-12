@@ -1,6 +1,6 @@
 import { ItemView, MarkdownRenderer, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
-import { query, resolveProvider } from 'wikey-core'
+import { query } from 'wikey-core'
 
 export const WIKEY_CHAT_VIEW = 'wikey-chat'
 
@@ -118,7 +118,11 @@ export class WikeyChatView extends ItemView {
 
     try {
       const config = this.plugin.buildConfig()
-      const result = await query(question, config, this.plugin.httpClient)
+      const basePath = (this.app.vault.adapter as any).basePath ?? ''
+      const result = await query(question, config, this.plugin.httpClient, {
+        basePath,
+        wikiFS: this.plugin.wikiFS,
+      })
 
       loadingEl.remove()
 

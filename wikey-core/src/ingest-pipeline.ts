@@ -19,12 +19,17 @@ const execFileAsync = promisify(execFile)
 
 const MAX_JSON_RETRIES = 2
 
+export interface IngestOptions {
+  readonly basePath?: string
+}
+
 export async function ingest(
   sourcePath: string,
   wikiFS: WikiFS,
   config: WikeyConfig,
   httpClient: HttpClient,
   onProgress?: IngestProgressCallback,
+  opts?: IngestOptions,
 ): Promise<IngestResult> {
   // Step 1: Read source
   onProgress?.({ step: 1, total: 4, message: '소스 읽기...' })
@@ -92,7 +97,7 @@ export async function ingest(
 
   // Step 4: Reindex
   onProgress?.({ step: 4, total: 4, message: '인덱싱...' })
-  triggerReindex()
+  triggerReindex(opts?.basePath)
 
   return {
     sourcePage,
@@ -230,13 +235,15 @@ tags: [태그1, 태그2]
   return cachedTemplate
 }
 
-function triggerReindex(): void {
+function triggerReindex(basePath?: string): void {
+  const { join } = require('node:path') as typeof import('node:path')
+  const cwd = basePath ?? process.cwd()
+  const script = join(cwd, 'scripts/reindex.sh')
+
   // Fire-and-forget background reindex
   try {
-    execFile('scripts/reindex.sh', ['--quick'], (err) => {
-      if (err) {
-        // Reindex failure is non-fatal
-      }
+    execFile(script, ['--quick'], { cwd }, () => {
+      // Reindex failure is non-fatal
     })
   } catch {
     // reindex.sh not found — non-fatal

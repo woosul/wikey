@@ -1,6 +1,6 @@
 import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { HttpClient, QueryResult, SearchResult, WikeyConfig } from './types.js'
+import type { HttpClient, QueryResult, SearchResult, WikiFS, WikeyConfig } from './types.js'
 import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
 
@@ -8,23 +8,43 @@ const execFileAsync = promisify(execFile)
 
 const QMD_COLLECTION = 'wikey-wiki'
 
+export interface QueryOptions {
+  readonly basePath?: string
+  readonly wikiFS?: WikiFS
+}
+
 export async function query(
   question: string,
   config: WikeyConfig,
   httpClient: HttpClient,
+  opts?: QueryOptions,
 ): Promise<QueryResult> {
-  const qmdBin = await findQmdBin(config)
+  const basePath = opts?.basePath ?? process.cwd()
+  const qmdBin = await findQmdBin(config, basePath)
 
-  const searchResults = await execQmdSearch(qmdBin, question, config)
+  const searchResults = await execQmdSearch(qmdBin, question, config, basePath)
 
   if (searchResults.length === 0) {
-    return {
-      answer: '검색 결과가 없습니다. 위키가 인덱싱되어 있는지 확인하세요 (`scripts/reindex.sh` 실행).',
-      sources: [],
+    // No search results — try direct LLM answer as fallback
+    const { provider, model } = resolveProvider('default', config)
+    const llm = new LLMClient(httpClient, config)
+    try {
+      const directAnswer = await llm.call(
+        `당신은 wikey 위키 어시스턴트입니다. 위키 검색 결과가 없었습니다.\n\n질문: ${question}\n\n위키에 관련 내용이 없다면 솔직히 말하고, 일반적인 질문이면 간단히 답변하세요.`,
+        { provider, model },
+      )
+      return { answer: directAnswer, sources: [] }
+    } catch {
+      return {
+        answer: '검색 결과가 없습니다. 위키가 인덱싱되어 있는지 확인하세요 (`scripts/reindex.sh` 실행).',
+        sources: [],
+      }
     }
   }
 
-  const context = await buildContextFromResults(searchResults)
+  const context = opts?.wikiFS
+    ? await buildContextWithWikiFS(searchResults, opts.wikiFS)
+    : await buildContextFromFS(searchResults, basePath)
 
   const prompt = buildSynthesisPrompt(context, question)
   const { provider, model } = resolveProvider('default', config)
@@ -38,16 +58,17 @@ async function execQmdSearch(
   qmdBin: string,
   question: string,
   config: WikeyConfig,
+  basePath: string,
 ): Promise<readonly SearchResult[]> {
   const topN = String(config.WIKEY_QMD_TOP_N || 5)
 
-  const koreanQuery = await tryKoreanPreprocess(question)
+  const koreanQuery = await tryKoreanPreprocess(question, basePath)
   const multiQuery = `lex: ${koreanQuery}\nvec: ${question}`
 
   try {
     const { stdout } = await execFileAsync(qmdBin, [
       'query', multiQuery, '--json', '-n', topN, '-c', QMD_COLLECTION,
-    ])
+    ], { cwd: basePath })
     return parseQmdOutput(stdout)
   } catch {
     return []
@@ -83,15 +104,15 @@ ${context}
 위키 내용을 기반으로 답변하세요. 출처는 [[페이지명]] 형식으로 인용하세요.`
 }
 
-async function buildContextFromResults(
+async function buildContextWithWikiFS(
   results: readonly SearchResult[],
+  wikiFS: WikiFS,
 ): Promise<string> {
-  const { readFile } = await import('node:fs/promises')
   const parts: string[] = []
 
   for (const result of results) {
     try {
-      const content = await readFile(result.path, 'utf-8')
+      const content = await wikiFS.read(result.path)
       const basename = result.path.split('/').pop()?.replace('.md', '') ?? result.path
       parts.push(`--- ${basename}.md ---\n${content}\n`)
     } catch {
@@ -102,12 +123,37 @@ async function buildContextFromResults(
   return parts.join('\n')
 }
 
-function tryKoreanPreprocess(text: string): Promise<string> {
+async function buildContextFromFS(
+  results: readonly SearchResult[],
+  basePath: string,
+): Promise<string> {
+  const { readFile } = await import('node:fs/promises')
+  const { join } = await import('node:path')
+  const parts: string[] = []
+
+  for (const result of results) {
+    try {
+      const fullPath = join(basePath, result.path)
+      const content = await readFile(fullPath, 'utf-8')
+      const basename = result.path.split('/').pop()?.replace('.md', '') ?? result.path
+      parts.push(`--- ${basename}.md ---\n${content}\n`)
+    } catch {
+      // file not found — skip
+    }
+  }
+
+  return parts.join('\n')
+}
+
+function tryKoreanPreprocess(text: string, basePath: string): Promise<string> {
+  const { join } = require('node:path') as typeof import('node:path')
+  const scriptPath = join(basePath, 'scripts/korean-tokenize.py')
+
   return new Promise((resolve) => {
     try {
       const proc = spawn('python3', [
-        'scripts/korean-tokenize.py', '--mode', 'query',
-      ], { stdio: ['pipe', 'pipe', 'pipe'] })
+        scriptPath, '--mode', 'query',
+      ], { stdio: ['pipe', 'pipe', 'pipe'], cwd: basePath })
 
       let stdout = ''
       proc.stdout.on('data', (data: Buffer) => { stdout += data.toString() })
@@ -121,10 +167,16 @@ function tryKoreanPreprocess(text: string): Promise<string> {
   })
 }
 
-async function findQmdBin(config: WikeyConfig): Promise<string> {
-  // 1. 설정값 (향후 config에서 읽기)
+async function findQmdBin(config: WikeyConfig, basePath: string): Promise<string> {
+  const { join } = await import('node:path')
+
+  // 1. 설정값 (사용자가 설정 탭에서 지정)
+  if ((config as any).QMD_PATH) {
+    return (config as any).QMD_PATH
+  }
+
   // 2. 프로젝트 내 vendored qmd
-  const vendoredPath = 'tools/qmd/bin/qmd'
+  const vendoredPath = join(basePath, 'tools/qmd/bin/qmd')
   try {
     const { accessSync } = await import('node:fs')
     accessSync(vendoredPath)

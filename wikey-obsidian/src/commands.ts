@@ -58,6 +58,7 @@ async function runIngest(plugin: WikeyPlugin, sourcePath: string): Promise<void>
 
   try {
     const config = plugin.buildConfig()
+    const basePath = (plugin.app.vault.adapter as any).basePath ?? ''
     const result = await ingest(
       sourcePath,
       plugin.wikiFS,
@@ -66,6 +67,7 @@ async function runIngest(plugin: WikeyPlugin, sourcePath: string): Promise<void>
       (progress) => {
         new Notice(`${progress.step}/${progress.total} ${progress.message}`)
       },
+      { basePath },
     )
 
     const createdNames = [
