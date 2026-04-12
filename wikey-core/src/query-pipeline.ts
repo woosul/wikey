@@ -85,11 +85,19 @@ async function execQmdSearch(
   const multiQuery = `lex: ${koreanQuery}\nvec: ${question}`
 
   try {
-    const { stdout } = await execFileAsync(qmdBin, [
+    console.log('[Wikey] qmd exec:', qmdBin, 'cwd:', basePath)
+    console.log('[Wikey] qmd query:', JSON.stringify(multiQuery))
+    const { stdout, stderr } = await execFileAsync(qmdBin, [
       'query', multiQuery, '--json', '-n', topN, '-c', QMD_COLLECTION,
-    ], { cwd: basePath })
-    return parseQmdOutput(stdout)
-  } catch {
+    ], { cwd: basePath, timeout: 30000 })
+    console.log('[Wikey] qmd stdout length:', stdout.length, 'stderr length:', stderr.length)
+    if (stderr) console.log('[Wikey] qmd stderr:', stderr.slice(0, 500))
+    const results = parseQmdOutput(stdout)
+    console.log('[Wikey] qmd results:', results.length)
+    return results
+  } catch (err: any) {
+    const msg = err?.stderr ?? err?.message ?? String(err)
+    console.error('[Wikey] qmd exec FAILED:', msg.slice(0, 500))
     return []
   }
 }
