@@ -2,7 +2,7 @@
 
 > 기간: 2026-04-12 ~ 진행 중
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **진행 중** — Phase 3-0 완료, Phase 3-1 완료, Phase 3-2 진행 중
+> 상태: **진행 중** — Phase 3-0 완료, Phase 3-1 완료, Phase 3-2 완료, Phase 3-3 대기
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), qmd 2.1.0 (vendored), Node.js 22.17.0
 
@@ -18,6 +18,11 @@
 | 04-12 | 3-1-B | llm-client.ts — 4개 프로바이더 (Gemini/Anthropic/OpenAI/Ollama) (13 tests) |
 | 04-12 | 3-1-D | query-pipeline.ts — qmd exec, 합성 프롬프트 (6 tests) |
 | 04-12 | 3-1-E | ingest-pipeline.ts — JSON 추출, 프롬프트 DRY, reindex (10 tests) |
+| 04-12 | 3-2-A | main.ts — WikeyPlugin, ObsidianWikiFS, ObsidianHttpClient 어댑터 |
+| 04-12 | 3-2-B | settings-tab.ts — BASIC_MODEL, API 키, Ollama 연결, Sync 경고 |
+| 04-12 | 3-2-C | sidebar-chat.ts — 채팅 UI, 마크다운 렌더링, 위키링크, CSS |
+| 04-12 | 3-2-D | commands.ts — Cmd+Shift+I, 파일 선택, URI 프로토콜, 진행률 |
+| 04-12 | 3-2-E | status-bar.ts — 페이지 수, 통계 모달 |
 
 ---
 
@@ -220,7 +225,80 @@ wikey/
 
 ---
 
-## 3. Eng 리뷰 이슈 반영 현황
+## 3. Phase 3-2: Obsidian 플러그인 MVP
+
+### 3.1 Phase 3-2-A: main.ts + 어댑터
+
+| 구현 | 역할 |
+|------|------|
+| `WikeyPlugin extends Plugin` | onload: 리본 아이콘, 커맨드, 설정 탭, 채팅 뷰, 상태 바 등록 |
+| `ObsidianWikiFS implements WikiFS` | Vault API 래핑 (read/write/exists/list, 자동 디렉토리 생성) |
+| `ObsidianHttpClient implements HttpClient` | `requestUrl()` 래핑 (CORS 우회) |
+| `WikeySettings` | data.json 기반 설정 (basicModel, API 키, ollamaUrl, qmdPath, costLimit) |
+| `buildConfig()` | 설정 → WikeyConfig 변환 |
+| `activateChatView()` | 채팅 사이드바 열기 (기존 뷰 재활용) |
+
+### 3.2 Phase 3-2-B: settings-tab.ts
+
+| 항목 | 구현 |
+|------|------|
+| 기본 모델 드롭다운 | ollama / gemini / anthropic / openai / claude-code |
+| Ollama URL | 텍스트 입력 (기본: http://localhost:11434) |
+| 연결 테스트 버튼 | `/api/tags` 호출 → 모델 수 표시 / 실패 안내 |
+| API 키 입력 | Gemini, Anthropic, OpenAI 각각 (password 마스킹) |
+| Sync 경고 [M1] | ⚠️ "Obsidian Sync 사용 시 API 키 동기화됩니다" 문구 |
+| qmd 경로 | 자동 탐지 + 수동 입력 |
+| 비용 한도 | 숫자 입력 (기본: $50) |
+
+### 3.3 Phase 3-2-C: sidebar-chat.ts — MVP 핵심
+
+**UI 구조:**
+```
+┌─────────────────────────────┐
+│  Wikey                      │  ← 헤더
+├─────────────────────────────┤
+│  Q: ESC란?                   │
+│  A: ESC(Electronic Speed... │
+│  참고: [[esc]], [[pid-loop]] │  ← 클릭 가능
+├─────────────────────────────┤
+│  [질문을 입력하세요...]  [↩] │
+└─────────────────────────────┘
+```
+
+| 기능 | 구현 |
+|------|------|
+| 채팅 UI | ItemView 기반 사이드바, 메시지 목록 + textarea 입력 |
+| 쿼리 실행 | Enter 키 → `query()` 호출 → 마크다운 답변 표시 |
+| 마크다운 렌더링 | `MarkdownRenderer.render()` — 코드블록, 테이블, 리스트 지원 |
+| 위키링크 | `[[page]]` → 클릭 가능한 링크, `app.workspace.openLinkText()` |
+| 세션 대화 유지 | chatHistory를 플러그인 인스턴스에 저장 (뷰 재생성 시 복원) |
+| 로딩 | 스피너 애니메이션 + "답변을 생성하고 있습니다..." |
+| 에러 처리 | API 키 누락, qmd 없음, 네트워크 오류별 안내 메시지 |
+| 스타일링 | Obsidian CSS 변수 사용 (다크/라이트 모드 자동 대응) [L1] |
+
+### 3.4 Phase 3-2-D: commands.ts
+
+| 기능 | 구현 |
+|------|------|
+| Cmd+Shift+I | 현재 열린 노트 인제스트 (raw/ 외부 시 경고) |
+| "Ingest file..." | FuzzySuggestModal — wiki/ 제외한 마크다운 파일 선택 |
+| 진행률 Notice [CEO] | "1/4 소스 읽기..." → "2/4 LLM 호출..." → ... |
+| 완료 Notice | "인제스트 완료: 3개 페이지 — [[esc]], [[pid-loop]], [[source-esc]]" |
+| URI 프로토콜 [CEO] | `obsidian://wikey?query=ESC` → 사이드바 열기 + 자동 쿼리 |
+| | `obsidian://wikey?ingest=path/to/file.md` → 인제스트 실행 |
+
+### 3.5 Phase 3-2-E: status-bar.ts
+
+| 기능 | 구현 |
+|------|------|
+| 상태 바 | "📚 29 pages" (wiki/ 내 .md 재귀 카운트) |
+| 갱신 주기 | 5분마다 자동 갱신 |
+| 클릭 | 상세 통계 모달 (entities/concepts/sources/analyses/meta 각각 표시) |
+| cost-tracker fallback [M4] | 비용 표시 미구현 (cost-tracker.sh 미존재 시 페이지 수만 표시) |
+
+---
+
+## 4. Eng 리뷰 이슈 반영 현황
 
 ### HIGH
 
@@ -234,26 +312,35 @@ wikey/
 
 | # | 이슈 | 반영 | 상태 |
 |---|------|------|------|
-| M1 | Obsidian Sync API 키 경고 | Phase 3-2 settings-tab.ts에서 구현 예정 | 대기 |
+| M1 | Obsidian Sync API 키 경고 | settings-tab.ts에 경고 문구 표시 | **완료** |
 | M2 | wiki-ops 경로 검증 | `buildPath()`에서 `..`, `/` 차단 | **완료** |
-| M3 | wikey.conf 동시 수정 방지 | Phase 3-2 settings-tab.ts에서 구현 예정 | 대기 |
-| M4 | cost-tracker.sh fallback | Phase 3-2 status-bar.ts에서 구현 예정 | 대기 |
+| M3 | wikey.conf 동시 수정 방지 | Obsidian data.json 단독 사용 (wikey.conf 양방향 동기화는 v2) | 연기 |
+| M4 | cost-tracker.sh fallback | 비용 미표시, 페이지 수만 표시 | **완료** (graceful fallback) |
+
+### CEO 추가 항목
+
+| 항목 | 반영 | 상태 |
+|------|------|------|
+| Obsidian URI 프로토콜 | `obsidian://wikey?query=` + `?ingest=` | **완료** |
+| 인제스트 진행률 | Notice 4단계 표시 | **완료** |
 
 ---
 
-## 4. 코드 규모
+## 5. 코드 규모
 
 | 영역 | 파일 | 라인 수 |
 |------|------|---------|
 | wikey-core/src (구현) | 7개 (.ts) | 831 |
 | wikey-core/src/__tests__ (테스트) | 5개 (.test.ts) | 561 |
 | wikey-core/src/prompts (프롬프트) | 1개 (.txt) | ~60 |
-| wikey-obsidian/src (빈 셸) | 5개 (.ts) | 104 |
-| **합계** | **18개** | **~1,556** |
+| wikey-obsidian/src (플러그인) | 5개 (.ts) | ~630 |
+| wikey-obsidian/styles.css | 1개 | ~155 |
+| **합계** | **19개** | **~2,237** |
+| 번들 크기 (main.js, minified) | — | 25KB |
 
 ---
 
-## 5. 테스트 현황
+## 6. 테스트 현황
 
 ```
  ✓ src/__tests__/config.test.ts          17 tests
@@ -264,12 +351,12 @@ wikey/
 
  Test Files  5 passed (5)
       Tests  57 passed (57)
-   Duration  206ms
+   Duration  ~200ms
 ```
 
 ---
 
-## 6. 기존 CLI 미영향 확인
+## 7. 기존 CLI 미영향 확인
 
 | 항목 | 결과 |
 |------|------|
@@ -280,19 +367,19 @@ wikey/
 
 ---
 
-## 7. 다음 단계: Phase 3-2 (Obsidian 플러그인 MVP)
+## 8. 다음 단계: Phase 3-3 (통합 테스트 + 마무리)
 
 | Step | 내용 | 상태 |
 |------|------|------|
-| 3-2-A | main.ts + ObsidianWikiFS/HttpClient 어댑터 | 대기 |
-| 3-2-B | settings-tab.ts (BASIC_MODEL, API 키, Ollama 연결) | 대기 |
-| 3-2-C | sidebar-chat.ts (채팅 UI, query-pipeline, 위키링크) | 대기 |
-| 3-2-D | commands.ts (Cmd+Shift+I 인제스트, URI 프로토콜) | 대기 |
-| 3-2-E | status-bar.ts (페이지 수, 비용 표시) | 대기 |
+| 3-3-A | 단위 테스트 보강 (19+ 케이스) | 대기 |
+| 3-3-B | 수동 통합 테스트 (Obsidian에서 6 시나리오) | 대기 |
+| 3-3-C | 에러 케이스 처리 (8건) | 대기 |
+| 3-3-D | 배포 준비 (BRAT, 문서 업데이트) | 대기 |
+| 3-3-E | 최종 검증 + Git 태깅 (v0.1.0-alpha) | 대기 |
 
 ---
 
-## 8. Phase 3 전체 체크리스트
+## 9. Phase 3 전체 체크리스트
 
 ### Phase 3-0: 스캐폴딩 — 4/4
 
@@ -309,13 +396,13 @@ wikey/
 - [x] query-pipeline.ts (6 tests)
 - [x] ingest-pipeline.ts (10 tests)
 
-### Phase 3-2: Obsidian 플러그인 MVP — 0/5
+### Phase 3-2: Obsidian 플러그인 MVP — 5/5
 
-- [ ] main.ts + 어댑터
-- [ ] settings-tab.ts
-- [ ] sidebar-chat.ts
-- [ ] commands.ts
-- [ ] status-bar.ts
+- [x] main.ts + ObsidianWikiFS/HttpClient 어댑터
+- [x] settings-tab.ts (BASIC_MODEL, API 키, Ollama 연결, Sync 경고)
+- [x] sidebar-chat.ts (채팅 UI, query-pipeline, 위키링크, 대화 유지)
+- [x] commands.ts (Cmd+Shift+I, 파일 선택, URI 프로토콜, 진행률)
+- [x] status-bar.ts (페이지 수, 통계 모달)
 
 ### Phase 3-3: 통합 테스트 + 마무리 — 0/5
 
