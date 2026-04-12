@@ -363,6 +363,17 @@ if [ -z "$QUERY" ]; then
   usage
 fi
 
+# --- stale 인덱스 경고 ---
+STAMP_FILE="${HOME}/.cache/qmd/.last-reindex"
+if [ -f "$STAMP_FILE" ]; then
+  stale_files=$(find "${PROJECT_DIR}/${WIKI_DIR}" -name "*.md" -newer "$STAMP_FILE" 2>/dev/null | head -1)
+  if [ -n "$stale_files" ]; then
+    log_warn "인덱스가 오래됨 — ./scripts/reindex.sh 실행 추천"
+  fi
+elif [ -d "${PROJECT_DIR}/${WIKI_DIR}" ]; then
+  log_warn "인덱스 타임스탬프 없음 — ./scripts/reindex.sh 실행 추천"
+fi
+
 case "$MODE" in
   search)
     check_qmd

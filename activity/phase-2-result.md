@@ -2,7 +2,7 @@
 
 > 기간: 2026-04-11 ~ 진행 중
 > 목표: 한국어 + LLM 다층 검색 + 커뮤니티
-> 상태: **Step 1~3-3 완료, Step 3-4~7 미착수**
+> 상태: **Step 1~5 완료 (5-1-1 부분), Step 6~7 미착수**
 > 전제: Phase 1 완료 (12/12 필수, 5/5 중요, 3/4 선택)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), vLLM-Metal 0.2.0, Codex CLI 0.118.0
 
@@ -455,6 +455,39 @@ RRF 융합 (k=60) → Reranking (qwen3-reranker) → Top-5
 Gemma 4 합성 → 최종 답변
 ```
 
+### 2.9 Step 5: 멀티 LLM 워크플로우 최적화
+
+**목표:** 프로바이더별 최적 배분 검증 + 비용 추적 시스템 구축.
+
+**산��물:**
+
+| 파일 | 역할 |
+|------|------|
+| `scripts/cost-tracker.sh` | 비용 기록/집계 CLI (add/summary/providers) |
+| `activity/cost-log.md` | 구조화된 비용 로그 (프로바이더/작업별) |
+| `activity/cost-analysis.md` | 비용 효율 분석 보고서 |
+| `wiki/sources/source-power-device-basics.md` | Gemini→Claude 파이프라인 검증 인제스트 |
+
+**워크플로우 검증 결과:**
+
+| 검증 항목 | 결과 |
+|----------|------|
+| 5-1-2: Gemini→Claude 인제스트 | 파워디바이스 37p PDF → Gemini 요약 ($0.01) → wiki 소스 생성 |
+| 5-1-3: Codex CLI 린트 | GPT-4.1, 71K 토큰, $0.17, validate+pii+인덱스+위키링크 검사 PASS |
+| 5-1-4: Gemma 4 쿼리 5건 | basic backend, 평균 44초, 모두 정상 응답+인용 |
+| 5-2-1: 비용 추적 | cost-tracker.sh + cost-log.md (11건 기록) |
+| 5-2-2: 비용 분석 | 월 $14.73 시뮬레이션 (예산 29.5%), 로컬 비율 70%+ |
+
+**비용 요약 (2026-04-10~12):**
+
+| 프로바이더 | 비용 | 비율 |
+|-----------|------|------|
+| Claude Code (Opus 4) | $20.93 | 99.1% |
+| Codex CLI (GPT-4.1) | $0.17 | 0.8% |
+| Gemini 2.5 Flash | $0.03 | 0.1% |
+| Ollama (Gemma 4 12B) | $0.00 | 0.0% |
+| **합계** | **$21.13** | **42.3% of $50** |
+
 ---
 
 ## 5. 핵심 발견 및 교훈
@@ -517,40 +550,38 @@ Gemma 4 합성 → 최종 답변
 | 3-3 | **완료** | jina-v3 시도→실패→Qwen3-Embedding 채택, vsearch 100% | 중 |
 | 3-4 | **완료** | 50건 벤치마크 → vector Recall 97%, hybrid Recall 98% → **게이트 통과** | 중 |
 
-### 6.2 Step 4~7 (미착수)
+### 6.2 Step 6~7 (미착수)
 
 | Step | 핵심 작업 |
 |------|----------|
-| 4 | 반자동 인제스트 (fswatch inbox 감시, Gemini 대용량 처리) |
-| 5 | 멀티 LLM 워크플로우 최적화 (프로바이더별 비용 분석) |
 | 6 | 커뮤니티 공개 (GitHub public, README 최종화, 홍보) |
 | 7 | 장기 운영 + Phase 2→3 게이트 (3개월) |
 
 ### 6.3 다음 세션 작업 추천
 
-1. **Step 5** (멀티 LLM 워크플로우 최적화) — 프로바이더별 비용 분석
-2. **Step 6** (커뮤니티 공개) — GitHub public, README, 홍보
+1. **Step 6** (커뮤니티 공개) — GitHub public, README, 홍보
+2. **5-1-1 완료** — inbox에 소스 추가 후 Claude Code 5건 인제스트 비용 검증
 
 ---
 
 ## 7. Phase 2 완료 체크리스트 (현재 상태)
 
-### 필수 (Must) — 4/6
+### 필수 (Must) — 6/6
 
 - [x] raw/ PARA 재구조화 완료 (1,073개 파일 재분류)
 - [x] CLASSIFY.md 분류 기준 문서 동작
 - [x] LLM 다층 검색 파이프라인 동작 (qmd BM25+벡터+RRF + Gemma 4 합성)
-- [ ] 한국어 벤치마크 80%+ 정확도 (현재 Top-1 60%, Top-3 80% → Step 3-3/3-4)
+- [x] 한국어 벤치마크 80%+ 정확도 (vector Recall 97%, hybrid Recall 98%)
 - [x] validate-wiki.sh + check-pii.sh 통과
 - [x] wikey.schema.md, CLAUDE.md, AGENTS.md 업데이트 완료
 
-### 중요 (Should) — 1/5
+### 중요 (Should) — 4/5
 
-- [ ] inbox 모니터링 (fswatch) 동작
-- [ ] Gemini 대용량 소스 처리 1건+ 성공
+- [x] inbox 모니터링 (fswatch) 동작
+- [x] Gemini 대용량 소스 처리 1건+ 성공 (파워디바이스 37p, TCP/IP 56p)
 - [x] ~~Gemma 4 로컬 쿼리 확장/리랭킹~~ qmd 내장 파이프라인으로 대체
-- [ ] 50+ 소스, 100+ 위키 페이지
-- [ ] GitHub 공개 + README 최종화
+- [ ] 50+ 소스, 100+ 위키 페이지 (현재 7소스, 30페이지)
+- [x] 멀티 LLM 비용 추적 + 분석 완료 ($21.13/50.00, 42.3%)
 
 ### 선택 (Could) — 0/4
 

@@ -24,10 +24,33 @@
 | **Read** | wiki/ 페이지 읽기, raw/ 소스 읽기, wikey.schema.md 참조 |
 | **Write** | 새 위키 페이지 생성 (프론트매터 포함) |
 | **Edit** | 기존 위키 페이지 부분 수정 (index.md 갱신, 내용 추가 등) |
-| **Bash** | Git 명령, `validate-wiki.sh`, `check-pii.sh`, `update-qmd.sh`, `korean-tokenize.py --batch`, `watch-inbox.sh`, `classify-inbox.sh`, `summarize-large-source.sh` 실행 |
+| **Bash** | Git 명령, `validate-wiki.sh`, `check-pii.sh`, `update-qmd.sh`, `korean-tokenize.py --batch`, `watch-inbox.sh`, `classify-inbox.sh`, `summarize-large-source.sh`, `cost-tracker.sh`, `reindex.sh`, `check-providers.sh` 실행 |
 | **Glob** | wiki/ 내 파일 목록 확인 |
 | **Grep** | 위키링크 추적, 소스 인용 검색 |
 | **qmd MCP** | 위키 하이브리드 검색 (BM25+벡터+RRF). 쿼리 세션에서 관련 페이지 탐색 시 활용. FTS5 인덱스는 한국어 형태소 전처리 적용됨 (`korean-tokenize.py --batch`) |
+
+### LLM 설정
+
+프로세스별 LLM은 `local-llm/wikey.conf`에서 통합 관리한다. 환경변수로 오버라이드 가능.
+
+```bash
+# 프로바이더 상태 확인
+./scripts/check-providers.sh
+
+# 인덱스 상태 확인 + 전체 재인덱싱
+./scripts/reindex.sh --check
+./scripts/reindex.sh
+```
+
+### 데이터 위치
+
+| 경로 | 역할 |
+|------|------|
+| `~/.cache/qmd/index.sqlite` | 메인 DB (문서, FTS5, 벡터) |
+| `~/.cache/qmd/contextual-prefixes.json` | Gemma 4 맥락 프리픽스 캐시 |
+| `~/.cache/qmd/models/` | GGUF 모델 캐시 |
+| `local-llm/wikey.conf` | 통합 LLM 설정 |
+| `.env` | 클라우드 API 키 (git 미추적) |
 
 ### Obsidian CLI
 
@@ -74,11 +97,9 @@ git diff --name-only HEAD~5 -- wiki/
 6. wiki/index.md 갱신 (새 페이지 등재, 기존 요약 수정)
 7. wiki/log.md에 항목 추가 (날짜, 타입, 영향 페이지, 토큰)
 8. wiki/overview.md 갱신 (필요시)
-9. scripts/validate-wiki.sh 실행 → 통과 확인
-10. scripts/check-pii.sh 실행 → 통과 확인
-11. python3 scripts/contextual-retrieval.py --batch → Gemma 4 맥락 프리픽스 생성 + FTS5 적용
-12. python3 scripts/korean-tokenize.py --batch → FTS5 한국어 형태소 전처리 갱신
-13. Git 커밋
+9. scripts/check-pii.sh 실행 → 통과 확인
+10. scripts/reindex.sh 실행 → 전체 인덱싱 (qmd update + embed + CR + 한국어 + validate)
+11. Git 커밋
 ```
 
 ### 쿼리 세션

@@ -2,7 +2,7 @@
 title: 활동 로그
 type: log
 created: 2026-04-10
-updated: 2026-04-11
+updated: 2026-04-12
 ---
 
 # 활동 로그
@@ -127,3 +127,19 @@ updated: 2026-04-11
 - BM25 Top-1 정확도: 5/10 → 6/10, Top-3: 7/10 → 8/10
 - 핵심 교정: "FPV digital transmission" Top-1 → fpv-digital-transmission.md
 - 파이프라인: contextual-retrieval.py --batch → korean-tokenize.py --batch
+
+## [2026-04-12] ingest | SiC 파워 디바이스의 기초 (Gemini → Claude Code 파이프라인)
+
+- 원시 소스: `raw/3_resources/20_report/TWHB-16_001_kr_파워디바이스의기초.pdf` (37p, 3MB)
+- 인제스트 방법: Gemini 2.5 Flash 1차 요약 → Claude Code 위키 통합 (Step 5-1-2)
+- 소스 요약 생성: [[source-power-device-basics]]
+- 인덱스 갱신: 소스 1건 등재
+- 비용: Gemini $0.02 (요약) + Claude Code 세션 비용 (통합)
+
+## [2026-04-12] infra | Phase 2 Step 5 — 멀티 LLM 워크플로우 최적화
+
+- 비용 추적 인프라: `scripts/cost-tracker.sh` + `activity/cost-log.md`
+- Gemma 4 로컬 쿼리 5건 검증 (평균 44초, basic backend)
+- Codex CLI 교차 검증 린트 1회 (71K 토큰, $0.17)
+- Gemini → Claude Code 대용량 인제스트 파이프라인 1건 검증
+- 비용 분석: 프로바이더별 요금, 워크플로우별 비용 효율

@@ -2,7 +2,7 @@
 title: 콘텐츠 인덱스
 type: index
 created: 2026-04-10
-updated: 2026-04-11
+updated: 2026-04-12
 ---
 
 # 콘텐츠 인덱스
@@ -39,6 +39,7 @@ updated: 2026-04-11
 - [[source-wikey-design-decisions]] — Wikey 설계 의사결정 7개 ADR (2026-04-10)
 - [[source-dji-o3-air-unit]] — DJI O3 Air Unit 사용자 매뉴얼 33p PDF (2023-03)
 - [[source-nanovna-v2-notes]] — NanoVNA V2 사용 경험 + 매뉴얼 기반 개인 노트 (2026-04-11)
+- [[source-power-device-basics]] — SiC 파워 디바이스의 기초, 로옴 Tech Web Hand Book 37p (2026-04-12)
 
 ## 분석
 

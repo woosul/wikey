@@ -33,8 +33,27 @@ import urllib.error
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Configuration
+# Configuration (wikey.conf → 환경변수 → 기본값)
 # ---------------------------------------------------------------------------
+
+def _load_wikey_conf():
+    """wikey.conf에서 설정 로드 (환경변수 미설정 시)."""
+    conf = Path(__file__).resolve().parent.parent / "local-llm" / "wikey.conf"
+    if not conf.exists():
+        return
+    for line in conf.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, _, value = line.partition("=")
+        key = key.strip()
+        value = value.split("#")[0].strip()
+        if key and value and key not in os.environ:
+            os.environ[key] = value
+
+_load_wikey_conf()
 
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("CONTEXTUAL_MODEL", "gemma4")
