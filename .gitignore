@@ -1,9 +1,10 @@
 # Raw sources (PII protection)
 raw/
 
-# Obsidian
+# Obsidian (UI 상태 — 사용자마다 다름)
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
+.obsidian/graph.json
 
 # Local LLM models
 local-llm/*.gguf
