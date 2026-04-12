@@ -68,6 +68,17 @@ python3 scripts/korean-tokenize.py --batch
 ./scripts/summarize-large-source.sh <pdf> --dry-run
 ./scripts/summarize-large-source.sh <pdf>
 
+# 스크립트 인제스트 (에이전트 없이 API 직접 호출)
+./scripts/llm-ingest.sh <소스 파일>
+./scripts/llm-ingest.sh <소스> --provider gemini --dry-run
+
+# 통합 인덱싱 + 프로바이더 확인 + 비용 추적
+./scripts/reindex.sh                    # 전체 인덱싱
+./scripts/reindex.sh --check            # stale 여부 확인
+./scripts/check-providers.sh            # LLM 프로바이더 상태
+./scripts/cost-tracker.sh summary       # 비용 요약
+./scripts/setup.sh --check              # 설치 상태 확인
+
 # 위키 내 키워드 검색 (단순)
 grep -r "검색어" wiki/ --include="*.md"
 

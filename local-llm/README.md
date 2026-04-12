@@ -155,10 +155,13 @@ vllm --version           # 0.19.0+ (vllm-metal 0.2.0)
 ### 설정 파일 (`local-llm/wikey.conf`)
 
 ```bash
+WIKEY_BASIC_MODEL=claude-code # 기본 모델 (claude-code|codex|gemini|ollama)
 WIKEY_SEARCH_BACKEND=basic    # basic: qmd 내장 | gemma4: Gemma 4 확장+리랭킹
 WIKEY_MODEL=wikey             # Ollama 모델명
 WIKEY_QMD_TOP_N=5             # qmd 검색 결과 수
 ```
+
+상세 설정: `local-llm/wikey.conf` | 프로바이더 비교: `local-llm/model-selection-guide.md`
 
 ### 기본 쿼리
 

@@ -24,7 +24,7 @@
 | **Read** | wiki/ 페이지 읽기, raw/ 소스 읽기, wikey.schema.md 참조 |
 | **Write** | 새 위키 페이지 생성 (프론트매터 포함) |
 | **Edit** | 기존 위키 페이지 부분 수정 (index.md 갱신, 내용 추가 등) |
-| **Bash** | Git 명령, `validate-wiki.sh`, `check-pii.sh`, `update-qmd.sh`, `korean-tokenize.py --batch`, `watch-inbox.sh`, `classify-inbox.sh`, `summarize-large-source.sh`, `cost-tracker.sh`, `reindex.sh`, `check-providers.sh` 실행 |
+| **Bash** | Git 명령, `setup.sh`, `validate-wiki.sh`, `check-pii.sh`, `update-qmd.sh`, `korean-tokenize.py --batch`, `watch-inbox.sh`, `classify-inbox.sh`, `summarize-large-source.sh`, `llm-ingest.sh`, `reindex.sh`, `check-providers.sh`, `cost-tracker.sh` 실행. 공유 라이브러리: `scripts/lib/llm-api.sh` |
 | **Glob** | wiki/ 내 파일 목록 확인 |
 | **Grep** | 위키링크 추적, 소스 인용 검색 |
 | **qmd MCP** | 위키 하이브리드 검색 (BM25+벡터+RRF). 쿼리 세션에서 관련 페이지 탐색 시 활용. FTS5 인덱스는 한국어 형태소 전처리 적용됨 (`korean-tokenize.py --batch`) |
