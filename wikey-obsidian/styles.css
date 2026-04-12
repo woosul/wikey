@@ -372,29 +372,41 @@
 .wikey-ingest-action-btn {
   flex: 1;
   background: transparent !important;
-  border: 1px solid var(--interactive-accent) !important;
+  border: 1px solid var(--background-modifier-border) !important;
   box-shadow: none !important;
   border-radius: 6px;
   padding: 6px 8px;
   cursor: pointer;
   font-size: 0.8em;
   font-weight: 500;
-  color: var(--interactive-accent);
-  transition: background-color 0.15s, color 0.15s;
+  color: var(--text-muted);
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .wikey-ingest-action-btn:hover {
-  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent) !important;
+  color: var(--interactive-accent);
+  border-color: var(--interactive-accent) !important;
+}
+
+.wikey-ingest-action-btn:active {
+  background: var(--interactive-accent) !important;
+  color: white !important;
+  border-color: var(--interactive-accent) !important;
 }
 
 .wikey-ingest-action-primary {
-  background: var(--interactive-accent) !important;
-  color: white !important;
+  color: var(--text-normal);
+  font-weight: 600;
 }
 
 .wikey-ingest-action-primary:hover {
-  opacity: 0.85;
+  color: var(--interactive-accent);
+  border-color: var(--interactive-accent) !important;
+}
+
+.wikey-ingest-action-primary:active {
   background: var(--interactive-accent) !important;
+  color: white !important;
 }
 
 /* Drop zone */
