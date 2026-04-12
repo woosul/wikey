@@ -14,6 +14,10 @@ interface WikeySettings {
   ollamaUrl: string
   qmdPath: string
   costLimit: number
+  advancedLLM: boolean
+  ingestProvider: string
+  lintProvider: string
+  summarizeProvider: string
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -24,6 +28,10 @@ const DEFAULT_SETTINGS: WikeySettings = {
   ollamaUrl: 'http://localhost:11434',
   qmdPath: '',
   costLimit: 50,
+  advancedLLM: false,
+  ingestProvider: '',
+  lintProvider: '',
+  summarizeProvider: '',
 }
 
 export type { WikeySettings }
@@ -78,9 +86,9 @@ export default class WikeyPlugin extends Plugin {
       ANTHROPIC_API_KEY: this.settings.anthropicApiKey,
       OPENAI_API_KEY: this.settings.openaiApiKey,
       OLLAMA_URL: this.settings.ollamaUrl,
-      INGEST_PROVIDER: '',
-      LINT_PROVIDER: '',
-      SUMMARIZE_PROVIDER: '',
+      INGEST_PROVIDER: this.settings.advancedLLM ? this.settings.ingestProvider : '',
+      LINT_PROVIDER: this.settings.advancedLLM ? this.settings.lintProvider : '',
+      SUMMARIZE_PROVIDER: this.settings.advancedLLM ? this.settings.summarizeProvider : '',
       CONTEXTUAL_MODEL: 'gemma4',
       COST_LIMIT: this.settings.costLimit,
     }

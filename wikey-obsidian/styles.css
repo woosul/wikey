@@ -1,4 +1,4 @@
-/* Wikey Chat Sidebar */
+/* ── Wikey Chat Sidebar ── */
 
 .wikey-chat-container {
   display: flex;
@@ -18,6 +18,27 @@
 .wikey-chat-title {
   font-weight: 600;
   font-size: 1em;
+}
+
+.wikey-chat-header-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.wikey-header-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.wikey-header-btn:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
 }
 
 .wikey-chat-messages {
@@ -105,9 +126,7 @@
 }
 
 @keyframes wikey-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 .wikey-chat-error {
@@ -116,7 +135,17 @@
   border-radius: 4px;
   background: var(--background-modifier-error);
   color: var(--text-error);
-  font-size: 0.85em;
+  font-size: 0.8em;
+}
+
+.wikey-chat-error-detail {
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--font-monospace);
+  font-size: 0.8em;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .wikey-chat-input-area {
@@ -155,6 +184,9 @@
   font-size: 1em;
   cursor: pointer;
   align-self: flex-end;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .wikey-chat-send-btn:hover {
@@ -166,7 +198,7 @@
   cursor: not-allowed;
 }
 
-/* Wikilinks in chat */
+/* Wikilinks */
 .wikey-wikilink {
   color: var(--link-color);
   cursor: pointer;
@@ -176,4 +208,67 @@
 
 .wikey-wikilink:hover {
   text-decoration-style: solid;
+}
+
+/* ── Settings ── */
+
+.wikey-settings-status-group {
+  margin: 8px 0 16px;
+  padding: 8px 12px;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+}
+
+.wikey-settings-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+.wikey-settings-status-label {
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+.wikey-settings-status-badge {
+  font-size: 0.8em;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--background-modifier-border);
+}
+
+.wikey-status-ok {
+  background: rgba(0, 200, 83, 0.15);
+  color: var(--text-success, #00c853);
+}
+
+.wikey-status-warn {
+  background: rgba(255, 171, 0, 0.15);
+  color: var(--text-warning, #ffab00);
+}
+
+.wikey-status-error {
+  background: rgba(255, 82, 82, 0.15);
+  color: var(--text-error);
+}
+
+.wikey-settings-warning {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  margin: 4px 0 12px;
+  border-radius: 4px;
+  background: rgba(255, 171, 0, 0.1);
+  color: var(--text-warning, #ffab00);
+  font-size: 0.82em;
+}
+
+.wikey-btn-success {
+  color: var(--text-success, #00c853) !important;
+}
+
+.wikey-btn-error {
+  color: var(--text-error) !important;
 }

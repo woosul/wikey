@@ -5,7 +5,7 @@ import { query } from 'wikey-core'
 export const WIKEY_CHAT_VIEW = 'wikey-chat'
 
 interface ChatMessage {
-  readonly role: 'user' | 'assistant'
+  readonly role: 'user' | 'assistant' | 'error'
   readonly content: string
 }
 
@@ -43,6 +43,34 @@ export class WikeyChatView extends ItemView {
     const header = container.createDiv({ cls: 'wikey-chat-header' })
     header.createEl('span', { text: 'Wikey', cls: 'wikey-chat-title' })
 
+    const headerActions = header.createDiv({ cls: 'wikey-chat-header-actions' })
+
+    // Clear button
+    const clearBtn = headerActions.createEl('button', {
+      cls: 'wikey-header-btn',
+      attr: { 'aria-label': '대화 초기화' },
+    })
+    clearBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>'
+    clearBtn.addEventListener('click', () => this.clearChat())
+
+    // Reload button
+    const reloadBtn = headerActions.createEl('button', {
+      cls: 'wikey-header-btn',
+      attr: { 'aria-label': '플러그인 리로드' },
+    })
+    reloadBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>'
+    reloadBtn.addEventListener('click', () => {
+      (this.app as any).commands?.executeCommandById?.('app:reload')
+    })
+
+    // Close button
+    const closeBtn = headerActions.createEl('button', {
+      cls: 'wikey-header-btn',
+      attr: { 'aria-label': '사이드바 닫기' },
+    })
+    closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>'
+    closeBtn.addEventListener('click', () => this.leaf.detach())
+
     // Messages area
     this.messagesEl = container.createDiv({ cls: 'wikey-chat-messages' })
 
@@ -59,10 +87,8 @@ export class WikeyChatView extends ItemView {
       attr: { placeholder: '질문을 입력하세요...', rows: '2' },
     })
 
-    this.sendBtn = inputArea.createEl('button', {
-      cls: 'wikey-chat-send-btn',
-      text: '↩',
-    })
+    this.sendBtn = inputArea.createEl('button', { cls: 'wikey-chat-send-btn' })
+    this.sendBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/></svg>'
 
     this.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -80,6 +106,12 @@ export class WikeyChatView extends ItemView {
 
   async onClose() {
     this.abortController?.abort()
+  }
+
+  private clearChat() {
+    this.plugin.chatHistory = []
+    this.messagesEl.empty()
+    this.showWelcome()
   }
 
   private showWelcome() {
@@ -133,9 +165,11 @@ export class WikeyChatView extends ItemView {
       loadingEl.remove()
       console.error('[Wikey] query error:', err)
 
-      const errorMsg = this.getErrorMessage(err)
-      const errorEl = this.messagesEl.createDiv({ cls: 'wikey-chat-error' })
-      errorEl.createEl('span', { text: errorMsg })
+      // Show FULL error in UI for debugging
+      const fullError = err?.stack ?? err?.message ?? String(err)
+      const errorMsg: ChatMessage = { role: 'error', content: fullError }
+      this.plugin.chatHistory.push(errorMsg)
+      this.renderMessage(errorMsg)
     } finally {
       this.setInputEnabled(true)
       this.scrollToBottom()
@@ -144,6 +178,14 @@ export class WikeyChatView extends ItemView {
   }
 
   private renderMessage(msg: ChatMessage) {
+    if (msg.role === 'error') {
+      const errorEl = this.messagesEl.createDiv({ cls: 'wikey-chat-error' })
+      const pre = errorEl.createEl('pre', { cls: 'wikey-chat-error-detail' })
+      pre.textContent = msg.content
+      this.scrollToBottom()
+      return
+    }
+
     const msgEl = this.messagesEl.createDiv({
       cls: `wikey-chat-message wikey-chat-${msg.role}`,
     })
@@ -174,7 +216,7 @@ export class WikeyChatView extends ItemView {
       })
     })
 
-    // Also handle [[wikilink]] in plain text that MarkdownRenderer might not convert
+    // Also handle [[wikilink]] in plain text
     el.querySelectorAll('p, li, td').forEach((node) => {
       const html = node.innerHTML
       const replaced = html.replace(
@@ -206,35 +248,5 @@ export class WikeyChatView extends ItemView {
 
   private scrollToBottom() {
     this.messagesEl.scrollTop = this.messagesEl.scrollHeight
-  }
-
-  private getErrorMessage(err: any): string {
-    const msg = err?.message ?? String(err)
-
-    // API key missing
-    if (msg.includes('API') && msg.includes('key')) {
-      return '⚠️ API 키가 설정되지 않았습니다. 설정(Wikey) 탭에서 키를 입력하세요.'
-    }
-    // qmd not found
-    if (msg.includes('qmd를 찾을 수 없습니다') || msg.includes('qmd')) {
-      return '⚠️ qmd를 찾을 수 없습니다. tools/qmd/bin/qmd가 있는지 확인하거나, 설정에서 경로를 지정하세요.'
-    }
-    // Ollama not running / network error
-    if (msg.includes('ECONNREFUSED') || msg.includes('connect')) {
-      return '⚠️ Ollama에 연결할 수 없습니다. `ollama serve`를 먼저 실행하세요.'
-    }
-    // Timeout
-    if (msg.includes('timeout') || msg.includes('Timeout') || msg.includes('aborted')) {
-      return '⚠️ 응답 시간 초과 (60초). 다시 시도하거나 모델을 확인하세요.'
-    }
-    // JSON parse failure (ingest)
-    if (msg.includes('JSON 파싱 실패')) {
-      return '⚠️ LLM 응답을 파싱할 수 없습니다. 다시 시도하거나 다른 모델로 변경하세요.'
-    }
-    // Network error
-    if (msg.includes('fetch') || msg.includes('network') || msg.includes('Network')) {
-      return '⚠️ 네트워크 오류. 인터넷 연결과 API 서버 상태를 확인하세요.'
-    }
-    return `⚠️ 오류: ${msg}`
   }
 }
