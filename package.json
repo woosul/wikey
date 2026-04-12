@@ -1,0 +1,17 @@
+{
+  "name": "wikey",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LLM Wiki - personal knowledge base powered by LLM agents",
+  "workspaces": [
+    "wikey-core",
+    "wikey-obsidian"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "build:core": "npm run build -w wikey-core",
+    "build:obsidian": "npm run build -w wikey-obsidian",
+    "test": "npm test -w wikey-core",
+    "dev": "npm run dev -w wikey-obsidian"
+  }
+}

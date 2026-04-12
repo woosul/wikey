@@ -1,0 +1,9 @@
+{
+  "id": "wikey",
+  "name": "Wikey",
+  "version": "0.1.0",
+  "minAppVersion": "1.5.0",
+  "description": "LLM Wiki knowledge base - query, ingest, and manage your wiki from Obsidian",
+  "author": "moosuhan",
+  "isDesktopOnly": true
+}

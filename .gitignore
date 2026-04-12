@@ -28,5 +28,14 @@ __pycache__/
 # Tools — qmd (source clone, node_modules excluded)
 tools/qmd/node_modules/
 
+# Node.js
+node_modules/
+
+# wikey-core build output
+wikey-core/dist/
+
+# wikey-obsidian build output
+wikey-obsidian/main.js
+
 # Claude Code session
 .claude/settings.local.json

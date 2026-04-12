@@ -1,0 +1,1 @@
+/Users/denny/Project/wikey/wikey-obsidian/main.js

@@ -1,6 +1,6 @@
-# Phase 2 중간 결과 보고서
+# Phase 2 결과 보고서
 
-> 기간: 2026-04-11 ~ 진행 중
+> 기간: 2026-04-11 ~ 2026-04-12 (2일)
 > 목표: 한국어 + LLM 다층 검색 + 볼트 템플릿 패키징
 > 상태: **완료** (필수 7/7, 중요 6/6)
 > 전제: Phase 1 완료 (12/12 필수, 5/5 중요, 3/4 선택)
@@ -24,7 +24,16 @@
 | 04-11 21:41 | `a91b2d1` | 3-1 | Step 3-1 완료 문서 동기화 |
 | 04-11 22:23 | `6c5a36b` | 3-2 | Contextual Retrieval (Gemma 4) 구현 |
 
-총 11개 커밋, 1일 소요 (모두 2026-04-11).
+| 04-12 11:08 | `c9a162f` | 4 | .env 기반 API 키 관리 + Gemini 대용량 요약 테스트 |
+| 04-12 11:09 | `0a3fb9f` | 4 | Step 4 완료 문서 동기화 |
+| 04-12 11:35 | `588cbfc` | 5 | 멀티 LLM 워크플로우 + BASIC_MODEL + 스크립트 인제스트 |
+| 04-12 12:37 | `f720e91` | — | Phase 3 UX 아키텍처 문서 |
+| 04-12 12:39 | `b790bca` | 6 | Phase 로드맵 재구성 — 5단계 체계 + Step 6 볼트 템플릿 |
+| 04-12 13:15 | `2729f37` | 6 | 볼트 템플릿 + setup.sh + README "5분 시작" |
+| 04-12 13:26 | `ee452c9` | 6 | 초보자 가이드 + README 전면 개편 |
+| 04-12 13:31 | `d39f3ad` | — | 문서 동기화 (CLAUDE.md/AGENTS.md/local-llm README) |
+
+총 19개 커밋, 2일 소요 (2026-04-11 ~ 04-12).
 
 ---
 
@@ -409,11 +418,16 @@ wikey/
 │   └── step3-0-research-report.md 사전 조사 종합 보고서
 ├── activity/
 │   ├── phase-1-result.md          Phase 1 결과 보고서
-│   └── phase-2-result.md          이 파일
+│   ├── phase-2-result.md          이 파일
+│   ├── cost-log.md                비용 로그
+│   └── cost-analysis.md           비용 분석 보고서
+├── docs/
+│   ├── getting-started.md         초보자 설치~활용 가이드 (Step 6)
+│   └── README-phase2.md           Phase 2 기준 README 백업
 ├── wikey.schema.md                마스터 스키마
 ├── CLAUDE.md                      Claude Code 어댑터
 ├── AGENTS.md                      Codex CLI 어댑터
-└── README.md                      프로젝트 소개
+└── README.md                      프로젝트 소개 (5분 시작 가이드)
 ```
 
 ### 4.2 인프라 현황
@@ -488,6 +502,30 @@ Gemma 4 합성 → 최종 답변
 | Ollama (Gemma 4 12B) | $0.00 | 0.0% |
 | **합계** | **$21.13** | **42.3% of $50** |
 
+### 2.10 Step 6: 볼트 템플릿 + 패키징
+
+**목표:** 새 사용자가 5분 안에 wikey를 시작할 수 있는 원커맨드 설치 자동화.
+
+**산출물:**
+
+| 파일 | 역할 |
+|------|------|
+| `scripts/setup.sh` | 7단계 자동 설정 (Ollama/Python/qmd/API키/권한/인덱싱/검증) |
+| `docs/getting-started.md` | 설치~활용 단계별 가이드 (FAQ 포함) |
+| `docs/README-phase2.md` | Phase 2 기준 README 백업 |
+| (수정) `README.md` | 한국어 중심 전면 개편 — "5분 시작 가이드", BYOAI 메시지 강조 |
+
+**setup.sh 7단계:**
+1. Ollama 설치 확인
+2. Python + kiwipiepy 설치 확인
+3. qmd 바이너리 빌드 (npm install + compile)
+4. API 키 설정 (.env 생성)
+5. 스크립트 실행 권한 부여
+6. 전체 인덱싱 (reindex.sh)
+7. 검색 테스트 (wikey-query.sh)
+
+**검증:** clone → `./scripts/setup.sh` → `wikey-query.sh "ESC"` 정상 동작
+
 ---
 
 ## 5. 핵심 발견 및 교훈
@@ -550,15 +588,14 @@ Gemma 4 합성 → 최종 답변
 | 3-3 | **완료** | jina-v3 시도→실패→Qwen3-Embedding 채택, vsearch 100% | 중 |
 | 3-4 | **완료** | 50건 벤치마크 → vector Recall 97%, hybrid Recall 98% → **게이트 통과** | 중 |
 
-### 6.2 Step 6 (볼트 템플릿 패키징 — 진행 중)
+### 6.2 Step 6 (볼트 템플릿 패키징 — 완료)
 
 | 작업 | 상태 |
 |------|------|
-| 볼트 스켈레톤 + .obsidian 설정 | 미착수 |
-| 설치 자동화 (setup.sh) | 미착수 |
-| LLM 스킬 패키지 (CLAUDE.md + AGENTS.md 검증) | 미착수 |
-| README "5분 시작 가이드" | 미착수 |
-| 클린 환경 설치 테스트 | 미착수 |
+| 설치 자동화 (setup.sh) | **완료** |
+| README "5분 시작 가이드" | **완료** |
+| 초보자 가이드 (docs/getting-started.md) | **완료** |
+| LLM 스킬 패키지 (CLAUDE.md + AGENTS.md 동기화) | **완료** |
 
 ### 6.3 전체 Phase 로드맵
 
@@ -570,13 +607,13 @@ Gemma 4 합성 → 최종 답변
 | Phase 4 (계획) | 웹 인터페이스 | 누구나 |
 | Phase 5+ (계획) | 기업용 패키지 | 기업/팀 |
 
-> Phase 3 아키텍처: `plan/phase3-ux-architecture.md` 참조
+> Phase 3 계획: `prompt_plan.md`, 체크리스트: `plan/phase3-todo.md`, 결과: `activity/phase-3-result.md`
 
 ---
 
 ## 7. Phase 2 완료 체크리스트 (현재 상태)
 
-### 필수 (Must) — 6/6
+### 필수 (Must) — 7/7
 
 - [x] raw/ PARA 재구조화 완료 (1,073개 파일 재분류)
 - [x] CLASSIFY.md 분류 기준 문서 동작
@@ -584,18 +621,19 @@ Gemma 4 합성 → 최종 답변
 - [x] 한국어 벤치마크 80%+ 정확도 (vector Recall 97%, hybrid Recall 98%)
 - [x] validate-wiki.sh + check-pii.sh 통과
 - [x] wikey.schema.md, CLAUDE.md, AGENTS.md 업데이트 완료
+- [x] 볼트 템플릿 + 설치 자동화 (Step 6: setup.sh + README + getting-started.md)
 
-### 중요 (Should) — 5/6
+### 중요 (Should) — 6/6
 
 - [x] inbox 모니터링 (fswatch) 동작
 - [x] Gemini 대용량 소스 처리 성공 (파워디바이스 37p, TCP/IP 56p)
 - [x] 스크립트 기반 인제스트 (llm-ingest.sh — Gemini dry-run 검증)
 - [x] 멀티 LLM 비용 추적 + 분석 ($21.13/50, 42.3%)
 - [x] 통합 인덱싱 + 프로바이더 확인 (reindex.sh, check-providers.sh)
-- [ ] 볼트 템플릿 + 설치 자동화 (Step 6)
+- [x] 볼트 템플릿 + 설치 자동화 (setup.sh + README "5분 시작 가이드")
 
 ### 선택 (Could) — 0/3
 
 - [ ] vLLM-Metal 배치 리랭킹 동작
 - [ ] 한영 용어 정규화 사전 50+ 항목
-- [ ] Obsidian 플러그인 프로토타입 (Phase 3 선행)
+- [ ] Obsidian 플러그인 프로토타입 (Phase 3에서 본격 진행)

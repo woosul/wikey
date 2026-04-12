@@ -1,0 +1,94 @@
+// ── Interfaces ──
+
+export interface HttpClient {
+  request(url: string, opts: HttpRequestOptions): Promise<HttpResponse>
+}
+
+export interface HttpRequestOptions {
+  readonly method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  readonly headers?: Readonly<Record<string, string>>
+  readonly body?: string
+  readonly timeout?: number
+}
+
+export interface HttpResponse {
+  readonly status: number
+  readonly body: string
+}
+
+export interface WikiFS {
+  read(path: string): Promise<string>
+  write(path: string, content: string): Promise<void>
+  exists(path: string): Promise<boolean>
+  list(dir: string): Promise<string[]>
+}
+
+// ── Config ──
+
+export interface WikeyConfig {
+  readonly WIKEY_BASIC_MODEL: string
+  readonly WIKEY_SEARCH_BACKEND: string
+  readonly WIKEY_MODEL: string
+  readonly WIKEY_QMD_TOP_N: number
+
+  readonly GEMINI_API_KEY: string
+  readonly ANTHROPIC_API_KEY: string
+  readonly OPENAI_API_KEY: string
+  readonly OLLAMA_URL: string
+
+  readonly INGEST_PROVIDER: string
+  readonly LINT_PROVIDER: string
+  readonly SUMMARIZE_PROVIDER: string
+  readonly CONTEXTUAL_MODEL: string
+
+  readonly COST_LIMIT: number
+}
+
+// ── LLM ──
+
+export type LLMProvider = 'gemini' | 'anthropic' | 'openai' | 'ollama'
+
+export interface LLMCallOptions {
+  readonly provider?: LLMProvider
+  readonly model?: string
+  readonly temperature?: number
+  readonly maxTokens?: number
+  readonly timeout?: number
+  readonly responseMimeType?: string
+}
+
+// ── Wiki ──
+
+export interface WikiPage {
+  readonly filename: string
+  readonly content: string
+  readonly category: 'entities' | 'concepts' | 'sources' | 'analyses'
+}
+
+export interface IngestResult {
+  readonly sourcePage: WikiPage
+  readonly entities: readonly WikiPage[]
+  readonly concepts: readonly WikiPage[]
+  readonly indexAdditions: readonly string[]
+  readonly logEntry: string
+}
+
+export interface IngestProgress {
+  readonly step: number
+  readonly total: number
+  readonly message: string
+}
+
+export type IngestProgressCallback = (progress: IngestProgress) => void
+
+export interface QueryResult {
+  readonly answer: string
+  readonly sources: readonly SearchResult[]
+  readonly tokensUsed?: number
+}
+
+export interface SearchResult {
+  readonly path: string
+  readonly score: number
+  readonly snippet: string
+}

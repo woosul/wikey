@@ -1,428 +1,597 @@
-# Implementation Plan: Wikey — LLM-Agnostic 개인 지식저장소 → 한국어 기업 기술지식저장소
+# Phase 3 구현 계획 — Wikey Obsidian 플러그인
 
-> 확정일: 2026-04-10 (v2 — 차별화 + BYOAI 반영)
-> 리뷰: CEO + Eng + Codex 자동 리뷰 완료, Taste 결정 3건 확정
+> 작성일: 2026-04-12
+> 상태: **CEO+Eng 리뷰 완료 — 사용자 확인 대기**
+> 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
+> 참조: plan/phase3-todo.md (체크리스트), plan/decisions.md (ADR-001~007)
+> 리뷰: CEO (SELECTIVE EXPANSION) + Eng 완료
 
-## 차별화 전략
+## 1. 요구사항 재정의
 
-### 문제
+### 목표
 
-llmbase(React UI), seCall(한국어 검색), qmd(LLM 다층 검색)가 이미 존재. 기능만으로는 차별점이 약함.
+현재 CLI 전용(bash/python 스크립트 + LLM 세션)인 wikey 시스템에 Obsidian 플러그인을 추가하여, 터미널 없이도 지식 관리의 핵심 워크플로우(쿼리, 인제스트, 설정)를 수행할 수 있게 해요.
 
-### Wikey의 포지션
+### MVP 기능 (Phase 3-2)
 
-```
-                    위키 빌더            검색 엔진
-                  ┌───────────┐     ┌───────────┐
-                  │ llmbase   │     │ qmd       │
-                  │ (React UI)│     │ (LLM 리랭킹)│
-                  └───────────┘     └───────────┘
-                        │                 │
-                        │    Wikey가       │
-                        │    결합하는 영역   │
-                        ▼                 ▼
-    ┌─────────────────────────────────────────────────┐
-    │  Wikey = Obsidian 네이티브 + BYOAI + 한국어 특화   │
-    │                                                   │
-    │  1. 가장 낮은 진입 장벽 (Obsidian 스킬 설치만)      │
-    │  2. 어떤 LLM이든 연결 (BYOAI)                     │
-    │  3. 한국어 기업 기술 KB = 미개척 시장               │
-    └─────────────────────────────────────────────────┘
-```
-
-**핵심 차별점 3가지:**
-
-1. **Zero-setup**: Obsidian에 스킬셋 설치 + 스키마 파일 복사 = 끝. 앱 설치, 서버 구축, DB 설정 불필요
-2. **BYOAI**: Claude Code, Codex, Gemini, Gemma 4(로컬) 등 어떤 LLM 에이전트든 연결. 특정 모델에 종속되지 않음
-3. **한국어 기업 특화**: 한영 혼합 기술 용어 정규화, 한국 기업 도구(Slack KR, Jira KR) 연동 — 이 조합은 시장에 없음
-
----
-
-## 설계 결정 기록 (ADR)
-
-### ADR-001: Obsidian 중심 [A] — 유지
-
-### ADR-002: 2개 분리 (개인 검증 → 기업 별도 결정) [A] — 유지
-
-### ADR-003: 마크다운 + 추상화 [A] — 유지
-
-### ADR-004: RAG "합성 레이어" 포지셔닝 — 유지
-
-### ADR-005: BYOAI — LLM 프로바이더 독립 (신규)
-
-**결정**: 스키마를 프로바이더 독립적으로 설계. 하나의 스키마에서 여러 LLM 에이전트를 지원.
-
-**구조:**
-```
-wikey/
-├── wikey.schema.md          # 프로바이더 독립 스키마 (마스터)
-├── CLAUDE.md                # Claude Code용 → wikey.schema.md include + Claude 특화 지시
-├── AGENTS.md                # Codex CLI용 → wikey.schema.md include + Codex 특화 지시
-├── .gemini/                 # Gemini용 설정
-│   └── settings.json
-└── local-llm/               # 로컬 LLM (Gemma 4) 용 프롬프트
-    └── system-prompt.md
-```
-
-**프로바이더별 역할:**
-
-| 프로바이더 | 용도 | 장점 | 한계 |
-|-----------|------|------|------|
-| **Claude Code** | 메인 인제스트/쿼리/린트 | 최고 품질 합성, 도구 사용 능력 | 비용, 온라인 필수 |
-| **Codex CLI** | 독립 2차 리뷰, 병렬 인제스트 | 독립 관점, Claude와 다른 시각 | API 별도 |
-| **Gemini** | 대용량 소스 처리 (긴 컨텍스트) | 1M+ 컨텍스트, 무료 티어 | 도구 연동 약함 |
-| **Gemma 4 (로컬)** | 쿼리 확장, 리랭킹, 오프라인 작업 | 무료, 프라이버시, 오프라인 | 합성 품질 낮음 |
-
-**워크플로우별 최적 조합:**
-
-| 워크플로우 | 기본 | 대안 | 로컬 폴백 |
-|-----------|------|------|----------|
-| 인제스트 (소스 분석 + 위키 작성) | Claude Code | Codex | - |
-| 쿼리 (검색 + 합성) | Claude Code | Gemini (대량 컨텍스트) | Gemma 4 (단순 쿼리) |
-| 린트 (상태 점검) | Claude Code | Codex (독립 검증) | - |
-| 쿼리 확장 + 리랭킹 (Phase 2+) | Gemma 4 (로컬) | qmd 내장 모델 | - |
-| 대용량 소스 1차 요약 | Gemini | Claude Code | Gemma 4 |
-
----
-
-## Phase 1: Zero-Setup 개인 위키 + BYOAI 기반 (2–3주)
-
-> 목표: "Obsidian 스킬 설치 + 스키마 복사 = 바로 시작"하는 가장 쉬운 LLM Wiki 경험
-> 차별화: llmbase(앱 설치 필요)보다 낮은 진입 장벽 + 어떤 LLM이든 사용 가능
-
-### 1-1. 프로바이더 독립 스키마 설계
-
-```
-wikey/
-├── wikey.schema.md          # 마스터 스키마 (프로바이더 독립)
-│   ├── 디렉토리 구조
-│   ├── 3계층 아키텍처
-│   ├── 워크플로우 (인제스트/쿼리/린트)
-│   ├── 페이지 컨벤션 (프론트매터, 네이밍, 위키링크)
-│   ├── 원시 소스 관리 (추가/수정/삭제)
-│   └── 핵심 원칙
-│
-├── CLAUDE.md                # "wikey.schema.md를 읽고 따르라" + Claude Code 특화 지시
-│   └── Claude 도구 사용법 (Read, Write, Edit, Bash, Obsidian CLI)
-│
-├── AGENTS.md                # "wikey.schema.md를 읽고 따르라" + Codex 특화 지시
-│   └── Codex 도구 사용법
-│
-└── local-llm/
-    └── system-prompt.md     # Gemma 4용 시스템 프롬프트 (wikey.schema.md 요약 + 로컬 제약)
-```
-
-**핵심**: `wikey.schema.md`가 모든 LLM이 공유하는 단일 규칙 문서. 프로바이더별 파일은 "이 스키마를 따르되, 이 도구를 써라"만 추가.
-
-### 1-2. 디렉토리 구조 + Git 초기화
-
-```
-wikey/
-├── wikey.schema.md
-├── CLAUDE.md
-├── AGENTS.md
-├── raw/                     # .gitignore 대상 (PII 보호)
-│   ├── articles/
-│   ├── papers/
-│   ├── notes/
-│   └── assets/
-├── wiki/
-│   ├── index.md
-│   ├── log.md
-│   ├── overview.md
-│   ├── entities/
-│   ├── concepts/
-│   ├── sources/
-│   └── analyses/
-├── scripts/
-│   └── validate-wiki.sh
-├── .claude/skills/          # Obsidian 스킬 (설치 완료)
-└── .obsidian/               # Obsidian 볼트 설정
-```
-
-- Git 초기화 + GitHub private 연동
-- `.gitignore`: `raw/`, `.obsidian/workspace.json`, `.DS_Store`, `local-llm/*.gguf`
-
-### 1-3. 위키 정합성 검증 + PII 보호
-
-- `scripts/validate-wiki.sh`: 프론트매터, 위키링크, 인덱스 등재, 중복 검사
-- Git pre-commit hook 연동
-- PII 패턴 스캐닝 (한국 전화번호, 이메일, 주민번호)
-
-### 1-4. Claude Code로 인제스트/쿼리/린트 검증
-
-- 테스트 소스 5개 인제스트 (1건씩, 관여하며)
-- 쿼리 5건 테스트, 분석 페이지 저장
-- 린트 실행 (증분 + 전체)
-- 대용량 소스 청킹 검증 (20p+ PDF)
-
-### 1-5. BYOAI 검증 — Codex로 동일 위키 운영 테스트
-
-- Codex CLI에서 `AGENTS.md` 읽고 인제스트 1건 실행
-- Claude Code로 만든 위키에 Codex가 일관되게 추가할 수 있는지 검증
-- **두 LLM이 같은 위키를 교대로 유지할 수 있는가?** → BYOAI 핵심 검증
-
-### 1-6. Gemma 4 로컬 LLM 셋업
-
-- Ollama 또는 llama.cpp로 Gemma 4 로컬 실행
-- `local-llm/system-prompt.md`에 위키 스키마 요약 포함
-- 단순 쿼리 (위키 페이지 읽기 + 요약) 동작 확인
-- 오프라인 환경에서 위키 조회 가능한지 검증
-
-### 1-7. Obsidian 스킬 패키징 (배포 준비)
-
-- 현재 `.claude/skills/`의 kepano 스킬 + wikey 스키마를 **하나의 설치 가능한 패키지**로 정리
-- README: "Obsidian에서 이 스킬 설치 + wikey.schema.md 복사 = LLM Wiki 시작"
-- GitHub 공개 저장소로 배포 준비 (Phase 2에서 공개)
-
-### 완료 기준
-
-- [ ] wikey.schema.md (프로바이더 독립 마스터 스키마) 작성
-- [ ] CLAUDE.md + AGENTS.md가 동일 스키마를 참조
-- [ ] Claude Code로 5+ 소스 인제스트, 20+ 위키 페이지
-- [ ] Codex CLI로 1건 인제스트 성공 (BYOAI 검증)
-- [ ] Gemma 4 로컬에서 위키 쿼리 동작
-- [ ] validate-wiki.sh + pre-commit hook 동작
-- [ ] Obsidian Graph View에서 상호연결 확인
-- [ ] 스킬 패키지 README 작성
-
----
-
-## Phase 2: 한국어 + LLM 다층 검색 + 커뮤니티 (2–3주 설정 + 3개월 운영)
-
-> 목표: 한국어 검색 특화 + LLM 참여형 검색 도입 + Obsidian 커뮤니티 공개
-> 차별화: qmd의 LLM 다층 검색 + seCall의 한국어 형태소 분석을 결합한 유일한 솔루션
-
-### 2-1. raw/ PARA 재구조화 + 분류 시스템 (Phase 2 기반 작업)
-
-> Phase 2-3 반자동 인제스트의 전제 조건. inbox 단일 진입점 + 분류 기준 문서 시스템 구축.
-
-**현황**: Phase 1에서 flat 구조(articles/papers/notes/assets/) 사용. 1,073개 파일(1.7GB) 중 99.5%가 manual/에 비체계적으로 적재.
-
-**변경**:
-```
-raw/
-├── 0_inbox/         # 단일 진입점 — 모든 새 파일은 여기에 추가
-├── 1_projects/      # 활성 프로젝트 (기한 있음)
-├── 2_areas/         # 지속적 관심 영역
-├── 3_resources/     # 주제별 참고 자료
-│   ├── 10_article/  #   2차: 문서 유형별
-│   ├── 30_manual/
-│   │   └── 101_build_rccar/  # 3차: 상세 주제
-│   └── ...
-├── 4_archive/       # 완료/비활성 항목
-├── 9_assets/        # 이미지, 첨부파일 (Obsidian)
-└── CLASSIFY.md      # 분류 기준 문서 (규칙 + 자연어 가이드 + 피드백 로그)
-```
-
-**폴더 넘버링 규칙** (`N_name` / `NN_name` / `NNN_name`):
-- 1차 PARA: `0_inbox`, `1_projects`, `2_areas`, `3_resources`, `4_archive`
-- 2차 문서 유형: `10_article`, `20_report`, `30_manual`, `40_cad`, `50_firmware`, `60_note`
-- 3차 상세 주제: `101_build_rccar`, `201_radio_rf-measurement` 등
-- 간격을 두어 중간 삽입 가능, 리프 제품 폴더는 넘버링 미적용
-
-**분류 워크플로우**:
-1. 사용자가 `raw/0_inbox/`에 파일 또는 폴더 드롭
-2. LLM이 `CLASSIFY.md` 참조하여 자동 분류 제안 (폴더는 번들 단위로 즉시 분류)
-3. 사용자 승인 후 해당 PARA 카테고리로 이동
-4. 사용자 이의 시 → `CLASSIFY.md` 피드백 로그에 기록 + 규칙 업데이트
-
-**URI 기반 등록 (Phase 3-4 기업용)**:
-- 기업 저장소(Confluence, SharePoint 등)의 소스는 복사 시 중복 문제 발생
-- 파일 복사 대신 `.meta.yaml`에 URI + 메타데이터만 등록 → LLM이 URI로 원본 접근하여 인제스트
-- CLASSIFY.md 분류 규칙은 메타데이터 기반으로 동일 적용
-
-**분류 기준 문서 (`raw/CLASSIFY.md`)** — 하이브리드 형식:
-- 자동 규칙: 확장자/경로 패턴 → 즉시 분류 (예: *.pdf + 제품폴더 → resources/{topic}/{product}/)
-- 자연어 가이드: 규칙 미매칭 시 LLM 판단 기준 (판단 순서, 애매한 경우 처리)
-- 하위폴더 정의: resources/ 내 11개 토픽 폴더 + 제품별 리프 폴더
-- 새 하위폴더 생성 규칙: LLM 제안 → 사용자 승인 → CLASSIFY.md에 즉시 등재
-- 피드백 로그: 분류 이의 기록 (사용자 수정 사유 → 규칙/가이드 업데이트 트리거)
-
-**네이밍**: 영문 kebab-case (카테고리: `rc-car/`, 제품: `Kyosho-Mini-Z/`)
-
-**마이그레이션**: `scripts/migrate-raw-to-para.sh`로 기존 1,073개 전체 재분류
-- articles/ (3개) → resources/wikey-design/
-- notes/wikey-design-decisions.md → projects/wikey/
-- notes/nanovna-v2-notes.md → areas/rf-measurement/
-- manual/00.게임기기/* → resources/{rc-car,fpv,bldc-motor,sim-racing,...}/
-- manual/02.무선통신/* → resources/{rf-measurement,ham-radio,sdr}/
-
-**문서 업데이트**: wikey.schema.md (디렉토리 구조, 소스 관리, LLM 권한), CLAUDE.md/AGENTS.md (분류 세션 추가), wiki/sources/ 6개 (경로 갱신), README.md
-
-**LLM 권한 변경**: raw/ "읽기만" → "내용 수정 금지, inbox→분류 이동은 허용 (사용자 승인 후)"
-
-**2-4과의 연결**: inbox 단일 진입점이 확보되면 fswatch 모니터링 대상이 `raw/0_inbox/` 하나로 단순화됨.
-
-### 2-2. LLM 다층 검색 파이프라인 구축
-
-qmd MCP 서버 + 로컬 LLM(Gemma 4) 조합:
-
-```
-사용자 질문
-  │
-  ▼
-Gemma 4 (로컬): 쿼리 확장                    ← 무료, 오프라인
-  │  (동의어, 한영 변환, 의미 변형)
-  │
-  ├─► qmd BM25 검색 (한국어 형태소 분석)
-  ├─► qmd 벡터 검색 (의미 유사도)
-  │
-  ▼
-RRF 융합 → 상위 30개 후보
-  │
-  ▼
-Gemma 4 (로컬): 리랭킹                       ← 무료, 오프라인
-  │
-  ▼
-최종 상위 10개 → Claude/Codex/Gemini: 합성    ← 고품질 합성
-```
-
-**핵심**: 쿼리 확장과 리랭킹은 **로컬 LLM(무료)**이 담당, 최종 합성만 **클라우드 LLM(고품질)**이 담당. 토큰 비용 최소화 + 지능적 검색 유지.
-
-### 2-3. 한국어 검색 특화
-
-- seCall 패턴의 한국어 형태소 분석 (Lindera/mecab-ko) 적용
-- 한영 기술 용어 정규화 레이어:
-  ```
-  "삼성 SDI" ↔ "Samsung SDI"
-  "쿠버네티스" ↔ "Kubernetes" ↔ "k8s"
-  "배포" ↔ "deploy" ↔ "deployment"
-  ```
-- **벤치마크**: 50–100개 쿼리 (한영 혼합, 기술 약어, 엔티티 조회, 교차 문서 합성)
-- **게이트**: 80%+ 정확도
-
-### 2-4. 반자동 인제스트 파이프라인
-
-- `scripts/watch-raw.sh`: fswatch → 알림 → 사용자 승인 → 인제스트
-- 미승인 소스 대기 목록 관리
-- Gemini 활용: 대용량 소스(100p+ PDF) 1차 요약 → Claude Code가 위키에 통합
-
-### 2-5. 멀티 LLM 워크플로우 최적화
-
-| 작업 | 최적 프로바이더 | 이유 |
-|------|---------------|------|
-| 일상 인제스트 | Claude Code | 도구 사용 + 파일 편집 능력 최고 |
-| 대용량 소스 1차 요약 | Gemini | 1M+ 컨텍스트, 무료 티어 활용 |
-| 쿼리 확장 + 리랭킹 | Gemma 4 (로컬) | 무료, 빠름, 프라이버시 |
-| 최종 합성 | Claude Code 또는 Codex | 고품질 |
-| 독립 린트 (2차 검증) | Codex | Claude와 다른 시각으로 교차 검증 |
-| 오프라인 쿼리 | Gemma 4 (로컬) | 네트워크 없이 위키 조회 |
-
-### 2-6. 커뮤니티 공개
-
-- GitHub 공개: wikey.schema.md + 스킬 패키지 + 설치 가이드
-- "5분 안에 LLM Wiki 시작하기" 한국어/영어 README
-- Obsidian 커뮤니티 포럼 + GeekNews 공유
-
-### 2-7. 장기 운영 데이터 수집
-
-- 3개월간 일상 사용 (목표: 100+ 소스, 200+ 페이지)
-- 수집 데이터: 일관성 추이, 프로바이더별 토큰 비용, 검색 정확도, 커뮤니티 피드백
-
-### 완료 기준
-
-- [ ] LLM 다층 검색 파이프라인 동작 (로컬 확장+리랭킹 + 클라우드 합성)
-- [ ] 한국어 벤치마크 80%+ 정확도
-- [ ] Gemini 대용량 소스 처리 동작
-- [ ] Gemma 4 로컬 쿼리 확장/리랭킹 동작
-- [ ] GitHub 공개 + README 작성
-- [ ] 50+ 소스, 100+ 위키 페이지
-- [ ] 3개월 운영 데이터 수집
-
-### Phase 2→3 게이트
-
-| 기준 | 통과 | 실패 |
-|------|------|------|
-| LLM 위키 일관성 | lint 오류율 감소 | 오류 누적 증가 |
-| 토큰 비용 | 월 $50 이하 (개인) | 월 $100+ |
-| 커뮤니티 | 10+ GitHub stars, 사용자 피드백 | 무반응 |
-| BYOAI | 2+ 프로바이더로 위키 교대 운영 성공 | 프로바이더 전환 시 일관성 파괴 |
-| 팀 수요 | 2-3명 파일럿 긍정 | 무관심 |
-
----
-
-## Phase 3: 팀 협업 + 기업 파일럿 (10주, 3개 서브페이즈)
-
-> 전제: Phase 2 게이트 통과 후에만 진행
-
-### Phase 3a: 헤드리스 서버 (4주)
-
-- TypeScript/Node.js 위키 엔진 (WikiStore 인터페이스 구현)
-- LLM 프로바이더 추상화: Claude API, Gemini API, Ollama(Gemma 4) 지원
-- LLM 다층 검색 서버 모듈화 (쿼리확장→하이브리드검색→리랭킹→합성)
-- REST API + Docker 패키징
-
-### Phase 3b: 웹 UI (4주)
-
-- 위키 브라우징 + 그래프 뷰 + 검색 + 인제스트 업로드
-
-### Phase 3c: 팀 + 한국 기업 도구 연동 (2주)
-
-- Git 기반 동기화 + Slack KR 연동
-- 3명 팀 2주 파일럿
-
----
-
-## Phase 4: 한국어 기업 기술 KB (8–12주)
-
-> 전제: Phase 3 팀 파일럿 긍정 결과 후에만 진행
-> 차별화: 한국어 기업 기술지식저장소 = 시장에 없음
-
-### 4-1. 접근 제어 + 감사 (단일 테넌트)
-
-### 4-2. LLM 다층 검색 기업 확장
-
-- 쿼리 확장/리랭킹: Gemma 4 로컬 (기업 프라이버시 보장)
-- 하이브리드 검색: BM25(한국어 형태소) + 벡터
-- 합성: 기업이 선택한 LLM (Claude/GPT/Gemini/자체 모델)
-- 보조 DB: 린트 자동화 + 구조 분석용 (검색의 주체는 LLM)
-
-### 4-3. 한국 기업 소스 연동
-
-| 소스 | 연동 |
+| 기능 | 설명 |
 |------|------|
-| Slack (한국어 채널) | Bot → 한영 혼합 스레드 → 정규화 → `raw/` |
-| Jira/Linear | API → 이슈/ADR → `raw/` |
-| Confluence | API → 페이지 → 마크다운 변환 → `raw/` |
-| GitHub | Webhook → PR/이슈 → `raw/` |
-| 회의록 (한국어) | Clova/Whisper → 텍스트 → `raw/` |
+| **사이드바 채팅** | 질문 입력 → qmd 검색 + LLM 합성 → 위키링크 클릭 가능한 답변 |
+| **인제스트 커맨드** | 현재 노트/선택 파일을 Cmd+Shift+I로 인제스트 (wiki/ 페이지 자동 생성) |
+| **설정 탭** | BASIC_MODEL 드롭다운, API 키 입력, Ollama 연결 확인 |
+| **상태 바** | "29 pages indexed | $21.13/50" 실시간 표시 |
 
-### 4-4. 법적 삭제 + PII 자동 처리
+### 연기 기능 (v2)
+
+드래그앤드롭 inbox, 자동 인제스트(file watch), 인라인 린트, 비용 대시보드
+
+### 제약 조건
+
+- qmd는 이미 TypeScript (`tools/qmd/`)이므로 직접 import 가능
+- 한국어 형태소 분석(kiwipiepy)은 Python exec 유지 (TS 포팅 불가)
+- Contextual Retrieval은 Gemma 4 (Ollama localhost:11434) exec 유지
+- Obsidian 플러그인 환경은 Node.js + Electron (`child_process` 사용 가능)
+- 기존 CLI 워크플로우는 그대로 유지해야 해요
+- 데스크톱 전용 (`isDesktopOnly: true`)
 
 ---
 
-## 리스크 분석
+## 2. 아키텍처 개요
 
-| 리스크 | 심각도 | 대응 | Phase |
-|--------|--------|------|-------|
-| LLM 위키 일관성 유지 실패 | CRITICAL | validate-wiki.sh + pre-commit + 인제스트 후 diff 리뷰 | 1 |
-| BYOAI: 프로바이더 전환 시 일관성 파괴 | HIGH | 프로바이더 독립 스키마 + 전환 테스트 검증 | 1 |
-| 한국어 검색 정확도 부족 | HIGH | seCall 형태소 분석 + 50-100개 벤치마크 게이트 | 2 |
-| Gemma 4 로컬 품질 부족 | HIGH | 쿼리확장/리랭킹에만 사용, 합성은 클라우드 LLM | 2 |
-| 다중파일 인제스트 중 실패 | CRITICAL | Git 브랜치 작업 → 검증 후 merge | 1 |
-| PII 유출 | HIGH | .gitignore + PII 규칙 + pre-commit 스캔 | 1 |
-| Phase 3 전환 비용 | HIGH | WikiStore 인터페이스 문서화 + 위키링크 파서 자체 구현 | 2-3 |
-| 커뮤니티 무반응 | MEDIUM | Phase 2 게이트에서 판단, 실패 시 개인 도구로 유지 | 2 |
+### 전체 데이터 흐름
 
-## 기술 스택
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     Obsidian (Electron)                          │
+│                                                                   │
+│  ┌──────────────┐   ┌──────────────┐   ┌────────────────────┐   │
+│  │ sidebar-chat │   │  commands.ts │   │  settings-tab.ts   │   │
+│  │  (View)      │   │  Cmd+Shift+I │   │  BASIC_MODEL, Keys │   │
+│  └──────┬───────┘   └──────┬───────┘   └────────┬───────────┘   │
+│         │                  │                     │               │
+│         ▼                  ▼                     ▼               │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                    wikey-core/                           │    │
+│  │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐   │    │
+│  │  │query-pipeline│  │ingest-pipeline│  │  config.ts   │   │    │
+│  │  │   .ts       │  │   .ts        │  │              │   │    │
+│  │  └──────┬──────┘  └──────┬───────┘  └──────────────┘   │    │
+│  │         │                │                               │    │
+│  │  ┌──────▼──────┐  ┌─────▼──────┐                        │    │
+│  │  │ llm-client  │  │  wiki-ops  │                        │    │
+│  │  │   .ts       │  │   .ts      │                        │    │
+│  │  └──────┬──────┘  └─────┬──────┘                        │    │
+│  └─────────┼───────────────┼───────────────────────────────┘    │
+│            │               │                                     │
+└────────────┼───────────────┼─────────────────────────────────────┘
+             │               │
+    ┌────────▼────┐   ┌──────▼──────┐
+    │ LLM APIs    │   │ Vault FS    │
+    │ Gemini      │   │ wiki/*.md   │
+    │ Anthropic   │   │ raw/*.md    │
+    │ OpenAI      │   │ index.md    │
+    │ Ollama      │   │ log.md      │
+    └─────────────┘   └─────────────┘
+             │
+    ┌────────▼────────┐
+    │ qmd             │
+    │ (CLI exec MVP,  │
+    │  SDK import v2) │
+    └─────────────────┘
+```
 
-| 레이어 | Phase 1-2 | Phase 3-4 |
-|--------|-----------|-----------|
-| 위키 저장소 | 마크다운 + Git | WikiStore → FileSystem/DB |
-| 검색 | index.md → qmd + Gemma 4 | qmd 확장 + 한국어 BM25 |
-| 인제스트 LLM | Claude Code (메인) | Claude/Codex API |
-| 합성 LLM | Claude Code / Codex | 기업 선택 (BYOAI) |
-| 쿼리확장/리랭킹 | Gemma 4 (로컬) | Gemma 4 (로컬, 프라이버시) |
-| 대용량 처리 | Gemini (1M+ 컨텍스트) | Gemini API |
-| 뷰어 | Obsidian | Obsidian → 웹 UI |
-| 인프라 | 로컬 + GitHub | Docker → 클라우드 |
+### 쿼리 파이프라인 상세 흐름
 
-## 타임라인
+```
+사용자 → [채팅 입력]
+         │
+         ▼
+  sidebar-chat.ts
+         │
+         ▼ query-pipeline.query(question)
+  ┌─────────────────────────────┐
+  │  1. qmd 검색                │
+  │     MVP: exec('qmd query')  │
+  │     v2:  qmdStore.search()  │
+  │                             │
+  │  2. 검색 결과 취합           │
+  │     Top-N 문서 + 스니펫      │
+  │                             │
+  │  3. LLM 합성 (llm-client)   │
+  │     프롬프트: 검색 결과 +    │
+  │     질문 → 위키링크 답변     │
+  └─────────────┬───────────────┘
+                │
+                ▼
+  sidebar-chat.ts → 마크다운 렌더링
+  (위키링크 클릭 → Obsidian 내부 링크 이동)
+```
 
-| Phase | 기간 | 핵심 차별화 | 게이트 |
-|-------|------|-----------|--------|
-| **1: Zero-Setup + BYOAI** | 2–3주 | 가장 쉬운 시작 + 4개 LLM 검증 | 20+ 페이지, BYOAI 동작 |
-| **2: 한국어 + 다층 검색 + 공개** | 2–3주 + 3개월 | 로컬 LLM 검색 + 한국어 특화 + GitHub 공개 | 커뮤니티 반응, 80%+ 검색 정확도 |
-| **3: 팀 서버** | 10주 | 멀티 LLM 서버 + 한국 기업 도구 | 3명 팀 파일럿 |
-| **4: 한국어 기업 KB** | 8–12주 | 유일한 한국어 LLM Wiki 기업 솔루션 | 10명 1개월 파일럿 |
+### 인제스트 파이프라인 상세 흐름
+
+```
+사용자 → [Cmd+Shift+I]
+         │
+         ▼
+  commands.ts → ingest-pipeline.ingest(filePath)
+  ┌─────────────────────────────────┐
+  │  1. 소스 파일 읽기 (Vault.read)  │
+  │  2. 기존 index.md 읽기          │
+  │  3. LLM 호출 (llm-client)       │
+  │     프롬프트: llm-ingest.sh의   │
+  │     build_ingest_prompt() 동일  │
+  │  4. JSON 응답 파싱              │
+  │  5. wiki-ops로 파일 생성/수정   │
+  │  6. index.md, log.md 갱신       │
+  │  7. reindex 트리거 (exec)       │
+  └─────────────────────────────────┘
+         │
+         ▼
+  Notice("인제스트 완료: 3개 페이지 생성")
+```
+
+---
+
+## 3. 핵심 추상화 설계
+
+### 3-A: httpClient 추상화
+
+wikey-core는 HTTP 클라이언트를 주입받아요 (Obsidian 의존성 제거):
+
+```typescript
+interface HttpClient {
+  request(url: string, opts: RequestOptions): Promise<Response>
+}
+// Obsidian: requestUrl() 래퍼
+// CLI/테스트: fetch() 래퍼
+```
+
+### 3-B: WikiFS 추상화
+
+파일시스템 접근을 인터페이스로 분리:
+
+```typescript
+interface WikiFS {
+  read(path: string): Promise<string>
+  write(path: string, content: string): Promise<void>
+  exists(path: string): Promise<boolean>
+  list(dir: string): Promise<string[]>
+}
+// Obsidian: Vault API 래퍼
+// CLI/테스트: Node.js fs 래퍼
+```
+
+### 3-C: 설정 동기화
+
+Obsidian `data.json` ↔ `wikey.conf` 양방향 동기화. 진실의 원천은 `wikey.conf` 유지.
+
+---
+
+## 4. 단계별 구현 계획
+
+### Phase 3-0: 프로젝트 스캐폴딩 (1일)
+
+**생성할 구조**:
+
+```
+wikey/
+├── package.json            ← 루트: npm workspaces 설정
+├── wikey-core/
+│   ├── package.json        ← name: "wikey-core", type: "module"
+│   ├── tsconfig.json       ← strict, ESM, target: ES2022
+│   └── src/
+│       ├── index.ts        ← re-export
+│       ├── types.ts        ← WikiPage, IngestResult, QueryResult
+│       ├── config.ts       ← 빈 셸
+│       ├── llm-client.ts   ← 빈 셸
+│       ├── wiki-ops.ts     ← 빈 셸
+│       ├── ingest-pipeline.ts ← 빈 셸
+│       └── query-pipeline.ts  ← 빈 셸
+│
+├── wikey-obsidian/
+│   ├── package.json        ← depends: wikey-core (workspace)
+│   ├── tsconfig.json
+│   ├── manifest.json       ← Obsidian 플러그인 메타
+│   ├── esbuild.config.mjs  ← 번들러 (Obsidian 표준)
+│   ├── styles.css
+│   └── src/
+│       ├── main.ts         ← Plugin 엔트리
+│       ├── sidebar-chat.ts ← 빈 셸
+│       ├── settings-tab.ts ← 빈 셸
+│       ├── status-bar.ts   ← 빈 셸
+│       └── commands.ts     ← 빈 셸
+```
+
+**의사결정**:
+
+| 항목 | 결정 | 이유 |
+|------|------|------|
+| 모노레포 도구 | npm workspaces | pnpm/turborepo는 오버킬 |
+| 번들러 | esbuild | Obsidian 커뮤니티 플러그인 표준 |
+| TS target | ES2022 | Electron 기반, 최신 문법 지원 |
+| qmd 통합 | MVP: CLI exec → v2: SDK import | better-sqlite3 네이티브 모듈 이슈 회피 |
+
+**완료 기준**: `npm run build` → `wikey-obsidian/main.js` 생성, Obsidian에서 빈 플러그인 로드 성공
+
+---
+
+### Phase 3-1: wikey-core 구현 (3~4일)
+
+bash/python 스크립트의 핵심 로직을 TypeScript로 포팅. TDD 진행.
+
+#### 3-1-A: config.ts (0.5일)
+
+- 포팅 원본: `local-llm/wikey.conf` + `llm-api.sh`의 `_llm_load_config()`
+- wikey.conf INI 파싱 (key=value, `#` 주석)
+- 환경변수 오버라이드 (env > conf > 기본값)
+- `.env` 파일 로드 (dotenv 호환)
+- `resolveProvider()` 로직 포팅
+- 의존성: 없음
+
+#### 3-1-B: llm-client.ts (1일)
+
+- 포팅 원본: `scripts/lib/llm-api.sh`의 4개 프로바이더 함수
+- 프로바이더별 분기: Gemini, Anthropic, OpenAI, Ollama
+- httpClient 주입 패턴 (Obsidian `requestUrl()` vs `fetch()`)
+- MVP: non-streaming → Ollama 스트리밍 우선 지원
+- 의존성: config.ts
+
+#### 3-1-C: wiki-ops.ts (0.5일)
+
+- 포팅 원본: `llm-ingest.sh`의 `apply_ingest_result()` 파일 생성 로직
+- WikiFS 인터페이스 + Obsidian/Node.js 구현체
+- 페이지 CRUD, index.md 갱신, log.md 추가
+- 위키링크 추출/검증 유틸리티
+- 의존성: types.ts
+
+#### 3-1-D: query-pipeline.ts (1일)
+
+- 포팅 원본: `local-llm/wikey-query.sh` 전체
+- qmd 검색 (MVP: CLI exec)
+- 한국어 형태소 전처리 (Python exec — `korean-tokenize.py --mode query`)
+- 검색 결과 + LLM 합성 프롬프트 (wikey-query.sh 프롬프트 그대로)
+- 의존성: config.ts, llm-client.ts
+
+#### 3-1-E: ingest-pipeline.ts (1일)
+
+- 포팅 원본: `scripts/llm-ingest.sh` 전체
+- 소스 읽기 (마크다운만, PDF는 v2)
+- `build_ingest_prompt()` 동일 프롬프트
+- LLM → JSON 파싱 (```json 블록 추출 + 재시도)
+- wiki-ops로 파일 생성/수정
+- reindex 트리거 (exec `reindex.sh --quick`)
+- 의존성: config.ts, llm-client.ts, wiki-ops.ts
+
+---
+
+### Phase 3-2: Obsidian 플러그인 MVP (1~1.5주)
+
+#### 3-2-A: main.ts + 기본 구조 (0.5일)
+
+- `WikeyPlugin extends Plugin` 엔트리
+- `onload()`: 리본 아이콘, 커맨드, 설정 탭, 뷰, 상태 바 등록
+- Obsidian Vault → WikiFS 어댑터 구현
+- Obsidian requestUrl → HttpClient 어댑터 구현
+
+#### 3-2-B: settings-tab.ts (0.5일)
+
+- BASIC_MODEL 드롭다운 (`claude-code | gemini | codex | ollama`)
+- API 키 입력 (비밀번호 마스킹)
+- Ollama URL + 연결 테스트 버튼
+- qmd 바이너리 경로 (자동 탐지 + 수동 설정)
+- 비용 한도 설정
+- 저장: Obsidian data.json + wikey.conf 양방향 동기화
+
+#### 3-2-C: sidebar-chat.ts (3~4일) — MVP 핵심
+
+- `ItemView` 기반 사이드바 패널
+- 채팅 UI: 메시지 목록 + 입력 필드
+- query-pipeline 호출 → 응답 표시
+- Obsidian `MarkdownRenderer.renderMarkdown()` 사용
+- 위키링크 클릭 → `app.workspace.openLinkText()` 호출
+- 세션 내 대화 유지, 로딩 인디케이터, 에러 표시
+
+```
+┌─────────────────────────────┐
+│  🔍 Wikey                   │  ← 헤더
+├─────────────────────────────┤
+│  Q: ESC와 FC의 차이점은?     │
+│  A: ESC(전자변속기)와...     │
+│  참고: [[esc]], [[fc]]      │  ← 클릭 가능
+├─────────────────────────────┤
+│  [질문을 입력하세요...]  [↩] │
+└─────────────────────────────┘
+```
+
+#### 3-2-D: commands.ts — 인제스트 (1일)
+
+- `Cmd+Shift+I`: 현재 열린 노트 인제스트
+- 커맨드 팔레트: "Wikey: Ingest current note", "Wikey: Ingest file..."
+- 진행/완료/실패 Notice 표시
+- ingest-pipeline 호출
+
+#### 3-2-E: status-bar.ts (0.5일)
+
+- "📚 29 pages" (wiki/ 내 .md 수)
+- "$21.13/50" (cost-tracker.sh exec)
+- 클릭 시 상세 모달
+- 5분 주기 또는 인제스트 완료 시 갱신
+
+---
+
+### Phase 3-3: 통합 테스트 + 마무리 (2~3일)
+
+#### 3-3-A: E2E 테스트 (1일)
+
+- 설정 → Ollama 연결 테스트
+- 채팅 → 질문/답변 왕복
+- 인제스트 → wiki/ 파일 생성 확인
+- 위키링크 클릭 → 파일 열림
+- 상태 바 숫자 정확성
+
+#### 3-3-B: 에러 케이스 (1일)
+
+- API 키 미설정 → 설정 탭 안내
+- Ollama 미실행 → 안내 메시지
+- qmd 바이너리 없음 → 설치 가이드
+- 네트워크 오류 → 재시도
+- LLM JSON 파싱 실패 → 원본 응답 표시
+
+#### 3-3-C: 배포 준비 (0.5일)
+
+- manifest.json 완성
+- `.obsidian/plugins/wikey/` 심볼릭 링크 (개발 모드)
+- `.gitignore` 업데이트
+
+---
+
+## 5. 의존성 그래프
+
+```
+Phase 3-0: 스캐폴딩
+    │
+    ▼
+Phase 3-1-A: config.ts ─────────────────────────────┐
+    │                                                 │
+    ├──▶ Phase 3-1-B: llm-client.ts                  │
+    │         │                                       │
+    │         ├──▶ Phase 3-1-D: query-pipeline.ts     │
+    │         │                                       │
+    │         └──▶ Phase 3-1-E: ingest-pipeline.ts ◀──┤
+    │                    │                            │
+    │                    ▼                            │
+    │         Phase 3-1-C: wiki-ops.ts ───────────────┘
+    │
+    ▼
+Phase 3-2-A: main.ts (모든 core 모듈 필요)
+    │
+    ├──▶ 3-2-B: settings (병렬 가능)
+    ├──▶ 3-2-C: sidebar-chat (병렬 가능)
+    ├──▶ 3-2-D: commands (병렬 가능)
+    └──▶ 3-2-E: status-bar (병렬 가능)
+
+    ▼
+Phase 3-3: 통합 테스트 + 마무리
+```
+
+---
+
+## 6. 리스크 분석
+
+### HIGH
+
+| 리스크 | 완화 |
+|--------|------|
+| better-sqlite3 네이티브 모듈 — qmd SDK import 시 Electron ABI mismatch | MVP: CLI exec 유지. v2에서 wasm 또는 Electron rebuild 검토 |
+| LLM JSON 파싱 불안정 — bash에서도 빈번 실패 | JSON 추출 강화 + 구조화 출력 API (Gemini/OpenAI) 활용 |
+| Obsidian 마켓플레이스 보안 리뷰 — child_process, API 키 저장 | 초기 수동 설치 (BRAT), 리뷰 기준 사전 확인 |
+
+### MEDIUM
+
+| 리스크 | 완화 |
+|--------|------|
+| child_process 모바일 미지원 | `isDesktopOnly: true` 명시 |
+| qmd CLI 경로 — 사용자마다 다름 | 설정 탭 + 자동 탐지 (which, 프로젝트 내 탐색) |
+| 스트리밍 형식 불균일 | MVP: non-streaming 우선, Ollama 스트리밍만 지원 |
+| 한국어 kiwipiepy 미설치 | "한국어 강화" 토글, graceful fallback |
+
+### LOW
+
+| 리스크 | 완화 |
+|--------|------|
+| Obsidian API 변경 | minAppVersion 명시, 릴리스 노트 모니터링 |
+| wikey.conf ↔ settings 동기화 충돌 | 플러그인 활성화 시 wikey.conf 재로드 |
+
+---
+
+## 7. 작업량 예상
+
+| 모듈 | 예상 라인 | 복잡도 | 소요 |
+|------|----------|--------|------|
+| config.ts | 120 | 낮음 | 0.5일 |
+| llm-client.ts | 300 | 높음 | 1일 |
+| wiki-ops.ts | 200 | 중간 | 0.5일 |
+| query-pipeline.ts | 250 | 높음 | 1일 |
+| ingest-pipeline.ts | 300 | 높음 | 1일 |
+| types.ts | 80 | 낮음 | 포함 |
+| main.ts | 100 | 중간 | 0.5일 |
+| sidebar-chat.ts | 400 | 높음 | 3~4일 |
+| settings-tab.ts | 200 | 중간 | 0.5일 |
+| status-bar.ts | 80 | 낮음 | 0.5일 |
+| commands.ts | 120 | 중간 | 1일 |
+| 테스트 | 600+ | - | 분산 |
+| **합계** | **~2,750** | | **~11~14일** |
+
+---
+
+## 8. 일정 요약
+
+```
+Week 1:  스캐폴딩 + wikey-core 전체
+  Day 1:  Phase 3-0 스캐폴딩
+  Day 2:  3-1-A config.ts + 3-1-C wiki-ops.ts (병렬)
+  Day 3:  3-1-B llm-client.ts
+  Day 4:  3-1-D query-pipeline.ts
+  Day 5:  3-1-E ingest-pipeline.ts
+
+Week 2:  Obsidian 플러그인 MVP
+  Day 6:  3-2-A main.ts + 3-2-B settings-tab.ts
+  Day 7:  3-2-C sidebar-chat.ts (시작)
+  Day 8:  3-2-C sidebar-chat.ts (계속)
+  Day 9:  3-2-C sidebar-chat.ts (완성) + 3-2-E status-bar.ts
+  Day 10: 3-2-D commands.ts
+
+Week 3:  통합 테스트 + 마무리
+  Day 11: 3-3-A E2E 테스트
+  Day 12: 3-3-B 에러 케이스 + 3-3-C 배포 준비
+  Day 13: 버퍼 (예상 못한 이슈)
+  Day 14: 최종 검증 + Git 태깅
+```
+
+---
+
+## 9. 성공 기준 (검증 가능한 증거)
+
+| 기준 | 검증 방법 |
+|------|----------|
+| 플러그인 로드 | Obsidian 설정 > 커뮤니티 플러그인에 "Wikey" 표시 |
+| 설정 저장/로드 | 재시작 후 API 키 유지 |
+| Ollama 연결 | "연결 확인" 버튼 → 초록 체크마크 |
+| 채팅 질문/답변 | "ESC란?" → 위키 기반 답변 + [[esc]] 링크 |
+| 위키링크 클릭 | [[esc]] 클릭 → wiki/entities/esc.md 열림 |
+| 인제스트 | Cmd+Shift+I → wiki/sources/ 파일 생성 |
+| 상태 바 | "29 pages indexed" 숫자 정확 |
+| 기존 CLI | `wikey-query.sh "ESC"` 동일 결과 |
+| 테스트 | `npm test` — 0 failures |
+
+---
+
+## 10. ADR 연계
+
+이전 세션에서 확정된 아키텍처 결정과의 정합성:
+
+| ADR | Phase 3 반영 |
+|-----|-------------|
+| ADR-001: Obsidian 중심 | Obsidian 플러그인이 첫 번째 GUI |
+| ADR-003: 마크다운 = 데이터 모델 | WikiFS 추상화로 Vault API 직접 접근 |
+| ADR-005: BYOAI | 4개 프로바이더 (Gemini/Anthropic/OpenAI/Ollama) 지원 |
+| ADR-007: LLM 다층 검색 | qmd(검색) + LLM(합성) 분리 구조 유지 |
+
+---
+
+---
+
+## 11. CEO 리뷰 결과
+
+> 모드: SELECTIVE EXPANSION — 현재 범위 유지 + 가치 높은 추가 요소 선별
+
+### 전제 검증
+
+- **전제 유효**: Obsidian → 터미널 → Obsidian 컨텍스트 스위칭 제거가 올바른 문제
+- **타이밍 적절**: Phase 2 검색 인프라(qmd + 한국어) 완성 → GUI를 얹을 기반 갖춰짐
+
+### 대안 비교
+
+| 접근 | effort | 판정 |
+|------|--------|------|
+| A. wikey-core + wikey-obsidian (현재) | 11~14일 | **채택** — Phase 4 웹 재사용 가치 |
+| B. Obsidian 전용 (코어 분리 없이) | 7~9일 | 기각 — Phase 4에서 코드 중복 |
+| C. CLI 래퍼 (thin shell) | 3~4일 | 기각 — UX 제한 |
+
+### 범위 조정
+
+**추가 채택 (+0.8일)**:
+1. Obsidian URI 프로토콜 (`obsidian://wikey?query=ESC`) — Alfred/Raycast 연동
+2. 인제스트 진행률 단계 표시 ("1/4 소스 읽기 → 2/4 LLM 호출...")
+
+**명시적 제외**: 드래그앤드롭, 자동 인제스트, PDF 인제스트 — 모두 v2
+
+### 추상화 최소화 원칙
+
+Obsidian용 구현체만 먼저. CLI/웹용 WikiFS, HttpClient 구현체는 Phase 4에서 필요 시 추가.
+
+---
+
+## 12. Eng 리뷰 결과
+
+### HIGH 이슈 (3건)
+
+| # | 이슈 | 해결 | 추가 일정 |
+|---|------|------|----------|
+| H1 | 인제스트 프롬프트 DRY — bash와 TS 이중 관리 | 프롬프트를 `wikey-core/src/prompts/ingest.txt`로 분리 | +0.5일 |
+| H2 | child_process 셸 주입 — 쿼리가 셸 인자로 전달 | `execFile()` 사용 (셸 미개입) | +0.2일 |
+| H3 | qmd DB 동시 접근 — CLI exec과 qmd SDK 병행 시 | WAL 모드 확인 + 읽기 전용이므로 잠금 없음 | +0.1일 |
+
+### MEDIUM 이슈 (4건)
+
+| # | 이슈 | 해결 |
+|---|------|------|
+| M1 | Obsidian Sync API 키 노출 | 설정 탭에 경고 문구 |
+| M2 | wiki-ops 경로 검증 누락 | `wiki/` 프리픽스 하드체크 |
+| M3 | wikey.conf 동시 수정 경쟁 | 활성화 시 재로드 + 원자적 쓰기 |
+| M4 | cost-tracker.sh 미존재 시 에러 | graceful fallback |
+
+### 엣지 케이스 커버리지
+
+- 쿼리: 8건 (qmd 미설치, DB 비어있음, Ollama 미실행, API 키 누락, 응답 지연, 형태소 미설치, 빈 결과, 동시 쿼리)
+- 인제스트: 6건 (raw/ 외부 파일, 재인제스트, JSON 파싱 실패, 중단, 대용량, Vault 외부)
+- UI: 4건 (없는 위키링크, 리사이즈, 다크모드, 뒤로가기)
+
+### 테스트 전략
+
+- wikey-core: vitest 단위 테스트 (19 케이스)
+- Obsidian 플러그인: 수동 테스트 (6 시나리오)
+
+### 성능
+
+병목은 LLM 응답 대기(2~15초)뿐. qmd exec 오버헤드(~200ms)는 무시 가능.
+
+### 보안 권장
+
+1. `execFile()` 사용 (셸 이스케이프 불필요)
+2. wiki-ops 경로 검증 (`wiki/` 프리픽스)
+3. Obsidian Sync 경고 문구
+4. wikey.conf 원자적 쓰기
+
+---
+
+## 13. 최종 일정 (리뷰 반영)
+
+CEO 추가 (+0.8일) + Eng HIGH 이슈 (+0.8일) 반영:
+
+```
+총 예상: 13~16일 (기존 11~14일 + 리뷰 반영 +2일)
+
+Week 1:  스캐폴딩 + wikey-core
+  Day 1:  3-0 스캐폴딩 + 프롬프트 파일 분리 (H1)
+  Day 2:  3-1-A config.ts + 3-1-C wiki-ops.ts (경로 검증 M2 포함)
+  Day 3:  3-1-B llm-client.ts (execFile H2 포함)
+  Day 4:  3-1-D query-pipeline.ts
+  Day 5:  3-1-E ingest-pipeline.ts (진행률 표시 포함)
+
+Week 2:  Obsidian 플러그인 MVP
+  Day 6:  3-2-A main.ts + 3-2-B settings-tab.ts (Sync 경고 M1 포함)
+  Day 7:  3-2-C sidebar-chat.ts (시작)
+  Day 8:  3-2-C sidebar-chat.ts (계속)
+  Day 9:  3-2-C sidebar-chat.ts (완성) + 3-2-E status-bar.ts (M4 포함)
+  Day 10: 3-2-D commands.ts + URI 프로토콜
+
+Week 3:  통합 테스트 + 마무리
+  Day 11: 단위 테스트 (vitest 19 케이스)
+  Day 12: 수동 통합 테스트 (6 시나리오)
+  Day 13: 에러 케이스 + 배포 준비
+  Day 14: 버퍼
+```
+
+---
+
+## 14. 향후 확장 (Phase 3 이후)
+
+| 항목 | Phase | 설명 |
+|------|-------|------|
+| qmd SDK import | 3.5 | better-sqlite3-wasm 또는 Electron rebuild |
+| 드래그앤드롭 inbox | 3.5 | Obsidian dropzone → raw/0_inbox/ |
+| 인라인 린트 | 3.5 | EditorView 데코레이션 |
+| 비용 대시보드 | 3.5 | 모달/뷰로 월별 차트 |
+| 웹 인터페이스 | 4 | Next.js + wikey-core 재사용 |
+| 마켓플레이스 등록 | 4 | 보안 리뷰 통과 후 |

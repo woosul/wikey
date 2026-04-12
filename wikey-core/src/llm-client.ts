@@ -1,0 +1,153 @@
+import type { HttpClient, LLMCallOptions, LLMProvider, WikeyConfig } from './types.js'
+
+const DEFAULT_TIMEOUT = 60_000
+const DEFAULT_MAX_TOKENS = 8192
+const DEFAULT_TEMPERATURE = 0.1
+
+export class LLMClient {
+  constructor(
+    private readonly httpClient: HttpClient,
+    private readonly config: WikeyConfig,
+  ) {}
+
+  async call(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const provider = opts?.provider ?? 'gemini'
+
+    switch (provider) {
+      case 'gemini':
+        return this.callGemini(prompt, opts)
+      case 'anthropic':
+        return this.callAnthropic(prompt, opts)
+      case 'openai':
+        return this.callOpenAI(prompt, opts)
+      case 'ollama':
+        return this.callOllama(prompt, opts)
+      default:
+        throw new Error(`Unknown provider: ${provider}`)
+    }
+  }
+
+  private async callGemini(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const apiKey = this.config.GEMINI_API_KEY
+    if (!apiKey) throw new Error('GEMINI_API_KEY not set — configure API key in settings')
+
+    const model = opts?.model ?? 'gemini-2.5-flash'
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+
+    const payload: Record<string, unknown> = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: opts?.temperature ?? DEFAULT_TEMPERATURE,
+        maxOutputTokens: opts?.maxTokens ?? DEFAULT_MAX_TOKENS,
+      },
+    }
+
+    if (opts?.responseMimeType) {
+      (payload.generationConfig as Record<string, unknown>).responseMimeType = opts.responseMimeType
+    }
+
+    const response = await this.httpClient.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      timeout: opts?.timeout ?? DEFAULT_TIMEOUT,
+    })
+
+    const data = JSON.parse(response.body)
+    return data.candidates[0].content.parts[0].text as string
+  }
+
+  private async callAnthropic(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const apiKey = this.config.ANTHROPIC_API_KEY
+    if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set — configure API key in settings')
+
+    const model = opts?.model ?? 'claude-sonnet-4-20250514'
+    const url = 'https://api.anthropic.com/v1/messages'
+
+    const payload = {
+      model,
+      max_tokens: opts?.maxTokens ?? DEFAULT_MAX_TOKENS,
+      messages: [{ role: 'user', content: prompt }],
+    }
+
+    const response = await this.httpClient.request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify(payload),
+      timeout: opts?.timeout ?? DEFAULT_TIMEOUT,
+    })
+
+    const data = JSON.parse(response.body)
+    if (data.error) throw new Error(`Anthropic API error: ${data.error.message}`)
+    return data.content[0].text as string
+  }
+
+  private async callOpenAI(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const apiKey = this.config.OPENAI_API_KEY
+    if (!apiKey) throw new Error('OPENAI_API_KEY not set — configure API key in settings')
+
+    const model = opts?.model ?? 'gpt-4.1'
+    const url = 'https://api.openai.com/v1/chat/completions'
+
+    const payload = {
+      model,
+      max_tokens: opts?.maxTokens ?? DEFAULT_MAX_TOKENS,
+      messages: [{ role: 'user', content: prompt }],
+    }
+
+    const response = await this.httpClient.request(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+      timeout: opts?.timeout ?? DEFAULT_TIMEOUT,
+    })
+
+    const data = JSON.parse(response.body)
+    if (data.error) throw new Error(`OpenAI API error: ${data.error.message}`)
+    return data.choices[0].message.content as string
+  }
+
+  private async callOllama(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const model = opts?.model ?? this.config.WIKEY_MODEL ?? 'gemma4'
+    const baseUrl = this.config.OLLAMA_URL || 'http://localhost:11434'
+    const url = `${baseUrl}/api/chat`
+
+    const payload = {
+      model,
+      messages: [{ role: 'user', content: prompt }],
+      stream: false,
+      options: {
+        num_predict: opts?.maxTokens ?? DEFAULT_MAX_TOKENS,
+        temperature: opts?.temperature ?? DEFAULT_TEMPERATURE,
+      },
+    }
+
+    const response = await this.httpClient.request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      timeout: opts?.timeout ?? DEFAULT_TIMEOUT,
+    })
+
+    const data = JSON.parse(response.body)
+    let text: string = data.message?.content ?? ''
+
+    text = stripThinkingBlock(text)
+
+    return text.trim()
+  }
+}
+
+function stripThinkingBlock(text: string): string {
+  const marker = 'done thinking'
+  const idx = text.toLowerCase().indexOf(marker)
+  if (idx === -1) return text
+  return text.slice(idx + marker.length).replace(/^[.\n ]+/, '')
+}
