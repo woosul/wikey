@@ -8,6 +8,23 @@ const execFileAsync = promisify(execFile)
 
 const QMD_COLLECTION = 'wikey-wiki'
 
+/**
+ * Obsidian Electron의 PATH에는 nvm/homebrew 경로가 없음.
+ * 셸 프로파일에서 사용하는 일반적인 경로를 보강.
+ */
+function getEnhancedEnv(): Record<string, string> {
+  const env = { ...process.env } as Record<string, string>
+  const extraPaths = [
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+    `${process.env.HOME}/.nvm/versions/node/v22.17.0/bin`,
+    `${process.env.HOME}/.nvm/versions/node/v20.18.0/bin`,
+    `${process.env.HOME}/.local/bin`,
+  ]
+  env.PATH = [...extraPaths, env.PATH ?? ''].join(':')
+  return env
+}
+
 export interface QueryOptions {
   readonly basePath?: string
   readonly wikiFS?: WikiFS
@@ -89,7 +106,7 @@ async function execQmdSearch(
     console.log('[Wikey] qmd query:', JSON.stringify(multiQuery))
     const { stdout, stderr } = await execFileAsync(qmdBin, [
       'query', multiQuery, '--json', '-n', topN, '-c', QMD_COLLECTION,
-    ], { cwd: basePath, timeout: 30000 })
+    ], { cwd: basePath, timeout: 30000, env: getEnhancedEnv() })
     console.log('[Wikey] qmd stdout length:', stdout.length, 'stderr length:', stderr.length)
     if (stderr) console.log('[Wikey] qmd stderr:', stderr.slice(0, 500))
     const results = parseQmdOutput(stdout)
@@ -180,7 +197,7 @@ function tryKoreanPreprocess(text: string, basePath: string): Promise<string> {
     try {
       const proc = spawn('python3', [
         scriptPath, '--mode', 'query',
-      ], { stdio: ['pipe', 'pipe', 'pipe'], cwd: basePath })
+      ], { stdio: ['pipe', 'pipe', 'pipe'], cwd: basePath, env: getEnhancedEnv() })
 
       let stdout = ''
       proc.stdout.on('data', (data: Buffer) => { stdout += data.toString() })

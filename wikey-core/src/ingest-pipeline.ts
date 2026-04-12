@@ -242,7 +242,10 @@ function triggerReindex(basePath?: string): void {
 
   // Fire-and-forget background reindex
   try {
-    execFile(script, ['--quick'], { cwd }, () => {
+    const env = { ...process.env } as Record<string, string>
+    const extraPaths = ['/usr/local/bin', '/opt/homebrew/bin', `${process.env.HOME}/.nvm/versions/node/v22.17.0/bin`]
+    env.PATH = [...extraPaths, env.PATH ?? ''].join(':')
+    execFile(script, ['--quick'], { cwd, env }, () => {
       // Reindex failure is non-fatal
     })
   } catch {
