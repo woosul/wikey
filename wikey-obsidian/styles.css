@@ -99,7 +99,7 @@
   background: var(--background-modifier-border);
   padding: 12px 14px;
   margin: 8px 10px;
-  border-radius: 12px;
+  border-radius: 8px;
   font-size: 0.92em;
   line-height: 1.5;
   color: var(--text-normal);
@@ -124,6 +124,39 @@
 
 .wikey-chat-content p:last-child {
   margin-bottom: 0;
+}
+
+/* 테이블: 세로선 없음, 가로선 1px, 상단/하단 2px */
+.wikey-chat-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5em 0;
+  font-size: 0.9em;
+}
+
+.wikey-chat-content thead tr {
+  border-top: 2px solid var(--text-faint);
+  border-bottom: 2px solid var(--text-faint);
+}
+
+.wikey-chat-content tbody tr {
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.wikey-chat-content tbody tr:last-child {
+  border-bottom: 2px solid var(--text-faint);
+}
+
+.wikey-chat-content th,
+.wikey-chat-content td {
+  padding: 6px 10px;
+  text-align: left;
+  border: none;
+}
+
+.wikey-chat-content th {
+  font-weight: 600;
+  color: var(--text-normal);
 }
 
 /* ── 피드백 액션 ── */
