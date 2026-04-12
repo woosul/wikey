@@ -60,6 +60,80 @@ async function which(cmd: string, env: Record<string, string>): Promise<string> 
   }
 }
 
+/**
+ * qmd의 better-sqlite3가 컴파일된 node 버전과 일치하는 node를 찾는다.
+ * qmd 네이티브 모듈 ABI mismatch 방지.
+ */
+async function findCompatibleNode(
+  basePath: string,
+  env: Record<string, string>,
+): Promise<string> {
+  const { join } = require('node:path') as typeof import('node:path')
+
+  // 후보 node 경로들 수집
+  const candidates: string[] = []
+
+  // 1. nvm current (가장 가능성 높음 — nvm으로 npm install 했을 것)
+  try {
+    const { stdout } = await execFileAsync(
+      process.env.SHELL || '/bin/zsh',
+      ['-l', '-c', 'which node'],
+      { timeout: 5000 },
+    )
+    const nvmNode = stdout.trim()
+    if (nvmNode) candidates.push(nvmNode)
+  } catch { /* pass */ }
+
+  // 2. nvm default
+  const nvmDir = process.env.NVM_DIR || join(process.env.HOME ?? '', '.nvm')
+  try {
+    const { readdirSync } = require('node:fs') as typeof import('node:fs')
+    const versionsDir = join(nvmDir, 'versions/node')
+    const versions = readdirSync(versionsDir).sort().reverse()
+    for (const v of versions) {
+      candidates.push(join(versionsDir, v, 'bin/node'))
+    }
+  } catch { /* pass */ }
+
+  // 3. homebrew node
+  const brewNode = await which('node', env)
+  if (brewNode && !candidates.includes(brewNode)) {
+    candidates.push(brewNode)
+  }
+
+  // qmd better-sqlite3 경로
+  const nativeModule = join(basePath, 'tools/qmd/node_modules/better-sqlite3/build/Release/better_sqlite3.node')
+  const { existsSync } = require('node:fs') as typeof import('node:fs')
+  if (!existsSync(nativeModule)) {
+    // 네이티브 모듈 없으면 아무 node나 사용
+    return candidates[0] || 'node'
+  }
+
+  // 각 후보로 better-sqlite3 로드 시도
+  for (const nodePath of candidates) {
+    try {
+      const { existsSync: exists } = require('node:fs') as typeof import('node:fs')
+      if (!exists(nodePath)) continue
+
+      await execFileAsync(nodePath, [
+        '-e', `require('${nativeModule.replace(/'/g, "\\'")}')`,
+      ], { timeout: 5000 })
+      console.log(`[Wikey] qmd 호환 node 발견: ${nodePath}`)
+      return nodePath
+    } catch (err: any) {
+      const msg = err?.message ?? ''
+      if (msg.includes('MODULE_VERSION')) {
+        console.log(`[Wikey] node ABI 불일치: ${nodePath} — 건너뜀`)
+        continue
+      }
+      // MODULE_VERSION 외 다른 에러면 사용 가능할 수 있음
+      return nodePath
+    }
+  }
+
+  return candidates[0] || 'node'
+}
+
 async function checkOllama(url: string): Promise<{ running: boolean; models: string[] }> {
   const http = require('node:http') as typeof import('node:http')
   return new Promise((resolve) => {
@@ -102,8 +176,8 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
   status.shellPath = await detectShellPath()
   const env = makeEnv(status.shellPath)
 
-  // 2. node
-  status.nodePath = await which('node', env)
+  // 2. node (qmd 네이티브 모듈 호환 버전 우선 탐지)
+  status.nodePath = await findCompatibleNode(basePath, env)
   if (!status.nodePath) {
     issues.push('node를 찾을 수 없습니다. Node.js를 설치하세요.')
   }
