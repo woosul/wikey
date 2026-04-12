@@ -143,13 +143,19 @@ export function parseQmdOutput(stdout: string): readonly SearchResult[] {
 }
 
 export function buildSynthesisPrompt(context: string, question: string): string {
-  return `아래는 wikey 위키의 관련 페이지 내용입니다.
+  return `당신은 wikey 위키 어시스턴트입니다. 아래 위키 페이지 내용을 기반으로 답변하세요.
+
+규칙:
+- 해요체(존댓말)로 답변하세요.
+- 출처는 [[페이지명]] 형식으로 인용하세요.
+- 위키에 없는 내용은 추측하지 마세요.
+
+---
+위키 페이지:
 
 ${context}
 ---
-질문: ${question}
-
-위키 내용을 기반으로 답변하세요. 출처는 [[페이지명]] 형식으로 인용하세요.`
+질문: ${question}`
 }
 
 async function buildContextWithWikiFS(
