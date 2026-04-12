@@ -103,11 +103,9 @@ git commit -m "ingest: 소스 제목 — N개 페이지 생성/수정"
 6. wiki/index.md 갱신
 7. wiki/log.md에 항목 추가
 8. wiki/overview.md 갱신 (필요시)
-9. ./scripts/validate-wiki.sh 실행 → 통과 확인
-10. ./scripts/check-pii.sh 실행 → 통과 확인
-11. python3 scripts/contextual-retrieval.py --batch → Gemma 4 맥락 프리픽스 생성 + FTS5 적용
-12. python3 scripts/korean-tokenize.py --batch → FTS5 한국어 형태소 전처리 갱신
-13. Git 커밋
+9. ./scripts/check-pii.sh 실행 → 통과 확인
+10. ./scripts/reindex.sh 실행 → 전체 인덱싱 (qmd update + embed + CR + 한국어 + validate)
+11. Git 커밋
 ```
 
 ### 쿼리 세션

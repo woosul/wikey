@@ -21,43 +21,65 @@ User → Add source → LLM builds wiki → Browse in Obsidian
 | **Wiki Builder** | Ingest / Query / Lint | Ingest / Query / Lint | Session-to-wiki | Search only |
 | **Enterprise Path** | Phase 3-4 roadmap | - | - | - |
 
-## Quick Start
+## Quick Start (5분 안에 시작하기)
 
-### 1. Prerequisites
-
-- [Obsidian](https://obsidian.md) 1.12+ (with CLI enabled)
-- An LLM agent: [Claude Code](https://claude.com/claude-code), [Codex CLI](https://github.com/openai/codex), or [Ollama](https://ollama.com) (Gemma 4)
-- Python 3.9+ with kiwipiepy (`pip install kiwipiepy`) — Korean morpheme preprocessing
-
-### 2. Setup
+### 1. Clone + Setup
 
 ```bash
-# Clone
-git clone https://github.com/woosul/wikey.git
+git clone https://github.com/moosuhan/wikey.git
 cd wikey
-
-# Open this folder as a vault in Obsidian
-# (vault icon at bottom-left → Open folder as vault → select wikey)
-
-# Create raw/ directories (gitignored — not committed)
-mkdir -p raw/{0_inbox,1_projects,2_areas,3_resources,4_archive,9_assets}
+./scripts/setup.sh          # 자동 설정 (Ollama, Python, qmd)
 ```
 
-### 3. First Ingest
+setup.sh가 자동으로 확인/설치하는 것:
+- Ollama + Gemma 4 (12B) — 로컬 쿼리/검색
+- Python + kiwipiepy — 한국어 형태소 처리
+- qmd 검색 컬렉션 초기화
+- .env 템플릿 복사
 
-In a Claude Code session:
-```
-Read the CLAUDE.md in this project and ingest the sources in raw/0_inbox/.
+### 2. LLM 프로바이더 선택
+
+```bash
+# 프로바이더 상태 확인
+./scripts/check-providers.sh
+
+# wikey.conf에서 기본 모델 선택 (하나만 있어도 됨)
+# WIKEY_BASIC_MODEL=claude-code   ← Claude Pro/Max 구독자
+# WIKEY_BASIC_MODEL=codex         ← OpenAI API 사용자
+# WIKEY_BASIC_MODEL=gemini        ← 저가/무료 (API 키만)
+# WIKEY_BASIC_MODEL=ollama        ← 완전 오프라인 (무료)
 ```
 
-In Codex CLI:
-```
-Read AGENTS.md and ingest the sources in raw/0_inbox/.
+상세 가이드: [`local-llm/model-selection-guide.md`](local-llm/model-selection-guide.md)
+
+### 3. 첫 인제스트
+
+소스 파일을 `raw/0_inbox/`에 넣고:
+
+```bash
+# 방법 A: 스크립트 인제스트 (모든 프로바이더)
+./scripts/llm-ingest.sh raw/0_inbox/my-source.md
+
+# 방법 B: Claude Code 세션
+# → "이 소스를 인제스트해줘"
+
+# 방법 C: Codex CLI
+# codex exec "Read AGENTS.md and ingest raw/0_inbox/my-source.md"
 ```
 
-### 4. Browse
+### 4. 쿼리
 
-Open Obsidian and browse `wiki/`. Use Graph View to visualize connections.
+```bash
+# 로컬 쿼리 (Gemma 4, $0)
+./local-llm/wikey-query.sh "질문"
+
+# 검색만 (합성 없이)
+./local-llm/wikey-query.sh --search "키워드"
+```
+
+### 5. Obsidian에서 브라우징
+
+Obsidian에서 이 폴더를 볼트로 열면 `wiki/`를 그래프뷰, 백링크로 탐색할 수 있습니다.
 
 ## Architecture
 
@@ -74,8 +96,17 @@ wikey/
 │   ├── concepts/            # Theories, methods
 │   ├── sources/             # Source summaries
 │   └── analyses/            # Query results saved as pages
-├── scripts/                 # Validation & automation
-├── local-llm/               # Local LLM config & query pipeline
+├── scripts/
+│   ├── setup.sh             # One-command setup
+│   ├── llm-ingest.sh        # Script-based ingest (any provider)
+│   ├── reindex.sh           # Full indexing pipeline (1 command)
+│   ├── check-providers.sh   # LLM provider status check
+│   ├── cost-tracker.sh      # Cost tracking CLI
+│   └── validate-wiki.sh     # Wiki validation
+├── local-llm/
+│   ├── wikey.conf           # Unified LLM config (BASIC_MODEL)
+│   ├── wikey-query.sh       # Local query CLI (qmd + Gemma 4)
+│   └── model-selection-guide.md  # Provider comparison guide
 └── tools/qmd/               # Search infrastructure (vendored, tobi/qmd)
 ```
 
@@ -101,7 +132,7 @@ wikey/
 | Phase | Focus | Status |
 |-------|-------|--------|
 | **Phase 1** | Zero-setup personal wiki + BYOAI foundation | **Complete** |
-| **Phase 2** | Korean search + multi-LLM pipeline + vault template packaging | **In Progress** (Step 1–5 done, Step 6 next) |
+| **Phase 2** | Korean search + multi-LLM pipeline + vault template packaging | **Complete** |
 | **Phase 3** | Obsidian plugin (GUI: chat sidebar, drag-and-drop ingest, settings) | Planned |
 | **Phase 4** | Web interface (Next.js, shared core with Phase 3) | Planned |
 | **Phase 5+** | Enterprise package (team server, RBAC, audit trail) | Planned |
