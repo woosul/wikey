@@ -108,7 +108,7 @@ qmd는 이미 TypeScript(tools/qmd/)이므로 직접 import 가능.
 - 린트 결과 인라인 표시
 - 비용 대시보드
 
-### 3-3. 웹 인터페이스 (Phase 3~4)
+### 3-3. 웹 인터페이스 (Phase 4)
 
 Obsidian 플러그인 완성 후, 동일한 wikey-core를 사용하여 Next.js 웹 앱 구축.
 주 목적: Obsidian 없는 사용자, 모바일 접근, 팀 공유.

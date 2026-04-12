@@ -1,7 +1,7 @@
-# Phase 2: Todo List — 한국어 + LLM 다층 검색 + 커뮤니티
+# Phase 2: Todo List — 한국어 + LLM 다층 검색 + 볼트 템플릿 패키징
 
-> 기간: 2026-04-11 ~ (2–3주 설정 + 3개월 운영)
-> 상태: **진행 중**
+> 기간: 2026-04-11 ~
+> 상태: **Step 1–5 완료, Step 6 진행 중**
 > 전제: Phase 1 완료 (12/12 필수, 5/5 중요, 3/4 선택)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), vLLM-Metal 0.2.0, Codex CLI 0.118.0
 
@@ -362,69 +362,87 @@
 
 ---
 
-## Step 6: 커뮤니티 공개
+## Step 6: 볼트 템플릿 + LLM 스킬 패키지 (배포 전 단계)
 
-### 6-1. 배포 준비
+> Phase 2는 실질적인 배포를 하지 않는다. 배포 가능한 패키지를 만들고 검증하는 것이 목표.
+> 실제 배포(GitHub public, 마켓플레이스)는 Phase 3 Obsidian 플러그인 완성 후 진행.
 
-- [ ] **6-1-1.** GitHub 공개 저장소 전환 (private → public)
-  - raw/ .gitignore 확인 (PII 보호)
+### 6-1. Obsidian 볼트 템플릿 정리
+
+- [ ] **6-1-1.** 볼트 스켈레톤 생성 (wiki/ 기본 구조 + .obsidian/ 설정)
+  - wiki/ 빈 스켈레톤: index.md, log.md, overview.md, entities/.gitkeep, concepts/.gitkeep 등
+  - .obsidian/ 기본 설정: 그래프뷰, 백링크, 테마
+- [ ] **6-1-2.** raw/ 제외 확인 (.gitignore — 사용자 데이터 보호)
+  - raw/ 전체 .gitignore 처리
+  - .env .gitignore 확인
   - 민감 정보 커밋 이력 검사
-- [ ] **6-1-2.** README.md 최종화 (한국어 + 영어)
-  - "5분 안에 LLM Wiki 시작하기" 가이드
+- [ ] **6-1-3.** 설치 자동화 스크립트 (`scripts/setup.sh`)
+  - Ollama 설치 확인 + gemma4 pull
+  - Python 의존성 (kiwipiepy) 설치
+  - qmd 컬렉션 초기화
+  - wikey.conf 기본값 생성
+  - .env.example → .env 복사 안내
+
+### 6-2. LLM 스킬 패키지
+
+- [ ] **6-2-1.** Claude Code 스킬 파일 정리 (CLAUDE.md가 스킬 역할)
+  - 인제스트/쿼리/린트 세션 체크리스트 최종 검증
+  - llm-ingest.sh, reindex.sh 통합 확인
+- [ ] **6-2-2.** Codex 에이전트 설정 정리 (AGENTS.md)
+  - codex exec 기반 인제스트/린트 가이드
+- [ ] **6-2-3.** 로컬 전용 모드 검증 (BASIC_MODEL=ollama)
+  - Gemma 4만으로 인제스트/쿼리/린트 전체 동작 확인
+  - 품질 제한사항 문서화
+
+### 6-3. 설치 가이드 + 검증
+
+- [ ] **6-3-1.** README.md "5분 시작 가이드" 작성
+  - 한국어 + 영어 병행
   - BYOAI 프로바이더 비교표
   - 스크린샷 (Obsidian Graph View, 인제스트 결과)
-
-### 6-2. 공개 + 홍보
-
-- [ ] **6-2-1.** Obsidian 커뮤니티 포럼 게시
-- [ ] **6-2-2.** GeekNews 공유
-- [ ] **6-2-3.** 초기 피드백 수집 (GitHub Issues)
-
----
-
-## Step 7: 장기 운영 + Phase 2→3 게이트 (3개월)
-
-### 7-1. 운영 목표
-
-- [ ] **7-1-1.** 100+ 소스 인제스트 (현재 6건)
-- [ ] **7-1-2.** 200+ 위키 페이지 (현재 26건)
-- [ ] **7-1-3.** 일관성 추이 기록 (lint 오류율)
-- [ ] **7-1-4.** 프로바이더별 토큰 비용 월간 기록
-
-### 7-2. Phase 2→3 게이트 평가
-
-- [ ] **7-2-1.** LLM 위키 일관성: lint 오류율 감소 추세인가?
-- [ ] **7-2-2.** 토큰 비용: 월 $50 이하인가?
-- [ ] **7-2-3.** 커뮤니티: 10+ GitHub stars, 사용자 피드백 있는가?
-- [ ] **7-2-4.** BYOAI: 2+ 프로바이더로 위키 교대 운영 성공했는가?
-- [ ] **7-2-5.** 팀 수요: 2-3명 파일럿 긍정적인가?
+- [ ] **6-3-2.** 클린 환경 설치 테스트 (fresh clone → setup.sh → 인제스트 → 쿼리)
+- [ ] **6-3-3.** check-providers.sh로 프로바이더별 동작 확인
 
 ---
 
 ## Phase 2 완료 체크리스트
 
-### 필수 (Must)
+### 필수 (Must) — 6/7
 
 - [x] raw/ PARA 재구조화 완료 (1,073개 파일 재분류)
 - [x] CLASSIFY.md 분류 기준 문서 동작
-- [x] LLM 다층 검색 파이프라인 동작 (qmd 내장: 쿼리확장→검색→리랭킹 + Gemma 4 합성)
-- [ ] 한국어 벤치마크 80%+ 정확도 (현재 Top-1 40% → Step 3에서 개선)
-- [ ] validate-wiki.sh + check-pii.sh 통과
-- [ ] wikey.schema.md, CLAUDE.md, AGENTS.md 업데이트 완료
+- [x] LLM 다층 검색 파이프라인 동작 (qmd BM25+벡터+RRF + Gemma 4 합성)
+- [x] 한국어 벤치마크 80%+ 정확도 (vector Recall 97%, hybrid Recall 98%)
+- [x] validate-wiki.sh + check-pii.sh 통과
+- [x] 통합 LLM 설정 (WIKEY_BASIC_MODEL + llm-api.sh + check-providers.sh)
+- [ ] 볼트 템플릿 + 설치 자동화 (Step 6)
 
-### 중요 (Should)
+### 중요 (Should) — 5/6
 
-- [ ] inbox 모니터링 (fswatch) 동작
-- [ ] Gemini 대용량 소스 처리 1건+ 성공
-- [x] ~~Gemma 4 로컬 쿼리 확장/리랭킹~~ qmd 내장 파이프라인으로 대체
-- [ ] 50+ 소스, 100+ 위키 페이지
-- [ ] GitHub 공개 + README 최종화
+- [x] inbox 모니터링 (fswatch) 동작
+- [x] Gemini 대용량 소스 처리 성공 (파워디바이스 37p, TCP/IP 56p)
+- [x] 스크립트 기반 인제스트 (llm-ingest.sh — Gemini dry-run 검증)
+- [x] 멀티 LLM 비용 추적 + 분석 ($21.13/50, 42.3%)
+- [x] 통합 인덱싱 파이프라인 (reindex.sh)
+- [ ] 클린 환경 설치 테스트
 
-### 선택 (Could)
+### 선택 (Could) — 0/3
 
 - [ ] vLLM-Metal 배치 리랭킹 동작
 - [ ] 한영 용어 정규화 사전 50+ 항목
-- [ ] 커뮤니티 피드백 반영 1회+
-- [ ] 3개월 운영 데이터 수집 완료
+- [ ] Obsidian 플러그인 프로토타입 (Phase 3 선행)
 
-> 상세 결과: `activity/phase-2-result.md` 참조 (Step 1~3-2 완료 시점 중간 보고서)
+---
+
+## 전체 Phase 로드맵
+
+| Phase | 목표 | 산출물 | 사용자 |
+|-------|------|--------|--------|
+| **Phase 1** (완료) | Zero-setup + BYOAI 기반 | 마크다운 위키 + 검증 스크립트 | 개발자 |
+| **Phase 2** (진행) | 한국어 검색 + 멀티 LLM + 패키징 | 볼트 템플릿 + LLM 스킬 + 스크립트 | 개발자/파워유저 |
+| **Phase 3** (계획) | Obsidian 플러그인 | 채팅 사이드바, 인제스트 GUI, 설정 | 일반 Obsidian 사용자 |
+| **Phase 4** (계획) | 웹 인터페이스 | Next.js 앱 (업로드, 쿼리, 브라우징) | 누구나 |
+| **Phase 5+** (계획) | 기업용 패키지 | 팀 서버, RBAC, 감사 추적 | 기업/팀 |
+
+> Phase 3 아키텍처: `plan/phase3-ux-architecture.md` 참조
+> Phase 2 결과: `activity/phase-2-result.md` 참조

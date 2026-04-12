@@ -1,8 +1,8 @@
 # Phase 2 중간 결과 보고서
 
 > 기간: 2026-04-11 ~ 진행 중
-> 목표: 한국어 + LLM 다층 검색 + 커뮤니티
-> 상태: **Step 1~5 완료 (5-1-1 부분), Step 6~7 미착수**
+> 목표: 한국어 + LLM 다층 검색 + 볼트 템플릿 패키징
+> 상태: **Step 1~5 완료, Step 6 (볼트 템플릿 패키징) 진행 중**
 > 전제: Phase 1 완료 (12/12 필수, 5/5 중요, 3/4 선택)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), vLLM-Metal 0.2.0, Codex CLI 0.118.0
 
@@ -550,17 +550,27 @@ Gemma 4 합성 → 최종 답변
 | 3-3 | **완료** | jina-v3 시도→실패→Qwen3-Embedding 채택, vsearch 100% | 중 |
 | 3-4 | **완료** | 50건 벤치마크 → vector Recall 97%, hybrid Recall 98% → **게이트 통과** | 중 |
 
-### 6.2 Step 6~7 (미착수)
+### 6.2 Step 6 (볼트 템플릿 패키징 — 진행 중)
 
-| Step | 핵심 작업 |
-|------|----------|
-| 6 | 커뮤니티 공개 (GitHub public, README 최종화, 홍보) |
-| 7 | 장기 운영 + Phase 2→3 게이트 (3개월) |
+| 작업 | 상태 |
+|------|------|
+| 볼트 스켈레톤 + .obsidian 설정 | 미착수 |
+| 설치 자동화 (setup.sh) | 미착수 |
+| LLM 스킬 패키지 (CLAUDE.md + AGENTS.md 검증) | 미착수 |
+| README "5분 시작 가이드" | 미착수 |
+| 클린 환경 설치 테스트 | 미착수 |
 
-### 6.3 다음 세션 작업 추천
+### 6.3 전체 Phase 로드맵
 
-1. **Step 6** (커뮤니티 공개) — GitHub public, README, 홍보
-2. **5-1-1 완료** — inbox에 소스 추가 후 Claude Code 5건 인제스트 비용 검증
+| Phase | 목표 | 사용자 |
+|-------|------|--------|
+| Phase 1 (완료) | Zero-setup + BYOAI 기반 | 개발자 |
+| Phase 2 (진행) | 한국어 검색 + 멀티 LLM + 패키징 | 개발자/파워유저 |
+| Phase 3 (계획) | Obsidian 플러그인 (GUI) | 일반 Obsidian 사용자 |
+| Phase 4 (계획) | 웹 인터페이스 | 누구나 |
+| Phase 5+ (계획) | 기업용 패키지 | 기업/팀 |
+
+> Phase 3 아키텍처: `plan/phase3-ux-architecture.md` 참조
 
 ---
 
@@ -575,17 +585,17 @@ Gemma 4 합성 → 최종 답변
 - [x] validate-wiki.sh + check-pii.sh 통과
 - [x] wikey.schema.md, CLAUDE.md, AGENTS.md 업데이트 완료
 
-### 중요 (Should) — 4/5
+### 중요 (Should) — 5/6
 
 - [x] inbox 모니터링 (fswatch) 동작
-- [x] Gemini 대용량 소스 처리 1건+ 성공 (파워디바이스 37p, TCP/IP 56p)
-- [x] ~~Gemma 4 로컬 쿼리 확장/리랭킹~~ qmd 내장 파이프라인으로 대체
-- [ ] 50+ 소스, 100+ 위키 페이지 (현재 7소스, 30페이지)
-- [x] 멀티 LLM 비용 추적 + 분석 완료 ($21.13/50.00, 42.3%)
+- [x] Gemini 대용량 소스 처리 성공 (파워디바이스 37p, TCP/IP 56p)
+- [x] 스크립트 기반 인제스트 (llm-ingest.sh — Gemini dry-run 검증)
+- [x] 멀티 LLM 비용 추적 + 분석 ($21.13/50, 42.3%)
+- [x] 통합 인덱싱 + 프로바이더 확인 (reindex.sh, check-providers.sh)
+- [ ] 볼트 템플릿 + 설치 자동화 (Step 6)
 
-### 선택 (Could) — 0/4
+### 선택 (Could) — 0/3
 
 - [ ] vLLM-Metal 배치 리랭킹 동작
 - [ ] 한영 용어 정규화 사전 50+ 항목
-- [ ] 커뮤니티 피드백 반영 1회+
-- [ ] 3개월 운영 데이터 수집 완료
+- [ ] Obsidian 플러그인 프로토타입 (Phase 3 선행)

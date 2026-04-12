@@ -212,7 +212,7 @@ WIKEY_SEARCH_BACKEND=gemma4 ./local-llm/wikey-query.sh "위키 인제스트란?"
 
 ## Phase별 활용 로드맵
 
-### Phase 1 (현재) — 단순 쿼리
+### Phase 1 — 단순 쿼리
 
 ```
 사용자 질문 → wikey-query.sh → Ollama(wikey/gemma4) → 답변
@@ -226,7 +226,7 @@ WIKEY_SEARCH_BACKEND=gemma4 ./local-llm/wikey-query.sh "위키 인제스트란?"
 - 서빙: Ollama (인터랙티브)
 - 모델: Gemma 4 12B (9.6GB), 컨텍스트 32K
 
-### Phase 2 — qmd 다층 검색 파이프라인 (현재)
+### Phase 2 — qmd 다층 검색 파이프라인 + 멀티 LLM (현재)
 
 ```
 사용자 질문
@@ -252,52 +252,29 @@ Gemma 4 합성 (Ollama: 최종 답변)
 - 벤치마크: Top-1 40%, Top-3 60% (영어 정확, 한국어 부정확 → Step 3 개선)
 - 지연: 평균 11.3초/쿼리 (검색+리랭킹)
 
-### Phase 3 — 한국어 특화 + vLLM 도입
+### Phase 3 — Obsidian 플러그인
 
-```
-사용자 질문
-    │
-    ▼
-qmd query (개선된 파이프라인)
-    ├─ 한국어 형태소 전처리 (kiwipiepy, Step 3-1 완료)
-    ├─ 한영 용어 정규화 사전 적용
-    ├─ BM25 + 벡터 검색
-    ├─ RRF 융합
-    └─ 리랭킹
-    │
-    ▼
-vLLM API: 최종 합성 (배치 처리)
-```
+동일한 검색 코어 (qmd + Ollama)를 Obsidian 플러그인 UI에서 호출.
+사용자는 사이드바 채팅에서 질문하고, 드래그앤드롭으로 인제스트.
 
-- 위키 규모: ~300 페이지
-- 서빙: vLLM-Metal (OpenAI API 호환, 배치 리랭킹)
-- 한국어: kiwipiepy 형태소 전처리 (Step 3-1 완료) + 용어 정규화 사전
-- 목표: Top-1 80%+ 정확도
+- 인터페이스: Obsidian 사이드바 (채팅 + 인제스트 + 설정)
+- 코어: wikey-core TypeScript 모듈 (현재 bash/python의 TS 포팅)
+- 검색: 동일 (qmd + Gemma 4)
 
-### Phase 4 — 엔터프라이즈
+### Phase 4 — 웹 인터페이스
 
-```
-사용자 질문
-    │
-    ▼
-vLLM: 쿼리 확장 + 의도 분류
-    │
-    ├─ 단순 조회 → vLLM으로 즉시 답변
-    └─ 심층 분석 → 클라우드 LLM으로 위임
-    │
-    ▼
-하이브리드 검색 (BM25 + 벡터 + 한국어 형태소)
-    │
-    ▼
-vLLM: 리랭킹 (연속 배칭)
-    │
-    ▼
-선택된 LLM: 최종 합성
-```
+동일한 wikey-core를 Next.js 웹앱에서 사용.
+Obsidian 없이도 브라우저에서 업로드/쿼리/브라우징.
 
-- 서빙: vLLM-Metal (상시 데몬)
+- 인터페이스: 브라우저 (localhost 또는 Docker)
+- 코어: wikey-core 재사용
+
+### Phase 5+ — 기업용
+
+- 서빙: vLLM-Metal (상시 데몬, 배치 처리)
 - 모델: Gemma 4 27B MoE (더 높은 품질)
 - 동시 요청: 팀 서버에서 여러 사용자 지원
+- RBAC, 감사 추적, API 게이트웨이
 
 ## 모델 선택 가이드
 

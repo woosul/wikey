@@ -100,10 +100,11 @@ wikey/
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| **Phase 1** | Zero-setup personal wiki + BYOAI | **Complete** |
-| **Phase 2** | Korean search + LLM multi-layer search + Community | **In Progress** (Step 1–5 done, Step 6–7 planned) |
-| **Phase 3** | Team server + Web UI | Planned |
-| **Phase 4** | Korean enterprise tech KB | Planned |
+| **Phase 1** | Zero-setup personal wiki + BYOAI foundation | **Complete** |
+| **Phase 2** | Korean search + multi-LLM pipeline + vault template packaging | **In Progress** (Step 1–5 done, Step 6 next) |
+| **Phase 3** | Obsidian plugin (GUI: chat sidebar, drag-and-drop ingest, settings) | Planned |
+| **Phase 4** | Web interface (Next.js, shared core with Phase 3) | Planned |
+| **Phase 5+** | Enterprise package (team server, RBAC, audit trail) | Planned |
 
 ## Inspired By
 
