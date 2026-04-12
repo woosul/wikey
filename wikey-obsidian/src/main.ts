@@ -82,7 +82,7 @@ export default class WikeyPlugin extends Plugin {
       this.app.vault.on('create', (file) => {
         if (file.path.startsWith('raw/0_inbox/') && file.path.endsWith('.md')) {
           const name = file.path.split('/').pop() ?? file.path
-          new Notice(`📥 inbox에 새 파일: ${name}\n[+] 버튼으로 인제스트하세요.`)
+          new Notice(`inbox에 새 파일: ${name} — [+] 버튼으로 인제스트하세요.`)
           console.log('[Wikey] inbox 파일 감지:', file.path)
         }
       }),

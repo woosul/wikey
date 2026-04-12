@@ -387,36 +387,42 @@ export class WikeyChatView extends ItemView {
     new Notice(`${count}개 파일이 inbox에 추가됨`)
   }
 
+  private getInboxPath(): string {
+    const basePath = (this.app.vault.adapter as any).basePath ?? ''
+    const { join } = require('node:path') as typeof import('node:path')
+    return join(basePath, 'raw/0_inbox')
+  }
+
+  private listInboxFiles(): string[] {
+    const { readdirSync, existsSync } = require('node:fs') as typeof import('node:fs')
+    const inboxDir = this.getInboxPath()
+    if (!existsSync(inboxDir)) return []
+    return readdirSync(inboxDir)
+      .filter((f: string) => !f.startsWith('.'))
+      .sort()
+  }
+
   private async ingestInbox() {
     const progressEl = this.ingestPanel?.querySelector('.wikey-ingest-progress') as HTMLElement
+    const files = this.listInboxFiles()
 
-    let inboxFiles: string[]
-    try {
-      const all = await this.plugin.wikiFS.list('raw/0_inbox')
-      inboxFiles = all.filter((f) => f.endsWith('.md') || f.endsWith('.txt'))
-    } catch {
-      new Notice('inbox 폴더를 찾을 수 없습니다')
-      return
-    }
-
-    if (inboxFiles.length === 0) {
+    if (files.length === 0) {
       new Notice('inbox에 인제스트할 파일이 없습니다')
       return
     }
 
-    for (let i = 0; i < inboxFiles.length; i++) {
-      const f = inboxFiles[i]
-      const name = f.split('/').pop() ?? f
-      if (progressEl) progressEl.setText(`인제스트 중 (${i + 1}/${inboxFiles.length}): ${name}`)
-      await runIngest(this.plugin, f)
+    for (let i = 0; i < files.length; i++) {
+      const name = files[i]
+      if (progressEl) progressEl.setText(`인제스트 중 (${i + 1}/${files.length}): ${name}`)
+      await runIngest(this.plugin, `raw/0_inbox/${name}`)
     }
 
-    if (progressEl) progressEl.setText(`완료: ${inboxFiles.length}개 파일 인제스트`)
+    if (progressEl) progressEl.setText(`완료: ${files.length}개 파일 인제스트`)
     this.renderInboxStatus()
-    new Notice(`${inboxFiles.length}개 파일 인제스트 완료`)
+    new Notice(`${files.length}개 파일 인제스트 완료`)
   }
 
-  private async renderInboxStatus() {
+  private renderInboxStatus() {
     const existing = this.ingestPanel?.querySelector('.wikey-ingest-inbox')
     if (existing) existing.remove()
 
@@ -428,29 +434,23 @@ export class WikeyChatView extends ItemView {
     if (progressEl) container.insertBefore(inboxDiv, progressEl)
     else container.appendChild(inboxDiv)
 
-    try {
-      const all = await this.plugin.wikiFS.list('raw/0_inbox')
-      const files = all.filter((f) => f.endsWith('.md') || f.endsWith('.txt'))
+    const files = this.listInboxFiles()
 
-      inboxDiv.createEl('div', {
-        text: `inbox (${files.length}개)`,
-        cls: 'wikey-ingest-section-label',
-      })
+    inboxDiv.createEl('div', {
+      text: `inbox (${files.length}개)`,
+      cls: 'wikey-ingest-section-label',
+    })
 
-      if (files.length === 0) {
-        inboxDiv.createEl('span', { text: '비어있음', cls: 'wikey-ingest-inbox-empty' })
-        return
-      }
+    if (files.length === 0) {
+      inboxDiv.createEl('span', { text: '비어있음', cls: 'wikey-ingest-inbox-empty' })
+      return
+    }
 
-      for (const f of files.slice(0, 10)) {
-        const name = f.split('/').pop() ?? f
-        inboxDiv.createEl('div', { text: `• ${name}`, cls: 'wikey-ingest-file-row' })
-      }
-      if (files.length > 10) {
-        inboxDiv.createEl('div', { text: `... 외 ${files.length - 10}개`, cls: 'wikey-ingest-file-row' })
-      }
-    } catch {
-      inboxDiv.createEl('span', { text: 'inbox 폴더 없음', cls: 'wikey-ingest-inbox-empty' })
+    for (const f of files.slice(0, 10)) {
+      inboxDiv.createEl('div', { text: `• ${f}`, cls: 'wikey-ingest-file-row' })
+    }
+    if (files.length > 10) {
+      inboxDiv.createEl('div', { text: `... 외 ${files.length - 10}개`, cls: 'wikey-ingest-file-row' })
     }
   }
 
