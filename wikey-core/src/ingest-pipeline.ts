@@ -1,8 +1,5 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { readFile } from 'node:fs/promises'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import type {
   HttpClient,
   IngestProgressCallback,
@@ -33,8 +30,19 @@ export async function ingest(
 ): Promise<IngestResult> {
   // Step 1: Read source
   onProgress?.({ step: 1, total: 4, message: '소스 읽기...' })
-  const sourceContent = await wikiFS.read(sourcePath)
   const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
+  const isPdf = sourceFilename.toLowerCase().endsWith('.pdf')
+
+  let sourceContent: string
+  if (isPdf) {
+    onProgress?.({ step: 1, total: 4, message: 'PDF 텍스트 추출...' })
+    sourceContent = await extractPdfText(sourcePath, opts?.basePath)
+    if (!sourceContent || sourceContent.trim().length < 50) {
+      throw new Error(`PDF 텍스트 추출 실패: ${sourceFilename} — pdftotext가 설치되어 있는지 확인하세요 (brew install poppler)`)
+    }
+  } else {
+    sourceContent = await wikiFS.read(sourcePath)
+  }
 
   const indexContent = await wikiFS.read('wiki/index.md').catch(() => '')
 
@@ -233,6 +241,60 @@ tags: [태그1, 태그2]
 \`\`\``
 
   return cachedTemplate
+}
+
+async function extractPdfText(sourcePath: string, basePath?: string): Promise<string> {
+  const { join } = require('node:path') as typeof import('node:path')
+  const cwd = basePath ?? process.cwd()
+  const fullPath = join(cwd, sourcePath)
+
+  // 1. pdftotext (poppler)
+  try {
+    const { stdout } = await execFileAsync('pdftotext', [fullPath, '-'], {
+      timeout: 30000,
+      maxBuffer: 10 * 1024 * 1024,
+    })
+    if (stdout.trim().length > 50) return stdout.trim()
+  } catch {
+    // pdftotext not available — fall through
+  }
+
+  // 2. macOS textutil (basic extraction)
+  try {
+    const { stdout } = await execFileAsync('mdimport', ['-d1', fullPath], { timeout: 10000 })
+    if (stdout.trim().length > 50) return stdout.trim()
+  } catch {
+    // fall through
+  }
+
+  // 3. python3 PyPDF2/pymupdf fallback
+  try {
+    const { stdout } = await execFileAsync('python3', [
+      '-c',
+      `
+import sys
+try:
+    import fitz  # pymupdf
+    doc = fitz.open(sys.argv[1])
+    text = "\\n".join(page.get_text() for page in doc)
+    print(text[:200000])
+except ImportError:
+    try:
+        from PyPDF2 import PdfReader
+        reader = PdfReader(sys.argv[1])
+        text = "\\n".join(page.extract_text() or "" for page in reader.pages)
+        print(text[:200000])
+    except ImportError:
+        print("")
+`,
+      fullPath,
+    ], { timeout: 30000, maxBuffer: 10 * 1024 * 1024 })
+    if (stdout.trim().length > 50) return stdout.trim()
+  } catch {
+    // fall through
+  }
+
+  return ''
 }
 
 function triggerReindex(basePath?: string): void {
