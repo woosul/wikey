@@ -1,5 +1,6 @@
 /* ═══════════════════════════════════════
    Wikey Obsidian Plugin
+   Purple accent theme
    ═══════════════════════════════════════ */
 
 /* ── Layout ── */
@@ -17,16 +18,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 4px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--background-modifier-border);
   min-height: 36px;
+  margin: 0 -12px;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 .wikey-chat-title {
   font-weight: 700;
   font-size: 1em;
   color: var(--text-normal);
-  padding-left: 4px;
 }
 
 .wikey-chat-header-actions {
@@ -34,7 +37,7 @@
   gap: 0;
 }
 
-/* 아이콘 버튼: 배경 없음, 보더 없음, 아이콘만 */
+/* 아이콘 버튼 */
 .wikey-header-btn {
   background: transparent !important;
   border: none !important;
@@ -43,26 +46,28 @@
   padding: 6px;
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.15s, transform 0.1s;
+  transition: color 0.15s, background-color 0.15s, transform 0.1s;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0;
+  border-radius: 4px;
 }
 
 .wikey-header-btn:hover,
 .wikey-header-btn:focus {
   background: transparent !important;
   box-shadow: none !important;
-  color: var(--text-normal);
+  color: var(--interactive-accent) !important;
 }
 
 .wikey-header-btn:active {
-  color: var(--interactive-accent);
-  transform: scale(0.85);
+  background: var(--interactive-accent) !important;
+  color: white !important;
+  transform: scale(0.9);
+  border-radius: 4px;
 }
 
-/* ── Messages Area ── */
+/* ── Messages ── */
 
 .wikey-chat-messages {
   flex: 1;
@@ -70,7 +75,6 @@
   padding: 0;
 }
 
-/* Welcome */
 .wikey-chat-welcome {
   text-align: center;
   padding: 40px 16px;
@@ -90,7 +94,7 @@
   margin: 0;
 }
 
-/* 질문: 배경 블록 (구분선 없음 — 배경색 차이로 구분) */
+/* 질문 블록 */
 .wikey-chat-user {
   background: var(--background-primary-alt, var(--background-secondary));
   padding: 12px 14px;
@@ -99,7 +103,7 @@
   color: var(--text-normal);
 }
 
-/* 답변: 투명 배경, 전체 너비 */
+/* 답변 블록 */
 .wikey-chat-assistant {
   padding: 14px 14px 6px;
 }
@@ -120,21 +124,16 @@
   margin-bottom: 0;
 }
 
-/* ── 구분선: full-width ── */
-
-.wikey-chat-message + .wikey-chat-message {
-  border-top: none;
-}
+/* ── 피드백 액션 ── */
 
 .wikey-msg-actions {
   display: flex;
   gap: 2px;
-  margin-top: 10px;
+  margin: 10px 0 0;
   padding: 6px 0 10px;
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-/* 복사/피드백 아이콘 */
 .wikey-msg-action-btn {
   background: transparent !important;
   border: none !important;
@@ -148,7 +147,7 @@
 }
 
 .wikey-msg-action-btn:hover {
-  color: var(--text-muted);
+  color: var(--interactive-accent);
 }
 
 .wikey-msg-action-btn:active {
@@ -220,11 +219,7 @@
 .wikey-chat-help h2 {
   font-size: 1.05em;
   margin: 0 0 10px;
-  color: var(--text-normal);
-}
-
-.wikey-chat-help strong {
-  color: var(--text-normal);
+  color: var(--interactive-accent);
 }
 
 /* ── Input Area ── */
@@ -232,12 +227,14 @@
 .wikey-chat-input-wrapper {
   border-top: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
+  margin: 0 -12px;
+  padding: 0 12px;
 }
 
 .wikey-chat-input-area {
   display: flex;
   gap: 6px;
-  padding: 10px 4px 4px;
+  padding: 10px 0 4px;
   align-items: center;
 }
 
@@ -261,14 +258,14 @@
   box-shadow: 0 0 0 1px var(--interactive-accent);
 }
 
-/* 전송 버튼: 아이콘만 */
+/* 전송 버튼 */
 .wikey-chat-send-btn {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
   border: none !important;
   box-shadow: none !important;
-  border-radius: 0;
+  border-radius: 4px;
   background: transparent !important;
   color: var(--text-muted);
   cursor: pointer;
@@ -295,16 +292,17 @@
 
 .wikey-chat-model-tag {
   font-size: 0.72em;
-  color: var(--text-faint);
+  color: var(--interactive-accent);
   text-align: right;
-  padding: 2px 8px 6px;
+  padding: 2px 0 6px;
   letter-spacing: 0.02em;
+  opacity: 0.8;
 }
 
 /* ── Wikilinks ── */
 
 .wikey-wikilink {
-  color: var(--link-color);
+  color: var(--interactive-accent);
   cursor: pointer;
   text-decoration: underline;
   text-decoration-style: dotted;
@@ -313,42 +311,54 @@
 
 .wikey-wikilink:hover {
   text-decoration-style: solid;
-  color: var(--link-color-hover, var(--link-color));
 }
 
-/* ── Ingest Panel ── */
+/* ══════════════════════════════
+   Ingest Panel — Purple Theme
+   ══════════════════════════════ */
 
 .wikey-ingest-panel {
-  background: var(--background-primary-alt, var(--background-secondary));
   border-bottom: 1px solid var(--background-modifier-border);
   padding: 12px 14px;
+  margin: 0 -12px;
+  padding-left: 12px;
+  padding-right: 12px;
 }
 
 .wikey-ingest-dropzone {
-  border: 2px dashed var(--text-faint);
-  border-radius: 8px;
-  padding: 20px 16px;
+  border: 2px dashed var(--interactive-accent);
+  border-radius: 10px;
+  padding: 22px 16px;
   text-align: center;
-  color: var(--text-muted);
+  color: var(--text-normal);
   font-size: 0.88em;
   transition: border-color 0.2s, background-color 0.2s;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
+  background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
+  opacity: 0.9;
+}
+
+.wikey-ingest-dropzone:hover {
+  opacity: 1;
+  background: color-mix(in srgb, var(--interactive-accent) 12%, transparent);
 }
 
 .wikey-ingest-dragover {
   border-color: var(--interactive-accent);
-  background-color: rgba(var(--interactive-accent-rgb, 100, 100, 255), 0.06);
+  background: color-mix(in srgb, var(--interactive-accent) 18%, transparent) !important;
+  opacity: 1;
 }
 
 .wikey-ingest-select-btn {
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border: none;
+  background: var(--interactive-accent) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: none !important;
   border-radius: 6px;
-  padding: 6px 16px;
+  padding: 7px 20px;
   cursor: pointer;
   font-size: 0.85em;
   font-weight: 500;
@@ -383,11 +393,12 @@
 
 .wikey-ingest-all-btn {
   margin-top: 8px;
-  background: var(--interactive-accent);
-  color: var(--text-on-accent);
-  border: none;
+  background: var(--interactive-accent) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: none !important;
   border-radius: 6px;
-  padding: 6px 16px;
+  padding: 7px 20px;
   cursor: pointer;
   font-size: 0.82em;
   font-weight: 500;
@@ -403,14 +414,15 @@
   cursor: not-allowed;
 }
 
-/* ── Settings ── */
+/* ══════════════════
+   Settings
+   ══════════════════ */
 
 .wikey-settings-status-group {
   margin: 8px 0 16px;
   padding: 10px 14px;
   border: 1px solid var(--background-modifier-border);
   border-radius: 8px;
-  background: var(--background-primary-alt, transparent);
 }
 
 .wikey-settings-status-row {
