@@ -36,10 +36,10 @@
 
 /* 아이콘 버튼: 배경 없음, 보더 없음, 아이콘만 */
 .wikey-header-btn {
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  outline: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
   padding: 6px;
   color: var(--text-muted);
   cursor: pointer;
@@ -50,7 +50,10 @@
   border-radius: 0;
 }
 
-.wikey-header-btn:hover {
+.wikey-header-btn:hover,
+.wikey-header-btn:focus {
+  background: transparent !important;
+  box-shadow: none !important;
   color: var(--text-normal);
 }
 
@@ -133,9 +136,9 @@
 
 /* 복사/피드백 아이콘 */
 .wikey-msg-action-btn {
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
   padding: 3px 5px;
   color: var(--text-faint);
   cursor: pointer;
@@ -263,10 +266,10 @@
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  border: none;
-  box-shadow: none;
+  border: none !important;
+  box-shadow: none !important;
   border-radius: 0;
-  background: transparent;
+  background: transparent !important;
   color: var(--text-muted);
   cursor: pointer;
   align-self: center;
