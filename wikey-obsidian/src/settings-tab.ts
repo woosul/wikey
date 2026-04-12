@@ -1,9 +1,5 @@
 import { App, Notice, PluginSettingTab, Setting, requestUrl } from 'obsidian'
 import type WikeyPlugin from './main'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
-
-const execFileAsync = promisify(execFile)
 
 export class WikeySettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: WikeyPlugin) {
@@ -16,7 +12,7 @@ export class WikeySettingTab extends PluginSettingTab {
 
     containerEl.createEl('h2', { text: 'Wikey Settings' })
 
-    this.renderLocalLLMSection(containerEl)
+    this.renderEnvStatusSection(containerEl)
     this.renderBasicModelSection(containerEl)
     this.renderApiKeysSection(containerEl)
     this.renderSearchSection(containerEl)
@@ -24,24 +20,57 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderAdvancedSection(containerEl)
   }
 
-  // ── Section 1: Local LLM Status ──
-  private renderLocalLLMSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Local LLM (Ollama)' })
+  // ── Section 1: Environment Status ──
+  private renderEnvStatusSection(containerEl: HTMLElement): void {
+    containerEl.createEl('h3', { text: '환경 상태' })
 
+    const env = this.plugin.envStatus
     const statusContainer = containerEl.createDiv({ cls: 'wikey-settings-status-group' })
 
-    // Ollama status
-    const ollamaRow = statusContainer.createDiv({ cls: 'wikey-settings-status-row' })
-    ollamaRow.createEl('span', { text: 'Ollama', cls: 'wikey-settings-status-label' })
-    const ollamaStatus = ollamaRow.createEl('span', { text: '확인 중...', cls: 'wikey-settings-status-badge' })
+    if (!env) {
+      statusContainer.createEl('p', { text: '환경 탐지 중...', cls: 'wikey-settings-status-label' })
+      new Setting(containerEl).addButton((btn) =>
+        btn.setButtonText('재탐지').onClick(async () => {
+          await this.plugin.runEnvDetection()
+          this.display()
+        }),
+      )
+      return
+    }
 
-    // Gemma4 status
-    const gemmaRow = statusContainer.createDiv({ cls: 'wikey-settings-status-row' })
-    gemmaRow.createEl('span', { text: 'Gemma 4', cls: 'wikey-settings-status-label' })
-    const gemmaStatus = gemmaRow.createEl('span', { text: '확인 중...', cls: 'wikey-settings-status-badge' })
+    const items: Array<{ label: string; value: string; ok: boolean }> = [
+      { label: 'Node.js', value: env.nodePath || '미발견', ok: !!env.nodePath },
+      { label: 'Python3', value: env.pythonPath || '미발견 (한국어 검색 제한)', ok: !!env.pythonPath },
+      { label: 'kiwipiepy', value: env.hasKiwipiepy ? '설치됨' : '미설치 (한국어 검색 제한)', ok: env.hasKiwipiepy },
+      { label: 'qmd', value: env.qmdPath || '미발견', ok: !!env.qmdPath },
+      { label: 'Ollama', value: env.ollamaRunning ? `실행 중 (${env.ollamaModels.length}개 모델)` : '미실행', ok: env.ollamaRunning },
+      { label: 'Gemma 4', value: env.hasGemma4 ? '설치됨' : '미설치', ok: env.hasGemma4 },
+    ]
 
-    // Check status
-    this.checkOllamaStatus(ollamaStatus, gemmaStatus)
+    for (const item of items) {
+      const row = statusContainer.createDiv({ cls: 'wikey-settings-status-row' })
+      row.createEl('span', { text: item.label, cls: 'wikey-settings-status-label' })
+      const badge = row.createEl('span', {
+        text: item.value,
+        cls: `wikey-settings-status-badge ${item.ok ? 'wikey-status-ok' : 'wikey-status-error'}`,
+      })
+    }
+
+    // Issues
+    if (env.issues.length > 0) {
+      const issueBox = containerEl.createDiv({ cls: 'wikey-settings-warning' })
+      issueBox.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg> ${env.issues.join(' | ')}`
+    }
+
+    // Re-detect button
+    new Setting(containerEl).addButton((btn) =>
+      btn.setButtonText('환경 재탐지').onClick(async () => {
+        btn.setButtonText('탐지 중...')
+        btn.setDisabled(true)
+        await this.plugin.runEnvDetection()
+        this.display()
+      }),
+    )
 
     // Ollama URL
     new Setting(containerEl)
@@ -56,51 +85,11 @@ export class WikeySettingTab extends PluginSettingTab {
             await this.plugin.saveSettings()
           }),
       )
-  }
 
-  private async checkOllamaStatus(ollamaBadge: HTMLElement, gemmaBadge: HTMLElement): Promise<void> {
-    const url = this.plugin.settings.ollamaUrl || 'http://localhost:11434'
-    try {
-      const http = require('node:http') as typeof import('node:http')
-      const body = await new Promise<string>((resolve, reject) => {
-        const req = http.get(`${url}/api/tags`, (res) => {
-          const chunks: Buffer[] = []
-          res.on('data', (c: Buffer) => chunks.push(c))
-          res.on('end', () => resolve(Buffer.concat(chunks).toString()))
-        })
-        req.on('error', reject)
-        req.setTimeout(5000, () => { req.destroy(); reject(new Error('timeout')) })
-      })
-
-      const data = JSON.parse(body)
-      const models: string[] = (data.models ?? []).map((m: any) => m.name)
-      const modelCount = models.length
-
-      ollamaBadge.setText(`실행 중 (${modelCount}개 모델)`)
-      ollamaBadge.addClass('wikey-status-ok')
-
-      const hasGemma4 = models.some((n: string) => n.includes('gemma4') || n.includes('wikey'))
-      if (hasGemma4) {
-        gemmaBadge.setText('설치됨')
-        gemmaBadge.addClass('wikey-status-ok')
-      } else {
-        gemmaBadge.setText('미설치 — ollama pull gemma4 실행 필요')
-        gemmaBadge.addClass('wikey-status-warn')
-      }
-    } catch {
-      ollamaBadge.setText('미실행')
-      ollamaBadge.addClass('wikey-status-error')
-      gemmaBadge.setText('확인 불가')
-      gemmaBadge.addClass('wikey-status-error')
-
-      new Setting(ollamaBadge.parentElement!.parentElement!)
-        .setName('')
-        .setDesc('Ollama를 설치하고 실행하세요: https://ollama.com')
-        .addButton((btn) =>
-          btn.setButtonText('설치 가이드').onClick(() => {
-            window.open('https://ollama.com')
-          }),
-        )
+    if (!env.ollamaRunning) {
+      new Setting(containerEl)
+        .setDesc('Ollama를 설치하고 실행하세요')
+        .addButton((btn) => btn.setButtonText('Ollama 설치 가이드').onClick(() => window.open('https://ollama.com')))
     }
   }
 
@@ -166,11 +155,8 @@ export class WikeySettingTab extends PluginSettingTab {
         const ok = await this.testApiConnection(provider)
         btn.setButtonText(ok ? '✓ Connected' : '✗ Failed')
         btn.setDisabled(false)
-        if (ok) {
-          btn.buttonEl.addClass('wikey-btn-success')
-        } else {
-          btn.buttonEl.addClass('wikey-btn-error')
-        }
+        if (ok) btn.buttonEl.addClass('wikey-btn-success')
+        else btn.buttonEl.addClass('wikey-btn-error')
         setTimeout(() => {
           btn.setButtonText('연결 테스트')
           btn.buttonEl.removeClass('wikey-btn-success')
@@ -186,10 +172,7 @@ export class WikeySettingTab extends PluginSettingTab {
         case 'gemini': {
           const key = this.plugin.settings.geminiApiKey
           if (!key) { new Notice('Gemini API 키를 입력하세요.'); return false }
-          const resp = await requestUrl({
-            url: `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`,
-            method: 'GET',
-          })
+          const resp = await requestUrl({ url: `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`, method: 'GET' })
           if (resp.status === 200) { new Notice('Gemini 연결 성공'); return true }
           new Notice(`Gemini 오류: ${resp.status}`); return false
         }
@@ -208,11 +191,7 @@ export class WikeySettingTab extends PluginSettingTab {
         case 'openai': {
           const key = this.plugin.settings.openaiApiKey
           if (!key) { new Notice('OpenAI API 키를 입력하세요.'); return false }
-          const resp = await requestUrl({
-            url: 'https://api.openai.com/v1/models',
-            method: 'GET',
-            headers: { Authorization: `Bearer ${key}` },
-          })
+          const resp = await requestUrl({ url: 'https://api.openai.com/v1/models', method: 'GET', headers: { Authorization: `Bearer ${key}` } })
           if (resp.status === 200) { new Notice('OpenAI 연결 성공'); return true }
           new Notice(`OpenAI 오류: ${resp.status}`); return false
         }
@@ -228,15 +207,9 @@ export class WikeySettingTab extends PluginSettingTab {
   private renderSearchSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: '검색 (qmd)' })
 
-    // qmd status
-    const qmdRow = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
-    qmdRow.createEl('span', { text: 'qmd', cls: 'wikey-settings-status-label' })
-    const qmdStatus = qmdRow.createEl('span', { text: '확인 중...', cls: 'wikey-settings-status-badge' })
-    this.checkQmdStatus(qmdStatus)
-
     new Setting(containerEl)
       .setName('qmd 경로')
-      .setDesc('비워두면 자동 탐지 (tools/qmd/bin/qmd → which qmd)')
+      .setDesc(`현재: ${this.plugin.settings.qmdPath || '자동 탐지'}`)
       .addText((text) =>
         text
           .setPlaceholder('자동 탐지')
@@ -246,22 +219,6 @@ export class WikeySettingTab extends PluginSettingTab {
             await this.plugin.saveSettings()
           }),
       )
-  }
-
-  private async checkQmdStatus(badge: HTMLElement): Promise<void> {
-    const basePath = (this.app.vault.adapter as any).basePath ?? ''
-    const { join } = require('node:path') as typeof import('node:path')
-    const qmdPath = this.plugin.settings.qmdPath || join(basePath, 'tools/qmd/bin/qmd')
-
-    try {
-      const { accessSync } = require('node:fs') as typeof import('node:fs')
-      accessSync(qmdPath)
-      badge.setText(`정상 (${qmdPath.split('/').pop()})`)
-      badge.addClass('wikey-status-ok')
-    } catch {
-      badge.setText('미설치')
-      badge.addClass('wikey-status-error')
-    }
   }
 
   // ── Section 5: Cost ──
@@ -297,13 +254,13 @@ export class WikeySettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.advancedLLM = value
             await this.plugin.saveSettings()
-            this.display() // re-render
+            this.display()
           }),
       )
 
     if (!this.plugin.settings.advancedLLM) return
 
-    const providerOptions = {
+    const providerOptions: Record<string, string> = {
       '': '(기본 모델 사용)',
       'gemini': 'Gemini',
       'anthropic': 'Anthropic',
@@ -311,40 +268,22 @@ export class WikeySettingTab extends PluginSettingTab {
       'ollama': 'Ollama',
     }
 
-    new Setting(containerEl)
-      .setName('인제스트 프로바이더')
-      .setDesc('소스 → 위키 페이지 생성에 사용할 LLM')
-      .addDropdown((drop) => {
-        for (const [k, v] of Object.entries(providerOptions)) drop.addOption(k, v)
-        drop.setValue(this.plugin.settings.ingestProvider)
-          .onChange(async (value) => {
-            this.plugin.settings.ingestProvider = value
-            await this.plugin.saveSettings()
-          })
-      })
-
-    new Setting(containerEl)
-      .setName('린트 프로바이더')
-      .setDesc('위키 정합성 검사에 사용할 LLM')
-      .addDropdown((drop) => {
-        for (const [k, v] of Object.entries(providerOptions)) drop.addOption(k, v)
-        drop.setValue(this.plugin.settings.lintProvider)
-          .onChange(async (value) => {
-            this.plugin.settings.lintProvider = value
-            await this.plugin.saveSettings()
-          })
-      })
-
-    new Setting(containerEl)
-      .setName('요약 프로바이더')
-      .setDesc('대용량 소스 요약에 사용할 LLM')
-      .addDropdown((drop) => {
-        for (const [k, v] of Object.entries(providerOptions)) drop.addOption(k, v)
-        drop.setValue(this.plugin.settings.summarizeProvider)
-          .onChange(async (value) => {
-            this.plugin.settings.summarizeProvider = value
-            await this.plugin.saveSettings()
-          })
-      })
+    for (const [key, label, desc] of [
+      ['ingestProvider', '인제스트 프로바이더', '소스 → 위키 페이지 생성에 사용할 LLM'],
+      ['lintProvider', '린트 프로바이더', '위키 정합성 검사에 사용할 LLM'],
+      ['summarizeProvider', '요약 프로바이더', '대용량 소스 요약에 사용할 LLM'],
+    ] as const) {
+      new Setting(containerEl)
+        .setName(label)
+        .setDesc(desc)
+        .addDropdown((drop) => {
+          for (const [k, v] of Object.entries(providerOptions)) drop.addOption(k, v)
+          drop.setValue((this.plugin.settings as any)[key])
+            .onChange(async (value) => {
+              ;(this.plugin.settings as any)[key] = value
+              await this.plugin.saveSettings()
+            })
+        })
+    }
   }
 }

@@ -1,10 +1,12 @@
-import { Plugin, WorkspaceLeaf, requestUrl } from 'obsidian'
+import { Notice, Plugin, WorkspaceLeaf, requestUrl } from 'obsidian'
 import type { HttpClient, HttpRequestOptions, HttpResponse, WikiFS, WikeyConfig } from 'wikey-core'
-import { LLMClient, parseWikeyConf } from 'wikey-core'
+import { LLMClient } from 'wikey-core'
 import { WikeyChatView, WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { WikeySettingTab } from './settings-tab'
 import { WikeyStatusBar } from './status-bar'
 import { registerCommands } from './commands'
+import { detectEnvironment, buildExecEnv } from './env-detect'
+import type { EnvStatus } from './env-detect'
 
 interface WikeySettings {
   basicModel: string
@@ -18,6 +20,10 @@ interface WikeySettings {
   ingestProvider: string
   lintProvider: string
   summarizeProvider: string
+  // 자동 탐지된 환경 (수동 편집 불필요)
+  detectedShellPath: string
+  detectedNodePath: string
+  detectedPythonPath: string
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -32,6 +38,9 @@ const DEFAULT_SETTINGS: WikeySettings = {
   ingestProvider: '',
   lintProvider: '',
   summarizeProvider: '',
+  detectedShellPath: '',
+  detectedNodePath: '',
+  detectedPythonPath: '',
 }
 
 export type { WikeySettings }
@@ -41,7 +50,8 @@ export default class WikeyPlugin extends Plugin {
   wikiFS!: WikiFS
   httpClient!: HttpClient
   llmClient!: LLMClient
-  chatHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  envStatus: EnvStatus | null = null
+  chatHistory: Array<{ role: 'user' | 'assistant' | 'error'; content: string }> = []
   private statusBar!: WikeyStatusBar
 
   async onload() {
@@ -61,10 +71,45 @@ export default class WikeyPlugin extends Plugin {
     this.statusBar.register()
 
     registerCommands(this)
+
+    // 환경 자동 탐지 (백그라운드)
+    this.runEnvDetection()
   }
 
   onunload() {
     // cleanup handled by Obsidian
+  }
+
+  async runEnvDetection() {
+    const basePath = (this.app.vault.adapter as any).basePath ?? ''
+    console.log('[Wikey] 환경 탐지 시작...')
+    this.envStatus = await detectEnvironment(basePath, this.settings.ollamaUrl)
+
+    // 탐지 결과 저장
+    this.settings.detectedShellPath = this.envStatus.shellPath
+    this.settings.detectedNodePath = this.envStatus.nodePath
+    this.settings.detectedPythonPath = this.envStatus.pythonPath
+    if (!this.settings.qmdPath && this.envStatus.qmdPath) {
+      this.settings.qmdPath = this.envStatus.qmdPath
+    }
+    await this.saveData(this.settings)
+
+    console.log('[Wikey] 환경 탐지 완료:', {
+      node: this.envStatus.nodePath,
+      python: this.envStatus.pythonPath,
+      qmd: this.envStatus.qmdPath,
+      ollama: this.envStatus.ollamaRunning,
+      models: this.envStatus.ollamaModels,
+      issues: this.envStatus.issues,
+    })
+
+    if (this.envStatus.issues.length > 0) {
+      new Notice(`Wikey: ${this.envStatus.issues[0]}`)
+    }
+  }
+
+  getExecEnv(): Record<string, string> {
+    return buildExecEnv(this.settings.detectedShellPath || process.env.PATH || '')
   }
 
   async loadSettings() {
@@ -146,12 +191,12 @@ class ObsidianWikiFS implements WikiFS {
 
 class ObsidianHttpClient implements HttpClient {
   async request(url: string, opts: HttpRequestOptions): Promise<HttpResponse> {
-    // localhost/Ollama → Node.js http 직접 호출 (Obsidian requestUrl CORS 우회)
+    // localhost/Ollama → Node.js http 직접 호출
     if (url.includes('localhost') || url.includes('127.0.0.1')) {
       return this.requestViaNode(url, opts)
     }
 
-    // 외부 API (Gemini, Anthropic, OpenAI) → Obsidian requestUrl
+    // 외부 API → Obsidian requestUrl
     const response = await requestUrl({
       url,
       method: opts.method,

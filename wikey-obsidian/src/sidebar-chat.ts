@@ -154,6 +154,8 @@ export class WikeyChatView extends ItemView {
       const result = await query(question, config, this.plugin.httpClient, {
         basePath,
         wikiFS: this.plugin.wikiFS,
+        execEnv: this.plugin.getExecEnv(),
+        nodePath: this.plugin.settings.detectedNodePath,
       })
 
       loadingEl.remove()
