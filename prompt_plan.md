@@ -1,9 +1,9 @@
 # Phase 3 구현 계획 — Wikey Obsidian 플러그인
 
 > 작성일: 2026-04-12
-> 상태: **CEO+Eng 리뷰 완료 — 사용자 확인 대기**
+> 상태: **구현 진행 중** — Step 0~6 완료, 잔여 작업 있음
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
-> 참조: plan/phase3-todo.md (체크리스트), plan/decisions.md (ADR-001~007)
+> 참조: plan/phase3-todo.md (체크리스트), activity/phase-3-result.md (결과)
 > 리뷰: CEO (SELECTIVE EXPANSION) + Eng 완료
 
 ## 1. 요구사항 재정의
@@ -590,8 +590,73 @@ Week 3:  통합 테스트 + 마무리
 | 항목 | Phase | 설명 |
 |------|-------|------|
 | qmd SDK import | 3.5 | better-sqlite3-wasm 또는 Electron rebuild |
-| 드래그앤드롭 inbox | 3.5 | Obsidian dropzone → raw/0_inbox/ |
 | 인라인 린트 | 3.5 | EditorView 데코레이션 |
 | 비용 대시보드 | 3.5 | 모달/뷰로 월별 차트 |
 | 웹 인터페이스 | 4 | Next.js + wikey-core 재사용 |
 | 마켓플레이스 등록 | 4 | 보안 리뷰 통과 후 |
+
+---
+
+## 15. 구현 과정 변경 사항 (계획 대비 실제)
+
+> 이 절은 계획(1~14절)과 실제 구현의 차이를 기록한다.
+
+### 15-1. 추가 구현 (계획에 없었으나 구현)
+
+| 항목 | 이유 | 결과 |
+|------|------|------|
+| env-detect.ts | Obsidian Electron의 PATH/node ABI 문제 | 로그인 셸 PATH 탐지 + ABI 호환 node 자동 선택 |
+| PDF 인제스트 | inbox에 PDF만 있어서 급히 필요 | pdftotext→pymupdf→PyPDF2 3단계 fallback |
+| classify.ts | classify-inbox.sh 분류 규칙 TS 포팅 | 확장자/구조 기반 분류 힌트 |
+| scripts-runner.ts | validate/pii/reindex/cost-tracker exec 래퍼 | bash 스크립트 Obsidian에서 호출 가능 |
+| UI 고도화 (Step 4~5) | 사용자 피드백 반영 | purple 테마, 피드백, 인제스트 패널, 프로그레스바 |
+| inbox 감시 | Finder에서 직접 파일 추가 감지 | vault.on('create') 이벤트 |
+| Node.js http 직접 호출 | Obsidian requestUrl의 localhost CORS | Ollama 호출 경로 분리 |
+
+### 15-2. 변경 (계획과 다르게 구현)
+
+| 계획 | 실제 | 이유 |
+|------|------|------|
+| qmd CLI exec 유지 | node + qmd.js 직접 실행 | Electron node ABI mismatch (better-sqlite3) |
+| wikey.conf ↔ data.json 양방향 동기화 | data.json 단독 사용 | 동시 수정 경쟁 회피, v2로 연기 |
+| 드래그앤드롭 inbox (v2 연기) | MVP에서 구현 | 사용자 요청으로 즉시 구현 |
+| Phase 3-3 배포 (BRAT, 태그) | 잔여 작업으로 이동 | 기능 검증 우선 |
+| `workspace:*` (pnpm) | `"*"` (npm) | npm workspaces 호환 |
+
+### 15-3. 연기 (계획에 있었으나 미구현)
+
+| 항목 | 이유 | 대안 |
+|------|------|------|
+| wikey.conf 양방향 동기화 (M3) | 동시 수정 경쟁 위험 | data.json 단독 |
+| Obsidian Sync 경고 강화 | 우선순위 낮음 | 설정 탭 경고 문구로 대체 |
+| BRAT 배포 테스트 | 기능 검증 미완료 | 수동 심볼릭 링크로 동작 |
+| v0.1.0-alpha 태그 갱신 | 코드 아직 변동 중 | 잔여 작업 완료 후 |
+
+### 15-4. 발견된 Obsidian Electron 제약 (계획에 미예측)
+
+| 제약 | 영향 | 해결 |
+|------|------|------|
+| `import('node:*')` CORS 차단 | 모든 동적 import 실패 | `require()` 전환 |
+| Electron PATH 최소화 | nvm/homebrew node 미포함 | 로그인 셸 PATH 탐지 |
+| Electron node ≠ 시스템 node | better-sqlite3 ABI mismatch | ABI 호환 node 자동 선택 |
+| `requestUrl()` localhost CORS | Ollama 호출 실패 | Node.js http 모듈 직접 호출 |
+| Vault API가 .gitignore 폴더 미반환 | raw/0_inbox/ 목록 안 보임 | Node.js fs 직접 읽기 |
+
+### 15-5. 잔여 작업 (다음 세션)
+
+**완전 포팅 (bash→TS):**
+- validate-wiki.sh → TS 재구현
+- check-pii.sh → TS 재구현
+- cost-tracker.sh → TS 재구현
+- reindex.sh → TS 오케스트레이션
+
+**UI 통합:**
+- classify 서브폴더 이동 UI
+- 비용 추적 UI (상태 바 + 대시보드)
+- reindex/validate/pii 실행 UI (설정 탭)
+- 상태 바 페이지 수 수정
+
+**검증:**
+- Obsidian 수동 통합 테스트 6 시나리오
+- inbox PDF 인제스트 end-to-end
+- BRAT 배포 + v0.1.0-alpha 태그
