@@ -194,8 +194,25 @@ cp .env.example .env    # 템플릿 복사
 ### 구조
 
 ```
-wikey-core/       ← 핵심 로직 (프로바이더 독립)
-wikey-obsidian/   ← Obsidian 플러그인 (wikey-core 소비)
+wikey-core/                    ← 핵심 로직 (프로바이더 독립)
+  src/config.ts                ← wikey.conf 파싱, resolveProvider
+  src/llm-client.ts            ← 4 프로바이더 (Gemini/Anthropic/OpenAI/Ollama)
+  src/wiki-ops.ts              ← 페이지 CRUD, index/log 관리
+  src/query-pipeline.ts        ← qmd 검색 + LLM 합성
+  src/ingest-pipeline.ts       ← 소스→위키 변환 (PDF 지원)
+  src/classify.ts              ← inbox 분류 규칙 엔진
+  src/scripts-runner.ts        ← validate/pii/reindex/cost exec 래퍼
+  src/types.ts                 ← 공유 타입
+  src/__tests__/               ← vitest (65 tests)
+
+wikey-obsidian/                ← Obsidian 플러그인
+  src/main.ts                  ← WikeyPlugin, WikiFS/HttpClient 어댑터
+  src/sidebar-chat.ts          ← 채팅 UI, 인제스트 패널
+  src/settings-tab.ts          ← 설정 (환경 탐지, API 키, 고급 LLM)
+  src/commands.ts              ← Cmd+Shift+I, URI 프로토콜
+  src/status-bar.ts            ← 페이지 수, 통계 모달
+  src/env-detect.ts            ← 로그인 셸 PATH + ABI 호환 node 탐지
+  styles.css                   ← Purple accent 테마
 ```
 
 ### 개발 명령어

@@ -185,6 +185,17 @@ Phase C: 쿼리 시 섹션 인덱스 참조 → 해당 페이지만 온디맨드
 - 소스에 PII가 있을 경우 위키 페이지에 전파하지 않도록 주의
 - PII가 위키에 이미 전파된 경우, 사용자 지시에 따라 제거
 
+## Obsidian 플러그인 (Phase 3)
+
+wikey-core/ (TypeScript 핵심 로직)와 wikey-obsidian/ (Obsidian 플러그인)이 추가됨.
+
+```bash
+npm run build          # 전체 빌드
+npm test               # wikey-core vitest (65 tests)
+```
+
+Codex에서 wikey-core 모듈을 수정할 경우 `npm test`로 회귀 확인 필수.
+
 ## Claude Code와의 일관성 유지
 
 Codex로 작업할 때도 **동일한 컨벤션**을 따라야 한다:
