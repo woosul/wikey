@@ -50,7 +50,7 @@ export function registerCommands(plugin: WikeyPlugin): void {
   })
 }
 
-async function runIngest(plugin: WikeyPlugin, sourcePath: string): Promise<void> {
+export async function runIngest(plugin: WikeyPlugin, sourcePath: string): Promise<void> {
   // Warn if outside raw/
   if (!sourcePath.startsWith('raw/')) {
     new Notice(`⚠️ 이 파일은 raw/ 디렉토리 밖에 있습니다: ${sourcePath}`)
@@ -88,7 +88,7 @@ async function runIngest(plugin: WikeyPlugin, sourcePath: string): Promise<void>
   }
 }
 
-class IngestFileSuggestModal extends FuzzySuggestModal<TFile> {
+export class IngestFileSuggestModal extends FuzzySuggestModal<TFile> {
   constructor(private readonly plugin: WikeyPlugin) {
     super(plugin.app)
     this.setPlaceholder('인제스트할 파일을 선택하세요...')

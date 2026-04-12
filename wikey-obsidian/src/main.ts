@@ -24,6 +24,7 @@ interface WikeySettings {
   detectedShellPath: string
   detectedNodePath: string
   detectedPythonPath: string
+  feedback: Array<{ question: string; answer: string; vote: string; timestamp: string }>
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS: WikeySettings = {
   detectedShellPath: '',
   detectedNodePath: '',
   detectedPythonPath: '',
+  feedback: [],
 }
 
 export type { WikeySettings }

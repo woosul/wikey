@@ -1,6 +1,7 @@
-import { ItemView, MarkdownRenderer, WorkspaceLeaf } from 'obsidian'
+import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
-import { query } from 'wikey-core'
+import { query, resolveProvider } from 'wikey-core'
+import { runIngest, IngestFileSuggestModal } from './commands'
 
 export const WIKEY_CHAT_VIEW = 'wikey-chat'
 
@@ -9,11 +10,26 @@ interface ChatMessage {
   readonly content: string
 }
 
+// Bootstrap SVG icons (inline, 16x16)
+const ICONS = {
+  plus: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg>',
+  question: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/></svg>',
+  trash: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>',
+  reload: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>',
+  close: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>',
+  send: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/></svg>',
+  clipboard: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>',
+  thumbUp: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2 2 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a10 10 0 0 0-.443.05 9.4 9.4 0 0 0-.062-4.509A1.38 1.38 0 0 0 8.864.046M11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a9 9 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.2 2.2 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.9.9 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/></svg>',
+  thumbDown: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.864 15.674c-.956.24-1.843-.484-1.908-1.42-.072-1.05-.23-2.015-.428-2.59-.125-.36-.479-1.012-1.04-1.638-.557-.624-1.282-1.179-2.131-1.41C2.685 8.432 2 7.85 2 7V3c0-.845.682-1.464 1.448-1.546 1.07-.113 1.564-.415 2.068-.723l.048-.029c.272-.166.578-.349.97-.484C6.931.08 7.395 0 8 0h3.5c.937 0 1.599.478 1.934 1.064.164.287.254.607.254.913 0 .152-.023.312-.077.464.201.262.38.577.488.9.11.33.172.762.004 1.15.069.13.12.268.159.403.077.27.113.567.113.856s-.036.586-.113.856c-.035.12-.08.244-.138.363.394.571.418 1.2.234 1.733-.206.592-.682 1.1-1.2 1.272-.847.283-1.803.276-2.516.211a10 10 0 0 1-.443-.05 9.36 9.36 0 0 1-.062 4.51c-.138.508-.55.848-1.012.964zM11.5 1H8c-.51 0-.863.068-1.14.163-.281.097-.506.229-.776.393l-.04.025c-.555.338-1.198.73-2.49.868-.333.035-.554.29-.554.55V7c0 .255.226.543.62.65 1.095.3 1.977.997 2.614 1.709.635.71 1.064 1.475 1.238 1.977.243.7.407 1.768.482 2.85.025.362.36.595.667.518l.262-.065c.16-.04.258-.144.288-.255a8.34 8.34 0 0 0-.145-4.726.5.5 0 0 1 .595-.643h.003l.014.004.058.013a9 9 0 0 0 1.036.157c.663.06 1.457.054 2.11-.163.175-.059.45-.301.57-.651.107-.308.087-.67-.266-1.021L12.793 7l.353-.354c.043-.042.105-.14.154-.315.048-.167.075-.37.075-.581s-.027-.414-.075-.581c-.05-.174-.111-.273-.154-.315l-.353-.354.353-.354c.047-.047.109-.176.005-.488a2.2 2.2 0 0 0-.505-.804l-.353-.354.353-.354c.006-.005.041-.05.041-.17a.9.9 0 0 0-.121-.415C12.4 1.272 12.063 1 11.5 1"/></svg>',
+  folder: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3H14a2 2 0 0 1 2 2v1.5a.5.5 0 0 1-1 0V5a1 1 0 0 0-1-1H9.828a3 3 0 0 1-2.12-.879l-.83-.828A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/><path d="M14.5 5.5a.5.5 0 0 0-.468.324L12.78 9H3.22l-1.252-3.176A.5.5 0 0 0 1.5 5.5a.5.5 0 0 0-.49.412L.008 11.91a.5.5 0 0 0 .49.588h15.004a.5.5 0 0 0 .49-.588l-1.002-5.998A.5.5 0 0 0 14.5 5.5"/></svg>',
+}
+
 export class WikeyChatView extends ItemView {
   private messagesEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
   private sendBtn!: HTMLButtonElement
-  private abortController: AbortController | null = null
+  private ingestPanel: HTMLElement | null = null
+  private helpVisible = false
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -22,91 +38,67 @@ export class WikeyChatView extends ItemView {
     super(leaf)
   }
 
-  getViewType(): string {
-    return WIKEY_CHAT_VIEW
-  }
-
-  getDisplayText(): string {
-    return 'Wikey'
-  }
-
-  getIcon(): string {
-    return 'search'
-  }
+  getViewType(): string { return WIKEY_CHAT_VIEW }
+  getDisplayText(): string { return 'Wikey' }
+  getIcon(): string { return 'search' }
 
   async onOpen() {
     const container = this.containerEl.children[1] as HTMLElement
     container.empty()
     container.addClass('wikey-chat-container')
 
-    // Header
+    // ── Header ──
     const header = container.createDiv({ cls: 'wikey-chat-header' })
     header.createEl('span', { text: 'Wikey', cls: 'wikey-chat-title' })
+    const actions = header.createDiv({ cls: 'wikey-chat-header-actions' })
 
-    const headerActions = header.createDiv({ cls: 'wikey-chat-header-actions' })
+    this.makeHeaderBtn(actions, ICONS.plus, '인제스트', () => this.toggleIngestPanel())
+    this.makeHeaderBtn(actions, ICONS.question, '도움말', () => this.toggleHelp())
+    this.makeHeaderBtn(actions, ICONS.trash, '대화 초기화', () => this.clearChat())
+    this.makeHeaderBtn(actions, ICONS.reload, '리로드', () => (this.app as any).commands?.executeCommandById?.('app:reload'))
+    this.makeHeaderBtn(actions, ICONS.close, '닫기', () => this.leaf.detach())
 
-    // Clear button
-    const clearBtn = headerActions.createEl('button', {
-      cls: 'wikey-header-btn',
-      attr: { 'aria-label': '대화 초기화' },
-    })
-    clearBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z"/><path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/></svg>'
-    clearBtn.addEventListener('click', () => this.clearChat())
-
-    // Reload button
-    const reloadBtn = headerActions.createEl('button', {
-      cls: 'wikey-header-btn',
-      attr: { 'aria-label': '플러그인 리로드' },
-    })
-    reloadBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/><path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/></svg>'
-    reloadBtn.addEventListener('click', () => {
-      (this.app as any).commands?.executeCommandById?.('app:reload')
-    })
-
-    // Close button
-    const closeBtn = headerActions.createEl('button', {
-      cls: 'wikey-header-btn',
-      attr: { 'aria-label': '사이드바 닫기' },
-    })
-    closeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z"/></svg>'
-    closeBtn.addEventListener('click', () => this.leaf.detach())
-
-    // Messages area
+    // ── Messages ──
     this.messagesEl = container.createDiv({ cls: 'wikey-chat-messages' })
+    for (const msg of this.plugin.chatHistory) this.renderMessage(msg)
 
-    // Restore history
-    for (const msg of this.plugin.chatHistory) {
-      this.renderMessage(msg)
-    }
-
-    // Input area
-    const inputArea = container.createDiv({ cls: 'wikey-chat-input-area' })
+    // ── Input Area ──
+    const inputWrapper = container.createDiv({ cls: 'wikey-chat-input-wrapper' })
+    const inputArea = inputWrapper.createDiv({ cls: 'wikey-chat-input-area' })
 
     this.inputEl = inputArea.createEl('textarea', {
       cls: 'wikey-chat-input',
-      attr: { placeholder: '질문을 입력하세요...', rows: '2' },
+      attr: { placeholder: '질문을 입력하세요...', rows: '3' },
     })
 
     this.sendBtn = inputArea.createEl('button', { cls: 'wikey-chat-send-btn' })
-    this.sendBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/></svg>'
+    this.sendBtn.innerHTML = ICONS.send
 
     this.inputEl.addEventListener('keydown', (e: KeyboardEvent) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        this.handleSend()
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.handleSend() }
     })
-
     this.sendBtn.addEventListener('click', () => this.handleSend())
 
-    if (this.plugin.chatHistory.length === 0) {
-      this.showWelcome()
-    }
+    // Model tag
+    const modelTag = inputWrapper.createDiv({ cls: 'wikey-chat-model-tag' })
+    const config = this.plugin.buildConfig()
+    const { provider, model } = resolveProvider('default', config)
+    modelTag.setText(`${provider}:${model}`)
+
+    if (this.plugin.chatHistory.length === 0) this.showWelcome()
   }
 
-  async onClose() {
-    this.abortController?.abort()
+  async onClose() { /* cleanup */ }
+
+  // ── Header Helpers ──
+
+  private makeHeaderBtn(parent: HTMLElement, icon: string, label: string, onClick: () => void) {
+    const btn = parent.createEl('button', { cls: 'wikey-header-btn', attr: { 'aria-label': label, title: label } })
+    btn.innerHTML = icon
+    btn.addEventListener('click', onClick)
   }
+
+  // ── Chat Actions ──
 
   private clearChat() {
     this.plugin.chatHistory = []
@@ -115,23 +107,17 @@ export class WikeyChatView extends ItemView {
   }
 
   private showWelcome() {
-    const welcome = this.messagesEl.createDiv({ cls: 'wikey-chat-welcome' })
-    welcome.createEl('p', { text: '위키에 대해 질문해보세요.' })
-    welcome.createEl('p', {
-      text: '예: "ESC란?", "RAG와 LLM Wiki의 차이점"',
-      cls: 'wikey-chat-welcome-hint',
-    })
+    const w = this.messagesEl.createDiv({ cls: 'wikey-chat-welcome' })
+    w.createEl('p', { text: '위키에 대해 질문해보세요.' })
+    w.createEl('p', { text: '예: "DJI O3의 주요 스펙은?", "RAG와 LLM Wiki 비교"', cls: 'wikey-chat-welcome-hint' })
   }
 
   private async handleSend() {
     const question = this.inputEl.value.trim()
     if (!question) return
 
-    // Clear welcome
-    const welcome = this.messagesEl.querySelector('.wikey-chat-welcome')
-    if (welcome) welcome.remove()
+    this.messagesEl.querySelector('.wikey-chat-welcome')?.remove()
 
-    // Show user message
     const userMsg: ChatMessage = { role: 'user', content: question }
     this.plugin.chatHistory.push(userMsg)
     this.renderMessage(userMsg)
@@ -139,50 +125,31 @@ export class WikeyChatView extends ItemView {
     this.inputEl.value = ''
     this.setInputEnabled(false)
 
-    // Show loading
     const loadingEl = this.messagesEl.createDiv({ cls: 'wikey-chat-loading' })
     loadingEl.createEl('span', { text: '답변을 생성하고 있습니다...' })
     this.scrollToBottom()
-
-    // Abort previous if still running
-    this.abortController?.abort()
-    this.abortController = new AbortController()
 
     try {
       const config = this.plugin.buildConfig()
       const basePath = (this.app.vault.adapter as any).basePath ?? ''
       const result = await query(question, config, this.plugin.httpClient, {
-        basePath,
-        wikiFS: this.plugin.wikiFS,
+        basePath, wikiFS: this.plugin.wikiFS,
         execEnv: this.plugin.getExecEnv(),
         nodePath: this.plugin.settings.detectedNodePath,
       })
-
       loadingEl.remove()
-
       const assistantMsg: ChatMessage = { role: 'assistant', content: result.answer }
       this.plugin.chatHistory.push(assistantMsg)
       this.renderMessage(assistantMsg)
     } catch (err: any) {
       loadingEl.remove()
       console.error('[Wikey] query error:', err)
-
-      // Build detailed error string — handle empty/undefined errors
       let fullError: string
-      if (err == null) {
-        fullError = '[Wikey] Unknown error (null/undefined was thrown)'
-      } else if (err instanceof Error) {
-        fullError = `${err.name}: ${err.message}\n\n${err.stack ?? '(no stack)'}`
-      } else if (typeof err === 'object') {
-        fullError = JSON.stringify(err, null, 2)
-      } else {
-        fullError = String(err)
-      }
-
-      if (!fullError || fullError.trim() === '') {
-        fullError = '[Wikey] Empty error — check Obsidian DevTools (Cmd+Option+I) Console for details'
-      }
-
+      if (err == null) fullError = '[Wikey] Unknown error'
+      else if (err instanceof Error) fullError = `${err.name}: ${err.message}\n${err.stack ?? ''}`
+      else if (typeof err === 'object') fullError = JSON.stringify(err, null, 2)
+      else fullError = String(err)
+      if (!fullError?.trim()) fullError = '[Wikey] Empty error — Cmd+Option+I 콘솔 확인'
       const errorMsg: ChatMessage = { role: 'error', content: fullError }
       this.plugin.chatHistory.push(errorMsg)
       this.renderMessage(errorMsg)
@@ -193,11 +160,12 @@ export class WikeyChatView extends ItemView {
     }
   }
 
+  // ── Message Rendering ──
+
   private renderMessage(msg: ChatMessage) {
     if (msg.role === 'error') {
-      const errorEl = this.messagesEl.createDiv({ cls: 'wikey-chat-error' })
-      const pre = errorEl.createEl('pre', { cls: 'wikey-chat-error-detail' })
-      pre.textContent = msg.content
+      const el = this.messagesEl.createDiv({ cls: 'wikey-chat-error' })
+      el.createEl('pre', { cls: 'wikey-chat-error-detail', text: msg.content })
       this.scrollToBottom()
       return
     }
@@ -207,40 +175,187 @@ export class WikeyChatView extends ItemView {
     })
 
     if (msg.role === 'user') {
-      msgEl.createEl('div', { cls: 'wikey-chat-label', text: 'Q' })
       msgEl.createEl('div', { cls: 'wikey-chat-content', text: msg.content })
     } else {
-      msgEl.createEl('div', { cls: 'wikey-chat-label', text: 'A' })
       const contentEl = msgEl.createDiv({ cls: 'wikey-chat-content' })
       this.renderMarkdown(msg.content, contentEl)
+      this.addMessageActions(msgEl, msg.content)
     }
 
     this.scrollToBottom()
   }
 
+  private addMessageActions(msgEl: HTMLElement, content: string) {
+    const actions = msgEl.createDiv({ cls: 'wikey-msg-actions' })
+
+    // Copy
+    const copyBtn = this.makeActionBtn(actions, ICONS.clipboard, '복사')
+    copyBtn.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(content)
+      new Notice('복사됨')
+      copyBtn.addClass('wikey-msg-action-active')
+      setTimeout(() => copyBtn.removeClass('wikey-msg-action-active'), 1500)
+    })
+
+    // Thumbs up
+    const upBtn = this.makeActionBtn(actions, ICONS.thumbUp, '좋아요')
+    upBtn.addEventListener('click', () => {
+      this.saveFeedback(content, 'up')
+      upBtn.addClass('wikey-msg-action-active')
+      new Notice('피드백 저장됨')
+    })
+
+    // Thumbs down
+    const downBtn = this.makeActionBtn(actions, ICONS.thumbDown, '나빠요')
+    downBtn.addEventListener('click', () => {
+      this.saveFeedback(content, 'down')
+      downBtn.addClass('wikey-msg-action-active')
+      new Notice('피드백 저장됨')
+    })
+  }
+
+  private makeActionBtn(parent: HTMLElement, icon: string, label: string): HTMLElement {
+    const btn = parent.createEl('button', { cls: 'wikey-msg-action-btn', attr: { 'aria-label': label, title: label } })
+    btn.innerHTML = icon
+    return btn
+  }
+
+  private saveFeedback(answer: string, vote: 'up' | 'down') {
+    const lastQuestion = [...this.plugin.chatHistory].reverse().find((m) => m.role === 'user')
+    const entry = {
+      question: lastQuestion?.content ?? '',
+      answer: answer.slice(0, 200),
+      vote,
+      timestamp: new Date().toISOString(),
+    }
+    if (!this.plugin.settings.feedback) (this.plugin.settings as any).feedback = []
+    ;(this.plugin.settings as any).feedback.push(entry)
+    this.plugin.saveSettings()
+  }
+
+  // ── Help ──
+
+  private toggleHelp() {
+    this.helpVisible = !this.helpVisible
+    const existing = this.messagesEl.querySelector('.wikey-chat-help')
+    if (existing) { existing.remove(); return }
+
+    const helpEl = this.messagesEl.createDiv({ cls: 'wikey-chat-help' })
+    const helpMd = `## Wikey 사용 가이드
+
+**질문하기**
+위키에 대해 자연어로 질문하세요.
+예: "DJI O3의 주요 스펙은?", "RAG와 LLM Wiki 비교"
+
+**인제스트** (소스 → 위키 변환)
+- \`Cmd+Shift+I\`: 현재 노트 인제스트
+- 상단 \`[+]\` 버튼: 파일 선택 또는 드래그&드롭
+- \`raw/inbox/\`에 파일 추가 → 자동 감지
+
+**위키링크**
+답변의 [[페이지명]]을 클릭하면 해당 위키 페이지로 이동해요.
+
+**설정**
+\`Cmd+,\` → Wikey 탭에서 모델, API 키, Ollama 연결을 관리해요.`
+
+    MarkdownRenderer.render(this.app, helpMd, helpEl, '', this.plugin)
+    this.scrollToBottom()
+  }
+
+  // ── Ingest Panel ──
+
+  private toggleIngestPanel() {
+    if (this.ingestPanel) {
+      this.ingestPanel.remove()
+      this.ingestPanel = null
+      return
+    }
+
+    const inputWrapper = this.containerEl.querySelector('.wikey-chat-input-wrapper')
+    if (!inputWrapper) return
+
+    this.ingestPanel = createDiv({ cls: 'wikey-ingest-panel' })
+    inputWrapper.insertBefore(this.ingestPanel, inputWrapper.firstChild)
+
+    // Drop zone
+    const dropZone = this.ingestPanel.createDiv({ cls: 'wikey-ingest-dropzone' })
+    dropZone.createEl('span', { text: '파일을 여기에 드래그하세요' })
+
+    const selectBtn = dropZone.createEl('button', { cls: 'wikey-ingest-select-btn', text: '파일 선택' })
+    selectBtn.addEventListener('click', () => {
+      new IngestFileSuggestModal(this.plugin).open()
+    })
+
+    // Drag/drop events
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.addClass('wikey-ingest-dragover') })
+    dropZone.addEventListener('dragleave', () => dropZone.removeClass('wikey-ingest-dragover'))
+    dropZone.addEventListener('drop', async (e) => {
+      e.preventDefault()
+      dropZone.removeClass('wikey-ingest-dragover')
+      const files = e.dataTransfer?.files
+      if (files && files.length > 0) {
+        new Notice(`${files.length}개 파일 감지 — Obsidian 내부 파일만 인제스트 가능해요. [파일 선택] 버튼을 사용하세요.`)
+      }
+    })
+
+    // Inbox status
+    this.renderInboxStatus(this.ingestPanel)
+  }
+
+  private async renderInboxStatus(panel: HTMLElement) {
+    const inboxDiv = panel.createDiv({ cls: 'wikey-ingest-inbox' })
+
+    try {
+      const files = await this.plugin.wikiFS.list('raw/0_inbox')
+      const mdFiles = files.filter((f) => f.endsWith('.md'))
+      if (mdFiles.length === 0) {
+        inboxDiv.createEl('span', { text: 'inbox: 비어있음', cls: 'wikey-ingest-inbox-empty' })
+        return
+      }
+
+      inboxDiv.createEl('span', { text: `inbox: ${mdFiles.length}개 파일 대기`, cls: 'wikey-ingest-inbox-label' })
+      for (const f of mdFiles.slice(0, 5)) {
+        const name = f.split('/').pop() ?? f
+        inboxDiv.createEl('div', { text: `• ${name}`, cls: 'wikey-ingest-inbox-item' })
+      }
+      if (mdFiles.length > 5) {
+        inboxDiv.createEl('div', { text: `... 외 ${mdFiles.length - 5}개`, cls: 'wikey-ingest-inbox-item' })
+      }
+
+      const ingestAllBtn = inboxDiv.createEl('button', { cls: 'wikey-ingest-all-btn', text: '모두 인제스트' })
+      ingestAllBtn.addEventListener('click', async () => {
+        ingestAllBtn.setAttr('disabled', 'true')
+        ingestAllBtn.setText('처리 중...')
+        for (const f of mdFiles) {
+          await runIngest(this.plugin, f)
+        }
+        ingestAllBtn.setText('완료')
+        setTimeout(() => this.toggleIngestPanel(), 1500)
+      })
+    } catch {
+      inboxDiv.createEl('span', { text: 'inbox 폴더를 찾을 수 없습니다', cls: 'wikey-ingest-inbox-empty' })
+    }
+  }
+
+  // ── Markdown ──
+
   private renderMarkdown(content: string, el: HTMLElement) {
     MarkdownRenderer.render(this.app, content, el, '', this.plugin)
 
-    // Make wikilinks clickable
     el.querySelectorAll('a.internal-link').forEach((link) => {
       link.addEventListener('click', (e: Event) => {
         e.preventDefault()
         const href = (link as HTMLAnchorElement).getAttribute('data-href')
-        if (href) {
-          this.app.workspace.openLinkText(href, '')
-        }
+        if (href) this.app.workspace.openLinkText(href, '')
       })
     })
 
-    // Also handle [[wikilink]] in plain text
     el.querySelectorAll('p, li, td').forEach((node) => {
       const html = node.innerHTML
       const replaced = html.replace(
         /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
-        (_match, target, display) => {
-          const text = display || target
-          return `<a class="internal-link wikey-wikilink" data-href="${target}">${text}</a>`
-        },
+        (_, target, display) =>
+          `<a class="internal-link wikey-wikilink" data-href="${target}">${display || target}</a>`,
       )
       if (replaced !== html) {
         node.innerHTML = replaced
@@ -248,14 +363,14 @@ export class WikeyChatView extends ItemView {
           link.addEventListener('click', (e: Event) => {
             e.preventDefault()
             const href = (link as HTMLAnchorElement).getAttribute('data-href')
-            if (href) {
-              this.app.workspace.openLinkText(href, '')
-            }
+            if (href) this.app.workspace.openLinkText(href, '')
           })
         })
       }
     })
   }
+
+  // ── Utils ──
 
   private setInputEnabled(enabled: boolean) {
     this.inputEl.disabled = !enabled
