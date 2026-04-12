@@ -129,11 +129,14 @@ export function parseQmdOutput(stdout: string): readonly SearchResult[] {
       score: number
       snippet?: string
     }>
-    return raw.map((r) => ({
-      path: r.file.replace(`qmd://${QMD_COLLECTION}/`, ''),
-      score: r.score,
-      snippet: r.snippet ?? '',
-    }))
+    return raw.map((r) => {
+      let path = r.file.replace(`qmd://${QMD_COLLECTION}/`, '')
+      // qmd 컬렉션 루트가 wiki/ → 경로에 wiki/ 접두사 추가
+      if (!path.startsWith('wiki/')) {
+        path = `wiki/${path}`
+      }
+      return { path, score: r.score, snippet: r.snippet ?? '' }
+    })
   } catch {
     return []
   }
