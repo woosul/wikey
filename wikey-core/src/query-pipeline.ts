@@ -146,14 +146,14 @@ async function buildContextFromFS(
   results: readonly SearchResult[],
   basePath: string,
 ): Promise<string> {
-  const { readFile } = await import('node:fs/promises')
-  const { join } = await import('node:path')
+  const { readFileSync } = require('node:fs') as typeof import('node:fs')
+  const { join } = require('node:path') as typeof import('node:path')
   const parts: string[] = []
 
   for (const result of results) {
     try {
       const fullPath = join(basePath, result.path)
-      const content = await readFile(fullPath, 'utf-8')
+      const content = readFileSync(fullPath, 'utf-8')
       const basename = result.path.split('/').pop()?.replace('.md', '') ?? result.path
       parts.push(`--- ${basename}.md ---\n${content}\n`)
     } catch {
@@ -187,7 +187,8 @@ function tryKoreanPreprocess(text: string, basePath: string): Promise<string> {
 }
 
 async function findQmdBin(config: WikeyConfig, basePath: string): Promise<string> {
-  const { join } = await import('node:path')
+  const { join } = require('node:path') as typeof import('node:path')
+  const { accessSync } = require('node:fs') as typeof import('node:fs')
 
   // 1. 설정값 (사용자가 설정 탭에서 지정)
   if ((config as any).QMD_PATH) {
@@ -197,7 +198,6 @@ async function findQmdBin(config: WikeyConfig, basePath: string): Promise<string
   // 2. 프로젝트 내 vendored qmd
   const vendoredPath = join(basePath, 'tools/qmd/bin/qmd')
   try {
-    const { accessSync } = await import('node:fs')
     accessSync(vendoredPath)
     return vendoredPath
   } catch {
