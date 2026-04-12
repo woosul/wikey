@@ -5,6 +5,61 @@ created: 2026-04-10
 updated: 2026-04-12
 ---
 
+## 2026-04-12
+
+- 소스 요약 생성: [[source-sic-power-basics]]
+- 엔티티 생성: [[실리콘 카바이드 (SiC)]], [[SiC 쇼트키 배리어 다이오드 (SBD)]], [[SiC MOSFET]], [[Full SiC 파워 모듈]]
+- 개념 생성: [[SiC 파워 디바이스의 메리트]], [[전력 모듈 게이트 드라이브 최적화]]
+- 인덱스 갱신
+
+
+## 2026-04-12
+
+- 소스 요약 생성: [[source-cw-pokemon-quick-start-guide]]
+- 엔티티 생성: [[cw-pocket-wizard]]
+- 개념 생성: [[cw-communication]]
+- 인덱스 갱신
+
+
+## 2026-04-12
+
+- 소스 요약 생성: [[source-ham-cube-cw-decoder-manual.md]]
+- 엔티티 생성: [[ham-cube-cw-decoder]]
+- 개념 생성: [[cw-decoding]]
+- 인덱스 갱신
+
+
+## 2026-04-12
+
+- 소스 요약 생성: [[source-raspberry-pi-high-quality-camera-getting-started]]
+- 엔티티 생성: [[raspbian]]
+- 개념 생성: [[raspistill]], [[back-focus-adjustment]], [[ir-filter]], [[mipi-dsi]], [[mipi-csi]]
+- 인덱스 갱신
+
+
+## 2026-04-12
+
+- 소스 요약 생성: [[source-raspberry-pi-hq-camera-getting-started]]
+- 엔티티 생성: [[raspberry-pi-high-quality-camera]], [[raspberry-pi]], [[raspberry-pi-foundation]], [[sony-imx477]]
+- 개념 생성: [[c-mount-lens]], [[cs-mount-lens]], [[camera-module]]
+- 인덱스 갱신
+
+
+## 2026-04-12
+
+- 운영 프레임워크 정의: [[source-claude-code-config]]
+- 개념 생성: [[wikey-operational-framework]]
+- 인덱스 갱신
+
+
+## 2026-04-12
+
+- 소스 요약 생성: [[source-claude-code-setup]]
+- 엔티티 생성: [[claude-code]]
+- 개념 생성: [[wikey-workflow-protocol]]
+- 인덱스 갱신
+
+
 # 활동 로그
 
 > 형식: `## [YYYY-MM-DD] type | title`
