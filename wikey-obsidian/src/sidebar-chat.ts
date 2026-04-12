@@ -131,6 +131,7 @@ export class WikeyChatView extends ItemView {
       this.renderMessage(assistantMsg)
     } catch (err: any) {
       loadingEl.remove()
+      console.error('[Wikey] query error:', err)
 
       const errorMsg = this.getErrorMessage(err)
       const errorEl = this.messagesEl.createDiv({ cls: 'wikey-chat-error' })

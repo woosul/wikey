@@ -138,6 +138,12 @@ class ObsidianWikiFS implements WikiFS {
 
 class ObsidianHttpClient implements HttpClient {
   async request(url: string, opts: HttpRequestOptions): Promise<HttpResponse> {
+    // localhost/Ollama → Node.js http 직접 호출 (Obsidian requestUrl CORS 우회)
+    if (url.includes('localhost') || url.includes('127.0.0.1')) {
+      return this.requestViaNode(url, opts)
+    }
+
+    // 외부 API (Gemini, Anthropic, OpenAI) → Obsidian requestUrl
     const response = await requestUrl({
       url,
       method: opts.method,
@@ -148,5 +154,29 @@ class ObsidianHttpClient implements HttpClient {
       status: response.status,
       body: typeof response.text === 'string' ? response.text : JSON.stringify(response.json),
     }
+  }
+
+  private requestViaNode(url: string, opts: HttpRequestOptions): Promise<HttpResponse> {
+    return new Promise((resolve, reject) => {
+      const http = require('node:http') as typeof import('node:http')
+      const parsed = new URL(url)
+      const req = http.request({
+        hostname: parsed.hostname,
+        port: parsed.port || 80,
+        path: parsed.pathname + parsed.search,
+        method: opts.method,
+        headers: opts.headers as Record<string, string>,
+      }, (res) => {
+        const chunks: Buffer[] = []
+        res.on('data', (chunk: Buffer) => chunks.push(chunk))
+        res.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf-8')
+          resolve({ status: res.statusCode ?? 0, body })
+        })
+      })
+      req.on('error', reject)
+      if (opts.body) req.write(opts.body)
+      req.end()
+    })
   }
 }
