@@ -41,11 +41,34 @@ export function parseWikeyConf(content: string): Partial<WikeyConfig> {
 }
 
 export function loadConfig(projectDir: string): WikeyConfig {
-  // Phase 3-1-A: 파일시스템 기반 구현 (테스트 외 실제 환경)
-  // 우선순위: 환경변수 > wikey.conf > 기본값
-  // .env 파일은 Obsidian 플러그인에서 별도 처리
-  void projectDir
-  return { ...DEFAULTS }
+  const config = { ...DEFAULTS }
+
+  // 1. wikey.conf 읽기
+  try {
+    const fs = require('node:fs') as typeof import('node:fs')
+    const path = require('node:path') as typeof import('node:path')
+    const confPath = path.join(projectDir, 'wikey.conf')
+    const content = fs.readFileSync(confPath, 'utf-8')
+    Object.assign(config, parseWikeyConf(content))
+  } catch {
+    // 파일 없음
+  }
+
+  // 2. credentials.json 읽기
+  try {
+    const fs = require('node:fs') as typeof import('node:fs')
+    const path = require('node:path') as typeof import('node:path')
+    const os = require('node:os') as typeof import('node:os')
+    const credPath = path.join(os.homedir(), '.config', 'wikey', 'credentials.json')
+    const cred = JSON.parse(fs.readFileSync(credPath, 'utf-8'))
+    if (cred.geminiApiKey && !config.GEMINI_API_KEY) config.GEMINI_API_KEY = cred.geminiApiKey
+    if (cred.anthropicApiKey && !config.ANTHROPIC_API_KEY) config.ANTHROPIC_API_KEY = cred.anthropicApiKey
+    if (cred.openaiApiKey && !config.OPENAI_API_KEY) config.OPENAI_API_KEY = cred.openaiApiKey
+  } catch {
+    // 파일 없음
+  }
+
+  return config
 }
 
 export function resolveProvider(

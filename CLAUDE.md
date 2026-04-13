@@ -51,8 +51,8 @@
 | `~/.cache/qmd/index.sqlite` | 메인 DB (문서, FTS5, 벡터) |
 | `~/.cache/qmd/contextual-prefixes.json` | Gemma 4 맥락 프리픽스 캐시 |
 | `~/.cache/qmd/models/` | GGUF 모델 캐시 |
-| `local-llm/wikey.conf` | 통합 LLM 설정 |
-| `.env` | 클라우드 API 키 (git 미추적) |
+| `./wikey.conf` | 통합 설정 (CLI + 플러그인 공유) |
+| `~/.config/wikey/credentials.json` | API 키 (bash + 플러그인 공유) |
 
 ### Obsidian CLI
 
@@ -171,17 +171,22 @@ Claude Code에서의 구체적 실행:
 4. source 페이지에 섹션 인덱스 테이블 포함
 5. 핵심 섹션을 재읽기하여 위키 페이지 생성
 
-## API 키 설정
+## 설정 체계
 
-클라우드 LLM API 키는 `.env` 파일로 관리한다:
+단일 소스 원칙: `wikey.conf`(공유 설정) + `credentials.json`(API 키) + `data.json`(플러그인 상태).
+
+| 파일 | 역할 | 소비자 |
+|------|------|--------|
+| `./wikey.conf` | 모델, 프로바이더, URL, 검색, 비용 | bash + 플러그인 (공유) |
+| `~/.config/wikey/credentials.json` | API 키 (Gemini/Anthropic/OpenAI) | bash + 플러그인 (공유) |
+| `.obsidian/plugins/wikey/data.json` | 채팅 히스토리, 피드백, 탐지 경로, UI | 플러그인만 |
 
 ```bash
-cp .env.example .env    # 템플릿 복사
-# .env 파일에 실제 API 키 입력 (GEMINI_API_KEY 등)
-# .env는 .gitignore에 포함되어 git에 커밋되지 않음
+# 프로바이더 상태 확인
+./scripts/check-providers.sh
 ```
 
-**주의: `.env` 파일을 Read 도구로 절대 열지 않는다.** API 키가 대화 컨텍스트에 노출된다. 키 존재 여부 확인은 `source .env && echo "length: ${#GEMINI_API_KEY}"` 사용.
+**주의: `credentials.json`을 Read 도구로 절대 열지 않는다.** API 키가 대화 컨텍스트에 노출된다. 키 존재 여부 확인은 `cat ~/.config/wikey/credentials.json | python3 -c "import sys,json; d=json.load(sys.stdin); print({k:len(v) for k,v in d.items()})"` 사용.
 
 ## PII 주의사항
 

@@ -774,6 +774,7 @@ function initializeDatabase(db: Database): void {
     console.warn(_sqliteVecUnavailableReason);
   }
   db.exec("PRAGMA journal_mode = WAL");
+  db.exec("PRAGMA busy_timeout = 5000");
   db.exec("PRAGMA foreign_keys = ON");
 
   // Drop legacy tables that are now managed in YAML

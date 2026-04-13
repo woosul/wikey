@@ -17,18 +17,50 @@ _LLM_API_LOADED=1
 
 _LLM_API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _LLM_PROJECT_DIR="$(cd "$_LLM_API_DIR/../.." && pwd)"
-_LLM_CONF_FILE="${_LLM_PROJECT_DIR}/local-llm/wikey.conf"
+_LLM_CONF_FILE="${_LLM_PROJECT_DIR}/wikey.conf"
+
+# --- credentials.json 로드 ---
+_load_credentials() {
+  local cred_file="${HOME}/.config/wikey/credentials.json"
+  [ ! -f "$cred_file" ] && return
+
+  if command -v jq &>/dev/null; then
+    local val
+    for key in geminiApiKey anthropicApiKey openaiApiKey; do
+      val=$(jq -r ".$key // empty" "$cred_file" 2>/dev/null)
+      [ -n "$val" ] || continue
+      case "$key" in
+        geminiApiKey)    [ -z "${GEMINI_API_KEY:-}" ]    && export GEMINI_API_KEY="$val" ;;
+        anthropicApiKey) [ -z "${ANTHROPIC_API_KEY:-}" ] && export ANTHROPIC_API_KEY="$val" ;;
+        openaiApiKey)    [ -z "${OPENAI_API_KEY:-}" ]    && export OPENAI_API_KEY="$val" ;;
+      esac
+    done
+    return
+  fi
+
+  # jq 없으면 grep fallback
+  local val
+  for pair in geminiApiKey:GEMINI_API_KEY anthropicApiKey:ANTHROPIC_API_KEY openaiApiKey:OPENAI_API_KEY; do
+    local json_key="${pair%%:*}" env_key="${pair##*:}"
+    [ -n "${!env_key:-}" ] && continue
+    val=$(grep -o "\"$json_key\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$cred_file" 2>/dev/null | head -1 | sed 's/.*:.*"\(.*\)"/\1/')
+    [ -n "$val" ] && export "$env_key=$val"
+  done
+}
 
 # --- 설정 로드 ---
 _llm_load_config() {
-  # .env 로드
+  # 1. credentials.json (API 키 — 플러그인과 공유)
+  _load_credentials
+
+  # 2. .env 폴백 (하위 호환, 향후 제거)
   if [ -f "${_LLM_PROJECT_DIR}/.env" ]; then
     set -a
     source "${_LLM_PROJECT_DIR}/.env"
     set +a
   fi
 
-  # wikey.conf 로드 (환경변수 미설정 시)
+  # 3. wikey.conf 로드 (환경변수 미설정 시)
   if [ -f "$_LLM_CONF_FILE" ]; then
     while IFS='=' read -r key value; do
       key=$(echo "$key" | xargs)

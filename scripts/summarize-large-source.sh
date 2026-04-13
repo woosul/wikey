@@ -20,7 +20,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# .env 파일에서 API 키 로드 (이미 설정된 환경변수는 유지)
+# credentials.json 로드 (플러그인과 공유)
+_CRED_FILE="${HOME}/.config/wikey/credentials.json"
+if [ -f "$_CRED_FILE" ] && command -v jq &>/dev/null; then
+  for key in geminiApiKey anthropicApiKey openaiApiKey; do
+    val=$(jq -r ".$key // empty" "$_CRED_FILE" 2>/dev/null)
+    [ -n "$val" ] || continue
+    case "$key" in
+      geminiApiKey)    [ -z "${GEMINI_API_KEY:-}" ]    && export GEMINI_API_KEY="$val" ;;
+      anthropicApiKey) [ -z "${ANTHROPIC_API_KEY:-}" ] && export ANTHROPIC_API_KEY="$val" ;;
+      openaiApiKey)    [ -z "${OPENAI_API_KEY:-}" ]    && export OPENAI_API_KEY="$val" ;;
+    esac
+  done
+fi
+
+# .env 폴백 (하위 호환)
 if [ -f "${PROJECT_DIR}/.env" ]; then
   set -a
   source "${PROJECT_DIR}/.env"

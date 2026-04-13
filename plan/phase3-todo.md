@@ -155,10 +155,10 @@
 |---|------|------|
 | H1 | 인제스트 프롬프트 DRY | **완료** |
 | H2 | child_process 셸 주입 (execFile) | **완료** |
-| H3 | qmd DB 동시 접근 | CLI 병행 테스트에서 검증 예정 |
+| H3 | qmd DB 동시 접근 | **완료** (busy_timeout=5000 추가) |
 | M1 | Obsidian Sync API 키 경고 | **완료** |
 | M2 | wiki-ops 경로 검증 | **완료** |
-| M3 | wikey.conf 동시 수정 방지 | 연기 (data.json 단독 사용) |
+| M3 | 설정 파일 통합 | **완료** (wikey.conf 단일 소스 + credentials.json) |
 | M4 | cost-tracker.sh fallback | **완료** |
 
 ## CEO 추가 항목

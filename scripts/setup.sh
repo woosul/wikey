@@ -142,30 +142,29 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
-# --- 5. API 키 (.env) ---
+# --- 5. API 키 (credentials.json) ---
 step "5/7" "API 키 설정"
 
-if [ -f "${PROJECT_DIR}/.env" ]; then
-  ok ".env 파일 존재"
-  # 키 존재 확인 (내용은 읽지 않음)
+_CRED_FILE="${HOME}/.config/wikey/credentials.json"
+if [ -f "$_CRED_FILE" ]; then
+  ok "credentials.json 존재 (${_CRED_FILE})"
+  if command -v jq &>/dev/null; then
+    [ -n "$(jq -r '.geminiApiKey // empty' "$_CRED_FILE" 2>/dev/null)" ] && ok "GEMINI_API_KEY 설정됨" || warn "GEMINI_API_KEY 미설정 (선택)"
+    [ -n "$(jq -r '.openaiApiKey // empty' "$_CRED_FILE" 2>/dev/null)" ] && ok "OPENAI_API_KEY 설정됨" || warn "OPENAI_API_KEY 미설정 (선택)"
+    [ -n "$(jq -r '.anthropicApiKey // empty' "$_CRED_FILE" 2>/dev/null)" ] && ok "ANTHROPIC_API_KEY 설정됨" || warn "ANTHROPIC_API_KEY 미설정 (선택)"
+  fi
+elif [ -f "${PROJECT_DIR}/.env" ]; then
+  warn ".env 존재 (레거시) — 플러그인 설정에서 API 키를 입력하면 credentials.json으로 마이그레이션됩니다"
   source "${PROJECT_DIR}/.env" 2>/dev/null
   [ -n "${GEMINI_API_KEY:-}" ] && ok "GEMINI_API_KEY 설정됨 (${#GEMINI_API_KEY}자)" || warn "GEMINI_API_KEY 미설정 (선택)"
-  [ -n "${OPENAI_API_KEY:-}" ] && ok "OPENAI_API_KEY 설정됨" || warn "OPENAI_API_KEY 미설정 (선택)"
-  [ -n "${ANTHROPIC_API_KEY:-}" ] && ok "ANTHROPIC_API_KEY 설정됨" || warn "ANTHROPIC_API_KEY 미설정 (선택)"
 else
-  if [ "$CHECK_ONLY" = false ] && [ -f "${PROJECT_DIR}/.env.example" ]; then
-    cp "${PROJECT_DIR}/.env.example" "${PROJECT_DIR}/.env"
-    ok ".env 생성 (.env.example 복사)"
-    warn "API 키를 .env 파일에 입력하세요 (선택사항)"
-  else
-    warn ".env 없음 — cp .env.example .env 후 API 키 입력 (선택사항)"
-  fi
+  warn "API 키 미설정 — 플러그인 설정 > API 키에서 입력하세요"
 fi
 
 # --- 6. wikey.conf ---
 step "6/7" "wikey.conf 설정"
 
-if [ -f "${PROJECT_DIR}/local-llm/wikey.conf" ]; then
+if [ -f "${PROJECT_DIR}/wikey.conf" ]; then
   ok "wikey.conf 존재"
   source "${PROJECT_DIR}/scripts/lib/llm-api.sh" 2>/dev/null
   local_basic="${WIKEY_BASIC_MODEL:-claude-code}"

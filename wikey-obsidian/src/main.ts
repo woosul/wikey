@@ -1,6 +1,6 @@
 import { Notice, Plugin, WorkspaceLeaf, requestUrl } from 'obsidian'
 import type { HttpClient, HttpRequestOptions, HttpResponse, WikiFS, WikeyConfig } from 'wikey-core'
-import { LLMClient } from 'wikey-core'
+import { LLMClient, parseWikeyConf } from 'wikey-core'
 import { WikeyChatView, WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { WikeySettingTab } from './settings-tab'
 import { WikeyStatusBar } from './status-bar'
@@ -28,7 +28,6 @@ interface WikeySettings {
   feedback: Array<{ question: string; answer: string; vote: string; timestamp: string }>
   persistChatHistory: boolean
   savedChatHistory: ReadonlyArray<{ role: 'user' | 'assistant' | 'error'; content: string }>
-  syncProtection: boolean
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -50,7 +49,6 @@ const DEFAULT_SETTINGS: WikeySettings = {
   feedback: [],
   persistChatHistory: true,
   savedChatHistory: [],
-  syncProtection: true,
 }
 
 export type { WikeySettings }
@@ -131,12 +129,12 @@ export default class WikeyPlugin extends Plugin {
       const MAX = 100
       const trimmed = this.chatHistory.length > MAX ? this.chatHistory.slice(-MAX) : [...this.chatHistory]
       this.settings = { ...this.settings, savedChatHistory: trimmed }
-      this.saveData(this.buildPersistableSettings())
+      this.saveData(this.buildPluginOnlyData())
     }
   }
 
   async runEnvDetection() {
-    const basePath = (this.app.vault.adapter as any).basePath ?? ''
+    const basePath = this.basePath
     console.log('[Wikey] 환경 탐지 시작...')
     this.envStatus = await detectEnvironment(basePath, this.settings.ollamaUrl)
 
@@ -148,7 +146,7 @@ export default class WikeyPlugin extends Plugin {
       detectedPythonPath: this.envStatus.pythonPath,
       qmdPath: (!this.settings.qmdPath && this.envStatus.qmdPath) ? this.envStatus.qmdPath : this.settings.qmdPath,
     }
-    await this.saveData(this.buildPersistableSettings())
+    await this.saveData(this.buildPluginOnlyData())
 
     console.log('[Wikey] 환경 탐지 완료:', {
       node: this.envStatus.nodePath,
@@ -169,20 +167,31 @@ export default class WikeyPlugin extends Plugin {
   }
 
   async loadSettings() {
+    // 1. data.json (플러그인 상태)
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
-    if (this.settings.syncProtection) {
-      this.loadCredentials()
-    }
+
+    // 2. wikey.conf (공유 설정 — CLI와 동일 소스)
+    this.loadFromWikeyConf()
+
+    // 3. credentials.json (API 키)
+    this.loadCredentials()
+
+    // 4. 대화 히스토리 복원
     if (this.settings.persistChatHistory && this.settings.savedChatHistory?.length) {
       this.chatHistory = [...this.settings.savedChatHistory]
     }
   }
 
   async saveSettings() {
-    if (this.settings.syncProtection) {
-      this.saveCredentials()
-    }
-    await this.saveData(this.buildPersistableSettings())
+    // 1. 공유 설정 → wikey.conf
+    this.saveToWikeyConf()
+
+    // 2. API 키 → credentials.json (항상 — bash와 공유)
+    this.saveCredentials()
+
+    // 3. 플러그인 상태 → data.json
+    await this.saveData(this.buildPluginOnlyData())
+
     this.llmClient = new LLMClient(this.httpClient, this.buildConfig())
   }
 
@@ -192,9 +201,78 @@ export default class WikeyPlugin extends Plugin {
     return path.join(os.homedir(), '.config', 'wikey', 'credentials.json')
   }
 
-  private buildPersistableSettings(): WikeySettings {
-    if (!this.settings.syncProtection) return this.settings
-    return { ...this.settings, geminiApiKey: '', anthropicApiKey: '', openaiApiKey: '' }
+  private get basePath(): string {
+    return (this.app.vault.adapter as any).basePath ?? ''
+  }
+
+  private loadFromWikeyConf(): void {
+    try {
+      const fs = require('node:fs') as typeof import('node:fs')
+      const path = require('node:path') as typeof import('node:path')
+      const confPath = path.join(this.basePath, 'wikey.conf')
+      const content = fs.readFileSync(confPath, 'utf-8')
+      const conf = parseWikeyConf(content) as Record<string, unknown>
+
+      this.settings = {
+        ...this.settings,
+        basicModel: (conf.WIKEY_BASIC_MODEL as string) || this.settings.basicModel,
+        cloudModel: (conf.WIKEY_MODEL as string) || this.settings.cloudModel,
+        ollamaUrl: (conf.OLLAMA_URL as string) || this.settings.ollamaUrl,
+        costLimit: (conf.COST_LIMIT as number) || this.settings.costLimit,
+        ingestProvider: (conf.INGEST_PROVIDER as string) || '',
+        lintProvider: (conf.LINT_PROVIDER as string) || '',
+        summarizeProvider: (conf.SUMMARIZE_PROVIDER as string) || '',
+      }
+    } catch {
+      // wikey.conf 없음 — data.json 값 유지
+    }
+  }
+
+  private saveToWikeyConf(): void {
+    try {
+      const fs = require('node:fs') as typeof import('node:fs')
+      const path = require('node:path') as typeof import('node:path')
+      const confPath = path.join(this.basePath, 'wikey.conf')
+      let content = fs.readFileSync(confPath, 'utf-8')
+
+      const updates: Record<string, string> = {
+        WIKEY_BASIC_MODEL: this.settings.basicModel,
+        WIKEY_MODEL: this.settings.cloudModel || 'wikey',
+        OLLAMA_URL: this.settings.ollamaUrl,
+        COST_LIMIT: String(this.settings.costLimit),
+      }
+      if (this.settings.advancedLLM) {
+        if (this.settings.ingestProvider) updates.INGEST_PROVIDER = this.settings.ingestProvider
+        if (this.settings.lintProvider) updates.LINT_PROVIDER = this.settings.lintProvider
+        if (this.settings.summarizeProvider) updates.SUMMARIZE_PROVIDER = this.settings.summarizeProvider
+      }
+
+      for (const [key, value] of Object.entries(updates)) {
+        const regex = new RegExp(`^(#\\s*)?${key}=.*$`, 'm')
+        if (regex.test(content)) {
+          content = content.replace(regex, `${key}=${value}`)
+        } else {
+          content += `\n${key}=${value}`
+        }
+      }
+
+      fs.writeFileSync(confPath, content)
+    } catch {
+      // wikey.conf 없으면 무시
+    }
+  }
+
+  private buildPluginOnlyData(): Record<string, unknown> {
+    return {
+      persistChatHistory: this.settings.persistChatHistory,
+      savedChatHistory: this.settings.savedChatHistory,
+      feedback: this.settings.feedback,
+      advancedLLM: this.settings.advancedLLM,
+      detectedShellPath: this.settings.detectedShellPath,
+      detectedNodePath: this.settings.detectedNodePath,
+      detectedPythonPath: this.settings.detectedPythonPath,
+      qmdPath: this.settings.qmdPath,
+    }
   }
 
   loadCredentials(): void {
@@ -232,15 +310,6 @@ export default class WikeyPlugin extends Plugin {
     )
   }
 
-  deleteCredentials(): void {
-    try {
-      const fs = require('node:fs') as typeof import('node:fs')
-      fs.unlinkSync(this.credentialsPath)
-    } catch {
-      // 파일 없음
-    }
-  }
-
   scheduleChatSave() {
     if (!this.settings.persistChatHistory) return
     if (this.chatSaveTimer) clearTimeout(this.chatSaveTimer)
@@ -248,7 +317,7 @@ export default class WikeyPlugin extends Plugin {
       const MAX = 100
       const trimmed = this.chatHistory.length > MAX ? this.chatHistory.slice(-MAX) : [...this.chatHistory]
       this.settings = { ...this.settings, savedChatHistory: trimmed }
-      this.saveData(this.buildPersistableSettings())
+      this.saveData(this.buildPluginOnlyData())
     }, 2000)
   }
 

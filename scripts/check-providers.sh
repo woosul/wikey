@@ -9,7 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONF_FILE="${PROJECT_DIR}/local-llm/wikey.conf"
+CONF_FILE="${PROJECT_DIR}/wikey.conf"
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -19,7 +19,21 @@ BOLD='\033[1m'
 DIM='\033[2m'
 NC='\033[0m'
 
-# .env 로드
+# credentials.json 로드 (플러그인과 공유)
+_CRED_FILE="${HOME}/.config/wikey/credentials.json"
+if [ -f "$_CRED_FILE" ] && command -v jq &>/dev/null; then
+  for key in geminiApiKey anthropicApiKey openaiApiKey; do
+    val=$(jq -r ".$key // empty" "$_CRED_FILE" 2>/dev/null)
+    [ -n "$val" ] || continue
+    case "$key" in
+      geminiApiKey)    [ -z "${GEMINI_API_KEY:-}" ]    && export GEMINI_API_KEY="$val" ;;
+      anthropicApiKey) [ -z "${ANTHROPIC_API_KEY:-}" ] && export ANTHROPIC_API_KEY="$val" ;;
+      openaiApiKey)    [ -z "${OPENAI_API_KEY:-}" ]    && export OPENAI_API_KEY="$val" ;;
+    esac
+  done
+fi
+
+# .env 폴백 (하위 호환)
 if [ -f "${PROJECT_DIR}/.env" ]; then
   set -a
   source "${PROJECT_DIR}/.env"

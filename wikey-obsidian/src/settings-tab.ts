@@ -139,33 +139,17 @@ export class WikeySettingTab extends PluginSettingTab {
           }),
       )
 
-    new Setting(containerEl)
-      .setName('Sync 보호')
-      .setDesc('API 키를 vault 외부에 저장해요. Obsidian Sync 사용 시 활성화하세요.')
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.syncProtection)
-          .onChange(async (value) => {
-            this.plugin.settings = { ...this.plugin.settings, syncProtection: value }
-            if (value) {
-              this.plugin.saveCredentials()
-            } else {
-              this.plugin.deleteCredentials()
-            }
-            await this.plugin.saveSettings()
-            new Notice(value ? 'API 키가 외부에 저장됩니다.' : 'API 키가 data.json에 저장됩니다.')
-          }),
-      )
   }
 
   // ── Section 3: API Keys ──
   private renderApiKeysSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: 'API 키' })
 
-    if (!this.plugin.settings.syncProtection) {
-      const syncWarning = containerEl.createDiv({ cls: 'wikey-settings-warning' })
-      syncWarning.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg> Sync 보호가 꺼져 있어요. API 키가 data.json에 저장되며 Obsidian Sync로 동기화될 수 있습니다.'
-    }
+    const keyInfo = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
+    keyInfo.createEl('span', {
+      text: 'API 키는 ~/.config/wikey/credentials.json에 저장돼요.',
+      cls: 'wikey-settings-status-label',
+    })
 
     this.renderApiKeyField(containerEl, 'Gemini API Key', 'geminiApiKey', 'AIza...', 'gemini')
     this.renderApiKeyField(containerEl, 'Anthropic API Key', 'anthropicApiKey', 'sk-ant-...', 'anthropic')
