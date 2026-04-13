@@ -178,6 +178,8 @@ export class WikeyChatView extends ItemView {
 
   private clearChat() {
     this.plugin.chatHistory = []
+    this.plugin.settings = { ...this.plugin.settings, savedChatHistory: [] }
+    this.plugin.saveSettings()
     this.messagesEl.empty()
     this.activePanel = null
     this.updatePanelBtnStates()
@@ -214,6 +216,7 @@ export class WikeyChatView extends ItemView {
 
     const userMsg: ChatMessage = { role: 'user', content: question }
     this.plugin.chatHistory.push(userMsg)
+    this.plugin.scheduleChatSave()
     this.renderMessage(userMsg)
 
     this.inputEl.value = ''
@@ -234,6 +237,7 @@ export class WikeyChatView extends ItemView {
       loadingEl.remove()
       const assistantMsg: ChatMessage = { role: 'assistant', content: result.answer }
       this.plugin.chatHistory.push(assistantMsg)
+      this.plugin.scheduleChatSave()
       this.renderMessage(assistantMsg)
     } catch (err: any) {
       loadingEl.remove()
@@ -246,6 +250,7 @@ export class WikeyChatView extends ItemView {
       if (!fullError?.trim()) fullError = '[Wikey] Empty error — Cmd+Option+I 콘솔 확인'
       const errorMsg: ChatMessage = { role: 'error', content: fullError }
       this.plugin.chatHistory.push(errorMsg)
+      this.plugin.scheduleChatSave()
       this.renderMessage(errorMsg)
     } finally {
       this.setInputEnabled(true)

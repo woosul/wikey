@@ -628,9 +628,15 @@ Week 3:  통합 테스트 + 마무리
 | 항목 | 이유 | 대안 |
 |------|------|------|
 | wikey.conf 양방향 동기화 (M3) | 동시 수정 경쟁 위험 | data.json 단독 |
-| Obsidian Sync 경고 강화 | 우선순위 낮음 | 설정 탭 경고 문구로 대체 |
-| BRAT 배포 테스트 | 기능 검증 미완료 | 수동 심볼릭 링크로 동작 |
-| v0.1.0-alpha 태그 갱신 | 코드 아직 변동 중 | 잔여 작업 완료 후 |
+| qmd SDK import | 난이도 높음 (better-sqlite3 ABI) | Phase 4 연기, CLI exec 안정 동작 |
+
+### 15-3b. 연기 해제 → 구현 진행 (이번 세션)
+
+| 항목 | 구현 방식 |
+|------|----------|
+| 대화 히스토리 영구 저장 | settings 토글 + data.json 저장 (최대 100건, 디바운스 2초) |
+| Obsidian Sync 경고 강화 | settings 토글 + `~/.config/wikey/credentials.json` 분리 저장 |
+| BRAT 배포 + v0.1.0-alpha 태그 | versions.json + GitHub Actions + git tag |
 
 ### 15-4. 발견된 Obsidian Electron 제약 (계획에 미예측)
 

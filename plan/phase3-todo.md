@@ -125,20 +125,27 @@
 - [x] **welcome 숨김** — 특수 패널 열릴 때 자동 숨김/복원
 - [x] **audit-ingest.py** — raw/ 미인제스트 문서 감지 스크립트
 
-### 선택 (Could) — 미착수
+### 선택 (Could) — 진행 중
 
-- [ ] **대화 히스토리 영구 저장** — 현재 세션 내만 유지
-- [ ] **Obsidian Sync 경고 강화** — API 키 동기화 방지 옵션
-- [ ] **qmd SDK import** — CLI exec 대신 직접 import (better-sqlite3 wasm)
-- [ ] **BRAT 배포 테스트** — 수동 설치 가이드
-- [ ] **v0.1.0-alpha Git 태그 갱신** — 현재 코드 기준
+- [x] **대화 히스토리 영구 저장** — settings 토글 (on/off), 최대 100건, 디바운스 2초
+  - main.ts: `persistChatHistory`, `savedChatHistory` 필드 추가
+  - sidebar-chat.ts: handleSend 후 scheduleChatSave, clearChat에 영속 초기화
+  - settings-tab.ts: 일반 섹션에 토글 추가
+- [x] **Obsidian Sync 경고 강화** — settings 토글 (on/off), API 키를 `~/.config/wikey/credentials.json`에 분리 저장
+  - main.ts: `syncProtection` 필드 + loadCredentials/saveCredentials/deleteCredentials
+  - settings-tab.ts: 패시브 경고 → 토글 교체, 일반 섹션에 배치
+  - saveSettings/scheduleChatSave에서 buildPersistableSettings() 공용
+- [x] **BRAT 배포 + v0.1.0-alpha 태그** — versions.json + GitHub Actions + 태그
+  - wikey-obsidian/versions.json: `{ "0.1.0": "1.5.0" }`
+  - .github/workflows/release.yml: 태그 push → 빌드 → Release 에셋 첨부
+  - git tag v0.1.0-alpha (갱신 예정)
+- [ ] **qmd SDK import** — Phase 4 연기 (난이도 높음, CLI exec 안정 동작 중)
 
 ### 다음 세션 작업
 
 - [ ] Audit 패널 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
 - [ ] 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
 - [ ] Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
-- [ ] Could 항목 선택적 진행
 
 ---
 

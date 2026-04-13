@@ -26,6 +26,9 @@ interface WikeySettings {
   detectedNodePath: string
   detectedPythonPath: string
   feedback: Array<{ question: string; answer: string; vote: string; timestamp: string }>
+  persistChatHistory: boolean
+  savedChatHistory: ReadonlyArray<{ role: 'user' | 'assistant' | 'error'; content: string }>
+  syncProtection: boolean
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -45,6 +48,9 @@ const DEFAULT_SETTINGS: WikeySettings = {
   detectedNodePath: '',
   detectedPythonPath: '',
   feedback: [],
+  persistChatHistory: true,
+  savedChatHistory: [],
+  syncProtection: true,
 }
 
 export type { WikeySettings }
@@ -57,6 +63,7 @@ export default class WikeyPlugin extends Plugin {
   envStatus: EnvStatus | null = null
   chatHistory: Array<{ role: 'user' | 'assistant' | 'error'; content: string }> = []
   private statusBar!: WikeyStatusBar
+  private chatSaveTimer: ReturnType<typeof setTimeout> | null = null
 
   async onload() {
     await this.loadSettings()
@@ -116,7 +123,16 @@ export default class WikeyPlugin extends Plugin {
   }
 
   onunload() {
-    // cleanup handled by Obsidian
+    if (this.chatSaveTimer) {
+      clearTimeout(this.chatSaveTimer)
+      this.chatSaveTimer = null
+    }
+    if (this.settings.persistChatHistory) {
+      const MAX = 100
+      const trimmed = this.chatHistory.length > MAX ? this.chatHistory.slice(-MAX) : [...this.chatHistory]
+      this.settings = { ...this.settings, savedChatHistory: trimmed }
+      this.saveData(this.buildPersistableSettings())
+    }
   }
 
   async runEnvDetection() {
@@ -125,13 +141,14 @@ export default class WikeyPlugin extends Plugin {
     this.envStatus = await detectEnvironment(basePath, this.settings.ollamaUrl)
 
     // 탐지 결과 저장
-    this.settings.detectedShellPath = this.envStatus.shellPath
-    this.settings.detectedNodePath = this.envStatus.nodePath
-    this.settings.detectedPythonPath = this.envStatus.pythonPath
-    if (!this.settings.qmdPath && this.envStatus.qmdPath) {
-      this.settings.qmdPath = this.envStatus.qmdPath
+    this.settings = {
+      ...this.settings,
+      detectedShellPath: this.envStatus.shellPath,
+      detectedNodePath: this.envStatus.nodePath,
+      detectedPythonPath: this.envStatus.pythonPath,
+      qmdPath: (!this.settings.qmdPath && this.envStatus.qmdPath) ? this.envStatus.qmdPath : this.settings.qmdPath,
     }
-    await this.saveData(this.settings)
+    await this.saveData(this.buildPersistableSettings())
 
     console.log('[Wikey] 환경 탐지 완료:', {
       node: this.envStatus.nodePath,
@@ -153,11 +170,86 @@ export default class WikeyPlugin extends Plugin {
 
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
+    if (this.settings.syncProtection) {
+      this.loadCredentials()
+    }
+    if (this.settings.persistChatHistory && this.settings.savedChatHistory?.length) {
+      this.chatHistory = [...this.settings.savedChatHistory]
+    }
   }
 
   async saveSettings() {
-    await this.saveData(this.settings)
+    if (this.settings.syncProtection) {
+      this.saveCredentials()
+    }
+    await this.saveData(this.buildPersistableSettings())
     this.llmClient = new LLMClient(this.httpClient, this.buildConfig())
+  }
+
+  private get credentialsPath(): string {
+    const os = require('node:os') as typeof import('node:os')
+    const path = require('node:path') as typeof import('node:path')
+    return path.join(os.homedir(), '.config', 'wikey', 'credentials.json')
+  }
+
+  private buildPersistableSettings(): WikeySettings {
+    if (!this.settings.syncProtection) return this.settings
+    return { ...this.settings, geminiApiKey: '', anthropicApiKey: '', openaiApiKey: '' }
+  }
+
+  loadCredentials(): void {
+    try {
+      const fs = require('node:fs') as typeof import('node:fs')
+      const raw = fs.readFileSync(this.credentialsPath, 'utf-8')
+      const data = JSON.parse(raw)
+      this.settings = {
+        ...this.settings,
+        geminiApiKey: data.geminiApiKey ?? '',
+        anthropicApiKey: data.anthropicApiKey ?? '',
+        openaiApiKey: data.openaiApiKey ?? '',
+      }
+    } catch {
+      // 파일 없음 — 초기 상태
+    }
+  }
+
+  saveCredentials(): void {
+    const fs = require('node:fs') as typeof import('node:fs')
+    const path = require('node:path') as typeof import('node:path')
+    const dir = path.dirname(this.credentialsPath)
+    fs.mkdirSync(dir, { recursive: true })
+    fs.writeFileSync(
+      this.credentialsPath,
+      JSON.stringify(
+        {
+          geminiApiKey: this.settings.geminiApiKey,
+          anthropicApiKey: this.settings.anthropicApiKey,
+          openaiApiKey: this.settings.openaiApiKey,
+        },
+        null,
+        2,
+      ),
+    )
+  }
+
+  deleteCredentials(): void {
+    try {
+      const fs = require('node:fs') as typeof import('node:fs')
+      fs.unlinkSync(this.credentialsPath)
+    } catch {
+      // 파일 없음
+    }
+  }
+
+  scheduleChatSave() {
+    if (!this.settings.persistChatHistory) return
+    if (this.chatSaveTimer) clearTimeout(this.chatSaveTimer)
+    this.chatSaveTimer = setTimeout(() => {
+      const MAX = 100
+      const trimmed = this.chatHistory.length > MAX ? this.chatHistory.slice(-MAX) : [...this.chatHistory]
+      this.settings = { ...this.settings, savedChatHistory: trimmed }
+      this.saveData(this.buildPersistableSettings())
+    }, 2000)
   }
 
   buildConfig(): WikeyConfig {

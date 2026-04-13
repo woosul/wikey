@@ -208,7 +208,7 @@ wikey-core/                    ← 핵심 로직 (프로바이더 독립)
 wikey-obsidian/                ← Obsidian 플러그인
   src/main.ts                  ← WikeyPlugin, WikiFS/HttpClient 어댑터
   src/sidebar-chat.ts          ← 채팅 UI, 인제스트 패널
-  src/settings-tab.ts          ← 설정 (환경 탐지, API 키, 고급 LLM)
+  src/settings-tab.ts          ← 설정 (환경 탐지, 일반 토글, API 키, 고급 LLM)
   src/commands.ts              ← Cmd+Shift+I, URI 프로토콜
   src/status-bar.ts            ← 페이지 수, 통계 모달
   src/env-detect.ts            ← 로그인 셸 PATH + ABI 호환 node 탐지

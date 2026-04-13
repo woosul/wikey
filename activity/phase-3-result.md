@@ -2,7 +2,7 @@
 
 > 기간: 2026-04-12 ~ 진행 중
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **진행 중** — Step 0~6 완료 + Must/Should 전체 완료 + Audit 패널 + Cross-lingual 검색
+> 상태: **진행 중** — Step 0~6 완료 + Must/Should 전체 완료 + Could 3/5 완료
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), qmd 2.1.0 (vendored), Node.js 22.17.0
 
@@ -318,7 +318,7 @@ wikey/
 
 | # | 이슈 | 반영 | 상태 |
 |---|------|------|------|
-| M1 | Obsidian Sync API 키 경고 | settings-tab.ts에 경고 문구 표시 | **완료** |
+| M1 | Obsidian Sync API 키 경고 | syncProtection 토글 + `~/.config/wikey/credentials.json` 분리 저장 | **완료 (강화)** |
 | M2 | wiki-ops 경로 검증 | `buildPath()`에서 `..`, `/` 차단 | **완료** |
 | M3 | wikey.conf 동시 수정 방지 | Obsidian data.json 단독 사용 (wikey.conf 양방향 동기화는 v2) | 연기 |
 | M4 | cost-tracker.sh fallback | 비용 미표시, 페이지 수만 표시 | **완료** (graceful fallback) |
@@ -446,4 +446,54 @@ Obsidian Electron 환경의 제약으로 5건의 런타임 이슈 발견 및 해
 - [ ] Audit 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
 - [ ] 인제스트 품질 검증 (wiki 페이지 내용 리뷰)
 - [ ] Obsidian UI 수동 테스트
-- [ ] Could 항목 선택적 진행 (대화 영구 저장, BRAT 배포 등)
+
+---
+
+## 11. Could 항목 구현 (2026-04-13)
+
+### 완료 3/5
+
+| 항목 | 구현 | 상태 |
+|------|------|------|
+| **대화 히스토리 영구 저장** | `persistChatHistory` 토글 (기본 ON), 최대 100건, 2초 디바운스, onunload flush | **완료** |
+| **Obsidian Sync 경고 강화** | `syncProtection` 토글 (기본 ON), `~/.config/wikey/credentials.json` 분리, `buildPersistableSettings()` | **완료** |
+| **BRAT 배포 + v0.1.0-alpha 태그** | `versions.json`, `.github/workflows/release.yml`, 태그 갱신 | **완료** |
+
+### 연기 2/5
+
+| 항목 | 이유 |
+|------|------|
+| qmd SDK import | Phase 4 연기 (better-sqlite3 ABI, 난이도 높음) |
+
+### 구현 상세
+
+**대화 히스토리:**
+- `WikeySettings`에 `persistChatHistory: boolean`, `savedChatHistory: ReadonlyArray` 추가
+- `scheduleChatSave()`: 디바운스 2초, MAX 100건 trim
+- `onunload()`: 타이머 flush → `buildPersistableSettings()` 저장
+- `sidebar-chat.ts`: handleSend 3곳 + clearChat에 영속 초기화
+- `settings-tab.ts`: "일반" 섹션에 토글 UI
+
+**Sync 보호:**
+- `WikeySettings`에 `syncProtection: boolean` 추가 (기본 ON)
+- ON: API 키를 `~/.config/wikey/credentials.json`에 저장, data.json에는 빈 문자열
+- OFF: 기존 동작 + API Keys 섹션에 경고 메시지
+- `buildPersistableSettings()`: saveSettings/scheduleChatSave/onunload/runEnvDetection 통합
+- `loadCredentials()/saveCredentials()/deleteCredentials()`: Node.js fs 직접 사용
+
+**BRAT 배포:**
+- `wikey-obsidian/versions.json`: `{ "0.1.0": "1.5.0" }`
+- `.github/workflows/release.yml`: 태그 push → npm ci → build → gh-release (main.js, manifest.json, styles.css)
+
+### 코드 규모 (갱신)
+
+| 영역 | 파일 | 라인 수 |
+|------|------|---------|
+| wikey-core/src (구현) | 9개 (.ts) | ~1,600 |
+| wikey-core/src/__tests__ | 5개 (.test.ts) | ~600 |
+| wikey-obsidian/src | 6개 (.ts) | ~1,900 |
+| wikey-obsidian/styles.css | 1개 | ~700 |
+| scripts/audit-ingest.py | 1개 | ~120 |
+| **합계** | **22개** | **~4,920** |
+
+65 tests passed, 빌드 0 errors.
