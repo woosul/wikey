@@ -650,18 +650,18 @@ Week 3:  통합 테스트 + 마무리
 | `requestUrl()` localhost CORS | Ollama 호출 실패 | Node.js http 모듈 직접 호출 |
 | Vault API가 .gitignore 폴더 미반환 | raw/0_inbox/ 목록 안 보임 | Node.js fs 직접 읽기 |
 
-### 15-5. 잔여 작업 (Phase 3 마지막)
+### 15-5. 잔여 작업 (Phase 3 마지막, A→B→C 순서)
 
-**검증:**
+**A. 테스트 + 검증 (우선):**
 - Audit 패널 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
 - 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
 - Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
 
-**완전 포팅 (bash→TS):**
-- validate-wiki.sh → TS 재구현
-- check-pii.sh → TS 재구현
-- cost-tracker.sh → TS 재구현
-- reindex.sh → TS 오케스트레이션
+**B. 운영 안정성 (A 완료 후):**
+- 로컬 LLM 모델 검증: Gemma4 12B 최적성, Gemma4 27B/Qwen3/Llama 4 대안 조사
+- 원본/위키 삭제 안전장치: 출처 무효화 감지, 깨진 링크 정리, dry-run, 삭제 이력
+- 초기화 기능: 완전/인제스트/원본/인덱스/설정 선택적 리셋 + 확인 다이얼로그
 
-**선택:**
-- qmd SDK import (better-sqlite3 wasm 교체)
+**C. 완전 통합 (B 완료 후):**
+- bash→TS 완전 포팅 (validate-wiki, check-pii, cost-tracker, reindex)
+- qmd SDK import (선택)
