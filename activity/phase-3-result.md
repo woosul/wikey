@@ -2,7 +2,7 @@
 
 > 기간: 2026-04-12 ~ 진행 중
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **진행 중** — Step 0~6 완료 + Must/Should 전체 완료 + Could 3/5 완료
+> 상태: **진행 중** — Step 0~6 완료 + Must/Should 완료 + Could 3/4 + Eng H3+M3 완료
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), qmd 2.1.0 (vendored), Node.js 22.17.0
 
@@ -29,6 +29,12 @@
 | 04-12 | 4 | 채팅 UI 고도화 — Q/A 삭제, 질문 블록, purple 테마, 피드백 |
 | 04-12 | 5 | 인제스트 패널 — drag/drop, 3버튼, 프로그레스바, inbox 감시 |
 | 04-12 | 6 | CLI 포팅 — PDF 인제스트, classify, validate/pii/reindex/cost exec |
+| 04-13 | Could | 대화 히스토리 영구 저장 (persistChatHistory 토글, 디바운스 저장) |
+| 04-13 | Could | Sync 보호 + credentials.json 분리 (syncProtection 토글) |
+| 04-13 | Could | BRAT 배포 인프라 (versions.json, GitHub Actions, v0.1.0-alpha) |
+| 04-13 | H3 | qmd busy_timeout=5000 추가 — 동시 접근 안전 |
+| 04-13 | M3 | 설정 통합 — wikey.conf 단일 소스 + credentials.json 공유 |
+| 04-13 | M3 | Sync 보호 → 설정 통합으로 흡수 (syncProtection 제거, API 키 항상 외부) |
 
 ---
 
@@ -312,15 +318,15 @@ wikey/
 |---|------|------|------|
 | H1 | 인제스트 프롬프트 DRY | `prompts/ingest.txt` 추출 + `buildIngestPrompt()` 플레이스홀더 치환 | **완료** |
 | H2 | child_process 셸 주입 | 모든 외부 프로세스 호출에 `execFile()`/`spawn()` 사용 | **완료** |
-| H3 | qmd DB 동시 접근 | Phase 3-3에서 CLI 병행 테스트로 검증 예정 | 대기 |
+| H3 | qmd DB 동시 접근 | `PRAGMA busy_timeout = 5000` 추가 (`store.ts:777`). WAL + busy_timeout으로 CLI/플러그인 동시 접근 안전. 쓰기 중 읽기 테스트 통과 | **완료** |
 
 ### MEDIUM
 
 | # | 이슈 | 반영 | 상태 |
 |---|------|------|------|
-| M1 | Obsidian Sync API 키 경고 | syncProtection 토글 + `~/.config/wikey/credentials.json` 분리 저장 | **완료 (강화)** |
+| M1 | Obsidian Sync API 키 경고 | API 키가 항상 `~/.config/wikey/credentials.json`에 저장 (vault 외부). M3 통합으로 `syncProtection` 토글 자체가 불필요해져 제거 | **완료 (M3에 흡수)** |
 | M2 | wiki-ops 경로 검증 | `buildPath()`에서 `..`, `/` 차단 | **완료** |
-| M3 | wikey.conf 동시 수정 방지 | Obsidian data.json 단독 사용 (wikey.conf 양방향 동기화는 v2) | 연기 |
+| M3 | 설정 파일 통합 | 3종(`.env`, `wikey.conf`, `data.json`) → 단일 소스 체계. `wikey.conf` 프로젝트 루트 이동, `loadConfig()` 실제 구현, 플러그인 `loadFromWikeyConf()`/`saveToWikeyConf()`/`buildPluginOnlyData()` 추가, bash `_load_credentials()` 추가, `.env.example` 삭제 | **완료** |
 | M4 | cost-tracker.sh fallback | 비용 미표시, 페이지 수만 표시 | **완료** (graceful fallback) |
 
 ### CEO 추가 항목
@@ -451,49 +457,108 @@ Obsidian Electron 환경의 제약으로 5건의 런타임 이슈 발견 및 해
 
 ## 11. Could 항목 구현 (2026-04-13)
 
-### 완료 3/5
+### Could 완료 3/4
 
 | 항목 | 구현 | 상태 |
 |------|------|------|
-| **대화 히스토리 영구 저장** | `persistChatHistory` 토글 (기본 ON), 최대 100건, 2초 디바운스, onunload flush | **완료** |
-| **Obsidian Sync 경고 강화** | `syncProtection` 토글 (기본 ON), `~/.config/wikey/credentials.json` 분리, `buildPersistableSettings()` | **완료** |
+| **대화 히스토리 영구 저장** | `persistChatHistory` 토글, 최대 100건, 2초 디바운스, onunload flush | **완료** |
+| **Sync 경고 → 설정 통합으로 해소** | API 키가 항상 `credentials.json`에 저장. `syncProtection` 토글 제거됨 | **완료** |
 | **BRAT 배포 + v0.1.0-alpha 태그** | `versions.json`, `.github/workflows/release.yml`, 태그 갱신 | **완료** |
+| **qmd SDK import** | Phase 3 마지막 또는 Phase 4 연기 | 미착수 |
 
-### 연기 2/5
+---
 
-| 항목 | 이유 |
-|------|------|
-| qmd SDK import | Phase 4 연기 (better-sqlite3 ABI, 난이도 높음) |
+## 12. H3+M3: 설정 통합 (2026-04-13)
 
-### 구현 상세
+### H3: qmd DB 동시 접근 — 완료
 
-**대화 히스토리:**
-- `WikeySettings`에 `persistChatHistory: boolean`, `savedChatHistory: ReadonlyArray` 추가
-- `scheduleChatSave()`: 디바운스 2초, MAX 100건 trim
-- `onunload()`: 타이머 flush → `buildPersistableSettings()` 저장
-- `sidebar-chat.ts`: handleSend 3곳 + clearChat에 영속 초기화
-- `settings-tab.ts`: "일반" 섹션에 토글 UI
+- `tools/qmd/src/store.ts`에 `PRAGMA busy_timeout = 5000` 추가
+- WAL 모드 + busy_timeout으로 CLI/플러그인 동시 접근 안전
+- 동시 접근 테스트 통과 (쓰기 중 읽기 에러 없음)
 
-**Sync 보호:**
-- `WikeySettings`에 `syncProtection: boolean` 추가 (기본 ON)
-- ON: API 키를 `~/.config/wikey/credentials.json`에 저장, data.json에는 빈 문자열
-- OFF: 기존 동작 + API Keys 섹션에 경고 메시지
-- `buildPersistableSettings()`: saveSettings/scheduleChatSave/onunload/runEnvDetection 통합
-- `loadCredentials()/saveCredentials()/deleteCredentials()`: Node.js fs 직접 사용
+### M3: 설정 파일 통합 — 완료
 
-**BRAT 배포:**
-- `wikey-obsidian/versions.json`: `{ "0.1.0": "1.5.0" }`
-- `.github/workflows/release.yml`: 태그 push → npm ci → build → gh-release (main.js, manifest.json, styles.css)
+**변경 전 (3파일 분리):**
+```
+.env                     ← API 키 (bash만)
+local-llm/wikey.conf     ← 모델 설정 (bash만)
+data.json                ← 전체 설정 (플러그인만)
+```
+
+**변경 후 (단일 소스):**
+```
+./wikey.conf                        ← 공유 설정 (CLI + 플러그인)
+~/.config/wikey/credentials.json    ← API 키 (CLI + 플러그인 공유)
+data.json                           ← 플러그인 상태만
+```
+
+**역할 분담 (변경 후):**
+
+| 파일 | 저장 내용 | 소비자 | Git |
+|------|----------|--------|-----|
+| `./wikey.conf` | 모델, 프로바이더, URL, 검색, 비용 한도 | bash + 플러그인 | 추적 |
+| `~/.config/wikey/credentials.json` | API 키 (Gemini/Anthropic/OpenAI) | bash + 플러그인 | N/A (vault 외부) |
+| `.obsidian/plugins/wikey/data.json` | 채팅 히스토리, 피드백, 탐지 경로, UI 상태 | 플러그인만 | .gitignore |
+
+**키 이동:**
+
+| 키 | 이전 위치 | 이후 위치 |
+|-----|----------|----------|
+| WIKEY_BASIC_MODEL 등 모델 설정 | wikey.conf (bash) + data.json (플러그인) | wikey.conf (공유) |
+| GEMINI_API_KEY 등 API 키 | .env (bash) + data.json (플러그인) | credentials.json (공유) |
+| OLLAMA_URL | data.json | wikey.conf |
+| COST_LIMIT | data.json | wikey.conf |
+| chatHistory, feedback | data.json | data.json (유지) |
+
+**파일별 변경 상세:**
+
+| 파일 | 변경 내용 |
+|------|----------|
+| `local-llm/wikey.conf` → `./wikey.conf` | 프로젝트 루트로 `git mv`. `local-llm/wikey.conf`는 심볼릭 링크 |
+| `./wikey.conf` | 헤더 갱신 ("통합 설정, 단일 소스"), `OLLAMA_URL` 주석 해제, `COST_LIMIT=50` 추가, API 키 안내 주석 |
+| `wikey-core/src/config.ts` | `loadConfig()` 스텁 → 실제 구현: wikey.conf 파싱 + credentials.json 읽기 |
+| `wikey-obsidian/src/main.ts` | `loadFromWikeyConf()`: wikey.conf 읽어 settings에 머지 |
+| | `saveToWikeyConf()`: 모델/프로바이더 변경을 wikey.conf에 정규식 치환으로 쓰기 (주석/구조 보존) |
+| | `buildPluginOnlyData()`: data.json에 플러그인 상태만 저장 (모델/키 제외) |
+| | `syncProtection` 필드 제거 (API 키가 항상 vault 외부 → 토글 불필요) |
+| | `buildPersistableSettings()` 제거 (buildPluginOnlyData로 대체) |
+| | `deleteCredentials()` 제거 (credentials.json 항상 유지) |
+| `wikey-obsidian/src/settings-tab.ts` | Sync 보호 토글 제거, API Keys 섹션에 저장 위치 안내 문구 |
+| `scripts/lib/llm-api.sh` | conf 경로 `./wikey.conf`로 변경, `_load_credentials()` 추가 (jq → grep fallback) |
+| `scripts/check-providers.sh` | conf 경로 변경 + credentials.json 로딩 |
+| `scripts/summarize-large-source.sh` | credentials.json 로딩 추가 |
+| `scripts/setup.sh` | "API 키" 섹션을 credentials.json 기준으로 재작성, wikey.conf 경로 변경 |
+| `.env.example` | 삭제 (wikey.conf 헤더에 안내 통합) |
+
+**bash credentials.json 로딩 (`_load_credentials`):**
+
+```
+우선순위: 환경변수 > credentials.json > .env (폴백) > wikey.conf
+```
+
+- jq 사용 가능 시: `jq -r ".$key // empty"` 파싱
+- jq 미설치 시: grep+sed fallback (순수 bash)
+- camelCase→SCREAMING_SNAKE 매핑: `geminiApiKey`→`GEMINI_API_KEY`
+
+**saveToWikeyConf 로직:**
+
+```
+1. wikey.conf를 fs.readFileSync로 읽기
+2. 변경 키별 정규식: /^(#\s*)?KEY=.*$/m
+3. 매치 시 교체, 미매치 시 파일 끝에 추가
+4. 주석 처리된 키(# KEY=...)도 활성화
+5. wikey.conf 미존재 시 무시 (CLI 미사용 환경)
+```
 
 ### 코드 규모 (갱신)
 
 | 영역 | 파일 | 라인 수 |
 |------|------|---------|
-| wikey-core/src (구현) | 9개 (.ts) | ~1,600 |
+| wikey-core/src (구현) | 9개 (.ts) | ~1,650 |
 | wikey-core/src/__tests__ | 5개 (.test.ts) | ~600 |
-| wikey-obsidian/src | 6개 (.ts) | ~1,900 |
+| wikey-obsidian/src | 6개 (.ts) | ~1,950 |
 | wikey-obsidian/styles.css | 1개 | ~700 |
 | scripts/audit-ingest.py | 1개 | ~120 |
-| **합계** | **22개** | **~4,920** |
+| **합계** | **22개** | **~5,020** |
 
 65 tests passed, 빌드 0 errors.

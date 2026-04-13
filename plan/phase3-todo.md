@@ -1,7 +1,7 @@
 # Phase 3: Todo List — Obsidian 플러그인 (wikey-core + wikey-obsidian)
 
 > 기간: 2026-04-12 ~
-> 상태: **진행 중** (Phase 3-0~3-3 완료, Phase 3-4 UI 고도화 완료, 잔여 작업 있음)
+> 상태: **진행 중** (Step 0~6 완료, Must/Should 완료, Could 3/5 완료, Eng H3+M3 완료)
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Gemma 4 (12B), qmd 2.1.0 (vendored), Node.js 22.17.0
 > 핵심 계획: `prompt_plan.md`
@@ -125,27 +125,20 @@
 - [x] **welcome 숨김** — 특수 패널 열릴 때 자동 숨김/복원
 - [x] **audit-ingest.py** — raw/ 미인제스트 문서 감지 스크립트
 
-### 선택 (Could) — 진행 중
+### 선택 (Could) — 3/4 완료
 
-- [x] **대화 히스토리 영구 저장** — settings 토글 (on/off), 최대 100건, 디바운스 2초
-  - main.ts: `persistChatHistory`, `savedChatHistory` 필드 추가
-  - sidebar-chat.ts: handleSend 후 scheduleChatSave, clearChat에 영속 초기화
-  - settings-tab.ts: 일반 섹션에 토글 추가
-- [x] **Obsidian Sync 경고 강화** — settings 토글 (on/off), API 키를 `~/.config/wikey/credentials.json`에 분리 저장
-  - main.ts: `syncProtection` 필드 + loadCredentials/saveCredentials/deleteCredentials
-  - settings-tab.ts: 패시브 경고 → 토글 교체, 일반 섹션에 배치
-  - saveSettings/scheduleChatSave에서 buildPersistableSettings() 공용
-- [x] **BRAT 배포 + v0.1.0-alpha 태그** — versions.json + GitHub Actions + 태그
-  - wikey-obsidian/versions.json: `{ "0.1.0": "1.5.0" }`
-  - .github/workflows/release.yml: 태그 push → 빌드 → Release 에셋 첨부
-  - git tag v0.1.0-alpha (갱신 예정)
-- [ ] **qmd SDK import** — Phase 4 연기 (난이도 높음, CLI exec 안정 동작 중)
+- [x] **대화 히스토리 영구 저장** — settings 토글, 최대 100건, 디바운스 2초
+- [x] **Obsidian Sync 경고 → 설정 통합으로 해소** — API 키가 항상 credentials.json에 저장, data.json에 미포함
+- [x] **BRAT 배포 + v0.1.0-alpha 태그** — versions.json + GitHub Actions + 태그 갱신
+- [ ] **qmd SDK import** — Phase 3 마지막 또는 Phase 4 연기 (난이도 높음)
 
-### 다음 세션 작업
+### Phase 3 마지막 작업
 
 - [ ] Audit 패널 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
 - [ ] 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
 - [ ] Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
+- [ ] bash→TS 완전 포팅 (validate-wiki, check-pii, cost-tracker, reindex)
+- [ ] qmd SDK import (선택)
 
 ---
 

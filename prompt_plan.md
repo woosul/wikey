@@ -627,16 +627,18 @@ Week 3:  통합 테스트 + 마무리
 
 | 항목 | 이유 | 대안 |
 |------|------|------|
-| wikey.conf 양방향 동기화 (M3) | 동시 수정 경쟁 위험 | data.json 단독 |
-| qmd SDK import | 난이도 높음 (better-sqlite3 ABI) | Phase 4 연기, CLI exec 안정 동작 |
+| qmd SDK import | 난이도 높음 (better-sqlite3 ABI) | Phase 3 마지막 또는 Phase 4 연기 |
+| bash→TS 완전 포팅 | Phase 3 마지막 작업으로 이동 | exec 래퍼 안정 동작 중 |
 
-### 15-3b. 연기 해제 → 구현 진행 (이번 세션)
+### 15-3b. 연기 해제 → 구현 완료
 
-| 항목 | 구현 방식 |
-|------|----------|
-| 대화 히스토리 영구 저장 | settings 토글 + data.json 저장 (최대 100건, 디바운스 2초) |
-| Obsidian Sync 경고 강화 | settings 토글 + `~/.config/wikey/credentials.json` 분리 저장 |
-| BRAT 배포 + v0.1.0-alpha 태그 | versions.json + GitHub Actions + git tag |
+| 항목 | 구현 방식 | 상태 |
+|------|----------|------|
+| 대화 히스토리 영구 저장 | settings 토글 + data.json 저장 (최대 100건, 디바운스 2초) | **완료** |
+| Sync 경고 → 설정 통합 | credentials.json으로 API 키 통합, syncProtection 제거 | **완료** |
+| BRAT 배포 + v0.1.0-alpha 태그 | versions.json + GitHub Actions + git tag | **완료** |
+| H3: qmd 동시 접근 | busy_timeout=5000 추가 | **완료** |
+| M3: 설정 파일 통합 | wikey.conf 단일 소스 + credentials.json 공유 | **완료** |
 
 ### 15-4. 발견된 Obsidian Electron 제약 (계획에 미예측)
 
@@ -648,7 +650,12 @@ Week 3:  통합 테스트 + 마무리
 | `requestUrl()` localhost CORS | Ollama 호출 실패 | Node.js http 모듈 직접 호출 |
 | Vault API가 .gitignore 폴더 미반환 | raw/0_inbox/ 목록 안 보임 | Node.js fs 직접 읽기 |
 
-### 15-5. 잔여 작업 (다음 세션)
+### 15-5. 잔여 작업 (Phase 3 마지막)
+
+**검증:**
+- Audit 패널 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
+- 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
+- Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
 
 **완전 포팅 (bash→TS):**
 - validate-wiki.sh → TS 재구현
@@ -656,13 +663,5 @@ Week 3:  통합 테스트 + 마무리
 - cost-tracker.sh → TS 재구현
 - reindex.sh → TS 오케스트레이션
 
-**UI 통합:**
-- classify 서브폴더 이동 UI
-- 비용 추적 UI (상태 바 + 대시보드)
-- reindex/validate/pii 실행 UI (설정 탭)
-- 상태 바 페이지 수 수정
-
-**검증:**
-- Obsidian 수동 통합 테스트 6 시나리오
-- inbox PDF 인제스트 end-to-end
-- BRAT 배포 + v0.1.0-alpha 태그
+**선택:**
+- qmd SDK import (better-sqlite3 wasm 교체)
