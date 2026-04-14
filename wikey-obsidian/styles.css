@@ -410,8 +410,21 @@
 
 .wikey-audit-summary-row {
   display: flex;
+  justify-content: space-between;
+  align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.wikey-audit-stats-left {
+  display: flex;
+  gap: 8px;
+}
+
+.wikey-audit-status-right {
+  font-size: 0.92em;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -444,7 +457,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 0;
+  padding: 4px 4px;
   border-bottom: 1px solid var(--background-modifier-border);
   margin-bottom: 2px;
 }
@@ -538,15 +551,60 @@
   gap: 1px;
 }
 
+.wikey-audit-name-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .wikey-audit-name {
   font-size: 0.92em;
   color: var(--text-normal);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.wikey-audit-name-done {
+  color: #00c853 !important;
+}
+
+.wikey-audit-filesize {
+  font-size: 0.92em;
+  color: var(--text-faint);
+  flex-shrink: 0;
+}
+
+.wikey-audit-path-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
 }
 
 .wikey-audit-path {
+  font-size: 0.72em;
+  color: var(--text-faint);
+}
+
+.wikey-audit-recommend {
+  font-size: 0.68em;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.wikey-audit-recommend-local {
+  color: var(--text-faint);
+}
+
+.wikey-audit-recommend-cloud {
+  color: var(--interactive-accent);
+}
+
+.wikey-audit-time {
   font-size: 0.72em;
   color: var(--text-faint);
 }
@@ -599,6 +657,23 @@
 
 .wikey-audit-apply-btn:hover { opacity: 0.85; }
 .wikey-audit-apply-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+.wikey-audit-cancel-btn {
+  font-size: 0.92em;
+  padding: 4px 16px;
+  border: 1px solid var(--text-error) !important;
+  background: var(--text-error) !important;
+  color: white !important;
+  box-shadow: none !important;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+
+.wikey-audit-cancel-btn:hover { opacity: 0.85; }
+.wikey-audit-cancel-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
 
 .wikey-audit-delay-action-btn {
   font-size: 0.92em;
@@ -741,8 +816,9 @@
   font-size: 0.88em;
   color: var(--text-muted);
   cursor: pointer;
-  background: transparent;
-  border: none;
+  background-color: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
   padding: 2px 22px 2px 8px;
   appearance: none;
   -webkit-appearance: none;
@@ -751,12 +827,30 @@
   background-position: right 6px center;
 }
 
+/* ── Stat number styling ── */
+
+.wikey-stat-number {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.wikey-stat-number-white {
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
 .wikey-select:focus {
   outline: none;
+  box-shadow: none;
   color: var(--text-normal);
 }
 
 .wikey-select:hover {
+  box-shadow: none;
+}
+
+.wikey-select:hover:not(:focus) {
   color: var(--text-normal);
 }
 
@@ -1064,10 +1158,21 @@
   padding: 3px 0;
 }
 
+.wikey-settings-status-label-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
 .wikey-settings-status-label {
   font-weight: 500;
   font-size: 0.9em;
   color: var(--text-normal);
+}
+
+.wikey-settings-status-desc {
+  font-size: 0.75em;
+  color: var(--text-faint);
 }
 
 .wikey-settings-status-badge {

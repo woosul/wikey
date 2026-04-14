@@ -55,6 +55,7 @@ export interface LLMCallOptions {
   readonly maxTokens?: number
   readonly timeout?: number
   readonly responseMimeType?: string
+  readonly jsonMode?: boolean
 }
 
 // ── Wiki ──

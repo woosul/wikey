@@ -19,6 +19,7 @@ interface WikeySettings {
   costLimit: number
   advancedLLM: boolean
   ingestProvider: string
+  ingestModel: string
   lintProvider: string
   summarizeProvider: string
   // 자동 탐지된 환경 (수동 편집 불필요)
@@ -41,6 +42,7 @@ const DEFAULT_SETTINGS: WikeySettings = {
   costLimit: 50,
   advancedLLM: false,
   ingestProvider: '',
+  ingestModel: '',
   lintProvider: '',
   summarizeProvider: '',
   detectedShellPath: '',
@@ -325,16 +327,16 @@ export default class WikeyPlugin extends Plugin {
     return {
       WIKEY_BASIC_MODEL: this.settings.basicModel,
       WIKEY_SEARCH_BACKEND: 'basic',
-      WIKEY_MODEL: this.settings.cloudModel || 'wikey',
+      WIKEY_MODEL: this.settings.ingestModel || this.settings.cloudModel || 'qwen3:8b',
       WIKEY_QMD_TOP_N: 5,
       GEMINI_API_KEY: this.settings.geminiApiKey,
       ANTHROPIC_API_KEY: this.settings.anthropicApiKey,
       OPENAI_API_KEY: this.settings.openaiApiKey,
       OLLAMA_URL: this.settings.ollamaUrl,
-      INGEST_PROVIDER: this.settings.advancedLLM ? this.settings.ingestProvider : '',
+      INGEST_PROVIDER: this.settings.ingestProvider || '',
       LINT_PROVIDER: this.settings.advancedLLM ? this.settings.lintProvider : '',
       SUMMARIZE_PROVIDER: this.settings.advancedLLM ? this.settings.summarizeProvider : '',
-      CONTEXTUAL_MODEL: 'gemma4',
+      CONTEXTUAL_MODEL: 'gemma4:26b',
       COST_LIMIT: this.settings.costLimit,
     }
   }

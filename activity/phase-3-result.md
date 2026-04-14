@@ -2,9 +2,9 @@
 
 > 기간: 2026-04-12 ~ 진행 중
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **진행 중** — Step 0~6 완료 + Must/Should 완료 + Could 3/4 + Eng H3+M3 완료
+> 상태: **진행 중** — Step 0~6 완료 + A/A-1 완료 + B 잔여
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
-> 인프라: Ollama 0.20.5 + Gemma 4 (12B), qmd 2.1.0 (vendored), Node.js 22.17.0
+> 인프라: Ollama 0.20.5 + Qwen3 8B + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
 
 ---
 
@@ -35,6 +35,35 @@
 | 04-13 | H3 | qmd busy_timeout=5000 추가 — 동시 접근 안전 |
 | 04-13 | M3 | 설정 통합 — wikey.conf 단일 소스 + credentials.json 공유 |
 | 04-13 | M3 | Sync 보호 → 설정 통합으로 흡수 (syncProtection 제거, API 키 항상 외부) |
+| 04-14 | A | UI 영문 전환 — dashboard, audit, inbox, settings, help, 프로그레스 메시지 전체 |
+| 04-14 | A | Dashboard 숫자 통일 — audit 기반 Raw Sources (ingested/total per PARA folder + Delayed) |
+| 04-14 | A | Dashboard home 아이콘, PARA별 ingested accent color |
+| 04-14 | A | Audit 패널 UI 개편 — 상단 좌(stats)+우(status), 하단 provider+model+Ingest/Cancel+Delay |
+| 04-14 | A | Audit 모델 드롭다운 — API 동적 로드, provider별 (Local/Gemini/OpenAI Codex/Anthropic Claude) |
+| 04-14 | A | Audit Cancel 기능 — Ingest→Cancel 전환, 완료 건 유지+진행 중단 |
+| 04-14 | A | Audit 행 정보 강화 — 파일 크기, 추천 모델(Local/Cloud), 실시간 시간 카운터, 완료 시 green 유지 |
+| 04-14 | A | Inbox UI 개편 — checkbox + bottom bar (Move+auto-ingest / Delay), 분류 Auto/Project/Area/Resource/Archive |
+| 04-14 | A | Select UI 표준화 — background+border+shadow 통일 |
+| 04-14 | A | 설정 영문 전환 + 용어 통일 (Local/Google Gemini/Anthropic Claude/OpenAI Codex) |
+| 04-14 | A | 설정 Ingest Model 섹션 추가 — provider + model 기본값 |
+| 04-14 | A | 설정 환경 상태 — 항목별 설명 추가, Qwen3/MarkItDown 상태 표시, MarkItDown 설치 버튼 |
+| 04-14 | A-1 | 로컬 LLM 커뮤니티 조사 — Gemma4 JSON/think 버그(#15260), Qwen3 한국어 우수 |
+| 04-14 | A-1 | 모델 설치 — qwen3:8b, gemma4:26b, supergemma4:26b(GGUF import+chat template) |
+| 04-14 | A-1 | 모델 비교 테스트 (TCP/IP PDF) — Qwen3 53s OK, Gemma4 78s OK, SuperGemma4 FAIL(빈 응답) |
+| 04-14 | A-1 | SuperGemma4 디버그 — chat template 누락 → think:true 필요 → thinking loop(40K chars) → 탈락 |
+| 04-14 | A-1 | 모델 정리 — wikey:latest 삭제, gemma4:latest(8B) 삭제, supergemma4 삭제 |
+| 04-14 | A-1 | Ollama think 파라미터 — Gemma=think:true(빈 응답 방지), Qwen3=think:false(토큰 절감) |
+| 04-14 | A-1 | jsonMode 옵션 — Qwen3 format:"json", Gemma 프롬프트 기반(#15260 회피) |
+| 04-14 | A-1 | LLM 타임아웃 60s → 300s, maxOutputTokens 8K → 65K |
+| 04-14 | A-1 | Gemini 에러 처리 — finishReason:MAX_TOKENS 원인 발견+해결, candidates null 방어 |
+| 04-14 | A-1 | MarkItDown 전처리 — PDF→md 변환 우선(→pdftotext→pymupdf fallback) |
+| 04-14 | A-1 | Graphify-style 챕터 분할 — 12K+ 문서는 ## 헤더 기준 분할 → 순차 추출 → 병합 |
+| 04-14 | A-1 | provider별 truncate — Local만 12K 제한, Cloud는 전체 전송 |
+| 04-14 | A-1 | LLM 파일명 경로 strip — wiki/entities/x.md 반환 시 자동 정리 |
+| 04-14 | A-1 | E2E 테스트 (파워디바이스 88KB) — Qwen3 17min 27E+26C, Gemini 10min 46E+170C, Gemma4 32min 5E+3C |
+| 04-14 | A-1 | audit-ingest.py — inbox+_delayed 포함, per-folder breakdown (ingested/total) |
+| 04-14 | A-1 | Graphify 종합 분석 → activity/graphify-analysis.md |
+| 04-14 | A-1 | Phase 재구성 — Phase 4(인제스트 고도화+지식그래프), Phase 5(웹환경, 기존 4) |
 
 ---
 
@@ -550,7 +579,7 @@ data.json                           ← 플러그인 상태만
 5. wikey.conf 미존재 시 무시 (CLI 미사용 환경)
 ```
 
-### 코드 규모 (갱신)
+### 코드 규모 (04-13 시점)
 
 | 영역 | 파일 | 라인 수 |
 |------|------|---------|
@@ -560,5 +589,162 @@ data.json                           ← 플러그인 상태만
 | wikey-obsidian/styles.css | 1개 | ~700 |
 | scripts/audit-ingest.py | 1개 | ~120 |
 | **합계** | **22개** | **~5,020** |
+
+65 tests passed, 빌드 0 errors.
+
+---
+
+## 3. 04-14 세션 상세 결과
+
+### 3.1 UI 영문 전환 + 표준화
+
+모든 시스템 인터페이스를 English로 전환:
+- sidebar-chat.ts: 헤더 tooltip, welcome, help, loading, error, 피드백, 진행 메시지
+- settings-tab.ts: 섹션명, 설명, 버튼 텍스트, Notice 메시지
+- ingest-pipeline.ts: onProgress 메시지 (Reading source, Calling LLM, Creating pages, Indexing)
+
+Provider 명칭 통일:
+- `Local (Ollama)` / `Google Gemini` / `Anthropic Claude` / `OpenAI Codex`
+
+### 3.2 Dashboard 숫자 통일
+
+**문제:** Raw Sources "Total 10" vs Undigested "Ingested 6" — 카운팅 방법 불일치 (top-level vs recursive)
+
+**해결:**
+- audit-ingest.py에 inbox + _delayed 추가, per-folder breakdown 출력
+- Dashboard Raw Sources를 audit 데이터 단일 소스로 통합
+- Row 1: Total Files / Ingested (accent) / Missing
+- Row 2: PARA별 `ingested / total` (Inbox, Projects, Areas, Resources, Archive, Delayed)
+- Undigested Documents 섹션 제거 (Raw Sources에 병합)
+
+검산: `0+1+1+4+0 = 6 = Ingested`, `3+0+0+129+25 = 157 = Missing` ✓
+
+### 3.3 Audit 패널 UI 개편
+
+**Before:** 하단에 `N개 선택됨 + provider select + 적용 + 보류`
+**After:**
+- 상단: 좌측 stats (Total/Ingested/Missing) + **우측 status** (2 selected / 1/2 processing)
+- 하단: **Provider** + **Model** (API 동적 로드) + **Ingest/Cancel** + **Delay**
+- 행 정보: 파일명 + **파일크기(우)** + 폴더경로(전체) + **추천모델(우)** + **시간 카운터**
+- Cancel: Ingest→빨간 Cancel 전환, 완료 건 유지 + 진행 중단
+- 완료 행: 제거하지 않고 **파일명 green** 전환 + 소요 시간 표시
+- 추천 모델: ≤1MB → Local, >1MB → Cloud (purple)
+
+### 3.4 Inbox UI 개편
+
+**Before:** 파일별 select + 이동 버튼
+**After:**
+- 제목: `inbox | N` (숫자 16px bold white)
+- 행: checkbox + 파일명 + classify hint
+- 하단: `N selected` + classify select (Auto/Project/Area/Resource/Archive) + **Move** + **Delay**
+- Move 시 자동 ingest (audit 동일 progress bar)
+
+### 3.5 설정 탭 정리
+
+- 섹션 구조: Environment → Default Model → **Ingest Model (신규)** → General → API Keys → Search → Cost → Wiki Tools → Advanced
+- 환경 상태: 항목별 **용도 설명** 추가 (deep gray)
+- Qwen3 / Gemma4 / MarkItDown 개별 상태 표시
+- MarkItDown 미설치 시 **Install** 버튼 (pip3 install markitdown[pdf] 자동 실행)
+- Advanced: ingestProvider 제거 (별도 섹션으로 이동), lint/summarize만 유지
+
+### 3.6 로컬 LLM 모델 평가
+
+**커뮤니티 조사 결과:**
+- Gemma4 JSON/think 버그 확인 (Ollama #15260): think=false 시 format 파라미터 깨짐
+- Qwen3: JSON 구조화 출력 가장 안정적, 한국어 CJK 최적화 (201개 언어)
+- SuperGemma4: Jiunsong 파인튜닝, uncensored, HuggingFace GGUF
+
+**설치 모델:**
+
+| 모델 | 크기 | 출처 |
+|------|------|------|
+| qwen3:8b | 5.2GB | ollama pull |
+| gemma4:26b (MoE) | 17GB | ollama pull |
+| supergemma4:26b | 16GB | HuggingFace GGUF import |
+| gemma4:latest (8B) | 9.6GB | 기존 |
+| wikey:latest | 9.6GB | 기존 Modelfile |
+
+**SuperGemma4 디버그 과정:**
+1. 첫 테스트: 빈 응답 (0 chars, eval 100 tokens) — chat template 누락
+2. Modelfile에 Gemma4 chat template 추가 → 여전히 빈 응답
+3. think:true 추가 → 간단 프롬프트 성공 (`{"ok": true}`)
+4. 인제스트 프롬프트: thinking 40,146자 소비 → content 0자 — **thinking loop**
+5. 결론: 복잡한 프롬프트에서 thinking에 토큰 전부 소비, 답변 미생성 → **탈락**
+
+**JSON 출력 테스트 (TCP/IP PDF, curl 직접 호출, 3000자 소스):**
+
+| 모델 | 시간 | JSON | source_page | entities | concepts |
+|------|------|------|-------------|----------|----------|
+| qwen3:8b | 49.5s | OK | OK | 4 | 3 |
+| gemma4:26b | 99.6s | OK | OK | 6 | 8 |
+| supergemma4:26b | 187.4s | **FAIL** | — | — | — |
+
+**모델 정리:** wikey:latest 삭제, gemma4:latest(8B) 삭제, supergemma4:26b 삭제
+
+### 3.7 인제스트 파이프라인 개선
+
+**발견된 문제들:**
+1. LLM 타임아웃 60s → 로컬 모델 인제스트에 부족
+2. Gemini finishReason:MAX_TOKENS → maxOutputTokens 8K 부족
+3. PDF 원문 254KB → 로컬 모델 컨텍스트 초과
+4. Gemma4 JSON 스키마 불일치 (source_page 대신 다른 키)
+5. LLM이 파일명에 경로 포함 (wiki/entities/x.md)
+
+**해결:**
+
+| 문제 | 해결 | 코드 |
+|------|------|------|
+| 타임아웃 | 60s → 300s | llm-client.ts DEFAULT_TIMEOUT |
+| 출력 토큰 | 8K → 65K | llm-client.ts DEFAULT_MAX_TOKENS |
+| PDF 전처리 | MarkItDown 우선 (→pdftotext→pymupdf fallback) | ingest-pipeline.ts extractPdfText |
+| 대용량 분할 | 12K+ 문서 → ## 헤더 기준 챕터 분할 → 순차 추출 → 병합 | ingest-pipeline.ts splitIntoChunks |
+| provider별 제한 | Local만 12K truncate, Cloud는 전체 전송 | ingest-pipeline.ts ingest() |
+| 파일명 경로 | 자동 strip (wiki/entities/x.md → x.md) | wiki-ops.ts buildPath |
+| Gemini 에러 | candidates null 방어 + finishReason 상세 메시지 | llm-client.ts callGemini |
+| think 제어 | Gemma=think:true, Qwen3=think:false | llm-client.ts callOllama |
+| jsonMode | Qwen3 format:"json", Gemma 프롬프트 기반 | llm-client.ts callOllama |
+
+**Graphify-style 2단계 파이프라인:**
+- 소문서 (≤12K): 기존 1회 호출
+- 대문서 (>12K): Step A(요약→source_page) + Step B(챕터별→entities/concepts) + Step C(중복 제거 병합)
+
+### 3.8 E2E 인제스트 테스트 결과 (파워디바이스 88KB PDF)
+
+| 모델 | 경로 | 시간 | Entities | Concepts | 총 페이지 | 판정 |
+|------|------|------|----------|----------|-----------|------|
+| **Qwen3 8B** | local, chunked (6 chunks) | **17min** | 27 | 26 | 54 | 인제스트 기본 |
+| **Gemini 2.5 Flash** | cloud, chunked (6 chunks) | **10min** | 46 | 170 | 217 | 최고 품질 |
+| **Gemma4 26B** | local, chunked (6 chunks) | **32min** | 5 | 3 | 9 | **인제스트 제외** |
+
+**Gemma4 26B 인제스트 탈락 이유:** thinking 오버헤드 (매 호출마다 think:true 필수), 한국어 약함, 추출 granularity 최저
+
+### 3.9 Graphify 분석
+
+Graphify (safishamsi/graphify) 아키텍처 분석 → `activity/graphify-analysis.md` 저장.
+
+**Wikey Phase 4에 수용 결정된 항목:**
+- 지식 그래프 (NetworkX + vis.js)
+- 증분 업데이트 (SHA256 해시 기반 delta)
+- Provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS)
+- 추출 기준 명확화 (모델 간 결과 일관성)
+
+### 3.10 Phase 재구성
+
+| Phase | 범위 | 상태 |
+|-------|------|------|
+| 3 | Obsidian 플러그인 + 인제스트 기본 | 진행 중 (B 잔여) |
+| **4 (신규)** | 인제스트 고도화 + 지식 그래프 (Graphify 수용) | 계획 |
+| **5 (기존 4)** | 웹 환경 구축 | 이동 |
+
+### 코드 규모 (04-14 갱신)
+
+| 영역 | 파일 | 라인 수 |
+|------|------|---------|
+| wikey-core/src (구현) | 9개 (.ts) | ~1,500 |
+| wikey-core/src/__tests__ | 5개 (.test.ts) | ~600 |
+| wikey-obsidian/src | 6개 (.ts) | ~2,990 |
+| wikey-obsidian/styles.css | 1개 | ~1,260 |
+| scripts/audit-ingest.py | 1개 | ~150 |
+| **합계** | **22개** | **~6,500** |
 
 65 tests passed, 빌드 0 errors.

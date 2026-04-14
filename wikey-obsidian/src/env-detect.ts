@@ -14,7 +14,9 @@ export interface EnvStatus {
   ollamaRunning: boolean
   ollamaModels: string[]
   hasGemma4: boolean
+  hasQwen3: boolean
   hasKiwipiepy: boolean
+  hasMarkitdown: boolean
   ready: boolean
   issues: string[]
 }
@@ -28,7 +30,9 @@ const DEFAULT_STATUS: EnvStatus = {
   ollamaRunning: false,
   ollamaModels: [],
   hasGemma4: false,
+  hasQwen3: false,
   hasKiwipiepy: false,
+  hasMarkitdown: false,
   ready: false,
   issues: [],
 }
@@ -165,6 +169,16 @@ async function checkKiwipiepy(pythonPath: string, env: Record<string, string>): 
   }
 }
 
+async function checkMarkitdown(pythonPath: string, env: Record<string, string>): Promise<boolean> {
+  if (!pythonPath) return false
+  try {
+    await execFileAsync(pythonPath, ['-c', 'from markitdown import MarkItDown'], { env, timeout: 5000 })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * 전체 환경 탐지 실행. 플러그인 onload에서 1회 호출.
  */
@@ -206,15 +220,20 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
   const ollama = await checkOllama(ollamaUrl)
   status.ollamaRunning = ollama.running
   status.ollamaModels = ollama.models
-  status.hasGemma4 = ollama.models.some((n) => n.includes('gemma4') || n.includes('wikey'))
+  status.hasGemma4 = ollama.models.some((n) => n.includes('gemma4'))
+  status.hasQwen3 = ollama.models.some((n) => n.includes('qwen3'))
   if (!ollama.running) {
-    issues.push('Ollama가 실행 중이 아닙니다. ollama serve를 실행하세요.')
-  } else if (!status.hasGemma4) {
-    issues.push('Gemma 4 모델이 없습니다. ollama pull gemma4를 실행하세요.')
+    issues.push('Ollama is not running. Run: ollama serve')
+  } else {
+    if (!status.hasQwen3) issues.push('Qwen3 not found. Run: ollama pull qwen3:8b')
+    if (!status.hasGemma4) issues.push('Gemma4 not found. Run: ollama pull gemma4:26b')
   }
 
   // 6. kiwipiepy
   status.hasKiwipiepy = await checkKiwipiepy(status.pythonPath, env)
+
+  // 7. markitdown
+  status.hasMarkitdown = await checkMarkitdown(status.pythonPath, env)
 
   status.issues = issues
   status.ready = issues.length === 0

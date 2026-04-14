@@ -104,7 +104,7 @@ const PROVIDER_DEFAULTS: Record<string, string> = {
   gemini: 'gemini-2.5-flash',
   anthropic: 'claude-sonnet-4-20250514',
   openai: 'gpt-4.1',
-  ollama: 'gemma4',
+  ollama: 'qwen3:8b',
 }
 
 function mapToProvider(

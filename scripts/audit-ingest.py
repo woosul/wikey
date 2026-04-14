@@ -13,7 +13,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-RAW_DIRS = ["raw/1_projects", "raw/2_areas", "raw/3_resources", "raw/4_archive"]
+RAW_DIRS = ["raw/0_inbox", "raw/1_projects", "raw/2_areas", "raw/3_resources", "raw/4_archive", "raw/_delayed"]
 WIKI_SOURCES = ROOT / "wiki" / "sources"
 DOC_EXTS = {".md", ".txt", ".pdf"}
 
@@ -89,28 +89,46 @@ def main():
 
     missing = []
     ingested = 0
+    # per-folder counters
+    folder_total: dict[str, int] = {}
+    folder_ingested: dict[str, int] = {}
 
     for doc in all_docs:
         rel = str(doc.relative_to(ROOT))
+        # determine PARA folder key
+        parts = rel.split("/")
+        folder_key = parts[1] if len(parts) >= 2 else "other"
+        folder_total[folder_key] = folder_total.get(folder_key, 0) + 1
+
         # 1순위: ingest-map.json에 기록된 경로
         if rel in ingest_map:
             ingested += 1
+            folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
             continue
         # 2순위: 파일명 기반 fuzzy matching
         name = normalize(doc.stem)
         if match(name, wiki_keys):
             ingested += 1
+            folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
         else:
             missing.append(doc)
 
     total = len(all_docs)
     missing_count = len(missing)
 
+    # build per-folder summary
+    folders = {}
+    for key in folder_total:
+        ft = folder_total[key]
+        fi = folder_ingested.get(key, 0)
+        folders[key] = {"total": ft, "ingested": fi, "missing": ft - fi}
+
     if mode == "json":
         print(json.dumps({
             "total_documents": total,
             "ingested": ingested,
             "missing": missing_count,
+            "folders": folders,
             "files": [str(f.relative_to(ROOT)) for f in missing],
         }, ensure_ascii=False, indent=2))
     elif mode == "summary":

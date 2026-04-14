@@ -63,7 +63,10 @@ export function extractWikilinks(content: string): readonly string[] {
 }
 
 function buildPath(category: string, filename: string): string {
-  if (filename.includes('..') || filename.includes('/')) {
+  // LLM sometimes returns full paths — strip to basename
+  const cleaned = filename.includes('/') ? filename.split('/').pop()! : filename
+  filename = cleaned
+  if (filename.includes('..')) {
     throw new Error(`Invalid filename: ${filename} — directory traversal not allowed`)
   }
   const path = `${WIKI_PREFIX}${category}/${filename}`

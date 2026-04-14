@@ -136,33 +136,49 @@
 
 **A. 테스트 + 검증 (우선)**
 
-- [ ] Audit 패널 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
+- [x] UI 영문 전환 — dashboard, audit, inbox, settings, help 전체
+- [x] Dashboard 숫자 통일 — audit 기반 Raw Sources (ingested/total per PARA folder)
+- [x] Audit 패널 UI 개편 — 상단 상태, 하단 provider+model+Ingest/Cancel+Delay
+- [x] Inbox UI 개편 — checkbox + Move(auto-ingest) + Delay
+- [x] 설정 Ingest Model 섹션 추가 — provider + model 기본값
+- [x] 로컬 LLM 모델 평가 — qwen3:8b(최적), gemma4:26b(차선), supergemma4(탈락)
+- [x] Ollama think 파라미터 처리 — Gemma=think:true, Qwen3=think:false
+- [x] jsonMode 옵션 추가 — Qwen3 format:"json", Gemma 프롬프트 기반
+- [x] LLM 타임아웃 60s → 300s
+- [ ] Audit 패널 인제스트 E2E 테스트 — 실제 파이프라인 성공 확인 필요
 - [ ] 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
 - [ ] Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
 
-**B. 운영 안정성 (A 완료 후)**
+**A-1. 인제스트 파이프라인 개선 (Graphify 분석 결과 수용)**
 
-- [ ] **로컬 LLM 모델 검증** — Gemma4 12B가 최적인가? 커뮤니티 조사
-  - Gemma4 27B (31B 아님, 실제 파라미터 수 확인) 품질/속도 트레이드오프
-  - Qwen3, Llama 4, Mistral 등 대안 모델 벤치마크
-  - wikey 워크플로우별 (합성, 인제스트, CR) 모델 적합성 평가
-- [ ] **원본/위키 삭제 안전장치** — 인제스트 완료 후 원본 삭제 시 문제, wiki 문서 삭제 시 문제
-  - raw/ 원본 삭제 시: 해당 소스를 인용하는 wiki 페이지의 출처 무효화 감지
-  - wiki/ 문서 삭제 시: 깨진 위키링크, 인덱스 불일치, 고아 참조 자동 정리
-  - 삭제 전 영향 범위 미리보기 (dry-run)
-  - 삭제 이력 추적 (log.md 기록, 복원 가이드)
-- [ ] **초기화 기능** — 설정에서 선택적 리셋
-  - 완전 재설정: wiki/ 전체 삭제 + 인덱스 초기화 + 설정 초기화
-  - 인제스트 초기화: wiki/ 삭제 + 인덱스 재빌드 (raw/ 유지)
-  - 원본 초기화: raw/ 정리 (processed/ 아카이브 포함)
-  - 인덱스 초기화: qmd DB 삭제 + 재인덱싱
-  - 설정 초기화: wikey.conf + credentials.json + data.json 기본값 복원
-  - 각 초기화에 확인 다이얼로그 + dry-run 표시
+- [x] **MarkItDown 전처리** — PDF→md 변환 (MarkItDown→pdftotext→pymupdf fallback)
+- [x] **Graphify-style 챕터 분할** — 12K+ 문서는 ## 헤더 기준 분할 → 순차 추출 → 병합
+  - Step A: 전체 요약 → source_page (로컬: truncate, 클라우드: full text)
+  - Step B: 챕터별 → entities + concepts 추출
+  - Step C: 중복 제거 후 병합
+- [x] **maxOutputTokens 65K** — Gemini finishReason:MAX_TOKENS 문제 해결
+- [x] **Gemini 에러 처리** — finishReason/candidates 없는 경우 상세 에러 메시지
+- [x] **LLM 파일명 경로 strip** — LLM이 wiki/entities/x.md 반환 시 자동 정리
+- [ ] **프롬프트 파일 분리** — ingest_prompt_basic.md(시스템) + ingest_prompt_user.md(사용자 커스텀)
+  - 사용자가 설정에서 링크 클릭으로 user 프롬프트 편집
+  - Reset 버튼으로 기본값 복원
 
-**C. 완전 통합 (B 완료 후)**
+> **A-2 항목은 Phase 4로 이동 → `plan/phase4-todo.md`**
 
-- [ ] bash→TS 완전 포팅 (validate-wiki, check-pii, cost-tracker, reindex)
-- [ ] qmd SDK import (선택)
+**B. Phase 3 잔여 (다음 세션)**
+
+- [x] **로컬 LLM 모델 검증** — qwen3:8b(인제스트 기본), gemma4:26b(쿼리 전용) 확정
+  - Gemma4 26B 인제스트: 32min, 5E+3C — **인제스트 제외** (thinking 오버헤드 + 한국어 약함)
+  - Gemma4 26B는 쿼리/채팅 전용으로만 유지
+- [ ] **Qwen3 14B 테스트** — 8B 대비 품질 향상 기대 (9.3GB, M-series 여유)
+  - `ollama pull qwen3:14b` → 동일 파워디바이스 PDF로 E2E 테스트
+  - 8B(27E+26C, 17min) 대비 추출량/속도 비교
+  - 결과에 따라 인제스트 기본 모델 교체 검토
+- [ ] Audit 패널 인제스트 E2E 테스트 — Obsidian에서 실제 성공 확인
+- [ ] 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
+- [ ] Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
+
+> **운영 안정성, 완전 통합 항목은 Phase 4로 이동 → `plan/phase4-todo.md`**
 
 ---
 

@@ -1,7 +1,7 @@
 import type { HttpClient, LLMCallOptions, LLMProvider, WikeyConfig } from './types.js'
 
-const DEFAULT_TIMEOUT = 60_000
-const DEFAULT_MAX_TOKENS = 8192
+const DEFAULT_TIMEOUT = 300_000
+const DEFAULT_MAX_TOKENS = 65_536
 const DEFAULT_TEMPERATURE = 0.1
 
 export class LLMClient {
@@ -54,6 +54,13 @@ export class LLMClient {
     })
 
     const data = JSON.parse(response.body)
+
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      const reason = data.candidates?.[0]?.finishReason ?? 'unknown'
+      const error = data.error?.message ?? JSON.stringify(data).slice(0, 300)
+      throw new Error(`Gemini returned no content (finishReason: ${reason}): ${error}`)
+    }
+
     return data.candidates[0].content.parts[0].text as string
   }
 
@@ -119,7 +126,9 @@ export class LLMClient {
     const baseUrl = this.config.OLLAMA_URL || 'http://localhost:11434'
     const url = `${baseUrl}/api/chat`
 
-    const payload = {
+    const isGemma = model.toLowerCase().includes('gemma')
+
+    const payload: Record<string, unknown> = {
       model,
       messages: [{ role: 'user', content: prompt }],
       stream: false,
@@ -127,6 +136,23 @@ export class LLMClient {
         num_predict: opts?.maxTokens ?? DEFAULT_MAX_TOKENS,
         temperature: opts?.temperature ?? DEFAULT_TEMPERATURE,
       },
+    }
+
+    // JSON mode: use format param for non-Gemma models.
+    // Gemma4 + think:false breaks format (Ollama #15260), so skip format for Gemma
+    // and rely on prompt-based JSON instruction + post-processing instead.
+    if (opts?.jsonMode && !isGemma) {
+      payload.format = 'json'
+    }
+
+    // Thinking control:
+    // Gemma4 models: must send think=true, otherwise Ollama strips thinking
+    // tokens and returns empty content (especially for custom GGUF imports).
+    // Non-Gemma (Qwen3 etc): disable thinking to save tokens.
+    if (isGemma) {
+      payload.think = true
+    } else {
+      payload.think = false
     }
 
     const response = await this.httpClient.request(url, {

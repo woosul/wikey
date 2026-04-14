@@ -35,24 +35,25 @@ describe('createPage', () => {
     expect(content).toContain('# ESC')
   })
 
-  it('rejects paths outside wiki/', async () => {
+  it('rejects filenames with directory traversal (..)', async () => {
     const fs = createMockFS()
     const page: WikiPage = {
-      filename: '../../../etc/passwd',
+      filename: '..exploit.md',
       content: 'malicious',
       category: 'entities',
     }
     await expect(createPage(fs, page)).rejects.toThrow()
   })
 
-  it('rejects filenames with directory traversal', async () => {
+  it('strips path prefix from LLM-generated filenames', async () => {
     const fs = createMockFS()
     const page: WikiPage = {
-      filename: '../../outside.md',
-      content: 'content',
+      filename: 'wiki/entities/clean-name.md',
+      content: '---\ntitle: Test\n---\n\ncontent',
       category: 'entities',
     }
-    await expect(createPage(fs, page)).rejects.toThrow()
+    await createPage(fs, page)
+    expect(await fs.exists('wiki/entities/clean-name.md')).toBe(true)
   })
 
   it('updates existing page when it exists', async () => {

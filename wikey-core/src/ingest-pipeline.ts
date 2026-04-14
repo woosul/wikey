@@ -30,45 +30,87 @@ export async function ingest(
   opts?: IngestOptions,
 ): Promise<IngestResult> {
   // Step 1: Read source
-  onProgress?.({ step: 1, total: 4, message: '소스 읽기...' })
+  onProgress?.({ step: 1, total: 4, message: 'Reading source...' })
   const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
   const isPdf = sourceFilename.toLowerCase().endsWith('.pdf')
 
   let sourceContent: string
   if (isPdf) {
-    onProgress?.({ step: 1, total: 4, message: 'PDF 텍스트 추출...' })
+    onProgress?.({ step: 1, total: 4, message: 'Extracting (MarkItDown)...' })
     sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv)
     if (!sourceContent || sourceContent.trim().length < 50) {
-      throw new Error(`PDF 텍스트 추출 실패: ${sourceFilename} — pdftotext가 설치되어 있는지 확인하세요 (brew install poppler)`)
+      throw new Error(`PDF text extraction failed: ${sourceFilename} — install pdftotext (brew install poppler) or markitdown (pip install markitdown[pdf])`)
     }
   } else {
     sourceContent = await wikiFS.read(sourcePath)
   }
 
   const indexContent = await wikiFS.read('wiki/index.md').catch(() => '')
-
-  // Step 2: Call LLM
-  onProgress?.({ step: 2, total: 4, message: 'LLM 호출...' })
-  const prompt = buildIngestPrompt(sourceContent, sourceFilename, indexContent)
   const { provider, model } = resolveProvider('ingest', config)
   const llm = new LLMClient(httpClient, config)
+  const isLocal = provider === 'ollama'
 
-  let parsed: IngestRawResult | null = null
-  for (let attempt = 0; attempt <= MAX_JSON_RETRIES; attempt++) {
-    const llmOpts = provider === 'gemini'
-      ? { provider, model, responseMimeType: 'application/json' as const }
-      : { provider, model }
-    const response = await llm.call(prompt, llmOpts)
-    parsed = extractJsonBlock(response)
-    if (parsed) break
+  // Route: small doc → single call, large doc → chunked pipeline
+  const isLargeDoc = sourceContent.length > MAX_SOURCE_CHARS
+  let parsed: IngestRawResult
+
+  if (!isLargeDoc) {
+    // ── Small document: single LLM call (original flow) ──
+    const content = isLocal ? truncateSource(sourceContent) : sourceContent
+    onProgress?.({ step: 2, total: 4, message: `LLM (${model})...` })
+    parsed = await callLLMForIngest(llm, content, sourceFilename, indexContent, provider, model)
+  } else {
+    // ── Large document: Graphify-style chunked pipeline ──
+    const chunks = splitIntoChunks(sourceContent)
+    const totalSteps = chunks.length + 2 // summary + chunks + merge
+
+    // Step A: Summary → source_page (truncated for local, full for cloud)
+    onProgress?.({ step: 2, total: 4, message: `Summary (${model}) [1/${totalSteps}]...` })
+    const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
+    const summaryParsed = await callLLMForIngest(llm, summaryContent, sourceFilename, indexContent, provider, model)
+
+    // Step B: Each chunk → entities + concepts
+    const allEntities: Array<{ filename: string; content: string }> = [...(summaryParsed.entities ?? [])]
+    const allConcepts: Array<{ filename: string; content: string }> = [...(summaryParsed.concepts ?? [])]
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i]
+      onProgress?.({ step: 2, total: 4, message: `Chunk ${i + 1}/${chunks.length} (${model})...` })
+      const chunkContent = isLocal ? truncateSource(chunk) : chunk
+      try {
+        const chunkParsed = await callLLMForExtraction(llm, chunkContent, sourceFilename, provider, model)
+        allEntities.push(...(chunkParsed.entities ?? []))
+        allConcepts.push(...(chunkParsed.concepts ?? []))
+      } catch {
+        // Skip failed chunks — partial results are better than nothing
+      }
+    }
+
+    // Step C: Merge — deduplicate by filename
+    const seenEntities = new Map<string, { filename: string; content: string }>()
+    for (const e of allEntities) {
+      if (!seenEntities.has(e.filename)) seenEntities.set(e.filename, e)
+    }
+    const seenConcepts = new Map<string, { filename: string; content: string }>()
+    for (const c of allConcepts) {
+      if (!seenConcepts.has(c.filename)) seenConcepts.set(c.filename, c)
+    }
+
+    parsed = {
+      source_page: summaryParsed.source_page,
+      entities: [...seenEntities.values()],
+      concepts: [...seenConcepts.values()],
+      index_additions: summaryParsed.index_additions,
+      log_entry: summaryParsed.log_entry,
+    }
   }
 
-  if (!parsed) {
-    throw new Error('LLM JSON 파싱 실패 — 최대 재시도 초과')
+  if (!parsed.source_page?.filename || !parsed.source_page?.content) {
+    throw new Error(`LLM returned invalid structure — missing source_page. Keys: ${Object.keys(parsed).join(', ')}`)
   }
 
   // Step 3: Create/update wiki pages
-  onProgress?.({ step: 3, total: 4, message: '파일 생성...' })
+  onProgress?.({ step: 3, total: 4, message: 'Creating pages...' })
   const createdPages: string[] = []
   const updatedPages: string[] = []
 
@@ -105,7 +147,7 @@ export async function ingest(
   }
 
   // Step 4: Reindex
-  onProgress?.({ step: 4, total: 4, message: '인덱싱...' })
+  onProgress?.({ step: 4, total: 4, message: 'Indexing...' })
   triggerReindex(opts?.basePath)
 
   return {
@@ -123,6 +165,87 @@ export async function ingest(
     indexAdditions: parsed.index_additions ?? [],
     logEntry: parsed.log_entry ?? '',
   }
+}
+
+// ── LLM call helpers ──
+
+async function callLLMForIngest(
+  llm: LLMClient, sourceContent: string, sourceFilename: string,
+  indexContent: string, provider: string, model: string,
+): Promise<IngestRawResult> {
+  const prompt = buildIngestPrompt(sourceContent, sourceFilename, indexContent)
+  return callLLMWithRetry(llm, prompt, provider, model)
+}
+
+async function callLLMForExtraction(
+  llm: LLMClient, chunkContent: string, sourceFilename: string,
+  provider: string, model: string,
+): Promise<IngestRawResult> {
+  const today = new Date().toISOString().slice(0, 10)
+  const prompt = `Extract entities and concepts from this document chunk.
+Source: ${sourceFilename}
+
+${chunkContent}
+
+Respond with JSON only:
+\`\`\`json
+{
+  "source_page": {"filename": "source-placeholder.md", "content": ""},
+  "entities": [{"filename": "entity-name.md", "content": "---\\ntitle: Name\\ntype: entity\\ncreated: ${today}\\nupdated: ${today}\\nsources: [${sourceFilename}]\\ntags: []\\n---\\n\\n# Name\\n\\nDescription..."}],
+  "concepts": [{"filename": "concept-name.md", "content": "---\\ntitle: Name\\ntype: concept\\ncreated: ${today}\\nupdated: ${today}\\nsources: [${sourceFilename}]\\ntags: []\\n---\\n\\n# Name\\n\\nDescription..."}]
+}
+\`\`\``
+  return callLLMWithRetry(llm, prompt, provider, model)
+}
+
+async function callLLMWithRetry(
+  llm: LLMClient, prompt: string, provider: string, model: string,
+): Promise<IngestRawResult> {
+  for (let attempt = 0; attempt <= MAX_JSON_RETRIES; attempt++) {
+    const llmOpts = provider === 'gemini'
+      ? { provider: provider as any, model, responseMimeType: 'application/json' as const, jsonMode: true }
+      : { provider: provider as any, model, jsonMode: true }
+    const response = await llm.call(prompt, llmOpts)
+    const parsed = extractJsonBlock(response)
+    if (parsed) return parsed
+  }
+  throw new Error('LLM JSON parse failed — max retries exceeded')
+}
+
+// ── Chunk splitter (Graphify-style: split by markdown headers) ──
+
+function splitIntoChunks(text: string, maxChunkSize = 8000): string[] {
+  // Split by ## headers
+  const sections = text.split(/(?=^## )/m)
+  const chunks: string[] = []
+  let current = ''
+
+  for (const section of sections) {
+    if (current.length + section.length > maxChunkSize && current.length > 0) {
+      chunks.push(current.trim())
+      current = ''
+    }
+    current += section
+  }
+  if (current.trim()) chunks.push(current.trim())
+
+  // If no headers found or single chunk too large, split by paragraphs
+  if (chunks.length <= 1 && text.length > maxChunkSize) {
+    const paragraphs = text.split(/\n\n+/)
+    const result: string[] = []
+    let buf = ''
+    for (const p of paragraphs) {
+      if (buf.length + p.length > maxChunkSize && buf.length > 0) {
+        result.push(buf.trim())
+        buf = ''
+      }
+      buf += p + '\n\n'
+    }
+    if (buf.trim()) result.push(buf.trim())
+    return result
+  }
+
+  return chunks
 }
 
 interface IngestRawResult {
@@ -244,6 +367,8 @@ tags: [태그1, 태그2]
   return cachedTemplate
 }
 
+const MAX_SOURCE_CHARS = 12_000
+
 async function extractPdfText(sourcePath: string, basePath?: string, execEnv?: Record<string, string>): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const cwd = basePath ?? process.cwd()
@@ -254,7 +379,17 @@ async function extractPdfText(sourcePath: string, basePath?: string, execEnv?: R
   const extraPaths = ['/opt/homebrew/bin', '/usr/local/bin']
   env.PATH = [...extraPaths, env.PATH ?? ''].join(':')
 
-  // 1. pdftotext (poppler)
+  // 1. MarkItDown (structured markdown, best quality)
+  try {
+    const { stdout } = await execFileAsync('python3', [
+      '-c', `from markitdown import MarkItDown; r = MarkItDown().convert("${fullPath}"); print(r.text_content)`,
+    ], { timeout: 30000, maxBuffer: 10 * 1024 * 1024, env })
+    if (stdout.trim().length > 50) return stdout.trim()
+  } catch {
+    // markitdown not available — fall through
+  }
+
+  // 2. pdftotext (poppler)
   try {
     const { stdout } = await execFileAsync('pdftotext', [fullPath, '-'], {
       timeout: 30000,
@@ -266,7 +401,7 @@ async function extractPdfText(sourcePath: string, basePath?: string, execEnv?: R
     // pdftotext not available — fall through
   }
 
-  // 2. macOS textutil (basic extraction)
+  // 3. macOS textutil (basic extraction)
   try {
     const { stdout } = await execFileAsync('mdimport', ['-d1', fullPath], { timeout: 10000, env })
     if (stdout.trim().length > 50) return stdout.trim()
@@ -302,6 +437,17 @@ except ImportError:
   }
 
   return ''
+}
+
+function truncateSource(text: string): string {
+  if (text.length <= MAX_SOURCE_CHARS) return text
+  // Keep beginning and end for context
+  const headSize = Math.floor(MAX_SOURCE_CHARS * 0.7)
+  const tailSize = Math.floor(MAX_SOURCE_CHARS * 0.25)
+  const head = text.slice(0, headSize)
+  const tail = text.slice(-tailSize)
+  const skipped = text.length - headSize - tailSize
+  return `${head}\n\n[... ${skipped} chars truncated ...]\n\n${tail}`
 }
 
 function triggerReindex(basePath?: string): void {
