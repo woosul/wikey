@@ -1,10 +1,10 @@
 # Phase 3 결과 보고서
 
-> 기간: 2026-04-12 ~ 진행 중
+> 기간: 2026-04-12 ~ 2026-04-18
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **진행 중** — Step 0~6 완료 + A/A-1 완료 + B 잔여
+> 상태: **거의 완료** — Step 0~6 + A/A-1 + B 자동 E2E 9 시나리오 + 발견 이슈 4건 수정 + 단일 프롬프트 리팩토링 완료. **잔여 §B-1/§B-2 6건은 다음 세션** (`plan/phase3-todo.md`)
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
-> 인프라: Ollama 0.20.5 + Qwen3 8B + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
+> 인프라: Ollama 0.20.5 + Qwen3 8B + Qwen3.6:35b-a3b + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
 
 ---
 
@@ -64,6 +64,12 @@
 | 04-14 | A-1 | audit-ingest.py — inbox+_delayed 포함, per-folder breakdown (ingested/total) |
 | 04-14 | A-1 | Graphify 종합 분석 → activity/graphify-analysis.md |
 | 04-14 | A-1 | Phase 재구성 — Phase 4(인제스트 고도화+지식그래프), Phase 5(웹환경, 기존 4) |
+| 04-18 | B 사전 | markitdown-ocr fallback 추가 (extractPdfText 5단계, Ollama gemma4:26b vision via OpenAI 호환) |
+| 04-18 | B E2E | 9 시나리오 자동 실행 (obsidian-cli + Notice MutationObserver) — 6 PASS / 2 PARTIAL / 1 FAIL |
+| 04-18 | B 후속 | 이슈 4건 수정 + 회귀 검증 — race condition / silent partial / Ollama 404 / Settings UI race |
+| 04-18 | B 후속 | log.md 헤더 형식 수정 (`## [YYYY-MM-DD] ingest \| <filename>`) |
+| 04-18 | B 리팩토링 | 단일 프롬프트 모델 — `loadEffectiveIngestPrompt`, 모달 [Edit]/[Reset], `.wikey/ingest_prompt.md` |
+| 04-18 | B UI | 사이드바 헤더 탭 순서 변경 (dashboard → ingest → audit → help), 대시보드 hint eye SVG 통일 |
 
 ---
 
@@ -760,3 +766,139 @@ Graphify (safishamsi/graphify) 아키텍처 분석 → `activity/graphify-analys
 | **합계** | **22개** | **~6,500** |
 
 65 tests passed, 빌드 0 errors.
+
+---
+
+## 11. 2026-04-18 세션: E2E 자동 실행 + 이슈 수정 + 단일 프롬프트 리팩토링
+
+### 11.1 사전 준비: markitdown-ocr fallback
+
+사용자 지적: 이미지 스캔 PDF는 텍스트 레이어가 없어 기존 4단계 fallback (markitdown / pdftotext / mdimport / pymupdf) 모두 빈 결과 반환.
+
+**구현** (`wikey-core/src/ingest-pipeline.ts:extractPdfText`):
+- 5번째 단계 추가: 4단계 모두 실패 시 markitdown-ocr 호출
+- LLM Vision 클라이언트로 Ollama OpenAI 호환 endpoint(`/v1`) + `gemma4:26b` (vision capability) 사용
+- 환경변수 `WIKEY_OCR_MODEL`, `OLLAMA_URL`로 오버라이드 가능
+- `pip install openai` (markitdown-ocr 의존)
+
+**환경 감지** (`wikey-obsidian/src/env-detect.ts`):
+- `EnvStatus.hasMarkitdownOcr` 필드 + `checkMarkitdownOcr()` (`markitdown_ocr` + `openai` 둘 다 import 가능 여부)
+- Settings 환경 섹션에 "MarkItDown OCR" 행 (Optional 표시)
+
+### 11.2 E2E 자동 실행 (9 시나리오)
+
+`plan/phase3-obsidian-test.md` 5 시나리오 + 사용자 요청으로 3-1, 4-1 (Gemini 변형) 추가.
+
+**자동화 도구**:
+- `obsidian-cli` (`eval`, `dev:console`, `dev:screenshot`, `command`, `plugin:reload`)
+- Notice MutationObserver 패치로 auto-dismiss 우회 → `[NOTICE] HH:MM:SS <text>` 콘솔 영구 기록
+- Monitor 도구로 인제스트 완료 폴링
+
+**결과**:
+
+| 시나리오 | 모델 | 결과 | 소요 |
+|---------|------|------|------|
+| 1. 환경 감지 | — | PASS | 1m |
+| 2. 작은 파일 | qwen3:8b | PASS (3E+2C) | 66s |
+| 3. 큰 PDF | qwen3.6:35b-a3b | PARTIAL (source+7E, log/index 미갱신) | 24m |
+| 3-1. 큰 PDF | gemini-2.5-flash | FAIL (race "File already exists") | 8m |
+| 4. 작은 파일 + custom prompt | qwen3:8b | PASS (slug 규칙 준수) | 80s |
+| 4-1. 작은 파일 + custom prompt | gemini-2.5-flash | PASS (4E+6C, slug 준수) | 35s |
+| 5a. Ollama 중단 | — | PASS ("socket hang up") | 12s |
+| 5b. 잘못된 모델명 | fakemodel:7b | PARTIAL ("JSON parse failed" 모호) | 40s |
+| 5c. raw/ 외부 파일 | qwen3:8b | PASS (가드 없음, 19페이지 생성) | 108s |
+
+상세 결과: `activity/phase-3-test-results.md` (291줄).
+
+### 11.3 발견 이슈 5건 → 4건 수정 + 회귀 검증
+
+| # | 이슈 | 우선순위 | 수정 내용 | 회귀 검증 |
+|---|------|---------|----------|----------|
+| 1 | 청크형 인제스트 silent partial (log/index/.ingest-map 미갱신) | HIGH | `[Wikey ingest]` console.info 단계별 로깅 + 누락 필드 warn + commands.ts에 console.error+stack | dev:console에 `start`/`source meta`/`summary done`/`chunks done`/`pages written`/`index updated`/`log prepended`/`done` 단계 영구 기록 확인 |
+| 2 | 동시 인제스트 race ("File already exists") | HIGH | `ObsidianWikiFS.write` 원자적 upsert (try create → catch already-exists → modify) | 2건 동시 트리거 → 둘 다 성공, "already exists" 0건 |
+| 3 | Ollama 404 모델 메시지 모호 | MED | `LLMClient.callOllama`에서 `data.error` 검사 → "not found"/"does not exist" 패턴 시 친절 메시지 | `fakemodel:7b` → "Ollama model 'fakemodel:7b' not found. Run: ollama pull fakemodel:7b" |
+| 4 | Settings [Create & Edit] 버튼 metadata 캐시 race | LOW | `vault.adapter.exists` 디스크 사전 검사 + 50ms 대기 후 재조회 | (수동 검증 잔여) |
+| 5 | wiki/ 폴더 인제스트 가드 부재 | LOW | **보류** — 다음 세션에서 결정 | — |
+
+### 11.4 단일 프롬프트 모델 리팩토링
+
+**배경**: 사용자 지적 — 기존 2-layer (번들 base + `.wikey/ingest_prompt_user.md` 추가) 모델이 모호하고 "Failed to open user prompt: File already exists" 류 에러 발생.
+
+**설계 변경**:
+- ONE source of truth: `.wikey/ingest_prompt.md` 존재 시 그것이 전체 시스템 프롬프트, 미존재 시 `BUNDLED_INGEST_PROMPT` 상수
+- 설정 UI: [Edit] (모달 팝업, effective prompt 로드 → 편집 → 저장) + [Reset] (override 파일 삭제)
+- "Create" 동작 없음 — Edit이 항상 현재 프롬프트 표시
+
+**코드 변경**:
+- `wikey-core/src/ingest-pipeline.ts`:
+  - `USER_PROMPT_PATH` / `USER_PROMPT_TEMPLATE` / `loadUserPrompt` 제거
+  - `INGEST_PROMPT_PATH = '.wikey/ingest_prompt.md'` + `BUNDLED_INGEST_PROMPT` export
+  - `loadEffectiveIngestPrompt(wikiFS)` 추가
+  - `buildIngestPrompt(...)`: `userPrompt` 파라미터 → `templateOverride?` (full template 교체)
+  - `{{USER_PROMPT}}` placeholder 번들에서 제거
+- `wikey-core/src/index.ts`: re-export 갱신
+- `wikey-obsidian/src/settings-tab.ts`:
+  - `renderIngestPromptSection` 재작성 (Edit/Reset 두 버튼만)
+  - `IngestPromptEditModal` 클래스 (textarea + Save/Cancel + 도움말)
+  - `.wikey/`는 dotted 폴더라 vault metadata 미추적 → `vault.adapter.exists`로 비동기 상태/Reset enable 갱신
+- `wikey-obsidian/styles.css`: `.wikey-ingest-prompt-modal/help/textarea/footer` 스타일 추가
+- 기존 `.wikey/ingest_prompt_user.md` 삭제 (Phase 3 E2E 테스트 잔재)
+
+**검증**:
+- 단위 테스트 70/70 (15 ingest-pipeline tests 갱신)
+- Smoke test: bundled default 경로 인제스트 정상 (82s, 8 페이지)
+- UI 테스트: Save → "Custom override" + Reset 활성화, Reset → "Bundled default"
+
+### 11.5 부수 수정
+
+- **log.md 헤더 형식**: `## YYYY-MM-DD` → `## [YYYY-MM-DD] ingest | <filename>` (validate-wiki.sh 규칙 일치)
+- **사이드바 헤더 탭 순서**: dashboard → audit → ingest → help → **dashboard → ingest → audit → help** (논리적 순서)
+- **대시보드 hint 아이콘**: `☑` Unicode → audit eye SVG 인라인 (시각적 통일)
+
+### 11.6 wiki/ 인제스트 아티팩트
+
+E2E 테스트로 생성된 페이지를 자동 정리 후 커밋 (`79a458e`):
+- 16 신규 entities (SiC-MOSFET, claude-code, gemini, gemma-4 등)
+- 12 신규 concepts (file-over-app, rag-synthesis-layer, korean-search-strategy 등)
+- 23 modified (overview 인제스트로 기존 페이지 갱신)
+
+**자동 정리 (validate hook 통과)**:
+- 중복 파일 3건 제거 (concepts/byoai, entities/korean-enterprise-specialization, sources/overview)
+- 깨진 wikilink 41건을 plain text로 변환 (4 파일)
+- log.md 형식 6건 정규화
+- index.md에 누락 항목 17건 추가
+- 잔여 1건 수동 수정 (log.md `[[llm-wiki-architecture]]` → `[[concept-llm-wiki-architecture]]`)
+
+### 11.7 커밋 7건
+
+| 커밋 | 내용 |
+|------|------|
+| `92c9637` | fix(ingest): OCR fallback + 4 race/UX 이슈 수정 |
+| `7809d8f` | docs: Phase 3 Obsidian E2E 테스트 결과 (`activity/phase-3-test-results.md` 291줄) |
+| `0421d7c` | config(wikey): default 모델 (basic=gemini, ollama=qwen3.6:35b-a3b) |
+| `79a458e` | wiki: E2E 인제스트 아티팩트 + 자동 정리 |
+| `ef63156` | refactor(ingest-prompt): 단일 프롬프트 모델 + 모달 편집 UI |
+| `786983d` | fix(ingest): log.md 헤더 형식 |
+| `741040c` | ui(sidebar): 헤더 탭 순서 + 대시보드 hint 아이콘 |
+| `6630a3c` | docs(plan): Phase 3 잔여 정리 + 이번 세션 follow-up 추가 |
+
+### 11.8 코드 규모 (04-18 갱신)
+
+| 영역 | 파일 | 라인 수 |
+|------|------|---------|
+| wikey-core/src (구현) | 9개 (.ts) | ~1,560 (+60: 로깅, OCR fallback, BUNDLED_INGEST_PROMPT) |
+| wikey-core/src/__tests__ | 5개 (.test.ts) | ~620 (+20: loadEffectiveIngestPrompt 3 tests) |
+| wikey-obsidian/src | 6개 (.ts) | ~3,090 (+100: 모달, race fix, env hasMarkitdownOcr, 탭 순서) |
+| wikey-obsidian/styles.css | 1개 | ~1,304 (+44: 모달 스타일) |
+| scripts/audit-ingest.py | 1개 | ~150 |
+| **합계** | **22개** | **~6,724** |
+
+**테스트**: 70/70 pass (65 → 70, +5 tests).
+**빌드**: 0 errors.
+
+### 11.9 Phase 3 잔여 (다음 세션)
+
+`plan/phase3-todo.md` §B-1 (3건) + §B-2 (3건) — 6건 검증/결정 항목.
+
+- §B-1: Audit 패널 UI E2E / 인제스트 품질 리뷰 / 사람 눈 UI 평가
+- §B-2: markitdown-ocr 실 스캔 PDF / 단일 프롬프트 override 경로 / wiki/ 가드 결정
