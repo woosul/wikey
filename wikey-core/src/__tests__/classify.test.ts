@@ -12,47 +12,105 @@ describe('classifyFile — 2차 서브폴더 라우팅 (CLASSIFY.md 기준)', ()
     expect(r.destination).toBe('raw/3_resources/')
   })
 
-  it('PDF with manual/guide keyword → 30_manual', () => {
-    expect(classifyFile('SiC_Power_Handbook.pdf', false).destination).toBe('raw/3_resources/30_manual/')
-    expect(classifyFile('Raspberry_Pi_Getting_Started.pdf', false).destination).toBe('raw/3_resources/30_manual/')
-    expect(classifyFile('User_Manual_v1.pdf', false).destination).toBe('raw/3_resources/30_manual/')
-    expect(classifyFile('카메라_사용법.pdf', false).destination).toBe('raw/3_resources/30_manual/')
+  it('PDF with manual/guide keyword → 30_manual (when 3차 키워드 없음)', () => {
+    expect(classifyFile('User-Guide-v1.pdf', false).destination).toBe('raw/3_resources/30_manual/')
+    expect(classifyFile('Generic-Handbook.pdf', false).destination).toBe('raw/3_resources/30_manual/')
+    expect(classifyFile('일반사용법.pdf', false).destination).toBe('raw/3_resources/30_manual/')
   })
 
-  it('PDF with report/paper keyword → 20_report', () => {
-    expect(classifyFile('Q3_Report_2026.pdf', false).destination).toBe('raw/3_resources/20_report/')
-    expect(classifyFile('semiconductor-paper.pdf', false).destination).toBe('raw/3_resources/20_report/')
-    expect(classifyFile('기술분석리포트.pdf', false).destination).toBe('raw/3_resources/20_report/')
+  it('PDF with report/paper keyword → 20_report (when 3차 키워드 없음)', () => {
+    expect(classifyFile('Q3-Report-2026.pdf', false).destination).toBe('raw/3_resources/20_report/')
+    expect(classifyFile('annual-analysis.pdf', false).destination).toBe('raw/3_resources/20_report/')
+    expect(classifyFile('분기리포트.pdf', false).destination).toBe('raw/3_resources/20_report/')
   })
 
   it('PDF without keyword → 30_manual as default', () => {
     expect(classifyFile('unknown.pdf', false).destination).toBe('raw/3_resources/30_manual/')
   })
 
-  it('markdown / txt → 60_note', () => {
-    expect(classifyFile('my-note.md', false).destination).toBe('raw/3_resources/60_note/')
+  it('markdown / txt → 60_note (when 3차 키워드 없음)', () => {
+    expect(classifyFile('diary.md', false).destination).toBe('raw/3_resources/60_note/')
     expect(classifyFile('thoughts.txt', false).destination).toBe('raw/3_resources/60_note/')
   })
 
-  it('CAD formats → 40_cad', () => {
-    expect(classifyFile('gear.stl', false).destination).toBe('raw/3_resources/40_cad/')
-    expect(classifyFile('mount.step', false).destination).toBe('raw/3_resources/40_cad/')
-    expect(classifyFile('part.3mf', false).destination).toBe('raw/3_resources/40_cad/')
+  it('CAD format default (ext matches 3차 keyword list via stl/step/3mf, but bare filename has no other keyword)', () => {
+    // stl/step/3mf are both 확장자 AND 3차 keywords → always routed to 400_engineering
+    expect(classifyFile('part.stl', false).destination).toBe('raw/3_resources/40_cad/400_engineering/')
+    expect(classifyFile('mount.step', false).destination).toBe('raw/3_resources/40_cad/400_engineering/')
+    expect(classifyFile('widget.3mf', false).destination).toBe('raw/3_resources/40_cad/400_engineering/')
   })
 
-  it('source code → 50_firmware', () => {
-    expect(classifyFile('main.c', false).destination).toBe('raw/3_resources/50_firmware/')
-    expect(classifyFile('driver.cpp', false).destination).toBe('raw/3_resources/50_firmware/')
-    expect(classifyFile('sketch.ino', false).destination).toBe('raw/3_resources/50_firmware/')
-    expect(classifyFile('app.py', false).destination).toBe('raw/3_resources/50_firmware/')
+  it('source code → 50_firmware (keyword-free names)', () => {
+    expect(classifyFile('helper.c', false).destination).toBe('raw/3_resources/50_firmware/')
+    expect(classifyFile('parser.cpp', false).destination).toBe('raw/3_resources/50_firmware/')
+    expect(classifyFile('blink.ino', false).destination).toBe('raw/3_resources/50_firmware/')
+    expect(classifyFile('util.py', false).destination).toBe('raw/3_resources/50_firmware/')
   })
 
-  it('binary / firmware → 50_firmware', () => {
-    expect(classifyFile('firmware.bin', false).destination).toBe('raw/3_resources/50_firmware/')
-    expect(classifyFile('tool.exe', false).destination).toBe('raw/3_resources/50_firmware/')
+  it('binary .bin/.exe → 50_firmware (keyword-free; firmware keyword matches 500_technology)', () => {
+    expect(classifyFile('image.bin', false).destination).toBe('raw/3_resources/50_firmware/')
+    expect(classifyFile('installer.exe', false).destination).toBe('raw/3_resources/50_firmware/')
   })
 
   it('unknown extension → raw/3_resources/ (safe fallback)', () => {
     expect(classifyFile('weird.xyz', false).destination).toBe('raw/3_resources/')
+  })
+})
+
+describe('classifyFile — 3차 Dewey Decimal 자연계 분류', () => {
+  it('물리/화학/수학/반도체 → 300_science', () => {
+    expect(classifyFile('SiC-physics-handbook.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/300_science/')
+    expect(classifyFile('quantum-mechanics-note.md', false).destination)
+      .toBe('raw/3_resources/60_note/300_science/')
+    expect(classifyFile('반도체-이론.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/300_science/')
+  })
+
+  it('회로/CAD/기계 → 400_engineering', () => {
+    expect(classifyFile('pcb-layout-guide.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/400_engineering/')
+    expect(classifyFile('chassis.stl', false).destination)
+      .toBe('raw/3_resources/40_cad/400_engineering/')
+    expect(classifyFile('bldc-motor-design.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/400_engineering/')
+  })
+
+  it('AI/LLM/임베디드/컴퓨팅 → 500_technology', () => {
+    expect(classifyFile('Raspberry_Pi_Getting_Started.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/500_technology/')
+    expect(classifyFile('llm-research-note.md', false).destination)
+      .toBe('raw/3_resources/60_note/500_technology/')
+    expect(classifyFile('arduino-programming.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/500_technology/')
+  })
+
+  it('RF/통신/카메라/영상 → 600_communication', () => {
+    expect(classifyFile('DJI_O3_Air_Unit_Manual.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/600_communication/')
+    expect(classifyFile('nanovna-v2-quickstart.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/600_communication/')
+    expect(classifyFile('malahit-dsp-review.md', false).destination)
+      .toBe('raw/3_resources/60_note/600_communication/')
+  })
+
+  it('취미/생활 → 900_lifestyle', () => {
+    expect(classifyFile('Kyosho-MR-04-Manual.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/900_lifestyle/')
+    expect(classifyFile('hotas-setup.md', false).destination)
+      .toBe('raw/3_resources/60_note/900_lifestyle/')
+  })
+
+  it('no keyword match → 2차 폴더까지만 (3차 생략)', () => {
+    expect(classifyFile('random-document.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/')
+    expect(classifyFile('meeting-2026.md', false).destination)
+      .toBe('raw/3_resources/60_note/')
+  })
+
+  it('우선순위: physics 키워드가 먼저 매칭되면 300_science (sic)', () => {
+    // 'sic' 포함 파일은 300_science로 매칭 (반도체 물성)
+    expect(classifyFile('sic-datasheet.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/300_science/')
   })
 })

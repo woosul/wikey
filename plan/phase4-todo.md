@@ -40,6 +40,16 @@
 - [ ] 프로젝트 코드베이스도 위키로 관리 가능
 - [ ] 코드 변경 시 AST diff로 영향 범위 자동 감지
 
+## 4-4b. LLM 기반 3차/4차 분류 폴더 생성
+
+현재 `wikey-core/src/classify.ts`는 파일명 토큰 매칭으로 Dewey Decimal 3차(10개 대분류)까지 라우팅. 매칭 안 되는 파일은 2차 폴더까지만 이동.
+
+- [ ] **LLM 3차 분류** — 토큰 매칭 실패 시 LLM이 파일명+첫 200자 미리보기를 보고 `300_science`~`900_lifestyle` 중 선택. 자신 없으면 `000_general`로 안전 배치.
+- [ ] **LLM 4차 제품 폴더 제안** — 제품 매뉴얼/CAD 같은 경우 LLM이 파일명에서 제품명 slug 추출(`Kyosho-Mini-Z/`, `DJI-O3-Air-Unit/`) 후 신규 폴더 생성 + 이동.
+- [ ] **Audit 패널 UI**에 "Re-classify with LLM" 토글 — 자동 2차 폴더 결과를 3차/4차까지 확장
+- [ ] **피드백 학습** — 사용자가 분류 결과 수정 시 `raw/CLASSIFY.md` 피드백 로그에 기록 + few-shot 예시로 반영
+- [ ] **비용 관리** — classify 전용 저가 모델(gemini-2.0-flash-lite 등) 지정 가능
+
 ## 4-5. 인제스트 프롬프트 시스템
 
 - [ ] 프롬프트 파일 분리 — ingest_prompt_basic.md(시스템) + ingest_prompt_user.md(사용자)
