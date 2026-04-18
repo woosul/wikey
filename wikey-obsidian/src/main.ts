@@ -366,15 +366,32 @@ class ObsidianWikiFS implements WikiFS {
   }
 
   async write(path: string, content: string): Promise<void> {
-    const existing = this.plugin.app.vault.getAbstractFileByPath(path)
+    const { vault } = this.plugin.app
+    const dir = path.substring(0, path.lastIndexOf('/'))
+    if (dir && !(await vault.adapter.exists(dir))) {
+      await vault.createFolder(dir)
+    }
+    const existing = vault.getAbstractFileByPath(path)
     if (existing) {
-      await this.plugin.app.vault.modify(existing as any, content)
-    } else {
-      const dir = path.substring(0, path.lastIndexOf('/'))
-      if (dir && !this.plugin.app.vault.getAbstractFileByPath(dir)) {
-        await this.plugin.app.vault.createFolder(dir)
+      await vault.modify(existing as any, content)
+      return
+    }
+    try {
+      await vault.create(path, content)
+    } catch (err: any) {
+      // Race: file created between our check and create call (concurrent ingest,
+      // or Obsidian metadata cache lag). Re-fetch and modify as upsert.
+      if (/already exists/i.test(err?.message ?? '')) {
+        const refetched = vault.getAbstractFileByPath(path)
+        if (refetched) {
+          await vault.modify(refetched as any, content)
+          return
+        }
+        // File exists on disk but not in vault — write via adapter as last resort.
+        await vault.adapter.write(path, content)
+        return
       }
-      await this.plugin.app.vault.create(path, content)
+      throw err
     }
   }
 

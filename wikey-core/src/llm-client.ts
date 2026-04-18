@@ -162,7 +162,21 @@ export class LLMClient {
       timeout: opts?.timeout ?? DEFAULT_TIMEOUT,
     })
 
-    const data = JSON.parse(response.body)
+    let data: { message?: { content?: string }; error?: string }
+    try {
+      data = JSON.parse(response.body)
+    } catch {
+      throw new Error(`Ollama returned non-JSON response (model='${model}', status check failed). Body preview: ${response.body.slice(0, 200)}`)
+    }
+
+    if (data.error) {
+      // Surface Ollama's own error message (e.g., "model 'X' not found, try pulling it first")
+      if (/not found|does not exist/i.test(data.error)) {
+        throw new Error(`Ollama model '${model}' not found. Run: ollama pull ${model}`)
+      }
+      throw new Error(`Ollama error: ${data.error}`)
+    }
+
     let text: string = data.message?.content ?? ''
 
     text = stripThinkingBlock(text)

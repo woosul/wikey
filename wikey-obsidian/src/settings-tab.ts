@@ -53,6 +53,7 @@ export class WikeySettingTab extends PluginSettingTab {
       { label: 'Qwen3.6:35b-a3b', value: env.hasQwen36 ? 'Installed' : 'Optional', ok: env.hasQwen36, optional: true, desc: 'Ingest high-quality option (24GB MoE, ≥48GB RAM)' },
       { label: 'Gemma4', value: env.hasGemma4 ? 'Installed' : 'Optional', ok: env.hasGemma4, optional: true, desc: 'Query/CR synthesis option (not used for ingest)' },
       { label: 'MarkItDown', value: env.hasMarkitdown ? 'Installed' : 'Not installed', ok: env.hasMarkitdown, desc: 'PDF/DOCX to Markdown converter (Microsoft)' },
+      { label: 'MarkItDown OCR', value: env.hasMarkitdownOcr ? 'Installed' : 'Optional', ok: env.hasMarkitdownOcr, optional: true, desc: 'Scanned-PDF OCR fallback (markitdown-ocr + openai SDK, uses Ollama vision model)' },
     ]
 
     for (const item of items) {
@@ -211,13 +212,24 @@ export class WikeySettingTab extends PluginSettingTab {
       .addButton((btn) =>
         btn.setButtonText(fileExists ? 'Edit' : 'Create & Edit').onClick(async () => {
           try {
+            const parent = USER_PROMPT_PATH.split('/').slice(0, -1).join('/')
+            if (parent && !(await vault.adapter.exists(parent))) {
+              await vault.createFolder(parent)
+            }
+            // Disk-level check first to handle metadata-cache lag (file exists on
+            // disk but vault.getAbstractFileByPath still returns null).
+            if (!(await vault.adapter.exists(USER_PROMPT_PATH))) {
+              await vault.create(USER_PROMPT_PATH, USER_PROMPT_TEMPLATE)
+            }
+            // Re-resolve via vault API (may need a tick for metadata cache).
             let file = vault.getAbstractFileByPath(USER_PROMPT_PATH)
             if (!(file instanceof TFile)) {
-              const parent = USER_PROMPT_PATH.split('/').slice(0, -1).join('/')
-              if (parent && !(await vault.adapter.exists(parent))) {
-                await vault.createFolder(parent)
-              }
-              file = await vault.create(USER_PROMPT_PATH, USER_PROMPT_TEMPLATE)
+              // Force the cache by listing the folder.
+              await new Promise((r) => setTimeout(r, 50))
+              file = vault.getAbstractFileByPath(USER_PROMPT_PATH)
+            }
+            if (!(file instanceof TFile)) {
+              throw new Error(`File exists on disk but not yet visible in vault: ${USER_PROMPT_PATH}. Try again in a moment.`)
             }
             await this.plugin.app.workspace.getLeaf(true).openFile(file as TFile)
           } catch (err) {

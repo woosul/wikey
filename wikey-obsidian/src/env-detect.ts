@@ -18,6 +18,7 @@ export interface EnvStatus {
   hasQwen36: boolean
   hasKiwipiepy: boolean
   hasMarkitdown: boolean
+  hasMarkitdownOcr: boolean
   ready: boolean
   issues: string[]
 }
@@ -35,6 +36,7 @@ const DEFAULT_STATUS: EnvStatus = {
   hasQwen36: false,
   hasKiwipiepy: false,
   hasMarkitdown: false,
+  hasMarkitdownOcr: false,
   ready: false,
   issues: [],
 }
@@ -181,6 +183,17 @@ async function checkMarkitdown(pythonPath: string, env: Record<string, string>):
   }
 }
 
+async function checkMarkitdownOcr(pythonPath: string, env: Record<string, string>): Promise<boolean> {
+  if (!pythonPath) return false
+  try {
+    // markitdown-ocr 패키지 + openai SDK 둘 다 있어야 OCR fallback 가능.
+    await execFileAsync(pythonPath, ['-c', 'import markitdown_ocr, openai'], { env, timeout: 5000 })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * 전체 환경 탐지 실행. 플러그인 onload에서 1회 호출.
  */
@@ -236,6 +249,9 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
 
   // 7. markitdown
   status.hasMarkitdown = await checkMarkitdown(status.pythonPath, env)
+
+  // 8. markitdown-ocr (스캔 PDF용 OCR fallback, 옵셔널)
+  status.hasMarkitdownOcr = await checkMarkitdownOcr(status.pythonPath, env)
 
   status.issues = issues
   status.ready = issues.length === 0

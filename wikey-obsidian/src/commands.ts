@@ -65,9 +65,9 @@ export async function runIngest(
   sourcePath: string,
   onProgress?: (step: number, total: number, message: string) => void,
 ): Promise<IngestRunResult> {
+  const basePath = (plugin.app.vault.adapter as any).basePath ?? ''
   try {
     const config = plugin.buildConfig()
-    const basePath = (plugin.app.vault.adapter as any).basePath ?? ''
     const result = await ingest(
       sourcePath,
       plugin.wikiFS,
@@ -96,6 +96,7 @@ export async function runIngest(
     return { success: true, sourcePath, createdPages }
   } catch (err: any) {
     const msg = err?.message ?? String(err)
+    console.error(`[Wikey ingest] failed for ${sourcePath}:`, msg, err?.stack ?? '')
     return { success: false, sourcePath, createdPages: [], error: msg }
   }
 }

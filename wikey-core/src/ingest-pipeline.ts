@@ -29,6 +29,9 @@ export async function ingest(
   onProgress?: IngestProgressCallback,
   opts?: IngestOptions,
 ): Promise<IngestResult> {
+  const log = (msg: string, ...rest: unknown[]) => console.info(`[Wikey ingest] ${msg}`, ...rest)
+  log(`start: ${sourcePath}`)
+
   // Step 1: Read source
   onProgress?.({ step: 1, total: 4, message: 'Reading source...' })
   const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
@@ -55,11 +58,14 @@ export async function ingest(
   const isLargeDoc = sourceContent.length > MAX_SOURCE_CHARS
   let parsed: IngestRawResult
 
+  log(`source: ${sourceContent.length} chars, large=${sourceContent.length > MAX_SOURCE_CHARS}, provider=${provider}, model=${model}`)
+
   if (!isLargeDoc) {
     // ── Small document: single LLM call (original flow) ──
     const content = isLocal ? truncateSource(sourceContent) : sourceContent
     onProgress?.({ step: 2, total: 4, message: `LLM (${model})...` })
     parsed = await callLLMForIngest(llm, content, sourceFilename, indexContent, provider, model, userPrompt)
+    log(`small-doc LLM done — entities=${parsed.entities?.length ?? 0}, concepts=${parsed.concepts?.length ?? 0}, index_additions=${parsed.index_additions?.length ?? 0}, log_entry=${parsed.log_entry ? 'yes' : 'no'}`)
   } else {
     // ── Large document: Graphify-style chunked pipeline ──
     const chunks = splitIntoChunks(sourceContent)
@@ -69,11 +75,20 @@ export async function ingest(
     onProgress?.({ step: 2, total: 4, message: `Summary (${model}) [1/${totalSteps}]...` })
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
     const summaryParsed = await callLLMForIngest(llm, summaryContent, sourceFilename, indexContent, provider, model, userPrompt)
+    log(`summary done — entities=${summaryParsed.entities?.length ?? 0}, concepts=${summaryParsed.concepts?.length ?? 0}, index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
+    if (!summaryParsed.index_additions?.length) {
+      console.warn('[Wikey ingest] summary returned no index_additions — wiki/index.md will not be updated')
+    }
+    if (!summaryParsed.log_entry) {
+      console.warn('[Wikey ingest] summary returned no log_entry — wiki/log.md will not be updated')
+    }
 
     // Step B: Each chunk → entities + concepts
     const allEntities: Array<{ filename: string; content: string }> = [...(summaryParsed.entities ?? [])]
     const allConcepts: Array<{ filename: string; content: string }> = [...(summaryParsed.concepts ?? [])]
 
+    let chunkOk = 0
+    let chunkFail = 0
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i]
       onProgress?.({ step: 2, total: 4, message: `Chunk ${i + 1}/${chunks.length} (${model})...` })
@@ -82,10 +97,13 @@ export async function ingest(
         const chunkParsed = await callLLMForExtraction(llm, chunkContent, sourceFilename, provider, model)
         allEntities.push(...(chunkParsed.entities ?? []))
         allConcepts.push(...(chunkParsed.concepts ?? []))
-      } catch {
-        // Skip failed chunks — partial results are better than nothing
+        chunkOk++
+      } catch (err) {
+        chunkFail++
+        console.warn(`[Wikey ingest] chunk ${i + 1}/${chunks.length} failed:`, (err as Error).message)
       }
     }
+    log(`chunks done — ok=${chunkOk}, failed=${chunkFail}, raw entities=${allEntities.length}, raw concepts=${allConcepts.length}`)
 
     // Step C: Merge — deduplicate by filename
     const seenEntities = new Map<string, { filename: string; content: string }>()
@@ -112,6 +130,7 @@ export async function ingest(
 
   // Step 3: Create/update wiki pages
   onProgress?.({ step: 3, total: 4, message: 'Creating pages...' })
+  log(`writing pages — source=${parsed.source_page.filename}, entities=${(parsed.entities ?? []).length}, concepts=${(parsed.concepts ?? []).length}`)
   const createdPages: string[] = []
   const updatedPages: string[] = []
 
@@ -138,18 +157,23 @@ export async function ingest(
     ;(conceptExists ? updatedPages : createdPages).push(concept.filename)
   }
 
+  log(`pages written — created=${createdPages.length}, updated=${updatedPages.length}`)
+
   if (parsed.index_additions?.length) {
     await updateIndex(wikiFS, parsed.index_additions)
+    log(`index.md updated with ${parsed.index_additions.length} entries`)
   }
 
   if (parsed.log_entry) {
     const today = new Date().toISOString().slice(0, 10)
     await appendLog(wikiFS, `## ${today}\n\n${parsed.log_entry}`)
+    log(`log.md prepended`)
   }
 
   // Step 4: Reindex
   onProgress?.({ step: 4, total: 4, message: 'Indexing...' })
   triggerReindex(opts?.basePath)
+  log(`done: ${sourcePath}`)
 
   return {
     sourcePage,
@@ -468,6 +492,31 @@ except ImportError:
     if (stdout.trim().length > 50) return stdout.trim()
   } catch {
     // fall through
+  }
+
+  // 5. markitdown-ocr fallback (scanned/image-only PDFs via Ollama vision)
+  // Triggered only when all text-layer extractors fail (likely scanned PDF).
+  const ollamaUrl = env.OLLAMA_URL || 'http://localhost:11434'
+  const visionModel = env.WIKEY_OCR_MODEL || 'gemma4:26b'
+  try {
+    const { stdout } = await execFileAsync('python3', [
+      '-c',
+      `
+import sys
+from openai import OpenAI
+from markitdown import MarkItDown
+client = OpenAI(base_url=sys.argv[2] + "/v1", api_key="ollama")
+md = MarkItDown(enable_plugins=True, llm_client=client, llm_model=sys.argv[3])
+result = md.convert(sys.argv[1])
+print(result.text_content)
+`,
+      fullPath,
+      ollamaUrl,
+      visionModel,
+    ], { timeout: 600000, maxBuffer: 50 * 1024 * 1024, env })
+    if (stdout.trim().length > 50) return stdout.trim()
+  } catch {
+    // OCR plugin or openai SDK or vision model unavailable — give up
   }
 
   return ''
