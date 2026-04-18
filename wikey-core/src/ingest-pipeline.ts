@@ -166,7 +166,7 @@ export async function ingest(
 
   if (parsed.log_entry) {
     const today = new Date().toISOString().slice(0, 10)
-    await appendLog(wikiFS, `## ${today}\n\n${parsed.log_entry}`)
+    await appendLog(wikiFS, `## [${today}] ingest | ${sourceFilename}\n\n${parsed.log_entry}`)
     log(`log.md prepended`)
   }
 

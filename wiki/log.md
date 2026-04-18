@@ -5,6 +5,14 @@ created: 2026-04-10
 updated: 2026-04-12
 ---
 
+## [2026-04-18] ingest | wikey-design-decisions.md (smoke test)
+
+- 소스 요약 생성: [[source-wikey-design-decisions]]
+- 엔티티 생성: [[entity-zero-setup]], [[entity-byoai]], [[entity-korean-enterprise-specialization]], [[entity-architecture-decision-records]]
+- 개념 생성: [[concept-architecture-decision-records]], [[concept-llm-participation-multi-layer-search]], [[concept-llm-wiki-architecture]]
+- 인덱스 갱신
+
+
 ## [2026-04-18] ingest | Phase 3 E2E test
 - 소스 요약 생성: [[source-wikey-design-decisions]]
 - 엔티티 생성: [[wikey]], [[zero-setup]], [[byoai]], [[korean-enterprise-specialization]]
