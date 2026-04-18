@@ -216,7 +216,7 @@ wikey-obsidian/                ← Obsidian 플러그인
   src/settings-tab.ts          ← 설정 (환경 탐지, 일반 토글, API 키, 고급 LLM)
   src/commands.ts              ← Cmd+Shift+I, URI 프로토콜
   src/status-bar.ts            ← 페이지 수, 통계 모달
-  src/env-detect.ts            ← 로그인 셸 PATH + ABI 호환 node 탐지
+  src/env-detect.ts            ← 로그인 셸 PATH + ABI 호환 node 탐지 (kiwipiepy/markitdown/markitdown-ocr 옵셔널 감지 포함)
   styles.css                   ← Purple accent 테마
 ```
 

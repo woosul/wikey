@@ -37,6 +37,22 @@
 - 단일 프롬프트 리팩토링 + 단위 70/70 + smoke test 통과
 - 빌드 0 errors
 
+### 스킬 후보 (다음 세션 또는 Phase 4에서 구현 결정)
+
+| ID | 후보 | 비고 |
+|----|------|------|
+| S1 | `obsidian-e2e-scaffold` 스킬 | obsidian-cli + Notice MutationObserver + Monitor 폴링 패턴 자동화 (이번 세션 9회 반복) |
+| S2 | `diagnostic-logger.ts` 유틸 | 파이프라인 단계별 console.info 헬퍼 + 누락 필드 warn (ingest-pipeline.ts에 적용한 패턴 재사용) |
+| S4 | `wiki-validate-cleanup` 스킬 | validate-wiki.sh + audit-ingest.py 체이닝 + 자동 수정 (dupe 제거, 깨진 링크 변환, log 형식, index 등재) |
+
+### 추가 follow-up (이번 세션 발견, plan/phase4-todo.md 또는 phase3-todo.md §B에 통합 예정)
+
+| ID | 작업 | 우선 |
+|----|------|------|
+| F1 | wikey-obsidian 단위 테스트 (commands/sidebar/settings) | HIGH |
+| F2 | `scripts/llm-ingest.sh` bash CLI 회귀 테스트 (4건 fix 동기화 또는 deprecate 결정) | MED |
+| F4 | Scenario 3 (대규모 PDF + qwen3.6:35b-a3b) 재실행 — diagnostic 로깅으로 silent partial 원인 확정 | MED |
+
 ### Phase 4 이관 아이디어 (구현 X, 기록만)
 
 - **model-benchmark.py** — Ollama × source × prompt 벤치 하니스 (이번 세션에 반복 작성한 /tmp/*.py 패턴 재사용 가능)
