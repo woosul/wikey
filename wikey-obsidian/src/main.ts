@@ -7,6 +7,7 @@ import { WikeyStatusBar } from './status-bar'
 import { registerCommands } from './commands'
 import { detectEnvironment, buildExecEnv } from './env-detect'
 import type { EnvStatus } from './env-detect'
+import { ensureParaFolders } from './setup-para'
 
 interface WikeySettings {
   basicModel: string
@@ -121,6 +122,13 @@ export default class WikeyPlugin extends Plugin {
 
     // 환경 자동 탐지 (백그라운드)
     this.runEnvDetection()
+
+    // PARA 기본 폴더 구조 idempotent 보장 (신규 vault에 배포)
+    void ensureParaFolders(this.app).then((r) => {
+      if (r.created > 0) {
+        console.info(`[Wikey] PARA folders initialized: ${r.created} created, ${r.existed} existed`)
+      }
+    }).catch((err) => console.warn('[Wikey] PARA folders setup failed:', err))
 
     // raw/ 파일 감시 (시작 직후 vault 인덱싱 무시 + 배치 알림)
     const startTime = Date.now()

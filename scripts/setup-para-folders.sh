@@ -32,18 +32,19 @@ SECOND=(
   "60_note"
 )
 
-# 3차 Dewey Decimal 자연계 분류 (간소화 10개 대분류)
+# 3차 Dewey Decimal 10대분류 (DDC 표준 번호 준수)
+# 참고: https://en.wikipedia.org/wiki/Dewey_Decimal_Classification
 THIRD=(
-  "000_general"
-  "100_humanities"
-  "200_social"
-  "300_science"
-  "400_engineering"
-  "500_technology"
-  "600_communication"
-  "700_arts"
-  "800_literature"
-  "900_lifestyle"
+  "000_computer_science"   # Computer science, information, general
+  "100_philosophy"         # Philosophy & psychology
+  "200_religion"           # Religion
+  "300_social_sciences"    # Social sciences
+  "400_language"           # Language
+  "500_natural_science"    # Natural sciences & Mathematics
+  "600_technology"         # Technology (Applied sciences) — Engineering, Electronics, Communications, Medicine
+  "700_arts_recreation"    # Arts & Recreation — Art, Music, Sports, Games, Hobbies
+  "800_literature"         # Literature
+  "900_history_geography"  # History & Geography
 )
 
 created=0
@@ -62,11 +63,26 @@ for p in "${TOP[@]}"; do
   create_dir "$RAW/$p"
 done
 
-# 2차 × 3차 (3_resources 아래에만 전체 조합 생성)
-for s in "${SECOND[@]}"; do
-  create_dir "$RAW/3_resources/$s"
-  for t in "${THIRD[@]}"; do
-    create_dir "$RAW/3_resources/$s/$t"
+# PARA 방법론: Projects는 프로젝트별 고유 폴더라 사전 생성 불가 (런타임 생성).
+# Areas / Resources / Archive는 주제 기반 분류이므로 동일한 2차 × 3차 구조 공유.
+#
+# 참고: https://fortelabs.com/blog/para/ (Tiago Forte)
+# - Areas (2_): 지속 관리하는 책임 영역
+# - Resources (3_): 나중에 참조할 주제별 자료
+# - Archive (4_): 비활성화된 완료/만료 항목 (Areas/Resources에서 이동)
+SHARED_TAXONOMY_PARENTS=(
+  "2_areas"
+  "3_resources"
+  "4_archive"
+)
+
+# 2차 × 3차 (Areas / Resources / Archive 전체 조합 생성)
+for parent in "${SHARED_TAXONOMY_PARENTS[@]}"; do
+  for s in "${SECOND[@]}"; do
+    create_dir "$RAW/$parent/$s"
+    for t in "${THIRD[@]}"; do
+      create_dir "$RAW/$parent/$s/$t"
+    done
   done
 done
 

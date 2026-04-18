@@ -50,6 +50,50 @@
 - [ ] **피드백 학습** — 사용자가 분류 결과 수정 시 `raw/CLASSIFY.md` 피드백 로그에 기록 + few-shot 예시로 반영
 - [ ] **비용 관리** — classify 전용 저가 모델(gemini-2.0-flash-lite 등) 지정 가능
 
+## 4-4c. URI 기반 안정 참조 아키텍처 (PARA 이동에 불변)
+
+**문제 배경**: PARA 방법론은 파일 활성도에 따라 Resources → Archive 이동이 기본 가정. 현재 wikey는 파일 경로 → wiki 페이지 매핑(`.ingest-map.json`) + 소스 페이지 본문의 원본 경로 참조 구조 → 이동 시 stale 발생.
+
+실제 관찰 (2026-04-19 세션): Raspberry Pi HQ Camera 파일 3회 이동(`inbox → 3_resources → 3_resources/30_manual → 3_resources/30_manual/500_technology`) 중 `.ingest-map.json` 0회 갱신 → Audit 파이프라인 판정 오류. 이번 세션에 수동 복구 1회.
+
+**결정 (2026-04-19)**: 경로 기반 참조 포기, **URI/고정 ID 기반 안정 참조**로 전환. PARA 이동이 참조에 영향 없도록.
+
+### 구현 로드맵
+
+- [ ] **소스 ID 체계**
+  - 각 소스 파일에 불변 ID 부여 (SHA256(content) 또는 UUID)
+  - `.wikey/source-registry.json` — `{id: {current_path, hash, first_seen, ingested_pages[]}}`
+  - 신규 ingest 시 ID 발급, 기존 파일 재감지 시 hash 매칭으로 ID 복구
+- [ ] **wiki/sources 프론트매터 리팩토링**
+  - 기존: `raw/original_path: raw/3_resources/.../file.pdf` (경로 하드코딩)
+  - 신규: `source_id: sha256:abc123... / uri: file:///vault/raw/.../file.pdf` (ID 참조)
+  - 본문 `> 원시 소스:` 라인은 UI 표시용으로만 유지
+- [ ] **`.ingest-map.json` → `.wikey/source-registry.json` 교체**
+  - 키: source_id (이동 불변)
+  - 값: `{current_path, hash, source_page, ingested_at}`
+  - 마이그레이션: 기존 경로 키를 hash 기반 id로 rewrite하는 one-shot 스크립트
+- [ ] **파일 이동 감지 + registry 갱신**
+  - `vault.on('rename')` → hash 재계산 없이 경로만 업데이트
+  - `vault.on('modify')` → hash 변경 시 재인제스트 candidate로 마킹 (Audit 패널 표시)
+  - `vault.on('delete')` → registry 항목 tombstone + wiki/sources에 "원본 삭제됨" 배너
+- [ ] **CLASSIFY.md `.meta.yaml` URI 패턴 확장**
+  - 로컬 파일: `uri: file://vault-relative/path` + `source_id`
+  - 외부 소스: `uri: https://confluence.company.com/...` (기존 기업 URI 패턴 계승)
+  - 공통 인터페이스로 로컬·외부 모두 처리
+- [ ] **Audit 파이프라인 호환**
+  - `audit-ingest.py` 판정 기준: hash 기반 (경로 대신)
+  - 동일 hash의 파일이 이동했을 뿐이면 재인제스트 대상 아님
+  - 내용 변경 시에만 재인제스트 제안
+- [ ] **PARA 이동 허용 + 이력 보존**
+  - 소스 id의 `path_history[]`에 이동 이력 append (auditing용)
+  - Archive 이동 시 wiki/sources에 "아카이브됨" 배너 표시 (읽기는 유지)
+
+### 호환성 전략
+
+- Phase 4 시작 시점에 `.ingest-map.json` → `.wikey/source-registry.json` 일괄 마이그레이션 스크립트 제공
+- wiki/sources 프론트매터 자동 변환 (기존 `raw/...` 경로 → hash 계산 후 `source_id` 필드 추가)
+- 경로 기반 접근 API는 한 릴리스 deprecation 후 제거
+
 ## 4-5. 인제스트 프롬프트 시스템
 
 - [ ] 프롬프트 파일 분리 — ingest_prompt_basic.md(시스템) + ingest_prompt_user.md(사용자)

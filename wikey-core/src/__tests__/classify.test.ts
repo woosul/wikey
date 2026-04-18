@@ -34,10 +34,10 @@ describe('classifyFile — 2차 서브폴더 라우팅 (CLASSIFY.md 기준)', ()
   })
 
   it('CAD format default (ext matches 3차 keyword list via stl/step/3mf, but bare filename has no other keyword)', () => {
-    // stl/step/3mf are both 확장자 AND 3차 keywords → always routed to 400_engineering
-    expect(classifyFile('part.stl', false).destination).toBe('raw/3_resources/40_cad/400_engineering/')
-    expect(classifyFile('mount.step', false).destination).toBe('raw/3_resources/40_cad/400_engineering/')
-    expect(classifyFile('widget.3mf', false).destination).toBe('raw/3_resources/40_cad/400_engineering/')
+    // stl/step/3mf are both 확장자 AND 3차 keywords → always routed to 600_technology (DDC applied sciences)
+    expect(classifyFile('part.stl', false).destination).toBe('raw/3_resources/40_cad/600_technology/')
+    expect(classifyFile('mount.step', false).destination).toBe('raw/3_resources/40_cad/600_technology/')
+    expect(classifyFile('widget.3mf', false).destination).toBe('raw/3_resources/40_cad/600_technology/')
   })
 
   it('source code → 50_firmware (keyword-free names)', () => {
@@ -57,48 +57,45 @@ describe('classifyFile — 2차 서브폴더 라우팅 (CLASSIFY.md 기준)', ()
   })
 })
 
-describe('classifyFile — 3차 Dewey Decimal 자연계 분류', () => {
-  it('물리/화학/수학/반도체 → 300_science', () => {
-    expect(classifyFile('SiC-physics-handbook.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/300_science/')
-    expect(classifyFile('quantum-mechanics-note.md', false).destination)
-      .toBe('raw/3_resources/60_note/300_science/')
-    expect(classifyFile('반도체-이론.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/300_science/')
-  })
-
-  it('회로/CAD/기계 → 400_engineering', () => {
-    expect(classifyFile('pcb-layout-guide.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/400_engineering/')
-    expect(classifyFile('chassis.stl', false).destination)
-      .toBe('raw/3_resources/40_cad/400_engineering/')
-    expect(classifyFile('bldc-motor-design.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/400_engineering/')
-  })
-
-  it('AI/LLM/임베디드/컴퓨팅 → 500_technology', () => {
+describe('classifyFile — 3차 Dewey Decimal (DDC 표준 10대분류)', () => {
+  it('AI/LLM/임베디드/컴퓨팅 → 000_computer_science', () => {
     expect(classifyFile('Raspberry_Pi_Getting_Started.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/500_technology/')
+      .toBe('raw/3_resources/30_manual/000_computer_science/')
     expect(classifyFile('llm-research-note.md', false).destination)
-      .toBe('raw/3_resources/60_note/500_technology/')
+      .toBe('raw/3_resources/60_note/000_computer_science/')
     expect(classifyFile('arduino-programming.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/500_technology/')
+      .toBe('raw/3_resources/30_manual/000_computer_science/')
   })
 
-  it('RF/통신/카메라/영상 → 600_communication', () => {
+  it('물리/화학/수학/반도체 → 500_natural_science', () => {
+    expect(classifyFile('SiC-physics-handbook.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/500_natural_science/')
+    expect(classifyFile('quantum-mechanics-note.md', false).destination)
+      .toBe('raw/3_resources/60_note/500_natural_science/')
+    expect(classifyFile('반도체-이론.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/500_natural_science/')
+  })
+
+  it('회로/CAD/기계/통신/RF → 600_technology', () => {
+    expect(classifyFile('pcb-layout-guide.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/600_technology/')
+    expect(classifyFile('chassis.stl', false).destination)
+      .toBe('raw/3_resources/40_cad/600_technology/')
+    expect(classifyFile('bldc-motor-design.pdf', false).destination)
+      .toBe('raw/3_resources/30_manual/600_technology/')
     expect(classifyFile('DJI_O3_Air_Unit_Manual.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/600_communication/')
+      .toBe('raw/3_resources/30_manual/600_technology/')
     expect(classifyFile('nanovna-v2-quickstart.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/600_communication/')
+      .toBe('raw/3_resources/30_manual/600_technology/')
     expect(classifyFile('malahit-dsp-review.md', false).destination)
-      .toBe('raw/3_resources/60_note/600_communication/')
+      .toBe('raw/3_resources/60_note/600_technology/')
   })
 
-  it('취미/생활 → 900_lifestyle', () => {
+  it('취미/여가/오디오/키보드 → 700_arts_recreation', () => {
     expect(classifyFile('Kyosho-MR-04-Manual.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/900_lifestyle/')
+      .toBe('raw/3_resources/30_manual/700_arts_recreation/')
     expect(classifyFile('hotas-setup.md', false).destination)
-      .toBe('raw/3_resources/60_note/900_lifestyle/')
+      .toBe('raw/3_resources/60_note/700_arts_recreation/')
   })
 
   it('no keyword match → 2차 폴더까지만 (3차 생략)', () => {
@@ -108,9 +105,8 @@ describe('classifyFile — 3차 Dewey Decimal 자연계 분류', () => {
       .toBe('raw/3_resources/60_note/')
   })
 
-  it('우선순위: physics 키워드가 먼저 매칭되면 300_science (sic)', () => {
-    // 'sic' 포함 파일은 300_science로 매칭 (반도체 물성)
+  it('우선순위: sic 키워드 매칭 시 500_natural_science (반도체 물성)', () => {
     expect(classifyFile('sic-datasheet.pdf', false).destination)
-      .toBe('raw/3_resources/30_manual/300_science/')
+      .toBe('raw/3_resources/30_manual/500_natural_science/')
   })
 })

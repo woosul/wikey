@@ -27,6 +27,9 @@
 - `cc94cfe` **refactor(settings)**: API 동적 Model 로드 + `.wikey-select` 통일 + Re-detect 위치 이동
 - `8da2045` **style(select)**: 외곽 테두리 제거 + chevron #999→#bbb (밝게)
 - `468564e` **style(select)**: box-shadow/outline 제거 (focus/hover 포함)
+- `64cf969` **docs(session-wrap)**: UI 폴리싱 4 커밋 반영
+- `3db253f` **refactor(defaults)**: `provider-defaults.ts` 단일 소스 도입 + gemini-flash 동급 통일
+- (신규) **feat(setup)**: PARA 방법론 전체 반영 (Areas/Resources/Archive 동일 구조) + `setup-para.ts` TS 포팅으로 플러그인 onload 자동 배포
 
 ### 이번 세션 주요 변경
 
@@ -54,6 +57,17 @@
 - 설정 패널 6 selects 모두 `.wikey-select` 통일 (Audit/Ingest 패널과 동일 chevron 스타일)
 - Environment `Re-detect` 버튼 하단 → h3 헤더 우측 이동 (`.wikey-settings-section-header`)
 - `.wikey-select`: border / box-shadow / outline 제거 + chevron `#999`→`#bbb` (밝게)
+
+**Provider-defaults 단일 소스 리팩토링 (세션 종반)**
+- 신규 `wikey-core/src/provider-defaults.ts` — provider별 기본 모델 한 파일에 집중
+- 하드코딩 6곳 → import 교체 (config / llm-client / ingest-pipeline OCR / query-pipeline / main.ts CONTEXTUAL / settings-tab ping)
+- 기본 모델을 `gemini-2.5-flash` 동급 가성비로 통일:
+  - gemini: `gemini-2.5-flash`
+  - anthropic: `claude-haiku-4-5-20251001` (sonnet → haiku)
+  - openai: `gpt-4.1-mini` (gpt-4.1 → 4.1-mini)
+  - ollama: `qwen3:8b`
+- Vision (OCR) 전용: gpt-4o-mini / gemma4:26b (로컬)
+- 이후 모델명 변경은 `provider-defaults.ts` 한 곳만 수정하면 전 파이프라인 반영
 
 **classify 개편**
 - Dewey Decimal 10개 대분류 (000_general~900_lifestyle)

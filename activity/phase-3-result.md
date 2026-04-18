@@ -902,3 +902,365 @@ E2E 테스트로 생성된 페이지를 자동 정리 후 커밋 (`79a458e`):
 
 - §B-1: Audit 패널 UI E2E / 인제스트 품질 리뷰 / 사람 눈 UI 평가
 - §B-2: markitdown-ocr 실 스캔 PDF / 단일 프롬프트 override 경로 / wiki/ 가드 결정
+
+---
+
+## 12. 2026-04-19 세션 — UI 재설계 + 근본 수정 + 단일 소스 리팩토링
+
+### 12.1 세션 목표와 흐름
+
+Phase 3 B-1 #2(인제스트 품질 검증) 수행 → Ingest 패널 CDP E2E 중 404 발견 → 근본 원인 5건 연쇄 추적 수정 → UI 전면 재설계 → Dewey Decimal 분류 체계 도입 → 설정 UI 폴리싱 → 전 파이프라인 모델 리터럴 하드코딩 제거.
+
+### 12.2 완료 커밋 12건
+
+| # | 해시 | 카테고리 | 제목 | 변경량 |
+|---|------|---------|------|--------|
+| 1 | `f597133` | lint | Phase 3 E2E 인제스트 중복 제거 + slug 정규화 | 23 files, +80/−280 |
+| 2 | `fb0a471` | feat | UI 재설계 + provider resolver + updateIndex 카테고리 분기 | 30 files, +834/−83 |
+| 3 | `f93b061` | fix | I2 로컬 타임존 + I3 classify 2차 서브폴더 | 4 files, +142/−18 |
+| 4 | `dc4d30c` | feat | Dewey Decimal 자연계 3차 분류 + setup-para-folders.sh | 4 files, +256/−34 |
+| 5 | `b9b5339` | docs | 세션 정리 (중간) — 계획/메모 동기화 | 3 files, +102/−7 |
+| 6 | `08990c1` | fix | Default Model 섹션에 Model 필드 추가 | 1 file, +25/−5 |
+| 7 | `cc94cfe` | refactor | API 동적 Model 로드 + `.wikey-select` 통일 + Re-detect 위치 이동 | 2 files, +224/−124 |
+| 8 | `8da2045` | style | 외곽 테두리 제거 + chevron `#999`→`#bbb` | 1 file, +2/−2 |
+| 9 | `468564e` | style | box-shadow/outline 제거 (focus/hover) | 1 file, +8/−0 |
+| 10 | `64cf969` | docs | UI 폴리싱 4 커밋 반영 | 1 file, +14/−2 |
+| 11 | `3db253f` | refactor | `provider-defaults.ts` 단일 소스 도입 + gemini-flash 동급 통일 | 9 files, +93/−29 |
+
+### 12.3 근본 수정 11건 상세
+
+#### 12.3.1 B-1 #2 인제스트 품질 검증 — 중복 13건 정리
+
+2026-04-18 Scenario 4 custom 프롬프트(`.wikey/ingest_prompt_user.md`)의 slug 규칙(`entity-` 접두사 + 영문 대문자)이 기본 프롬프트의 lowercase-hyphen 규칙과 충돌하여 34 신규 페이지 중 13건 중복.
+
+**삭제 (canonical로 병합)**:
+- 접두사 변형 9건: `entity-byoai`, `entity-wikey`, `entity-zero-setup`, `entity-korean-enterprise-specialization`, `entity-architecture-decision-records`, `entity-nanovna-v2`, `concept-architecture-decision-records`, `concept-llm-participation-multi-layer-search`, `concept-llm-wiki-architecture`
+- 영한 혼합/대문자 변형 4건: `ROHM-Co-Ltd` (→ rohm), `sic-power-devices` (→ sic-power-device), `SiC-파워-디바이스` (→ sic-power-device), `sources/nanovna-v2-notes` (→ source-nanovna-v2-notes)
+
+**Rename (lowercase-hyphen 통일)**:
+- `SiC-MOSFET` → `sic-mosfet`
+- `SiC-SBD` → `sic-sbd`
+- `Full-SiC-파워-모듈` → `full-sic-power-module`
+
+**Canonical 병합**:
+- `nanovna-v2.md` (상세 내용 보강)
+- `architecture-decision-records.md` (ADR-001~007 정보 추가)
+
+**부가 정리**:
+- plain-text 참조를 위키링크로 변환 (`rohm.md`, `sic-power-device.md`, `sic.md`)
+- `sic-power-device.md` 자기 참조 제거
+- `index.md` 전면 재작성 (카테고리별 정렬)
+- `validate-wiki.sh` PASS (5/5) + PII PASS
+
+#### 12.3.2 Provider/Model 불일치 404 — 근본 수정
+
+**현상**: OMRON 스캔 PDF Ingest 시 `[error] Request failed, status 404` + 로그 `provider=gemini, model=qwen3.6:35b-a3b`
+
+**원인 체인**:
+1. 사용자가 이전에 Ingest Model=`qwen3.6:35b-a3b`(Ollama)로 설정
+2. basicModel을 gemini로 변경했으나 `settings.ingestModel` stale로 남음
+3. `buildConfig`의 `WIKEY_MODEL = ingestModel || cloudModel || 'qwen3:8b'` fallback에서 cross-provider 조합 그대로 통과
+4. `mapToProvider('gemini', cfg)` → userModel=`qwen3.6:35b-a3b`가 그대로 model로 세팅
+5. Gemini API가 `qwen3.6:35b-a3b` 모델 모름 → 404
+
+**수정**:
+- `isModelCompatible(model, provider)` guard in `main.ts buildConfig`
+  - 모델 prefix로 provider 호환성 검증 (`gemini-*`, `gpt-*`, `claude-*` → 해당 provider만, 그 외 → ollama만)
+  - 부적합 시 `validatedModel = ''` → wikey-core `resolveProvider`가 provider 기본값 선택
+- `WIKEY_MODEL` fallback 제거 (`|| 'qwen3:8b'` 삭제)
+- settings-tab Provider 드롭다운 onChange 시 `ingestModel` + `cloudModel` 동시 clear + Notice
+- `renderModelDropdown()` 헬퍼로 Default/Ingest Model 모두 API 동적 드롭다운 (fetchModelList)
+
+**검증**: Raspberry Pi 재시도 시 로그 `provider=gemini, model=gemini-2.5-flash` 확인 + 18 페이지 정상 생성.
+
+#### 12.3.3 Silent Fail UX 버그
+
+**현상**: Ingest 실패 시 UI row에 fail 클래스 설정됐지만 `renderInboxStatus(2000ms)` 재호출로 상태 즉시 리셋 → 사용자가 에러 못 봄.
+
+**수정**:
+- Plugin-level state `inboxFailState: Map<filename, {error, timestamp}>` (10분 TTL)
+- `renderInboxStatus`가 각 row 렌더링 시 state 확인 → fail 클래스 + 에러 메시지 복원
+- moveBtn(Ingest) 핸들러 진입 시 선택 파일의 failState 삭제 (Retry semantics)
+- TTL 초과 항목 자동 정리
+
+#### 12.3.4 classify.ts PARA 경로 하드코딩
+
+**현상**: classify가 모든 destination을 `raw/resources/`로 설정. PARA 규칙은 `raw/3_resources/`. 이동 시 PARA 아닌 신규 폴더 생성.
+
+**원인**: Phase 2 Step 1 PARA 재구조화 시 classify.ts(`classify-hint.sh` 포팅본) 업데이트 누락.
+
+**수정**: `raw/resources/` → `raw/3_resources/` 4곳 sed (PDF/MD/CAD/소스코드/기본값).
+
+#### 12.3.5 wiki-ops.updateIndex 카테고리 분기 없음
+
+**현상**: Raspberry Pi 첫 인제스트 후 `index.md` "## 분석" 섹션에 18개 신규 항목이 전부 몰림 (엔티티 9 + 개념 8 + 소스 1 섞여서).
+
+**원인**: 기존 `updateIndex(fs, string[])` 시그니처가 카테고리 정보 없이 파일 끝(즉, 마지막 섹션 = 분석)에 단순 append.
+
+**수정**:
+- 시그니처 확장: `IndexAddition = string | { entry, category: 'entities' | 'concepts' | 'sources' | 'analyses' }`
+- `CATEGORY_HEADERS` 매핑 (`entities → '## 엔티티'`, `concepts → '## 개념'`, `sources → '## 소스'`, `analyses → '## 분석'`)
+- `insertIntoSection(content, header, entries)` 헬퍼 — 다음 `## ` 헤더 직전 또는 EOF 위치에 insert
+- 기존 string 입력은 `analyses`로 fallback (backward compat, legacy 테스트 통과)
+- `ingest-pipeline`: `parsed.index_additions`의 각 entry에서 첫 위키링크 추출 → `sourcePage.filename`/`entities[].filename`/`concepts[].filename`과 매칭해 category 태깅
+
+**테스트**: 6 신규 (category routing / mixed / legacy / 중복 방지 등).
+
+#### 12.3.6 log.md 날짜 UTC 편향 (I2)
+
+**현상**: KST 00~09시 인제스트 시 `log.md` 헤더에 전날 날짜.
+
+**원인**: `new Date().toISOString().slice(0,10)` (UTC 기준).
+
+**수정**: `formatLocalDate(d)` 헬퍼 (getFullYear/Month/Date 로컬). 3곳 교체 (small-doc 경로 / summary 경로 / merge 경로).
+
+**테스트**: 3 신규 (로컬 타임존 확인 / zero-pad / 10-char 포맷).
+
+#### 12.3.7 OCR 모델 하드코딩 → Provider 설정 기반 (I1 선제 처리)
+
+**현상**: `resolveOcrEndpoint`의 vision 모델이 `gemma4:26b` 하드코딩. 사용자 basicModel이 gemini여도 OCR은 강제로 Ollama.
+
+**수정**:
+- Settings에 `OCR Provider` + `OCR Model` 전용 필드 (미설정 시 basicModel 상속)
+- `resolveOcrEndpoint(config)`: 4 provider OpenAI-compat 엔드포인트 자동 선택
+  - gemini → `https://generativelanguage.googleapis.com/v1beta/openai/`
+  - openai → `https://api.openai.com/v1`
+  - anthropic → Ollama fallback (OpenAI-compat vision 미지원)
+  - ollama → `http://localhost:11434/v1`
+- 5-tier PDF 추출 각 단계에 `[Wikey ingest][pdf-extract] tier N/5 ...` 체크포인트 로깅 (silent fail 해소)
+- `extractPdfText` 시그니처에 `config?` 추가
+
+#### 12.3.8 classify 세부 서브폴더 미지원 → Dewey Decimal 10대분류
+
+**기존**: 11개 제품별 3차 폴더 (`101_build_rccar`, `102_build_fpv`, `201_radio_rf-measurement`, `301_equip_test-equipment`, `901_wikey_design` 등) — 과도하게 디테일 + CLASSIFY.md 지속 유지 부담.
+
+**교체**: Dewey Decimal 간소화 10대분류 (`000_general`~`900_lifestyle`)
+- `300_science` — 물리/화학/수학/반도체
+- `400_engineering` — 회로/CAD/기계/모터
+- `500_technology` — IT/AI/임베디드/컴퓨팅
+- `600_communication` — 무선/카메라/영상/안테나
+- `900_lifestyle` — 취미/RC/시뮬레이터/오디오
+- 나머지 000/100/200/700/800 구조만 사전 생성
+
+**구현 세부**:
+- 기존 regex `\b` → `tokenize + Set.has` (파일명 `_` 경계 문제 해소)
+- 한국어 키워드는 substring 매칭 (한글은 word boundary 없음)
+- 첫 매칭 확정, 매칭 없으면 2차 폴더까지만
+
+**PARA 방법론 전체 반영**: Projects(1_)는 프로젝트별 고유 폴더라 제외, **Areas / Resources / Archive** 모두 동일 2차×3차 구조 공유 (주제 기반 분류는 세 카테고리 모두 동일해야 한다는 Forte PARA 원칙).
+
+**Script**: `scripts/setup-para-folders.sh` (idempotent)
+- 1차 PARA 6 (0_inbox, 1_projects, 2_areas, 3_resources, 4_archive, 9_assets)
+- Areas/Resources/Archive × 2차 6 × 3차 10 = 180 폴더 전부 사전 생성
+- `mkdir -p`로 멱등, 기존 폴더 skip
+- 실행(최종): 204개 폴더 확보
+
+**플러그인 배포 자동화**: `wikey-obsidian/src/setup-para.ts` 신규 — `ensureParaFolders(app)` TypeScript 포팅. 플러그인 onload에서 자동 호출 → 신규 vault에도 기본 구조 배포. 사용자가 별도 스크립트 실행 불필요.
+
+**CLASSIFY.md 갱신**: 3차 섹션 재작성 (로컬만, `raw/` gitignore로 git 미추적).
+
+#### 12.3.9 Default Model UI 상세 모델 미지정 → API 동적 드롭다운
+
+**기존**: Default Model 섹션에 Provider 드롭다운만. 사용자가 `gemini-2.5-pro` vs `gemini-2.5-flash` 등을 선택할 수 없고 `PROVIDER_DEFAULTS` 하드코딩된 `gemini-2.5-flash` 강제.
+
+**수정**:
+- Default Model / Ingest Model 섹션 양쪽에 Model 필드 추가
+- `renderModelDropdown()` 헬퍼 (`fetchModelList(provider, config, httpClient)` 동적 로드)
+- Provider API 미설정/오프라인 시 `(API unavailable — check API key)` 표시
+- 기존 custom 값은 `(custom)` 라벨로 보존 (API가 리스트 못 주는 특수 모델 대응)
+- `(provider default)` 옵션으로 wikey-core 기본값 위임 가능 (명시적 미설정)
+- `cloudModel` 필드 재활용 (Chat 패널 모델 선택과 공유 — follow-up: coupling 정리)
+
+#### 12.3.10 설정 Dropdown 스타일 비일관 → `.wikey-select` 전체 통일
+
+**기존**: Obsidian `Setting.addDropdown`(`.dropdown`) + Audit 패널의 `.wikey-select` 공존 → 같은 설정 탭 내에서 UI 불일치.
+
+**수정**:
+- `renderStandardDropdown(container, name, desc, options, currentValue, onChange)` 헬퍼
+- 설정 6 selects 모두 `.wikey-select` 적용 (Default Provider / Ingest Provider / Auto Ingest Interval / OCR Provider / Default Model / Ingest Model)
+- Audit/Ingest 패널과 chevron 스타일 통일
+
+**CSS 조정**:
+- `.wikey-select { border: none; box-shadow: none; outline: none; }`
+- `:focus`, `:hover` 상태에서도 shadow/outline 제거
+- chevron SVG fill `#999` → `#bbb` (배경 속에서 살짝 밝게)
+
+#### 12.3.11 Environment Re-detect 위치 이동
+
+**기존**: Environment 섹션 하단에 `Setting().addButton` → 긴 상태 목록 스크롤 후에야 보임.
+
+**수정**:
+- h3 헤더와 같은 행에 우측 고정 (`.wikey-settings-section-header` flex row)
+- `.wikey-settings-section-btn` — small right-aligned button with border/radius
+
+### 12.4 Ingest 패널 UI 재설계 — Before vs After
+
+**Before**
+```
+[Add to inbox] [Ingest inbox] [Add + Ingest]   ← bulk 3버튼
+📥 Drag files here [Browse]                    ← drop zone
+Pending (N)                                    ← pending list
+inbox | N
+  ☐ file1 │ PDF 문서
+  ☐ file2 │ PDF 문서
+0 selected  [Auto▾] [Move] [Delay]             ← Move만 (분류 전용)
+```
+
+**After**
+```
+Insert file to inbox               [Add]       ← 헤더 + Add 버튼
+📥 Drag files here [Browse]                    ← drop zone
+Pending (N)                                    ← pending list, [Add] 누르면 inbox 복사
+inbox | N
+  ☐ file1 │ 6.3MB │ Cloud                      ← filesize + Cloud/Local
+  ☐ file2 │ 502KB │ Local
+0 selected  [Auto▾] [Ingest] [Delay]           ← Move → Ingest (분류+인제스트 통합)
+```
+
+**주요 변화**:
+- 상단 bulk 3버튼 완전 제거 (사용자 관점: "inbox는 자동 관문, bulk 액션 불필요")
+- drop zone에 명확한 제목 `Insert file to inbox` + 우측 `[Add]` 버튼 (pending → inbox 이행)
+- inbox 각 행에 filesize + Cloud/Local 뱃지 (Audit 패널 패턴 복제). 1MB 초과 → Cloud 권장
+- 하단 [Ingest] 버튼: classify select('auto')로 PARA 자동 분류 + 인제스트 통합 실행
+
+### 12.5 자동 Ingest 도입
+
+**설정**:
+- `autoIngest: boolean` (기본 off)
+- `autoIngestInterval: 0 | 10 | 30 | 60` 초 (기본 30)
+  - 0: Immediately
+  - 10/30/60: debounce window
+
+**동작**:
+- `vault.on('create')` 이벤트에서 `raw/0_inbox/` 새 파일 감지
+- 자동 queue에 path 추가 → debounce 후 `flushAutoIngestQueue` 호출
+- 각 파일에 대해 `runIngest(plugin, relPath)` 순차 실행
+- 완료 시 `Auto-ingest 완료: N 성공 / M 실패` Notice
+
+### 12.6 provider-defaults.ts 단일 소스 리팩토링 (세션 종반)
+
+**문제**: 모델 리터럴이 6곳에 분산 하드코딩 → `gpt-4o` vs `gpt-4.1` 같은 불일치 재발.
+
+**해결**: `wikey-core/src/provider-defaults.ts` 신규 — 단일 진실 원천.
+
+```ts
+PROVIDER_CHAT_DEFAULTS = {
+  gemini:    'gemini-2.5-flash',
+  anthropic: 'claude-haiku-4-5-20251001',  // flash 동급 가성비
+  openai:    'gpt-4.1-mini',
+  ollama:    'qwen3:8b',
+}
+
+PROVIDER_VISION_DEFAULTS = {
+  gemini:    'gemini-2.5-flash',
+  anthropic: 'claude-haiku-4-5-20251001',  // (미사용, Ollama fallback)
+  openai:    'gpt-4o-mini',
+  ollama:    'gemma4:26b',
+}
+
+CONTEXTUAL_DEFAULT_MODEL = 'gemma4:26b'
+ANTHROPIC_PING_MODEL = 'claude-haiku-4-5-20251001'
+```
+
+**가성비 동급 기준**:
+- sonnet-4 → haiku-4-5 (대형 → 경량)
+- gpt-4.1 → gpt-4.1-mini
+- gpt-4o → gpt-4o-mini (vision)
+
+**교체 6곳**:
+1. `wikey-core/src/config.ts` `PROVIDER_DEFAULTS` → `PROVIDER_CHAT_DEFAULTS` (+ `CONTEXTUAL_MODEL` 기본값)
+2. `wikey-core/src/llm-client.ts` 4개 provider fallback (gemini/anthropic/openai/ollama)
+3. `wikey-core/src/ingest-pipeline.ts` `resolveOcrEndpoint` 4분기
+4. `wikey-core/src/query-pipeline.ts` ollama fallback (`'gemma4'` → `qwen3:8b`)
+5. `wikey-obsidian/src/main.ts` `buildConfig` `CONTEXTUAL_MODEL`
+6. `wikey-obsidian/src/settings-tab.ts` Anthropic API Test 버튼 ping 모델
+
+**테스트 조정**: `config.test.ts` anthropic default 기대값 변경 (`claude-sonnet-4-20250514` → `claude-haiku-4-5-20251001`).
+
+### 12.7 Obsidian CDP E2E 패턴 도입
+
+실 사용자 클릭 흐름 자동 검증을 위한 인프라.
+
+**실행 절차**:
+1. Obsidian 종료 → `--remote-debugging-port=9222 --remote-allow-origins=*` 플래그로 재실행
+2. `/tmp/wikey-cdp.py` 헬퍼 (websocket-client + CDP `Runtime.evaluate`)
+3. 콘솔 monkey-patch → `window.__wikeyConsoleBuffer`에 `[Wikey ...]` 로그 버퍼링
+4. Monitor tool로 주기적 폴링 → row 상태 class 기반 terminal 감지
+
+**핵심 발견**:
+- Chrome 111+ 정책상 `--remote-allow-origins=*` 필수 (없으면 WebSocket 403 Forbidden)
+- `*`는 zsh에서 glob 되므로 작은따옴표로 감싸야 함
+
+**패널 셀렉터 (재사용)**:
+- `.wikey-header-btn[aria-label="Dashboard|Ingest|Audit|Help|Clear Chat|Reload|Close"]`
+- `.wikey-ingest-panel`, `.wikey-audit-panel`
+- `.wikey-ingest-inbox .wikey-audit-row` / `.wikey-audit-cb` / `.wikey-audit-apply-btn`
+
+**플러그인 리로드**:
+```js
+await app.plugins.disablePlugin('wikey')
+await app.plugins.enablePlugin('wikey')
+```
+
+전체 참고: `~/.claude/projects/.../memory/reference_obsidian_cdp_e2e.md`.
+
+### 12.8 Phase 4 이관 항목 (이번 세션 신규)
+
+`plan/phase4-todo.md` §4-4b 추가 — **LLM 기반 3차/4차 분류**:
+- Dewey Decimal 매칭 실패 시 LLM이 파일명 + 미리보기로 대분류 선택 (`000_general` 안전 배치)
+- LLM이 제품 4차 폴더명 slug 추출 (`Kyosho-Mini-Z/`, `DJI-O3-Air-Unit/` 등) + 신규 폴더 생성
+- Audit 패널 "Re-classify with LLM" 토글
+- 사용자 분류 수정 시 `raw/CLASSIFY.md` 피드백 로그 + few-shot 예시로 반영
+- classify 전용 저가 모델(`gemini-2.0-flash-lite` 등) 지정 가능
+
+### 12.9 발견한 follow-up (다음 세션 이후 처리)
+
+- **`.ingest-map.json` stale 항목**: `nanovna-v2-notes.md` 삭제 후에도 map에 남음. 인덱스 갱신 시 검증 로직 필요.
+- **raw/ 파일 이동 추적 + wiki/ 참조 sync (Phase 4 §4-4c)**:
+  - 2026-04-19 세션 증거: Raspberry Pi HQ Camera 파일 3회 이동(`inbox → 3_resources → 3_resources/30_manual → 3_resources/30_manual/500_technology`) 중 `.ingest-map.json` 0회 갱신 → stale key 발견
+  - 원인: 현재 아키텍처가 파일 경로 → wiki 페이지 매핑 → PARA 이동 가정과 충돌
+  - 복구: 세션 종반에 수동 rewrite (`raw/3_resources//Raspberry_Pi_...pdf` → `raw/3_resources/30_manual/500_technology/Raspberry_Pi_...pdf`)
+  - 근본 해결: `vault.on('rename')` 훅, source 페이지 original_path 자동 sync, URI 기반 안정 참조, PARA 적합성 RFC
+- **Query 파이프라인 ollama-우선 로직 재검토**: `ollamaAvailable` 체크 시 basicModel이 cloud여도 ollama 시도 → `basicModel`이 cloud면 cloud 사용하도록 개편.
+- **`wikey.conf` user override**: `WIKEY_DEFAULT_GEMINI_MODEL=gemini-2.5-pro` 같은 ENV로 provider-defaults override 가능하게 config 파서 확장.
+- **Chat cloudModel vs Default Model cloudModel coupling 정리**: 두 UI가 같은 필드 공유 → 의도치 않은 동기화 가능성.
+- **Dewey Decimal 세션 내 2회 번호 재조정 이력**:
+  - 1차(dc4d30c): 임의 번호(000/100/.../900) 간소화
+  - 2차(이번 세션 종반): DDC 원본 표준 번호로 정렬 (000 Computer / 500 Science / 600 Technology / 700 Arts)
+  - CLASSIFY.md 표 동기화 + classify.ts DEWEY 테이블 재매핑 + 테스트 기대값 조정
+
+### 12.10 검증 결과
+
+| 지표 | 결과 |
+|------|------|
+| 단위 테스트 | **95/95 PASS** (이전 65 → 70 → 95, +30) |
+| 빌드 | **0 errors** |
+| validate-wiki.sh | **PASS** (5/5) |
+| check-pii.sh | **PASS** |
+| CDP E2E (Raspberry Pi) | **성공** — Ingest 패널 체크박스 → Ingest 버튼 → Gemini 2.5 Flash → 18 페이지 (source 1 + entities 9 + concepts 8), classify='auto'로 `raw/3_resources/30_manual/500_technology/`로 이동 |
+| OCR 경로 관찰 | OMRON 6.3MB 스캔 PDF → markitdown-ocr + gemma4:26b vision 트리거 확인 (완주 검증은 §B-2 #4) |
+| UI 검증 (CDP) | 설정 패널 6 selects 모두 `.wikey-select` 적용, Environment Re-detect 헤더 우측 배치, Ingest 패널 재설계(drop header + Add + filesize/Cloud + Ingest) 모두 확인 |
+
+### 12.11 코드 규모 (04-19 갱신)
+
+| 영역 | 파일 | 라인 수 |
+|------|------|---------|
+| wikey-core/src (구현) | 10개 (.ts, provider-defaults 신규) | ~1,750 (+190: OCR resolver, tokenize classify, updateIndex 카테고리, Dewey DEWEY, formatLocalDate) |
+| wikey-core/src/__tests__ | 6개 (.test.ts, classify.test 신규) | ~850 (+230: Dewey 테스트, updateIndex 카테고리 테스트, formatLocalDate) |
+| wikey-obsidian/src | 6개 (.ts) | ~3,400 (+310: Auto Ingest, OCR 설정, Default Model 드롭다운, fail state TTL, 동적 modelList) |
+| wikey-obsidian/styles.css | 1개 | ~1,360 (+56: drop-header, section-header, select border/shadow 제거) |
+| scripts/setup-para-folders.sh | 1개 (신규) | ~72 |
+| **합계** | **24개** | **~7,432** |
+
+**테스트**: 95/95 pass (+25 tests vs 04-18 세션).
+**빌드**: 0 errors.
+
+### 12.12 Phase 3 잔여 (다음 세션)
+
+`plan/phase3-todo.md` §B-1 #1/#3 + §B-2 #4/#5/#6 — **5건** (B-1 #2 완료).
+
+- **§B-1 #1**: Audit 패널 인제스트 E2E — UI 재설계 후 재검증
+- **§B-1 #3**: Obsidian UI 수동 테스트 — 재설계분 사람 눈 평가
+- **§B-2 #4**: markitdown-ocr fallback 완주 검증 — OCR 트리거는 관찰됨, 전체 완주 미검증
+- **§B-2 #5**: `.wikey/ingest_prompt_user.md` override 경로 E2E
+- **§B-2 #6**: wiki/ 폴더 인제스트 가드 도입 결정
