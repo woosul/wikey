@@ -75,25 +75,35 @@
 - [ ] 장점: 속도↑, 세밀한 양자화 제어 (IQ2~BF16, Unsloth Dynamic 2.0), 백그라운드 데몬 불필요
 - [ ] 단점: 모델 스와핑 별도 도구 필요, provider 분기 재작성, GGUF 수동 다운로드
 
-## 4-8. 문서 변환 Tiered Pipeline (MarkItDown + Docling/Kreuzberg)
+## 4-8. 문서 변환 Tiered Pipeline (MarkItDown + markitdown-ocr → Docling/Kreuzberg)
 
 MarkItDown GitHub 이슈 트래커 확인된 주요 문제:
 - HTML의 동적 데이터 변환 시 데이터 손실
 - PDF 내 이미지 링크 추출 오류
 - 복잡한 레이아웃 (멀티컬럼, 테이블) 변환 품질 저하
 
-**권장 전략**: MarkItDown을 "1차 변환기(first-pass)"로 활용하고, 변환 품질이 중요한 문서에 대해서는 Docling / Kreuzberg 같은 고정확도 도구로 폴백하는 **tiered pipeline**.
+**현재 상태 (2026-04-18, Phase 3 완료분)**:
+- Tier 1: MarkItDown (기본 텍스트 PDF/DOCX 변환)
+- Tier 2: pdftotext / mdimport / pymupdf (텍스트 레이어 fallback)
+- Tier 3: markitdown-ocr + Ollama gemma4:26b vision (이미지 스캔 PDF용 OCR)
+- 위치: `wikey-core/src/ingest-pipeline.ts:extractPdfText` (5단계 chain)
 
-- [ ] **변환 품질 감지** — MarkItDown 출력의 신호 기반 품질 스코어 (테이블 깨짐, 이미지 누락, 빈 섹션 비율)
-- [ ] **Docling 통합** (Tier 2) — IBM Research의 고정확도 파서, 구조 보존 우수
-  - `pip install docling` → Python exec 래퍼 추가
-  - PDF/DOCX/PPTX 레이아웃 분석, 테이블·이미지 OCR
+**Phase 4 권장 전략**: MarkItDown 계열을 "1차 변환기(first-pass)"로 활용하고, 변환 품질이 부족한 문서에 대해서는 Docling / Kreuzberg 같은 고정확도 도구로 폴백하는 **tiered pipeline**으로 확장.
+
+- [ ] **변환 품질 감지** — MarkItDown / markitdown-ocr 출력의 신호 기반 품질 스코어 (테이블 깨짐, 이미지 누락, 빈 섹션 비율, OCR 신뢰도)
+- [ ] **Docling 통합** (Tier 4 — markitdown + ocr 모두 미흡 시 fallback) — IBM Research 고정확도 파서, 구조 보존 우수
+  - `pip install docling` → Python exec 래퍼 추가 (`extractPdfText`의 6번째 fallback 단계)
+  - PDF/DOCX/PPTX 레이아웃 분석, 테이블·이미지 OCR (자체 OCR 엔진 내장 — markitdown-ocr와 중복 검토 필요)
   - 처리 시간은 MarkItDown 대비 2~5배 느림 → 품질 필요 시에만 선택적 사용
-- [ ] **Kreuzberg 통합** (Tier 2) — 경량·빠른 정확도 파서 (MarkItDown과 Docling 사이 포지션)
+  - **markitdown-ocr 대비 비교 포인트**: (a) 한국어 OCR 정확도 (b) 테이블 구조 보존 (c) 그림 캡션 추출 (d) 메모리/시간 비용
+- [ ] **Kreuzberg 통합** (Tier 4 대안) — 경량·빠른 정확도 파서 (MarkItDown과 Docling 사이 포지션)
   - 이미지 링크 추출 안정, HTML 동적 데이터 보존
 - [ ] **파이프라인 분기**:
   - Tier 1 (기본): MarkItDown → 품질 스코어 ≥ 임계값 → 그대로 사용
-  - Tier 2 (fallback): 스코어 미달 or 사용자 지정 → Docling 또는 Kreuzberg 재변환
+  - Tier 2-3 (fallback): pdftotext / mdimport / pymupdf / markitdown-ocr (현재 구현)
+  - Tier 4 (고품질 fallback): 스코어 미달 or 사용자 지정 → Docling 또는 Kreuzberg 재변환
   - 사용자 오버라이드: Audit 패널에 파일별 변환기 선택 옵션
-- [ ] **성능 비교 테스트** — 동일 88KB 파워디바이스 PDF로 3개 변환기 출력 대조 (챕터·테이블·이미지 보존율)
+- [ ] **성능 비교 테스트** — 동일 PDF로 4개 변환기 출력 대조 (markitdown vs markitdown-ocr vs Docling vs Kreuzberg)
+  - 평가 코퍼스: TWHB-16_001 파워디바이스 PDF (3.3MB, 텍스트 레이어 있음) + 별도 스캔 PDF 1건 (이미지 only)
+  - 메트릭: 챕터/테이블/이미지 보존율, 처리 시간, 메모리 사용량, 한국어 정확도
 - [ ] **캐시 전략** — 변환 결과 캐시 (SHA256 기반) → 재인제스트 시 변환 스킵
