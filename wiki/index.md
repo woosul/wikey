@@ -83,3 +83,4 @@ updated: 2026-04-12
 - [[concept-llm-participation-multi-layer-search]] — Phase 3 E2E 테스트로 인제스트된 개념
 - [[concept-llm-wiki-architecture]] — Phase 3 E2E 테스트로 인제스트된 개념
 - [[nanovna-v2-notes]] — Phase 3 E2E 테스트 소스
+- [[entity-architecture-decision-records]] — Wikey의 핵심 설계 결정 기록 (소스: 1개)

@@ -2,7 +2,7 @@
 title: Wikey 설계 의사결정 노트
 created: 2026-04-10
 updated: 2026-04-10
-sources: [source-llm-wiki-gist, source-llm-wiki-community]
+sources: [source-wikey-design-decisions.md]
 tags: [design, architecture, wikey]
 ---
 
