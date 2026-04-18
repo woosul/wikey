@@ -16,6 +16,17 @@ const execFileAsync = promisify(execFile)
 
 const MAX_JSON_RETRIES = 2
 
+/**
+ * Format a Date as YYYY-MM-DD in local timezone.
+ * (toISOString() uses UTC which can shift the date by one day in +09:00 etc.)
+ */
+export function formatLocalDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export interface IngestOptions {
   readonly basePath?: string
   readonly execEnv?: Record<string, string>
@@ -177,7 +188,7 @@ export async function ingest(
   }
 
   if (parsed.log_entry) {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = formatLocalDate(new Date())
     await appendLog(wikiFS, `## [${today}] ingest | ${sourceFilename}\n\n${parsed.log_entry}`)
     log(`log.md prepended`)
   }
@@ -218,7 +229,7 @@ async function callLLMForExtraction(
   llm: LLMClient, chunkContent: string, sourceFilename: string,
   provider: string, model: string,
 ): Promise<IngestRawResult> {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = formatLocalDate(new Date())
   const prompt = `Extract entities and concepts from this document chunk.
 Source: ${sourceFilename}
 
@@ -323,7 +334,7 @@ export function buildIngestPrompt(
   indexContent: string,
   templateOverride?: string,
 ): string {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = formatLocalDate(new Date())
   const template = templateOverride ?? BUNDLED_INGEST_PROMPT
   return template
     .replaceAll('{{TODAY}}', today)

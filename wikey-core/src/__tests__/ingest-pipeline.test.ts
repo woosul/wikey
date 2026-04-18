@@ -1,6 +1,31 @@
 import { describe, it, expect } from 'vitest'
-import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT } from '../ingest-pipeline.js'
+import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate } from '../ingest-pipeline.js'
 import type { WikiFS } from '../types.js'
+
+describe('formatLocalDate', () => {
+  it('returns YYYY-MM-DD in local timezone (not UTC)', () => {
+    // Simulate Seoul midnight (2026-04-19 00:30 KST = 2026-04-18 15:30 UTC)
+    // Without fix: toISOString returns 2026-04-18
+    // With fix: getFullYear/getMonth/getDate returns 2026-04-19
+    const d = new Date('2026-04-18T15:30:00.000Z')
+    // When running in +09:00 (Asia/Seoul), local date should be 2026-04-19.
+    // When running in UTC, local date should be 2026-04-18.
+    // We assert format shape and that output equals date computed from local getters.
+    const expected = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    expect(formatLocalDate(d)).toBe(expected)
+  })
+
+  it('pads single-digit month and day', () => {
+    const d = new Date(2026, 0, 5, 12, 0, 0) // local: 2026-01-05
+    expect(formatLocalDate(d)).toBe('2026-01-05')
+  })
+
+  it('format is always 10 chars YYYY-MM-DD', () => {
+    const d = new Date()
+    const out = formatLocalDate(d)
+    expect(out).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+})
 
 describe('extractJsonBlock', () => {
   it('extracts JSON from ```json code block', () => {
