@@ -59,8 +59,8 @@ export class WikeyChatView extends ItemView {
     const actions = header.createDiv({ cls: 'wikey-chat-header-actions' })
 
     this.panelBtns.dashboard = this.makeHeaderBtn(actions, ICONS.dashboard, 'Dashboard', () => this.togglePanel('dashboard'))
-    this.panelBtns.audit = this.makeHeaderBtn(actions, ICONS.audit, 'Audit', () => this.togglePanel('audit'))
     this.panelBtns.ingest = this.makeHeaderBtn(actions, ICONS.plus, 'Ingest', () => this.togglePanel('ingest'))
+    this.panelBtns.audit = this.makeHeaderBtn(actions, ICONS.audit, 'Audit', () => this.togglePanel('audit'))
     this.panelBtns.help = this.makeHeaderBtn(actions, ICONS.question, 'Help', () => this.togglePanel('help'))
     this.makeHeaderBtn(actions, ICONS.trash, 'Clear Chat', () => this.clearChat())
     this.makeHeaderBtn(actions, ICONS.reload, 'Reload', () => (this.app as any).commands?.executeCommandById?.('app:reload'))
@@ -476,7 +476,7 @@ Click [[page name]] in answers to navigate to the wiki page.
 
       if (data.missing > 0) {
         const hint = container.createDiv({ cls: 'wikey-dashboard-empty' })
-        hint.setText(`${data.missing} unprocessed — manage via ☑ icon`)
+        hint.innerHTML = `${data.missing} unprocessed — manage via ${ICONS.audit} icon`
       }
     } catch {
       container.createEl('span', { text: 'Audit failed', cls: 'wikey-dashboard-empty' })
@@ -530,7 +530,7 @@ Click [[page name]] in answers to navigate to the wiki page.
 
       if (data.missing > 0) {
         const hint = container.createDiv({ cls: 'wikey-dashboard-empty' })
-        hint.setText(`${data.missing} unprocessed — manage via ☑ icon`)
+        hint.innerHTML = `${data.missing} unprocessed — manage via ${ICONS.audit} icon`
       }
     } catch {
       const rawStats = this.collectRawStats()
