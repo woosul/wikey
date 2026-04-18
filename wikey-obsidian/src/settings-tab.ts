@@ -1,5 +1,6 @@
 import { App, Modal, Notice, PluginSettingTab, Setting, TFile, requestUrl } from 'obsidian'
-import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, loadEffectiveIngestPrompt } from 'wikey-core'
+import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, loadEffectiveIngestPrompt, fetchModelList } from 'wikey-core'
+import type { LLMProvider } from 'wikey-core'
 import type WikeyPlugin from './main'
 
 export class WikeySettingTab extends PluginSettingTab {
@@ -27,19 +28,22 @@ export class WikeySettingTab extends PluginSettingTab {
 
   // ── Section 1: Environment Status ──
   private renderEnvStatusSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Environment' })
+    // Header row: title + Re-detect button on right
+    const headerRow = containerEl.createDiv({ cls: 'wikey-settings-section-header' })
+    headerRow.createEl('h3', { text: 'Environment' })
+    const headerBtn = headerRow.createEl('button', { text: 'Re-detect', cls: 'wikey-settings-section-btn' })
+    headerBtn.addEventListener('click', async () => {
+      headerBtn.textContent = 'Detecting...'
+      headerBtn.setAttr('disabled', 'true')
+      await this.plugin.runEnvDetection()
+      this.display()
+    })
 
     const env = this.plugin.envStatus
     const statusContainer = containerEl.createDiv({ cls: 'wikey-settings-status-group' })
 
     if (!env) {
       statusContainer.createEl('p', { text: 'Detecting environment...', cls: 'wikey-settings-status-label' })
-      new Setting(containerEl).addButton((btn) =>
-        btn.setButtonText('Re-detect').onClick(async () => {
-          await this.plugin.runEnvDetection()
-          this.display()
-        }),
-      )
       return
     }
 
@@ -76,15 +80,6 @@ export class WikeySettingTab extends PluginSettingTab {
       const issueBox = containerEl.createDiv({ cls: 'wikey-settings-warning' })
       issueBox.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></svg> ${env.issues.join(' | ')}`
     }
-
-    new Setting(containerEl).addButton((btn) =>
-      btn.setButtonText('Re-detect').onClick(async () => {
-        btn.setButtonText('Detecting...')
-        btn.setDisabled(true)
-        await this.plugin.runEnvDetection()
-        this.display()
-      }),
-    )
 
     new Setting(containerEl)
       .setName('Ollama URL')
@@ -140,92 +135,160 @@ export class WikeySettingTab extends PluginSettingTab {
   private renderBasicModelSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: 'Default Model' })
 
-    new Setting(containerEl)
-      .setName('Provider')
-      .setDesc('Default LLM provider for all tasks. Can be overridden per-task in Advanced settings.')
-      .addDropdown((drop) =>
-        drop
-          .addOption('ollama', 'Local (Ollama)')
-          .addOption('gemini', 'Google Gemini')
-          .addOption('anthropic', 'Anthropic Claude')
-          .addOption('openai', 'OpenAI Codex')
-          .addOption('claude-code', 'Anthropic Claude')
-          .setValue(this.plugin.settings.basicModel)
-          .onChange(async (value) => {
-            // basicModel 변경 시, 새 provider와 호환되지 않는 model 값은 clear
-            const prev = this.plugin.settings.basicModel
-            this.plugin.settings.basicModel = value
-            if (value !== prev) {
-              // Default Model의 상세 model (chat 선택 캐시) clear
-              if (this.plugin.settings.cloudModel) {
-                this.plugin.settings.cloudModel = ''
-              }
-              // Ingest가 Default Model 상속 중이면 ingestModel도 clear
-              const inherits = !this.plugin.settings.ingestProvider
-              if (inherits && this.plugin.settings.ingestModel) {
-                this.plugin.settings.ingestModel = ''
-              }
-              new Notice('Default model cleared (provider changed).')
-            }
-            await this.plugin.saveSettings()
-            this.display()
-          }),
-      )
+    this.renderStandardDropdown(
+      containerEl,
+      'Provider',
+      'Default LLM provider for all tasks. Can be overridden per-task in Advanced settings.',
+      [
+        { value: 'ollama', label: 'Local (Ollama)' },
+        { value: 'gemini', label: 'Google Gemini' },
+        { value: 'anthropic', label: 'Anthropic Claude' },
+        { value: 'openai', label: 'OpenAI Codex' },
+        { value: 'claude-code', label: 'Anthropic Claude' },
+      ],
+      this.plugin.settings.basicModel,
+      async (value) => {
+        const prev = this.plugin.settings.basicModel
+        this.plugin.settings.basicModel = value
+        if (value !== prev) {
+          if (this.plugin.settings.cloudModel) this.plugin.settings.cloudModel = ''
+          const inherits = !this.plugin.settings.ingestProvider
+          if (inherits && this.plugin.settings.ingestModel) this.plugin.settings.ingestModel = ''
+          new Notice('Default model cleared (provider changed).')
+        }
+        await this.plugin.saveSettings()
+        this.display()
+      },
+    )
 
-    new Setting(containerEl)
-      .setName('Model')
-      .setDesc('Specific model for the selected provider (e.g. gemini-2.5-flash, gpt-4.1, claude-sonnet-4-20250514, qwen3:8b). Leave blank for provider default.')
-      .addText((text) =>
-        text
-          .setPlaceholder('(provider default)')
-          .setValue(this.plugin.settings.cloudModel || '')
-          .onChange(async (value) => {
-            this.plugin.settings.cloudModel = value.trim()
-            await this.plugin.saveSettings()
-          }),
-      )
+    this.renderModelDropdown(
+      containerEl,
+      'Model',
+      'Specific model for the selected provider. Loaded dynamically from the provider API.',
+      this.plugin.settings.basicModel as LLMProvider,
+      this.plugin.settings.cloudModel || '',
+      async (value) => {
+        this.plugin.settings.cloudModel = value
+        await this.plugin.saveSettings()
+      },
+    )
+  }
+
+  /**
+   * Render a standard-styled select (`.wikey-select`) for static options.
+   * Use this instead of Setting.addDropdown to match Audit/Ingest panel UI.
+   */
+  private renderStandardDropdown(
+    containerEl: HTMLElement,
+    name: string,
+    desc: string,
+    options: ReadonlyArray<{ value: string; label: string }>,
+    currentValue: string,
+    onChange: (value: string) => Promise<void>,
+  ): void {
+    const setting = new Setting(containerEl).setName(name).setDesc(desc)
+    const selectEl = document.createElement('select')
+    selectEl.classList.add('wikey-select')
+    for (const opt of options) {
+      const o = new Option(opt.label, opt.value)
+      if (opt.value === currentValue) o.selected = true
+      selectEl.appendChild(o)
+    }
+    selectEl.addEventListener('change', async () => {
+      await onChange(selectEl.value)
+    })
+    setting.controlEl.appendChild(selectEl)
+  }
+
+  /**
+   * Render a model selector that dynamically fetches the provider's model list.
+   * Falls back to a plain text input if the API call fails (no API key, offline).
+   */
+  private renderModelDropdown(
+    containerEl: HTMLElement,
+    name: string,
+    desc: string,
+    provider: LLMProvider,
+    currentValue: string,
+    onChange: (value: string) => Promise<void>,
+  ): void {
+    const setting = new Setting(containerEl).setName(name).setDesc(desc)
+    const selectEl = document.createElement('select')
+    selectEl.classList.add('wikey-select')
+    selectEl.disabled = true
+    selectEl.appendChild(new Option('(loading...)', ''))
+    setting.controlEl.appendChild(selectEl)
+
+    void (async () => {
+      try {
+        const models = await fetchModelList(provider, this.plugin.buildConfig(), this.plugin.httpClient)
+        selectEl.innerHTML = ''
+        selectEl.appendChild(new Option('(provider default)', ''))
+        let matched = false
+        for (const m of models) {
+          const opt = new Option(m, m)
+          if (m === currentValue) { opt.selected = true; matched = true }
+          selectEl.appendChild(opt)
+        }
+        if (currentValue && !matched) {
+          // Preserve existing custom value even if API didn't list it
+          const opt = new Option(`${currentValue} (custom)`, currentValue)
+          opt.selected = true
+          selectEl.appendChild(opt)
+        }
+        selectEl.disabled = false
+        selectEl.addEventListener('change', async () => {
+          await onChange(selectEl.value)
+        })
+      } catch (err) {
+        selectEl.innerHTML = ''
+        const opt = new Option('(API unavailable — check API key)', '')
+        selectEl.appendChild(opt)
+        selectEl.disabled = true
+      }
+    })()
   }
 
   // ── Section: Ingest Model ──
   private renderIngestModelSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: 'Ingest Model' })
 
-    new Setting(containerEl)
-      .setName('Provider')
-      .setDesc('Default provider for document ingestion. Leave empty to use Default Model.')
-      .addDropdown((drop) =>
-        drop
-          .addOption('', '(use Default Model)')
-          .addOption('ollama', 'Local (Ollama)')
-          .addOption('gemini', 'Google Gemini')
-          .addOption('openai', 'OpenAI Codex')
-          .addOption('anthropic', 'Anthropic Claude')
-          .setValue(this.plugin.settings.ingestProvider)
-          .onChange(async (value) => {
-            // provider가 바뀌면 기존 ingestModel은 해당 provider와 호환되지 않을 수 있으므로 자동 clear
-            const prev = this.plugin.settings.ingestProvider
-            this.plugin.settings.ingestProvider = value
-            if (value !== prev && this.plugin.settings.ingestModel) {
-              this.plugin.settings.ingestModel = ''
-              new Notice('Ingest model cleared (provider changed).')
-            }
-            await this.plugin.saveSettings()
-            this.display()
-          }),
-      )
+    this.renderStandardDropdown(
+      containerEl,
+      'Provider',
+      'Provider for document ingestion. Leave empty to use Default Model.',
+      [
+        { value: '', label: '(use Default Model)' },
+        { value: 'ollama', label: 'Local (Ollama)' },
+        { value: 'gemini', label: 'Google Gemini' },
+        { value: 'openai', label: 'OpenAI Codex' },
+        { value: 'anthropic', label: 'Anthropic Claude' },
+      ],
+      this.plugin.settings.ingestProvider,
+      async (value) => {
+        const prev = this.plugin.settings.ingestProvider
+        this.plugin.settings.ingestProvider = value
+        if (value !== prev && this.plugin.settings.ingestModel) {
+          this.plugin.settings.ingestModel = ''
+          new Notice('Ingest model cleared (provider changed).')
+        }
+        await this.plugin.saveSettings()
+        this.display()
+      },
+    )
 
-    new Setting(containerEl)
-      .setName('Model')
-      .setDesc('Model name (e.g. qwen3:8b, qwen3.6:35b-a3b, gemini-2.0-flash). Leave empty for provider default. Note: qwen3.6:35b-a3b uses ~27GB VRAM — requires ≥48GB unified memory.')
-      .addText((text) =>
-        text
-          .setPlaceholder('provider default')
-          .setValue(this.plugin.settings.ingestModel)
-          .onChange(async (value) => {
-            this.plugin.settings.ingestModel = value
-            await this.plugin.saveSettings()
-          }),
-      )
+    const effectiveIngestProvider = (this.plugin.settings.ingestProvider || this.plugin.settings.basicModel) as LLMProvider
+    this.renderModelDropdown(
+      containerEl,
+      'Model',
+      'Model for ingestion, dynamically loaded from the provider API. Leave at (provider default) to inherit wikey-core defaults.',
+      effectiveIngestProvider,
+      this.plugin.settings.ingestModel || '',
+      async (value) => {
+        this.plugin.settings.ingestModel = value
+        await this.plugin.saveSettings()
+      },
+    )
   }
 
   // ── Section: Ingest Prompt (single-prompt model) ──
@@ -321,21 +384,23 @@ export class WikeySettingTab extends PluginSettingTab {
           }),
       )
 
-    new Setting(containerEl)
-      .setName('Auto Ingest Interval')
-      .setDesc('Debounce window before auto-ingest fires on new inbox files.')
-      .addDropdown((dd) => {
-        dd.addOption('0', 'Immediately')
-        dd.addOption('10', '10 seconds')
-        dd.addOption('30', '30 seconds')
-        dd.addOption('60', '60 seconds')
-        dd.setValue(String(this.plugin.settings.autoIngestInterval))
-        dd.onChange(async (value) => {
-          const v = Number(value)
-          this.plugin.settings.autoIngestInterval = (v === 0 || v === 10 || v === 30 || v === 60 ? v : 30) as 0 | 10 | 30 | 60
-          await this.plugin.saveSettings()
-        })
-      })
+    this.renderStandardDropdown(
+      containerEl,
+      'Auto Ingest Interval',
+      'Debounce window before auto-ingest fires on new inbox files.',
+      [
+        { value: '0', label: 'Immediately' },
+        { value: '10', label: '10 seconds' },
+        { value: '30', label: '30 seconds' },
+        { value: '60', label: '60 seconds' },
+      ],
+      String(this.plugin.settings.autoIngestInterval),
+      async (value) => {
+        const v = Number(value)
+        this.plugin.settings.autoIngestInterval = (v === 0 || v === 10 || v === 30 || v === 60 ? v : 30) as 0 | 10 | 30 | 60
+        await this.plugin.saveSettings()
+      },
+    )
 
     // OCR fallback (markitdown-ocr) — 미설정 시 basicModel 사용
     const ocrDesc = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
@@ -344,20 +409,22 @@ export class WikeySettingTab extends PluginSettingTab {
       cls: 'wikey-settings-status-label',
     })
 
-    new Setting(containerEl)
-      .setName('OCR Provider')
-      .setDesc('Vision model provider used when text-layer extraction fails.')
-      .addDropdown((dd) => {
-        dd.addOption('', '(inherit basic model)')
-        dd.addOption('gemini', 'Gemini')
-        dd.addOption('openai', 'OpenAI')
-        dd.addOption('ollama', 'Ollama (local)')
-        dd.setValue(this.plugin.settings.ocrProvider || '')
-        dd.onChange(async (value) => {
-          this.plugin.settings.ocrProvider = value
-          await this.plugin.saveSettings()
-        })
-      })
+    this.renderStandardDropdown(
+      containerEl,
+      'OCR Provider',
+      'Vision model provider used when text-layer extraction fails.',
+      [
+        { value: '', label: '(inherit basic model)' },
+        { value: 'gemini', label: 'Gemini' },
+        { value: 'openai', label: 'OpenAI' },
+        { value: 'ollama', label: 'Ollama (local)' },
+      ],
+      this.plugin.settings.ocrProvider || '',
+      async (value) => {
+        this.plugin.settings.ocrProvider = value
+        await this.plugin.saveSettings()
+      },
+    )
 
     new Setting(containerEl)
       .setName('OCR Model')

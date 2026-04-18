@@ -810,6 +810,39 @@
   letter-spacing: 0.03em;
 }
 
+/* ── Settings section header (h3 + right-aligned action button) ── */
+
+.wikey-settings-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.2em;
+  margin-bottom: 0.3em;
+}
+
+.wikey-settings-section-header h3 {
+  margin: 0;
+}
+
+.wikey-settings-section-btn {
+  font-size: 0.82em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--interactive-normal);
+  color: var(--text-normal);
+  border: 1px solid var(--background-modifier-border);
+}
+
+.wikey-settings-section-btn:hover {
+  background: var(--interactive-hover);
+}
+
+.wikey-settings-section-btn[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── 공통 Select (chevron 스타일) ── */
 
 .wikey-select {
