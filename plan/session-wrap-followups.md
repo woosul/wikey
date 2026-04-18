@@ -1,28 +1,41 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-18 (Phase 3 B 세션 — 모델 평가 + 프롬프트 분리)
+> 최신 갱신: 2026-04-18 (Phase 3 E2E 자동 실행 + 이슈 4건 수정 + 단일 프롬프트 리팩토링)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-18 세션 마감 (Phase 3 B 완료)
+## 2026-04-18 (E2E + 리팩토링 세션) 마감
 
-### ⭐ 다음 세션 핵심 작업: Obsidian 실 테스트
+### ⭐ 다음 세션 핵심 작업: Phase 3 잔여 검증
 
-**파일**: `plan/phase3-obsidian-test.md` (258줄 체크리스트)
+**파일**: `plan/phase3-todo.md` §B-1 + §B-2
 
-5 시나리오 45분 예상:
-1. Fresh environment verification (5m)
-2. Small-doc single-chunk ingest — Qwen3 8B baseline (5m)
-3. Large-doc chunked ingest — Qwen3.6:35b-a3b (10–15m, 메모리 타이트 → 다른 앱 닫기)
-4. Ingest Prompt 사용자 커스텀 (A-1 신규 기능) (5m)
-5. Error cases (Ollama stopped / invalid model / out-of-raw) (5m)
+#### B-1 Phase 3 원래 잔여
+1. Audit 패널 인제스트 E2E (UI 클릭 흐름)
+2. 인제스트 품질 검증 (16 entities + 12 concepts 신규 페이지 리뷰)
+3. Obsidian UI 수동 테스트 (사람 눈 평가)
 
-### 이번 세션 완료 (커밋됨)
-- `83df408` A-1 인제스트 프롬프트 basic/user 분리
-- `89fcd22` LLM 모델 전부 optional 처리 + Qwen3.6 독립 감지
-- `960b5a1` Qwen3.6:35b-a3b 인제스트 옵션 + Phase 4 로드맵 확장
-- 70/70 tests, 0 build errors
+#### B-2 이번 세션 발생 follow-up
+4. markitdown-ocr fallback E2E (실 스캔 PDF)
+5. 단일 프롬프트 override 경로 E2E (`.wikey/ingest_prompt.md`)
+6. wiki/ 폴더 인제스트 가드 도입 여부 결정
+
+### 이번 세션 완료 (커밋됨, 7개)
+- `92c9637` fix(ingest): OCR fallback + 4 이슈 수정 (race / logging / Ollama 404 / UI race)
+- `7809d8f` docs: Phase 3 Obsidian E2E 테스트 결과 (`activity/phase-3-test-results.md`)
+- `0421d7c` config(wikey): default 모델 변경 (basic=gemini, ollama=qwen3.6:35b-a3b)
+- `79a458e` wiki: E2E 테스트 인제스트 아티팩트 + 자동 정리 (16E+12C)
+- `ef63156` refactor(ingest-prompt): 단일 프롬프트 모델 + 모달 편집 UI
+- `786983d` fix(ingest): log.md 헤더 형식 (`## [YYYY-MM-DD] ingest | <filename>`)
+- `741040c` ui(sidebar): 헤더 탭 순서 (dashboard → ingest → audit → help) + 대시보드 hint eye 아이콘
+
+### 이번 세션 검증 결과
+- E2E 9 시나리오 (1, 2, 3, 3-1, 4, 4-1, 5a, 5b, 5c) 자동 실행
+- PASS 6 (1/2/4/4-1/5a/5c) / PARTIAL 2 (3 silent skip, 5b 모호 메시지) / FAIL 1 (3-1 race)
+- 발견 이슈 5건 → 4건 수정 + 회귀 검증 (이슈 5는 결정 보류)
+- 단일 프롬프트 리팩토링 + 단위 70/70 + smoke test 통과
+- 빌드 0 errors
 
 ### Phase 4 이관 아이디어 (구현 X, 기록만)
 

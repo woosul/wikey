@@ -146,9 +146,8 @@
 - [x] Ollama think 파라미터 처리 — Gemma=think:true, Qwen3=think:false
 - [x] jsonMode 옵션 추가 — Qwen3 format:"json", Gemma 프롬프트 기반
 - [x] LLM 타임아웃 60s → 300s
-- [ ] Audit 패널 인제스트 E2E 테스트 — 실제 파이프라인 성공 확인 필요
-- [ ] 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
-- [ ] Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
+
+> 잔여 검증 항목은 §B로 통합 (중복 제거)
 
 **A-1. 인제스트 파이프라인 개선 (Graphify 분석 결과 수용)**
 
@@ -189,9 +188,25 @@
   - **속도 2.2배 우위** + **품질 1.5배** (concepts granularity 현저히 우수)
   - 도메인 특수 용어 포착: 4H-SiC, Trench 구조 MOSFET, dV/dt 파괴, 단락 내량, 바디 다이오드
   - 인제스트 권장 모델 업그레이드 검토 가능 (메모리 여유 확인된 환경 한정)
-- [ ] Audit 패널 인제스트 E2E 테스트 — Obsidian에서 실제 성공 확인
-- [ ] 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
-- [ ] Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
+### B-1. Phase 3 원래 잔여 (검증 필요)
+
+- [ ] **Audit 패널 인제스트 E2E** — Audit 패널 UI(체크박스 → Ingest 버튼)로 실제 인제스트 성공 확인
+  - 이번 세션은 `wikey:ingest-current-note` 명령만 사용 → Audit 패널 클릭 흐름 미검증
+- [ ] **인제스트 품질 검증** — 생성된 wiki 페이지 내용 리뷰
+  - 2026-04-18 E2E로 16 entities + 12 concepts 신규 (커밋 79a458e), SiC-MOSFET 1건만 확인
+  - 전체 페이지 frontmatter/내용/wikilink 정합성 검토 필요
+- [ ] **Obsidian UI 수동 테스트** — 사람 눈 평가
+  - 대시보드 숫자/카드 시각, Audit 패널 체크박스 + provider/model 선택, Inbox 탭 Move/Delay 흐름
+
+### B-2. 2026-04-18 E2E 세션 후속 (이번 세션 발생분)
+
+- [ ] **markitdown-ocr fallback E2E** — 실제 스캔 PDF (텍스트 레이어 없는 이미지 PDF)로 OCR 경로 검증
+  - 코드 경로만 확인됨 (textPDF는 1단계 markitdown으로 처리되어 OCR fallback 미발동)
+  - Ollama gemma4:26b vision 호출 + extract 품질 평가
+- [ ] **단일 프롬프트 모델 override E2E** — `.wikey/ingest_prompt.md` 작성 시 custom 경로 정상 동작 검증
+  - Smoke test는 bundled default 경로만 검증
+  - 단위 테스트 15건은 통과
+- [ ] **이슈 5 결정**: wiki/ 폴더 인제스트 가드 도입 여부 (현재 가드 없음 → wiki→wiki 사이클 위험, `activity/phase-3-test-results.md` 참조)
 
 > **운영 안정성, 완전 통합, llama.cpp PoC는 Phase 4로 이동 → `plan/phase4-todo.md`**
 
