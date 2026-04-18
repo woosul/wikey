@@ -5,6 +5,48 @@ created: 2026-04-10
 updated: 2026-04-12
 ---
 
+## [2026-04-18] ingest | Phase 3 E2E test
+- 소스 요약 생성: [[source-wikey-design-decisions]]
+- 엔티티 생성: [[wikey]], [[zero-setup]], [[byoai]], [[korean-enterprise-specialization]]
+- 개념 생성: [[architecture-decision-records]], [[llm-participation-multi-layer-search]], [[morphological-analysis-guardrail]]
+- 인덱스 갱신
+
+
+## [2026-04-18] ingest | Phase 3 E2E test
+- 소스 요약 생성: [[source-nanovna-v2-notes]]
+- 엔티티 생성: [[entity-nanovna-v2]]
+- 개념 생성: [[concept-antenna-measurement]]
+- 인덱스 갱신
+
+
+## [2026-04-18] ingest | Phase 3 E2E test
+- 소스 요약 생성: [[overview]]
+- 엔티티 생성: [[andrej-karpathy]], [[farzapedia]], [[llmbase]], [[secall]], [[obsidian]], [[qmd]], [[dji-o3-air-unit]], [[nanovna-v2]]
+- 개념 생성: [[llm-wiki]], [[three-layer-architecture]], [[knowledge-compounding]], [[ingest-query-lint]], [[rag-vs-wiki]], [[byoai]], [[schema-layer]], [[memex]], [[append-and-review]], [[fpv-digital-transmission]]
+- 인덱스 갱신
+
+
+## [2026-04-18] ingest | Phase 3 E2E test
+- 소스 요약 생성: [[source-wikey-design-decisions]]
+- 엔티티 생성: [[claude-code]], [[codex-cli]], [[gemini]], [[gemma-4]]
+- 개념 생성: [[korean-enterprise-specialization]], [[file-over-app]], [[rag-synthesis-layer]], [[llm-provider-independence]], [[korean-search-strategy]], [[morphological-analysis-guardrail]]
+- 인덱스 갱신
+
+
+## [2026-04-18] ingest | Phase 3 E2E test
+- 소스 요약 생성: [[source-wikey-design-decisions]]
+- 엔티티 생성: [[wikey]], [[zero-setup]], [[byoai]], [[korean-enterprise-specialization]]
+- 개념 생성: [[architecture-decision-records]], [[llm-participation-multi-layer-search]], [[concept-llm-wiki-architecture]]
+- 인덱스 갱신
+
+
+## [2026-04-18] ingest | Phase 3 E2E test
+- 소스 요약 생성: [[source-wikey-design-decisions]]
+- 엔티티 생성: [[wikey]], [[byoai]], [[zero-setup]]
+- 개념 생성: [[architecture-decision-records]], [[llm-participation-multi-layer-search]]
+- 인덱스 갱신
+
+
 # 활동 로그
 
 > 형식: `## [YYYY-MM-DD] type | title`

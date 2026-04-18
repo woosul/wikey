@@ -45,3 +45,41 @@ updated: 2026-04-12
 
 - [[risks-of-llm-wiki]] — LLM Wiki의 5대 리스크 심각도 분석 (2026-04-10)
 - [[vision-vs-reality]] — Karpathy 비전 vs 커뮤니티 현실 비교 (2026-04-10)
+- [[wikey]] — LLM Wiki의 오픈소스 구현체, Zero-setup, BYOAI, 한국어 기업 특화 (소스: 1개)
+- [[zero-setup]] — Wikey의 간단한 설정 과정, Obsidian 기반 (소스: 1개)
+- [[architecture-decision-records]] — Wikey의 핵심 설계 결정 기록 (소스: 1개)
+- [[llm-participation-multi-layer-search]] — LLM이 검색 양쪽 끝에 참여하는 방식 (소스: 1개)
+- [[claude-code]] — Anthropic의 코드 생성 및 분석 특화 LLM (소스: 1개)
+- [[codex-cli]] — LLM 에이전트의 독립 2차 리뷰 및 병렬 인제스트 도구 (소스: 1개)
+- [[gemini]] — Google의 대용량 소스 처리 특화 LLM (소스: 1개)
+- [[gemma-4]] — Google의 로컬 실행 가능한 경량 오픈소스 LLM (소스: 1개)
+- [[korean-enterprise-specialization]] — Wikey의 한국어 및 기업 환경 특화 전략 (소스: 1개)
+- [[file-over-app]] — Karpathy의 도구 종속성 제거 원칙 (소스: 1개)
+- [[rag-synthesis-layer]] — RAG 위에 지식 합성을 얹는 Wikey의 포지셔닝 (소스: 1개)
+- [[llm-provider-independence]] — Wikey의 BYOAI 구현을 위한 LLM 프로바이더 독립 설계 (소스: 1개)
+- [[korean-search-strategy]] — Wikey의 한국어 검색 정확도 향상 전략 (소스: 1개)
+- [[morphological-analysis-guardrail]] — 한국어 검색 품질 향상을 위한 형태소 분석 기반 가드레일 (소스: 1개)
+- wiki — LLM Wiki 패턴을 기반으로 한 개인 지식 베이스 (소스: 1개)
+- [[entity-nanovna-v2]] — NanoVNA V2, 50kHz~3GHz 벡터 네트워크 분석기 (소스: 1개)
+- [[concept-antenna-measurement]] — 안테나 측정, FPV 장비의 영상 전송 품질에 영향 (소스: 1개)
+
+
+## E2E 테스트 인제스트 (2026-04-18)
+
+- [[Full-SiC-파워-모듈]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[ROHM-Co-Ltd]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[SiC-MOSFET]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[SiC-SBD]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[SiC-파워-디바이스]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[entity-byoai]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[entity-korean-enterprise-specialization]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[entity-wikey]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[entity-zero-setup]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[rohm]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[sic]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[sic-power-device]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[sic-power-devices]] — Phase 3 E2E 테스트로 인제스트된 엔티티
+- [[concept-architecture-decision-records]] — Phase 3 E2E 테스트로 인제스트된 개념
+- [[concept-llm-participation-multi-layer-search]] — Phase 3 E2E 테스트로 인제스트된 개념
+- [[concept-llm-wiki-architecture]] — Phase 3 E2E 테스트로 인제스트된 개념
+- [[nanovna-v2-notes]] — Phase 3 E2E 테스트 소스
