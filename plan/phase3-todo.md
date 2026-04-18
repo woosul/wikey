@@ -191,12 +191,18 @@
 ### B-1. Phase 3 원래 잔여 (검증 필요)
 
 - [ ] **Audit 패널 인제스트 E2E** — Audit 패널 UI(체크박스 → Ingest 버튼)로 실제 인제스트 성공 확인
-  - 이번 세션은 `wikey:ingest-current-note` 명령만 사용 → Audit 패널 클릭 흐름 미검증
-- [ ] **인제스트 품질 검증** — 생성된 wiki 페이지 내용 리뷰
-  - 2026-04-18 E2E로 16 entities + 12 concepts 신규 (커밋 79a458e), SiC-MOSFET 1건만 확인
-  - 전체 페이지 frontmatter/내용/wikilink 정합성 검토 필요
+  - 2026-04-19 세션은 Ingest 패널(Cmd+Shift+I 흐름)로 우회 완료 — Audit 패널(👁) 직접 클릭 흐름 미검증
+  - UI 재설계(fb0a471) 이후 상태로 재검증 필요
+- [x] **인제스트 품질 검증** — 생성된 wiki 페이지 내용 리뷰 (2026-04-19 완료, 커밋 f597133)
+  - 중복 13건 제거 (entity-/concept- 접두어 변형) + slug 정규화 (SiC-* → sic-*)
+  - canonical 병합: nanovna-v2, architecture-decision-records
+  - 원인 기록: Scenario 4 custom 프롬프트가 기본 프롬프트와 slug 규칙 충돌
 - [ ] **Obsidian UI 수동 테스트** — 사람 눈 평가
-  - 대시보드 숫자/카드 시각, Audit 패널 체크박스 + provider/model 선택, Inbox 탭 Move/Delay 흐름
+  - 대시보드 숫자/카드 시각
+  - Audit 패널 체크박스 + provider/model 선택
+  - Ingest 패널 재설계 (drop header + Add + filesize + Cloud/Local + Ingest 버튼)
+  - Settings: Auto Ingest toggle/interval + OCR Provider/Model
+  - Fail state 10분 TTL 보존 확인
 
 ### B-2. 2026-04-18 E2E 세션 후속 (이번 세션 발생분)
 

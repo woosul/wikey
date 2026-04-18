@@ -1,7 +1,96 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-18 (Phase 3 E2E 자동 실행 + 이슈 4건 수정 + 단일 프롬프트 리팩토링)
+> 최신 갱신: 2026-04-19 (UI 재설계 + provider/classify 근본 수정 + Dewey Decimal 3차 분류)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-19 (UI 재설계 + 근본 수정 세션) 마감
+
+### ⭐ 다음 세션 핵심 작업
+
+**Phase 3 B-1 잔여**:
+1. **[#1] Audit 패널 인제스트 E2E** — 이번 세션은 Ingest 패널로 우회. Audit 패널(👁 아이콘) 체크박스→Ingest 클릭 흐름 검증 필요
+2. **[#3] Obsidian UI 수동 테스트** — UI 재설계 변경분(header 없음, Add 버튼, Cloud/Local 뱃지, Auto Ingest 토글, OCR 설정) 사람 눈 평가
+3. **[B-2 #4] markitdown-ocr fallback E2E** — 이번 세션에 OMRON 스캔 PDF에서 OCR 경로 발동 관찰됨 (gemma4:26b vision). 작은 스캔 PDF로 완주 검증 필요
+4. **[B-2 #5] `.wikey/ingest_prompt_user.md` override E2E**
+5. **[B-2 #6] wiki/ 폴더 인제스트 가드 도입 결정**
+
+### 이번 세션 완료 (커밋 4개)
+
+- `f597133` **lint**: Phase 3 E2E 중복 13건 제거 + slug 정규화 (23 files, +80/−280)
+- `fb0a471` **feat(ingest)**: UI 재설계 + provider resolver + updateIndex 카테고리 분기 (30 files, +834/−83)
+- `f93b061` **fix(ingest)**: I2 로컬 타임존 + I3 classify 2차 서브폴더 (4 files, +142/−18)
+- `dc4d30c` **feat(classify)**: Dewey Decimal 자연계 3차 분류 + setup-para-folders.sh (4 files, +256/−34)
+
+### 이번 세션 주요 변경
+
+**UI 재설계 (Ingest 패널)**
+- 상단 bulk 3버튼 제거 → drop zone + `[Add]` + inbox 섹션 통합
+- inbox 행: filename + filesize + Cloud/Local 뱃지
+- 하단 바: `[PARA select] [Ingest] [Delay]` (Move → Ingest로 교체)
+- Fail state 10분 TTL 보존 (renderInboxStatus 재렌더 간)
+
+**자동 Ingest**
+- Settings: `autoIngest` toggle + interval (0/10/30/60s)
+- `vault.on('create')` → debounce → 자동 `runIngest`
+
+**OCR/Provider resolver (근본 수정)**
+- `isModelCompatible()` guard: qwen이 gemini로 전달되는 404 버그 예방
+- Provider onChange 시 ingestModel 자동 clear
+- `WIKEY_MODEL` fallback 제거 → wikey-core가 provider 기본값 선택
+- OCR 전용 설정 (`ocrProvider`/`ocrModel`), 미설정 시 basicModel 상속
+- `resolveOcrEndpoint()`: gemini/openai/ollama OpenAI-compat 자동 선택
+- 5-tier PDF 추출 체크포인트 console.info/warn (silent fail 해소)
+
+**classify 개편**
+- Dewey Decimal 10개 대분류 (000_general~900_lifestyle)
+- 토큰 기반 매칭 (regex `\b` → `tokenize + Set.has`로 `_` 경계 해소)
+- PARA 경로 버그 fix: `raw/resources/` → `raw/3_resources/`
+- `scripts/setup-para-folders.sh` 신규 (66개 폴더 사전 생성)
+
+**updateIndex 카테고리 분기**
+- 기존: 모든 항목이 "## 분석" 섹션으로만 append
+- 수정: `{entry, category}` 객체 받아 엔티티/개념/소스/분석 섹션에 insert
+
+**I2 로컬 타임존**
+- `toISOString().slice(0,10)` → `formatLocalDate()` (getFullYear/Month/Date)
+- KST 00~09시 UTC 날짜로 하루 뒤로 찍히는 버그 fix
+
+### 검증 결과
+
+- 단위 테스트: **95/95 PASS** (이전 65/70 → 95)
+- 빌드: 0 errors
+- validate-wiki.sh: PASS (5/5)
+- E2E Raspberry Pi HQ Camera: 18 페이지 (source 1 + entities 9 + concepts 8) 생성 + index.md 카테고리별 정렬 검증
+- OCR 경로 관찰: OMRON 6.3MB 스캔 PDF → markitdown-ocr + gemma4:26b vision 트리거 확인
+
+### 발견 이슈/기록
+
+- **OCR 하드코딩** `gemma4:26b` — 수정 완료 (resolveOcrEndpoint)
+- **Silent fail** — UI에 fail 상태 2초 후 사라지는 UX 버그 → 10분 TTL로 수정
+- **classify PARA 경로** — `raw/resources/` 하드코딩 (PARA 재구조화 누락) → 수정
+- **Provider/model 불일치** — settings migration 없어 basicModel 변경 시 ingestModel stale → isModelCompatible guard + onChange clear
+- **index.md updateIndex 버그** — 모든 신규 항목이 "분석" 섹션으로만 → 카테고리 분기
+- **Date UTC 편향** — toISOString의 날짜 shift → formatLocalDate
+- **`.ingest-map.json` stale 항목** — `nanovna-v2-notes.md` 삭제 후에도 남음 (follow-up)
+
+### Phase 4 이관 (이번 세션 신규 추가)
+
+- **§4-4b LLM 기반 3차/4차 분류** — Dewey Decimal 매칭 실패 시 LLM으로 대분류 선택 + 제품 4차 폴더 제안 + Audit 패널 "Re-classify with LLM" 토글 + 피드백 학습 + 저가 모델 옵션
+
+### 기존 스킬 후보 (유지)
+
+| ID | 후보 | 비고 |
+|----|------|------|
+| S1 | `obsidian-e2e-scaffold` 스킬 | obsidian-cli + Notice MutationObserver + Monitor 폴링 |
+| S2 | `diagnostic-logger.ts` 유틸 | 파이프라인 단계별 console.info 헬퍼 |
+| S4 | `wiki-validate-cleanup` 스킬 | validate-wiki.sh + audit-ingest.py 체이닝 |
+
+### 이번 세션 신규 환경 변경
+
+- `.claude/settings.local.json`: `Monitor`, `TaskStop` 자동 승인 추가
+- Obsidian 실행: `--remote-debugging-port=9222 --remote-allow-origins=*` (CDP E2E용). 테스트 종료 후엔 일반 재시작 권장
 
 ---
 
