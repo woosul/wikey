@@ -16,12 +16,17 @@
 4. **[B-2 #5] `.wikey/ingest_prompt_user.md` override E2E**
 5. **[B-2 #6] wiki/ 폴더 인제스트 가드 도입 결정**
 
-### 이번 세션 완료 (커밋 4개)
+### 이번 세션 완료 (커밋 9개)
 
 - `f597133` **lint**: Phase 3 E2E 중복 13건 제거 + slug 정규화 (23 files, +80/−280)
 - `fb0a471` **feat(ingest)**: UI 재설계 + provider resolver + updateIndex 카테고리 분기 (30 files, +834/−83)
 - `f93b061` **fix(ingest)**: I2 로컬 타임존 + I3 classify 2차 서브폴더 (4 files, +142/−18)
 - `dc4d30c` **feat(classify)**: Dewey Decimal 자연계 3차 분류 + setup-para-folders.sh (4 files, +256/−34)
+- `b9b5339` **docs**: 세션 정리 — 계획/메모 동기화 (3 files, +102/−7)
+- `08990c1` **fix(settings)**: Default Model 섹션에 Model 필드 추가
+- `cc94cfe` **refactor(settings)**: API 동적 Model 로드 + `.wikey-select` 통일 + Re-detect 위치 이동
+- `8da2045` **style(select)**: 외곽 테두리 제거 + chevron #999→#bbb (밝게)
+- `468564e` **style(select)**: box-shadow/outline 제거 (focus/hover 포함)
 
 ### 이번 세션 주요 변경
 
@@ -37,11 +42,18 @@
 
 **OCR/Provider resolver (근본 수정)**
 - `isModelCompatible()` guard: qwen이 gemini로 전달되는 404 버그 예방
-- Provider onChange 시 ingestModel 자동 clear
+- Provider onChange 시 ingestModel + cloudModel 동시 clear
 - `WIKEY_MODEL` fallback 제거 → wikey-core가 provider 기본값 선택
+- **Default Model 섹션에 상세 Model 드롭다운 추가** (이전엔 Provider만 있어 PROVIDER_DEFAULTS 하드코딩 의존)
+- **Default/Ingest Model 상세 모델 = API 동적 드롭다운** (`fetchModelList` 재사용, Gemini/OpenAI/Anthropic/Ollama 모두)
 - OCR 전용 설정 (`ocrProvider`/`ocrModel`), 미설정 시 basicModel 상속
 - `resolveOcrEndpoint()`: gemini/openai/ollama OpenAI-compat 자동 선택
 - 5-tier PDF 추출 체크포인트 console.info/warn (silent fail 해소)
+
+**설정 UI 폴리싱 (세션 후반)**
+- 설정 패널 6 selects 모두 `.wikey-select` 통일 (Audit/Ingest 패널과 동일 chevron 스타일)
+- Environment `Re-detect` 버튼 하단 → h3 헤더 우측 이동 (`.wikey-settings-section-header`)
+- `.wikey-select`: border / box-shadow / outline 제거 + chevron `#999`→`#bbb` (밝게)
 
 **classify 개편**
 - Dewey Decimal 10개 대분류 (000_general~900_lifestyle)
