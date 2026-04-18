@@ -21,7 +21,12 @@ export { LLMClient, fetchModelList } from './llm-client.js'
 export { createPage, updateIndex, appendLog, extractWikilinks } from './wiki-ops.js'
 export { query } from './query-pipeline.js'
 export type { QueryOptions } from './query-pipeline.js'
-export { ingest, loadUserPrompt, USER_PROMPT_PATH, USER_PROMPT_TEMPLATE } from './ingest-pipeline.js'
+export {
+  ingest,
+  loadEffectiveIngestPrompt,
+  INGEST_PROMPT_PATH,
+  BUNDLED_INGEST_PROMPT,
+} from './ingest-pipeline.js'
 export type { IngestOptions } from './ingest-pipeline.js'
 export { classifyFile, moveFile } from './classify.js'
 export type { ClassifyResult } from './classify.js'

@@ -49,7 +49,7 @@ export async function ingest(
   }
 
   const indexContent = await wikiFS.read('wiki/index.md').catch(() => '')
-  const userPrompt = await loadUserPrompt(wikiFS)
+  const promptTemplate = await loadEffectiveIngestPrompt(wikiFS)
   const { provider, model } = resolveProvider('ingest', config)
   const llm = new LLMClient(httpClient, config)
   const isLocal = provider === 'ollama'
@@ -64,7 +64,7 @@ export async function ingest(
     // ── Small document: single LLM call (original flow) ──
     const content = isLocal ? truncateSource(sourceContent) : sourceContent
     onProgress?.({ step: 2, total: 4, message: `LLM (${model})...` })
-    parsed = await callLLMForIngest(llm, content, sourceFilename, indexContent, provider, model, userPrompt)
+    parsed = await callLLMForIngest(llm, content, sourceFilename, indexContent, provider, model, promptTemplate)
     log(`small-doc LLM done — entities=${parsed.entities?.length ?? 0}, concepts=${parsed.concepts?.length ?? 0}, index_additions=${parsed.index_additions?.length ?? 0}, log_entry=${parsed.log_entry ? 'yes' : 'no'}`)
   } else {
     // ── Large document: Graphify-style chunked pipeline ──
@@ -74,7 +74,7 @@ export async function ingest(
     // Step A: Summary → source_page (truncated for local, full for cloud)
     onProgress?.({ step: 2, total: 4, message: `Summary (${model}) [1/${totalSteps}]...` })
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
-    const summaryParsed = await callLLMForIngest(llm, summaryContent, sourceFilename, indexContent, provider, model, userPrompt)
+    const summaryParsed = await callLLMForIngest(llm, summaryContent, sourceFilename, indexContent, provider, model, promptTemplate)
     log(`summary done — entities=${summaryParsed.entities?.length ?? 0}, concepts=${summaryParsed.concepts?.length ?? 0}, index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
     if (!summaryParsed.index_additions?.length) {
       console.warn('[Wikey ingest] summary returned no index_additions — wiki/index.md will not be updated')
@@ -196,9 +196,9 @@ export async function ingest(
 
 async function callLLMForIngest(
   llm: LLMClient, sourceContent: string, sourceFilename: string,
-  indexContent: string, provider: string, model: string, userPrompt: string = '',
+  indexContent: string, provider: string, model: string, promptTemplate?: string,
 ): Promise<IngestRawResult> {
-  const prompt = buildIngestPrompt(sourceContent, sourceFilename, indexContent, userPrompt)
+  const prompt = buildIngestPrompt(sourceContent, sourceFilename, indexContent, promptTemplate)
   return callLLMWithRetry(llm, prompt, provider, model)
 }
 
@@ -309,56 +309,38 @@ export function buildIngestPrompt(
   sourceContent: string,
   sourceFilename: string,
   indexContent: string,
-  userPrompt: string = '',
+  templateOverride?: string,
 ): string {
   const today = new Date().toISOString().slice(0, 10)
-  const userBlock = userPrompt.trim()
-    ? `\n## 사용자 추가 지침\n\n${userPrompt.trim()}\n`
-    : ''
-  return loadPromptTemplate()
-    .replace('{{TODAY}}', today)
+  const template = templateOverride ?? BUNDLED_INGEST_PROMPT
+  return template
     .replaceAll('{{TODAY}}', today)
-    .replace('{{USER_PROMPT}}', userBlock)
     .replace('{{INDEX_CONTENT}}', indexContent)
     .replace('{{SOURCE_FILENAME}}', sourceFilename)
     .replace('{{SOURCE_CONTENT}}', sourceContent)
 }
 
-export const USER_PROMPT_PATH = '.wikey/ingest_prompt_user.md'
+/** Path to the user-editable ingest prompt override (vault-relative). */
+export const INGEST_PROMPT_PATH = '.wikey/ingest_prompt.md'
 
-export const USER_PROMPT_TEMPLATE = `<!--
-wikey 인제스트 사용자 추가 지침 파일입니다.
-이 파일의 내용은 기본 프롬프트 뒤에 추가되어 LLM에 전달됩니다.
-이 HTML 주석 블록은 인제스트 시 자동으로 제거됩니다.
-
-예시 지침:
-- 엔티티 slug는 영문 소문자만 사용하세요.
-- 수치 단위는 반드시 포함하세요 (예: 200V, 10A).
-- 제품명은 전체 이름으로 기록하세요 (축약 금지).
-
-아래 주석 블록 밖에 직접 작성하세요.
--->
-
-`
-
-export async function loadUserPrompt(wikiFS: WikiFS): Promise<string> {
+/**
+ * Load the effective ingest prompt template.
+ * - If `.wikey/ingest_prompt.md` exists, return its content (full override).
+ * - Else, return the bundled default.
+ */
+export async function loadEffectiveIngestPrompt(wikiFS: WikiFS): Promise<string> {
   try {
-    if (!(await wikiFS.exists(USER_PROMPT_PATH))) return ''
-    const content = await wikiFS.read(USER_PROMPT_PATH)
-    // Strip HTML-style comments (used as placeholder/help text)
-    return content.replace(/<!--[\s\S]*?-->/g, '').trim()
+    if (await wikiFS.exists(INGEST_PROMPT_PATH)) {
+      return await wikiFS.read(INGEST_PROMPT_PATH)
+    }
   } catch {
-    return ''
+    // fall through to bundled default
   }
+  return BUNDLED_INGEST_PROMPT
 }
 
-let cachedTemplate: string | null = null
-
-function loadPromptTemplate(): string {
-  if (cachedTemplate) return cachedTemplate
-
-  // Inline the basic template (same as prompts/ingest_prompt_basic.md) to avoid fs dependency in tests
-  cachedTemplate = `당신은 wikey LLM Wiki의 인제스트 에이전트입니다.
+/** Bundled default ingest prompt template (used when no user override exists). */
+export const BUNDLED_INGEST_PROMPT = `당신은 wikey LLM Wiki의 인제스트 에이전트입니다.
 아래 소스를 분석하여 위키 페이지를 생성하세요.
 
 ## 컨벤션
@@ -387,7 +369,7 @@ tags: [태그1, 태그2]
 
 ### 현재 인덱스 (이미 존재하는 페이지)
 {{INDEX_CONTENT}}
-{{USER_PROMPT}}
+
 ## 소스 파일
 파일명: {{SOURCE_FILENAME}}
 
@@ -421,9 +403,6 @@ tags: [태그1, 태그2]
   "log_entry": "- 소스 요약 생성: [[source-name]]\\n- 엔티티 생성: [[entity1]]\\n- 개념 생성: [[concept1]]\\n- 인덱스 갱신"
 }
 \`\`\``
-
-  return cachedTemplate
-}
 
 const MAX_SOURCE_CHARS = 12_000
 

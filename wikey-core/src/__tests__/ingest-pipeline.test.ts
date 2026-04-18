@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractJsonBlock, buildIngestPrompt, loadUserPrompt, USER_PROMPT_PATH } from '../ingest-pipeline.js'
+import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT } from '../ingest-pipeline.js'
 import type { WikiFS } from '../types.js'
 
 describe('extractJsonBlock', () => {
@@ -67,20 +67,19 @@ describe('buildIngestPrompt', () => {
     expect(prompt).toContain('concepts')
   })
 
-  it('omits user prompt block when userPrompt is empty', () => {
-    const prompt = buildIngestPrompt('content', 'file.md', '', '')
-    expect(prompt).not.toContain('사용자 추가 지침')
+  it('uses bundled template when no override is provided', () => {
+    const prompt = buildIngestPrompt('content', 'file.md', '')
+    expect(prompt).toContain('당신은 wikey LLM Wiki의 인제스트 에이전트입니다')
   })
 
-  it('includes user prompt block when userPrompt is provided', () => {
-    const userPrompt = 'entity slug는 영문 소문자만 사용'
-    const prompt = buildIngestPrompt('content', 'file.md', '', userPrompt)
-    expect(prompt).toContain('## 사용자 추가 지침')
-    expect(prompt).toContain(userPrompt)
+  it('uses templateOverride when provided', () => {
+    const override = 'CUSTOM PROMPT — process {{SOURCE_FILENAME}} content: {{SOURCE_CONTENT}}'
+    const prompt = buildIngestPrompt('hello', 'foo.md', '', override)
+    expect(prompt).toBe('CUSTOM PROMPT — process foo.md content: hello')
   })
 })
 
-describe('loadUserPrompt', () => {
+describe('loadEffectiveIngestPrompt', () => {
   function makeFS(files: Record<string, string>): WikiFS {
     return {
       read: async (path: string) => {
@@ -93,23 +92,26 @@ describe('loadUserPrompt', () => {
     }
   }
 
-  it('returns empty string when user prompt file is absent', async () => {
-    const result = await loadUserPrompt(makeFS({}))
-    expect(result).toBe('')
+  it('returns bundled default when override file is absent', async () => {
+    const result = await loadEffectiveIngestPrompt(makeFS({}))
+    expect(result).toBe(BUNDLED_INGEST_PROMPT)
   })
 
-  it('returns user prompt content when file exists', async () => {
-    const content = '수치 단위는 반드시 포함하세요'
-    const fs = makeFS({ [USER_PROMPT_PATH]: content })
-    const result = await loadUserPrompt(fs)
+  it('returns override file content when present', async () => {
+    const content = '나만의 시스템 프롬프트 — {{SOURCE_CONTENT}}'
+    const fs = makeFS({ [INGEST_PROMPT_PATH]: content })
+    const result = await loadEffectiveIngestPrompt(fs)
     expect(result).toBe(content)
   })
 
-  it('strips HTML comments from user prompt', async () => {
-    const content = '<!-- template comment -->\n실제 지침 내용'
-    const fs = makeFS({ [USER_PROMPT_PATH]: content })
-    const result = await loadUserPrompt(fs)
-    expect(result).toBe('실제 지침 내용')
-    expect(result).not.toContain('template comment')
+  it('falls back to bundled default if override read throws', async () => {
+    const fs: WikiFS = {
+      read: async () => { throw new Error('disk error') },
+      write: async () => {},
+      exists: async () => true,
+      list: async () => [],
+    }
+    const result = await loadEffectiveIngestPrompt(fs)
+    expect(result).toBe(BUNDLED_INGEST_PROMPT)
   })
 })

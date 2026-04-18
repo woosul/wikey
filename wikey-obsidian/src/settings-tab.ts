@@ -1,5 +1,5 @@
-import { App, Notice, PluginSettingTab, Setting, TFile, requestUrl } from 'obsidian'
-import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, USER_PROMPT_PATH, USER_PROMPT_TEMPLATE } from 'wikey-core'
+import { App, Modal, Notice, PluginSettingTab, Setting, TFile, requestUrl } from 'obsidian'
+import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, loadEffectiveIngestPrompt } from 'wikey-core'
 import type WikeyPlugin from './main'
 
 export class WikeySettingTab extends PluginSettingTab {
@@ -193,60 +193,64 @@ export class WikeySettingTab extends PluginSettingTab {
       )
   }
 
-  // ── Section: Ingest Prompt (user customization) ──
+  // ── Section: Ingest Prompt (single-prompt model) ──
+  // Note: `.wikey/` is a hidden folder (dot-prefixed), so vault metadata
+  // (getAbstractFileByPath, getFiles) does not track files inside it.
+  // Use vault.adapter.* for all existence checks and writes.
   private renderIngestPromptSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: 'Ingest Prompt' })
 
     const { vault } = this.plugin.app
-    const fileExists = vault.getAbstractFileByPath(USER_PROMPT_PATH) instanceof TFile
-    const status = fileExists ? 'Custom (user file exists)' : 'Default (no user file)'
-
     const descEl = containerEl.createDiv({ cls: 'wikey-settings-status-desc' })
-    descEl.createSpan({ text: `Base prompt (wikey conventions + JSON format) is bundled with the plugin. Your additional instructions can be added in ` })
-    descEl.createEl('code', { text: USER_PROMPT_PATH })
-    descEl.createSpan({ text: ` and will be appended before the source. Status: ${status}.` })
+    const statusSpan = descEl.createSpan({
+      text: 'System prompt sent to the LLM during ingest. Edit to tune for your data; Reset to revert. Status: …',
+    })
 
+    let resetButton: HTMLButtonElement | null = null
     new Setting(containerEl)
-      .setName('User Prompt')
-      .setDesc('Edit additional instructions (appended to the base prompt). Reset deletes the user file.')
+      .setName('Edit prompt')
+      .setDesc('Open the current ingest system prompt in a popup editor. Save writes a vault override; Reset removes it.')
       .addButton((btn) =>
-        btn.setButtonText(fileExists ? 'Edit' : 'Create & Edit').onClick(async () => {
+        btn.setButtonText('Edit').onClick(async () => {
           try {
-            const parent = USER_PROMPT_PATH.split('/').slice(0, -1).join('/')
-            if (parent && !(await vault.adapter.exists(parent))) {
-              await vault.createFolder(parent)
-            }
-            // Disk-level check first to handle metadata-cache lag (file exists on
-            // disk but vault.getAbstractFileByPath still returns null).
-            if (!(await vault.adapter.exists(USER_PROMPT_PATH))) {
-              await vault.create(USER_PROMPT_PATH, USER_PROMPT_TEMPLATE)
-            }
-            // Re-resolve via vault API (may need a tick for metadata cache).
-            let file = vault.getAbstractFileByPath(USER_PROMPT_PATH)
-            if (!(file instanceof TFile)) {
-              // Force the cache by listing the folder.
-              await new Promise((r) => setTimeout(r, 50))
-              file = vault.getAbstractFileByPath(USER_PROMPT_PATH)
-            }
-            if (!(file instanceof TFile)) {
-              throw new Error(`File exists on disk but not yet visible in vault: ${USER_PROMPT_PATH}. Try again in a moment.`)
-            }
-            await this.plugin.app.workspace.getLeaf(true).openFile(file as TFile)
+            const wikiFS = this.plugin.wikiFS
+            const current = await loadEffectiveIngestPrompt(wikiFS)
+            new IngestPromptEditModal(this.plugin.app, current, async (next) => {
+              const parent = INGEST_PROMPT_PATH.split('/').slice(0, -1).join('/')
+              if (parent && !(await vault.adapter.exists(parent))) {
+                await vault.createFolder(parent)
+              }
+              await vault.adapter.write(INGEST_PROMPT_PATH, next)
+              new Notice('Ingest prompt saved.')
+              this.display()
+            }).open()
           } catch (err) {
-            new Notice(`Failed to open user prompt: ${(err as Error).message}`)
+            new Notice(`Failed to open prompt editor: ${(err as Error).message}`)
           }
         }),
       )
-      .addButton((btn) =>
-        btn.setButtonText('Reset').setDisabled(!fileExists).onClick(async () => {
-          const file = vault.getAbstractFileByPath(USER_PROMPT_PATH)
-          if (!(file instanceof TFile)) return
-          if (!confirm(`Delete ${USER_PROMPT_PATH}? Ingest will use the default prompt.`)) return
-          await vault.delete(file)
-          new Notice('User prompt deleted — reverted to default.')
+      .addButton((btn) => {
+        resetButton = btn.buttonEl
+        btn.setButtonText('Reset').setDisabled(true).onClick(async () => {
+          if (!(await vault.adapter.exists(INGEST_PROMPT_PATH))) {
+            new Notice('Already using bundled default.')
+            return
+          }
+          if (!confirm(`Reset ingest prompt to bundled default? This deletes ${INGEST_PROMPT_PATH}.`)) return
+          await vault.adapter.remove(INGEST_PROMPT_PATH)
+          new Notice('Ingest prompt reset to default.')
           this.display()
-        }),
+        })
+      })
+
+    // Async update of status text + Reset button enable (disk truth)
+    void (async () => {
+      const isCustom = await vault.adapter.exists(INGEST_PROMPT_PATH)
+      statusSpan.setText(
+        `System prompt sent to the LLM during ingest. Edit to tune for your data; Reset to revert. Status: ${isCustom ? 'Custom override' : 'Bundled default'}.`,
       )
+      if (resetButton) resetButton.disabled = !isCustom
+    })()
   }
 
   // ── Section: General ──
@@ -550,5 +554,54 @@ export class WikeySettingTab extends PluginSettingTab {
             })
         })
     }
+  }
+}
+
+/**
+ * Modal popup for editing the ingest system prompt. Loads the current effective
+ * prompt (override or bundled default) and saves to `.wikey/ingest_prompt.md`
+ * via the supplied callback.
+ */
+class IngestPromptEditModal extends Modal {
+  private textarea!: HTMLTextAreaElement
+  constructor(
+    app: App,
+    private readonly initialContent: string,
+    private readonly onSave: (next: string) => Promise<void>,
+  ) {
+    super(app)
+  }
+
+  onOpen(): void {
+    const { contentEl, modalEl } = this
+    modalEl.addClass('wikey-ingest-prompt-modal')
+    contentEl.createEl('h2', { text: 'Edit Ingest Prompt' })
+    contentEl.createEl('p', {
+      text: 'Edit the system prompt sent to the LLM during ingest. Keep the {{TODAY}}, {{INDEX_CONTENT}}, {{SOURCE_FILENAME}}, {{SOURCE_CONTENT}} placeholders or the pipeline will not receive the source.',
+      cls: 'wikey-ingest-prompt-help',
+    })
+    this.textarea = contentEl.createEl('textarea', {
+      cls: 'wikey-ingest-prompt-textarea',
+    })
+    this.textarea.value = this.initialContent
+    this.textarea.spellcheck = false
+
+    const footer = contentEl.createDiv({ cls: 'wikey-ingest-prompt-footer' })
+    const cancelBtn = footer.createEl('button', { text: 'Cancel' })
+    cancelBtn.addEventListener('click', () => this.close())
+    const saveBtn = footer.createEl('button', { text: 'Save', cls: 'mod-cta' })
+    saveBtn.addEventListener('click', async () => {
+      const next = this.textarea.value
+      try {
+        await this.onSave(next)
+        this.close()
+      } catch (err) {
+        new Notice(`Save failed: ${(err as Error).message}`)
+      }
+    })
+  }
+
+  onClose(): void {
+    this.contentEl.empty()
   }
 }
