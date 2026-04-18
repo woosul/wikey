@@ -225,7 +225,7 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
   if (!ollama.running) {
     issues.push('Ollama is not running. Run: ollama serve')
   } else {
-    if (!status.hasQwen3) issues.push('Qwen3 not found. Run: ollama pull qwen3:8b')
+    if (!status.hasQwen3) issues.push('Qwen3 not found. Run: ollama pull qwen3:8b (or qwen3.6:35b-a3b for higher quality, ≥48GB RAM)')
     if (!status.hasGemma4) issues.push('Gemma4 not found. Run: ollama pull gemma4:26b')
   }
 

@@ -29,7 +29,7 @@
 
 - qmd는 이미 TypeScript (`tools/qmd/`)이므로 직접 import 가능
 - 한국어 형태소 분석(kiwipiepy)은 Python exec 유지 (TS 포팅 불가)
-- Contextual Retrieval은 Gemma 4 (Ollama localhost:11434) exec 유지
+- Contextual Retrieval은 Gemma4 26B (Ollama localhost:11434) exec 유지
 - Obsidian 플러그인 환경은 Node.js + Electron (`child_process` 사용 가능)
 - 기존 CLI 워크플로우는 그대로 유지해야 해요
 - 데스크톱 전용 (`isDesktopOnly: true`)
@@ -658,7 +658,7 @@ Week 3:  통합 테스트 + 마무리
 - Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
 
 **B. 운영 안정성 (A 완료 후):**
-- 로컬 LLM 모델 검증: Gemma4 12B 최적성, Gemma4 27B/Qwen3/Llama 4 대안 조사
+- 로컬 LLM 모델 검증 (2026-04-18 완료): 인제스트 = Qwen3 8B (기본) + Qwen3.6:35b-a3b (고품질), 쿼리/CR = Gemma4 26B 확정. 14B·SuperGemma4·gemma4 12B 탈락.
 - 원본/위키 삭제 안전장치: 출처 무효화 감지, 깨진 링크 정리, dry-run, 삭제 이력
 - 초기화 기능: 완전/인제스트/원본/인덱스/설정 선택적 리셋 + 확인 다이얼로그
 

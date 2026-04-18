@@ -48,7 +48,7 @@ LLM이 하는 일:
 | **Claude Code** | 월 $20~100 (구독) | 최고 품질, 추천 |
 | **Codex CLI** | 토큰 과금 (~$6/월) | 좋은 품질 |
 | **Gemini** | 거의 무료 | 대용량 PDF에 최강 |
-| **Ollama (Gemma 4)** | 완전 무료 | 오프라인 동작, 품질 제한 |
+| **Ollama (Qwen3/Gemma4)** | 완전 무료 | 오프라인, Qwen3.6 사용 시 품질 격차 축소 |
 
 상세 비교: [`local-llm/model-selection-guide.md`](../local-llm/model-selection-guide.md)
 
@@ -96,7 +96,7 @@ cd wikey
 
 ```
 [1/7] Obsidian 볼트     — wiki/ 디렉토리 확인
-[2/7] Ollama + Gemma 4  — Ollama 설치 확인, gemma4 모델 다운로드 (9.6GB)
+[2/7] Ollama 모델 세트  — qwen3:8b(5.2GB, 인제스트 기본) + gemma4:26b(17GB, 쿼리) 다운로드
 [3/7] Python + kiwipiepy — 한국어 형태소 분석기 설치
 [4/7] qmd 검색 엔진     — 검색 컬렉션 초기화 + 인덱싱
 [5/7] API 키 설정       — .env 파일 생성 (API 키는 직접 입력)
@@ -507,7 +507,7 @@ Python 3.9 이상이 필요합니다. `python3 --version`으로 확인하세요.
 
 ### Q: 인제스트 시 JSON 파싱 오류가 발생합니다
 
-로컬 모델(ollama)로 인제스트할 때 발생할 수 있습니다. Gemma 4의 응답이 잘리는 경우입니다.
+로컬 모델(ollama) 인제스트 시 발생 가능. Qwen3 계열은 `format:"json"` 적용되어 안정적이지만 Gemma4 26B는 thinking 경로에서 응답이 잘릴 수 있음 (Phase 3에서 Gemma4는 인제스트 제외).
 
 해결 방법:
 ```bash
@@ -557,7 +557,7 @@ claude
 |--------|------|------|
 | 위키 페이지 | `wiki/` | 마크다운 파일 (git으로 버전 관리) |
 | 검색 인덱스 | `~/.cache/qmd/index.sqlite` | SQLite DB (문서, FTS5, 벡터) |
-| CR 캐시 | `~/.cache/qmd/contextual-prefixes.json` | Gemma 4 맥락 프리픽스 |
+| CR 캐시 | `~/.cache/qmd/contextual-prefixes.json` | Gemma4 26B 맥락 프리픽스 |
 | GGUF 모델 | `~/.cache/qmd/models/` | qmd 내장 모델 캐시 |
 | 원시 소스 | `raw/` | 사용자가 넣은 소스 (git 미추적) |
 | API 키 | `.env` | 클라우드 LLM 키 (git 미추적) |

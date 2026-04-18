@@ -170,15 +170,26 @@
 - [x] **로컬 LLM 모델 검증** — qwen3:8b(인제스트 기본), gemma4:26b(쿼리 전용) 확정
   - Gemma4 26B 인제스트: 32min, 5E+3C — **인제스트 제외** (thinking 오버헤드 + 한국어 약함)
   - Gemma4 26B는 쿼리/채팅 전용으로만 유지
-- [ ] **Qwen3 14B 테스트** — 8B 대비 품질 향상 기대 (9.3GB, M-series 여유)
-  - `ollama pull qwen3:14b` → 동일 파워디바이스 PDF로 E2E 테스트
-  - 8B(27E+26C, 17min) 대비 추출량/속도 비교
-  - 결과에 따라 인제스트 기본 모델 교체 검토
+- [x] **Qwen3 14B 테스트** — 2026-04-18 smoke test 완료 → **탈락**
+  - 3K chunk: 42.0s, 4E+5C (qwen3:8b 22.3s, 5E+5C 대비 2배 느리고 entity 적음)
+  - `ollama rm qwen3:14b` 실행 (9.3GB 해제)
+- [x] **Qwen3.6:35b-a3b 평가** — 2026-04-18 smoke test 완료 → **인제스트 옵션 추가**
+  - 3K chunk: 42.6s, 5E+5C, **가장 풍부한 description** (수치 + 고수준 개념 정확 추출)
+  - MoE 35B/3B active → 14B dense와 동일 시간에 더 높은 품질
+  - 한국어 도메인 용어 처리 우수 (ROHM, 절연 파괴 전계, 200V, 10배 등)
+  - **메모리 부담**: 27GB VRAM, M4 Pro 48GB 기준 loaded 시 47G/48G 사용 (114MB 여유)
+  - 인제스트 전용 (상시 로드 비권장), 32K ctx 기본 유지 (262K 확장 시 RAM 부족)
+- [x] **Qwen3.6:35b-a3b E2E 테스트** — 2026-04-18 완료 → **Qwen3 8B 대비 압도**
+  - 74KB 텍스트 (pdftotext), 10 chunks, 총 **7.6분**, **30E + 50C = 80 페이지**
+  - 이전 결과 대비: Qwen3 8B (17분, 27E+26C=53), Gemini (10분, 46E+170C=216)
+  - **속도 2.2배 우위** + **품질 1.5배** (concepts granularity 현저히 우수)
+  - 도메인 특수 용어 포착: 4H-SiC, Trench 구조 MOSFET, dV/dt 파괴, 단락 내량, 바디 다이오드
+  - 인제스트 권장 모델 업그레이드 검토 가능 (메모리 여유 확인된 환경 한정)
 - [ ] Audit 패널 인제스트 E2E 테스트 — Obsidian에서 실제 성공 확인
 - [ ] 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
 - [ ] Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
 
-> **운영 안정성, 완전 통합 항목은 Phase 4로 이동 → `plan/phase4-todo.md`**
+> **운영 안정성, 완전 통합, llama.cpp PoC는 Phase 4로 이동 → `plan/phase4-todo.md`**
 
 ---
 

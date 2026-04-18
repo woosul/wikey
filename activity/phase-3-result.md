@@ -708,15 +708,27 @@ Provider 명칭 통일:
 - 소문서 (≤12K): 기존 1회 호출
 - 대문서 (>12K): Step A(요약→source_page) + Step B(챕터별→entities/concepts) + Step C(중복 제거 병합)
 
-### 3.8 E2E 인제스트 테스트 결과 (파워디바이스 88KB PDF)
+### 3.8 E2E 인제스트 테스트 결과 (파워디바이스 PDF)
 
-| 모델 | 경로 | 시간 | Entities | Concepts | 총 페이지 | 판정 |
-|------|------|------|----------|----------|-----------|------|
-| **Qwen3 8B** | local, chunked (6 chunks) | **17min** | 27 | 26 | 54 | 인제스트 기본 |
-| **Gemini 2.5 Flash** | cloud, chunked (6 chunks) | **10min** | 46 | 170 | 217 | 최고 품질 |
-| **Gemma4 26B** | local, chunked (6 chunks) | **32min** | 5 | 3 | 9 | **인제스트 제외** |
+| 모델 | 경로 | 시간 | E | C | 총 페이지 | 판정 |
+|------|------|------|---|---|-----------|------|
+| **Qwen3 8B** | local, MarkItDown 88KB, chunked (6) | 17min | 27 | 26 | 54 | 인제스트 기본 (보수) |
+| **Gemini 2.5 Flash** | cloud, MarkItDown 88KB, chunked (6) | 10min | 46 | 170 | 217 | 최고 품질 (클라우드) |
+| **Gemma4 26B** | local, MarkItDown 88KB, chunked (6) | 32min | 5 | 3 | 9 | **인제스트 제외** |
+| **Qwen3 14B** | local, 3K smoke test | 42s | 4 | 5 | 9 | **제외 (8B 열등)** |
+| **Qwen3.6:35b-a3b** | local, pdftotext 74KB, chunked (10) | **7.6min** | 30 | 50 | 80 | **인제스트 옵션 추가** |
 
 **Gemma4 26B 인제스트 탈락 이유:** thinking 오버헤드 (매 호출마다 think:true 필수), 한국어 약함, 추출 granularity 최저
+
+**Qwen3 14B 탈락 이유 (2026-04-18 smoke):** 동일 3K chunk에서 qwen3:8b(22.3s/5E+5C) 대비 42.0s/4E+5C — 2배 느리면서 entity 적음. `ollama rm qwen3:14b` 실행.
+
+**Qwen3.6:35b-a3b 채택 근거 (2026-04-18):**
+- MoE 35B total / 3B active → 14B dense와 동일 latency
+- 3K smoke: 42.6s/5E+5C/854 out_tokens (8B의 646 대비 풍부)
+- E2E 74KB: 7.6분/30E+50C — **Qwen3 8B 대비 속도 2.2배 + concepts 1.9배**
+- 한국어 도메인 용어 우수: 4H-SiC, Trench 구조 MOSFET, dV/dt 파괴, 단락 내량, 바디 다이오드
+- **메모리 부담**: 27GB VRAM, M4 Pro 48GB 기준 로드 시 47G/48G (114MB 여유)
+- 인제스트 전용 (Ollama 5분 idle auto-unload), 32K ctx 기본, 상시 로드 비권장
 
 ### 3.9 Graphify 분석
 

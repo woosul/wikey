@@ -59,3 +59,41 @@
 - [ ] 초기화 기능 — 선택적 리셋 (완전/인제스트/원본/인덱스/설정)
 - [ ] bash→TS 완전 포팅 (validate-wiki, check-pii, cost-tracker, reindex)
 - [ ] qmd SDK import (선택)
+
+## 4-7. 로컬 추론 엔진 검토 (llama.cpp PoC)
+
+- [ ] **Ollama vs llama.cpp 실측 gap 측정** — M4 Pro 48GB 환경에서 동일 Qwen3.6:35b-a3b GGUF로 비교
+  - Ollama 0.20.5 (MLX 백엔드) vs `brew install llama.cpp` + `llama-server`
+  - 동일 chunk·프롬프트로 latency/토큰/메모리 실측
+  - 커뮤니티 측정치: 단일 요청 10~30% overhead (Go 런타임 + HTTP 직렬화)
+  - wikey는 단일 사용자 + 순차 chunk → 동시요청 3x gap 해당 없음
+  - **판정 기준**: 실측 gap ≥15%면 전환, 미만이면 Ollama 유지
+- [ ] **전환 시 통합 경로**
+  - `llama-server`는 OpenAI-compat API 제공 → `wikey-core/llm-client.ts`에 `llamacpp` provider 추가
+  - `llama-swap` (Go proxy)로 모델 auto-load/unload → Ollama 스타일 UX 재현
+  - GGUF 파일 직접 관리 (모델 경로 설정 UI 추가)
+- [ ] 장점: 속도↑, 세밀한 양자화 제어 (IQ2~BF16, Unsloth Dynamic 2.0), 백그라운드 데몬 불필요
+- [ ] 단점: 모델 스와핑 별도 도구 필요, provider 분기 재작성, GGUF 수동 다운로드
+
+## 4-8. 문서 변환 Tiered Pipeline (MarkItDown + Docling/Kreuzberg)
+
+MarkItDown GitHub 이슈 트래커 확인된 주요 문제:
+- HTML의 동적 데이터 변환 시 데이터 손실
+- PDF 내 이미지 링크 추출 오류
+- 복잡한 레이아웃 (멀티컬럼, 테이블) 변환 품질 저하
+
+**권장 전략**: MarkItDown을 "1차 변환기(first-pass)"로 활용하고, 변환 품질이 중요한 문서에 대해서는 Docling / Kreuzberg 같은 고정확도 도구로 폴백하는 **tiered pipeline**.
+
+- [ ] **변환 품질 감지** — MarkItDown 출력의 신호 기반 품질 스코어 (테이블 깨짐, 이미지 누락, 빈 섹션 비율)
+- [ ] **Docling 통합** (Tier 2) — IBM Research의 고정확도 파서, 구조 보존 우수
+  - `pip install docling` → Python exec 래퍼 추가
+  - PDF/DOCX/PPTX 레이아웃 분석, 테이블·이미지 OCR
+  - 처리 시간은 MarkItDown 대비 2~5배 느림 → 품질 필요 시에만 선택적 사용
+- [ ] **Kreuzberg 통합** (Tier 2) — 경량·빠른 정확도 파서 (MarkItDown과 Docling 사이 포지션)
+  - 이미지 링크 추출 안정, HTML 동적 데이터 보존
+- [ ] **파이프라인 분기**:
+  - Tier 1 (기본): MarkItDown → 품질 스코어 ≥ 임계값 → 그대로 사용
+  - Tier 2 (fallback): 스코어 미달 or 사용자 지정 → Docling 또는 Kreuzberg 재변환
+  - 사용자 오버라이드: Audit 패널에 파일별 변환기 선택 옵션
+- [ ] **성능 비교 테스트** — 동일 88KB 파워디바이스 PDF로 3개 변환기 출력 대조 (챕터·테이블·이미지 보존율)
+- [ ] **캐시 전략** — 변환 결과 캐시 (SHA256 기반) → 재인제스트 시 변환 스킵

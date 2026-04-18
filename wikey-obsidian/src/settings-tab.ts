@@ -173,7 +173,7 @@ export class WikeySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Model')
-      .setDesc('Model name (e.g. gemma3:12b, gemini-2.0-flash). Leave empty for provider default.')
+      .setDesc('Model name (e.g. qwen3:8b, qwen3.6:35b-a3b, gemini-2.0-flash). Leave empty for provider default. Note: qwen3.6:35b-a3b uses ~27GB VRAM — requires ≥48GB unified memory.')
       .addText((text) =>
         text
           .setPlaceholder('provider default')
