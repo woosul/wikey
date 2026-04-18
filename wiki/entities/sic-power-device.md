@@ -21,8 +21,8 @@ tags: [sic, power-device, 반도체, 전력변환]
 
 ## 주요 제품
 
-*   sic-sbd (SiC 쇼트키 배리어 다이오드)
-*   sic-mosfet (SiC MOSFET)
-*   full-sic-power-module (Full SiC 파워 모듈)
+*   [[sic-sbd]] (SiC 쇼트키 배리어 다이오드)
+*   [[sic-mosfet]] (SiC MOSFET)
+*   [[full-sic-power-module]] (Full SiC 파워 모듈)
 
-[[rohm]]은 2010년에 sic-sbd와 sic-mosfet의 양산을 시작했으며, 2012년에는 full-sic-power-module 양산을 개시하는 등 [[sic-power-device]] 기술을 선도하고 있습니다.
+[[rohm]]은 2010년에 [[sic-sbd]]와 [[sic-mosfet]]의 양산을 시작했으며, 2012년에는 [[full-sic-power-module]] 양산을 개시하는 등 SiC 파워 디바이스 기술을 선도하고 있습니다.

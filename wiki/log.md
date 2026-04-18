@@ -5,11 +5,23 @@ created: 2026-04-10
 updated: 2026-04-12
 ---
 
+## [2026-04-18] lint | Phase 3 E2E 중복 제거 (B-1 #2 품질 검증)
+
+- 중복 제거 13건: `entity-byoai`, `entity-wikey`, `entity-zero-setup`, `entity-korean-enterprise-specialization`, `entity-architecture-decision-records`, `entity-nanovna-v2`, `ROHM-Co-Ltd`, `sic-power-devices`, `SiC-파워-디바이스`, `concept-architecture-decision-records`, `concept-llm-participation-multi-layer-search`, `concept-llm-wiki-architecture`, `sources/nanovna-v2-notes` (canonical로 내용 병합 후 삭제)
+- 슬러그 rename 3건: `SiC-MOSFET` → `sic-mosfet`, `SiC-SBD` → `sic-sbd`, `Full-SiC-파워-모듈` → `full-sic-power-module` (lowercase-hyphen 규칙 통일)
+- 위키링크 리라이트: log.md / index.md 참조 갱신
+- plain-text 참조 → 위키링크 변환: `rohm.md`, `sic-power-device.md`, `sic.md` (`sic-sbd`, `sic-mosfet`, `full-sic-power-module`)
+- 자기참조 제거: `sic-power-device.md`
+- canonical 보강: `nanovna-v2.md` (entity-nanovna-v2 내용 병합), `architecture-decision-records.md` (ADR-001~007 정보 추가)
+- index.md 전면 재작성 (E2E 테스트 섹션 제거, 엔티티/개념 일관 정렬)
+- 원인: Scenario 4 custom 프롬프트(`entity-` 접두사 + 영문 대문자 slug)가 기본 프롬프트 산출과 슬러그 충돌
+- 검증: validate-wiki.sh PASS (5/5)
+
 ## [2026-04-18] ingest | wikey-design-decisions.md (smoke test)
 
 - 소스 요약 생성: [[source-wikey-design-decisions]]
-- 엔티티 생성: [[entity-zero-setup]], [[entity-byoai]], [[entity-korean-enterprise-specialization]], [[entity-architecture-decision-records]]
-- 개념 생성: [[concept-architecture-decision-records]], [[concept-llm-participation-multi-layer-search]], [[concept-llm-wiki-architecture]]
+- 엔티티 생성: [[zero-setup]], [[byoai]], [[korean-enterprise-specialization]], [[architecture-decision-records]]
+- 개념 생성: [[architecture-decision-records]], [[llm-participation-multi-layer-search]], [[llm-wiki]]
 - 인덱스 갱신
 
 
@@ -22,7 +34,7 @@ updated: 2026-04-12
 
 ## [2026-04-18] ingest | Phase 3 E2E test
 - 소스 요약 생성: [[source-nanovna-v2-notes]]
-- 엔티티 생성: [[entity-nanovna-v2]]
+- 엔티티 생성: [[nanovna-v2]]
 - 개념 생성: [[concept-antenna-measurement]]
 - 인덱스 갱신
 
@@ -44,7 +56,7 @@ updated: 2026-04-12
 ## [2026-04-18] ingest | Phase 3 E2E test
 - 소스 요약 생성: [[source-wikey-design-decisions]]
 - 엔티티 생성: [[wikey]], [[zero-setup]], [[byoai]], [[korean-enterprise-specialization]]
-- 개념 생성: [[architecture-decision-records]], [[llm-participation-multi-layer-search]], [[concept-llm-wiki-architecture]]
+- 개념 생성: [[architecture-decision-records]], [[llm-participation-multi-layer-search]], [[llm-wiki]]
 - 인덱스 갱신
 
 
