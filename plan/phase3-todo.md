@@ -125,12 +125,13 @@
 - [x] **welcome 숨김** — 특수 패널 열릴 때 자동 숨김/복원
 - [x] **audit-ingest.py** — raw/ 미인제스트 문서 감지 스크립트
 
-### 선택 (Could) — 3/4 완료
+### 선택 (Could) — 3/3 완료 (qmd SDK import는 Phase 4로 이관)
 
 - [x] **대화 히스토리 영구 저장** — settings 토글, 최대 100건, 디바운스 2초
 - [x] **Obsidian Sync 경고 → 설정 통합으로 해소** — API 키가 항상 credentials.json에 저장, data.json에 미포함
 - [x] **BRAT 배포 + v0.1.0-alpha 태그** — versions.json + GitHub Actions + 태그 갱신
-- [ ] **qmd SDK import** — Phase 3 마지막 또는 Phase 4 연기 (난이도 높음)
+
+> qmd SDK import, CLI script → TS 완전 포팅은 Phase 4 §4-6으로 이관됨.
 
 ### Phase 3 마지막 작업
 
@@ -159,9 +160,12 @@
 - [x] **maxOutputTokens 65K** — Gemini finishReason:MAX_TOKENS 문제 해결
 - [x] **Gemini 에러 처리** — finishReason/candidates 없는 경우 상세 에러 메시지
 - [x] **LLM 파일명 경로 strip** — LLM이 wiki/entities/x.md 반환 시 자동 정리
-- [ ] **프롬프트 파일 분리** — ingest_prompt_basic.md(시스템) + ingest_prompt_user.md(사용자 커스텀)
-  - 사용자가 설정에서 링크 클릭으로 user 프롬프트 편집
-  - Reset 버튼으로 기본값 복원
+- [x] **프롬프트 파일 분리** — 2026-04-18 완료
+  - `wikey-core/src/prompts/ingest_prompt_basic.md` (시스템, 번들 불변) + `<vault>/.wikey/ingest_prompt_user.md` (사용자 편집, 선택)
+  - `loadUserPrompt()` 로더 + `USER_PROMPT_TEMPLATE` export + HTML 주석 자동 제거
+  - 설정 탭 Ingest Prompt 섹션: Create & Edit / Reset 버튼, 파일 상태 표시
+  - `buildIngestPrompt()` 시그니처에 `userPrompt` 파라미터 추가 (chunked 파이프라인에도 전달)
+  - 신규 테스트 5건 (65→70 tests passed)
 
 > **A-2 항목은 Phase 4로 이동 → `plan/phase4-todo.md`**
 

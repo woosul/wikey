@@ -27,7 +27,7 @@ tags: [태그1, 태그2]
 
 ### 현재 인덱스 (이미 존재하는 페이지)
 {{INDEX_CONTENT}}
-
+{{USER_PROMPT}}
 ## 소스 파일
 파일명: {{SOURCE_FILENAME}}
 

@@ -1,5 +1,5 @@
-import { App, Notice, PluginSettingTab, Setting, requestUrl } from 'obsidian'
-import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck } from 'wikey-core'
+import { App, Notice, PluginSettingTab, Setting, TFile, requestUrl } from 'obsidian'
+import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, USER_PROMPT_PATH, USER_PROMPT_TEMPLATE } from 'wikey-core'
 import type WikeyPlugin from './main'
 
 export class WikeySettingTab extends PluginSettingTab {
@@ -16,6 +16,7 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderEnvStatusSection(containerEl)
     this.renderBasicModelSection(containerEl)
     this.renderIngestModelSection(containerEl)
+    this.renderIngestPromptSection(containerEl)
     this.renderGeneralSection(containerEl)
     this.renderApiKeysSection(containerEl)
     this.renderSearchSection(containerEl)
@@ -188,6 +189,51 @@ export class WikeySettingTab extends PluginSettingTab {
             this.plugin.settings.ingestModel = value
             await this.plugin.saveSettings()
           }),
+      )
+  }
+
+  // ── Section: Ingest Prompt (user customization) ──
+  private renderIngestPromptSection(containerEl: HTMLElement): void {
+    containerEl.createEl('h3', { text: 'Ingest Prompt' })
+
+    const { vault } = this.plugin.app
+    const fileExists = vault.getAbstractFileByPath(USER_PROMPT_PATH) instanceof TFile
+    const status = fileExists ? 'Custom (user file exists)' : 'Default (no user file)'
+
+    const descEl = containerEl.createDiv({ cls: 'wikey-settings-status-desc' })
+    descEl.createSpan({ text: `Base prompt (wikey conventions + JSON format) is bundled with the plugin. Your additional instructions can be added in ` })
+    descEl.createEl('code', { text: USER_PROMPT_PATH })
+    descEl.createSpan({ text: ` and will be appended before the source. Status: ${status}.` })
+
+    new Setting(containerEl)
+      .setName('User Prompt')
+      .setDesc('Edit additional instructions (appended to the base prompt). Reset deletes the user file.')
+      .addButton((btn) =>
+        btn.setButtonText(fileExists ? 'Edit' : 'Create & Edit').onClick(async () => {
+          try {
+            let file = vault.getAbstractFileByPath(USER_PROMPT_PATH)
+            if (!(file instanceof TFile)) {
+              const parent = USER_PROMPT_PATH.split('/').slice(0, -1).join('/')
+              if (parent && !(await vault.adapter.exists(parent))) {
+                await vault.createFolder(parent)
+              }
+              file = await vault.create(USER_PROMPT_PATH, USER_PROMPT_TEMPLATE)
+            }
+            await this.plugin.app.workspace.getLeaf(true).openFile(file as TFile)
+          } catch (err) {
+            new Notice(`Failed to open user prompt: ${(err as Error).message}`)
+          }
+        }),
+      )
+      .addButton((btn) =>
+        btn.setButtonText('Reset').setDisabled(!fileExists).onClick(async () => {
+          const file = vault.getAbstractFileByPath(USER_PROMPT_PATH)
+          if (!(file instanceof TFile)) return
+          if (!confirm(`Delete ${USER_PROMPT_PATH}? Ingest will use the default prompt.`)) return
+          await vault.delete(file)
+          new Notice('User prompt deleted — reverted to default.')
+          this.display()
+        }),
       )
   }
 

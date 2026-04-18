@@ -57,8 +57,8 @@
 
 - [ ] 원본/위키 삭제 안전장치 — dry-run 미리보기, 영향 범위 표시
 - [ ] 초기화 기능 — 선택적 리셋 (완전/인제스트/원본/인덱스/설정)
-- [ ] bash→TS 완전 포팅 (validate-wiki, check-pii, cost-tracker, reindex)
-- [ ] qmd SDK import (선택)
+- [ ] **bash→TS 완전 포팅** (validate-wiki, check-pii, cost-tracker, reindex) — Phase 3에서 이관, exec 래퍼는 안정 동작 중이라 우선순위 낮음
+- [ ] **qmd SDK import** — Phase 3에서 이관. CLI exec → 직접 import로 전환 시 지연 감소 + 에러 처리 개선. 난이도 높음 (현재 vendored CLI 구조)
 
 ## 4-7. 로컬 추론 엔진 검토 (llama.cpp PoC)
 
