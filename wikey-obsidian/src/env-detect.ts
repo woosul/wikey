@@ -15,6 +15,7 @@ export interface EnvStatus {
   ollamaModels: string[]
   hasGemma4: boolean
   hasQwen3: boolean
+  hasQwen36: boolean
   hasKiwipiepy: boolean
   hasMarkitdown: boolean
   ready: boolean
@@ -31,6 +32,7 @@ const DEFAULT_STATUS: EnvStatus = {
   ollamaModels: [],
   hasGemma4: false,
   hasQwen3: false,
+  hasQwen36: false,
   hasKiwipiepy: false,
   hasMarkitdown: false,
   ready: false,
@@ -221,13 +223,13 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
   status.ollamaRunning = ollama.running
   status.ollamaModels = ollama.models
   status.hasGemma4 = ollama.models.some((n) => n.includes('gemma4'))
-  status.hasQwen3 = ollama.models.some((n) => n.includes('qwen3'))
+  status.hasQwen3 = ollama.models.some((n) => /^qwen3:[0-9]/.test(n))
+  status.hasQwen36 = ollama.models.some((n) => n.includes('qwen3.6'))
   if (!ollama.running) {
     issues.push('Ollama is not running. Run: ollama serve')
-  } else {
-    if (!status.hasQwen3) issues.push('Qwen3 not found. Run: ollama pull qwen3:8b (or qwen3.6:35b-a3b for higher quality, ≥48GB RAM)')
-    if (!status.hasGemma4) issues.push('Gemma4 not found. Run: ollama pull gemma4:26b')
   }
+  // LLM models are all optional — not flagged as issues.
+  // Selection dropdowns only show installed models (via Ollama /api/tags).
 
   // 6. kiwipiepy
   status.hasKiwipiepy = await checkKiwipiepy(status.pythonPath, env)

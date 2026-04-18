@@ -1201,6 +1201,11 @@
   color: var(--text-error);
 }
 
+.wikey-status-neutral {
+  background: rgba(128, 128, 128, 0.10);
+  color: var(--text-muted);
+}
+
 .wikey-settings-warning {
   display: flex;
   align-items: center;

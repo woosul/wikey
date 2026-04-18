@@ -42,14 +42,15 @@ export class WikeySettingTab extends PluginSettingTab {
       return
     }
 
-    const items: Array<{ label: string; value: string; ok: boolean; desc: string }> = [
+    const items: Array<{ label: string; value: string; ok: boolean; desc: string; optional?: boolean }> = [
       { label: 'Node.js', value: env.nodePath || 'Not found', ok: !!env.nodePath, desc: 'Runtime for qmd search engine' },
       { label: 'Python3', value: env.pythonPath || 'Not found', ok: !!env.pythonPath, desc: 'Required for Korean tokenizer & PDF processing' },
       { label: 'kiwipiepy', value: env.hasKiwipiepy ? 'Installed' : 'Not installed', ok: env.hasKiwipiepy, desc: 'Korean morpheme analyzer for search accuracy' },
       { label: 'qmd', value: env.qmdPath || 'Not found', ok: !!env.qmdPath, desc: 'Hybrid search engine (BM25 + vector)' },
       { label: 'Ollama', value: env.ollamaRunning ? `Running (${env.ollamaModels.length} models)` : 'Not running', ok: env.ollamaRunning, desc: 'Local LLM server for private inference' },
-      { label: 'Qwen3', value: env.hasQwen3 ? 'Installed' : 'Not installed', ok: env.hasQwen3, desc: 'Fast local model for ingest (JSON reliable)' },
-      { label: 'Gemma4', value: env.hasGemma4 ? 'Installed' : 'Not installed', ok: env.hasGemma4, desc: 'Local model for query & rich extraction' },
+      { label: 'Qwen3 8B', value: env.hasQwen3 ? 'Installed' : 'Optional', ok: env.hasQwen3, optional: true, desc: 'Ingest option (5.2GB, fast, JSON reliable)' },
+      { label: 'Qwen3.6:35b-a3b', value: env.hasQwen36 ? 'Installed' : 'Optional', ok: env.hasQwen36, optional: true, desc: 'Ingest high-quality option (24GB MoE, ≥48GB RAM)' },
+      { label: 'Gemma4', value: env.hasGemma4 ? 'Installed' : 'Optional', ok: env.hasGemma4, optional: true, desc: 'Query/CR synthesis option (not used for ingest)' },
       { label: 'MarkItDown', value: env.hasMarkitdown ? 'Installed' : 'Not installed', ok: env.hasMarkitdown, desc: 'PDF/DOCX to Markdown converter (Microsoft)' },
     ]
 
@@ -58,9 +59,14 @@ export class WikeySettingTab extends PluginSettingTab {
       const labelWrap = row.createDiv({ cls: 'wikey-settings-status-label-wrap' })
       labelWrap.createEl('span', { text: item.label, cls: 'wikey-settings-status-label' })
       labelWrap.createEl('span', { text: item.desc, cls: 'wikey-settings-status-desc' })
+      const badgeCls = item.ok
+        ? 'wikey-status-ok'
+        : item.optional
+          ? 'wikey-status-neutral'
+          : 'wikey-status-error'
       row.createEl('span', {
         text: item.value,
-        cls: `wikey-settings-status-badge ${item.ok ? 'wikey-status-ok' : 'wikey-status-error'}`,
+        cls: `wikey-settings-status-badge ${badgeCls}`,
       })
     }
 
