@@ -152,16 +152,36 @@ export class WikeySettingTab extends PluginSettingTab {
           .addOption('claude-code', 'Anthropic Claude')
           .setValue(this.plugin.settings.basicModel)
           .onChange(async (value) => {
-            // basicModel 변경 시, ingest가 Default Model 상속 중이면 ingestModel도 clear
+            // basicModel 변경 시, 새 provider와 호환되지 않는 model 값은 clear
             const prev = this.plugin.settings.basicModel
             this.plugin.settings.basicModel = value
-            const inherits = !this.plugin.settings.ingestProvider
-            if (value !== prev && inherits && this.plugin.settings.ingestModel) {
-              this.plugin.settings.ingestModel = ''
-              new Notice('Ingest model cleared (default provider changed).')
+            if (value !== prev) {
+              // Default Model의 상세 model (chat 선택 캐시) clear
+              if (this.plugin.settings.cloudModel) {
+                this.plugin.settings.cloudModel = ''
+              }
+              // Ingest가 Default Model 상속 중이면 ingestModel도 clear
+              const inherits = !this.plugin.settings.ingestProvider
+              if (inherits && this.plugin.settings.ingestModel) {
+                this.plugin.settings.ingestModel = ''
+              }
+              new Notice('Default model cleared (provider changed).')
             }
             await this.plugin.saveSettings()
             this.display()
+          }),
+      )
+
+    new Setting(containerEl)
+      .setName('Model')
+      .setDesc('Specific model for the selected provider (e.g. gemini-2.5-flash, gpt-4.1, claude-sonnet-4-20250514, qwen3:8b). Leave blank for provider default.')
+      .addText((text) =>
+        text
+          .setPlaceholder('(provider default)')
+          .setValue(this.plugin.settings.cloudModel || '')
+          .onChange(async (value) => {
+            this.plugin.settings.cloudModel = value.trim()
+            await this.plugin.saveSettings()
           }),
       )
   }
