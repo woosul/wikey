@@ -1,5 +1,44 @@
 # 다음 세션 후속 작업
 
+> 최신 갱신: 2026-04-18 (Phase 3 B 세션 — 모델 평가 + 프롬프트 분리)
+> 생성일: 2026-04-10
+
+---
+
+## 2026-04-18 세션 마감 (Phase 3 B 완료)
+
+### ⭐ 다음 세션 핵심 작업: Obsidian 실 테스트
+
+**파일**: `plan/phase3-obsidian-test.md` (258줄 체크리스트)
+
+5 시나리오 45분 예상:
+1. Fresh environment verification (5m)
+2. Small-doc single-chunk ingest — Qwen3 8B baseline (5m)
+3. Large-doc chunked ingest — Qwen3.6:35b-a3b (10–15m, 메모리 타이트 → 다른 앱 닫기)
+4. Ingest Prompt 사용자 커스텀 (A-1 신규 기능) (5m)
+5. Error cases (Ollama stopped / invalid model / out-of-raw) (5m)
+
+### 이번 세션 완료 (커밋됨)
+- `83df408` A-1 인제스트 프롬프트 basic/user 분리
+- `89fcd22` LLM 모델 전부 optional 처리 + Qwen3.6 독립 감지
+- `960b5a1` Qwen3.6:35b-a3b 인제스트 옵션 + Phase 4 로드맵 확장
+- 70/70 tests, 0 build errors
+
+### Phase 4 이관 아이디어 (구현 X, 기록만)
+
+- **model-benchmark.py** — Ollama × source × prompt 벤치 하니스 (이번 세션에 반복 작성한 /tmp/*.py 패턴 재사용 가능)
+- **ollama-health.sh** — top PhysMem + /api/ps 메모리/VRAM 실시간 체크 헬퍼
+- **prompt-baseline.py** — basic+user 프롬프트로 테스트 코퍼스 배치 실행 후 entity/concept counts diff
+
+### 선택 문서 보강 (생략됨, 필요 시)
+- `docs/getting-started.md` — Ingest Prompt 사용자 커스텀(A-1) 섹션 추가
+- `local-llm/model-selection-guide.md` — Qwen3.6를 8B 업그레이드 경로로 명시
+- `CLAUDE.md` — 플러그인 Ingest Model 설정 섹션 언급
+
+---
+
+## 과거 세션 (참고용)
+
 > 생성일: 2026-04-10
 > 이전 세션: wikey 프로젝트 초기 설정 + 계획 수립 (v2)
 
