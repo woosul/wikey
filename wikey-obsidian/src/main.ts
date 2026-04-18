@@ -22,6 +22,12 @@ interface WikeySettings {
   ingestModel: string
   lintProvider: string
   summarizeProvider: string
+  // OCR (markitdown-ocr fallback). 빈 값이면 basicModel로 resolve.
+  ocrProvider: string
+  ocrModel: string
+  // 자동 인제스트 (inbox file watcher)
+  autoIngest: boolean
+  autoIngestInterval: 0 | 10 | 30 | 60  // 0 = immediately, others = seconds debounce
   // 자동 탐지된 환경 (수동 편집 불필요)
   detectedShellPath: string
   detectedNodePath: string
@@ -45,6 +51,10 @@ const DEFAULT_SETTINGS: WikeySettings = {
   ingestModel: '',
   lintProvider: '',
   summarizeProvider: '',
+  ocrProvider: '',
+  ocrModel: '',
+  autoIngest: false,
+  autoIngestInterval: 30,
   detectedShellPath: '',
   detectedNodePath: '',
   detectedPythonPath: '',
@@ -54,6 +64,32 @@ const DEFAULT_SETTINGS: WikeySettings = {
 }
 
 export type { WikeySettings }
+
+/**
+ * Heuristic check: does `model` belong to `provider`'s model family?
+ * Defensive guard against stale settings where model/provider mismatch.
+ */
+function isModelCompatible(model: string, provider: string): boolean {
+  if (!model) return true
+  const m = model.toLowerCase()
+  switch (provider) {
+    case 'gemini':
+      return m.startsWith('gemini-') || m.startsWith('gemma-')
+    case 'openai':
+    case 'codex':
+      return m.startsWith('gpt-') || m.startsWith('o1') || m.startsWith('o3') || m.startsWith('o4')
+    case 'anthropic':
+    case 'claude-code':
+      return m.startsWith('claude-')
+    case 'ollama':
+    case 'local':
+      // Ollama hosts any non-cloud model (qwen, gemma4:*, llama, phi, etc.)
+      return !m.startsWith('gemini-') && !m.startsWith('gemma-') && !m.startsWith('gpt-')
+        && !m.startsWith('claude-') && !m.startsWith('o1') && !m.startsWith('o3') && !m.startsWith('o4')
+    default:
+      return true
+  }
+}
 
 export default class WikeyPlugin extends Plugin {
   settings: WikeySettings = DEFAULT_SETTINGS
@@ -92,6 +128,17 @@ export default class WikeyPlugin extends Plugin {
     let bypassBatch: string[] = []
     let bypassTimer: ReturnType<typeof setTimeout> | null = null
 
+    // 자동 인제스트 디바운스 큐 (설정 off면 미사용)
+    const autoQueue: string[] = []
+    let autoTimer: ReturnType<typeof setTimeout> | null = null
+
+    const scheduleAutoIngest = () => {
+      if (autoTimer) clearTimeout(autoTimer)
+      const interval = this.settings.autoIngestInterval
+      const delayMs = interval === 0 ? 0 : interval * 1000
+      autoTimer = setTimeout(() => void this.flushAutoIngestQueue(autoQueue), delayMs)
+    }
+
     this.registerEvent(
       this.app.vault.on('create', (file) => {
         if (!file.path.startsWith('raw/')) return
@@ -101,8 +148,14 @@ export default class WikeyPlugin extends Plugin {
         const isDoc = /\.(md|txt|pdf)$/i.test(file.path)
 
         if (file.path.startsWith('raw/0_inbox/')) {
-          if (isDoc) {
-            new Notice(`inbox에 새 파일: ${name} — [+] 버튼으로 인제스트하세요.`)
+          if (!isDoc) return
+          if (this.settings.autoIngest) {
+            const relPath = file.path
+            if (!autoQueue.includes(relPath)) autoQueue.push(relPath)
+            console.log('[Wikey] auto-ingest queued:', relPath, 'interval=', this.settings.autoIngestInterval)
+            scheduleAutoIngest()
+          } else {
+            new Notice(`inbox에 새 파일: ${name} — [+] 버튼에서 인제스트하세요.`)
           }
         } else if (isDoc && !file.path.includes('/_')) {
           bypassBatch.push(name)
@@ -120,6 +173,27 @@ export default class WikeyPlugin extends Plugin {
         }
       }),
     )
+  }
+
+  async flushAutoIngestQueue(queue: string[]): Promise<void> {
+    const { runIngest } = await import('./commands')
+    const batch = queue.splice(0, queue.length)
+    if (batch.length === 0) return
+    console.info(`[Wikey] auto-ingest flushing ${batch.length} file(s)`)
+    new Notice(`Auto-ingest: ${batch.length}개 파일 처리 시작`)
+    let ok = 0
+    let fail = 0
+    for (const relPath of batch) {
+      try {
+        const result = await runIngest(this, relPath)
+        if (result.success) ok++
+        else fail++
+      } catch (err: unknown) {
+        console.error('[Wikey] auto-ingest error:', relPath, err)
+        fail++
+      }
+    }
+    new Notice(`Auto-ingest 완료: ${ok} 성공 / ${fail} 실패`)
   }
 
   onunload() {
@@ -324,10 +398,16 @@ export default class WikeyPlugin extends Plugin {
   }
 
   buildConfig(): WikeyConfig {
+    // Effective provider for ingest: ingestProvider → basicModel fallback
+    const effectiveProvider = (this.settings.ingestProvider || this.settings.basicModel || 'ollama').toLowerCase()
+    // Model validation: drop ingestModel if it doesn't match the effective provider.
+    // Empty string lets wikey-core resolveProvider pick provider-default (e.g. gemini-2.5-flash).
+    const rawModel = this.settings.ingestModel || this.settings.cloudModel || ''
+    const validatedModel = isModelCompatible(rawModel, effectiveProvider) ? rawModel : ''
     return {
       WIKEY_BASIC_MODEL: this.settings.basicModel,
       WIKEY_SEARCH_BACKEND: 'basic',
-      WIKEY_MODEL: this.settings.ingestModel || this.settings.cloudModel || 'qwen3:8b',
+      WIKEY_MODEL: validatedModel,
       WIKEY_QMD_TOP_N: 5,
       GEMINI_API_KEY: this.settings.geminiApiKey,
       ANTHROPIC_API_KEY: this.settings.anthropicApiKey,
@@ -338,6 +418,8 @@ export default class WikeyPlugin extends Plugin {
       SUMMARIZE_PROVIDER: this.settings.advancedLLM ? this.settings.summarizeProvider : '',
       CONTEXTUAL_MODEL: 'gemma4:26b',
       COST_LIMIT: this.settings.costLimit,
+      OCR_PROVIDER: this.settings.ocrProvider || undefined,
+      OCR_MODEL: this.settings.ocrModel || undefined,
     }
   }
 

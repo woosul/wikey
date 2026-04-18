@@ -40,7 +40,7 @@ export async function ingest(
   let sourceContent: string
   if (isPdf) {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (MarkItDown)...' })
-    sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv)
+    sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`PDF text extraction failed: ${sourceFilename} — install pdftotext (brew install poppler) or markitdown (pip install markitdown[pdf])`)
     }
@@ -160,7 +160,19 @@ export async function ingest(
   log(`pages written — created=${createdPages.length}, updated=${updatedPages.length}`)
 
   if (parsed.index_additions?.length) {
-    await updateIndex(wikiFS, parsed.index_additions)
+    const entityBases = new Set((parsed.entities ?? []).map((e) => e.filename.replace(/\.md$/i, '')))
+    const conceptBases = new Set((parsed.concepts ?? []).map((c) => c.filename.replace(/\.md$/i, '')))
+    const sourceBase = sourcePage.filename.replace(/\.md$/i, '')
+    const tagged = parsed.index_additions.map((entry) => {
+      const match = entry.match(/\[\[([^\]|]+)/)
+      const firstLink = match ? match[1].trim().replace(/\.md$/i, '') : ''
+      let category: 'entities' | 'concepts' | 'sources' | 'analyses' = 'analyses'
+      if (firstLink === sourceBase || firstLink.startsWith('source-')) category = 'sources'
+      else if (entityBases.has(firstLink)) category = 'entities'
+      else if (conceptBases.has(firstLink)) category = 'concepts'
+      return { entry, category }
+    })
+    await updateIndex(wikiFS, tagged)
     log(`index.md updated with ${parsed.index_additions.length} entries`)
   }
 
@@ -406,10 +418,74 @@ tags: [태그1, 태그2]
 
 const MAX_SOURCE_CHARS = 12_000
 
-async function extractPdfText(sourcePath: string, basePath?: string, execEnv?: Record<string, string>): Promise<string> {
+interface OcrEndpoint {
+  readonly baseUrl: string
+  readonly apiKey: string
+  readonly model: string
+  readonly providerLabel: string
+}
+
+export function resolveOcrEndpoint(config?: WikeyConfig): OcrEndpoint {
+  const ollamaBase = (config?.OLLAMA_URL || 'http://localhost:11434').replace(/\/+$/, '') + '/v1'
+  const explicitProvider = config?.OCR_PROVIDER
+  const explicitModel = config?.OCR_MODEL
+  const fallbackProvider = config?.WIKEY_BASIC_MODEL || 'ollama'
+  const provider = (explicitProvider || fallbackProvider).toLowerCase()
+
+  switch (provider) {
+    case 'gemini':
+      return {
+        baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
+        apiKey: config?.GEMINI_API_KEY || '',
+        model: explicitModel || 'gemini-2.5-flash',
+        providerLabel: 'gemini',
+      }
+    case 'openai':
+      return {
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: config?.OPENAI_API_KEY || '',
+        model: explicitModel || 'gpt-4o',
+        providerLabel: 'openai',
+      }
+    case 'anthropic':
+      // Anthropic은 markitdown-ocr가 요구하는 OpenAI-compat vision 호출 미지원 → Ollama fallback
+      return {
+        baseUrl: ollamaBase,
+        apiKey: 'ollama',
+        model: explicitModel || 'gemma4:26b',
+        providerLabel: 'ollama (anthropic fallback)',
+      }
+    case 'ollama':
+    default:
+      return {
+        baseUrl: ollamaBase,
+        apiKey: 'ollama',
+        model: explicitModel || 'gemma4:26b',
+        providerLabel: 'ollama',
+      }
+  }
+}
+
+async function extractPdfText(
+  sourcePath: string,
+  basePath?: string,
+  execEnv?: Record<string, string>,
+  config?: WikeyConfig,
+): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const cwd = basePath ?? process.cwd()
   const fullPath = join(cwd, sourcePath)
+  const log = (msg: string, ...rest: unknown[]) => console.info(`[Wikey ingest][pdf-extract] ${msg}`, ...rest)
+  const warn = (msg: string, ...rest: unknown[]) => console.warn(`[Wikey ingest][pdf-extract] ${msg}`, ...rest)
+  const accept = (tier: string, out: string): string | null => {
+    const text = out.trim()
+    if (text.length > 50) {
+      log(`tier ${tier} OK — ${text.length} chars`)
+      return text
+    }
+    log(`tier ${tier} rejected — ${text.length} chars below threshold (50)`)
+    return null
+  }
 
   // PATH 보강 (Electron 환경에서 homebrew 등 누락 방지)
   const env = execEnv ? { ...execEnv } : { ...process.env } as Record<string, string>
@@ -417,36 +493,43 @@ async function extractPdfText(sourcePath: string, basePath?: string, execEnv?: R
   env.PATH = [...extraPaths, env.PATH ?? ''].join(':')
 
   // 1. MarkItDown (structured markdown, best quality)
+  log(`tier 1/5 start: markitdown — ${fullPath}`)
   try {
     const { stdout } = await execFileAsync('python3', [
       '-c', `from markitdown import MarkItDown; r = MarkItDown().convert("${fullPath}"); print(r.text_content)`,
     ], { timeout: 30000, maxBuffer: 10 * 1024 * 1024, env })
-    if (stdout.trim().length > 50) return stdout.trim()
-  } catch {
-    // markitdown not available — fall through
+    const ok = accept('1 markitdown', stdout)
+    if (ok) return ok
+  } catch (err: unknown) {
+    warn(`tier 1 markitdown error: ${errorMessage(err)}`)
   }
 
   // 2. pdftotext (poppler)
+  log(`tier 2/5 start: pdftotext`)
   try {
     const { stdout } = await execFileAsync('pdftotext', [fullPath, '-'], {
       timeout: 30000,
       maxBuffer: 10 * 1024 * 1024,
       env,
     })
-    if (stdout.trim().length > 50) return stdout.trim()
-  } catch {
-    // pdftotext not available — fall through
+    const ok = accept('2 pdftotext', stdout)
+    if (ok) return ok
+  } catch (err: unknown) {
+    warn(`tier 2 pdftotext error: ${errorMessage(err)}`)
   }
 
-  // 3. macOS textutil (basic extraction)
+  // 3. macOS mdimport (Spotlight metadata)
+  log(`tier 3/5 start: mdimport`)
   try {
     const { stdout } = await execFileAsync('mdimport', ['-d1', fullPath], { timeout: 10000, env })
-    if (stdout.trim().length > 50) return stdout.trim()
-  } catch {
-    // fall through
+    const ok = accept('3 mdimport', stdout)
+    if (ok) return ok
+  } catch (err: unknown) {
+    warn(`tier 3 mdimport error: ${errorMessage(err)}`)
   }
 
-  // 3. python3 PyPDF2/pymupdf fallback
+  // 4. pymupdf / PyPDF2 fallback
+  log(`tier 4/5 start: pymupdf/PyPDF2`)
   try {
     const { stdout } = await execFileAsync('python3', [
       '-c',
@@ -468,15 +551,20 @@ except ImportError:
 `,
       fullPath,
     ], { timeout: 30000, maxBuffer: 10 * 1024 * 1024, env })
-    if (stdout.trim().length > 50) return stdout.trim()
-  } catch {
-    // fall through
+    const ok = accept('4 pymupdf/PyPDF2', stdout)
+    if (ok) return ok
+  } catch (err: unknown) {
+    warn(`tier 4 pymupdf/PyPDF2 error: ${errorMessage(err)}`)
   }
 
-  // 5. markitdown-ocr fallback (scanned/image-only PDFs via Ollama vision)
-  // Triggered only when all text-layer extractors fail (likely scanned PDF).
-  const ollamaUrl = env.OLLAMA_URL || 'http://localhost:11434'
-  const visionModel = env.WIKEY_OCR_MODEL || 'gemma4:26b'
+  // 5. markitdown-ocr fallback (scanned/image-only PDFs via OpenAI-compat vision API)
+  // 미설정 시 WIKEY_BASIC_MODEL로 resolve, fallback=Ollama gemma4:26b.
+  const ocr = resolveOcrEndpoint(config)
+  log(`tier 5/5 start: markitdown-ocr — provider=${ocr.providerLabel}, model=${ocr.model}, base=${ocr.baseUrl}`)
+  if (!ocr.apiKey) {
+    warn(`tier 5 skipped — no apiKey for provider=${ocr.providerLabel}`)
+    return ''
+  }
   try {
     const { stdout } = await execFileAsync('python3', [
       '-c',
@@ -484,21 +572,29 @@ except ImportError:
 import sys
 from openai import OpenAI
 from markitdown import MarkItDown
-client = OpenAI(base_url=sys.argv[2] + "/v1", api_key="ollama")
+client = OpenAI(base_url=sys.argv[2], api_key=sys.argv[4])
 md = MarkItDown(enable_plugins=True, llm_client=client, llm_model=sys.argv[3])
 result = md.convert(sys.argv[1])
 print(result.text_content)
 `,
       fullPath,
-      ollamaUrl,
-      visionModel,
-    ], { timeout: 600000, maxBuffer: 50 * 1024 * 1024, env })
-    if (stdout.trim().length > 50) return stdout.trim()
-  } catch {
-    // OCR plugin or openai SDK or vision model unavailable — give up
+      ocr.baseUrl,
+      ocr.model,
+      ocr.apiKey,
+    ], { timeout: 900000, maxBuffer: 50 * 1024 * 1024, env })
+    const ok = accept(`5 markitdown-ocr (${ocr.providerLabel}/${ocr.model})`, stdout)
+    if (ok) return ok
+  } catch (err: unknown) {
+    warn(`tier 5 markitdown-ocr error: ${errorMessage(err)}`)
   }
 
+  warn(`all 5 tiers failed for ${sourcePath}`)
   return ''
+}
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) return err.message.split('\n')[0].slice(0, 200)
+  return String(err).slice(0, 200)
 }
 
 function truncateSource(text: string): string {

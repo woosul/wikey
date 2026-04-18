@@ -929,6 +929,35 @@
   color: white !important;
 }
 
+/* Drop zone header (title + Add button) */
+.wikey-ingest-drop-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2px 6px 2px;
+}
+
+.wikey-ingest-drop-title {
+  font-size: 0.92em;
+  font-weight: 500;
+  color: var(--text-normal);
+}
+
+.wikey-ingest-add-btn {
+  font-size: 0.82em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  cursor: pointer;
+}
+
+.wikey-ingest-add-btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Drop zone */
 .wikey-ingest-dropzone {
   border: 2px dashed var(--interactive-accent);

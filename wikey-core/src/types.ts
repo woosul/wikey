@@ -42,6 +42,10 @@ export interface WikeyConfig {
   readonly CONTEXTUAL_MODEL: string
 
   readonly COST_LIMIT: number
+
+  // OCR fallback (markitdown-ocr). 미설정 시 WIKEY_BASIC_MODEL로 resolve.
+  readonly OCR_PROVIDER?: string
+  readonly OCR_MODEL?: string
 }
 
 // ── LLM ──

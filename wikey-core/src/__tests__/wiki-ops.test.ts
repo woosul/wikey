@@ -73,23 +73,90 @@ describe('createPage', () => {
 })
 
 describe('updateIndex', () => {
-  it('adds new entries to index', async () => {
-    const fs = createMockFS({
-      'wiki/index.md': '# Index\n\n## Entities\n\n- [[esc]] — ESC\n',
-    })
+  const INDEX_WITH_SECTIONS = [
+    '# Index',
+    '',
+    '## 엔티티',
+    '',
+    '- [[esc]] — ESC',
+    '',
+    '## 개념',
+    '',
+    '- [[flight-mode]] — Flight mode',
+    '',
+    '## 소스',
+    '',
+    '- [[source-manual]] — Manual',
+    '',
+    '## 분석',
+    '',
+    '- [[risks]] — Risks',
+    '',
+  ].join('\n')
+
+  it('adds new entries to index (legacy string form)', async () => {
+    const fs = createMockFS({ 'wiki/index.md': '# Index\n\n## Entities\n\n- [[esc]] — ESC\n' })
     await updateIndex(fs, ['- [[fc]] — Flight Controller'])
     const content = await fs.read('wiki/index.md')
     expect(content).toContain('[[fc]]')
   })
 
   it('skips duplicate entries', async () => {
-    const fs = createMockFS({
-      'wiki/index.md': '# Index\n\n## Entities\n\n- [[esc]] — ESC\n',
-    })
+    const fs = createMockFS({ 'wiki/index.md': '# Index\n\n## Entities\n\n- [[esc]] — ESC\n' })
     await updateIndex(fs, ['- [[esc]] — Electronic Speed Controller'])
     const content = await fs.read('wiki/index.md')
     const matches = content.match(/\[\[esc\]\]/g)
     expect(matches?.length).toBe(1)
+  })
+
+  it('routes entity to 엔티티 section when category given', async () => {
+    const fs = createMockFS({ 'wiki/index.md': INDEX_WITH_SECTIONS })
+    await updateIndex(fs, [{ entry: '- [[fc]] — Flight Controller', category: 'entities' }])
+    const content = await fs.read('wiki/index.md')
+    const entSection = content.slice(content.indexOf('## 엔티티'), content.indexOf('## 개념'))
+    expect(entSection).toContain('[[fc]]')
+    const analSection = content.slice(content.indexOf('## 분석'))
+    expect(analSection).not.toContain('[[fc]]')
+  })
+
+  it('routes concept to 개념 section', async () => {
+    const fs = createMockFS({ 'wiki/index.md': INDEX_WITH_SECTIONS })
+    await updateIndex(fs, [{ entry: '- [[gps-lock]] — GPS lock', category: 'concepts' }])
+    const content = await fs.read('wiki/index.md')
+    const concSection = content.slice(content.indexOf('## 개념'), content.indexOf('## 소스'))
+    expect(concSection).toContain('[[gps-lock]]')
+  })
+
+  it('routes source to 소스 section', async () => {
+    const fs = createMockFS({ 'wiki/index.md': INDEX_WITH_SECTIONS })
+    await updateIndex(fs, [{ entry: '- [[source-fpv]] — FPV guide', category: 'sources' }])
+    const content = await fs.read('wiki/index.md')
+    const srcSection = content.slice(content.indexOf('## 소스'), content.indexOf('## 분석'))
+    expect(srcSection).toContain('[[source-fpv]]')
+  })
+
+  it('distributes mixed categories to respective sections in one call', async () => {
+    const fs = createMockFS({ 'wiki/index.md': INDEX_WITH_SECTIONS })
+    await updateIndex(fs, [
+      { entry: '- [[fc]] — FC', category: 'entities' },
+      { entry: '- [[pid]] — PID tuning', category: 'concepts' },
+      { entry: '- [[source-wiki]] — Wiki source', category: 'sources' },
+    ])
+    const content = await fs.read('wiki/index.md')
+    const entSection = content.slice(content.indexOf('## 엔티티'), content.indexOf('## 개념'))
+    const concSection = content.slice(content.indexOf('## 개념'), content.indexOf('## 소스'))
+    const srcSection = content.slice(content.indexOf('## 소스'), content.indexOf('## 분석'))
+    expect(entSection).toContain('[[fc]]')
+    expect(concSection).toContain('[[pid]]')
+    expect(srcSection).toContain('[[source-wiki]]')
+  })
+
+  it('legacy string entries fall back to 분석 section', async () => {
+    const fs = createMockFS({ 'wiki/index.md': INDEX_WITH_SECTIONS })
+    await updateIndex(fs, ['- [[new-insight]] — Insight'])
+    const content = await fs.read('wiki/index.md')
+    const analSection = content.slice(content.indexOf('## 분석'))
+    expect(analSection).toContain('[[new-insight]]')
   })
 })
 

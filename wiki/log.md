@@ -5,6 +5,14 @@ created: 2026-04-10
 updated: 2026-04-12
 ---
 
+## [2026-04-18] ingest | Raspberry_Pi_High_Quality_Camera_Getting_Started.pdf
+
+- 소스 요약 생성: [[source-raspberry-pi-high-quality-camera]]
+- 엔티티 생성: [[raspberry-pi-high-quality-camera]], [[raspberry-pi]], [[c-mount-lens]], [[cs-mount-lens]], [[raspbian]], [[raspistill]], [[raspberry-pi-trading-ltd]], [[mipi-alliance-inc]], [[raspberry-pi-foundation]]
+- 개념 생성: [[back-focus-adjustment]], [[ir-filter]], [[c-cs-adapter]], [[tripod-mount]], [[regulatory-compliance]], [[safety-information]], [[mipi-dsi]], [[mipi-csi]]
+- 인덱스 갱신
+
+
 ## [2026-04-18] lint | Phase 3 E2E 중복 제거 (B-1 #2 품질 검증)
 
 - 중복 제거 13건: `entity-byoai`, `entity-wikey`, `entity-zero-setup`, `entity-korean-enterprise-specialization`, `entity-architecture-decision-records`, `entity-nanovna-v2`, `ROHM-Co-Ltd`, `sic-power-devices`, `SiC-파워-디바이스`, `concept-architecture-decision-records`, `concept-llm-participation-multi-layer-search`, `concept-llm-wiki-architecture`, `sources/nanovna-v2-notes` (canonical로 내용 병합 후 삭제)

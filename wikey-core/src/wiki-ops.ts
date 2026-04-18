@@ -11,22 +11,63 @@ export async function createPage(
   await wikiFS.write(path, page.content)
 }
 
+export type IndexCategory = 'entities' | 'concepts' | 'sources' | 'analyses'
+
+export type IndexAddition = string | { readonly entry: string; readonly category: IndexCategory }
+
+const CATEGORY_HEADERS: Record<IndexCategory, string> = {
+  entities: '## 엔티티',
+  concepts: '## 개념',
+  sources: '## 소스',
+  analyses: '## 분석',
+}
+
 export async function updateIndex(
   wikiFS: WikiFS,
-  additions: readonly string[],
+  additions: readonly IndexAddition[],
 ): Promise<void> {
   const indexPath = 'wiki/index.md'
   const content = await wikiFS.read(indexPath)
 
-  const newEntries = additions.filter((entry) => {
+  // Skip duplicates (any addition whose wikilinks already exist in the index)
+  const fresh = additions.filter((a) => {
+    const entry = typeof a === 'string' ? a : a.entry
     const links = extractWikilinks(entry)
     return links.every((link) => !content.includes(`[[${link}]]`))
   })
+  if (fresh.length === 0) return
 
-  if (newEntries.length === 0) return
+  // Group by category. Legacy string additions fall through to 'analyses'.
+  const grouped: Record<IndexCategory, string[]> = { entities: [], concepts: [], sources: [], analyses: [] }
+  for (const a of fresh) {
+    if (typeof a === 'string') grouped.analyses.push(a)
+    else grouped[a.category].push(a.entry)
+  }
 
-  const updated = content.trimEnd() + '\n' + newEntries.join('\n') + '\n'
+  let updated = content
+  for (const cat of Object.keys(grouped) as IndexCategory[]) {
+    if (grouped[cat].length === 0) continue
+    updated = insertIntoSection(updated, CATEGORY_HEADERS[cat], grouped[cat])
+  }
   await wikiFS.write(indexPath, updated)
+}
+
+function insertIntoSection(content: string, header: string, entries: string[]): string {
+  const startIdx = content.indexOf(header)
+  if (startIdx === -1) {
+    // Section missing — append the section with its entries at end
+    return content.trimEnd() + '\n\n' + header + '\n\n' + entries.join('\n') + '\n'
+  }
+  // End of this section: next '## ' header or EOF
+  const afterHeader = startIdx + header.length
+  const rest = content.slice(afterHeader)
+  const nextHeaderMatch = rest.match(/\n##\s/)
+  const sectionEnd = nextHeaderMatch && nextHeaderMatch.index !== undefined
+    ? afterHeader + nextHeaderMatch.index + 1  // keep the leading \n
+    : content.length
+  const before = content.slice(0, sectionEnd).replace(/\n+$/, '')
+  const after = content.slice(sectionEnd)
+  return before + '\n' + entries.join('\n') + (after.startsWith('\n') ? after : '\n' + after)
 }
 
 export async function appendLog(

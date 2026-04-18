@@ -1028,22 +1028,13 @@ Click [[page name]] in answers to navigate to the wiki page.
     this.ingestPanel = createDiv({ cls: 'wikey-ingest-panel' })
     this.messagesEl.parentElement?.insertBefore(this.ingestPanel, this.messagesEl)
 
-    // ── Action buttons (top) ──
-    const actionsBar = this.ingestPanel.createDiv({ cls: 'wikey-ingest-actions' })
+    // ── Drop zone with header ──
+    const dropHeader = this.ingestPanel.createDiv({ cls: 'wikey-ingest-drop-header' })
+    dropHeader.createEl('span', { text: 'Insert file to inbox', cls: 'wikey-ingest-drop-title' })
+    const addToInboxBtn = dropHeader.createEl('button', { cls: 'wikey-ingest-add-btn', text: 'Add' })
+    addToInboxBtn.setAttr('disabled', 'true')
+    addToInboxBtn.addEventListener('click', () => this.addPendingToInbox())
 
-    const addBtn = actionsBar.createEl('button', { cls: 'wikey-ingest-action-btn', text: 'Add to inbox' })
-    addBtn.addEventListener('click', () => this.addPendingToInbox())
-
-    const ingestBtn = actionsBar.createEl('button', { cls: 'wikey-ingest-action-btn', text: 'Ingest inbox' })
-    ingestBtn.addEventListener('click', () => this.ingestInbox())
-
-    const addIngestBtn = actionsBar.createEl('button', { cls: 'wikey-ingest-action-btn wikey-ingest-action-primary', text: 'Add + Ingest' })
-    addIngestBtn.addEventListener('click', async () => {
-      await this.addPendingToInbox()
-      await this.ingestInbox()
-    })
-
-    // ── Drop zone ──
     const dropZone = this.ingestPanel.createDiv({ cls: 'wikey-ingest-dropzone' })
     dropZone.createEl('span', { text: 'Drag files here', cls: 'wikey-ingest-drop-label' })
 
@@ -1077,6 +1068,13 @@ Click [[page name]] in answers to navigate to the wiki page.
     this.ingestPanel.createDiv({ cls: 'wikey-ingest-progress' })
   }
 
+  private updateAddBtnState() {
+    const btn = this.ingestPanel?.querySelector('.wikey-ingest-add-btn') as HTMLButtonElement | null
+    if (!btn) return
+    if (this.pendingFiles.length === 0) btn.setAttr('disabled', 'true')
+    else btn.removeAttribute('disabled')
+  }
+
   private onFilesSelected(fileList: FileList) {
     for (let i = 0; i < fileList.length; i++) {
       const f = fileList[i]
@@ -1089,19 +1087,20 @@ Click [[page name]] in answers to navigate to the wiki page.
 
   private renderPendingFiles() {
     const container = this.ingestPanel?.querySelector('.wikey-ingest-pending')
-    if (!container) return
-    container.empty()
-
-    if (this.pendingFiles.length === 0) return
-
-    const el = container as HTMLElement
-    el.createEl('div', { text: `Selected (${this.pendingFiles.length})`, cls: 'wikey-ingest-section-label' })
-    for (const f of this.pendingFiles) {
-      const row = el.createDiv({ cls: 'wikey-ingest-file-row' })
-      row.createEl('span', { text: f.name, cls: 'wikey-ingest-file-name' })
-      const sizeKb = (f.size / 1024).toFixed(1)
-      row.createEl('span', { text: `${sizeKb} KB`, cls: 'wikey-ingest-file-size' })
+    if (container) {
+      container.empty()
+      if (this.pendingFiles.length > 0) {
+        const el = container as HTMLElement
+        el.createEl('div', { text: `Selected (${this.pendingFiles.length})`, cls: 'wikey-ingest-section-label' })
+        for (const f of this.pendingFiles) {
+          const row = el.createDiv({ cls: 'wikey-ingest-file-row' })
+          row.createEl('span', { text: f.name, cls: 'wikey-ingest-file-name' })
+          const sizeKb = (f.size / 1024).toFixed(1)
+          row.createEl('span', { text: `${sizeKb} KB`, cls: 'wikey-ingest-file-size' })
+        }
+      }
     }
+    this.updateAddBtnState()
   }
 
   private async addPendingToInbox() {
@@ -1166,6 +1165,8 @@ Click [[page name]] in answers to navigate to the wiki page.
 
   private inboxSelections: Set<string> = new Set()
   private inboxRowMap: Map<string, HTMLElement> = new Map()
+  // Preserve fail state across re-renders. Cleared on manual retry or 10min TTL.
+  private inboxFailState: Map<string, { error: string; timestamp: number }> = new Map()
 
   private async ingestSelectedInboxFiles() {
     const selected = [...this.inboxSelections]
@@ -1289,7 +1290,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       classifySelect.createEl('option', { text: opt.label, attr: { value: opt.value } })
     }
 
-    const moveBtn = applyBar.createEl('button', { text: 'Move', cls: 'wikey-audit-apply-btn wikey-inbox-move-btn' })
+    const moveBtn = applyBar.createEl('button', { text: 'Ingest', cls: 'wikey-audit-apply-btn wikey-inbox-move-btn' })
     const delayBtn = applyBar.createEl('button', { text: 'Delay', cls: 'wikey-audit-delay-action-btn wikey-inbox-delay-btn' })
     moveBtn.setAttr('disabled', 'true')
     delayBtn.setAttr('disabled', 'true')
@@ -1312,6 +1313,12 @@ Click [[page name]] in answers to navigate to the wiki page.
       const fullPath = join(basePath, 'raw/0_inbox', f)
       const isDir = existsSync(fullPath) && statSync(fullPath).isDirectory()
       const hint = classifyFile(f, isDir)
+      let fileSizeKb = 0
+      if (!isDir && existsSync(fullPath)) {
+        try { fileSizeKb = Math.round(statSync(fullPath).size / 1024) } catch { /* skip */ }
+      }
+      const sizeLabel = fileSizeKb >= 1024 ? `${(fileSizeKb / 1024).toFixed(1)}MB` : `${fileSizeKb}KB`
+      const recommend = fileSizeKb > 1024 ? 'Cloud' : 'Local'
 
       const row = listEl.createDiv({ cls: 'wikey-audit-row' })
       this.inboxRowMap.set(f, row)
@@ -1319,8 +1326,22 @@ Click [[page name]] in answers to navigate to the wiki page.
       const cb = row.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
 
       const info = row.createDiv({ cls: 'wikey-audit-info' })
-      info.createEl('span', { text: f, cls: 'wikey-audit-name' })
-      info.createEl('span', { text: hint.hint, cls: 'wikey-audit-path' })
+      const nameLine = info.createDiv({ cls: 'wikey-audit-name-line' })
+      nameLine.createEl('span', { text: f, cls: 'wikey-audit-name' })
+      if (!isDir) nameLine.createEl('span', { text: sizeLabel, cls: 'wikey-audit-filesize' })
+      const pathLine = info.createDiv({ cls: 'wikey-audit-path-line' })
+      pathLine.createEl('span', { text: hint.hint, cls: 'wikey-audit-path' })
+      if (!isDir) pathLine.createEl('span', { text: recommend, cls: `wikey-audit-recommend wikey-audit-recommend-${recommend.toLowerCase()}` })
+
+      // Preserve prior fail state across re-renders (TTL 10min, cleared on retry)
+      const failInfo = this.inboxFailState.get(f)
+      if (failInfo && Date.now() - failInfo.timestamp < 10 * 60 * 1000) {
+        row.addClass('wikey-audit-row-fail')
+        const errEl = row.createDiv({ cls: 'wikey-audit-error' })
+        errEl.setText(failInfo.error.length > 100 ? failInfo.error.slice(0, 100) + '...' : failInfo.error)
+      } else if (failInfo) {
+        this.inboxFailState.delete(f)
+      }
 
       const toggleCb = () => {
         if ((cb as HTMLInputElement).checked) this.inboxSelections.add(f)
@@ -1360,6 +1381,9 @@ Click [[page name]] in answers to navigate to the wiki page.
       const selected = [...this.inboxSelections]
       if (selected.length === 0) return
       const dest = classifySelect.value
+
+      // Retry semantics: clear prior fail state for these files before re-attempting
+      for (const f of selected) this.inboxFailState.delete(f)
 
       moveBtn.setAttr('disabled', 'true')
       delayBtn.setAttr('disabled', 'true')
@@ -1425,8 +1449,15 @@ Click [[page name]] in answers to navigate to the wiki page.
           }
         }
 
-        if (result.success) done++
-        else failed++
+        if (result.success) {
+          done++
+          this.inboxFailState.delete(name)
+        } else {
+          failed++
+          if (result.error) {
+            this.inboxFailState.set(name, { error: result.error, timestamp: Date.now() })
+          }
+        }
       }
 
       const msg = failed > 0

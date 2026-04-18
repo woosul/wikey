@@ -152,8 +152,16 @@ export class WikeySettingTab extends PluginSettingTab {
           .addOption('claude-code', 'Anthropic Claude')
           .setValue(this.plugin.settings.basicModel)
           .onChange(async (value) => {
+            // basicModel 변경 시, ingest가 Default Model 상속 중이면 ingestModel도 clear
+            const prev = this.plugin.settings.basicModel
             this.plugin.settings.basicModel = value
+            const inherits = !this.plugin.settings.ingestProvider
+            if (value !== prev && inherits && this.plugin.settings.ingestModel) {
+              this.plugin.settings.ingestModel = ''
+              new Notice('Ingest model cleared (default provider changed).')
+            }
             await this.plugin.saveSettings()
+            this.display()
           }),
       )
   }
@@ -174,8 +182,15 @@ export class WikeySettingTab extends PluginSettingTab {
           .addOption('anthropic', 'Anthropic Claude')
           .setValue(this.plugin.settings.ingestProvider)
           .onChange(async (value) => {
+            // provider가 바뀌면 기존 ingestModel은 해당 provider와 호환되지 않을 수 있으므로 자동 clear
+            const prev = this.plugin.settings.ingestProvider
             this.plugin.settings.ingestProvider = value
+            if (value !== prev && this.plugin.settings.ingestModel) {
+              this.plugin.settings.ingestModel = ''
+              new Notice('Ingest model cleared (provider changed).')
+            }
             await this.plugin.saveSettings()
+            this.display()
           }),
       )
 
@@ -271,6 +286,69 @@ export class WikeySettingTab extends PluginSettingTab {
             }
             await this.plugin.saveSettings()
             new Notice(value ? 'Chat history will be saved.' : 'Chat history saving disabled.')
+          }),
+      )
+
+    new Setting(containerEl)
+      .setName('Auto Ingest')
+      .setDesc('Automatically ingest files added to raw/0_inbox/ (debounced).')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.autoIngest)
+          .onChange(async (value) => {
+            this.plugin.settings.autoIngest = value
+            await this.plugin.saveSettings()
+          }),
+      )
+
+    new Setting(containerEl)
+      .setName('Auto Ingest Interval')
+      .setDesc('Debounce window before auto-ingest fires on new inbox files.')
+      .addDropdown((dd) => {
+        dd.addOption('0', 'Immediately')
+        dd.addOption('10', '10 seconds')
+        dd.addOption('30', '30 seconds')
+        dd.addOption('60', '60 seconds')
+        dd.setValue(String(this.plugin.settings.autoIngestInterval))
+        dd.onChange(async (value) => {
+          const v = Number(value)
+          this.plugin.settings.autoIngestInterval = (v === 0 || v === 10 || v === 30 || v === 60 ? v : 30) as 0 | 10 | 30 | 60
+          await this.plugin.saveSettings()
+        })
+      })
+
+    // OCR fallback (markitdown-ocr) — 미설정 시 basicModel 사용
+    const ocrDesc = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
+    ocrDesc.createEl('span', {
+      text: 'OCR fallback (markitdown-ocr). Leave blank to inherit basic model.',
+      cls: 'wikey-settings-status-label',
+    })
+
+    new Setting(containerEl)
+      .setName('OCR Provider')
+      .setDesc('Vision model provider used when text-layer extraction fails.')
+      .addDropdown((dd) => {
+        dd.addOption('', '(inherit basic model)')
+        dd.addOption('gemini', 'Gemini')
+        dd.addOption('openai', 'OpenAI')
+        dd.addOption('ollama', 'Ollama (local)')
+        dd.setValue(this.plugin.settings.ocrProvider || '')
+        dd.onChange(async (value) => {
+          this.plugin.settings.ocrProvider = value
+          await this.plugin.saveSettings()
+        })
+      })
+
+    new Setting(containerEl)
+      .setName('OCR Model')
+      .setDesc('e.g. gemini-2.5-flash, gpt-4o, gemma4:26b. Leave blank for provider default.')
+      .addText((text) =>
+        text
+          .setPlaceholder('(provider default)')
+          .setValue(this.plugin.settings.ocrModel || '')
+          .onChange(async (value) => {
+            this.plugin.settings.ocrModel = value.trim()
+            await this.plugin.saveSettings()
           }),
       )
   }

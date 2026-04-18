@@ -1,5 +1,6 @@
 {
   "raw/1_projects/wikey/wikey-design-decisions.md": "source-wikey-design-decisions.md",
   "wiki/overview.md": "overview.md",
-  "raw/2_areas/rf-measurement/nanovna-v2-notes.md": "nanovna-v2-notes.md"
+  "raw/2_areas/rf-measurement/nanovna-v2-notes.md": "nanovna-v2-notes.md",
+  "raw/3_resources//Raspberry_Pi_High_Quality_Camera_Getting_Started.pdf": "source-raspberry-pi-high-quality-camera.md"
 }

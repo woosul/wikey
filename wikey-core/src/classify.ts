@@ -18,23 +18,23 @@ export function classifyFile(filename: string, isDir: boolean): ClassifyResult {
 
   // Rule 3: Folder
   if (isDir) {
-    return { filename, hint: '폴더 — LLM 판단 필요', destination: 'raw/resources/' }
+    return { filename, hint: '폴더 — LLM 판단 필요', destination: 'raw/3_resources/' }
   }
 
   // Rule 4-7: Extension-based
   switch (ext) {
     case 'pdf':
-      return { filename, hint: 'PDF 문서', destination: 'raw/resources/' }
+      return { filename, hint: 'PDF 문서', destination: 'raw/3_resources/' }
     case 'md':
-      return { filename, hint: '마크다운 노트', destination: 'raw/resources/' }
+      return { filename, hint: '마크다운 노트', destination: 'raw/3_resources/' }
     case 'stl': case 'step': case 'obj': case '3mf':
-      return { filename, hint: 'CAD 파일', destination: 'raw/resources/' }
+      return { filename, hint: 'CAD 파일', destination: 'raw/3_resources/' }
     case 'c': case 'h': case 'cpp': case 'ino': case 'py':
-      return { filename, hint: '소스코드', destination: 'raw/resources/' }
+      return { filename, hint: '소스코드', destination: 'raw/3_resources/' }
     case 'exe': case 'dll': case 'bin': case 'hex':
-      return { filename, hint: '바이너리/펌웨어', destination: 'raw/resources/' }
+      return { filename, hint: '바이너리/펌웨어', destination: 'raw/3_resources/' }
     default:
-      return { filename, hint: 'CLASSIFY.md 참조', destination: 'raw/resources/' }
+      return { filename, hint: 'CLASSIFY.md 참조', destination: 'raw/3_resources/' }
   }
 }
 
