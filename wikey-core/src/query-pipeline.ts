@@ -3,6 +3,7 @@ import { promisify } from 'node:util'
 import type { HttpClient, QueryResult, SearchResult, WikiFS, WikeyConfig } from './types.js'
 import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
+import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -253,7 +254,7 @@ async function extractEnglishKeywords(
   // Ollama 로컬 우선 (빠르고 무료), 없으면 기본 provider
   const ollamaAvailable = config.OLLAMA_URL && config.OLLAMA_URL !== ''
   const provider = ollamaAvailable ? 'ollama' as const : resolveProvider('default', config).provider
-  const model = ollamaAvailable ? (config.WIKEY_MODEL || 'gemma4') : resolveProvider('default', config).model
+  const model = ollamaAvailable ? (config.WIKEY_MODEL || PROVIDER_CHAT_DEFAULTS.ollama) : resolveProvider('default', config).model
 
   const llm = new LLMClient(httpClient, config)
 

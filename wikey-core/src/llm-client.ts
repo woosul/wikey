@@ -1,4 +1,5 @@
 import type { HttpClient, LLMCallOptions, LLMProvider, WikeyConfig } from './types.js'
+import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
 
 const DEFAULT_TIMEOUT = 300_000
 const DEFAULT_MAX_TOKENS = 65_536
@@ -31,7 +32,7 @@ export class LLMClient {
     const apiKey = this.config.GEMINI_API_KEY
     if (!apiKey) throw new Error('GEMINI_API_KEY not set — configure API key in settings')
 
-    const model = opts?.model ?? 'gemini-2.5-flash'
+    const model = opts?.model ?? PROVIDER_CHAT_DEFAULTS.gemini
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const payload: Record<string, unknown> = {
@@ -68,7 +69,7 @@ export class LLMClient {
     const apiKey = this.config.ANTHROPIC_API_KEY
     if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set — configure API key in settings')
 
-    const model = opts?.model ?? 'claude-sonnet-4-20250514'
+    const model = opts?.model ?? PROVIDER_CHAT_DEFAULTS.anthropic
     const url = 'https://api.anthropic.com/v1/messages'
 
     const payload = {
@@ -97,7 +98,7 @@ export class LLMClient {
     const apiKey = this.config.OPENAI_API_KEY
     if (!apiKey) throw new Error('OPENAI_API_KEY not set — configure API key in settings')
 
-    const model = opts?.model ?? 'gpt-4.1'
+    const model = opts?.model ?? PROVIDER_CHAT_DEFAULTS.openai
     const url = 'https://api.openai.com/v1/chat/completions'
 
     const payload = {
@@ -122,7 +123,7 @@ export class LLMClient {
   }
 
   private async callOllama(prompt: string, opts?: LLMCallOptions): Promise<string> {
-    const model = opts?.model ?? this.config.WIKEY_MODEL ?? 'gemma4'
+    const model = opts?.model ?? this.config.WIKEY_MODEL ?? PROVIDER_CHAT_DEFAULTS.ollama
     const baseUrl = this.config.OLLAMA_URL || 'http://localhost:11434'
     const url = `${baseUrl}/api/chat`
 

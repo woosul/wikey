@@ -11,6 +11,7 @@ import type {
 import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
 import { createPage, updateIndex, appendLog } from './wiki-ops.js'
+import { PROVIDER_VISION_DEFAULTS } from './provider-defaults.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -448,14 +449,14 @@ export function resolveOcrEndpoint(config?: WikeyConfig): OcrEndpoint {
       return {
         baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/',
         apiKey: config?.GEMINI_API_KEY || '',
-        model: explicitModel || 'gemini-2.5-flash',
+        model: explicitModel || PROVIDER_VISION_DEFAULTS.gemini,
         providerLabel: 'gemini',
       }
     case 'openai':
       return {
         baseUrl: 'https://api.openai.com/v1',
         apiKey: config?.OPENAI_API_KEY || '',
-        model: explicitModel || 'gpt-4o',
+        model: explicitModel || PROVIDER_VISION_DEFAULTS.openai,
         providerLabel: 'openai',
       }
     case 'anthropic':
@@ -463,7 +464,7 @@ export function resolveOcrEndpoint(config?: WikeyConfig): OcrEndpoint {
       return {
         baseUrl: ollamaBase,
         apiKey: 'ollama',
-        model: explicitModel || 'gemma4:26b',
+        model: explicitModel || PROVIDER_VISION_DEFAULTS.ollama,
         providerLabel: 'ollama (anthropic fallback)',
       }
     case 'ollama':
@@ -471,7 +472,7 @@ export function resolveOcrEndpoint(config?: WikeyConfig): OcrEndpoint {
       return {
         baseUrl: ollamaBase,
         apiKey: 'ollama',
-        model: explicitModel || 'gemma4:26b',
+        model: explicitModel || PROVIDER_VISION_DEFAULTS.ollama,
         providerLabel: 'ollama',
       }
   }

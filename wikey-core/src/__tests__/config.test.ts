@@ -144,7 +144,7 @@ describe('resolveProvider', () => {
     const config = { ...baseConfig, WIKEY_BASIC_MODEL: 'anthropic' }
     const result = resolveProvider('default', config)
     expect(result.provider).toBe('anthropic')
-    expect(result.model).toBe('claude-sonnet-4-20250514')
+    expect(result.model).toBe('claude-haiku-4-5-20251001')
   })
 
   it('resolves codex as openai', () => {

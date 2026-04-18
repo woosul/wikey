@@ -1,6 +1,6 @@
 import { Notice, Plugin, WorkspaceLeaf, requestUrl } from 'obsidian'
 import type { HttpClient, HttpRequestOptions, HttpResponse, WikiFS, WikeyConfig } from 'wikey-core'
-import { LLMClient, parseWikeyConf } from 'wikey-core'
+import { LLMClient, parseWikeyConf, CONTEXTUAL_DEFAULT_MODEL } from 'wikey-core'
 import { WikeyChatView, WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { WikeySettingTab } from './settings-tab'
 import { WikeyStatusBar } from './status-bar'
@@ -416,7 +416,7 @@ export default class WikeyPlugin extends Plugin {
       INGEST_PROVIDER: this.settings.ingestProvider || '',
       LINT_PROVIDER: this.settings.advancedLLM ? this.settings.lintProvider : '',
       SUMMARIZE_PROVIDER: this.settings.advancedLLM ? this.settings.summarizeProvider : '',
-      CONTEXTUAL_MODEL: 'gemma4:26b',
+      CONTEXTUAL_MODEL: CONTEXTUAL_DEFAULT_MODEL,
       COST_LIMIT: this.settings.costLimit,
       OCR_PROVIDER: this.settings.ocrProvider || undefined,
       OCR_MODEL: this.settings.ocrModel || undefined,

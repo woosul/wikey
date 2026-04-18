@@ -1,5 +1,5 @@
 import { App, Modal, Notice, PluginSettingTab, Setting, TFile, requestUrl } from 'obsidian'
-import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, loadEffectiveIngestPrompt, fetchModelList } from 'wikey-core'
+import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, loadEffectiveIngestPrompt, fetchModelList, ANTHROPIC_PING_MODEL } from 'wikey-core'
 import type { LLMProvider } from 'wikey-core'
 import type WikeyPlugin from './main'
 
@@ -511,7 +511,7 @@ export class WikeySettingTab extends PluginSettingTab {
             url: 'https://api.anthropic.com/v1/messages',
             method: 'POST',
             headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] }),
+            body: JSON.stringify({ model: ANTHROPIC_PING_MODEL, max_tokens: 1, messages: [{ role: 'user', content: 'ping' }] }),
           })
           if (resp.status === 200) { new Notice('Anthropic connected'); return true }
           new Notice(`Anthropic error: ${resp.status}`); return false

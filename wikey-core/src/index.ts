@@ -39,3 +39,10 @@ export {
   costTrackerAdd,
 } from './scripts-runner.js'
 export type { ScriptResult } from './scripts-runner.js'
+export {
+  PROVIDER_CHAT_DEFAULTS,
+  PROVIDER_VISION_DEFAULTS,
+  CONTEXTUAL_DEFAULT_MODEL,
+  DEFAULT_BASIC_PROVIDER,
+  ANTHROPIC_PING_MODEL,
+} from './provider-defaults.js'

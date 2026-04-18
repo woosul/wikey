@@ -1,4 +1,5 @@
 import type { WikeyConfig, LLMProvider } from './types.js'
+import { PROVIDER_CHAT_DEFAULTS, CONTEXTUAL_DEFAULT_MODEL } from './provider-defaults.js'
 
 const NUMERIC_KEYS = new Set(['WIKEY_QMD_TOP_N', 'COST_LIMIT'])
 
@@ -14,7 +15,7 @@ const DEFAULTS: WikeyConfig = {
   INGEST_PROVIDER: '',
   LINT_PROVIDER: '',
   SUMMARIZE_PROVIDER: '',
-  CONTEXTUAL_MODEL: 'gemma4',
+  CONTEXTUAL_MODEL: CONTEXTUAL_DEFAULT_MODEL,
   COST_LIMIT: 50,
 }
 
@@ -91,7 +92,7 @@ export function resolveProvider(
     case 'cr':
       return {
         provider: 'ollama',
-        model: config.CONTEXTUAL_MODEL || 'gemma4',
+        model: config.CONTEXTUAL_MODEL || CONTEXTUAL_DEFAULT_MODEL,
       }
     default:
       resolved = basicModel
@@ -100,12 +101,8 @@ export function resolveProvider(
   return mapToProvider(resolved, config)
 }
 
-const PROVIDER_DEFAULTS: Record<string, string> = {
-  gemini: 'gemini-2.5-flash',
-  anthropic: 'claude-sonnet-4-20250514',
-  openai: 'gpt-4.1',
-  ollama: 'qwen3:8b',
-}
+// PROVIDER defaults moved to provider-defaults.ts (single source of truth).
+// Imported below as PROVIDER_CHAT_DEFAULTS.
 
 function mapToProvider(
   name: string,
@@ -115,21 +112,21 @@ function mapToProvider(
 
   switch (name) {
     case 'gemini':
-      return { provider: 'gemini', model: userModel || PROVIDER_DEFAULTS.gemini }
+      return { provider: 'gemini', model: userModel || PROVIDER_CHAT_DEFAULTS.gemini }
     case 'anthropic':
-      return { provider: 'anthropic', model: userModel || PROVIDER_DEFAULTS.anthropic }
+      return { provider: 'anthropic', model: userModel || PROVIDER_CHAT_DEFAULTS.anthropic }
     case 'openai':
     case 'codex':
-      return { provider: 'openai', model: userModel || PROVIDER_DEFAULTS.openai }
+      return { provider: 'openai', model: userModel || PROVIDER_CHAT_DEFAULTS.openai }
     case 'ollama':
     case 'local':
-      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_DEFAULTS.ollama }
+      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_CHAT_DEFAULTS.ollama }
     case 'claude-code':
       if (config.ANTHROPIC_API_KEY) {
-        return { provider: 'anthropic', model: userModel || PROVIDER_DEFAULTS.anthropic }
+        return { provider: 'anthropic', model: userModel || PROVIDER_CHAT_DEFAULTS.anthropic }
       }
-      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_DEFAULTS.ollama }
+      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_CHAT_DEFAULTS.ollama }
     default:
-      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_DEFAULTS.ollama }
+      return { provider: 'ollama', model: userModel || config.WIKEY_MODEL || PROVIDER_CHAT_DEFAULTS.ollama }
   }
 }
