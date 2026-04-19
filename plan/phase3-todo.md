@@ -214,6 +214,26 @@
   - 단위 테스트 15건은 통과
 - [ ] **이슈 5 결정**: wiki/ 폴더 인제스트 가드 도입 여부 (현재 가드 없음 → wiki→wiki 사이클 위험, `activity/phase-3-test-results.md` 참조)
 
+### B-3. 2026-04-19 chunk 프롬프트 보정 검증 (신규)
+
+- [ ] **PMS 재인제스트 v2 실행** — 새 `callLLMForExtraction` 프롬프트 효과 검증
+  - v1 baseline: source 1 + entities 61 + concepts 519 = **581 파일** (UI 라벨 대량 승격, 과다 분할 확정)
+  - v2 예상: source 1 + entities 3~8 + concepts 15~30 = 20~40 파일
+  - 비교 데이터 위치: `activity/ingest-comparison/README.md` + `v1-file-list.txt` + `v1-concepts-sample.txt`
+  - 실행 방법: Obsidian Cmd+R → Audit 또는 Ingest 패널에서 `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` 다시 인제스트 (Gemini 2.5-flash 권장, stay-involved 모달 그대로)
+  - 체크 항목:
+    - UI 라벨(`announcement`, `address-book`, `all-services`, `access-rights` 등) **0개 생성**
+    - 업계 표준 용어(`pmbok`, `wbs`, `gantt-chart`, `erp`, `mes`, `scm`) **유지**
+    - log.md·index.md 등재율이 100%에 가깝게 (v1은 18/581 = 3%)
+    - 백링크 고아 비율
+    - 총 LLM 호출 시간 + 토큰 사용량 (가능하면)
+  - 결과 기록: `activity/ingest-comparison/README.md`의 v2 섹션 채움
+- [ ] **chunk step index/log 누락 수정 여부 판단** — v1에서 chunk 결과물이 `updateIndex`/`appendLog` 호출 없이 파일만 생성된 구조적 문제
+  - 현재 코드는 summaryParsed.index_additions/log_entry만 처리
+  - chunk에서 새로 발견된 entity/concept는 index/log 등재 누락 → 고아 유발
+  - 해결안: `merge` 단계에서 chunk 전용 index/log 보강 or summary prompt에서 chunk 결과를 fold 후 최종 index/log 재생성
+  - v2 테스트 결과가 양호하면 (UI 라벨 제거로 자연히 해소) 별도 수정 불필요할 수도
+
 > **운영 안정성, 완전 통합, llama.cpp PoC는 Phase 4로 이동 → `plan/phase4-todo.md`**
 
 ---

@@ -1,20 +1,87 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-19 (UI 재설계 + provider/classify 근본 수정 + Dewey Decimal 3차 분류)
+> 최신 갱신: 2026-04-19 오전 (Stay-involved 모달 + classify LLM fallback + chunk 프롬프트 과다분할 확인)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-19 (UI 재설계 + 근본 수정 세션) 마감
+## 2026-04-19 오전 (Stay-involved UX + chunk 과다분할 진단 세션) 마감
 
-### ⭐ 다음 세션 핵심 작업
+### ⭐ 다음 세션 최우선 작업: PMS v2 재인제스트 + v1/v2 비교
 
-**Phase 3 B-1 잔여**:
-1. **[#1] Audit 패널 인제스트 E2E** — 이번 세션은 Ingest 패널로 우회. Audit 패널(👁 아이콘) 체크박스→Ingest 클릭 흐름 검증 필요
-2. **[#3] Obsidian UI 수동 테스트** — UI 재설계 변경분(header 없음, Add 버튼, Cloud/Local 뱃지, Auto Ingest 토글, OCR 설정) 사람 눈 평가
-3. **[B-2 #4] markitdown-ocr fallback E2E** — 이번 세션에 OMRON 스캔 PDF에서 OCR 경로 발동 관찰됨 (gemma4:26b vision). 작은 스캔 PDF로 완주 검증 필요
-4. **[B-2 #5] `.wikey/ingest_prompt_user.md` override E2E**
-5. **[B-2 #6] wiki/ 폴더 인제스트 가드 도입 결정**
+**목표**: 금번 세션 마지막에 수정한 `callLLMForExtraction` 프롬프트가 v1 과다분할(581 → 20~40) 해소하는지 검증.
+
+1. Obsidian **Cmd+R** (새 빌드 로드) → Audit 패널 → `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` (이미 inbox에 복원됨) 선택 → Ingest
+2. 생성 파일 수·UI 라벨 여부·업계 표준 보존·log/index 등재율·시간/토큰 측정
+3. 결과를 `activity/ingest-comparison/README.md` v2 섹션에 기록
+4. v1(581) vs v2 정량 비교 표 완성
+
+**이전 세션부터 누적된 잔여**:
+- [#1] Audit 패널 인제스트 E2E — 이번 세션에 v1으로 실행됨, v2로 재검증 필요
+- [#3] Obsidian UI 수동 테스트 — 재설계분 사람 눈 평가
+- [B-2 #4] markitdown-ocr fallback E2E (OMRON 스캔 PDF)
+- [B-2 #5] `.wikey/ingest_prompt_user.md` override E2E
+- [B-2 #6] wiki/ 폴더 인제스트 가드 도입 결정
+
+### 이번 세션 완료 (주요 10건)
+
+**UX — Stay-involved 모달**:
+- `IngestFlowModal` 통합 단일 모달 (Brief → Processing → Preview stepper)
+- Brief 로딩 상태 + 비동기 `setBrief()` (즉시 모달 open, 10~30s LLM 대기 중 사용자 시각 피드백)
+- Processing [Back] → Brief 복귀 (guide 유지, runIngest while 루프)
+- Modal drag (h3 handle) + resize (SE corner grip 20×20, CSS 변수 기반 Obsidian max-width 우회)
+- 이모지 제거 (CLAUDE.md 규칙 준수)
+
+**UX — Audit 패널 대규모 개편**:
+- Stat chip 3개 (All/Ingested/Missing) 클릭 토글 + **완전 원형 pill** (border-radius: 9999px) + active 상태 accent
+- Filter row: `[Folder] [Search...] [List|Tree]` 오른쪽 정렬
+- Select All 라인 우측에 "Total | N" (16px bold)
+- Tree view: raw/ 최상위 숨김, SVG chevron (회전 애니메이션)
+- List/Tree 토글 (동일 데이터, 뷰 전환)
+- Fail/Cancelled 시각 구분 (fail=red, cancelled=gray)
+- Cancel 후 재시도 UX: 체크 유지 + renderList() 호출로 stale UI 해소
+- Provider/Model 셀렉트 **맨 아래로 배치** (Ingest 패널과 레이아웃 공유)
+- Provider/Model 기본값 `(use Default Model)` + `(provider default)` — API 리스트 첫 항목 자동 선택 버그 방지
+
+**UX — Ingest 패널 확장**:
+- Provider/Model 셀렉트 추가 (Audit와 동일 패턴, 맨 아래 배치)
+- Ingest 버튼은 기존 위치 유지
+
+**UX — Dashboard**:
+- Wiki 섹션에 `?` info 아이콘 (hover 툴팁 + 클릭 → `docs/ingest-decomposition.md`)
+- Missing 경고 알림 문구 제거 (사용자 요구)
+
+**기능 — Classify LLM fallback**:
+- `classifyFile` PDF default 30_manual 제거 → LLM fallback 트리거
+- DEWEY 카테고리 4 → **10개 확장** (000/100/200/300/400/500/600/700/800/900)
+- `classifyFileAsync` + `classifyWithLLM` + `loadClassifyRules` 신설
+- CLASSIFY.md에 템플릿·예시 섹션 추가 (LLM 참조용)
+- 하드코딩 매칭 실패 시에만 LLM 호출 (비용 최소화)
+
+**기능 — Ingest 핵심 수정**:
+- `ingest-map.json` 슬래시 중복 정규화(`normalizeRawPath`) + `updateIngestMapPath` (이동 후 매핑 갱신)
+- moveBtn 흐름 역전: 이동-후-인제스트 → **인제스트 성공 후 이동** (실패 시 inbox 잔류 → 재시도 가능)
+- `skipPostMove` 옵션 추가 (PARA 이동은 호출자가 담당)
+- Progress subStep/subTotal 세밀화: chunk i/N 진행률이 모달+row bar 양쪽에 부드러운 %로 반영
+- `loadSettings` DEFAULT 명시 저장 (누락된 필드 자동 채움)
+- generateBrief 404 로깅 강화 (`[Wikey brief] start: provider=X model=Y`)
+
+**수정 — Gemini 404 원인 확정**:
+- Google이 `gemini-2.0-flash` alias를 신규 사용자에게 **deprecate** — `models.list`는 여전히 반환하지만 `generateContent` 호출 시 404 ("no longer available to new users")
+- `fetchModelList`에서 `gemini-2.0-flash`·`gemini-2.0-flash-lite` alias 필터링 (명시 버전 `-001`은 유지)
+- `PROVIDER_CHAT_DEFAULTS.gemini = 'gemini-2.5-flash'` 단일 소스 확인
+
+**진단 — chunk 프롬프트 과다분할 (v1 baseline)**:
+- PMS 3.5MB PDF → 28,993자 → chunks 분할 → 각 청크 독립 추출 → **concepts 519 + entities 61 = 581 파일**
+- 원인: `callLLMForExtraction` 프롬프트에 재사용 필터·환각 방지·상한 **전혀 없음** (이전 세션 보정은 `BUNDLED_INGEST_PROMPT`에만 적용)
+- 과다 유형: UI 메뉴·기능명(`announcement`, `address-book`, `all-services` 등)이 concept 승격
+- 정상 유지: 업계 표준 용어(`pmbok`, `wbs`, `gantt-chart`, `erp`, `mes` 등 14개)
+- 현재: v1 파일 전부 원복(삭제) + PDF inbox 복귀 + chunk 프롬프트 새 버전(v2) 빌드
+- 비교 데이터 저장: `activity/ingest-comparison/{README.md, v1-file-list.txt, v1-concepts-sample.txt}`
+
+---
+
+### (구) 이번 세션 완료 (커밋 9개) — 직전 세션 기록
 
 ### 이번 세션 완료 (커밋 9개)
 
