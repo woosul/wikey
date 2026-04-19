@@ -190,9 +190,9 @@
   - 인제스트 권장 모델 업그레이드 검토 가능 (메모리 여유 확인된 환경 한정)
 ### B-1. Phase 3 원래 잔여 (검증 필요)
 
-- [ ] **Audit 패널 인제스트 E2E** — Audit 패널 UI(체크박스 → Ingest 버튼)로 실제 인제스트 성공 확인
-  - 2026-04-19 세션은 Ingest 패널(Cmd+Shift+I 흐름)로 우회 완료 — Audit 패널(👁) 직접 클릭 흐름 미검증
-  - UI 재설계(fb0a471) 이후 상태로 재검증 필요
+- [x] **Audit 패널 인제스트 E2E** — 2026-04-19 저녁 세션 v6 검증으로 완료 (커밋 77e9c9d)
+  - audit panel [Ingest] 버튼으로 PMS PDF 6회 인제스트 + Approve & Write 검증
+  - audit panel auto-move PARA 추가: 인제스트 후 raw/0_inbox/ → classifyFileAsync로 PARA 자동 라우팅
 - [x] **인제스트 품질 검증** — 생성된 wiki 페이지 내용 리뷰 (2026-04-19 완료, 커밋 f597133)
   - 중복 13건 제거 (entity-/concept- 접두어 변형) + slug 정규화 (SiC-* → sic-*)
   - canonical 병합: nanovna-v2, architecture-decision-records
@@ -216,22 +216,17 @@
 
 ### B-3. 2026-04-19 chunk 프롬프트 보정 검증 (신규)
 
-- [ ] **PMS 재인제스트 v2 실행** — 새 `callLLMForExtraction` 프롬프트 효과 검증
-  - v1 baseline: source 1 + entities 61 + concepts 519 = **581 파일** (UI 라벨 대량 승격, 과다 분할 확정)
-  - v2 예상: source 1 + entities 3~8 + concepts 15~30 = 20~40 파일
-  - 비교 데이터 위치: `activity/ingest-comparison/README.md` + `v1-file-list.txt` + `v1-concepts-sample.txt`
-  - 실행 방법: Obsidian Cmd+R → Audit 또는 Ingest 패널에서 `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` 다시 인제스트 (Gemini 2.5-flash 권장, stay-involved 모달 그대로)
-  - 체크 항목:
-    - UI 라벨(`announcement`, `address-book`, `all-services`, `access-rights` 등) **0개 생성**
-    - 업계 표준 용어(`pmbok`, `wbs`, `gantt-chart`, `erp`, `mes`, `scm`) **유지**
-    - log.md·index.md 등재율이 100%에 가깝게 (v1은 18/581 = 3%)
-    - 백링크 고아 비율
-    - 총 LLM 호출 시간 + 토큰 사용량 (가능하면)
-  - 결과 기록: `activity/ingest-comparison/README.md`의 v2 섹션 채움
-- [ ] **chunk step index/log 누락 수정 여부 판단** — v1에서 chunk 결과물이 `updateIndex`/`appendLog` 호출 없이 파일만 생성된 구조적 문제
-  - 현재 코드는 summaryParsed.index_additions/log_entry만 처리
-  - chunk에서 새로 발견된 entity/concept는 index/log 등재 누락 → 고아 유발
-  - 해결안: `merge` 단계에서 chunk 전용 index/log 보강 or summary prompt에서 chunk 결과를 fold 후 최종 index/log 재생성
+- [x] **PMS 재인제스트 v2~v6 실행** — 2026-04-19 저녁 세션 v6 완료 (커밋 77e9c9d)
+  - v2~v5 진동 (35→102) → **v6 = 22~38 (CV 16.9%, 76% 축소)**
+  - 한국어/UI/business/op 라벨 **0건** (schema-guided + anti-pattern 차단)
+  - 업계 표준 100% 보존, 약어 자동 풀네임 통합 (pmbok/erp/wbs/bom/scm/mes/plm/aps)
+  - log/index 등재율 **100%** (Phase A writtenPages 결정적 backfill)
+  - 처리 시간 평균 290s (v5 525s 대비 -45%)
+  - 상세 결과 → `activity/ingest-comparison/README.md` v6 섹션
+- [x] **chunk step index/log 누락 수정** — 2026-04-19 저녁 세션 v6 Phase A로 해결 (커밋 77e9c9d)
+  - `wiki-ops.ts` updateIndex/appendLog가 writtenPages 받아 결정적 backfill
+  - LLM 누락분 자동 보충 + 3-stage pipeline에서 chunk → mention → canonicalize로 분리
+  - 추가 fix: stripBrokenWikilinks (LLM dropped 항목 자동 정리)
   - v2 테스트 결과가 양호하면 (UI 라벨 제거로 자연히 해소) 별도 수정 불필요할 수도
 
 > **운영 안정성, 완전 통합, llama.cpp PoC는 Phase 4로 이동 → `plan/phase4-todo.md`**
