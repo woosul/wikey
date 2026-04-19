@@ -1,7 +1,83 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-19 오전 (Stay-involved 모달 + classify LLM fallback + chunk 프롬프트 과다분할 확인)
+> 최신 갱신: 2026-04-19 저녁 (v6 인제스트 코어 재설계 + UI 9건 + audit auto-move PARA)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-19 저녁 (v6 = 3-Stage Pipeline + Schema-Guided + UI 폴리싱) 마감
+
+### ⭐ 다음 세션 시작점
+
+**현재 상태**: v6 final commit 완료. PMS 인제스트 결과 wiki에 작성 (concepts 44, entities 46, sources 10). PMS 원본 PDF는 `raw/3_resources/30_manual/`로 자동 이동 (audit auto-move).
+
+**바로 시작 가능한 작업**:
+
+1. **🔴 다른 inbox 파일 인제스트 검증** (highest)
+   - `raw/0_inbox/`에 OMRON_HEM-7156T-AP_*.pdf (49.6MB), OMRON_HEM-7600T.pdf 남음
+   - audit panel auto-move로 PARA 라우팅 검증
+   - 큰 PDF의 markitdown-ocr fallback E2E 동시 테스트
+
+2. **🟡 v6 결정성 추가 측정 (옵션)**
+   - 현재 5회 std dev: Total CV 16.9%, Concepts CV 33.4%
+   - 다른 입력(사업자등록증 등)에서도 결정성 일관성 확인
+   - schema에 `methodology` vs `document_type` 경계 명확화로 Concepts CV 감소 시도
+
+3. **🟡 Lint 세션 — wiki 정리**
+   - PMS 인제스트로 작성된 페이지들의 중복/품질 검토
+   - log.md `, ,` cosmetic 잔존(이전 인제스트 시점) 정리
+   - validate-wiki.sh 실행
+
+### 잔여 (이전 세션부터 누적, 우선순위 재정렬)
+
+- **🟢 [v7-1]** schema에 `methodology` vs `document_type` 경계 명확화 (concept CV 감소)
+- **🟢 [v7-2]** anti-pattern에 운영 항목 추가 발굴 (인제스트 누적 중 발견 시)
+- **🟢 [v7-3]** Anthropic-style contextual chunk 재작성 (검색 재현율 개선, 인제스트와 별개)
+- **🟢 [v7-4]** 5회 std dev 자동 측정 → activity 로그 (회귀 감지 자동화)
+- **🟢 [v7-5]** schema yaml 사용자 override (`.wikey/schema.yaml`) — Phase D는 표시만, 편집 미구현
+- **🟢 [v7-6]** Pro 모델(`gemini-3.1-pro-preview`)을 옵션으로 노출 (Concept 보수적 분류 원할 때)
+- **🟡 [B-2 #4]** markitdown-ocr fallback E2E (OMRON 스캔 PDF) — 다음 세션 #1과 통합 가능
+- **🟡 [B-2 #5]** `.wikey/ingest_prompt_user.md` override E2E
+- **🟡 [B-2 #6]** wiki/ 폴더 인제스트 가드 도입 결정
+
+### 이번 세션 완료 (v6 = Phase A + B + C + D + UI 9건 + audit auto-move)
+
+**인제스트 코어 재설계**:
+- `wikey-core/src/schema.ts` 신규: 4 entity (organization·person·product·tool) + 3 concept (standard·methodology·document_type) + anti-pattern detector (한국어/UI/business/op/list/report/form)
+- `wikey-core/src/canonicalizer.ts` 신규: 단일 LLM 호출, schema-guided, cross-pool dedup, 약어/풀네임 자동 통합, 기존 페이지 재사용
+- `wikey-core/src/ingest-pipeline.ts`: 3-stage (summary + extractMentions + canonicalize)
+- `wikey-core/src/wiki-ops.ts`: writtenPages 기반 결정적 index/log backfill, stripBrokenWikilinks (LLM 누락/dropped 항목 자동 정리), normalizeBase + extractFirstSentence helper 추가
+- `wikey-core/src/types.ts`: WikiPage entityType/conceptType, Mention, CanonicalizedResult 타입 추가, LLMCallOptions.seed (v7 옵션)
+- `wikey-core/src/llm-client.ts`: Gemini generationConfig.seed 전달 지원
+
+**UI 9건**:
+1. Modal close 차단 (backdrop + ESC) + Processing 단계 [X] confirm 다이얼로그
+2. Modal resize 핸들 11×11 @ 315deg + 코너 안착 (modalEl 직접 부착)
+3. Modal 하단 button-row sticky (콘텐츠 길이 무관 항상 하단)
+4. Audit panel [Ingest][Delay] 우측 정렬 + provider/model 하단 고정
+5. Ingest panel bottom bar 고정 (audit과 동일, gap 10px) — `.wikey-ingest-progress:empty {display:none}`로 빈 progress 영역 차지 제거
+6. Brief 모달 schema preview 라인
+7. NFC/NFD 한글 검색 fix (audit 패널)
+8. Plugin 아이콘 search → book → book-open
+9. styles.css resize handle 1.5배(7→11px) + 방향 cw-180
+
+**audit panel auto-move PARA**:
+- `wikey-obsidian/src/commands.ts`의 runIngestCore에 `autoMoveFromInbox?: boolean` 옵션 추가
+- audit applyBtn은 true 전달 → ingest 후 raw/0_inbox/ 파일을 classifyFileAsync (CLASSIFY.md + LLM fallback)로 PARA 자동 라우팅
+- moveFile + updateIngestMapPath 자동 호출
+- inbox panel 'auto'는 기존 동작 유지 (plan phase classify + moveBtn explicit move)
+
+**기타**:
+- v6.1 실험 (temperature=0 + seed=42) → CV 악화 → 롤백
+- pro 모델 (gemini-3.1-pro-preview) 1회 시험 → Concept 매우 보수적 (7개)
+- PMS 원본 PDF를 `raw/0_inbox/` → `raw/3_resources/30_manual/`로 수동 이동 + ingest-map 키 갱신 + 백링크 점검 (모두 파일명 기반 wikilink, 위치 무관 → 무결)
+- 테스트 97 → **143** (+46): schema.test.ts (20) + canonicalizer.test.ts (12) + wiki-ops.test.ts (+13)
+
+**문서**:
+- `plan/plan-ingest-core-rebuild.md` 신규 (Plan 본체 + v6 결과 + v6.1 실험 분석)
+- `activity/ingest-comparison/README.md` 갱신 (v1~v6 종합 비교 표)
+- `activity/ingest-comparison/v3-file-list.txt` 신규
+- CLAUDE.md 갱신 (canonicalizer.ts, schema.ts, ingest-modals.ts 경로 추가)
 
 ---
 

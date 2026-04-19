@@ -23,10 +23,16 @@ done
 # ──────────────────────────────────────────────
 # 검증 2: 위키링크 대상 파일 존재 확인
 # ──────────────────────────────────────────────
+# Wikilink는 wiki/ 내 .md 또는 raw/ 내 임의 파일(PDF/이미지 등)을 가리킬 수 있음.
+# Obsidian은 파일명 기반 자동 해결이라 위치 무관.
 echo "=== 검증 2: 위키링크 확인 ==="
 find "$WIKI_DIR" -name "*.md" -print0 | while IFS= read -r -d '' file; do
   perl -ne 'while (/\[\[([^\]|]+)/g) { print "$1\n" }' "$file" | while read -r link; do
     found=$(find "$WIKI_DIR" -name "${link}.md" -print -quit 2>/dev/null)
+    if [ -z "$found" ]; then
+      # wiki/ .md에 없으면 raw/에서 임의 확장자 허용 (PDF, 이미지 등)
+      found=$(find raw -name "${link}.*" -print -quit 2>/dev/null)
+    fi
     if [ -z "$found" ]; then
       error "$file: 깨진 위키링크 [[${link}]]"
     fi

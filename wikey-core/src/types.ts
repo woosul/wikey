@@ -56,6 +56,8 @@ export interface LLMCallOptions {
   readonly provider?: LLMProvider
   readonly model?: string
   readonly temperature?: number
+  /** Deterministic sampling seed (Gemini supports this in generationConfig). */
+  readonly seed?: number
   readonly maxTokens?: number
   readonly timeout?: number
   readonly responseMimeType?: string
@@ -68,6 +70,40 @@ export interface WikiPage {
   readonly filename: string
   readonly content: string
   readonly category: 'entities' | 'concepts' | 'sources' | 'analyses'
+  /** Phase B v6: Schema-guided sub-type. Optional for sources/analyses (no sub-type). */
+  readonly entityType?: EntityType
+  readonly conceptType?: ConceptType
+}
+
+// ── Schema (Phase B v6: Schema-Guided Extraction) ──
+
+/** Allowed entity sub-types. LLM must classify each entity into one of these. */
+export type EntityType = 'organization' | 'person' | 'product' | 'tool'
+
+/** Allowed concept sub-types. LLM must classify each concept into one of these. */
+export type ConceptType = 'standard' | 'methodology' | 'document_type'
+
+/**
+ * A raw mention extracted from a chunk by Stage 1 (no classification yet).
+ * Stage 2 canonicalizer turns these into WikiPage objects with type assigned.
+ */
+export interface Mention {
+  readonly name: string
+  readonly type_hint?: EntityType | ConceptType | 'unknown'
+  readonly evidence: string
+  readonly source_chunk_id?: number
+}
+
+/**
+ * Stage 2 canonicalizer output. `dropped` are mentions that failed schema validation
+ * (UI labels, business objects, Korean labels, etc) — surfaced for transparency.
+ */
+export interface CanonicalizedResult {
+  readonly entities: readonly WikiPage[]
+  readonly concepts: readonly WikiPage[]
+  readonly dropped: ReadonlyArray<{ mention: Mention; reason: string }>
+  readonly indexAdditions?: readonly string[]
+  readonly logEntry?: string
 }
 
 export interface IngestResult {

@@ -12,7 +12,9 @@ import type {
 } from './types.js'
 import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
-import { createPage, updateIndex, appendLog } from './wiki-ops.js'
+import { createPage, updateIndex, appendLog, normalizeBase, type WrittenPage } from './wiki-ops.js'
+import { canonicalize } from './canonicalizer.js'
+import type { Mention, EntityType, ConceptType } from './types.js'
 import { PROVIDER_VISION_DEFAULTS } from './provider-defaults.js'
 
 const execFileAsync = promisify(execFile)
@@ -79,38 +81,60 @@ export async function ingest(
 
   log(`source: ${sourceContent.length} chars, large=${sourceContent.length > MAX_SOURCE_CHARS}, provider=${provider}, model=${model}`)
 
+  // ── v6 3-stage pipeline ──
+  // Stage 1: Summary LLM (source_page) + chunk LLM (mentions only, no classification)
+  // Stage 2: Canonicalizer LLM (single doc-global call) → schema-validated entities/concepts
+  // Stage 3: Code writes pages + deterministic index/log (Phase A)
+  const existingEntityBases = (await wikiFS.list('wiki/entities').catch(() => []))
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => f.replace(/\.md$/i, ''))
+  const existingConceptBases = (await wikiFS.list('wiki/concepts').catch(() => []))
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => f.replace(/\.md$/i, ''))
+  log(`existing wiki — entities=${existingEntityBases.length}, concepts=${existingConceptBases.length}`)
+
+  const today = formatLocalDate(new Date())
+
   if (!isLargeDoc) {
-    // ── Small document: single LLM call (original flow) ──
+    // ── Small document: 1 summary call + 1 mentions call + 1 canonicalize call ──
     const content = isLocal ? truncateSource(sourceContent) : sourceContent
-    onProgress?.({ step: 2, total: 4, message: `LLM (${model})...` })
-    parsed = await callLLMForIngest(llm, content, sourceFilename, indexContent, provider, model, promptTemplate)
-    log(`small-doc LLM done — entities=${parsed.entities?.length ?? 0}, concepts=${parsed.concepts?.length ?? 0}, index_additions=${parsed.index_additions?.length ?? 0}, log_entry=${parsed.log_entry ? 'yes' : 'no'}`)
+    onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: 3, message: `Summary (${model})...` })
+    const summaryParsed = await callLLMForSummary(llm, content, sourceFilename, indexContent, provider, model, promptTemplate)
+
+    onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model})...` })
+    const mentions = await extractMentions(llm, content, sourceFilename, provider, model)
+    log(`small-doc — summary done, mentions=${mentions.length}`)
+
+    onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})...` })
+    const canon = await canonicalize({
+      llm, mentions, existingEntityBases, existingConceptBases,
+      sourceFilename, today, guideHint: opts?.guideHint, provider, model,
+    })
+    log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
+
+    parsed = {
+      source_page: summaryParsed.source_page,
+      entities: canon.entities.map((p) => ({ filename: p.filename, content: p.content })),
+      concepts: canon.concepts.map((p) => ({ filename: p.filename, content: p.content })),
+      index_additions: canon.indexAdditions ? [...canon.indexAdditions] : summaryParsed.index_additions,
+      log_entry: canon.logEntry ?? summaryParsed.log_entry,
+    }
   } else {
-    // ── Large document: Graphify-style chunked pipeline ──
+    // ── Large document: Summary + chunked mention extraction + 1 canonicalize ──
     const chunks = splitIntoChunks(sourceContent)
-    const totalSteps = chunks.length + 2 // summary + chunks + merge
+    const totalSteps = chunks.length + 2  // summary + chunks + canonicalize
 
     // Step A: Summary → source_page (truncated for local, full for cloud)
     onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: totalSteps, message: `Summary (${model}) [1/${totalSteps}]...` })
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
-    const summaryParsed = await callLLMForIngest(llm, summaryContent, sourceFilename, indexContent, provider, model, promptTemplate)
-    log(`summary done — entities=${summaryParsed.entities?.length ?? 0}, concepts=${summaryParsed.concepts?.length ?? 0}, index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
-    if (!summaryParsed.index_additions?.length) {
-      console.warn('[Wikey ingest] summary returned no index_additions — wiki/index.md will not be updated')
-    }
-    if (!summaryParsed.log_entry) {
-      console.warn('[Wikey ingest] summary returned no log_entry — wiki/log.md will not be updated')
-    }
+    const summaryParsed = await callLLMForSummary(llm, summaryContent, sourceFilename, indexContent, provider, model, promptTemplate)
+    log(`summary done — index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
 
-    // Step B: Each chunk → entities + concepts
-    const allEntities: Array<{ filename: string; content: string }> = [...(summaryParsed.entities ?? [])]
-    const allConcepts: Array<{ filename: string; content: string }> = [...(summaryParsed.concepts ?? [])]
-
-    let chunkOk = 0
-    let chunkFail = 0
+    // Step B: Each chunk → mentions only (no classification)
+    const allMentions: Mention[] = []
+    let chunkOk = 0, chunkFail = 0
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i]
-      // Summary occupied subStep 0..1. Chunks use subStep 1..totalSteps-1.
       onProgress?.({
         step: 2, total: 4,
         subStep: i + 1, subTotal: totalSteps,
@@ -118,33 +142,38 @@ export async function ingest(
       })
       const chunkContent = isLocal ? truncateSource(chunk) : chunk
       try {
-        const chunkParsed = await callLLMForExtraction(llm, chunkContent, sourceFilename, provider, model)
-        allEntities.push(...(chunkParsed.entities ?? []))
-        allConcepts.push(...(chunkParsed.concepts ?? []))
+        const chunkMentions = await extractMentions(llm, chunkContent, sourceFilename, provider, model, i)
+        allMentions.push(...chunkMentions)
         chunkOk++
       } catch (err) {
         chunkFail++
         console.warn(`[Wikey ingest] chunk ${i + 1}/${chunks.length} failed:`, (err as Error).message)
       }
     }
-    log(`chunks done — ok=${chunkOk}, failed=${chunkFail}, raw entities=${allEntities.length}, raw concepts=${allConcepts.length}`)
+    log(`mentions extracted — ok=${chunkOk}, failed=${chunkFail}, total=${allMentions.length}`)
 
-    // Step C: Merge — deduplicate by filename
-    const seenEntities = new Map<string, { filename: string; content: string }>()
-    for (const e of allEntities) {
-      if (!seenEntities.has(e.filename)) seenEntities.set(e.filename, e)
-    }
-    const seenConcepts = new Map<string, { filename: string; content: string }>()
-    for (const c of allConcepts) {
-      if (!seenConcepts.has(c.filename)) seenConcepts.set(c.filename, c)
+    // Step C: Single canonicalizer call — schema validation + acronym/existing dedup
+    onProgress?.({
+      step: 2, total: 4,
+      subStep: chunks.length + 1, subTotal: totalSteps,
+      message: `Canonicalizing (${model}) [${chunks.length + 1}/${totalSteps}]...`,
+    })
+    const canon = await canonicalize({
+      llm, mentions: allMentions, existingEntityBases, existingConceptBases,
+      sourceFilename, today, guideHint: opts?.guideHint, provider, model,
+    })
+    log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
+    if (canon.dropped.length > 0) {
+      const droppedSummary = canon.dropped.slice(0, 10).map((d) => `${d.mention.name} (${d.reason})`).join(', ')
+      log(`dropped sample: ${droppedSummary}${canon.dropped.length > 10 ? `, +${canon.dropped.length - 10} more` : ''}`)
     }
 
     parsed = {
       source_page: summaryParsed.source_page,
-      entities: [...seenEntities.values()],
-      concepts: [...seenConcepts.values()],
-      index_additions: summaryParsed.index_additions,
-      log_entry: summaryParsed.log_entry,
+      entities: canon.entities.map((p) => ({ filename: p.filename, content: p.content })),
+      concepts: canon.concepts.map((p) => ({ filename: p.filename, content: p.content })),
+      index_additions: canon.indexAdditions ? [...canon.indexAdditions] : summaryParsed.index_additions,
+      log_entry: canon.logEntry ?? summaryParsed.log_entry,
     }
   }
 
@@ -195,28 +224,38 @@ export async function ingest(
 
   log(`pages written — created=${createdPages.length}, updated=${updatedPages.length}`)
 
-  if (parsed.index_additions?.length) {
-    const entityBases = new Set((parsed.entities ?? []).map((e) => e.filename.replace(/\.md$/i, '')))
-    const conceptBases = new Set((parsed.concepts ?? []).map((c) => c.filename.replace(/\.md$/i, '')))
-    const sourceBase = sourcePage.filename.replace(/\.md$/i, '')
-    const tagged = parsed.index_additions.map((entry) => {
-      const match = entry.match(/\[\[([^\]|]+)/)
-      const firstLink = match ? match[1].trim().replace(/\.md$/i, '') : ''
-      let category: 'entities' | 'concepts' | 'sources' | 'analyses' = 'analyses'
-      if (firstLink === sourceBase || firstLink.startsWith('source-')) category = 'sources'
-      else if (entityBases.has(firstLink)) category = 'entities'
-      else if (conceptBases.has(firstLink)) category = 'concepts'
-      return { entry, category }
-    })
-    await updateIndex(wikiFS, tagged)
-    log(`index.md updated with ${parsed.index_additions.length} entries`)
-  }
+  // Phase A: Build writtenPages for deterministic index/log backfill.
+  // Every page actually written (regardless of whether the LLM mentioned it) is registered.
+  const writtenPages: WrittenPage[] = [
+    { filename: sourcePage.filename, category: 'sources', content: sourcePage.content },
+    ...(parsed.entities ?? []).map((e) => ({ filename: e.filename, category: 'entities' as const, content: e.content })),
+    ...(parsed.concepts ?? []).map((c) => ({ filename: c.filename, category: 'concepts' as const, content: c.content })),
+  ]
 
-  if (parsed.log_entry) {
-    const today = formatLocalDate(new Date())
-    await appendLog(wikiFS, `## [${today}] ingest | ${sourceFilename}\n\n${parsed.log_entry}`)
-    log(`log.md prepended`)
-  }
+  // Tag LLM-provided index_additions by category so wiki-ops places them in the right section.
+  const entityBases = new Set((parsed.entities ?? []).map((e) => normalizeBase(e.filename)))
+  const conceptBases = new Set((parsed.concepts ?? []).map((c) => normalizeBase(c.filename)))
+  const sourceBase = normalizeBase(sourcePage.filename)
+  const tagged = (parsed.index_additions ?? []).map((entry) => {
+    const match = entry.match(/\[\[([^\]|]+)/)
+    const firstLink = match ? normalizeBase(match[1].trim()) : ''
+    let category: 'entities' | 'concepts' | 'sources' | 'analyses' = 'analyses'
+    if (firstLink === sourceBase || firstLink.startsWith('source-')) category = 'sources'
+    else if (entityBases.has(firstLink)) category = 'entities'
+    else if (conceptBases.has(firstLink)) category = 'concepts'
+    return { entry, category }
+  })
+  await updateIndex(wikiFS, tagged, writtenPages)
+  log(`index.md updated — LLM entries=${tagged.length}, total written pages=${writtenPages.length}`)
+
+  // log.md: always append an entry, using LLM body if available, else build deterministic header.
+  // Auto-fill missing pages so the log reflects what was actually written.
+  // (today already declared at top of ingest() for canonicalizer)
+  const llmBody = parsed.log_entry?.trim() ?? ''
+  const entryHeader = `## [${today}] ingest | ${sourceFilename}`
+  const entry = llmBody ? `${entryHeader}\n\n${llmBody}` : `${entryHeader}\n`
+  await appendLog(wikiFS, entry, writtenPages)
+  log(`log.md prepended`)
 
   // Step 4: Reindex
   onProgress?.({ step: 4, total: 4, message: 'Indexing...' })
@@ -242,7 +281,12 @@ export async function ingest(
 
 // ── LLM call helpers ──
 
-async function callLLMForIngest(
+/**
+ * v6 Stage 1a: Summary call — produces source_page (markdown) + index_additions + log_entry.
+ * Entities/concepts in the response are IGNORED in v6 (canonicalizer determines them from mentions).
+ * Renamed from callLLMForIngest for clarity; same prompt template.
+ */
+async function callLLMForSummary(
   llm: LLMClient, sourceContent: string, sourceFilename: string,
   indexContent: string, provider: string, model: string, promptTemplate?: string,
 ): Promise<IngestRawResult> {
@@ -250,11 +294,80 @@ async function callLLMForIngest(
   return callLLMWithRetry(llm, prompt, provider, model)
 }
 
+/**
+ * v6 Stage 1b: Mention extractor — chunk LLM emits raw mentions only, no classification.
+ * Returns Mention[] (not IngestRawResult). Stage 2 canonicalizer handles classification + dedup.
+ */
+async function extractMentions(
+  llm: LLMClient, chunkContent: string, sourceFilename: string,
+  provider: string, model: string, chunkIdx?: number,
+): Promise<Mention[]> {
+  const prompt = `이 문서 청크에서 잠재적으로 wiki 페이지가 될 만한 **mention(언급)**을 추출하세요.
+
+Source: ${sourceFilename}
+
+## 작업 정의
+
+분류하지 마세요. 페이지를 만들지 마세요. 단지 "이 chunk에 등장하는 wiki 후보"를 짧게 나열만 하세요.
+
+각 mention은 다음 정보를 가집니다:
+- \`name\`: 정규화된 base name (소문자 + 하이픈 구분, 예: \`pmbok\`, \`goodstream-co-ltd\`)
+- \`type_hint\`: 다음 중 하나 또는 \`unknown\`
+  - **entity 후보**: \`organization\` (회사/기관), \`person\` (실명 인물), \`product\` (제품명), \`tool\` (소프트웨어/프로토콜)
+  - **concept 후보**: \`standard\` (산업표준/규격), \`methodology\` (방법론), \`document_type\` (문서종류)
+- \`evidence\`: 1문장 (어디 등장했는지, 200자 이내)
+
+## 무엇을 mention으로 뽑을까
+
+✅ 산업 표준 용어 (PMBOK, ERP, MES, Gantt chart 등)
+✅ 회사·인물·제품·도구의 고유명
+✅ 정식 문서 유형 (사업자등록증, 세금계산서 등)
+
+❌ UI 라벨/메뉴/버튼명 — 절대 mention 아님
+❌ 한국어 일반 명사 라벨 (회의실, 결재시스템 등) — mention 아님
+❌ X-management, X-service, X-support 같은 단순 기능명 — mention 아님
+❌ 비즈니스 객체 라벨 (quotation, purchase-order, tax-invoice 등) — mention 아님
+
+## 가이드 분량
+
+청크당 0~15개 정도. 모르는 것보다 **빠뜨리는 게 낫습니다**. 명확한 것만.
+
+## 출력 형식 (JSON only)
+
+\`\`\`json
+{
+  "mentions": [
+    {"name": "goodstream-co-ltd", "type_hint": "organization", "evidence": "사업자등록증 발급 대상"},
+    {"name": "pmbok", "type_hint": "standard", "evidence": "프로젝트 관리 표준 지식체계로 명시"},
+    {"name": "lotus-pms", "type_hint": "product", "evidence": "이 문서가 소개하는 제품명"}
+  ]
+}
+\`\`\`
+
+## 청크 본문
+
+${chunkContent}`
+
+  const raw = await callLLMWithRetry(llm, prompt, provider, model)
+  const mentions = ((raw as any).mentions ?? []) as Array<{ name?: string; type_hint?: string; evidence?: string }>
+  return mentions
+    .filter((m) => m.name && m.name.trim().length > 0)
+    .map((m) => ({
+      name: m.name!.trim(),
+      type_hint: (m.type_hint as Mention['type_hint']) ?? 'unknown',
+      evidence: (m.evidence ?? '').trim(),
+      source_chunk_id: chunkIdx,
+    }))
+}
+
+// Legacy v5 extractor (kept for fallback / reference, NOT called in v6 flow)
 async function callLLMForExtraction(
   llm: LLMClient, chunkContent: string, sourceFilename: string,
   provider: string, model: string,
 ): Promise<IngestRawResult> {
   const today = formatLocalDate(new Date())
+  // v5: revert to v2-equivalent prompt (concise blocking) + drop existingPagesHint (v3/v4 lessons:
+  // longer prompts trigger LLM to extract MORE, not less). Dedup/autoFill in code instead.
   const prompt = `이 문서 청크에서 **진짜로 재사용 가능한** 엔티티/개념만 추출하세요.
 
 Source: ${sourceFilename}
@@ -269,9 +382,10 @@ Source: ${sourceFilename}
 - **독립적 설명 가치가 있는 업계 표준·제도·방법론·문서유형**만 생성합니다.
 - 예시(GOOD): \`pmbok\`, \`work-breakdown-structure\`, \`gantt-chart\`, \`erp\`, \`mes\`, \`supply-chain-management\`, \`electronic-approval-system\`
 - ❌ 제외 (absolute):
-  - **UI 기능명·메뉴 라벨·화면 이름**: announcement, address-book, all-services, access-rights, actual-work-time, add-schedule, application-details 등
+  - **UI 기능명·메뉴 라벨·화면 이름**: announcement, address-book, all-services, access-rights, actual-work-time, add-schedule, application-details, mobile-app-service 등
   - **소프트웨어 기능 항목**: "공지 등록", "일정 추가", "결재 목록" 같은 것들은 **소프트웨어 기능 설명**이지 **독립 개념**이 아닙니다 — source 페이지 본문에서 설명하면 충분
   - 업종 분류명·빈 폼 필드·일회성 라벨·관용구
+  - 비즈니스 객체 이름 (quotation, purchase-order, tax-invoice 등): 데이터 모델이지 산업 표준 개념이 아니면 제외
 
 ## 가이드 상한 (엄격한 cap 아님)
 - 청크당 entities 0~5개, concepts 0~10개 정도가 건전합니다.
@@ -291,6 +405,7 @@ JSON only:
   "concepts": [{"filename": "concept-name.md", "content": "---\\ntitle: Name\\ntype: concept\\ncreated: ${today}\\nupdated: ${today}\\nsources: [${sourceFilename}]\\ntags: []\\n---\\n\\n# Name\\n\\nDescription..."}]
 }
 \`\`\`
+filename은 항상 \`name.md\` 형식 (디렉토리 prefix 금지).
 
 ## 청크 본문
 ${chunkContent}`
@@ -310,6 +425,72 @@ async function callLLMWithRetry(
   }
   throw new Error('LLM JSON parse failed — max retries exceeded')
 }
+
+// ── v6 Phase A: normalizeBase moved to wiki-ops.ts (used by both ingest + index) ──
+
+// ── v5: existingPagesHint REMOVED (lessons from v3/v4 — hint inflated extraction, didn't help reuse) ──
+// Existing-page reuse handled in code via wikiFS.exists() check during page write (createPage upserts).
+
+// ── v3.1 fix #2: Acronym ↔ full-name canonicalization across MERGED entity+concept pool ──
+
+export interface DedupResult<T> { kept: T[]; removed: string[] }
+
+export function dedupAcronymsCrossPool<T extends { filename: string; content: string }>(
+  entities: readonly T[],
+  concepts: readonly T[],
+): { entities: T[]; concepts: T[]; removed: string[] } {
+  const entBases = entities.map((e) => normalizeBase(e.filename))
+  const conBases = concepts.map((c) => normalizeBase(c.filename))
+  const allBases = new Set([...entBases, ...conBases])
+  const removed: string[] = []
+  const removedBases = new Set<string>()
+
+  // Acronym → fullname removal (across merged pool)
+  for (const base of allBases) {
+    const isShortNoSep = base.length <= 6 && !base.includes('-') && !base.includes('_')
+    if (!isShortNoSep) continue
+    for (const otherBase of allBases) {
+      if (otherBase === base) continue
+      const words = otherBase.split(/[-_]/).filter(Boolean)
+      if (words.length < 2) continue
+      const initials = words.map((w) => w[0]?.toLowerCase() ?? '').join('')
+      if (initials === base) {
+        removedBases.add(base)
+        removed.push(`${base} → ${otherBase}`)
+        break
+      }
+    }
+  }
+
+  // Cross-pool exact-name dedup: same base in both pools → keep concept, drop entity
+  const conceptBaseSet = new Set(conBases)
+  for (const base of entBases) {
+    if (removedBases.has(base)) continue
+    if (conceptBaseSet.has(base)) {
+      removedBases.add(`__entity__:${base}`)  // entity-only removal marker
+      removed.push(`${base} (entity → concept)`)
+    }
+  }
+
+  const keptEntities = entities.filter((e) => {
+    const base = normalizeBase(e.filename)
+    if (removedBases.has(base)) return false
+    if (removedBases.has(`__entity__:${base}`)) return false
+    return true
+  })
+  const keptConcepts = concepts.filter((c) => {
+    const base = normalizeBase(c.filename)
+    return !removedBases.has(base)
+  })
+
+  return { entities: keptEntities, concepts: keptConcepts, removed }
+}
+
+// ── v3.1 fix #3: Auto-fill index additions with strict dedup by base name ──
+
+// ── v6 Phase A: autoFillIndexAdditions REMOVED. wiki-ops.updateIndex/appendLog now use writtenPages
+//   for deterministic auto-fill, replacing this function entirely.
+// ── v6 Phase A: extractFirstSentence moved to wiki-ops.ts.
 
 // ── Chunk splitter (Graphify-style: split by markdown headers) ──
 

@@ -15,6 +15,13 @@ export type IndexCategory = 'entities' | 'concepts' | 'sources' | 'analyses'
 
 export type IndexAddition = string | { readonly entry: string; readonly category: IndexCategory }
 
+/** A page that was written to disk during ingest — used to backfill index/log entries the LLM omitted. */
+export interface WrittenPage {
+  readonly filename: string
+  readonly category: IndexCategory
+  readonly content: string
+}
+
 const CATEGORY_HEADERS: Record<IndexCategory, string> = {
   entities: '## 엔티티',
   concepts: '## 개념',
@@ -22,20 +29,71 @@ const CATEGORY_HEADERS: Record<IndexCategory, string> = {
   analyses: '## 분석',
 }
 
+/**
+ * Strip directory prefix and `.md` extension from a filename, lowercased.
+ * LLM emits inconsistent formats (`pms.md` / `concepts/pms` / `wiki/concepts/pms.md`) —
+ * normalizing here lets dedup work across all three.
+ */
+export function normalizeBase(filename: string): string {
+  const basename = filename.includes('/') ? filename.split('/').pop()! : filename
+  return basename.replace(/\.md$/i, '').toLowerCase()
+}
+
+/** Extract the first sentence from page content (skipping frontmatter + first heading). */
+export function extractFirstSentence(content: string): string {
+  const body = content.replace(/^---[\s\S]*?---\s*/, '').trim()
+  const afterHeading = body.replace(/^#+\s+[^\n]+\n+/, '').trim()
+  const match = afterHeading.match(/^[^\n。.!?]{5,160}[。.!?]?/)
+  const text = (match ? match[0] : afterHeading.slice(0, 100)).trim().replace(/\s+/g, ' ')
+  return text || '(설명 없음)'
+}
+
+/**
+ * Update wiki/index.md with new entries.
+ *
+ * `writtenPages` is the deterministic source of truth: any page actually written that
+ * the LLM forgot to include in `additions` is auto-registered using `extractFirstSentence`.
+ * This guarantees 100% coverage and prevents orphan pages.
+ */
 export async function updateIndex(
   wikiFS: WikiFS,
   additions: readonly IndexAddition[],
+  writtenPages: readonly WrittenPage[] = [],
 ): Promise<void> {
   const indexPath = 'wiki/index.md'
   const content = await wikiFS.read(indexPath)
 
+  // v6+: filter out additions whose primary wikilink target was dropped by the
+  // canonicalizer (LLM additions can reference anti-pattern names that never
+  // got written). Only entries whose first wikilink matches a writtenPage base
+  // (or was already in the index) survive.
+  const writtenBases = new Set(writtenPages.map((wp) => normalizeBase(wp.filename)))
+  const filtered = writtenBases.size > 0
+    ? additions.filter((a) => {
+        const entry = typeof a === 'string' ? a : a.entry
+        const links = extractWikilinks(entry)
+        if (links.length === 0) return true  // no link = pass through
+        // First link must point to a written page OR already exist in index (legacy carryover)
+        const primaryBase = normalizeBase(links[0])
+        return writtenBases.has(primaryBase) || content.includes(`[[${links[0]}]]`)
+      })
+    : additions
+
   // Skip duplicates (any addition whose wikilinks already exist in the index)
-  const fresh = additions.filter((a) => {
+  const fresh = filtered.filter((a) => {
     const entry = typeof a === 'string' ? a : a.entry
     const links = extractWikilinks(entry)
     return links.every((link) => !content.includes(`[[${link}]]`))
   })
-  if (fresh.length === 0) return
+
+  // Track which bases the LLM already covered (across both fresh + already-in-index)
+  const llmCoveredBases = new Set<string>()
+  for (const a of additions) {
+    const entry = typeof a === 'string' ? a : a.entry
+    for (const link of extractWikilinks(entry)) {
+      llmCoveredBases.add(normalizeBase(link))
+    }
+  }
 
   // Group by category. Legacy string additions fall through to 'analyses'.
   const grouped: Record<IndexCategory, string[]> = { entities: [], concepts: [], sources: [], analyses: [] }
@@ -43,6 +101,17 @@ export async function updateIndex(
     if (typeof a === 'string') grouped.analyses.push(a)
     else grouped[a.category].push(a.entry)
   }
+
+  // Auto-fill: any written page not covered by LLM gets a deterministic entry.
+  for (const wp of writtenPages) {
+    const base = normalizeBase(wp.filename)
+    if (llmCoveredBases.has(base)) continue
+    if (content.includes(`[[${base}]]`)) continue  // already in index from previous ingest
+    grouped[wp.category].push(`- [[${base}]] — ${extractFirstSentence(wp.content)} (소스: 1개)`)
+  }
+
+  if (grouped.entities.length === 0 && grouped.concepts.length === 0
+      && grouped.sources.length === 0 && grouped.analyses.length === 0) return
 
   let updated = content
   for (const cat of Object.keys(grouped) as IndexCategory[]) {
@@ -70,20 +139,89 @@ function insertIntoSection(content: string, header: string, entries: string[]): 
   return before + '\n' + entries.join('\n') + (after.startsWith('\n') ? after : '\n' + after)
 }
 
+/**
+ * Prepend an entry to wiki/log.md (newest first).
+ *
+ * If `writtenPages` is provided, any page not already linked in the entry body is
+ * auto-appended as a category-grouped bullet. Guarantees the log reflects what was
+ * actually written, not just what the LLM remembered to mention.
+ */
 export async function appendLog(
   wikiFS: WikiFS,
   entry: string,
+  writtenPages: readonly WrittenPage[] = [],
 ): Promise<void> {
   const logPath = 'wiki/log.md'
   const content = await wikiFS.read(logPath)
+
+  let finalEntry = entry
+  if (writtenPages.length > 0) {
+    // v6+ Phase A fix: strip wikilinks that point to pages that were NOT actually written
+    // (LLM may include dropped entities/concepts in log_entry — those become broken links).
+    const writtenBases = new Set(writtenPages.map((wp) => normalizeBase(wp.filename)))
+    finalEntry = stripBrokenWikilinks(entry, writtenBases)
+
+    const linkedBases = new Set<string>()
+    for (const link of extractWikilinks(finalEntry)) {
+      linkedBases.add(normalizeBase(link))
+    }
+    const missing: Record<IndexCategory, string[]> = { entities: [], concepts: [], sources: [], analyses: [] }
+    for (const wp of writtenPages) {
+      const base = normalizeBase(wp.filename)
+      if (linkedBases.has(base)) continue
+      missing[wp.category].push(`[[${base}]]`)
+    }
+    const lines: string[] = []
+    if (missing.entities.length > 0) lines.push(`- 추가 엔티티: ${missing.entities.join(', ')}`)
+    if (missing.concepts.length > 0) lines.push(`- 추가 개념: ${missing.concepts.join(', ')}`)
+    if (missing.sources.length > 0) lines.push(`- 추가 소스: ${missing.sources.join(', ')}`)
+    if (missing.analyses.length > 0) lines.push(`- 추가 분석: ${missing.analyses.join(', ')}`)
+    if (lines.length > 0) {
+      finalEntry = finalEntry.trimEnd() + '\n' + lines.join('\n')
+    }
+  }
+
   const headerEnd = content.indexOf('\n\n')
   if (headerEnd === -1) {
-    await wikiFS.write(logPath, content + '\n\n' + entry + '\n')
+    await wikiFS.write(logPath, content + '\n\n' + finalEntry + '\n')
     return
   }
   const header = content.slice(0, headerEnd)
   const body = content.slice(headerEnd)
-  await wikiFS.write(logPath, header + '\n\n' + entry + '\n' + body)
+  await wikiFS.write(logPath, header + '\n\n' + finalEntry + '\n' + body)
+}
+
+/**
+ * Remove `[[name]]` wikilinks pointing to bases NOT in `keepBases`.
+ * If the surrounding line becomes degenerate (e.g., empty list item, dangling comma),
+ * tidy it up. Used to drop links the LLM emitted but the canonicalizer rejected.
+ */
+export function stripBrokenWikilinks(text: string, keepBases: ReadonlySet<string>): string {
+  // First pass: replace each [[link]] or [[link|alias]] with empty if base not in keepBases
+  const cleaned = text.replace(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g, (match, linkText) => {
+    const base = (linkText.includes('/') ? linkText.split('/').pop() : linkText)
+      .replace(/\.md$/i, '').toLowerCase().trim()
+    return keepBases.has(base) ? match : ''
+  })
+  // Tidy: collapse multiple consecutive commas, fix degenerate punctuation
+  return cleaned
+    .split('\n')
+    .map((line) => line
+      .replace(/,\s*(?:,\s*)+/g, ', ')   // multiple consecutive commas → single
+      .replace(/:\s*,/g, ':')            // colon followed by comma
+      .replace(/,\s*$/g, '')             // trailing comma
+      .replace(/\(\s*,\s*/g, '(')        // "(, "
+      .replace(/\s*,\s*\)/g, ')')        // " ,)"
+      .replace(/\s{2,}/g, ' ')           // multiple spaces
+      .trimEnd())
+    .filter((line, i, arr) => {
+      // Drop lines that became just a list bullet with nothing left ("- ", "- :")
+      const stripped = line.trim()
+      if (/^-\s*$/.test(stripped)) return false
+      if (/^-\s+[^[]+:\s*$/.test(stripped)) return false  // "- 엔티티 생성:" with nothing after
+      return true
+    })
+    .join('\n')
 }
 
 export function extractWikilinks(content: string): readonly string[] {

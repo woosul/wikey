@@ -612,6 +612,11 @@ Week 3:  통합 테스트 + 마무리
 | UI 고도화 (Step 4~5) | 사용자 피드백 반영 | purple 테마, 피드백, 인제스트 패널, 프로그레스바 |
 | inbox 감시 | Finder에서 직접 파일 추가 감지 | vault.on('create') 이벤트 |
 | Node.js http 직접 호출 | Obsidian requestUrl의 localhost CORS | Ollama 호출 경로 분리 |
+| ingest-modals.ts (Stay-involved Brief→Processing→Preview) | llm-wiki "stay involved" UX 원칙 반영 | LLM 10~30s 대기 중 모달 즉시 open + Back 복귀 + Drag/Resize |
+| provider-defaults.ts (단일 소스) | 4 프로바이더 기본 모델 분산 정의 → 변경 시 일관성 깨짐 | resolveProvider/UI 셀렉트 모두 한 파일 참조 |
+| wikey-core/src/prompts/ingest_prompt_basic.md | 인라인 BUNDLED_INGEST_PROMPT 가독성·튜닝 어려움 | 외부화 + chunk 프롬프트(callLLMForExtraction)에도 품질 필터 전파 |
+| setup-para.ts | PARA 폴더 구조 자동 생성 (raw/0_inbox~4_archives + DDC 3차) | Phase 4 URI 참조 확정 |
+| classify LLM fallback | 하드코딩 매칭 실패 시 비용 최소화 LLM 분류 | classifyFileAsync + classifyWithLLM + DEWEY 10개 카테고리 확장 |
 
 ### 15-2. 변경 (계획과 다르게 구현)
 
@@ -656,6 +661,7 @@ Week 3:  통합 테스트 + 마무리
 - Audit 패널 인제스트 세부 테스트 (다양한 PDF, 에러 케이스)
 - 인제스트 품질 검증 (생성된 wiki 페이지 내용 리뷰)
 - Obsidian UI 수동 테스트 (대시보드, audit, 모델 선택 등)
+- chunk 프롬프트 v1→v2 정량 비교 실험 (`activity/ingest-comparison/` 아카이브, PMS PDF 기준 581 → ?)
 
 **B. 운영 안정성 (A 완료 후):**
 - 로컬 LLM 모델 검증 (2026-04-18 완료): 인제스트 = Qwen3 8B (기본) + Qwen3.6:35b-a3b (고품질), 쿼리/CR = Gemma4 26B 확정. 14B·SuperGemma4·gemma4 12B 탈락.

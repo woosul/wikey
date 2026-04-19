@@ -5,6 +5,13 @@ created: 2026-04-10
 updated: 2026-04-19
 ---
 
+## [2026-04-19] ingest | PMS_제품소개_R10_20220815.pdf
+
+- 엔티티 생성: [[lotus-pms]], [[goodstream-co-ltd]], [[lotus-scm]], [[groupware]], [[project-management-institute]], [[enterprise-resource-planning]], [[lotus-mes]], [[restful-api]], [[mqtt]], [[java]], [[alimtalk]], [[application-programming-interface]], [[integrated-member-database]]
+- 개념 생성: [[work-breakdown-structure]], [[project-management-body-of-knowledge]], [[bill-of-materials]], [[issue-management-ledger]], [[risk-management-ledger]], [[manufacturing-execution-system]], [[product-lifecycle-management]], [[supply-chain-management]], [[gantt-chart]], [[electronic-bill-of-materials]], [[single-sign-on]], , , [[business-registration-certificate]], [[corrective-and-preventive-action]]
+- 추가 소스: [[source-lotus-pms-product-intro]]
+
+
 ## [2026-04-19] ingest | 사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf
 
 - 소스 요약 생성: [[source-goodstream-biz-reg-cert-2015]]

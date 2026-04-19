@@ -1,6 +1,6 @@
 import { FuzzySuggestModal, Notice, TFile } from 'obsidian'
 import type WikeyPlugin from './main'
-import { generateBrief, ingest, PlanRejectedError, type IngestPlan } from 'wikey-core'
+import { generateBrief, ingest, PlanRejectedError, type IngestPlan, classifyFileAsync, moveFile } from 'wikey-core'
 import { WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { IngestFlowModal } from './ingest-modals'
 
@@ -67,6 +67,12 @@ export interface IngestRunOptions {
   skipBriefModal?: boolean
   /** Bypass Stage 2 (preview) regardless of settings. Rarely used. */
   skipPreviewModal?: boolean
+  /**
+   * Auto-classify and move raw/0_inbox/ file to a PARA folder after successful ingest.
+   * - audit panel: true (auto-classify via CLASSIFY.md + LLM fallback)
+   * - inbox panel: false (moveBtn handles destination manually via user selection)
+   */
+  autoMoveFromInbox?: boolean
 }
 
 export async function runIngest(
@@ -87,6 +93,7 @@ export async function runIngest(
       guideHint: undefined,
       planGate: undefined,
       onProgress,
+      autoMoveFromInbox: runOpts?.autoMoveFromInbox,
     })
   }
 
@@ -134,6 +141,7 @@ export async function runIngest(
         modal.updateProgress(step, total, message, subStep, subTotal)
         onProgress?.(step, total, message, subStep, subTotal)
       },
+      autoMoveFromInbox: runOpts?.autoMoveFromInbox,
     })
 
     // If user hit [Back] during processing, the modal already flipped back to Brief.
@@ -157,6 +165,7 @@ async function runIngestCore(
     guideHint: string | undefined
     planGate: ((plan: IngestPlan) => Promise<boolean>) | undefined
     onProgress?: (step: number, total: number, message: string, subStep?: number, subTotal?: number) => void
+    autoMoveFromInbox?: boolean
   },
 ): Promise<IngestRunResult> {
   try {
@@ -181,11 +190,36 @@ async function runIngestCore(
     ]
 
     saveIngestMap(basePath, sourcePath, result.sourcePage.filename)
-    // 파일은 inbox에 그대로 둔다. ingest-map.json 기록으로 audit이 "ingested"로 인식하므로
-    // 재인제스트 혼동 없고, 사용자가 PARA 이동 타이밍을 직접 결정할 수 있다.
-    // (이전에는 `raw/0_inbox/_processed/`로 옮겼으나 사용자 혼동 유발 → 폴더 자체 제거)
 
-    return { success: true, sourcePath, createdPages }
+    // Auto-classify + move: audit panel uses this path; raw/0_inbox/ file is
+    // routed to the correct PARA folder via CLASSIFY.md rules + LLM fallback.
+    // Inbox panel's moveBtn manages destination manually (user-selected PARA)
+    // and passes autoMoveFromInbox=false to skip this branch.
+    let finalSourcePath = sourcePath
+    if (ctx.autoMoveFromInbox && sourcePath.startsWith('raw/0_inbox/')) {
+      try {
+        const { basename, join } = require('node:path') as typeof import('node:path')
+        const filename = basename(sourcePath)
+        const classifyResult = await classifyFileAsync(filename, false, {
+          wikiFS: plugin.wikiFS,
+          httpClient: plugin.httpClient,
+          config: plugin.buildConfig(),
+        })
+        if (classifyResult.destination) {
+          moveFile(basePath, sourcePath, classifyResult.destination)
+          const newSourcePath = join(classifyResult.destination, filename)
+          updateIngestMapPath(basePath, sourcePath, newSourcePath)
+          finalSourcePath = newSourcePath
+          console.info(`[Wikey ingest] auto-moved to PARA: ${sourcePath} → ${newSourcePath} (${classifyResult.hint})`)
+        } else {
+          console.info(`[Wikey ingest] auto-move skipped (classify returned no destination): ${sourcePath}`)
+        }
+      } catch (err: any) {
+        console.warn(`[Wikey ingest] auto-move failed (staying in inbox): ${err?.message ?? err}`)
+      }
+    }
+
+    return { success: true, sourcePath: finalSourcePath, createdPages }
   } catch (err: any) {
     if (err instanceof PlanRejectedError) {
       console.info(`[Wikey ingest] cancelled at preview: ${sourcePath}`)

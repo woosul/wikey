@@ -43,7 +43,20 @@ updated: 2026-04-19
 - [[kim-myung-ho]] — 주식회사 굿스트림 대표자 (소스: 1개)
 - [[cheongju-tax-office]] — 청주세무서, 굿스트림 사업자등록증 교부 기관 (소스: 1개)
 - [[national-tax-service]] — 대한민국 국세청 (소스: 1개)
-
+- [[lotus-pms]] — 굿스트림의 프로젝트 관리 시스템 제품. (소스: 4개)
+- [[lotus-scm]] — 굿스트림의 공급망 관리 시스템 제품. (소스: 2개)
+- [[groupware]] — 조직 구성원들이 협업하고 정보를 공유하는 데 사용하는 소프트웨어. (소스: 1개)
+- [[project-management-institute]] — 프로젝트 관리 전문가들을 위한 국제 비영리 전문 조직. (소스: 1개)
+- [[enterprise-resource-planning]] — 기업의 모든 자원을 통합적으로 관리하여 효율성을 높이는 소프트웨어 시스템. (소스: 4개)
+- [[lotus-mes]] — 굿스트림의 제조 실행 시스템 제품. (소스: 1개)
+- [[restful-api]] — 웹 서비스 간 통신을 위한 아키텍처 스타일이자 프로토콜. (소스: 1개)
+- [[mqtt]] — 경량 메시징 프로토콜로, IoT 장치 간 통신에 주로 사용됨. (소스: 1개)
+- [[java]] — 객체 지향 프로그래밍 언어이자 플랫폼. (소스: 1개)
+- [[alimtalk]] — 카카오톡을 이용한 비즈니스 알림 메시지 서비스. (소스: 1개)
+- [[application-programming-interface]] — 소프트웨어 구성 요소들이 서로 통신할 수 있도록 하는 인터페이스. (소스: 1개)
+- [[integrated-member-database]] — 여러 시스템의 회원 정보를 통합하여 관리하는 데이터베이스. (소스: 1개)
+- [[application-programming-interface]] — 소프트웨어 구성 요소들이 서로 통신할 수 있도록 하는 인터페이스. (소스: 1개)
+- [[integrated-member-database]] — 여러 시스템의 회원 정보를 통합하여 관리하는 데이터베이스. (소스: 1개)
 ## 개념
 
 - [[llm-wiki]] — LLM이 영구적 위키를 점진적으로 구축·유지하는 패턴 (소스: 2개)
@@ -78,7 +91,18 @@ updated: 2026-04-19
 - [[electronic-tax-invoice]] — 전자세금계산서 (소스: 1개)
 - [[software-development]] — 소프트웨어 개발 업종 (소스: 1개)
 - [[wireless-communication-application-device-manufacturing]] — 무선 통신 응용장치 제조업종 (소스: 1개)
-
+- [[work-breakdown-structure]] — 프로젝트의 전체 작업을 계층적으로 분해하여 정의하는 표준. (소스: 4개)
+- [[project-management-body-of-knowledge]] — PMI가 제정한 프로젝트 관리 표준 지식체계. (소스: 1개)
+- [[bill-of-materials]] — 제품 생산에 필요한 모든 부품 및 자재 목록을 정의한 문서. (소스: 3개)
+- [[issue-management-ledger]] — 프로젝트 또는 업무에서 발생한 이슈를 기록하고 관리하는 문서. (소스: 1개)
+- [[risk-management-ledger]] — 프로젝트 또는 업무의 잠재적 위험을 식별하고 관리하는 문서. (소스: 1개)
+- [[manufacturing-execution-system]] — 생산 현장의 실시간 데이터를 수집하고 제어하여 생산 효율을 최적화하는 시스템 표준 및 프레임워크. (소스: 1개)
+- [[product-lifecycle-management]] — 제품의 기획부터 설계, 생산, 서비스, 폐기까지 전체 수명 주기를 관리하는 표준 및 프레임워크. (소스: 1개)
+- [[supply-chain-management]] — 제품의 생산 및 유통 과정을 효율적으로 관리하는 표준 및 프레임워크. (소스: 3개)
+- [[gantt-chart]] — 프로젝트 일정을 시각적으로 표현하는 표준화된 차트 형식 및 관리 기법. (소스: 3개)
+- [[electronic-bill-of-materials]] — 전자적으로 관리되는 제품의 부품 및 자재 목록. (소스: 1개)
+- [[single-sign-on]] — 한 번의 인증으로 여러 시스템에 접근할 수 있도록 하는 인증 표준. (소스: 1개)
+- [[corrective-and-preventive-action]] — 제품 또는 프로세스의 문제점을 해결하고 재발을 방지하기 위한 품질 관리 표준. (소스: 1개)
 ## 소스
 
 - [[source-llm-wiki-gist]] — Karpathy LLM Wiki 원문 gist (2026-04-02)
@@ -90,7 +114,7 @@ updated: 2026-04-19
 - [[source-power-device-basics]] — SiC 파워 디바이스의 기초, 로옴 Tech Web Hand Book 37p (2026-04-12)
 - [[source-raspberry-pi-high-quality-camera]] — Raspberry Pi High Quality Camera 시작하기 가이드 (2026-04-19)
 - [[source-goodstream-biz-reg-cert-2015]] — 주식회사 굿스트림 사업자등록증 2015년 사본 (2026-04-19)
-
+- [[source-lotus-pms-product-intro]] — LOTUS PMS 제품 소개서 (2022, 굿스트림)
 ## 분석
 
 - [[risks-of-llm-wiki]] — LLM Wiki의 5대 리스크 심각도 분석 (2026-04-10)

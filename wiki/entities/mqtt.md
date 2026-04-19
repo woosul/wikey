@@ -1,16 +1,16 @@
 ---
-title: goodstream-co-ltd
+title: mqtt
 type: entity
-entity_type: organization
+entity_type: tool
 created: 2026-04-19
 updated: 2026-04-19
 sources: [PMS_제품소개_R10_20220815.pdf]
 tags: []
 ---
 
-# goodstream-co-ltd
+# mqtt
 
-주식회사 굿스트림. 소프트웨어 개발/제조업.
+경량 메시징 프로토콜로, IoT 장치 간 통신에 주로 사용됨.
 
 ## 출처
 

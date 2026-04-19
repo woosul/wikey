@@ -1,16 +1,16 @@
 ---
-title: business-registration-certificate
+title: electronic-bill-of-materials
 type: concept
-concept_type: document_type
+concept_type: standard
 created: 2026-04-19
 updated: 2026-04-19
 sources: [PMS_제품소개_R10_20220815.pdf]
 tags: []
 ---
 
-# business-registration-certificate
+# electronic-bill-of-materials
 
-사업자 등록 사실을 증명하는 문서.
+전자적으로 관리되는 제품의 부품 및 자재 목록.
 
 ## 출처
 

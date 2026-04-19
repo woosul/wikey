@@ -1264,3 +1264,117 @@ await app.plugins.enablePlugin('wikey')
 - **§B-2 #4**: markitdown-ocr fallback 완주 검증 — OCR 트리거는 관찰됨, 전체 완주 미검증
 - **§B-2 #5**: `.wikey/ingest_prompt_user.md` override 경로 E2E
 - **§B-2 #6**: wiki/ 폴더 인제스트 가드 도입 결정
+
+---
+
+## 13. v6 인제스트 코어 재설계 (2026-04-19 저녁 세션)
+
+> **참조**: 정량 비교 데이터·v1~v6 진동·결정성 통계·6회 실행 결과 → [`activity/ingest-comparison/README.md`](./ingest-comparison/README.md)
+
+> **참조**: Plan 본체·Phase 분해·위험 분석·검증 기준 → [`plan/plan-ingest-core-rebuild.md`](../plan/plan-ingest-core-rebuild.md)
+
+### 13.1 배경
+
+PMS PDF(28,993자) 동일 입력 6회 인제스트에서 결과가 581 → 35 → 96 → 71 → 39 → 102 → 52로 진동. **결정성 부재가 솔루션의 치명적 결함**으로 식별. Codex 진단 + GraphRAG/LightRAG/LlamaIndex/Notion AI/Confluence 커뮤니티 패턴 종합:
+
+> `callLLMForExtraction()`이 chunk-local LLM에서 "분류 + 페이지 초안"을 동시 생성. 후처리 dedup은 파일명 정규화만 하고 의미 통합 못 함. 차단 메시지를 강화하면 LLM은 entity ↔ concept ↔ 한국어 라벨 사이를 회피 이동.
+
+### 13.2 새 아키텍처 (3-Stage Pipeline + Schema-Guided)
+
+```
+Stage 1: chunk LLM = Mention Extractor (분류 X, 페이지 X)
+   출력: [{ name, type_hint, evidence }]
+
+Stage 2: 문서-전역 Canonicalizer (단일 LLM 호출)
+   - Schema-guided: 4 entity (organization·person·product·tool)
+                    + 3 concept (standard·methodology·document_type)
+   - Cross-pool dedup: 약어↔풀네임/기존 페이지 재사용 일괄 결정
+   - Strict mode: schema 위반은 dropped
+
+Stage 3: 코드 결정적 페이지 작성 + index/log
+   - written 페이지 = Stage 2 결정 그대로
+   - updateIndex/appendLog는 writtenPages 기반 deterministic backfill
+   - LLM 의존 0 (orphan/누락 구조적 차단)
+```
+
+### 13.3 구현 (Phase A+B+C+D + C-boost)
+
+**신규 파일**:
+- `wikey-core/src/schema.ts` — ENTITY_TYPES (4) + CONCEPT_TYPES (3) + validateMention + detectAntiPattern + buildSchemaPromptBlock
+- `wikey-core/src/canonicalizer.ts` — canonicalize() 단일 LLM 호출, schema 검증, cross-pool dedup, page assembly
+- `wikey-core/src/__tests__/schema.test.ts` — 20 케이스
+- `wikey-core/src/__tests__/canonicalizer.test.ts` — 12 케이스
+
+**수정 파일**:
+- `wikey-core/src/types.ts` — WikiPage entityType/conceptType, Mention, CanonicalizedResult, LLMCallOptions.seed
+- `wikey-core/src/llm-client.ts` — Gemini generationConfig.seed 전달
+- `wikey-core/src/wiki-ops.ts` — updateIndex/appendLog에 writtenPages 옵션, normalizeBase + extractFirstSentence 이동, stripBrokenWikilinks 신규
+- `wikey-core/src/ingest-pipeline.ts` — 3-stage 흐름 (extractMentions + canonicalize), dedupAcronymsCrossPool/autoFillIndexAdditions 호출 제거
+- `wikey-obsidian/src/ingest-modals.ts` — Brief 모달 schema preview 라인, processing 단계 [X] confirm
+- `wikey-obsidian/src/commands.ts` — autoMoveFromInbox 옵션 + classifyFileAsync + moveFile 통합
+- `wikey-obsidian/src/sidebar-chat.ts` — audit applyBtn에 autoMoveFromInbox:true 전달, NFC/NFD 정규화 (한글 검색 fix), book-open 아이콘
+- `wikey-obsidian/src/main.ts` — book-open 리본 아이콘
+- `wikey-obsidian/styles.css` — modal resize handle 11px @ 315deg 코너 안착, ingest panel `.wikey-ingest-progress:empty {display:none}` 등 다수 수정
+
+### 13.4 검증 결과
+
+| 지표 | v5 (이전) | v6 (현재) |
+|------|----------|----------|
+| 5회 std deviation (Total) | (cancelled) | **CV 16.9%** (range 22~38) |
+| Entities 분류 일관성 | 흔들림 | **5중 4회 12-13** |
+| Concepts CV | (cancelled) | 33.4% |
+| 한국어 라벨 | (회피 발생) | **0건** |
+| UI 라벨 / 비즈니스 객체 | 발생 | **0건** |
+| 약어 자동 통합 | 부분 | **100%** (pmbok/erp/wbs/bom/scm/mes/plm/aps) |
+| 기존 entity 재사용 | 0% | **100%** (goodstream-co-ltd "업데이트") |
+| 처리 시간 평균 | 525s | **290s** (-45%) |
+| log/index 등재율 | LLM 의존 | **100%** (Phase A 결정적 backfill) |
+
+### 13.5 v6.1 실험 (롤백)
+
+`temperature=0 + seed=42` (Gemini) — Total CV 16.9% → 20.9% **악화**. Entities CV 14.7% → 36.3% 크게 악화. Concepts CV는 개선 (33.4% → 15.5%) trade-off만. Gemini seed "best-effort" 한계 명시 사실 확인. 호출자에서 temperature/seed 제거. `LLMCallOptions.seed` 필드 + llm-client 전달 로직은 v7 재실험 옵션으로 유지.
+
+`gemini-3.1-pro-preview` 1회 시험: total=24, e=16, c=7, 220s — Concept을 매우 보수적으로 분류. v7 옵션으로 노출 가치 있음.
+
+### 13.6 UI 변경 9건
+
+1. Modal close 차단 (backdrop + ESC) + Processing 단계 [X] confirm 다이얼로그
+2. Modal resize 핸들 7→11px (1.5배) + 315deg + 코너 안착 (modalEl 직접 부착)
+3. Modal 하단 button-row sticky (콘텐츠 길이 무관 항상 하단)
+4. Audit panel [Ingest][Delay] 우측 정렬 + provider/model 하단 고정
+5. Ingest panel bottom bar 고정 (audit과 동일, gap 10px) — `.wikey-ingest-progress:empty {display:none}` 추가
+6. Brief 모달 schema preview 라인
+7. NFC/NFD 한글 검색 fix (audit 패널)
+8. Plugin 아이콘 search → book → book-open
+9. Modal stripBrokenWikilinks tidy 강화 (multiple commas → 단일)
+
+### 13.7 audit panel auto-move PARA
+
+이전 디자인: "ingest 후 raw 파일은 inbox에 잔류, 사용자가 수동 PARA 이동" (혼동 유발)
+신규 디자인: audit ingest 후 raw/0_inbox/ 파일은 `classifyFileAsync` (CLASSIFY.md + LLM fallback)로 PARA 자동 라우팅 + `moveFile` + `updateIngestMapPath` 자동 호출.
+
+inbox panel "auto" 옵션은 기존 동작 유지 (plan phase classify + moveBtn explicit move) — 사용자가 plan 미리 보고 일괄 실행하는 inbox 워크플로우 보존.
+
+PMS 원본 PDF는 수동 이동 완료: `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` → `raw/3_resources/30_manual/`. 백링크 점검 결과 모든 wiki 참조가 파일명 기반 wikilink (위치 무관) → **무결**.
+
+### 13.8 코드 규모 (04-19 저녁 갱신)
+
+| 영역 | 파일 | 라인 수 |
+|------|------|---------|
+| wikey-core/src (구현) | 12개 (.ts, schema·canonicalizer 신규) | ~2,200 (+450) |
+| wikey-core/src/__tests__ | 8개 (.test.ts, schema·canonicalizer 신규) | ~1,250 (+400) |
+| wikey-obsidian/src | 8개 (.ts, ingest-modals 추가) | ~3,800 (+400) |
+| wikey-obsidian/styles.css | 1개 | ~1,940 (+580) |
+| **합계** | **29개** | **~9,190** |
+
+**테스트**: 95 → **143** pass (+48 tests).
+**빌드**: 0 errors.
+
+### 13.9 다음 세션 잔여
+
+`plan/session-wrap-followups.md`의 "2026-04-19 저녁 마감 → 다음 세션 시작점" 섹션 참조.
+
+핵심:
+- 🔴 다른 inbox 파일(OMRON) 인제스트로 audit auto-move PARA 추가 검증
+- 🟡 v6 결정성 다른 입력에서 일관성 확인
+- 🟢 v7 후보 7건 (schema 경계 명확화, anti-pattern 추가, contextual chunk, std dev 자동 측정, schema yaml override, pro 모델 옵션, lint 세션)

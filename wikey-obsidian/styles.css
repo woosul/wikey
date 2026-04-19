@@ -826,6 +826,10 @@
   padding-top: 8px;
   border-top: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
+  /* Default: action buttons right-aligned. Ingest panel uses flex:1 summary
+     element on the left, which naturally pushes buttons right. Audit panel
+     has only buttons → this rule pushes them to the right edge. */
+  justify-content: flex-end;
 }
 
 /* Provider/Model row — shared layout between Audit and Ingest panels.
@@ -1121,14 +1125,40 @@
    ══════════════════════════════ */
 
 .wikey-ingest-panel {
-  border-bottom: 1px solid var(--background-modifier-border);
-  padding: 10px 14px;
+  /* No border-bottom: chat-input-wrapper has border-top so a border here would
+     stack into a 2px line. Match audit panel which omits the bottom border. */
+  padding: 10px 12px;
   margin: 0 -12px;
-  padding-left: 12px;
-  padding-right: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* Mirror audit panel: claim full sidebar height so inbox list scrolls and
+     the inbox bottom bar (provider/model + Ingest/Delay) stays pinned just
+     above the chat input wrapper. */
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Hide chat messages while the ingest panel is open (mirrors audit panel
+   behavior so the ingest panel can occupy the full flex:1 area). */
+.wikey-chat-container:has(.wikey-ingest-panel) .wikey-chat-messages {
+  display: none;
+}
+
+/* Fixed-height blocks above the inbox list. */
+.wikey-ingest-panel > .wikey-ingest-drop-header,
+.wikey-ingest-panel > .wikey-ingest-dropzone,
+.wikey-ingest-panel > .wikey-ingest-pending,
+.wikey-ingest-panel > .wikey-ingest-progress {
+  flex-shrink: 0;
+}
+
+/* Hide empty pending/progress so inbox bottom bar sits flush with chat input
+   (matches audit panel layout). */
+.wikey-ingest-panel > .wikey-ingest-pending:empty,
+.wikey-ingest-panel > .wikey-ingest-progress:empty {
+  display: none;
 }
 
 /* Action buttons bar */
@@ -1264,6 +1294,31 @@
 .wikey-ingest-pending,
 .wikey-ingest-inbox {
   font-size: 0.92em;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Inbox claims remaining space: list scrolls, bottom bar pinned at bottom
+   (just above the chat input wrapper) via natural flex-column ordering. */
+.wikey-ingest-inbox {
+  flex: 1;
+}
+
+.wikey-ingest-inbox .wikey-audit-list-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.wikey-ingest-inbox .wikey-audit-bottom {
+  flex-shrink: 0;
+}
+
+/* Title and Select-All rows must not shrink. */
+.wikey-ingest-inbox > .wikey-ingest-section-label,
+.wikey-ingest-inbox > .wikey-audit-selectall {
+  flex-shrink: 0;
 }
 
 .wikey-ingest-file-row {
@@ -1604,15 +1659,41 @@
 .wikey-ingest-flow-modal {
   min-width: 480px;
   position: relative;
+  /* Flex column so the body region can stretch and the button row stays anchored */
+  display: flex;
+  flex-direction: column;
+  /* Fill the modal vertically so flex:1 on body has a basis to grow into */
+  height: 100%;
+  max-height: 100%;
+  box-sizing: border-box;
 }
 
 .wikey-ingest-flow-modal .wikey-modal-body {
   min-height: 240px;
+  /* Stretch + scroll so the button row (margin-top: auto) sits at the bottom */
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Pin the button row to the bottom of the body, regardless of content length */
+.wikey-ingest-flow-modal .wikey-modal-body > .wikey-modal-button-row {
+  margin-top: auto;
+  flex-shrink: 0;
+  /* Sticky bottom so the row stays in place as the body scrolls */
+  position: sticky;
+  bottom: 0;
+  background: var(--background-primary);
+  padding-top: 10px;
+  padding-bottom: 2px;
 }
 
 .wikey-ingest-flow-modal-wrap {
   /* Obsidian's default max-width (560px) is overridden by applyModalSize() inline style */
   max-width: none !important;
+  /* Anchor for absolutely-positioned children (resize handle at corner) */
+  position: relative;
 }
 
 .wikey-modal-drag-handle {
@@ -1624,25 +1705,26 @@
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 20px;
-  height: 20px;
+  width: 11px;
+  height: 11px;
   cursor: nwse-resize;
   z-index: 5;
-  /* Three visible diagonal lines so the affordance is obvious */
+  /* Three diagonal stripes pointing into the corner (135deg = ↘ stripes) — flipped
+     from the previous 45deg orientation. 11px (1.5× of 7px previous size). */
   background:
-    linear-gradient(135deg, transparent 5px, var(--text-muted) 5px, var(--text-muted) 6px, transparent 6px),
-    linear-gradient(135deg, transparent 10px, var(--text-muted) 10px, var(--text-muted) 11px, transparent 11px),
-    linear-gradient(135deg, transparent 15px, var(--text-muted) 15px, var(--text-muted) 16px, transparent 16px);
-  opacity: 0.7;
+    linear-gradient(315deg, transparent 2px, var(--text-muted) 2px, var(--text-muted) 3px, transparent 3px),
+    linear-gradient(315deg, transparent 5px, var(--text-muted) 5px, var(--text-muted) 6px, transparent 6px),
+    linear-gradient(315deg, transparent 8px, var(--text-muted) 8px, var(--text-muted) 9px, transparent 9px);
+  opacity: 0.6;
   transition: opacity 0.15s, background 0.15s;
 }
 
 .wikey-modal-resize-handle:hover {
   opacity: 1;
   background:
-    linear-gradient(135deg, transparent 5px, var(--interactive-accent) 5px, var(--interactive-accent) 6px, transparent 6px),
-    linear-gradient(135deg, transparent 10px, var(--interactive-accent) 10px, var(--interactive-accent) 11px, transparent 11px),
-    linear-gradient(135deg, transparent 15px, var(--interactive-accent) 15px, var(--interactive-accent) 16px, transparent 16px);
+    linear-gradient(315deg, transparent 2px, var(--interactive-accent) 2px, var(--interactive-accent) 3px, transparent 3px),
+    linear-gradient(315deg, transparent 5px, var(--interactive-accent) 5px, var(--interactive-accent) 6px, transparent 6px),
+    linear-gradient(315deg, transparent 8px, var(--interactive-accent) 8px, var(--interactive-accent) 9px, transparent 9px);
 }
 
 /* Inline spinner (12×12) — used in modal brief loading state */
@@ -1795,6 +1877,33 @@
   font-size: 0.9em;
   font-weight: 400;
   color: var(--text-faint);
+}
+
+/* v6 Phase D: schema preview line on Brief phase */
+.wikey-modal-schema-line {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  background: var(--background-secondary);
+  border-left: 2px solid var(--interactive-accent);
+  border-radius: 3px;
+  font-size: 0.8em;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.wikey-modal-schema-label {
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.wikey-modal-schema-types {
+  font-family: var(--font-monospace);
+  font-size: 0.92em;
+}
+
+.wikey-modal-schema-sep {
+  color: var(--text-faint);
+  margin: 0 4px;
 }
 
 .wikey-modal-brief {

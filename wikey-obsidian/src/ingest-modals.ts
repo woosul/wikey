@@ -164,6 +164,52 @@ export class IngestFlowModal extends Modal {
     // Force actual modal container width (Obsidian's default max-width is too tight).
     try { this.applyModalSize() } catch (err) { console.warn('[Wikey modal] applyModalSize failed:', err) }
 
+    // Block accidental dismissal (backdrop click + ESC) while LLM extraction is running.
+    // Only the explicit Cancel/Back/Approve buttons should close the modal mid-flow.
+    const containerEl = (this as unknown as { containerEl?: HTMLElement }).containerEl
+    if (containerEl) {
+      const backdropGuard = (e: MouseEvent) => {
+        // Backdrop = click on container itself (not on modal content)
+        if (e.target === containerEl) {
+          e.stopPropagation()
+          e.preventDefault()
+        }
+      }
+      containerEl.addEventListener('mousedown', backdropGuard, true)
+      containerEl.addEventListener('click', backdropGuard, true)
+      this.cleanups.push(() => {
+        containerEl.removeEventListener('mousedown', backdropGuard, true)
+        containerEl.removeEventListener('click', backdropGuard, true)
+      })
+    }
+    const escGuard = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('keydown', escGuard, true)
+    this.cleanups.push(() => document.removeEventListener('keydown', escGuard, true))
+
+    // [X] close button guard: during processing, confirm before closing.
+    // Use capture phase so we can stopPropagation/preventDefault before
+    // Obsidian's built-in close handler fires.
+    const closeBtn = modalEl.querySelector('.modal-close-button') as HTMLElement | null
+    if (closeBtn) {
+      const closeGuard = (e: MouseEvent) => {
+        if (this.phase === 'processing') {
+          const ok = window.confirm('Ingest 진행 중입니다. 정말 닫으시겠습니까?')
+          if (!ok) {
+            e.stopPropagation()
+            e.preventDefault()
+            e.stopImmediatePropagation()
+          }
+        }
+      }
+      closeBtn.addEventListener('click', closeGuard, true)
+      this.cleanups.push(() => closeBtn.removeEventListener('click', closeGuard, true))
+    }
+
     // ── Content first: the modal must render even if optional features (drag/resize) throw ──
     const titleEl = contentEl.createEl('h3', { text: 'Ingest', cls: 'wikey-modal-drag-handle' })
     const fn = contentEl.createDiv({ cls: 'wikey-modal-subtitle' })
@@ -180,7 +226,9 @@ export class IngestFlowModal extends Modal {
       window.addEventListener('resize', onWinResize)
       this.cleanups.push(() => window.removeEventListener('resize', onWinResize))
 
-      const handle = contentEl.createDiv({
+      // Attach resize handle to modalEl (not contentEl) so it sits at the true
+      // outer corner — contentEl has padding that pushes the handle inward.
+      const handle = modalEl.createDiv({
         cls: 'wikey-modal-resize-handle',
         attr: { 'aria-label': 'Resize modal', title: 'Drag to resize' },
       })
@@ -307,6 +355,13 @@ export class IngestFlowModal extends Modal {
     } else {
       briefBox.setText(this.brief || '(brief 미생성 — 네트워크 또는 LLM 오류)')
     }
+
+    // v6 Phase D: schema preview line — 사용자에게 활성 분류 스키마 표시 (Karpathy "stay involved")
+    const schemaLine = this.bodyEl.createDiv({ cls: 'wikey-modal-schema-line' })
+    schemaLine.createSpan({ cls: 'wikey-modal-schema-label', text: '활성 스키마: ' })
+    schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: '4 entity (organization · person · product · tool)' })
+    schemaLine.createSpan({ cls: 'wikey-modal-schema-sep', text: ' / ' })
+    schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: '3 concept (standard · methodology · document_type)' })
 
     const guideLabel = this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: '강조할 점 / 방향' })
     guideLabel.createEl('span', { cls: 'wikey-modal-hint', text: ' (선택, 비워도 됨)' })

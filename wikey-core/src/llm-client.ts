@@ -35,16 +35,16 @@ export class LLMClient {
     const model = opts?.model ?? PROVIDER_CHAT_DEFAULTS.gemini
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
+    const generationConfig: Record<string, unknown> = {
+      temperature: opts?.temperature ?? DEFAULT_TEMPERATURE,
+      maxOutputTokens: opts?.maxTokens ?? DEFAULT_MAX_TOKENS,
+    }
+    if (opts?.seed !== undefined) generationConfig.seed = opts.seed
+    if (opts?.responseMimeType) generationConfig.responseMimeType = opts.responseMimeType
+
     const payload: Record<string, unknown> = {
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: opts?.temperature ?? DEFAULT_TEMPERATURE,
-        maxOutputTokens: opts?.maxTokens ?? DEFAULT_MAX_TOKENS,
-      },
-    }
-
-    if (opts?.responseMimeType) {
-      (payload.generationConfig as Record<string, unknown>).responseMimeType = opts.responseMimeType
+      generationConfig,
     }
 
     const response = await this.httpClient.request(url, {

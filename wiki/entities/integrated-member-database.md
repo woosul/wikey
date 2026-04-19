@@ -1,16 +1,16 @@
 ---
-title: goodstream-co-ltd
+title: integrated-member-database
 type: entity
-entity_type: organization
+entity_type: tool
 created: 2026-04-19
 updated: 2026-04-19
 sources: [PMS_제품소개_R10_20220815.pdf]
 tags: []
 ---
 
-# goodstream-co-ltd
+# integrated-member-database
 
-주식회사 굿스트림. 소프트웨어 개발/제조업.
+여러 시스템의 회원 정보를 통합하여 관리하는 데이터베이스.
 
 ## 출처
 

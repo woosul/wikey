@@ -118,7 +118,7 @@ export default class WikeyPlugin extends Plugin {
 
     this.registerView(WIKEY_CHAT_VIEW, (leaf) => new WikeyChatView(leaf, this))
 
-    this.addRibbonIcon('search', 'Wikey', () => this.activateChatView())
+    this.addRibbonIcon('book-open', 'Wikey', () => this.activateChatView())
 
     this.addSettingTab(new WikeySettingTab(this.app, this))
 

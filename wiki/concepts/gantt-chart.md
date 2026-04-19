@@ -1,16 +1,16 @@
 ---
-title: business-registration-certificate
+title: gantt-chart
 type: concept
-concept_type: document_type
+concept_type: standard
 created: 2026-04-19
 updated: 2026-04-19
 sources: [PMS_제품소개_R10_20220815.pdf]
 tags: []
 ---
 
-# business-registration-certificate
+# gantt-chart
 
-사업자 등록 사실을 증명하는 문서.
+프로젝트 일정을 시각적으로 표현하는 표준화된 차트 형식 및 관리 기법.
 
 ## 출처
 

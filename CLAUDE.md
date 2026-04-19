@@ -202,17 +202,21 @@ Claude Code에서의 구체적 실행:
 wikey-core/                    ← 핵심 로직 (프로바이더 독립)
   src/config.ts                ← wikey.conf 파싱, resolveProvider
   src/llm-client.ts            ← 4 프로바이더 (Gemini/Anthropic/OpenAI/Ollama)
+  src/provider-defaults.ts     ← 4 프로바이더 기본 모델 단일 소스 (UI/core 공유)
   src/wiki-ops.ts              ← 페이지 CRUD, index/log 관리
   src/query-pipeline.ts        ← qmd 검색 + LLM 합성
-  src/ingest-pipeline.ts       ← 소스→위키 변환 (PDF 지원)
-  src/classify.ts              ← inbox 분류 규칙 엔진
+  src/ingest-pipeline.ts       ← 소스→위키 변환 (PDF + chunk v2 프롬프트)
+  src/classify.ts              ← inbox 분류 규칙 엔진 + LLM fallback (DEWEY 10개)
   src/scripts-runner.ts        ← validate/pii/reindex/cost exec 래퍼
   src/types.ts                 ← 공유 타입
-  src/__tests__/               ← vitest (65 tests)
+  src/prompts/                 ← 외부화된 프롬프트 (ingest_prompt_basic.md)
+  src/__tests__/               ← vitest (97 tests)
 
 wikey-obsidian/                ← Obsidian 플러그인
   src/main.ts                  ← WikeyPlugin, WikiFS/HttpClient 어댑터
-  src/sidebar-chat.ts          ← 채팅 UI, 인제스트 패널
+  src/sidebar-chat.ts          ← 채팅 UI, Audit/Ingest 패널
+  src/ingest-modals.ts         ← Stay-involved Brief→Processing→Preview 모달 (Drag/Resize)
+  src/setup-para.ts            ← PARA 폴더 구조 자동 생성 (0_inbox~4_archives + DDC 3차)
   src/settings-tab.ts          ← 설정 (환경 탐지, 일반 토글, API 키, 고급 LLM)
   src/commands.ts              ← Cmd+Shift+I, URI 프로토콜
   src/status-bar.ts            ← 페이지 수, 통계 모달

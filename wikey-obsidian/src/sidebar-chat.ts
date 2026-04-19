@@ -63,7 +63,7 @@ export class WikeyChatView extends ItemView {
 
   getViewType(): string { return WIKEY_CHAT_VIEW }
   getDisplayText(): string { return 'Wikey' }
-  getIcon(): string { return 'search' }
+  getIcon(): string { return 'book-open' }
 
   async onOpen() {
     const container = this.containerEl.children[1] as HTMLElement
@@ -759,8 +759,9 @@ Click [[page name]] in answers to navigate to the wiki page.
       const f = folderSelect.value
       if (f) files = files.filter((p) => p.includes(f))
       if (searchQuery) {
-        const q = searchQuery.toLowerCase()
-        files = files.filter((p) => p.toLowerCase().includes(q))
+        // Normalize to NFC for Korean filename matching (macOS filesystem uses NFD; JS strings are NFC).
+        const q = searchQuery.normalize('NFC').toLowerCase()
+        files = files.filter((p) => p.normalize('NFC').toLowerCase().includes(q))
       }
       return files
     }
@@ -1072,7 +1073,7 @@ Click [[page name]] in answers to navigate to the wiki page.
             const pct = computeRowPct(step, subStep, subTotal)
             row.style.setProperty('--progress', `${pct}%`)
           }
-        })
+        }, { autoMoveFromInbox: true })
         if (rowSpinner) {
           rowSpinner.remove()
           rowSpinner = null
