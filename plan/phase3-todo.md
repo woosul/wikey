@@ -229,6 +229,49 @@
   - 추가 fix: stripBrokenWikilinks (LLM dropped 항목 자동 정리)
   - v2 테스트 결과가 양호하면 (UI 라벨 제거로 자연히 해소) 별도 수정 불필요할 수도
 
+### C. 2026-04-19 저녁 세션 (v6 인제스트 코어 재설계) 후속
+
+#### C-1. 다음 세션 즉시 작업 (3건)
+
+- [ ] **🔴 OMRON inbox 파일 인제스트로 audit auto-move PARA 추가 검증**
+  - `raw/0_inbox/OMRON_HEM-7156T-AP_*.pdf` (49.6MB), `OMRON_HEM-7600T.pdf` 남음
+  - audit panel [Ingest] → classifyFileAsync 자동 라우팅 + moveFile + ingest-map 갱신 확인
+  - 큰 PDF의 markitdown-ocr fallback E2E와 동시 테스트 가능 (B-2 #4와 통합)
+- [ ] **🟡 v6 결정성 다른 입력에서 일관성 확인**
+  - 사업자등록증 등 다른 소스로 5회 std dev 측정 → CV 비교
+  - PMS와 유사한 안정성 (Total CV 16.9%, Entities CV 14.7%) 재현되는지 확인
+- [ ] **🟡 Lint 세션 — wiki 정리**
+  - 이번 세션 인제스트로 작성된 페이지들 중복/품질 검토
+  - log.md `, ,` cosmetic 잔존 (이전 인제스트 시점) 정리
+  - validate-wiki.sh 실행 (현재 PASS)
+
+#### C-2. v7 후속 (인제스트 안정화 보강, 6건)
+
+- [ ] **[v7-1] schema에 `methodology` vs `document_type` 경계 명확화**
+  - 현재 Concepts CV 33.4% (5중 9~25 진동) — canonicalizer LLM이 같은 mention을 다르게 분류
+  - schema.ts 타입 설명 (CONCEPT_TYPE_DESCRIPTIONS) 보강 + canonicalizer 프롬프트에 분류 결정 트리 추가
+  - 목표: Concepts CV ~15% 이하
+- [ ] **[v7-2] anti-pattern에 운영 항목 추가 발굴**
+  - 인제스트 누적 중 새 회피 패턴 발견 시 schema.ts OPERATIONAL_ITEMS 또는 정규식 접미사에 추가
+  - 현재 차단: 한국어 / X-management/-service/-support / business object / *-list/-report/-form
+- [ ] **[v7-3] Anthropic-style contextual chunk 재작성 (검색 재현율 개선)**
+  - 현재 wikey의 Gemma 4 contextual prefix는 생성 단계 프롬프트 보강용
+  - Anthropic 의도: chunk를 재작성해 embedding/BM25 인덱스에 반영 (retrieval 전처리)
+  - 인제스트와 별개로 검색 재현율 개선 효과 측정
+  - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
+- [ ] **[v7-4] 5회 std dev 자동 측정 → activity 로그 (회귀 감지 자동화)**
+  - 현재 `/tmp/v6-determinism.py` 같은 ad-hoc 스크립트로 측정
+  - `scripts/measure-determinism.sh` 신규 또는 cost-tracker 확장
+  - activity/determinism-log.md에 기록 → CI 통합 가능
+- [ ] **[v7-5] schema yaml 사용자 override (`.wikey/schema.yaml`)**
+  - Phase D는 표시만 (활성 스키마 라인) — 편집 미구현
+  - schema.ts에 loadSchemaOverride() 추가, 사용자 정의 entity/concept 타입 허용
+  - 기본 7개 타입 + 사용자 추가 N개 = 합산 schema
+- [ ] **[v7-6] Pro 모델 (`gemini-3.1-pro-preview`) 옵션 노출**
+  - 1회 시험: total=24, e=16, c=7, 220s — Concept을 매우 보수적으로 분류 (-68%)
+  - 사용자가 "정확/엄격 분류" 원할 때 Audit/Ingest 패널 model select에서 선택 가능
+  - settings.ingestModel + UI dropdown에 추가
+
 > **운영 안정성, 완전 통합, llama.cpp PoC는 Phase 4로 이동 → `plan/phase4-todo.md`**
 
 ---
