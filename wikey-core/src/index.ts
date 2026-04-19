@@ -12,6 +12,10 @@ export type {
   IngestResult,
   IngestProgress,
   IngestProgressCallback,
+  BriefMode,
+  IngestBrief,
+  IngestPlan,
+  IngestPlanGate,
   QueryResult,
   SearchResult,
 } from './types.js'
@@ -23,13 +27,23 @@ export { query } from './query-pipeline.js'
 export type { QueryOptions } from './query-pipeline.js'
 export {
   ingest,
+  generateBrief,
+  injectGuideHint,
   loadEffectiveIngestPrompt,
   INGEST_PROMPT_PATH,
   BUNDLED_INGEST_PROMPT,
+  PlanRejectedError,
 } from './ingest-pipeline.js'
 export type { IngestOptions } from './ingest-pipeline.js'
-export { classifyFile, moveFile } from './classify.js'
-export type { ClassifyResult } from './classify.js'
+export {
+  classifyFile,
+  classifyFileAsync,
+  classifyWithLLM,
+  loadClassifyRules,
+  clearClassifyRulesCache,
+  moveFile,
+} from './classify.js'
+export type { ClassifyResult, ClassifyLLMDeps } from './classify.js'
 export {
   validateWiki,
   checkPii,

@@ -292,6 +292,39 @@
   color: var(--interactive-accent);
 }
 
+.wikey-dashboard-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+.wikey-dashboard-section-header h3 {
+  margin: 0;
+}
+
+.wikey-dashboard-info {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 0.7em;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-radius: 50%;
+  cursor: help;
+  user-select: none;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+}
+
+.wikey-dashboard-info:hover {
+  opacity: 1;
+}
+
 .wikey-dashboard-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -436,12 +469,34 @@
 .wikey-audit-stat-ok { color: #00c853; }
 .wikey-audit-stat-warn { color: #ffab00; }
 
+.wikey-audit-stat-clickable {
+  cursor: pointer;
+  padding: 3px 12px;
+  border-radius: 9999px;
+  transition: background 0.15s;
+}
+
+.wikey-audit-stat-clickable:hover {
+  background: var(--background-modifier-hover);
+}
+
+.wikey-audit-stat-active {
+  background: var(--interactive-accent) !important;
+  color: var(--text-on-accent) !important;
+  font-weight: 700;
+}
+
+.wikey-audit-stat-active .wikey-stat-number {
+  color: var(--text-on-accent) !important;
+}
+
 .wikey-audit-filter {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 8px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .wikey-audit-filter-label {
@@ -450,7 +505,132 @@
   flex-shrink: 0;
 }
 
+.wikey-audit-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-left: auto;
+}
+
+.wikey-audit-view-btn {
+  padding: 2px 10px !important;
+  font-size: 0.82em !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+
+.wikey-audit-view-btn:hover {
+  color: var(--text-normal) !important;
+}
+
+.wikey-audit-view-active {
+  background: var(--interactive-accent) !important;
+  color: var(--text-on-accent) !important;
+}
+
+.wikey-audit-search {
+  flex: 1;
+  min-width: 100px;
+  padding: 3px 8px;
+  font-size: 0.85em;
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  color: var(--text-normal);
+}
+
+.wikey-audit-search:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.wikey-audit-tree-dir {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  cursor: pointer;
+  font-size: 0.92em;
+  user-select: none;
+}
+
+.wikey-audit-tree-dir:hover {
+  background: var(--background-modifier-hover);
+}
+
+.wikey-audit-tree-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--text-muted);
+}
+
+.wikey-audit-tree-chev {
+  transform: rotate(0deg);
+  transition: transform 0.15s ease-out;
+}
+
+.wikey-audit-tree-chev-open {
+  transform: rotate(90deg);
+}
+
+.wikey-audit-tree-dir-name {
+  color: var(--text-normal);
+  font-weight: 500;
+}
+
+.wikey-audit-tree-count {
+  font-size: 0.82em;
+  color: var(--text-faint);
+}
+
+.wikey-audit-tree-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+  font-size: 0.92em;
+}
+
+.wikey-audit-tree-file-name {
+  color: var(--text-normal);
+  font-family: var(--font-monospace);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wikey-audit-readonly {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* folder select uses .wikey-select */
+
+.wikey-audit-selectall-total {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.wikey-audit-selectall-total-label {
+  font-size: 0.82em;
+  color: var(--text-faint);
+}
+
+.wikey-audit-selectall-total-number {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-on-accent);
+}
 
 /* 전체선택 */
 .wikey-audit-selectall {
@@ -543,6 +723,13 @@
   background: var(--text-error);
 }
 
+/* 취소: 2px muted (빨강 아님 — 재시도 유도) */
+.wikey-audit-row-cancelled::after {
+  height: 2px;
+  background: var(--text-faint);
+  opacity: 0.5;
+}
+
 .wikey-audit-info {
   flex: 1;
   min-width: 0;
@@ -588,6 +775,11 @@
 .wikey-audit-path {
   font-size: 0.72em;
   color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .wikey-audit-recommend {
@@ -607,6 +799,9 @@
 .wikey-audit-time {
   font-size: 0.72em;
   color: var(--text-faint);
+  margin-left: 6px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .wikey-audit-error {
@@ -631,6 +826,18 @@
   padding-top: 8px;
   border-top: 1px solid var(--background-modifier-border);
   flex-shrink: 0;
+}
+
+/* Provider/Model row — shared layout between Audit and Ingest panels.
+   Sits BELOW the action row (Ingest/Delay buttons) at the bottom of the panel. */
+.wikey-provider-model-bar {
+  padding-top: 6px;
+  border-top: none;
+}
+
+.wikey-provider-model-bar .wikey-select {
+  flex: 1;
+  min-width: 0;
 }
 
 .wikey-audit-apply-summary {
@@ -1240,6 +1447,16 @@
   color: var(--text-normal);
 }
 
+.wikey-settings-status-required-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 4px;
+  vertical-align: super;
+  border-radius: 50%;
+  background: var(--interactive-accent);
+}
+
 .wikey-settings-status-desc {
   font-size: 0.75em;
   color: var(--text-faint);
@@ -1378,5 +1595,356 @@
   justify-content: flex-end;
   gap: 8px;
   margin-top: 12px;
+}
+
+/* ═══════════════════════════════════════
+   Ingest Flow Modal (Stay-involved UX)
+   ═══════════════════════════════════════ */
+
+.wikey-ingest-flow-modal {
+  min-width: 480px;
+  position: relative;
+}
+
+.wikey-ingest-flow-modal .wikey-modal-body {
+  min-height: 240px;
+}
+
+.wikey-ingest-flow-modal-wrap {
+  /* Obsidian's default max-width (560px) is overridden by applyModalSize() inline style */
+  max-width: none !important;
+}
+
+.wikey-modal-drag-handle {
+  cursor: move;
+  user-select: none;
+}
+
+.wikey-modal-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  cursor: nwse-resize;
+  z-index: 5;
+  /* Three visible diagonal lines so the affordance is obvious */
+  background:
+    linear-gradient(135deg, transparent 5px, var(--text-muted) 5px, var(--text-muted) 6px, transparent 6px),
+    linear-gradient(135deg, transparent 10px, var(--text-muted) 10px, var(--text-muted) 11px, transparent 11px),
+    linear-gradient(135deg, transparent 15px, var(--text-muted) 15px, var(--text-muted) 16px, transparent 16px);
+  opacity: 0.7;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.wikey-modal-resize-handle:hover {
+  opacity: 1;
+  background:
+    linear-gradient(135deg, transparent 5px, var(--interactive-accent) 5px, var(--interactive-accent) 6px, transparent 6px),
+    linear-gradient(135deg, transparent 10px, var(--interactive-accent) 10px, var(--interactive-accent) 11px, transparent 11px),
+    linear-gradient(135deg, transparent 15px, var(--interactive-accent) 15px, var(--interactive-accent) 16px, transparent 16px);
+}
+
+/* Inline spinner (12×12) — used in modal brief loading state */
+.wikey-modal-inline-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--background-modifier-border);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  animation: wikey-spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+.wikey-modal-brief-loading {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Ingest row spinner (shown between [Ingest] click and modal open) */
+.wikey-row-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-left: 6px;
+  border: 2px solid var(--background-modifier-border);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  animation: wikey-spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+.wikey-modal-progress-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  font-size: 0.88em;
+}
+
+.wikey-modal-progress-pct {
+  font-family: var(--font-monospace);
+  color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.wikey-modal-progress-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--background-modifier-border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.wikey-modal-progress-fill {
+  height: 100%;
+  background: var(--interactive-accent);
+  border-radius: 2px;
+  transition: width 0.25s ease-out;
+}
+
+.wikey-ingest-flow-modal h3 {
+  margin: 0 0 4px;
+  color: var(--interactive-accent);
+}
+
+.wikey-modal-subtitle {
+  font-size: 0.85em;
+  color: var(--text-faint);
+  margin-bottom: 14px;
+  word-break: break-all;
+}
+
+.wikey-modal-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--background-modifier-border);
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.wikey-modal-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+
+.wikey-modal-step-active {
+  opacity: 1;
+}
+
+.wikey-modal-step-done {
+  opacity: 0.85;
+}
+
+.wikey-modal-step-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--background-modifier-border);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  font-weight: 700;
+}
+
+.wikey-modal-step-active .wikey-modal-step-dot {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.wikey-modal-step-done .wikey-modal-step-dot {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  opacity: 0.6;
+}
+
+.wikey-modal-step-label {
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+.wikey-modal-step-sep {
+  flex: 1;
+  height: 1px;
+  background: var(--background-modifier-border);
+  min-width: 14px;
+}
+
+.wikey-modal-body {
+  min-height: 180px;
+}
+
+.wikey-modal-label {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--text-normal);
+  margin: 10px 0 4px;
+}
+
+.wikey-modal-hint {
+  font-size: 0.9em;
+  font-weight: 400;
+  color: var(--text-faint);
+}
+
+.wikey-modal-brief {
+  padding: 10px 12px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+  font-size: 0.88em;
+  line-height: 1.55;
+  color: var(--text-normal);
+  white-space: pre-wrap;
+}
+
+.wikey-modal-reflection {
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--interactive-accent) 8%, transparent);
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: 4px;
+  font-size: 0.88em;
+  line-height: 1.5;
+  color: var(--text-normal);
+}
+
+.wikey-modal-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 0.9em;
+  font-family: var(--font-interface);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  background: var(--background-primary);
+  color: var(--text-normal);
+  /* Disable browser-native resize to prevent the modal from growing when the
+     user drags the textarea corner. Modal-level resize is handled by
+     .wikey-modal-resize-handle at the bottom-right of the modal itself. */
+  resize: none;
+}
+
+.wikey-modal-textarea:focus {
+  outline: none;
+  border-color: var(--interactive-accent);
+}
+
+.wikey-modal-processing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 0 16px;
+}
+
+.wikey-modal-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--background-modifier-border);
+  border-top-color: var(--interactive-accent);
+  border-radius: 50%;
+  animation: wikey-spin 0.8s linear infinite;
+}
+
+@keyframes wikey-spin {
+  to { transform: rotate(360deg); }
+}
+
+.wikey-modal-progress-msg {
+  font-size: 0.9em;
+  color: var(--text-muted);
+}
+
+.wikey-modal-guide-echo {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.wikey-modal-plan-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+
+.wikey-modal-plan-group {
+  margin-top: 8px;
+  padding: 2px 0;
+  font-weight: 600;
+  font-size: 0.8em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.wikey-modal-plan-group:first-child {
+  margin-top: 0;
+}
+
+.wikey-modal-plan-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 0;
+  gap: 8px;
+}
+
+.wikey-modal-plan-indent {
+  padding-left: 10px;
+}
+
+.wikey-modal-plan-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+}
+
+.wikey-modal-plan-badge {
+  padding: 1px 8px;
+  border-radius: 8px;
+  font-size: 0.72em;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.wikey-modal-plan-new {
+  background: rgba(0, 200, 83, 0.15);
+  color: #00a848;
+}
+
+.wikey-modal-plan-update {
+  background: color-mix(in srgb, var(--interactive-accent) 15%, transparent);
+  color: var(--interactive-accent);
+}
+
+.wikey-modal-meta {
+  margin-top: 10px;
+  font-size: 0.8em;
+  color: var(--text-faint);
+}
+
+.wikey-modal-button-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.wikey-modal-button-row button {
+  font-size: 0.88em;
+  padding: 6px 14px;
 }
 

@@ -29,6 +29,9 @@ interface WikeySettings {
   // 자동 인제스트 (inbox file watcher)
   autoIngest: boolean
   autoIngestInterval: 0 | 10 | 30 | 60  // 0 = immediately, others = seconds debounce
+  // Stay-involved 모달 (llm-wiki.md "guide the LLM on what to emphasize")
+  ingestBriefs: 'always' | 'session' | 'never'
+  verifyIngestResults: boolean
   // 자동 탐지된 환경 (수동 편집 불필요)
   detectedShellPath: string
   detectedNodePath: string
@@ -56,6 +59,8 @@ const DEFAULT_SETTINGS: WikeySettings = {
   ocrModel: '',
   autoIngest: false,
   autoIngestInterval: 30,
+  ingestBriefs: 'always',
+  verifyIngestResults: true,
   detectedShellPath: '',
   detectedNodePath: '',
   detectedPythonPath: '',
@@ -99,6 +104,8 @@ export default class WikeyPlugin extends Plugin {
   llmClient!: LLMClient
   envStatus: EnvStatus | null = null
   chatHistory: Array<{ role: 'user' | 'assistant' | 'error'; content: string }> = []
+  /** Session-only: set to true when user clicks "Skip briefs this session" in Stage 1 modal. Cleared on reload. */
+  skipIngestBriefsThisSession = false
   private statusBar!: WikeyStatusBar
   private chatSaveTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -193,7 +200,8 @@ export default class WikeyPlugin extends Plugin {
     let fail = 0
     for (const relPath of batch) {
       try {
-        const result = await runIngest(this, relPath)
+        // auto-ingest = "batch with less supervision" mode — skip stay-involved modals
+        const result = await runIngest(this, relPath, undefined, { skipBriefModal: true, skipPreviewModal: true })
         if (result.success) ok++
         else fail++
       } catch (err: unknown) {
@@ -252,7 +260,15 @@ export default class WikeyPlugin extends Plugin {
 
   async loadSettings() {
     // 1. data.json (플러그인 상태)
-    this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData())
+    const existing = (await this.loadData()) ?? {}
+    this.settings = Object.assign({}, DEFAULT_SETTINGS, existing)
+
+    // 1b. 누락된 기본값을 data.json에 명시적으로 저장해 디버깅/감사 시 stale한 `missing` 필드 혼동 제거.
+    const missingKeys = Object.keys(DEFAULT_SETTINGS).filter((k) => !(k in existing))
+    if (missingKeys.length > 0) {
+      console.info(`[Wikey] persisting ${missingKeys.length} default settings: ${missingKeys.join(', ')}`)
+      await this.saveData(this.settings)
+    }
 
     // 2. wikey.conf (공유 설정 — CLI와 동일 소스)
     this.loadFromWikeyConf()

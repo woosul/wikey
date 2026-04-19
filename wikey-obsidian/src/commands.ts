@@ -1,7 +1,8 @@
 import { FuzzySuggestModal, Notice, TFile } from 'obsidian'
 import type WikeyPlugin from './main'
-import { ingest } from 'wikey-core'
+import { generateBrief, ingest, PlanRejectedError, type IngestPlan } from 'wikey-core'
 import { WIKEY_CHAT_VIEW } from './sidebar-chat'
+import { IngestFlowModal } from './ingest-modals'
 
 export function registerCommands(plugin: WikeyPlugin): void {
   // Cmd+Shift+I: Ingest current note
@@ -58,25 +59,119 @@ export interface IngestRunResult {
   sourcePath: string
   createdPages: string[]
   error?: string
+  cancelled?: boolean
+}
+
+export interface IngestRunOptions {
+  /** Skip Stage 1 (brief + guide) — used for auto-ingest or batch mode after user opts out. */
+  skipBriefModal?: boolean
+  /** Bypass Stage 2 (preview) regardless of settings. Rarely used. */
+  skipPreviewModal?: boolean
 }
 
 export async function runIngest(
   plugin: WikeyPlugin,
   sourcePath: string,
-  onProgress?: (step: number, total: number, message: string) => void,
+  onProgress?: (step: number, total: number, message: string, subStep?: number, subTotal?: number) => void,
+  runOpts?: IngestRunOptions,
 ): Promise<IngestRunResult> {
   const basePath = (plugin.app.vault.adapter as any).basePath ?? ''
+  const briefMode = plugin.settings.ingestBriefs
+  const shouldShowFlow = !runOpts?.skipBriefModal
+    && briefMode !== 'never'
+    && !plugin.skipIngestBriefsThisSession
+
+  // ── Fast path: no modal (auto-ingest or "never" mode) ──
+  if (!shouldShowFlow) {
+    return await runIngestCore(plugin, sourcePath, basePath, {
+      guideHint: undefined,
+      planGate: undefined,
+      onProgress,
+    })
+  }
+
+  // ── Stay-involved flow: unified modal (brief → processing → preview) ──
+  // Open the modal immediately with a loading state, then fetch the brief
+  // asynchronously so the user sees *something* within ~200ms instead of
+  // staring at a blank screen while Ollama spins up (10~30s).
+  const modal = new IngestFlowModal(plugin.app, sourcePath, '', plugin.settings.verifyIngestResults)
+  modal.open()
+
+  onProgress?.(1, 4, 'Generating brief...')
+  generateBrief(
+    sourcePath,
+    plugin.wikiFS,
+    plugin.buildConfig(),
+    plugin.httpClient,
+    { basePath, execEnv: plugin.getExecEnv() },
+  )
+    .then((b) => modal.setBrief(b))
+    .catch((err) => modal.setBrief(`(brief 생성 실패: ${err?.message ?? err})`))
+
+  // Brief → Processing → (optional Preview) loop. Back from Processing returns to Brief.
+  while (true) {
+    const briefOutcome = await modal.awaitBrief()
+    if (briefOutcome.action === 'cancel') {
+      modal.close()
+      return { success: false, sourcePath, createdPages: [], cancelled: true }
+    }
+    if (briefOutcome.action === 'skip-session') {
+      plugin.skipIngestBriefsThisSession = true
+    }
+
+    modal.showProcessing('Extracting with LLM...')
+
+    const planGate = briefOutcome.verifyResults
+      ? async (plan: IngestPlan): Promise<boolean> => {
+          return await modal.awaitPreview(plan)
+        }
+      : undefined
+
+    const result = await runIngestCore(plugin, sourcePath, basePath, {
+      guideHint: briefOutcome.guideHint || undefined,
+      planGate,
+      onProgress: (step, total, message, subStep, subTotal) => {
+        modal.updateProgress(step, total, message, subStep, subTotal)
+        onProgress?.(step, total, message, subStep, subTotal)
+      },
+    })
+
+    // If user hit [Back] during processing, the modal already flipped back to Brief.
+    // Discard this in-flight result and loop around for a new guide.
+    if (modal.backRequested) {
+      console.info('[Wikey ingest] user pressed Back — discarding result, returning to Brief')
+      continue
+    }
+
+    modal.finish()
+    return result
+  }
+}
+
+// ── Internal: core pipeline invocation (shared by modal & auto paths) ──
+async function runIngestCore(
+  plugin: WikeyPlugin,
+  sourcePath: string,
+  basePath: string,
+  ctx: {
+    guideHint: string | undefined
+    planGate: ((plan: IngestPlan) => Promise<boolean>) | undefined
+    onProgress?: (step: number, total: number, message: string, subStep?: number, subTotal?: number) => void
+  },
+): Promise<IngestRunResult> {
   try {
-    const config = plugin.buildConfig()
     const result = await ingest(
       sourcePath,
       plugin.wikiFS,
-      config,
+      plugin.buildConfig(),
       plugin.httpClient,
-      (progress) => {
-        onProgress?.(progress.step, progress.total, progress.message)
+      (progress) => ctx.onProgress?.(progress.step, progress.total, progress.message, progress.subStep, progress.subTotal),
+      {
+        basePath,
+        execEnv: plugin.getExecEnv(),
+        guideHint: ctx.guideHint,
+        onPlanReady: ctx.planGate,
       },
-      { basePath, execEnv: plugin.getExecEnv() },
     )
 
     const createdPages = [
@@ -85,16 +180,17 @@ export async function runIngest(
       ...result.concepts.map((c) => c.filename),
     ]
 
-    // 매핑 저장 (audit에서 인제스트 여부 판별용)
     saveIngestMap(basePath, sourcePath, result.sourcePage.filename)
-
-    // inbox 파일이면 processed로 이동
-    if (sourcePath.startsWith('raw/0_inbox/')) {
-      moveToProcessed(basePath, sourcePath)
-    }
+    // 파일은 inbox에 그대로 둔다. ingest-map.json 기록으로 audit이 "ingested"로 인식하므로
+    // 재인제스트 혼동 없고, 사용자가 PARA 이동 타이밍을 직접 결정할 수 있다.
+    // (이전에는 `raw/0_inbox/_processed/`로 옮겼으나 사용자 혼동 유발 → 폴더 자체 제거)
 
     return { success: true, sourcePath, createdPages }
   } catch (err: any) {
+    if (err instanceof PlanRejectedError) {
+      console.info(`[Wikey ingest] cancelled at preview: ${sourcePath}`)
+      return { success: false, sourcePath, createdPages: [], cancelled: true }
+    }
     const msg = err?.message ?? String(err)
     console.error(`[Wikey ingest] failed for ${sourcePath}:`, msg, err?.stack ?? '')
     return { success: false, sourcePath, createdPages: [], error: msg }
@@ -113,26 +209,36 @@ function saveIngestMap(basePath: string, rawPath: string, sourceFilename: string
     // 파일 없으면 빈 맵
   }
 
-  map[rawPath] = sourceFilename
+  map[normalizeRawPath(rawPath)] = sourceFilename
   writeFileSync(mapPath, JSON.stringify(map, null, 2), 'utf-8')
 }
 
-function moveToProcessed(basePath: string, sourcePath: string): void {
+/** Move an ingest-map entry from its pre-move path to the post-move path (called after moveFile to PARA). */
+export function updateIngestMapPath(basePath: string, oldRawPath: string, newRawPath: string): void {
   const { join } = require('node:path') as typeof import('node:path')
-  const { renameSync, mkdirSync, existsSync } = require('node:fs') as typeof import('node:fs')
+  const { readFileSync, writeFileSync } = require('node:fs') as typeof import('node:fs')
+  const mapPath = join(basePath, 'wiki/.ingest-map.json')
 
-  const processedDir = join(basePath, 'raw/0_inbox/_processed')
-  if (!existsSync(processedDir)) mkdirSync(processedDir, { recursive: true })
-
-  const fileName = sourcePath.split('/').pop() ?? sourcePath
-  const src = join(basePath, sourcePath)
-  const dst = join(processedDir, fileName)
-
+  let map: Record<string, string> = {}
   try {
-    renameSync(src, dst)
+    map = JSON.parse(readFileSync(mapPath, 'utf-8'))
   } catch {
-    // 이동 실패해도 인제스트 결과에 영향 없음
+    return
   }
+
+  const oldKey = normalizeRawPath(oldRawPath)
+  const newKey = normalizeRawPath(newRawPath)
+  const value = map[oldKey]
+  if (!value) return
+
+  delete map[oldKey]
+  map[newKey] = value
+  writeFileSync(mapPath, JSON.stringify(map, null, 2), 'utf-8')
+}
+
+/** Collapse duplicate slashes (`a//b` → `a/b`) so audit-ingest.py exact-match keys work. */
+function normalizeRawPath(p: string): string {
+  return p.replace(/\/{2,}/g, '/')
 }
 
 export class IngestFileSuggestModal extends FuzzySuggestModal<TFile> {

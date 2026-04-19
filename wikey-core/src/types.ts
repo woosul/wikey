@@ -82,9 +82,33 @@ export interface IngestProgress {
   readonly step: number
   readonly total: number
   readonly message: string
+  /** Optional fine-grained sub-progress within a step (e.g. chunk i of N during LLM extraction). */
+  readonly subStep?: number
+  readonly subTotal?: number
 }
 
 export type IngestProgressCallback = (progress: IngestProgress) => void
+
+// ── Stay-involved modal hooks (llm-wiki.md "guide emphasis" + "read summaries") ──
+
+export type BriefMode = 'always' | 'session' | 'never'
+
+export interface IngestBrief {
+  readonly sourceFilename: string
+  readonly summary: string
+}
+
+export interface IngestPlan {
+  readonly sourceFilename: string
+  readonly guideReflection: string
+  readonly sourcePage: { filename: string; existed: boolean }
+  readonly entities: ReadonlyArray<{ filename: string; existed: boolean }>
+  readonly concepts: ReadonlyArray<{ filename: string; existed: boolean }>
+  readonly indexAdditions: number
+  readonly hasLogEntry: boolean
+}
+
+export type IngestPlanGate = (plan: IngestPlan) => Promise<boolean>
 
 export interface QueryResult {
   readonly answer: string

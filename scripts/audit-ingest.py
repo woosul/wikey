@@ -88,7 +88,7 @@ def main():
     all_docs = scan_raw_docs()
 
     missing = []
-    ingested = 0
+    ingested_files: list[Path] = []
     # per-folder counters
     folder_total: dict[str, int] = {}
     folder_ingested: dict[str, int] = {}
@@ -102,16 +102,18 @@ def main():
 
         # 1순위: ingest-map.json에 기록된 경로
         if rel in ingest_map:
-            ingested += 1
+            ingested_files.append(doc)
             folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
             continue
         # 2순위: 파일명 기반 fuzzy matching
         name = normalize(doc.stem)
         if match(name, wiki_keys):
-            ingested += 1
+            ingested_files.append(doc)
             folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
         else:
             missing.append(doc)
+
+    ingested = len(ingested_files)
 
     total = len(all_docs)
     missing_count = len(missing)
@@ -130,6 +132,7 @@ def main():
             "missing": missing_count,
             "folders": folders,
             "files": [str(f.relative_to(ROOT)) for f in missing],
+            "ingested_files": [str(f.relative_to(ROOT)) for f in ingested_files],
         }, ensure_ascii=False, indent=2))
     elif mode == "summary":
         print(f"문서 총: {total}개 | 인제스트됨: {ingested}개 | 미인제스트: {missing_count}개")

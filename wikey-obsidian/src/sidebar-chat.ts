@@ -1,6 +1,6 @@
 import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
-import { query, resolveProvider, classifyFile, moveFile, fetchModelList } from 'wikey-core'
+import { query, resolveProvider, classifyFile, classifyFileAsync, moveFile, fetchModelList } from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
 import type { IngestRunResult } from './commands'
 
@@ -28,6 +28,23 @@ const ICONS = {
 }
 
 type PanelName = 'dashboard' | 'audit' | 'ingest' | 'help' | null
+
+/**
+ * Row progress with chunk-level subStep interpolation.
+ *
+ * Step weights: [0, 5, 80, 90, 100]  (Reading → LLM → Creating → Indexing)
+ * When step 2 (LLM) reports subStep/subTotal (e.g. chunk i of N), interpolate
+ * between 5% and 80% so long documents show smooth progress instead of being
+ * stuck at the step-2 flat weight.
+ */
+function computeRowPct(step: number, subStep?: number, subTotal?: number): number {
+  const weights = [0, 5, 80, 90, 100]
+  if (step === 2 && subStep != null && subTotal && subTotal > 0) {
+    const fraction = Math.min(1, Math.max(0, subStep / subTotal))
+    return Math.round(weights[1] + (weights[2] - weights[1]) * fraction)
+  }
+  return weights[step] ?? Math.round((step / 4) * 100)
+}
 
 export class WikeyChatView extends ItemView {
   private messagesEl!: HTMLElement
@@ -375,7 +392,32 @@ Click [[page name]] in answers to navigate to the wiki page.
 
     // ── Wiki Stats ──
     const wikiSection = el.createDiv({ cls: 'wikey-dashboard-section' })
-    wikiSection.createEl('h3', { text: 'Wiki' })
+    const wikiHeader = wikiSection.createDiv({ cls: 'wikey-dashboard-section-header' })
+    wikiHeader.createEl('h3', { text: 'Wiki' })
+    const wikiInfo = wikiHeader.createEl('span', {
+      cls: 'wikey-dashboard-info',
+      text: '?',
+      attr: {
+        'aria-label': 'Why more pages than raw sources?',
+        title:
+          '왜 Wiki > Raw인가?\n\n' +
+          'raw 소스 1개는 wiki 페이지 5~15개로 분해됩니다 (llm-wiki.md).\n\n' +
+          '• entities: 인물/제품/도구 (여러 소스에서 재사용)\n' +
+          '• concepts: 이론/방법론\n' +
+          '• sources: 원본 1개당 요약 1개\n' +
+          '• analyses: 쿼리 합성 결과\n\n' +
+          '분할 이유: 검색 정확도 + 재사용 + 백링크 그래프\n' +
+          '상세: docs/ingest-decomposition.md',
+      },
+    })
+    wikiInfo.addEventListener('click', async () => {
+      const file = this.app.vault.getAbstractFileByPath('docs/ingest-decomposition.md')
+      if (file) {
+        await this.app.workspace.getLeaf(false).openFile(file as any)
+      } else {
+        new Notice('docs/ingest-decomposition.md 없음')
+      }
+    })
 
     const categories: Record<string, number> = { entities: 0, concepts: 0, sources: 0, analyses: 0 }
     for (const cat of Object.keys(categories)) {
@@ -473,11 +515,6 @@ Click [[page name]] in answers to navigate to the wiki page.
       this.addStatCard(grid, String(data.total_documents), 'Total Docs')
       this.addStatCard(grid, String(data.ingested), 'Ingested')
       this.addStatCard(grid, String(data.missing), 'Missing')
-
-      if (data.missing > 0) {
-        const hint = container.createDiv({ cls: 'wikey-dashboard-empty' })
-        hint.innerHTML = `${data.missing} unprocessed — manage via ${ICONS.audit} icon`
-      }
     } catch {
       container.createEl('span', { text: 'Audit failed', cls: 'wikey-dashboard-empty' })
     }
@@ -528,10 +565,6 @@ Click [[page name]] in answers to navigate to the wiki page.
         }
       }
 
-      if (data.missing > 0) {
-        const hint = container.createDiv({ cls: 'wikey-dashboard-empty' })
-        hint.innerHTML = `${data.missing} unprocessed — manage via ${ICONS.audit} icon`
-      }
     } catch {
       const rawStats = this.collectRawStats()
       const grid = container.createDiv({ cls: 'wikey-dashboard-grid' })
@@ -559,7 +592,7 @@ Click [[page name]] in answers to navigate to the wiki page.
     const basePath = (this.app.vault.adapter as any).basePath ?? ''
     const env = this.plugin.getExecEnv()
 
-    let auditData: { total_documents: number; ingested: number; missing: number; files: string[] }
+    let auditData: { total_documents: number; ingested: number; missing: number; files: string[]; ingested_files: string[] }
     try {
       const script = join(basePath, 'scripts/audit-ingest.py')
       const stdout = execFileSync('python3', [script, '--json'], {
@@ -571,17 +604,24 @@ Click [[page name]] in answers to navigate to the wiki page.
       return
     }
 
-    // ── Top bar: stats (left) + status (right) ──
+    // ── Audit UI state (filter/view/search) ──
+    type AuditMode = 'all' | 'missing' | 'ingested'
+    let auditMode: AuditMode = 'missing'
+    let viewMode: 'list' | 'tree' = 'list'
+    let searchQuery = ''
+    const treeExpand: Map<string, boolean> = new Map()
+
+    // ── Top bar: clickable stat chips + status ──
     const topBar = container.createDiv({ cls: 'wikey-audit-summary-row' })
     const statsLeft = topBar.createDiv({ cls: 'wikey-audit-stats-left' })
-    const statTotal = statsLeft.createEl('span', { cls: 'wikey-audit-stat' })
-    const statIngested = statsLeft.createEl('span', { cls: 'wikey-audit-stat wikey-audit-stat-ok' })
-    const statMissing = statsLeft.createEl('span', { cls: 'wikey-audit-stat wikey-audit-stat-warn' })
+    const statTotal = statsLeft.createEl('span', { cls: 'wikey-audit-stat wikey-audit-stat-clickable' })
+    const statIngested = statsLeft.createEl('span', { cls: 'wikey-audit-stat wikey-audit-stat-ok wikey-audit-stat-clickable' })
+    const statMissing = statsLeft.createEl('span', { cls: 'wikey-audit-stat wikey-audit-stat-warn wikey-audit-stat-clickable' })
     const statusRight = topBar.createEl('span', { cls: 'wikey-audit-status-right' })
 
     const updateSummaryStats = () => {
       statTotal.empty()
-      statTotal.createEl('span', { text: 'Total ' })
+      statTotal.createEl('span', { text: 'All ' })
       statTotal.createEl('span', { text: String(auditData.total_documents), cls: 'wikey-stat-number' })
       statIngested.empty()
       statIngested.createEl('span', { text: 'Ingested ' })
@@ -589,6 +629,9 @@ Click [[page name]] in answers to navigate to the wiki page.
       statMissing.empty()
       statMissing.createEl('span', { text: 'Missing ' })
       statMissing.createEl('span', { text: String(auditData.missing), cls: 'wikey-stat-number' })
+      statTotal.toggleClass('wikey-audit-stat-active', auditMode === 'all')
+      statIngested.toggleClass('wikey-audit-stat-active', auditMode === 'ingested')
+      statMissing.toggleClass('wikey-audit-stat-active', auditMode === 'missing')
     }
     updateSummaryStats()
 
@@ -605,28 +648,47 @@ Click [[page name]] in answers to navigate to the wiki page.
       }
     }
 
-    if (auditData.missing === 0) {
-      container.createEl('span', { text: 'All documents are ingested.', cls: 'wikey-dashboard-empty' })
+    if (auditData.total_documents === 0) {
+      container.createEl('span', { text: 'No raw documents found.', cls: 'wikey-dashboard-empty' })
       return
     }
 
     this.auditSelections = new Set()
 
-    // ── 폴더 필터 ──
+    // ── Filter row: [Folder select] [Search...] ........ [List | Tree] ──
     const filterRow = container.createDiv({ cls: 'wikey-audit-filter' })
     filterRow.createEl('span', { text: 'Folder', cls: 'wikey-audit-filter-label' })
     const folderSelect = filterRow.createEl('select', { cls: 'wikey-select' })
 
+    const activeFiles = (): string[] => {
+      const ingested = auditData.ingested_files ?? []
+      if (auditMode === 'missing') return auditData.files
+      if (auditMode === 'ingested') return ingested
+      return [...auditData.files, ...ingested]
+    }
+
     const rebuildFolderOptions = () => {
       const currentVal = folderSelect.value
       folderSelect.empty()
-      folderSelect.createEl('option', { text: `All (${auditData.files.length})`, attr: { value: '' } })
-      for (const { folder, count } of this.extractFolders(auditData.files)) {
+      const files = activeFiles()
+      folderSelect.createEl('option', { text: `All (${files.length})`, attr: { value: '' } })
+      for (const { folder, count } of this.extractFolders(files)) {
         folderSelect.createEl('option', { text: `${folder} (${count})`, attr: { value: folder } })
       }
       folderSelect.value = currentVal
     }
     rebuildFolderOptions()
+
+    // Search input — middle of row
+    const searchInput = filterRow.createEl('input', {
+      cls: 'wikey-audit-search',
+      attr: { type: 'text', placeholder: 'Search filename...' },
+    }) as HTMLInputElement
+
+    // View toggle — right-aligned (margin-left: auto via CSS)
+    const viewToggle = filterRow.createDiv({ cls: 'wikey-audit-view-toggle' })
+    const listBtn = viewToggle.createEl('button', { text: 'List', cls: 'wikey-audit-view-btn wikey-audit-view-active' })
+    const treeBtn = viewToggle.createEl('button', { text: 'Tree', cls: 'wikey-audit-view-btn' })
 
     // ── 전체선택 + 목록 (스크롤 영역) ──
     const listArea = container.createDiv({ cls: 'wikey-audit-list-area' })
@@ -634,58 +696,73 @@ Click [[page name]] in answers to navigate to the wiki page.
     const selectAllRow = listArea.createDiv({ cls: 'wikey-audit-selectall' })
     const selectAllCb = selectAllRow.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
     selectAllRow.createEl('span', { text: 'Select All', cls: 'wikey-audit-selectall-label' })
+    // Right-side total count (reflects current mode + folder + search filters)
+    const selectAllTotal = selectAllRow.createEl('span', { cls: 'wikey-audit-selectall-total' })
+    const updateSelectAllTotal = (n: number) => {
+      selectAllTotal.empty()
+      selectAllTotal.createEl('span', { text: 'Total | ', cls: 'wikey-audit-selectall-total-label' })
+      selectAllTotal.createEl('span', { text: String(n), cls: 'wikey-audit-selectall-total-number' })
+    }
 
     const listEl = listArea.createDiv({ cls: 'wikey-audit-list' })
     const rowMap = new Map<string, HTMLElement>()
 
-    // ── 하단 고정: provider + model + [Ingest/Cancel] + [Delay] ──
+    // ── 하단 고정: [Ingest/Cancel] + [Delay] (상단) / provider + model (하단) ──
+    // Ingest 버튼은 상단(applyBar)에 유지, provider/model은 그 아래(providerBar)로
+    // 배치해 Ingest 패널과 동일한 레이아웃 공유.
     const bottomBar = container.createDiv({ cls: 'wikey-audit-bottom' })
     const applyBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar' })
-
-    const providerSelect = applyBar.createEl('select', { cls: 'wikey-select' })
-    const providerOptions = [
-      { value: 'ollama', text: 'Local' },
-      { value: 'gemini', text: 'Google Gemini' },
-      { value: 'openai', text: 'OpenAI Codex' },
-      { value: 'anthropic', text: 'Anthropic Claude' },
-    ]
-    const currentIngestProvider = this.plugin.settings.ingestProvider || this.plugin.settings.basicModel || 'ollama'
-    for (const opt of providerOptions) {
-      const el = providerSelect.createEl('option', { text: opt.text, attr: { value: opt.value } })
-      if (opt.value === currentIngestProvider) el.selected = true
-    }
-
-    const modelSelect = applyBar.createEl('select', { cls: 'wikey-select' })
-    const savedIngestModel = this.plugin.settings.ingestModel || ''
-    modelSelect.createEl('option', { text: savedIngestModel || 'default', attr: { value: savedIngestModel } })
-
-    // Load models dynamically for the selected provider
-    const loadModels = async (provider: string) => {
-      const config = this.plugin.buildConfig()
-      const models = await fetchModelList(provider as any, config, this.plugin.httpClient)
-      modelSelect.empty()
-      if (models.length === 0) {
-        modelSelect.createEl('option', { text: 'default', attr: { value: '' } })
-      } else {
-        for (const m of models) {
-          const opt = modelSelect.createEl('option', { text: m, attr: { value: m } })
-          if (m === savedIngestModel) opt.selected = true
-        }
-      }
-    }
-    loadModels(providerSelect.value)
-    providerSelect.addEventListener('change', () => loadModels(providerSelect.value))
 
     const applyBtn = applyBar.createEl('button', { text: 'Ingest', cls: 'wikey-audit-apply-btn' })
     const delayBtn = applyBar.createEl('button', { text: 'Delay', cls: 'wikey-audit-delay-action-btn' })
     applyBtn.setAttr('disabled', 'true')
     delayBtn.setAttr('disabled', 'true')
 
+    // Provider/Model row — bottom of panel, shared layout with Ingest panel
+    const providerBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
+    const providerSelect = providerBar.createEl('select', { cls: 'wikey-select' })
+    const providerOptions = [
+      { value: '', text: '(use Default Model)' },
+      { value: 'ollama', text: 'Local' },
+      { value: 'gemini', text: 'Google Gemini' },
+      { value: 'openai', text: 'OpenAI Codex' },
+      { value: 'anthropic', text: 'Anthropic Claude' },
+    ]
+    const currentIngestProvider = this.plugin.settings.ingestProvider || ''
+    for (const opt of providerOptions) {
+      const el = providerSelect.createEl('option', { text: opt.text, attr: { value: opt.value } })
+      if (opt.value === currentIngestProvider) el.selected = true
+    }
+
+    const modelSelect = providerBar.createEl('select', { cls: 'wikey-select' })
+    const savedIngestModel = this.plugin.settings.ingestModel || ''
+    modelSelect.createEl('option', { text: '(provider default)', attr: { value: '' } })
+
+    const loadModels = async (provider: string) => {
+      const config = this.plugin.buildConfig()
+      const models = await fetchModelList(provider as any, config, this.plugin.httpClient)
+      modelSelect.empty()
+      const defaultOpt = modelSelect.createEl('option', { text: '(provider default)', attr: { value: '' } })
+      if (!savedIngestModel) defaultOpt.selected = true
+      for (const m of models) {
+        const opt = modelSelect.createEl('option', { text: m, attr: { value: m } })
+        if (m === savedIngestModel) opt.selected = true
+      }
+    }
+    loadModels(providerSelect.value)
+    providerSelect.addEventListener('change', () => loadModels(providerSelect.value))
+
     let cancelRequested = false
 
     const getFiltered = (): string[] => {
+      let files = activeFiles()
       const f = folderSelect.value
-      return f ? auditData.files.filter((p) => p.includes(f)) : auditData.files
+      if (f) files = files.filter((p) => p.includes(f))
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase()
+        files = files.filter((p) => p.toLowerCase().includes(q))
+      }
+      return files
     }
 
     const updateApply = () => {
@@ -705,8 +782,16 @@ Click [[page name]] in answers to navigate to the wiki page.
       rowMap.clear()
       const filtered = getFiltered()
 
+      updateSelectAllTotal(filtered.length)
+
       const allChecked = filtered.length > 0 && filtered.every((f) => this.auditSelections.has(f))
       ;(selectAllCb as HTMLInputElement).checked = allChecked
+
+      if (viewMode === 'tree') {
+        renderTree(listEl, filtered)
+        updateApply()
+        return
+      }
 
       const { statSync: statSyncFn, existsSync: existsSyncFn } = require('node:fs') as typeof import('node:fs')
 
@@ -732,14 +817,13 @@ Click [[page name]] in answers to navigate to the wiki page.
         const sizeLabel = fileSizeKb >= 1024 ? `${(fileSizeKb / 1024).toFixed(1)}MB` : `${fileSizeKb}KB`
         nameLine.createEl('span', { text: sizeLabel, cls: 'wikey-audit-filesize' })
 
-        // Line 2: folder + recommended model (right)
+        // Line 2: folder + (time while ingesting) + recommended model (right)
         const pathLine = info.createDiv({ cls: 'wikey-audit-path-line' })
         pathLine.createEl('span', { text: parentDir, cls: 'wikey-audit-path' })
+        // Inline time — hidden until ingest starts, sits next to folder path
+        pathLine.createEl('span', { cls: 'wikey-audit-time', attr: { style: 'display:none' } })
         const recommend = fileSizeKb > 1024 ? 'Cloud' : 'Local'
         pathLine.createEl('span', { text: recommend, cls: `wikey-audit-recommend wikey-audit-recommend-${recommend.toLowerCase()}` })
-
-        // Line 3: time (hidden until ingest starts)
-        info.createEl('span', { cls: 'wikey-audit-time', attr: { style: 'display:none' } })
 
         const toggleCb = () => {
           if ((cb as HTMLInputElement).checked) this.auditSelections.add(filePath)
@@ -760,6 +844,128 @@ Click [[page name]] in answers to navigate to the wiki page.
       }
       updateApply()
     }
+
+    // ── Tree view: group filtered files by folder path (raw/ top-level hidden) ──
+    const renderTree = (parent: HTMLElement, files: string[]) => {
+      type Node = { name: string; fullPath: string; isDir: boolean; files: string[]; children: Map<string, Node> }
+      const root: Node = { name: '', fullPath: '', isDir: true, files: [], children: new Map() }
+      for (const f of files) {
+        const segs = f.split('/')
+        const fileName = segs[segs.length - 1]
+        let cur = root
+        for (let i = 0; i < segs.length - 1; i++) {
+          const seg = segs[i]
+          const p = segs.slice(0, i + 1).join('/')
+          if (!cur.children.has(seg)) {
+            cur.children.set(seg, { name: seg, fullPath: p, isDir: true, files: [], children: new Map() })
+          }
+          cur = cur.children.get(seg)!
+        }
+        cur.files.push(fileName)
+      }
+
+      const chevronSvg = (open: boolean): string =>
+        `<svg class="wikey-audit-tree-chev ${open ? 'wikey-audit-tree-chev-open' : ''}" viewBox="0 0 12 12" width="12" height="12"><path d="M4 2 L8 6 L4 10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+
+      const renderNode = (node: Node, depth: number) => {
+        const sortedDirs = [...node.children.entries()].sort(([a], [b]) => a.localeCompare(b))
+        for (const [, child] of sortedDirs) {
+          const isOpen = treeExpand.get(child.fullPath) ?? depth < 2
+          const dirRow = parent.createDiv({ cls: 'wikey-audit-tree-dir' })
+          dirRow.style.paddingLeft = `${depth * 14}px`
+          const caret = dirRow.createEl('span', { cls: 'wikey-audit-tree-caret' })
+          caret.innerHTML = chevronSvg(isOpen)
+          const fileCount = countFiles(child)
+          dirRow.createEl('span', { cls: 'wikey-audit-tree-dir-name', text: child.name })
+          dirRow.createEl('span', { cls: 'wikey-audit-tree-count', text: `(${fileCount})` })
+          dirRow.addEventListener('click', () => {
+            treeExpand.set(child.fullPath, !isOpen)
+            renderList()
+          })
+          if (isOpen) renderNode(child, depth + 1)
+        }
+        for (const fileName of node.files.sort()) {
+          const fullRel = node.fullPath ? `${node.fullPath}/${fileName}` : fileName
+          const row = parent.createDiv({ cls: 'wikey-audit-tree-file' })
+          row.style.paddingLeft = `${depth * 14 + 14}px`
+          const cb = row.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
+          ;(cb as HTMLInputElement).checked = this.auditSelections.has(fullRel)
+          row.createEl('span', { cls: 'wikey-audit-tree-file-name', text: fileName })
+          rowMap.set(fullRel, row)
+          const toggle = () => {
+            if ((cb as HTMLInputElement).checked) this.auditSelections.add(fullRel)
+            else this.auditSelections.delete(fullRel)
+            updateApply()
+          }
+          cb.addEventListener('change', toggle)
+          row.addEventListener('click', (e) => {
+            if (e.target === cb) return
+            ;(cb as HTMLInputElement).checked = !(cb as HTMLInputElement).checked
+            toggle()
+          })
+        }
+      }
+
+      const countFiles = (n: Node): number => {
+        let c = n.files.length
+        for (const ch of n.children.values()) c += countFiles(ch)
+        return c
+      }
+
+      // Hide top-level "raw/" — start rendering from its children
+      const rawNode = root.children.get('raw')
+      if (rawNode) renderNode(rawNode, 0)
+      else renderNode(root, 0)
+    }
+
+    // Stat chip toggle (all ⇄ missing ⇄ ingested)
+    const switchMode = (mode: AuditMode) => {
+      if (auditMode === mode) return
+      auditMode = mode
+      this.auditSelections = new Set()
+      rebuildFolderOptions()
+      updateSummaryStats()
+      renderList()
+      // In ingested mode, disable ingest/delay actions (already ingested). In all, enable — user can pick missing.
+      const readOnly = auditMode === 'ingested'
+      if (readOnly) {
+        applyBtn.setAttr('disabled', 'true')
+        delayBtn.setAttr('disabled', 'true')
+        applyBtn.addClass('wikey-audit-readonly')
+      } else {
+        applyBtn.removeClass('wikey-audit-readonly')
+        updateApply()
+      }
+    }
+    statTotal.addEventListener('click', () => switchMode('all'))
+    statMissing.addEventListener('click', () => switchMode('missing'))
+    statIngested.addEventListener('click', () => switchMode('ingested'))
+
+    // View toggle
+    listBtn.addEventListener('click', () => {
+      if (viewMode === 'list') return
+      viewMode = 'list'
+      listBtn.addClass('wikey-audit-view-active')
+      treeBtn.removeClass('wikey-audit-view-active')
+      renderList()
+    })
+    treeBtn.addEventListener('click', () => {
+      if (viewMode === 'tree') return
+      viewMode = 'tree'
+      treeBtn.addClass('wikey-audit-view-active')
+      listBtn.removeClass('wikey-audit-view-active')
+      renderList()
+    })
+
+    // Search input — debounced
+    let searchTimer: ReturnType<typeof setTimeout> | null = null
+    searchInput.addEventListener('input', () => {
+      if (searchTimer) clearTimeout(searchTimer)
+      searchTimer = setTimeout(() => {
+        searchQuery = searchInput.value.trim()
+        renderList()
+      }, 120)
+    })
 
     selectAllCb.addEventListener('change', () => {
       const filtered = getFiltered()
@@ -795,14 +1001,18 @@ Click [[page name]] in answers to navigate to the wiki page.
       providerSelect.setAttr('disabled', 'true')
       modelSelect.setAttr('disabled', 'true')
 
-      // Apply selected provider + model
+      // Apply selected provider + model ONLY when user explicitly overrode them.
+      // Empty value = "(use Default Model)" → leave plugin.settings untouched so
+      // resolveProvider picks the Default Model Provider + PROVIDER_CHAT_DEFAULTS model.
       const selectedProvider = providerSelect.value
       const selectedModel = modelSelect.value
       const origBasic = this.plugin.settings.basicModel
       const origIngestProvider = this.plugin.settings.ingestProvider
       const origIngestModel = this.plugin.settings.ingestModel
-      this.plugin.settings.basicModel = selectedProvider
-      this.plugin.settings.ingestProvider = selectedProvider
+      if (selectedProvider) {
+        this.plugin.settings.basicModel = selectedProvider
+        this.plugin.settings.ingestProvider = selectedProvider
+      }
       if (selectedModel) this.plugin.settings.ingestModel = selectedModel
       this.plugin.llmClient = new (await import('wikey-core')).LLMClient(
         this.plugin.httpClient, this.plugin.buildConfig(),
@@ -823,12 +1033,20 @@ Click [[page name]] in answers to navigate to the wiki page.
         const timeEl = row?.querySelector('.wikey-audit-time') as HTMLElement | null
         let timerInterval: ReturnType<typeof setInterval> | null = null
         const fileStart = Date.now()
+        let rowSpinner: HTMLElement | null = null
 
         if (row) {
           row.removeClass('wikey-audit-row-done')
           row.addClass('wikey-audit-row-active')
           row.style.setProperty('--progress', '0%')
           row.scrollIntoView({ block: 'nearest' })
+          // Loading spinner next to filename until brief/extract starts (first progress tick)
+          const nameEl = row.querySelector('.wikey-audit-name') as HTMLElement | null
+          if (nameEl) {
+            rowSpinner = document.createElement('span')
+            rowSpinner.className = 'wikey-row-spinner'
+            nameEl.insertAdjacentElement('afterend', rowSpinner)
+          }
         }
 
         // Show live time counter
@@ -843,13 +1061,22 @@ Click [[page name]] in answers to navigate to the wiki page.
 
         updateStatus(`${done + 1}/${selected.length} processing...`, true)
 
-        const stepWeights = [0, 5, 80, 90, 100]
-        const result = await runIngest(this.plugin, f, (step, _total) => {
+        let spinnerRemoved = false
+        const result = await runIngest(this.plugin, f, (step, _total, _msg, subStep, subTotal) => {
+          if (!spinnerRemoved && rowSpinner) {
+            rowSpinner.remove()
+            rowSpinner = null
+            spinnerRemoved = true
+          }
           if (row) {
-            const pct = stepWeights[step] ?? Math.round((step / 4) * 100)
+            const pct = computeRowPct(step, subStep, subTotal)
             row.style.setProperty('--progress', `${pct}%`)
           }
         })
+        if (rowSpinner) {
+          rowSpinner.remove()
+          rowSpinner = null
+        }
 
         // Stop timer
         if (timerInterval) clearInterval(timerInterval)
@@ -864,6 +1091,9 @@ Click [[page name]] in answers to navigate to the wiki page.
             // Change filename to green (keep in list, don't remove)
             const nameEl = row.querySelector('.wikey-audit-name') as HTMLElement | null
             if (nameEl) nameEl.addClass('wikey-audit-name-done')
+          } else if (result.cancelled) {
+            // User cancelled — silent, no red fail state (just reset)
+            row.addClass('wikey-audit-row-cancelled')
           } else {
             row.addClass('wikey-audit-row-fail')
             if (result.error) {
@@ -886,7 +1116,13 @@ Click [[page name]] in answers to navigate to the wiki page.
           succeeded.push(f)
           auditData.ingested++
           auditData.missing = auditData.files.length - succeeded.length
+          // Move from missing list → ingested list (for stat chip switching)
+          const idx = auditData.files.indexOf(f)
+          if (idx >= 0) auditData.files.splice(idx, 1)
+          auditData.ingested_files = [...(auditData.ingested_files ?? []), f]
           updateSummaryStats()
+        } else if (result.cancelled) {
+          cancelled++
         } else {
           failed++
         }
@@ -913,9 +1149,16 @@ Click [[page name]] in answers to navigate to the wiki page.
       updateStatus(msg, true)
       new Notice(msg)
 
-      // Don't remove completed rows — keep them visible with green names
-      this.auditSelections = new Set()
+      // Don't remove completed rows — keep them visible with green names.
+      // Clear selection for succeeded files; keep failed/cancelled files selected
+      // so the user can retry with a single click on [Ingest].
+      const succeededSet = new Set(succeeded)
+      for (const f of [...this.auditSelections]) {
+        if (succeededSet.has(f)) this.auditSelections.delete(f)
+      }
       rebuildFolderOptions()
+      renderList()
+      updateApply()
     })
 
     // ── 보류 (_delayed 이동) ──
@@ -1197,10 +1440,9 @@ Click [[page name]] in answers to navigate to the wiki page.
         summaryEl.createEl('span', { text: ' processing...' })
       }
 
-      const stepWeights = [0, 5, 80, 90, 100]
-      const result = await runIngest(this.plugin, `raw/0_inbox/${f}`, (step, _total) => {
+      const result = await runIngest(this.plugin, `raw/0_inbox/${f}`, (step, _total, _msg, subStep, subTotal) => {
         if (row) {
-          const pct = stepWeights[step] ?? Math.round((step / 4) * 100)
+          const pct = computeRowPct(step, subStep, subTotal)
           row.style.setProperty('--progress', `${pct}%`)
         }
       })
@@ -1280,8 +1522,12 @@ Click [[page name]] in answers to navigate to the wiki page.
       { value: 'raw/4_archive', label: 'Archive' },
     ]
 
-    // Bottom bar
+    // Bottom bar (2 rows for consistency with Audit panel)
+    // Row 1 (top): Action — PARA select + Ingest + Delay (버튼 위치 고정)
+    // Row 2 (bottom): Provider + Model (공간의 맨 아래)
     const bottomBar = inboxDiv.createDiv({ cls: 'wikey-audit-bottom' })
+
+    // Row 1: Action
     const applyBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar' })
     const applySummary = applyBar.createEl('span', { cls: 'wikey-audit-apply-summary wikey-inbox-apply-summary' })
 
@@ -1294,6 +1540,42 @@ Click [[page name]] in answers to navigate to the wiki page.
     const delayBtn = applyBar.createEl('button', { text: 'Delay', cls: 'wikey-audit-delay-action-btn wikey-inbox-delay-btn' })
     moveBtn.setAttr('disabled', 'true')
     delayBtn.setAttr('disabled', 'true')
+
+    // Row 2: Provider + Model (empty value → use Default Model from settings)
+    const providerBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
+    const inboxProviderSelect = providerBar.createEl('select', { cls: 'wikey-select' })
+    const inboxProviderOptions = [
+      { value: '', text: '(use Default Model)' },
+      { value: 'ollama', text: 'Local' },
+      { value: 'gemini', text: 'Google Gemini' },
+      { value: 'openai', text: 'OpenAI Codex' },
+      { value: 'anthropic', text: 'Anthropic Claude' },
+    ]
+    const curInboxProvider = this.plugin.settings.ingestProvider || ''
+    for (const opt of inboxProviderOptions) {
+      const el = inboxProviderSelect.createEl('option', { text: opt.text, attr: { value: opt.value } })
+      if (opt.value === curInboxProvider) el.selected = true
+    }
+
+    const inboxModelSelect = providerBar.createEl('select', { cls: 'wikey-select' })
+    const savedInboxModel = this.plugin.settings.ingestModel || ''
+    inboxModelSelect.createEl('option', { text: '(provider default)', attr: { value: '' } })
+
+    const loadInboxModels = async (provider: string) => {
+      inboxModelSelect.empty()
+      const def = inboxModelSelect.createEl('option', { text: '(provider default)', attr: { value: '' } })
+      if (!savedInboxModel) def.selected = true
+      if (!provider) return
+      try {
+        const models = await (await import('wikey-core')).fetchModelList(provider as any, this.plugin.buildConfig(), this.plugin.httpClient)
+        for (const m of models) {
+          const opt = inboxModelSelect.createEl('option', { text: m, attr: { value: m } })
+          if (m === savedInboxModel) opt.selected = true
+        }
+      } catch { /* API unavailable — keep default option only */ }
+    }
+    loadInboxModels(inboxProviderSelect.value)
+    inboxProviderSelect.addEventListener('change', () => loadInboxModels(inboxProviderSelect.value))
 
     const updateApply = () => {
       const count = this.inboxSelections.size
@@ -1376,68 +1658,114 @@ Click [[page name]] in answers to navigate to the wiki page.
       updateApply()
     })
 
-    // Move handler (move + auto-ingest)
+    // Ingest-then-move handler (llm-wiki.md stay-involved: fail → file stays in inbox for retry)
     moveBtn.addEventListener('click', async () => {
       const selected = [...this.inboxSelections]
       if (selected.length === 0) return
       const dest = classifySelect.value
 
-      // Retry semantics: clear prior fail state for these files before re-attempting
+      // Retry semantics: clear prior fail state before re-attempting
       for (const f of selected) this.inboxFailState.delete(f)
+
+      // Apply inbox provider/model overrides (empty = Default Model). Restore at the end.
+      const overrideProvider = inboxProviderSelect.value
+      const overrideModel = inboxModelSelect.value
+      const origBasicModel = this.plugin.settings.basicModel
+      const origIngestProvider = this.plugin.settings.ingestProvider
+      const origIngestModel = this.plugin.settings.ingestModel
+      if (overrideProvider) {
+        this.plugin.settings.basicModel = overrideProvider
+        this.plugin.settings.ingestProvider = overrideProvider
+      }
+      if (overrideModel) this.plugin.settings.ingestModel = overrideModel
 
       moveBtn.setAttr('disabled', 'true')
       delayBtn.setAttr('disabled', 'true')
 
-      // Phase 1: Move files
-      const movedFiles: Array<{ name: string; dest: string }> = []
+      // Resolve PARA destination per file (but do NOT move yet).
+      // For "auto" mode, fall back to LLM classifier when hardcoded rules can't
+      // determine a destination (unknown PDF, 3차 Dewey 누락 등).
+      const plan: Array<{ name: string; dest: string }> = []
       for (const f of selected) {
-        try {
-          let targetDest = dest
-          if (dest === 'auto') {
-            const fullPath = join(basePath, 'raw/0_inbox', f)
-            const isDir = existsSync(fullPath) && statSync(fullPath).isDirectory()
-            const hint = classifyFile(f, isDir)
-            targetDest = hint.destination || ''
-          }
-          if (targetDest) {
-            moveFile(basePath, `raw/0_inbox/${f}`, targetDest)
-            movedFiles.push({ name: f, dest: targetDest })
-          }
-        } catch { /* skip */ }
+        let targetDest = dest
+        if (dest === 'auto') {
+          const fullPath = join(basePath, 'raw/0_inbox', f)
+          const isDir = existsSync(fullPath) && statSync(fullPath).isDirectory()
+          const hint = await classifyFileAsync(f, isDir, {
+            wikiFS: this.plugin.wikiFS,
+            httpClient: this.plugin.httpClient,
+            config: this.plugin.buildConfig(),
+          })
+          targetDest = hint.destination || ''
+        }
+        if (targetDest) plan.push({ name: f, dest: targetDest })
       }
 
-      if (movedFiles.length === 0) {
-        new Notice('No files moved')
+      if (plan.length === 0) {
+        new Notice('No destination resolved')
         this.renderInboxStatus()
         return
       }
 
-      new Notice(`${movedFiles.length} files moved — starting ingest...`)
-
-      // Phase 2: Auto-ingest moved files
       let done = 0
       let failed = 0
-      for (const { name, dest: fileDest } of movedFiles) {
+      for (const { name, dest: fileDest } of plan) {
         const row = this.inboxRowMap.get(name)
+        let rowSpinner: HTMLElement | null = null
         if (row) {
           row.removeClass('wikey-audit-row-done')
           row.addClass('wikey-audit-row-active')
           row.style.setProperty('--progress', '0%')
           row.scrollIntoView({ block: 'nearest' })
+          // Add loading spinner next to filename (until modal opens / extract starts)
+          const nameEl = row.querySelector('.wikey-audit-name') as HTMLElement | null
+          if (nameEl) {
+            rowSpinner = document.createElement('span')
+            rowSpinner.className = 'wikey-row-spinner'
+            nameEl.insertAdjacentElement('afterend', rowSpinner)
+          }
         }
 
         applySummary.empty()
-        applySummary.createEl('span', { text: `${done + 1}/${movedFiles.length}`, cls: 'wikey-stat-number-white' })
+        applySummary.createEl('span', { text: `${done + 1}/${plan.length}`, cls: 'wikey-stat-number-white' })
         applySummary.createEl('span', { text: ' ingesting...' })
 
-        const ingestPath = `${fileDest}/${name}`
-        const stepWeights = [0, 5, 80, 90, 100]
-        const result = await runIngest(this.plugin, ingestPath, (step, _total) => {
-          if (row) {
-            const pct = stepWeights[step] ?? Math.round((step / 4) * 100)
-            row.style.setProperty('--progress', `${pct}%`)
+        // Phase 1: Ingest from inbox (file stays in place if ingest fails)
+        const ingestPath = `raw/0_inbox/${name}`
+        let spinnerRemoved = false
+        const result = await runIngest(
+          this.plugin,
+          ingestPath,
+          (step, _total, _msg, subStep, subTotal) => {
+            // First progress tick = modal/extract started → remove row spinner
+            if (!spinnerRemoved && rowSpinner) {
+              rowSpinner.remove()
+              rowSpinner = null
+              spinnerRemoved = true
+            }
+            if (row) {
+              const pct = computeRowPct(step, subStep, subTotal)
+              row.style.setProperty('--progress', `${pct}%`)
+            }
+          },
+        )
+        // Safety: always clean up spinner after runIngest completes
+        if (rowSpinner) {
+          rowSpinner.remove()
+          rowSpinner = null
+        }
+
+        // Phase 2: Move to PARA only on success, then update ingest-map
+        if (result.success) {
+          try {
+            moveFile(basePath, ingestPath, fileDest)
+            const destFull = `${fileDest.replace(/\/+$/, '')}/${name}`
+            const { updateIngestMapPath } = await import('./commands')
+            updateIngestMapPath(basePath, ingestPath, destFull)
+          } catch (err) {
+            console.warn('[Wikey] post-ingest move failed:', name, err)
           }
-        })
+        }
 
         if (row) {
           row.removeClass('wikey-audit-row-active')
@@ -1452,6 +1780,8 @@ Click [[page name]] in answers to navigate to the wiki page.
         if (result.success) {
           done++
           this.inboxFailState.delete(name)
+        } else if (result.cancelled) {
+          // User cancelled — silent, no fail state, file remains in inbox
         } else {
           failed++
           if (result.error) {
@@ -1466,6 +1796,12 @@ Click [[page name]] in answers to navigate to the wiki page.
       applySummary.empty()
       applySummary.setText(msg)
       new Notice(msg)
+
+      // Restore provider/model overrides (if user picked them for this run only)
+      this.plugin.settings.basicModel = origBasicModel
+      this.plugin.settings.ingestProvider = origIngestProvider
+      this.plugin.settings.ingestModel = origIngestModel
+      await this.plugin.saveSettings()
 
       this.inboxSelections = new Set()
       setTimeout(() => this.renderInboxStatus(), 2000)

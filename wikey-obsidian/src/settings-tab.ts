@@ -63,7 +63,10 @@ export class WikeySettingTab extends PluginSettingTab {
     for (const item of items) {
       const row = statusContainer.createDiv({ cls: 'wikey-settings-status-row' })
       const labelWrap = row.createDiv({ cls: 'wikey-settings-status-label-wrap' })
-      labelWrap.createEl('span', { text: item.label, cls: 'wikey-settings-status-label' })
+      const labelEl = labelWrap.createEl('span', { text: item.label, cls: 'wikey-settings-status-label' })
+      if (!item.optional) {
+        labelEl.createEl('span', { cls: 'wikey-settings-status-required-dot', attr: { 'aria-label': 'required', title: 'Required' } })
+      }
       labelWrap.createEl('span', { text: item.desc, cls: 'wikey-settings-status-desc' })
       const badgeCls = item.ok
         ? 'wikey-status-ok'
@@ -374,7 +377,7 @@ export class WikeySettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName('Auto Ingest')
-      .setDesc('Automatically ingest files added to raw/0_inbox/ (debounced).')
+      .setDesc('Automatically ingest files added to raw/0_inbox/ (debounced). Bypasses brief/preview modals.')
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.autoIngest)
@@ -401,6 +404,37 @@ export class WikeySettingTab extends PluginSettingTab {
         await this.plugin.saveSettings()
       },
     )
+
+    // ── Stay-involved modal (llm-wiki.md "guide emphasis" + "check updates") ──
+    this.renderStandardDropdown(
+      containerEl,
+      'Ingest Briefs',
+      'Pre-ingest modal that shows an LLM summary and lets you inject guidance. Session = ask once, remember the rest of this session.',
+      [
+        { value: 'always', label: 'Always (권장)' },
+        { value: 'session', label: 'Once per session' },
+        { value: 'never', label: 'Never (skip modal)' },
+      ],
+      this.plugin.settings.ingestBriefs,
+      async (value) => {
+        const v = value === 'always' || value === 'session' || value === 'never' ? value : 'always'
+        this.plugin.settings.ingestBriefs = v
+        this.plugin.skipIngestBriefsThisSession = false
+        await this.plugin.saveSettings()
+      },
+    )
+
+    new Setting(containerEl)
+      .setName('Verify results before writing')
+      .setDesc('추출 완료 후 생성될 페이지 목록을 미리 확인. 브리프 모달에서 이번 1회만 덮어쓸 수 있음.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.verifyIngestResults)
+          .onChange(async (value) => {
+            this.plugin.settings.verifyIngestResults = value
+            await this.plugin.saveSettings()
+          }),
+      )
 
     // OCR fallback (markitdown-ocr) — 미설정 시 basicModel 사용
     const ocrDesc = containerEl.createDiv({ cls: 'wikey-settings-status-row' })

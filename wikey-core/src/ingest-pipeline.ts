@@ -2,6 +2,8 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type {
   HttpClient,
+  IngestPlan,
+  IngestPlanGate,
   IngestProgressCallback,
   IngestResult,
   WikiFS,
@@ -31,6 +33,10 @@ export function formatLocalDate(d: Date): string {
 export interface IngestOptions {
   readonly basePath?: string
   readonly execEnv?: Record<string, string>
+  /** Stay-involved hook: user guidance injected into extraction prompt (llm-wiki.md "guide emphasis"). */
+  readonly guideHint?: string
+  /** Stay-involved hook: called after extraction, before file writes. Return false to cancel (llm-wiki.md "read summaries" + "check updates"). */
+  readonly onPlanReady?: IngestPlanGate
 }
 
 export async function ingest(
@@ -61,7 +67,8 @@ export async function ingest(
   }
 
   const indexContent = await wikiFS.read('wiki/index.md').catch(() => '')
-  const promptTemplate = await loadEffectiveIngestPrompt(wikiFS)
+  const basePromptTemplate = await loadEffectiveIngestPrompt(wikiFS)
+  const promptTemplate = opts?.guideHint ? injectGuideHint(basePromptTemplate, opts.guideHint) : basePromptTemplate
   const { provider, model } = resolveProvider('ingest', config)
   const llm = new LLMClient(httpClient, config)
   const isLocal = provider === 'ollama'
@@ -84,7 +91,7 @@ export async function ingest(
     const totalSteps = chunks.length + 2 // summary + chunks + merge
 
     // Step A: Summary → source_page (truncated for local, full for cloud)
-    onProgress?.({ step: 2, total: 4, message: `Summary (${model}) [1/${totalSteps}]...` })
+    onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: totalSteps, message: `Summary (${model}) [1/${totalSteps}]...` })
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
     const summaryParsed = await callLLMForIngest(llm, summaryContent, sourceFilename, indexContent, provider, model, promptTemplate)
     log(`summary done — entities=${summaryParsed.entities?.length ?? 0}, concepts=${summaryParsed.concepts?.length ?? 0}, index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
@@ -103,7 +110,12 @@ export async function ingest(
     let chunkFail = 0
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i]
-      onProgress?.({ step: 2, total: 4, message: `Chunk ${i + 1}/${chunks.length} (${model})...` })
+      // Summary occupied subStep 0..1. Chunks use subStep 1..totalSteps-1.
+      onProgress?.({
+        step: 2, total: 4,
+        subStep: i + 1, subTotal: totalSteps,
+        message: `Chunk ${i + 1}/${chunks.length} (${model})...`,
+      })
       const chunkContent = isLocal ? truncateSource(chunk) : chunk
       try {
         const chunkParsed = await callLLMForExtraction(llm, chunkContent, sourceFilename, provider, model)
@@ -138,6 +150,18 @@ export async function ingest(
 
   if (!parsed.source_page?.filename || !parsed.source_page?.content) {
     throw new Error(`LLM returned invalid structure — missing source_page. Keys: ${Object.keys(parsed).join(', ')}`)
+  }
+
+  // Stage 2 gate: show extraction plan before writing (llm-wiki.md "read summaries" + "check updates")
+  if (opts?.onPlanReady) {
+    onProgress?.({ step: 3, total: 4, message: 'Awaiting review...' })
+    const plan = await buildPlan(wikiFS, sourceFilename, parsed)
+    const approved = await opts.onPlanReady(plan)
+    if (!approved) {
+      log(`plan rejected by user — aborting before write`)
+      throw new PlanRejectedError(`Ingest cancelled at preview stage: ${sourcePath}`)
+    }
+    log(`plan approved`)
   }
 
   // Step 3: Create/update wiki pages
@@ -231,19 +255,45 @@ async function callLLMForExtraction(
   provider: string, model: string,
 ): Promise<IngestRawResult> {
   const today = formatLocalDate(new Date())
-  const prompt = `Extract entities and concepts from this document chunk.
+  const prompt = `이 문서 청크에서 **진짜로 재사용 가능한** 엔티티/개념만 추출하세요.
+
 Source: ${sourceFilename}
 
-${chunkContent}
+## 엔티티 선정 기준 (고유명사 — entities)
+- 문서의 **핵심 주체**이거나 **다른 소스에서 반복 참조될 가능성이 높을 때만** 생성합니다.
+- ❌ 제외 (absolute):
+  - 화면 라벨·버튼명·메뉴 항목·UI 텍스트
+  - 발급기관·서명자·푸터 기관명·1회 언급 주변 인물
 
-Respond with JSON only:
+## 개념 선정 기준 (추상 명사 — concepts)
+- **독립적 설명 가치가 있는 업계 표준·제도·방법론·문서유형**만 생성합니다.
+- 예시(GOOD): \`pmbok\`, \`work-breakdown-structure\`, \`gantt-chart\`, \`erp\`, \`mes\`, \`supply-chain-management\`, \`electronic-approval-system\`
+- ❌ 제외 (absolute):
+  - **UI 기능명·메뉴 라벨·화면 이름**: announcement, address-book, all-services, access-rights, actual-work-time, add-schedule, application-details 등
+  - **소프트웨어 기능 항목**: "공지 등록", "일정 추가", "결재 목록" 같은 것들은 **소프트웨어 기능 설명**이지 **독립 개념**이 아닙니다 — source 페이지 본문에서 설명하면 충분
+  - 업종 분류명·빈 폼 필드·일회성 라벨·관용구
+
+## 가이드 상한 (엄격한 cap 아님)
+- 청크당 entities 0~5개, concepts 0~10개 정도가 건전합니다.
+- 필터 기준을 만족한다면 더 많아도 OK. 만족 안 하면 0개도 OK.
+- **제품 문서에서 "기능 목록 전체"를 concept으로 만드는 패턴은 반드시 피하세요.**
+
+## 환각 방지
+- 문서에 **명시적으로 등장한** 것만. 없는 개념을 추론해 만들지 마세요.
+- 애매하면 만들지 않습니다. 부족한 것이 과도한 것보다 낫습니다.
+
+## 출력 형식
+JSON only:
 \`\`\`json
 {
   "source_page": {"filename": "source-placeholder.md", "content": ""},
   "entities": [{"filename": "entity-name.md", "content": "---\\ntitle: Name\\ntype: entity\\ncreated: ${today}\\nupdated: ${today}\\nsources: [${sourceFilename}]\\ntags: []\\n---\\n\\n# Name\\n\\nDescription..."}],
   "concepts": [{"filename": "concept-name.md", "content": "---\\ntitle: Name\\ntype: concept\\ncreated: ${today}\\nupdated: ${today}\\nsources: [${sourceFilename}]\\ntags: []\\n---\\n\\n# Name\\n\\nDescription..."}]
 }
-\`\`\``
+\`\`\`
+
+## 청크 본문
+${chunkContent}`
   return callLLMWithRetry(llm, prompt, provider, model)
 }
 
@@ -303,6 +353,8 @@ interface IngestRawResult {
   concepts?: Array<{ filename: string; content: string }>
   index_additions?: string[]
   log_entry?: string
+  /** Optional: LLM self-report on how user guide_hint was reflected. Populated when guideHint was provided. */
+  guide_reflection?: string
 }
 
 export function extractJsonBlock(text: string): IngestRawResult | null {
@@ -342,6 +394,98 @@ export function buildIngestPrompt(
     .replace('{{INDEX_CONTENT}}', indexContent)
     .replace('{{SOURCE_FILENAME}}', sourceFilename)
     .replace('{{SOURCE_CONTENT}}', sourceContent)
+}
+
+/**
+ * Inject user guide hint into the ingest prompt template.
+ * The hint is added as a system-level emphasis directive the LLM must respect.
+ */
+export function injectGuideHint(template: string, guideHint: string): string {
+  const trimmed = guideHint.trim()
+  if (!trimmed) return template
+  const block = `\n\n## 사용자 강조 지시 (우선 준수)\n\n> ${trimmed.replace(/\n/g, '\n> ')}\n\n위 지시를 entities/concepts 선별과 요약에 반영하세요. 반영 내역을 JSON의 최상위 \`guide_reflection\` 필드(1~2문장, 해요체)로 함께 반환하세요.\n`
+  return template + block
+}
+
+/** Thrown when user cancels ingest at the Stage 2 preview gate. */
+export class PlanRejectedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'PlanRejectedError'
+  }
+}
+
+/**
+ * Generate a lightweight brief (200-300 chars, single LLM call) for Stage 1 modal.
+ * Cheaper than full extraction — used only to show the user what the source is about
+ * before they commit to guide direction.
+ */
+export async function generateBrief(
+  sourcePath: string,
+  wikiFS: WikiFS,
+  config: WikeyConfig,
+  httpClient: HttpClient,
+  opts?: { basePath?: string; execEnv?: Record<string, string> },
+): Promise<string> {
+  const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
+  const isPdf = sourceFilename.toLowerCase().endsWith('.pdf')
+
+  let content: string
+  if (isPdf) {
+    content = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
+  } else {
+    content = await wikiFS.read(sourcePath)
+  }
+
+  const sample = content.slice(0, 6000)
+  const { provider, model } = resolveProvider('ingest', config)
+  const llm = new LLMClient(httpClient, config)
+
+  const prompt = `다음 문서의 핵심 포인트를 2~4문장(총 150~300자)으로 요약하세요. 존댓말(해요체). 목록·제목·마크다운 없이 평문.
+
+문서: ${sourceFilename}
+
+${sample}`
+
+  console.info(`[Wikey brief] start: provider=${provider} model=${model} file=${sourceFilename}`)
+  try {
+    const resp = await llm.call(prompt, { provider: provider as any, model, timeout: 60000 })
+    return (resp ?? '').trim()
+  } catch (err) {
+    const msg = errorMessage(err)
+    console.error(`[Wikey brief] failed — provider=${provider} model=${model} error=${msg}`, err)
+    return `(brief 생성 실패 · provider=${provider} · model=${model}\n${msg})`
+  }
+}
+
+async function buildPlan(
+  wikiFS: WikiFS,
+  sourceFilename: string,
+  parsed: IngestRawResult,
+): Promise<IngestPlan> {
+  const sourceName = parsed.source_page!.filename
+  const sourceExisted = await wikiFS.exists(`wiki/sources/${sourceName}`)
+  const entities = await Promise.all(
+    (parsed.entities ?? []).map(async (e) => ({
+      filename: e.filename,
+      existed: await wikiFS.exists(`wiki/entities/${e.filename}`),
+    })),
+  )
+  const concepts = await Promise.all(
+    (parsed.concepts ?? []).map(async (c) => ({
+      filename: c.filename,
+      existed: await wikiFS.exists(`wiki/concepts/${c.filename}`),
+    })),
+  )
+  return {
+    sourceFilename,
+    guideReflection: parsed.guide_reflection ?? '',
+    sourcePage: { filename: sourceName, existed: sourceExisted },
+    entities,
+    concepts,
+    indexAdditions: parsed.index_additions?.length ?? 0,
+    hasLogEntry: !!parsed.log_entry,
+  }
 }
 
 /** Path to the user-editable ingest prompt override (vault-relative). */
@@ -384,12 +528,22 @@ tags: [태그1, 태그2]
 ### 파일명 규칙
 - 소문자, 하이픈 구분 (예: my-page-name.md)
 - 소스 페이지: source-{name}.md
-- 엔티티: 고유명사/제품/인물 → wiki/entities/
-- 개념: 추상적 아이디어/패턴 → wiki/concepts/
+- 엔티티: wiki/entities/ — 문서의 **핵심 주체**이거나 **다른 소스에서 반복 참조될 가능성이 높을 때만** 생성합니다. 발급기관·서명자·푸터의 기관명·1회 언급 주변 인물은 source 페이지 본문에만 남기고 별도 페이지로 만들지 마세요.
+- 개념: wiki/concepts/ — **독립적 설명 가치가 있는 제도·방법론·문서유형**만 생성합니다. 업종 분류명, 빈 폼 필드, 일회성 라벨, 관용구는 concept로 승격하지 마세요.
+
+### 분할 상한 (llm-wiki.md "단일 소스 → 10-15 페이지"는 복잡한 논문·기사 기준)
+- **단순 서류** (등록증·증명서·영수증·신청서·명함·양식): source 1 + entity 1~2 + concept 1~3 이하
+- **기술 매뉴얼·제품 문서**: source 1 + entity 2~5 + concept 3~8
+- **논문·기사·심층 리포트**: llm-wiki.md 기준 10-15 페이지까지 허용
+
+### 환각 방지
+- 문서에 **명시적으로 등장한** 고유명사·개념만 페이지로 만듭니다. 문서에 없는 주변 지식을 추론해 새 페이지를 만들지 마세요.
+- 애매하면 만들지 않습니다. 부족한 것이 과도한 것보다 낫습니다.
 
 ### 위키링크
 - \`[[page-name]]\` 형식
 - 이미 존재하는 페이지와 연결하세요
+- 생성한 모든 entity/concept를 source 페이지 본문에서 최소 1회 \`[[wikilink]]\`로 참조하세요 (고아 페이지 방지)
 
 ### 현재 인덱스 (이미 존재하는 페이지)
 {{INDEX_CONTENT}}

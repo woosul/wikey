@@ -204,6 +204,10 @@ export async function fetchModelList(
         return (data.models ?? [])
           .map((m: { name: string }) => m.name.replace('models/', ''))
           .filter((n: string) => n.startsWith('gemini'))
+          // Drop Google-deprecated aliases that 404 on generateContent (e.g. "gemini-2.0-flash"
+          // returns "no longer available to new users"). Keep explicit versioned IDs like
+          // "gemini-2.0-flash-001" which remain callable.
+          .filter((n: string) => n !== 'gemini-2.0-flash' && n !== 'gemini-2.0-flash-lite')
           .sort()
       }
       case 'anthropic': {
