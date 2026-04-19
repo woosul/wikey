@@ -39,6 +39,10 @@ updated: 2026-04-19
 - [[raspberry-pi-trading-ltd]] — Raspberry Pi 제품 개발 및 판매 담당 상업 부문 (소스: 1개)
 - [[mipi-alliance-inc]] — 모바일 인터페이스 사양 개발 조직 (소스: 1개)
 - [[raspberry-pi-foundation]] — Raspberry Pi 개발 및 컴퓨터 과학 교육 자선 단체 (소스: 1개)
+- [[goodstream-co-ltd]] — 주식회사 굿스트림, 소프트웨어 개발·무선통신 제조업 (소스: 1개)
+- [[kim-myung-ho]] — 주식회사 굿스트림 대표자 (소스: 1개)
+- [[cheongju-tax-office]] — 청주세무서, 굿스트림 사업자등록증 교부 기관 (소스: 1개)
+- [[national-tax-service]] — 대한민국 국세청 (소스: 1개)
 
 ## 개념
 
@@ -68,6 +72,12 @@ updated: 2026-04-19
 - [[safety-information]] — 제품의 안전한 사용을 위한 지침 및 경고 (소스: 1개)
 - [[mipi-dsi]] — MIPI Display Serial Interface 표준 (소스: 1개)
 - [[mipi-csi]] — MIPI Camera Serial Interface 표준 (소스: 1개)
+- [[business-registration-certificate]] — 사업자등록증 (소스: 1개)
+- [[corporate-business]] — 법인사업자 구분 (소스: 1개)
+- [[business-unit-taxation]] — 사업자단위과세 제도 (소스: 1개)
+- [[electronic-tax-invoice]] — 전자세금계산서 (소스: 1개)
+- [[software-development]] — 소프트웨어 개발 업종 (소스: 1개)
+- [[wireless-communication-application-device-manufacturing]] — 무선 통신 응용장치 제조업종 (소스: 1개)
 
 ## 소스
 
@@ -79,6 +89,7 @@ updated: 2026-04-19
 - [[source-nanovna-v2-notes]] — NanoVNA V2 사용 경험 + 매뉴얼 기반 개인 노트 (2026-04-11)
 - [[source-power-device-basics]] — SiC 파워 디바이스의 기초, 로옴 Tech Web Hand Book 37p (2026-04-12)
 - [[source-raspberry-pi-high-quality-camera]] — Raspberry Pi High Quality Camera 시작하기 가이드 (2026-04-19)
+- [[source-goodstream-biz-reg-cert-2015]] — 주식회사 굿스트림 사업자등록증 2015년 사본 (2026-04-19)
 
 ## 분석
 

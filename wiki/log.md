@@ -2,8 +2,16 @@
 title: 활동 로그
 type: log
 created: 2026-04-10
-updated: 2026-04-12
+updated: 2026-04-19
 ---
+
+## [2026-04-19] ingest | 사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf
+
+- 소스 요약 생성: [[source-goodstream-biz-reg-cert-2015]]
+- 엔티티 생성: [[goodstream-co-ltd]], [[kim-myung-ho]], [[cheongju-tax-office]], [[national-tax-service]]
+- 개념 생성: [[business-registration-certificate]], [[corporate-business]], [[software-development]], [[wireless-communication-application-device-manufacturing]], [[business-unit-taxation]], [[electronic-tax-invoice]]
+- 인덱스 갱신
+
 
 ## [2026-04-18] ingest | Raspberry_Pi_High_Quality_Camera_Getting_Started.pdf
 
