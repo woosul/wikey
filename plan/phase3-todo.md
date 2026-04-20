@@ -217,9 +217,15 @@
   - 설정: OCR_DPI/OCR_PARALLEL/OCR_MAX_PAGES (`WikeyConfig`에 추가, 기본 180/4/200)
   - 비용: 48p × ~$0.0008/page = ~$0.04 per ingest (Gemini 2.5 Flash vision)
   - 갭: 동일 PDF에 대해 brief 생성 + 본 인제스트가 각각 extractPdfText 호출 → 2× OCR 비용 (Phase 4 최적화 후보)
-- [ ] **단일 프롬프트 모델 override E2E** — `.wikey/ingest_prompt.md` 작성 시 custom 경로 정상 동작 검증
-  - Smoke test는 bundled default 경로만 검증
-  - 단위 테스트 15건은 통과
+- [x] **단일 프롬프트 모델 override E2E** — 2026-04-20 완료
+  - 발견: ObsidianWikiFS.exists/read는 hidden folders (`.wikey/`)를 인식하지 못함 (Obsidian metadata cache 한계)
+    → `.wikey/ingest_prompt.md` 작성해도 항상 bundled default로 fallback
+  - **Fix**: `wikey-obsidian/src/main.ts` ObsidianWikiFS.exists/read에 `vault.adapter` fallback 추가
+  - E2E 검증: override prompt 작성 → audit panel 인제스트 → source 페이지에 marker 정상 반영
+    (`tags: ["override-marker-20260420"]`)
+  - 한계: override는 Stage 1 summary call에만 적용. Stage 2 mention extraction과 Stage 3 canonicalize는
+    하드코딩된 자체 프롬프트 사용 → entity/concept 페이지엔 override 영향 없음
+  - 후속: Stage 2/3 프롬프트도 override 가능하게 하려면 별도 작업 필요 (Phase 4 후보)
 - [ ] **이슈 5 결정**: wiki/ 폴더 인제스트 가드 도입 여부 (현재 가드 없음 → wiki→wiki 사이클 위험, `activity/phase-3-test-results.md` 참조)
 
 ### B-3. 2026-04-19 chunk 프롬프트 보정 검증 (신규)

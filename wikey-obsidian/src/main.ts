@@ -467,8 +467,11 @@ class ObsidianWikiFS implements WikiFS {
 
   async read(path: string): Promise<string> {
     const file = this.plugin.app.vault.getAbstractFileByPath(path)
-    if (!file) throw new Error(`File not found: ${path}`)
-    return this.plugin.app.vault.read(file as any)
+    if (file) return this.plugin.app.vault.read(file as any)
+    // Hidden folders (e.g. .wikey/) are not indexed by Obsidian's vault — fall back to adapter
+    const { adapter } = this.plugin.app.vault
+    if (await adapter.exists(path)) return adapter.read(path)
+    throw new Error(`File not found: ${path}`)
   }
 
   async write(path: string, content: string): Promise<void> {
@@ -502,7 +505,9 @@ class ObsidianWikiFS implements WikiFS {
   }
 
   async exists(path: string): Promise<boolean> {
-    return this.plugin.app.vault.getAbstractFileByPath(path) !== null
+    if (this.plugin.app.vault.getAbstractFileByPath(path) !== null) return true
+    // Hidden folders (e.g. .wikey/) bypass Obsidian's vault metadata — check adapter
+    return this.plugin.app.vault.adapter.exists(path)
   }
 
   async list(dir: string): Promise<string[]> {
