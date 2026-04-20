@@ -290,7 +290,7 @@
 
 ### ⭐ 다음 세션 핵심 작업: Phase 3 잔여 검증
 
-**파일**: `plan/phase3-todo.md` §B-1 + §B-2
+**파일**: `plan/phase-3-todo.md` §B-1 + §B-2
 
 #### B-1 Phase 3 원래 잔여
 1. Audit 패널 인제스트 E2E (UI 클릭 흐름)
@@ -326,7 +326,7 @@
 | S2 | `diagnostic-logger.ts` 유틸 | 파이프라인 단계별 console.info 헬퍼 + 누락 필드 warn (ingest-pipeline.ts에 적용한 패턴 재사용) |
 | S4 | `wiki-validate-cleanup` 스킬 | validate-wiki.sh + audit-ingest.py 체이닝 + 자동 수정 (dupe 제거, 깨진 링크 변환, log 형식, index 등재) |
 
-### 추가 follow-up (이번 세션 발견, plan/phase4-todo.md 또는 phase3-todo.md §B에 통합 예정)
+### 추가 follow-up (이번 세션 발견, plan/phase-4-todo.md 또는 phase-3-todo.md §B에 통합 예정)
 
 | ID | 작업 | 우선 |
 |----|------|------|
@@ -362,7 +362,7 @@ CLAUDE.md(30KB, 모놀리식)를 분리:
 - `AGENTS.md` — "wikey.schema.md 읽으라" + Codex 특화 지시
 - `local-llm/system-prompt.md` — 스키마 요약 + 로컬 LLM 제약
 
-참고: `plan/phase1-todo.md` Step 1 (1-1 ~ 1-4)
+참고: `plan/phase-1-todo.md` Step 1 (1-1 ~ 1-4)
 
 ### 2. [HIGH] Step 2: 디렉토리 구조 + Git 초기화
 

@@ -3,7 +3,7 @@
 > 실행 일시: 2026-04-18
 > 환경: Mac mini M4 Pro 48GB, Ollama 0.20.5, Obsidian 1.12.7
 > 자동화: obsidian-cli + dev:console (Notice MutationObserver 패치)
-> 플랜: `plan/phase3-obsidian-test.md`
+> 플랜: `plan/phase-3-obsidian-test.md`
 
 ---
 

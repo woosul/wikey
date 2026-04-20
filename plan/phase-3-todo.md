@@ -1,7 +1,7 @@
 # Phase 3: Todo List — Obsidian 플러그인 (wikey-core + wikey-obsidian)
 
 > 기간: 2026-04-12 ~ 2026-04-20
-> 상태: **완료** (Step 0~6 + Must/Should + Could 3/5 + Eng H3+M3 + §B-1/§B-2/§B-3 + §C-1 + §C-2 v7 5/6 완료. **잔여 v7-3 (contextual chunk retrieval 전처리)는 `plan/phase4-todo.md` §4-9 ①로 이관**)
+> 상태: **완료** (Step 0~6 + Must/Should + Could 3/5 + Eng H3+M3 + §B-1/§B-2/§B-3 + §C-1 + §C-2 v7 5/6 완료. **잔여 v7-3 (contextual chunk retrieval 전처리)는 `plan/phase-4-todo.md` §4-9 ①로 이관**)
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Qwen3 8B + Qwen3.6:35b-a3b + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
 > 핵심 계획: `prompt_plan.md`
@@ -48,7 +48,7 @@ osascript -e 'quit app "Obsidian"' && sleep 3
 
 ### Step 4 — Phase 4 진입 결정
 
-위 항목 정리 완료 시 Phase 3는 모든 계획 항목 종료. Phase 4 (`plan/phase4-todo.md`)로 진입.
+위 항목 정리 완료 시 Phase 3는 모든 계획 항목 종료. Phase 4 (`plan/phase-4-todo.md`)로 진입.
 
 ---
 
@@ -209,7 +209,7 @@ osascript -e 'quit app "Obsidian"' && sleep 3
   - `buildIngestPrompt()` 시그니처에 `userPrompt` 파라미터 추가 (chunked 파이프라인에도 전달)
   - 신규 테스트 5건 (65→70 tests passed)
 
-> **A-2 항목은 Phase 4로 이동 → `plan/phase4-todo.md`**
+> **A-2 항목은 Phase 4로 이동 → `plan/phase-4-todo.md`**
 
 **B. Phase 3 잔여 (다음 세션)**
 
@@ -332,7 +332,7 @@ osascript -e 'quit app "Obsidian"' && sleep 3
   - Anthropic 의도: chunk를 재작성해 embedding/BM25 인덱스에 반영 (retrieval 전처리)
   - 인덱스 재빌드 파이프라인 변경 + 재현율 벤치마크 필요 → 큰 스코프
   - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
-  - 상세: `plan/phase4-todo.md` §4-9 ①
+  - 상세: `plan/phase-4-todo.md` §4-9 ①
 - [x] **[v7-4] 5회 std dev 자동 측정 스크립트** — 2026-04-20 완료
   - `scripts/measure-determinism.sh <source-path> [-n N] [-o output.md]` 신규
   - Obsidian CDP (port 9222) 통해 audit panel을 N회 자동 구동, cleanup→ingest→count 반복
@@ -359,7 +359,7 @@ osascript -e 'quit app "Obsidian"' && sleep 3
   - 사용자가 "정확/엄격 분류" 원할 때 dropdown에서 즉시 선택 가능
   - 테스트: 5건 추가 (총 155 passed) + Obsidian E2E 검증
 
-> **운영 안정성, 완전 통합, llama.cpp PoC는 Phase 4로 이동 → `plan/phase4-todo.md`**
+> **운영 안정성, 완전 통합, llama.cpp PoC는 Phase 4로 이동 → `plan/phase-4-todo.md`**
 
 ---
 

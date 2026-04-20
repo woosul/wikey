@@ -3,7 +3,7 @@
 > 작성일: 2026-04-12
 > 상태: **구현 진행 중** — Step 0~6 완료, 잔여 작업 있음
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
-> 참조: plan/phase3-todo.md (체크리스트), activity/phase-3-result.md (결과)
+> 참조: plan/phase-3-todo.md (체크리스트), activity/phase-3-result.md (결과)
 > 리뷰: CEO (SELECTIVE EXPANSION) + Eng 완료
 
 ## 1. 요구사항 재정의

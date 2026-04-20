@@ -414,7 +414,7 @@ wikey/
 │   ├── Modelfile                  Gemma 4 커스텀 모델
 │   └── system-prompt.md           로컬 LLM 시스템 프롬프트
 ├── plan/
-│   ├── phase2-todo.md             Phase 2 체크리스트
+│   ├── phase-2-todo.md             Phase 2 체크리스트
 │   └── step3-0-research-report.md 사전 조사 종합 보고서
 ├── activity/
 │   ├── phase-1-result.md          Phase 1 결과 보고서
@@ -607,7 +607,7 @@ Gemma 4 합성 → 최종 답변
 | Phase 4 (계획) | 웹 인터페이스 | 누구나 |
 | Phase 5+ (계획) | 기업용 패키지 | 기업/팀 |
 
-> Phase 3 계획: `prompt_plan.md`, 체크리스트: `plan/phase3-todo.md`, 결과: `activity/phase-3-result.md`
+> Phase 3 계획: `prompt_plan.md`, 체크리스트: `plan/phase-3-todo.md`, 결과: `activity/phase-3-result.md`
 
 ---
 

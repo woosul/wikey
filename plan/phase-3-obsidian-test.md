@@ -254,5 +254,5 @@ After all scenarios pass:
 1. Note any failures or edge cases in `activity/phase-3-test-results.md`
 2. If all pass: mark Phase 3 as DONE
 3. Document any blockers for Phase 4 (llama.cpp PoC, distributed ingest)
-4. Update task list in plan/phase3-todo.md (lines 149-151 → completed)
+4. Update task list in plan/phase-3-todo.md (lines 149-151 → completed)
 

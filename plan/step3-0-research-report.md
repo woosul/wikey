@@ -212,7 +212,7 @@ RRF 융합 → Reranking → 결과
 
 ---
 
-## 3. phase2-todo.md Step 3 수정 제안
+## 3. phase-2-todo.md Step 3 수정 제안
 
 3-0 조사 결과를 바탕으로 Step 3-1~3-4를 아래와 같이 재구성할 것을 제안:
 

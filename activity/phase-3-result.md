@@ -787,7 +787,7 @@ Graphify (safishamsi/graphify) 아키텍처 분석 → `activity/graphify-analys
 
 ### 11.2 E2E 자동 실행 (9 시나리오)
 
-`plan/phase3-obsidian-test.md` 5 시나리오 + 사용자 요청으로 3-1, 4-1 (Gemini 변형) 추가.
+`plan/phase-3-obsidian-test.md` 5 시나리오 + 사용자 요청으로 3-1, 4-1 (Gemini 변형) 추가.
 
 **자동화 도구**:
 - `obsidian-cli` (`eval`, `dev:console`, `dev:screenshot`, `command`, `plugin:reload`)
@@ -898,7 +898,7 @@ E2E 테스트로 생성된 페이지를 자동 정리 후 커밋 (`79a458e`):
 
 ### 11.9 Phase 3 잔여 (다음 세션)
 
-`plan/phase3-todo.md` §B-1 (3건) + §B-2 (3건) — 6건 검증/결정 항목.
+`plan/phase-3-todo.md` §B-1 (3건) + §B-2 (3건) — 6건 검증/결정 항목.
 
 - §B-1: Audit 패널 UI E2E / 인제스트 품질 리뷰 / 사람 눈 UI 평가
 - §B-2: markitdown-ocr 실 스캔 PDF / 단일 프롬프트 override 경로 / wiki/ 가드 결정
@@ -1206,7 +1206,7 @@ await app.plugins.enablePlugin('wikey')
 
 ### 12.8 Phase 4 이관 항목 (이번 세션 신규)
 
-`plan/phase4-todo.md` §4-4b 추가 — **LLM 기반 3차/4차 분류**:
+`plan/phase-4-todo.md` §4-4b 추가 — **LLM 기반 3차/4차 분류**:
 - Dewey Decimal 매칭 실패 시 LLM이 파일명 + 미리보기로 대분류 선택 (`000_general` 안전 배치)
 - LLM이 제품 4차 폴더명 slug 추출 (`Kyosho-Mini-Z/`, `DJI-O3-Air-Unit/` 등) + 신규 폴더 생성
 - Audit 패널 "Re-classify with LLM" 토글
@@ -1257,7 +1257,7 @@ await app.plugins.enablePlugin('wikey')
 
 ### 12.12 Phase 3 잔여 (다음 세션)
 
-`plan/phase3-todo.md` §B-1 #1/#3 + §B-2 #4/#5/#6 — **5건** (B-1 #2 완료).
+`plan/phase-3-todo.md` §B-1 #1/#3 + §B-2 #4/#5/#6 — **5건** (B-1 #2 완료).
 
 - **§B-1 #1**: Audit 패널 인제스트 E2E — UI 재설계 후 재검증
 - **§B-1 #3**: Obsidian UI 수동 테스트 — 재설계분 사람 눈 평가
@@ -1389,7 +1389,7 @@ PMS 원본 PDF는 수동 이동 완료: `raw/0_inbox/PMS_제품소개_R10_202208
 ### 14.1 §B-1 Obsidian UI 수동 테스트 (사용자 검증 완료)
 
 - 사용자가 직접 6 시나리오 점검 → 별도 코드 변경 없음.
-- `plan/phase3-todo.md` §B-1 → `[x]` 마킹.
+- `plan/phase-3-todo.md` §B-1 → `[x]` 마킹.
 
 ### 14.2 §B-2 #4 markitdown-ocr fallback E2E + tier 6 신규 (commit `f35d3b1`)
 
@@ -1709,7 +1709,7 @@ concept_types:
 
 ### 14.15 Phase 4로 이관된 항목
 
-Phase 3 완료 시점에 열어둔 항목 → `plan/phase4-todo.md` §4-9로 이관:
+Phase 3 완료 시점에 열어둔 항목 → `plan/phase-4-todo.md` §4-9로 이관:
 
 1. **v7-3 Anthropic-style contextual chunk 재작성** — 검색 인덱스 전처리, 재현율 개선 (큰 스코프)
 2. brief generation + ingest OCR 중복 제거 (캐싱) — 14.2 발견
@@ -1720,4 +1720,4 @@ Phase 3 완료 시점에 열어둔 항목 → `plan/phase4-todo.md` §4-9로 이
 
 ### 14.16 Phase 3 종료 선언
 
-모든 §B/§C 항목 종료. v7-3만 Phase 4로 이관. 다음 세션부터 `plan/phase4-todo.md` §4-1 지식 그래프(NetworkX) 또는 §4-9 v7-3 우선 진입 검토.
+모든 §B/§C 항목 종료. v7-3만 Phase 4로 이관. 다음 세션부터 `plan/phase-4-todo.md` §4-1 지식 그래프(NetworkX) 또는 §4-9 v7-3 우선 진입 검토.
