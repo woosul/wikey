@@ -257,9 +257,11 @@
   - 결과: source-omron-hem-7600t-manual.md + 18 entities + 9 concepts + log.md/index.md 등재
   - **classifyFileAsync 자동 분류**: raw/0_inbox/ → `raw/3_resources/30_manual/600_technology/` (DDC 600 정확)
   - 잔여: HEM-7156T-AP (49.6MB, 88p) — 동일 경로 재현 확인용 (선택), markitdown-ocr 갭은 tier 6로 해소
-- [ ] **🟡 v6 결정성 다른 입력에서 일관성 확인**
-  - 사업자등록증 등 다른 소스로 5회 std dev 측정 → CV 비교
-  - PMS와 유사한 안정성 (Total CV 16.9%, Entities CV 14.7%) 재현되는지 확인
+- [x] **🟡 v6 결정성 다른 입력에서 일관성 확인** — 2026-04-20 완료
+  - Greendale 2026 Annual Report Excerpt (1.6KB 영어 소스) 5회 측정
+  - 결과: **Entities CV 8.4% / Concepts CV 21.1% / Total CV 12.9%** (모두 PMS보다 양호)
+  - Core ratio: Entities 9/11 (82%), Concepts 5/9 (56%) — Concepts 변동이 v7-1 강화 후보
+  - 상세: `activity/determinism-greendale-2026-04-20.md`
 - [ ] **🟡 Lint 세션 — wiki 정리**
   - 이번 세션 인제스트로 작성된 페이지들 중복/품질 검토
   - log.md `, ,` cosmetic 잔존 (이전 인제스트 시점) 정리
