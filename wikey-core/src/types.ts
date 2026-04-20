@@ -43,9 +43,12 @@ export interface WikeyConfig {
 
   readonly COST_LIMIT: number
 
-  // OCR fallback (markitdown-ocr). 미설정 시 WIKEY_BASIC_MODEL로 resolve.
+  // OCR fallback (markitdown-ocr + page-render Vision). 미설정 시 WIKEY_BASIC_MODEL로 resolve.
   readonly OCR_PROVIDER?: string
   readonly OCR_MODEL?: string
+  readonly OCR_DPI?: number
+  readonly OCR_PARALLEL?: number
+  readonly OCR_MAX_PAGES?: number
 }
 
 // ── LLM ──

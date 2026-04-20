@@ -824,13 +824,13 @@ async function extractPdfText(
   const fullPath = join(cwd, sourcePath)
   const log = (msg: string, ...rest: unknown[]) => console.info(`[Wikey ingest][pdf-extract] ${msg}`, ...rest)
   const warn = (msg: string, ...rest: unknown[]) => console.warn(`[Wikey ingest][pdf-extract] ${msg}`, ...rest)
-  const accept = (tier: string, out: string): string | null => {
+  const accept = (tier: string, out: string, minChars = 50): string | null => {
     const text = out.trim()
-    if (text.length > 50) {
+    if (text.length > minChars) {
       log(`tier ${tier} OK — ${text.length} chars`)
       return text
     }
-    log(`tier ${tier} rejected — ${text.length} chars below threshold (50)`)
+    log(`tier ${tier} rejected — ${text.length} chars below threshold (${minChars})`)
     return null
   }
 
@@ -839,8 +839,28 @@ async function extractPdfText(
   const extraPaths = ['/opt/homebrew/bin', '/usr/local/bin']
   env.PATH = [...extraPaths, env.PATH ?? ''].join(':')
 
+  // Page-aware threshold for OCR-style tiers (markitdown-ocr / Vision render).
+  // Vector-only PDFs trick markitdown-ocr into emitting a few cover-image OCR chars
+  // for many pages — we need to require chars-per-page above a floor.
+  let pdfPageCount = 0
+  try {
+    const { stdout } = await execFileAsync('python3', [
+      '-c',
+      `import fitz, sys; print(len(fitz.open(sys.argv[1])))`,
+      fullPath,
+    ], { timeout: 5000, env })
+    pdfPageCount = parseInt(stdout.trim(), 10) || 0
+  } catch (_err) {
+    pdfPageCount = 0
+  }
+  const ocrMinChars = (() => {
+    if (pdfPageCount <= 0) return 200
+    // 30 chars/page average, capped at 2000, floor at 200 (single-page brochures still pass at ~200 chars)
+    return Math.min(2000, Math.max(200, pdfPageCount * 30))
+  })()
+
   // 1. MarkItDown (structured markdown, best quality)
-  log(`tier 1/5 start: markitdown — ${fullPath}`)
+  log(`tier 1/6 start: markitdown — ${fullPath}`)
   try {
     const { stdout } = await execFileAsync('python3', [
       '-c', `from markitdown import MarkItDown; r = MarkItDown().convert("${fullPath}"); print(r.text_content)`,
@@ -852,7 +872,7 @@ async function extractPdfText(
   }
 
   // 2. pdftotext (poppler)
-  log(`tier 2/5 start: pdftotext`)
+  log(`tier 2/6 start: pdftotext`)
   try {
     const { stdout } = await execFileAsync('pdftotext', [fullPath, '-'], {
       timeout: 30000,
@@ -866,7 +886,7 @@ async function extractPdfText(
   }
 
   // 3. macOS mdimport (Spotlight metadata)
-  log(`tier 3/5 start: mdimport`)
+  log(`tier 3/6 start: mdimport`)
   try {
     const { stdout } = await execFileAsync('mdimport', ['-d1', fullPath], { timeout: 10000, env })
     const ok = accept('3 mdimport', stdout)
@@ -876,7 +896,7 @@ async function extractPdfText(
   }
 
   // 4. pymupdf / PyPDF2 fallback
-  log(`tier 4/5 start: pymupdf/PyPDF2`)
+  log(`tier 4/6 start: pymupdf/PyPDF2`)
   try {
     const { stdout } = await execFileAsync('python3', [
       '-c',
@@ -907,7 +927,7 @@ except ImportError:
   // 5. markitdown-ocr fallback (scanned/image-only PDFs via OpenAI-compat vision API)
   // 미설정 시 WIKEY_BASIC_MODEL로 resolve, fallback=Ollama gemma4:26b.
   const ocr = resolveOcrEndpoint(config)
-  log(`tier 5/5 start: markitdown-ocr — provider=${ocr.providerLabel}, model=${ocr.model}, base=${ocr.baseUrl}`)
+  log(`tier 5/6 start: markitdown-ocr — provider=${ocr.providerLabel}, model=${ocr.model}, base=${ocr.baseUrl}`)
   if (!ocr.apiKey) {
     warn(`tier 5 skipped — no apiKey for provider=${ocr.providerLabel}`)
     return ''
@@ -929,13 +949,90 @@ print(result.text_content)
       ocr.model,
       ocr.apiKey,
     ], { timeout: 900000, maxBuffer: 50 * 1024 * 1024, env })
-    const ok = accept(`5 markitdown-ocr (${ocr.providerLabel}/${ocr.model})`, stdout)
+    const ok = accept(`5 markitdown-ocr (${ocr.providerLabel}/${ocr.model})`, stdout, ocrMinChars)
     if (ok) return ok
   } catch (err: unknown) {
     warn(`tier 5 markitdown-ocr error: ${errorMessage(err)}`)
   }
 
-  warn(`all 5 tiers failed for ${sourcePath}`)
+  // 6. Page-render Vision OCR fallback (vector-only / scanned PDFs without embedded images)
+  // markitdown-ocr (tier 5)는 embedded raster image만 OCR. text-as-paths나 vector-only 매뉴얼은
+  // page를 PNG로 렌더 후 vision LLM에 전송해야 추출 가능.
+  log(`tier 6/6 start: page-render Vision OCR — provider=${ocr.providerLabel}, model=${ocr.model}`)
+  if (!ocr.apiKey) {
+    warn(`tier 6 skipped — no apiKey for provider=${ocr.providerLabel}`)
+    return ''
+  }
+  const dpi = String(config?.OCR_DPI ?? 180)
+  const parallel = String(config?.OCR_PARALLEL ?? 4)
+  const maxPages = String(config?.OCR_MAX_PAGES ?? 200)
+  try {
+    const { stdout } = await execFileAsync('python3', [
+      '-c',
+      `
+import sys, base64, time
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import fitz
+from openai import OpenAI
+
+pdf_path, base_url, model, api_key, dpi_s, parallel_s, max_pages_s = sys.argv[1:8]
+dpi = int(dpi_s)
+parallel = max(1, int(parallel_s))
+max_pages = int(max_pages_s)
+
+client = OpenAI(base_url=base_url, api_key=api_key)
+doc = fitz.open(pdf_path)
+total = min(len(doc), max_pages)
+
+pages_b64 = []
+for pno in range(total):
+    pix = doc[pno].get_pixmap(dpi=dpi)
+    pages_b64.append(base64.b64encode(pix.tobytes('png')).decode())
+
+prompt = 'Extract all visible text from this manual page. Preserve structure (headings, lists, tables). Output the markdown text content only — do not wrap layout in HTML/CSS, do not embed images, do not add commentary.'
+
+def ocr_page(idx_b64):
+    idx, b64 = idx_b64
+    for attempt in range(3):
+        try:
+            resp = client.chat.completions.create(
+                model=model,
+                messages=[{'role':'user','content':[
+                    {'type':'text','text':prompt},
+                    {'type':'image_url','image_url':{'url':f'data:image/png;base64,{b64}'}},
+                ]}],
+                max_tokens=2500,
+            )
+            return idx, (resp.choices[0].message.content or '').strip()
+        except Exception as e:
+            if attempt == 2:
+                return idx, f'[OCR error page {idx+1}: {e}]'
+            time.sleep(1.5 ** attempt)
+
+results = {}
+with ThreadPoolExecutor(max_workers=parallel) as ex:
+    futs = [ex.submit(ocr_page, (i, b)) for i, b in enumerate(pages_b64)]
+    for f in as_completed(futs):
+        i, txt = f.result()
+        results[i] = txt
+
+print('\\n\\n'.join(f'## Page {i+1}\\n\\n{results[i]}' for i in range(total)))
+`,
+      fullPath,
+      ocr.baseUrl,
+      ocr.model,
+      ocr.apiKey,
+      dpi,
+      parallel,
+      maxPages,
+    ], { timeout: 1800000, maxBuffer: 100 * 1024 * 1024, env })
+    const ok = accept(`6 page-render Vision (${ocr.providerLabel}/${ocr.model}, dpi=${dpi}, par=${parallel})`, stdout, Math.max(50, Math.floor(ocrMinChars / 2)))
+    if (ok) return ok
+  } catch (err: unknown) {
+    warn(`tier 6 page-render Vision OCR error: ${errorMessage(err)}`)
+  }
+
+  warn(`all 6 tiers failed for ${sourcePath}`)
   return ''
 }
 

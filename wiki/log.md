@@ -5,6 +5,38 @@ created: 2026-04-10
 updated: 2026-04-19
 ---
 
+## [2026-04-20] ingest | OMRON_HEM-7600T.pdf
+
+- 엔티티 생성: [[omron]]
+- 엔티티 생성: [[japanese-society-of-hypertension]]
+- 엔티티 생성: [[omron-healthcare-co-ltd]]
+- 엔티티 생성: [[bluetooth-sig-inc]]
+- 엔티티 생성: [[apple-inc]]
+- 엔티티 생성: [[omron-customer-service-center]]
+- 엔티티 생성: [[omron-healthcare-korea]]
+- 엔티티 생성: [[marler-jr]]
+- 엔티티 생성: [[hem-7600t]]
+- 엔티티 생성: [[intellisense]]
+- 엔티티 생성: [[aaa-alkaline-battery]]
+- 엔티티 생성: [[omron-connect]]
+- 엔티티 생성: [[hem-7600t-w]]
+- 엔티티 생성: [[iphone]]
+- 엔티티 생성: [[app-store]]
+- 엔티티 생성: [[bluetooth]]
+- 엔티티 생성: [[magnetic-resonance-imaging]]
+- 엔티티 생성: [[ct-scanner]]
+- 개념 생성: [[electromagnetic-compatibility]]
+- 개념 생성: [[bluetooth-low-energy]]
+- 개념 생성: [[iso-81060-2-2013]]
+- 개념 생성: [[iec-60529]]
+- 개념 생성: [[iec-60601-1-2-2007]]
+- 개념 생성: [[cispr-11]]
+- 개념 생성: [[iec-61000-4-2]]
+- 개념 생성: [[quality-guarantee-certificate]]
+- 개념 생성: [[medical-guideline]]
+- 추가 소스: [[source-omron-hem-7600t-manual]]
+
+
 ## [2026-04-19] ingest | PMS_제품소개_R10_20220815.pdf
 
 - 엔티티 생성: [[lotus-pms]], [[goodstream-co-ltd]], [[lotus-scm]], [[groupware]], [[project-management-institute]], [[enterprise-resource-planning]], [[lotus-mes]], [[restful-api]], [[mqtt]], [[java]], [[alimtalk]], [[application-programming-interface]], [[integrated-member-database]]

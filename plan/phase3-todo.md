@@ -197,7 +197,7 @@
   - 중복 13건 제거 (entity-/concept- 접두어 변형) + slug 정규화 (SiC-* → sic-*)
   - canonical 병합: nanovna-v2, architecture-decision-records
   - 원인 기록: Scenario 4 custom 프롬프트가 기본 프롬프트와 slug 규칙 충돌
-- [ ] **Obsidian UI 수동 테스트** — 사람 눈 평가
+- [x] **Obsidian UI 수동 테스트** — 2026-04-20 사용자 검증 완료
   - 대시보드 숫자/카드 시각
   - Audit 패널 체크박스 + provider/model 선택
   - Ingest 패널 재설계 (drop header + Add + filesize + Cloud/Local + Ingest 버튼)
@@ -206,9 +206,17 @@
 
 ### B-2. 2026-04-18 E2E 세션 후속 (이번 세션 발생분)
 
-- [ ] **markitdown-ocr fallback E2E** — 실제 스캔 PDF (텍스트 레이어 없는 이미지 PDF)로 OCR 경로 검증
-  - 코드 경로만 확인됨 (textPDF는 1단계 markitdown으로 처리되어 OCR fallback 미발동)
-  - Ollama gemma4:26b vision 호출 + extract 품질 평가
+- [x] **markitdown-ocr fallback E2E** — 2026-04-20 OMRON HEM-7600T (vector PDF, 48p) E2E 완료
+  - 발견: 기존 tier 5 markitdown-ocr는 embedded raster image만 OCR. text-as-paths/vector-only PDF는 빈 결과
+  - **신규 tier 6** 추가 (`extractPdfText`): page-render Vision OCR
+    - pymupdf로 페이지를 PNG로 렌더 (DPI 180 기본) → ThreadPoolExecutor 병렬 vision OCR
+    - 48p OMRON: ~85s, 27~35KB markdown 추출, 한국어 텍스트 100%
+  - **page-aware 임계값** 추가: tier 5/6 accept threshold = max(200, pageCount × 30) (cap 2000)
+    - 이전: 50자 통과 → vector PDF에서 cover-image 짤막 OCR(~93자)에 속아 tier 6 미발동
+    - 수정 후: 48p × 30 = 1440 floor → tier 5의 1128자 거부 → tier 6 진입
+  - 설정: OCR_DPI/OCR_PARALLEL/OCR_MAX_PAGES (`WikeyConfig`에 추가, 기본 180/4/200)
+  - 비용: 48p × ~$0.0008/page = ~$0.04 per ingest (Gemini 2.5 Flash vision)
+  - 갭: 동일 PDF에 대해 brief 생성 + 본 인제스트가 각각 extractPdfText 호출 → 2× OCR 비용 (Phase 4 최적화 후보)
 - [ ] **단일 프롬프트 모델 override E2E** — `.wikey/ingest_prompt.md` 작성 시 custom 경로 정상 동작 검증
   - Smoke test는 bundled default 경로만 검증
   - 단위 테스트 15건은 통과
@@ -233,10 +241,11 @@
 
 #### C-1. 다음 세션 즉시 작업 (3건)
 
-- [ ] **🔴 OMRON inbox 파일 인제스트로 audit auto-move PARA 추가 검증**
-  - `raw/0_inbox/OMRON_HEM-7156T-AP_*.pdf` (49.6MB), `OMRON_HEM-7600T.pdf` 남음
-  - audit panel [Ingest] → classifyFileAsync 자동 라우팅 + moveFile + ingest-map 갱신 확인
-  - 큰 PDF의 markitdown-ocr fallback E2E와 동시 테스트 가능 (B-2 #4와 통합)
+- [x] **🔴 OMRON HEM-7600T (48p) audit auto-move PARA 검증** — 2026-04-20 완료
+  - audit panel [Ingest] → tier 1~5 reject → **tier 6 page-render Vision OCR (35686자)** → 정상 인제스트
+  - 결과: source-omron-hem-7600t-manual.md + 18 entities + 9 concepts + log.md/index.md 등재
+  - **classifyFileAsync 자동 분류**: raw/0_inbox/ → `raw/3_resources/30_manual/600_technology/` (DDC 600 정확)
+  - 잔여: HEM-7156T-AP (49.6MB, 88p) — 동일 경로 재현 확인용 (선택), markitdown-ocr 갭은 tier 6로 해소
 - [ ] **🟡 v6 결정성 다른 입력에서 일관성 확인**
   - 사업자등록증 등 다른 소스로 5회 std dev 측정 → CV 비교
   - PMS와 유사한 안정성 (Total CV 16.9%, Entities CV 14.7%) 재현되는지 확인
