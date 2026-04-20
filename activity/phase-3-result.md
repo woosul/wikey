@@ -1,8 +1,8 @@
 # Phase 3 결과 보고서
 
-> 기간: 2026-04-12 ~ 2026-04-18
+> 기간: 2026-04-12 ~ 2026-04-20
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **거의 완료** — Step 0~6 + A/A-1 + B 자동 E2E 9 시나리오 + 발견 이슈 4건 수정 + 단일 프롬프트 리팩토링 완료. **잔여 §B-1/§B-2 6건은 다음 세션** (`plan/phase3-todo.md`)
+> 상태: **사실상 완료** — Step 0~6 + A/A-1 + B 자동 E2E + 04-20 세션에서 §B-1/§B-2/§C-1 모두 정리 + §C-2 v7 4/6. 잔여 v7-3 (Anthropic contextual chunk), v7-5 (schema yaml override) 2건은 Phase 4 후보로 검토 가능 (`plan/phase3-todo.md` §C-2)
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Qwen3 8B + Qwen3.6:35b-a3b + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
 
@@ -1378,3 +1378,301 @@ PMS 원본 PDF는 수동 이동 완료: `raw/0_inbox/PMS_제품소개_R10_202208
 - 🔴 다른 inbox 파일(OMRON) 인제스트로 audit auto-move PARA 추가 검증
 - 🟡 v6 결정성 다른 입력에서 일관성 확인
 - 🟢 v7 후보 7건 (schema 경계 명확화, anti-pattern 추가, contextual chunk, std dev 자동 측정, schema yaml override, pro 모델 옵션, lint 세션)
+
+---
+
+## 14. §B-1/§B-2/§C-1/§C-2 정리 세션 (2026-04-20)
+
+> 8개 commit (`f35d3b1` ~ `61c7830`), 143 → **159 tests** pass (+16), 모든 위키 검증 PASS.
+> 세션 목표: 13.9에 기록된 잔여(B-1, B-2, C-1, C-2 v7) 우선순위대로 정리.
+
+### 14.1 §B-1 Obsidian UI 수동 테스트 (사용자 검증 완료)
+
+- 사용자가 직접 6 시나리오 점검 → 별도 코드 변경 없음.
+- `plan/phase3-todo.md` §B-1 → `[x]` 마킹.
+
+### 14.2 §B-2 #4 markitdown-ocr fallback E2E + tier 6 신규 (commit `f35d3b1`)
+
+**문제 발견**
+
+- `raw/0_inbox/OMRON_HEM-7600T.pdf` (48p 한국어 매뉴얼) 인제스트 시도 → 기존 tier 1~5 모두 실패.
+- 원인: PDF가 **vector-only (text-as-paths, embedded images 0개)**. ToUnicode CMap 누락 추정.
+- pdftotext/pymupdf: 0 chars 추출. markitdown-ocr (tier 5)는 `pdfplumber.page.images`가 비어있어 OCR 미발동, 약 93~973 chars만 반환 (cover image 일부만).
+- accept threshold가 50자 (글자 수만 기준) → vector PDF는 짤막한 OCR 결과로 통과되어 tier 6 미진입.
+
+**해결: tier 6 신규 (`extractPdfText`) — page-render Vision OCR**
+
+```typescript
+// 신규: 페이지 전체를 PNG 렌더 → 병렬 vision LLM 호출
+import fitz  // pymupdf
+from concurrent.futures import ThreadPoolExecutor
+// DPI 180 기본, parallel 4 기본, max 200 페이지
+```
+
+- pymupdf로 페이지를 PNG 렌더 (configurable DPI, default 180)
+- ThreadPoolExecutor로 병렬 OCR (configurable parallel, default 4)
+- 각 페이지에 vision LLM (`gemini-2.5-flash` default) 전송 → markdown 추출 + 페이지 마커
+- 새 config 키 3개: `OCR_DPI`, `OCR_PARALLEL`, `OCR_MAX_PAGES` (`WikeyConfig`)
+
+**Page-aware accept threshold**
+
+- 기존 50자 → `max(200, pageCount × 30)` (cap 2000)로 변경.
+- 48p OMRON 기준 1440자 floor → tier 5의 1128자 거부 → tier 6 진입.
+- 1페이지짜리 brochure는 200자 floor → 정상 통과 보존.
+
+**E2E 검증 결과 (Audit panel [Ingest] → 자동 PARA 라우팅)**
+
+| 단계 | 결과 |
+|------|------|
+| tier 1 markitdown | 0 chars → reject |
+| tier 2 pdftotext | 0 chars → reject |
+| tier 3 mdimport | error |
+| tier 4 pymupdf/PyPDF2 | 0 chars → reject |
+| tier 5 markitdown-ocr | 1128 chars (1440 floor 미달) → reject |
+| **tier 6 page-render Vision (gemini/2.5-flash, DPI 180, par 4)** | **35686 chars OK** |
+| Stage 1 summary | gemini (27216 chars source 기준) |
+| Stage 2 mentions (chunked) | 4 chunks → 34 mentions |
+| Stage 3 canonicalize | **18 entities + 9 concepts** |
+| 자동 PARA | `raw/0_inbox/OMRON_HEM-7600T.pdf` → `raw/3_resources/30_manual/600_technology/` (DDC 600 기술 정확) |
+
+생성된 페이지: omron, hem-7600t, intellisense, japanese-society-of-hypertension, omron-healthcare-co-ltd, bluetooth-sig-inc, omron-connect, marler-jr 등 + IEC 60601-1-2-2007, ISO 81060-2-2013, FDA 21 CFR Part 11, Bluetooth Low Energy 등.
+
+**비용**: 48p × ~$0.0008/page = **~$0.04 per ingest** (Gemini 2.5 Flash vision).
+**갭 (Phase 4 후보)**: 동일 PDF에 대해 brief 생성 + 본 인제스트가 각각 `extractPdfText` 호출 → **2× OCR 비용**. 캐싱 필요.
+
+### 14.3 §B-2 #5 prompt override E2E + WikiFS hidden folder bug (commit `3e472fb`)
+
+**버그 발견**
+
+- 사용자가 `.wikey/ingest_prompt.md` 작성해도 LLM은 항상 bundled default 프롬프트 사용.
+- 원인: `ObsidianWikiFS.exists/read`가 `vault.getAbstractFileByPath`만 사용. Obsidian의 vault metadata cache는 `.`로 시작하는 hidden folder를 인덱싱하지 않음 → `.wikey/ingest_prompt.md`는 영원히 발견 불가.
+- `loadEffectiveIngestPrompt`는 정상이었으나, 어댑터 레벨에서 false 반환 → bundled fallback.
+
+**Fix (`wikey-obsidian/src/main.ts`)**
+
+```typescript
+async exists(path: string): Promise<boolean> {
+  if (this.plugin.app.vault.getAbstractFileByPath(path) !== null) return true
+  // Hidden folders (e.g. .wikey/) bypass Obsidian's vault metadata — check adapter
+  return this.plugin.app.vault.adapter.exists(path)
+}
+async read(path: string): Promise<string> {
+  const file = this.plugin.app.vault.getAbstractFileByPath(path)
+  if (file) return this.plugin.app.vault.read(file as any)
+  const { adapter } = this.plugin.app.vault
+  if (await adapter.exists(path)) return adapter.read(path)
+  throw new Error(`File not found: ${path}`)
+}
+```
+
+**E2E 검증**
+
+- `.wikey/ingest_prompt.md` 작성 (커스텀 marker `override-marker-20260420` 포함) → audit ingest
+- 결과 `wiki/sources/source-test-prompt-override.md` frontmatter: `tags: ["override-marker-20260420"]` ✓
+- **한계 발견**: override는 Stage 1 summary call에만 적용. Stage 2 mention extraction과 Stage 3 canonicalize는 하드코딩된 자체 프롬프트 사용 → entity/concept 페이지엔 marker 없음.
+- → Phase 4 후보: Stage 2/3 프롬프트도 사용자 override 가능하게 하기.
+
+### 14.4 §B-2 #6 wiki/ self-cycle 가드 (commit `0fa0a19`)
+
+**리스크 분석**
+
+- `ingest()` 진입점이 `sourcePath`에 검증 없음.
+- `IngestFileSuggestModal`은 `wiki/` 필터링이지만 다음 경로는 무방비:
+  1. `Cmd+Shift+I` (current note 인제스트) — 사용자가 wiki/ 페이지 열고 단축키 누르면 자기 자신을 source로 entities/concepts 생성 → 무한 사이클
+  2. URI handler `obsidian://wikey?ingest=wiki/...`
+  3. 외부 플러그인의 직접 호출
+
+**구현 (`wikey-core/src/ingest-pipeline.ts`)**
+
+```typescript
+export function assertNotWikiPath(sourcePath: string, caller: string): void {
+  const norm = sourcePath.replace(/^\.?\//, '').replace(/^\/+/, '')
+  if (norm === 'wiki' || norm.startsWith('wiki/')) {
+    throw new Error(
+      `${caller}: cannot ingest from wiki/ (would create self-cycle). ` +
+      `Move the source out of wiki/ first or pass a raw/* path. Got: ${sourcePath}`
+    )
+  }
+}
+```
+
+`ingest()` + `generateBrief()` 진입점에서 호출. 정규화 처리: `wiki/`, `./wiki/`, `/wiki/`, `wiki` (root) 모두 reject. `raw/wiki-archive/`, `raw/3_resources/wikipedia.md` 등 substring 매치는 통과.
+
+**테스트**: 7건 추가 (bare path / dot-prefix / slash-prefix / root / raw allowed / substring allowed / error 메시지 포함).
+
+### 14.5 §C-1 #1 OMRON HEM-7600T 인제스트 — §B-2 #4와 통합 검증 완료
+
+위 14.2 결과로 함께 검증. raw/0_inbox/ → raw/3_resources/30_manual/600_technology/ 자동 라우팅 확인. 잔여: HEM-7156T-AP (49.6MB, 88p)는 동일 경로 재현 확인용으로 선택적 (markitdown-ocr 갭은 tier 6로 해소).
+
+**Wiki 위생 처리**: source-omron-hem-7600t-manual.md의 한국어 wikilinks 261건 → canonical slug 자동 매핑 (Python 스크립트로 79건 정상 + 나머지 텍스트화). validate-wiki PASS. (canonicalize에 stripBrokenWikilinks 적용 누락 발견, Phase 4 후보)
+
+### 14.6 §C-1 #2 v6 결정성 다른 입력 측정 (commit `2e47c3b`)
+
+**소스**: `Greendale Industrial Solutions — 2026 Annual Report Excerpt` (1.6KB 영어 가공 분석 장비 회사 가상)
+
+**5-run 결과**
+
+| Run | Entities | Concepts | Total | Time(s) |
+|-----|---------:|---------:|------:|--------:|
+| 1   | 11       | 9        | 21    | 105.1   |
+| 2   | 11       | 8        | 20    | 105.1   |
+| 3   | 9        | 5        | 15    | 118.6   |
+| 4   | 11       | 8        | 20    | 96.1    |
+| 5   | 11       | 9        | 21    | 125.1   |
+
+**통계 vs PMS v6**
+
+| 지표 | Greendale | PMS v6 | 변화 |
+|------|----------:|-------:|-----:|
+| Entities CV | **8.4%** | 14.7% | -43% |
+| Concepts CV | **21.1%** | 33.4% | -37% |
+| Total CV | **12.9%** | 16.9% | -24% |
+
+**Core ratio**: Entities 9/11 (82%) · Concepts 5/9 (56%). 변동의 주체는 concept 분류 boundary (active-pharmaceutical-ingredient, atex-zone-1, good-manufacturing-practice, nist-srm-1003가 sometimes 등장).
+
+→ 작은 입력일수록 안정적 (chunk 분할 변동 없음).
+→ Concepts 변동은 **v7-1 schema decision tree로 개선 후보** (이번 세션에 구현 — 14.10).
+
+상세: `activity/determinism-greendale-2026-04-20.md`
+
+### 14.7 §C-1 #3 Lint 세션 (commit `a739a20`)
+
+- `wiki/log.md` L43 `, ,` cosmetic 정리 (정규식 `,(?:\s*,)+` → `,`)
+- `validate-wiki.sh` PASS (broken index links 0, 빈 페이지 0)
+- 64 entities / 53 concepts / 11 sources 정합성 확인
+
+### 14.8 §C-2 v7-4 자동 결정성 측정 스크립트 (commit `b95b2aa`)
+
+`scripts/measure-determinism.sh <source-path> [-n N] [-o output.md]` 신규 (351 lines).
+
+**아키텍처**
+
+- 헤더: source-path 검증 (wiki/ 가드 우회), CDP 연결 확인 (`curl http://localhost:9222/json`)
+- 본문: 매개변수화된 JS 템플릿을 `sed`로 주입, `/tmp/wikey-cdp.py`를 통해 실행
+- N회 루프 마다:
+  1. cleanupForRerun: source/entities/concepts 페이지 삭제 (content + filename fuzzy match), ingest-map 정리, log.md 정규식 제거, 인제스트 후 PARA 위치에서 raw/ 위치로 자동 복원
+  2. audit panel close+open 으로 데이터 새로고침 (5회 retry로 race condition 처리)
+  3. 타깃 행 체크 + Ingest 클릭 + apply 버튼이 "Ingest"로 복원될 때까지 대기 (타임아웃 10분)
+  4. 결과 파일 카운트
+- 통계: Mean/Std/CV/Range 계산 + Core/Variable 분리
+- 출력: 콘솔 + `activity/determinism-<slug>-<date>.md` (Markdown 표)
+
+**Smoke test**: 3-run with Quanta Robotics 가짜 소스 → Entities CV 8.7% / Concepts CV 0% / Total CV 6.0% (Greendale 결과 재현). 정상 동작 확인 후 테스트 아티팩트 정리.
+
+**향후**: v7-1+v7-2 schema 변경 효과 검증 시 `./scripts/measure-determinism.sh raw/0_inbox/<source> -n 5` 한 줄로 비교 가능.
+
+### 14.9 §C-2 v7-6 Pro 모델 dropdown 가시성 (commit `8add8c4`)
+
+**발견**
+
+- `fetchModelList`는 이미 모든 Gemini 모델 동적 로드 → Pro 모델도 dropdown에 있었음.
+- 그러나 비텍스트 변종(tts, image, video, customtools, native-audio, computer-use, robotics)도 함께 노출되어 Pro 모델 식별 어려움 (총 20개).
+
+**Fix (`wikey-core/src/llm-client.ts`)**
+
+```typescript
+.filter((n: string) => !(
+  /-(?:tts|customtools|image|video|embedding|robotics)(?:-|$)/.test(n)
+  || /-native-audio-/.test(n)
+  || /-computer-use-/.test(n)
+))
+.sort((a, b) => sortGeminiModelsRecommended(a, b))
+```
+
+**`sortGeminiModelsRecommended` (신규 export)** — 추천 family 우선:
+1. `gemini-2.5-flash` (recommended ingest default)
+2. `gemini-2.5-flash-*` family
+3. `gemini-2.5-pro`
+4. `gemini-2.5-pro-*` family
+5. `gemini-3.x-flash-*`
+6. `gemini-3.x-pro-*`
+7. legacy/specialized
+
+**E2E 결과**: 13개 모델 (필터 전 20개), Pro 위치 4 (`gemini-2.5-pro`) / 7 (`gemini-3-pro-preview`) / 8 (`gemini-3.1-pro-preview`).
+
+**테스트**: 5건 추가 (filter 정규식 + 정렬 동작 검증).
+
+### 14.10 §C-2 v7-1 + v7-2 schema 강화 (commit `61c7830`)
+
+**v7-1 — Concept 분류 결정 트리**
+
+`CONCEPT_TYPE_DESCRIPTIONS` 강화:
+
+```typescript
+// 기존: 한 줄 설명 + 예시 1~3개
+// 신규: "판단 기준" + 예시 4~5개 + 표준화 기관/약어/양식/절차 구분 명시
+standard:
+  '공식 발행되거나 산업 합의된 명명된 규격·프레임워크·프로토콜 ' +
+  '(예: pmbok, work-breakdown-structure, gantt-chart, iso-13320, ' +
+  'fda-21-cfr-part-11, hart-7, atex-zone-1). ' +
+  '판단 기준: 표준화 기관 또는 약어로 식별되며, 다수 조직이 공유하는 정의가 있다.',
+```
+
+신규 `CONCEPT_DECISION_TREE` export — 4단계 트리:
+1. 표준화 기관/약어 명시 → `standard`
+2. 발행 가능 양식 → `document_type`
+3. 절차/기법 → `methodology`
+4. 모호 → drop
+
+`buildSchemaPromptBlock`에 트리 자동 주입 → canonicalizer 프롬프트에서 LLM이 분류 결정 시 참조.
+
+**v7-2 — 추가 anti-pattern**
+
+- **OPERATIONAL_ITEMS** 8개 추가: workhours, employeerole, departmentcode, productcategory, paymentterm, shipmentstatus, returnpolicy, warrantyperiod
+- **UI element suffix** 신규 차단: `*-button/-menu/-tab/-page/-screen/-dialog/-modal/-section/-panel/-widget/-icon`
+- **DB column suffix** 신규 차단: `*-id/-code/-number/-key/-flag/-status/-count/-amount/-total` (3-hyphen 이내만 — 긴 자연어는 통과 예: `international-securities-identification-number`)
+
+**테스트**: 4건 추가 (operational variants / UI suffixes / DB suffixes / long-name 예외).
+
+**검증 권장 (다음 세션)**: `./scripts/measure-determinism.sh raw/0_inbox/<source> -n 5` 로 동일 입력 5-run 비교 → Concepts CV가 Greendale 21.1% → ~15% 도달하는지 정량 측정.
+
+### 14.11 코드 규모 (04-20 갱신)
+
+| 영역 | 파일 | 라인 수 (변화) |
+|------|------|--------------:|
+| wikey-core/src | 13개 (.ts) | ~2,400 (+200) |
+| wikey-core/src/__tests__ | 8개 (.test.ts) | ~1,400 (+150) |
+| wikey-obsidian/src | 8개 (.ts) | ~3,810 (+10) |
+| scripts | +1 (measure-determinism.sh, 351 lines) | +351 |
+| **합계** | **30개 + 1 script** | **~9,711** |
+
+**테스트**: 143 → **159 pass** (+16 — 7 wiki/ guard, 5 model filter/sort, 4 schema anti-pattern).
+**빌드**: 0 errors.
+
+### 14.12 이번 세션 commit 요약
+
+| Commit | 영역 | 내용 |
+|--------|------|------|
+| `f35d3b1` | feat(ingest) | tier 6 page-render Vision OCR + OMRON 48p E2E |
+| `3e472fb` | fix(obsidian) | WikiFS hidden folder support + ingest_prompt.md override 검증 |
+| `0fa0a19` | feat(ingest) | assertNotWikiPath guard — wiki/ self-cycle 차단 |
+| `2e47c3b` | docs(determinism) | Greendale 5회 측정 (CV 측정) |
+| `a739a20` | chore(wiki) | log.md cosmetic + lint |
+| `b95b2aa` | feat(scripts) | measure-determinism.sh 자동화 |
+| `8add8c4` | feat(llm) | Gemini model list filter+sort |
+| `61c7830` | feat(schema) | v7-1 decision tree + v7-2 anti-pattern |
+
+### 14.13 다음 세션 시작점
+
+**즉시 검증 (1건, 짧음)**
+
+- `./scripts/measure-determinism.sh raw/0_inbox/<small-source> -n 5` 실행 → v7-1+v7-2 효과 정량 측정 (Concepts CV 21.1% → 15% 목표 도달 여부)
+- 결과를 `activity/determinism-<source>-<date>.md`에 기록, README/log 동기화
+
+**잔여 v7 (Phase 4 검토 가능, 2건)**
+
+- **v7-3 Anthropic-style contextual chunk 재작성** (큰 작업, 검색 재현율 개선)
+  - 현재 wikey의 Gemma 4 contextual prefix는 생성 단계 프롬프트 보강용
+  - Anthropic 의도: chunk를 재작성해 embedding/BM25 인덱스에 반영 (retrieval 전처리)
+  - 인제스트와 별개로 검색 재현율 개선 효과 측정 필요
+  - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
+- **v7-5 schema yaml 사용자 override** (중간 작업, 스키마 확장)
+  - `.wikey/schema.yaml` 사용자 정의 entity/concept 타입 허용
+  - schema.ts에 `loadSchemaOverride()` 추가, 기본 7개 + 사용자 N개 합산
+
+**Phase 4 후보 (Phase 3 갭에서 발견)**
+
+1. brief generation + ingest의 OCR 중복 제거 (캐싱) — 14.2 발견
+2. canonicalize에 stripBrokenWikilinks 적용 (source_page 한국어 wikilink 자동 정리) — 14.5 발견
+3. Stage 2 mention extraction + Stage 3 canonicalize에 사용자 prompt override 지원 — 14.3 발견
+4. API 키가 process listing 노출 (env/stdin으로 전환) — 14.2 OCR 호출 시 발견

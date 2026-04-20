@@ -1,32 +1,55 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-19 저녁 (v6 인제스트 코어 재설계 + UI 9건 + audit auto-move PARA)
+> 최신 갱신: 2026-04-20 (§B/§C-1/§C-2 v7 4건 정리 — Phase 3 사실상 완료)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-20 (§B/§C-1/§C-2 정리) 마감
+
+### ⭐ 다음 세션 시작점
+
+**현재 상태**: Phase 3 사실상 완료. 8 commits (`f35d3b1`~`61c7830`), 159 tests pass. OMRON HEM-7600T 인제스트 + tier 6 page-render Vision OCR + WikiFS hidden folder fix + wiki/ self-cycle guard + 결정성 자동 측정 도구(`scripts/measure-determinism.sh`) + Gemini model dropdown 정리 + schema decision tree 모두 반영. `activity/phase-3-result.md` §14에 상세.
+
+**바로 시작 가능한 작업**:
+
+1. **🟢 v7-1+v7-2 schema 효과 정량 측정** (highest, ~10분)
+   ```bash
+   osascript -e 'quit app "Obsidian"' && sleep 3
+   /Applications/Obsidian.app/Contents/MacOS/Obsidian --remote-debugging-port=9222 '--remote-allow-origins=*' &
+   ./scripts/measure-determinism.sh raw/0_inbox/<small-source>.md -n 5
+   ```
+   - 04-20 baseline: Concepts CV 21.1% (Greendale)
+   - 목표: ~15% 도달 → v7-1 decision tree 효과 검증
+   - 결과는 `activity/determinism-<slug>-<date>.md`에 자동 기록
+
+2. **🟡 v7-3 Anthropic-style contextual chunk 재작성** (큰 작업, 별도 세션 권장)
+   - 검색 재현율 개선 (인제스트와 별개 retrieval 전처리)
+   - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
+
+3. **🟡 v7-5 schema yaml 사용자 override** (중간 작업)
+   - `.wikey/schema.yaml`로 사용자 정의 entity/concept 타입 허용
+   - schema.ts에 `loadSchemaOverride()` 추가, 기본 7 + 사용자 N 합산
+
+### Phase 3에서 발견한 Phase 4 후보 (4건)
+
+`activity/phase-3-result.md` §14.13 참조:
+1. brief generation + ingest의 OCR 중복 제거 (캐싱) — §14.2
+2. canonicalize에 stripBrokenWikilinks 적용 (source_page 한국어 wikilink 자동 정리) — §14.5
+3. Stage 2 mention extraction + Stage 3 canonicalize에 사용자 prompt override 지원 — §14.3
+4. OCR 호출 시 API 키 process listing 노출 → env/stdin 전환 — §14.2
 
 ---
 
 ## 2026-04-19 저녁 (v6 = 3-Stage Pipeline + Schema-Guided + UI 폴리싱) 마감
 
-### ⭐ 다음 세션 시작점
+> ⚠️ 아래 잔여 작업은 모두 2026-04-20 세션에서 정리됨. 참고용으로 보존.
 
-**현재 상태**: v6 final commit 완료. PMS 인제스트 결과 wiki에 작성 (concepts 44, entities 46, sources 10). PMS 원본 PDF는 `raw/3_resources/30_manual/`로 자동 이동 (audit auto-move).
+### 처리됨 (2026-04-20)
 
-**바로 시작 가능한 작업**:
-
-1. **🔴 다른 inbox 파일 인제스트 검증** (highest)
-   - `raw/0_inbox/`에 OMRON_HEM-7156T-AP_*.pdf (49.6MB), OMRON_HEM-7600T.pdf 남음
-   - audit panel auto-move로 PARA 라우팅 검증
-   - 큰 PDF의 markitdown-ocr fallback E2E 동시 테스트
-
-2. **🟡 v6 결정성 추가 측정 (옵션)**
-   - 현재 5회 std dev: Total CV 16.9%, Concepts CV 33.4%
-   - 다른 입력(사업자등록증 등)에서도 결정성 일관성 확인
-   - schema에 `methodology` vs `document_type` 경계 명확화로 Concepts CV 감소 시도
-
-3. **🟡 Lint 세션 — wiki 정리**
-   - PMS 인제스트로 작성된 페이지들의 중복/품질 검토
-   - log.md `, ,` cosmetic 잔존(이전 인제스트 시점) 정리
-   - validate-wiki.sh 실행
+1. ~~🔴 다른 inbox 파일 인제스트 검증~~ → OMRON HEM-7600T E2E 완료 (`f35d3b1`). HEM-7156T-AP 88p는 선택적 잔여.
+2. ~~🟡 v6 결정성 추가 측정~~ → Greendale 5-run 완료 (`2e47c3b`). Entities CV 8.4% / Concepts CV 21.1% / Total 12.9%.
+3. ~~🟡 Lint 세션 — wiki 정리~~ → log.md cosmetic + validate PASS (`a739a20`).
 
 ### 잔여 (이전 세션부터 누적, 우선순위 재정렬)
 

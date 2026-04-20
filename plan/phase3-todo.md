@@ -1,11 +1,54 @@
 # Phase 3: Todo List — Obsidian 플러그인 (wikey-core + wikey-obsidian)
 
-> 기간: 2026-04-12 ~
-> 상태: **진행 중** (Step 0~6 완료, Must/Should 완료, Could 3/5 완료, Eng H3+M3 완료)
+> 기간: 2026-04-12 ~ 2026-04-20
+> 상태: **사실상 완료** (Step 0~6 + Must/Should + Could 3/5 + Eng H3+M3 + §B-1/§B-2/§B-3 + §C-1 + §C-2 v7 4/6 완료. **잔여 v7-3 (contextual chunk), v7-5 (schema yaml override) 2건은 Phase 4 검토 가능**)
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
-> 인프라: Ollama 0.20.5 + Gemma 4 (12B), qmd 2.1.0 (vendored), Node.js 22.17.0
+> 인프라: Ollama 0.20.5 + Qwen3 8B + Qwen3.6:35b-a3b + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
 > 핵심 계획: `prompt_plan.md`
-> 결과: `activity/phase-3-result.md`
+> 결과: `activity/phase-3-result.md` (§14에 2026-04-20 세션 상세)
+
+---
+
+## 🎯 다음 세션 시작 가이드 (NEXT SESSION)
+
+> 2026-04-20 세션에서 §B/§C-1/§C-2(4건) 모두 정리됨. 여기서부터 곧바로 시작 가능.
+
+### Step 1 — 즉시 검증 (1건, ~10분)
+
+v7-1+v7-2 schema 강화 효과 정량 측정:
+
+```bash
+# Obsidian이 CDP 모드로 실행 중이어야 함 (port 9222)
+osascript -e 'quit app "Obsidian"' && sleep 3
+/Applications/Obsidian.app/Contents/MacOS/Obsidian --remote-debugging-port=9222 '--remote-allow-origins=*' &
+
+# Greendale 같은 1~2KB 영어 소스 준비 후
+./scripts/measure-determinism.sh raw/0_inbox/<source>.md -n 5
+```
+
+**기대치**: Concepts CV가 04-20 측정의 21.1%에서 ~15% 이하로 개선되어야 v7-1 성공. 결과는 `activity/determinism-<slug>-<date>.md`에 자동 기록됨.
+
+### Step 2 — 잔여 v7 (2건 중 선택)
+
+- **v7-3 Anthropic-style contextual chunk 재작성** — 검색 재현율 개선 (큰 작업, 별도 PoC 가치)
+  - 현재 contextual prefix는 인제스트 단계 보강용
+  - Anthropic 의도: chunk 재작성 → embedding/BM25 인덱스 반영 (retrieval 전처리)
+  - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
+- **v7-5 schema yaml 사용자 override (`.wikey/schema.yaml`)** — 스키마 확장 (중간 작업)
+  - schema.ts에 `loadSchemaOverride()` 추가
+  - 기본 7개 + 사용자 정의 N개 합산
+
+### Step 3 — Phase 3에서 발견한 Phase 4 후보 (4건)
+
+`activity/phase-3-result.md` §14.13 끝에 기록됨:
+1. brief generation + ingest의 OCR 중복 (캐싱 필요) — §14.2 발견
+2. canonicalize에 stripBrokenWikilinks 적용 (source_page 한국어 wikilink 자동 정리) — §14.5 발견
+3. Stage 2/3 프롬프트도 사용자 override 지원 — §14.3 발견
+4. OCR 호출 시 API 키 process listing 노출 (env/stdin으로 전환) — §14.2 발견
+
+### Step 4 — Phase 4 진입 결정
+
+위 항목 정리 완료 시 Phase 3는 모든 계획 항목 종료. Phase 4 (`plan/phase4-todo.md`)로 진입.
 
 ---
 
