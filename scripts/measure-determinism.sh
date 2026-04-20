@@ -223,11 +223,24 @@ for (let run = 1; run <= N_RUNS; run++) {
 
   const startTs = Date.now()
   applyBtn.click()
+  // Race-condition guard (v7 post-fix): wait for the apply button to transition
+  // AWAY from "Ingest" before entering the completion loop. Without this, the first
+  // probe inside the loop (1.5s after click) can catch the button still in its
+  // initial "Ingest" state — the loop then exits instantly with 0 entities/concepts.
+  let started = false
+  for (let probe = 0; probe < 20; probe++) {
+    await new Promise(r => setTimeout(r, 500))
+    const btnProbe = document.querySelector('.wikey-audit-panel .wikey-audit-apply-btn')?.textContent?.trim() || ''
+    if (btnProbe && !/^ingest$/i.test(btnProbe)) { started = true; break }
+  }
+  if (!started) {
+    results.push({ run, error: 'ingest did not start (button never transitioned)', elapsedMs: Date.now() - startTs }); continue
+  }
   let elapsedMs = 0
   while (true) {
     await new Promise(r => setTimeout(r, 1500))
     const btnNow = document.querySelector('.wikey-audit-panel .wikey-audit-apply-btn')?.textContent?.trim() || ''
-    if (/^ingest/i.test(btnNow)) { elapsedMs = Date.now() - startTs; break }
+    if (/^ingest$/i.test(btnNow)) { elapsedMs = Date.now() - startTs; break }
     if (Date.now() - startTs > 10 * 60 * 1000) {
       results.push({ run, error: 'timeout 10min', elapsedMs: Date.now() - startTs }); break
     }

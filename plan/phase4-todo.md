@@ -161,3 +161,66 @@ MarkItDown GitHub 이슈 트래커 확인된 주요 문제:
   - 평가 코퍼스: TWHB-16_001 파워디바이스 PDF (3.3MB, 텍스트 레이어 있음) + 별도 스캔 PDF 1건 (이미지 only)
   - 메트릭: 챕터/테이블/이미지 보존율, 처리 시간, 메모리 사용량, 한국어 정확도
 - [ ] **캐시 전략** — 변환 결과 캐시 (SHA256 기반) → 재인제스트 시 변환 스킵
+
+## 4-9. Phase 3에서 이관된 후속 (v7-3 + 갭 4건, 2026-04-20 확정)
+
+Phase 3 완료 시점에 열어둔 항목. 우선순위 ①~⑤ 순.
+
+### ① v7-3 Anthropic-style contextual chunk 재작성 (검색 재현율 개선)
+
+- [ ] chunk를 재작성해 embedding/BM25 **인덱스에 반영** (retrieval 전처리)
+  - 현재 wikey의 Gemma 4 contextual prefix는 **생성 단계** 프롬프트 보강용 (ingest-pipeline 내부)
+  - Anthropic 의도: 저장된 chunk 자체에 문서 맥락이 주입된 상태로 인덱스 구축
+  - 기대 효과: 하이브리드 검색(BM25+임베딩)에서 짧은 chunk의 문맥 손실 감소 → 재현율 개선
+  - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
+- [ ] PoC 범위
+  - qmd 인덱스 재빌드 파이프라인에 "contextual rewrite" 스테이지 추가
+  - 동일 코퍼스로 baseline vs rewrite 재현율 측정 (MRR, Recall@10)
+  - 비용: chunk 수 × 추가 LLM 호출 — 대형 코퍼스에서 부담될 수 있어 로컬 Gemma4 기본
+- [ ] 결정 기준: 재현율 개선 ≥ 15% 시 파이프라인에 상설 통합, 미만이면 기각 기록
+
+### ② brief generation + ingest의 OCR 중복 제거 (캐싱)
+
+- [ ] 동일 PDF에 대해 brief 생성 + 본 인제스트가 각각 `extractPdfText` 호출 → **2× OCR 비용** (14.2 발견)
+  - Phase 3 결과: 48p OMRON PDF, Gemini Flash vision ~$0.04/건 × 2회 = $0.08
+- [ ] 캐시 키: `<path, mtime, size, ocr_dpi>` → markdown 결과
+- [ ] 위치: `wikey-core/src/ingest-pipeline.ts:extractPdfText` 진입점에 메모이제이션 추가
+- [ ] 테스트: 동일 파일 2회 호출 → 두번째는 캐시 히트 어설션
+
+### ③ canonicalize에 stripBrokenWikilinks 자동 적용
+
+- [ ] source_page 한국어 wikilink 자동 정리 (14.5 발견, OMRON 261→79→0 수동 cleanup 경험)
+  - 현재 canonicalizer는 entity/concept 페이지와 log entry에는 이미 적용
+  - 누락: Stage 1 summary call이 생성하는 source_page 본문 wikilink
+- [ ] 위치: `wikey-core/src/canonicalizer.ts` 또는 `wikey-core/src/ingest-pipeline.ts`의 summary 후처리
+- [ ] writtenPages 기반 정리 → canonical 페이지에 없는 wikilink는 텍스트로 강등
+
+### ④ Stage 2/3 프롬프트도 사용자 override 지원
+
+- [ ] 현재 v7-5 override는 **schema 타입**만 확장 (`.wikey/schema.yaml`) — Stage 1 summary prompt도 `.wikey/ingest_prompt.md`로 override 가능
+- [ ] 미지원: Stage 2 mention extraction 프롬프트 + Stage 3 canonicalize 프롬프트 (14.3 발견)
+- [ ] 설계: `.wikey/canonicalize_prompt.md`, `.wikey/mention_prompt.md` 파일 존재 시 해당 스테이지에 override 주입
+- [ ] 위치: `wikey-core/src/canonicalizer.ts:buildCanonicalizerPrompt`, Stage 1 mention extraction 함수
+- [ ] UI: settings-tab.ts에 Ingest Prompt 섹션 확장 (3개 prompt 모두 편집 버튼)
+
+### ⑤ OCR API 키 process listing 노출 제거
+
+- [ ] markitdown-ocr + page-render vision OCR가 `--api-key=...` CLI 인자로 전달 → `ps aux`에서 보임 (14.2 발견, 보안 갭)
+- [ ] 전환: env var (`GEMINI_API_KEY` 등) 또는 stdin으로 전달
+- [ ] 위치: `wikey-core/src/ingest-pipeline.ts:extractPdfText` 내 execFile 호출 부위
+- [ ] 검증: 인제스트 중 `ps aux | grep markitdown` 에 키 미노출 확인
+
+### ⑥ measure-determinism.sh 안정성 보강 + v7 결정성 재측정 (14.14 발견)
+
+Phase 3 말미 2회 시도에서 측정 스크립트 자동화 문제로 CV 통계 산출 실패. Baseline(PMS v6, Total CV 16.9%)과 v7(v7-1 decision tree + v7-2 anti-pattern) 비교 미완.
+
+- [ ] **(a) plugin reload 강제** — 스크립트 진입 시 `app.plugins.disablePlugin('wikey'); await app.plugins.enablePlugin('wikey')` → 세션 중 리빌드된 플러그인이 수동 `Cmd+R` 없이도 반영
+- [ ] **(b) audit-ingest JSON 생성 확인** — 현재 5 retries × 1.5s = 7.5s 외에 JSON 파일 mtime이 현재 측정 세션보다 fresh한지 추가 체크
+- [ ] **(c) apply-button 전환 timeout 상향** — 10s (20 × 500ms) → 30s (60 × 500ms) + `.wikey-ingest-progress` notice 표시 병행 감지
+- [ ] **(d) per-run 실패 허용 정책** — 5회 중 N회(예: 3회) 정상 완료면 해당 runs만 통계 산출
+- [ ] **재측정 완료 후** → `activity/determinism-pms-post-v7-<date>.md`에 CV 표 + v7-1 decision tree 판정 (**개선 / 무효 / 악화**) + README/log 동기화
+- [ ] **cross-check**: Greendale 같은 작은 영어 소스(chunk 1개)로는 CV 측정에 불충분(사용자 지적) — 측정 대상은 최소 15KB 이상·chunk ≥ 3개 보장
+
+---
+
+> v7-5 (schema yaml override)는 Phase 3 말미(2026-04-20)에 **완료됨** — `wikey-core/src/schema.ts` `loadSchemaOverride()` + Obsidian 설정 탭 Schema Override 섹션. 27건 신규 테스트 (파서 8 · validation 5 · getEntityTypes/ConceptTypes 2 · promptBlock 3 · FS 로더 4 · canonicalizer 통합 3 · prompt 주입 1 · built-in+override 1).

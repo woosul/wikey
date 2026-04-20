@@ -2,7 +2,7 @@
 
 > 기간: 2026-04-12 ~ 2026-04-20
 > 목표: Obsidian 플러그인 (wikey-core + wikey-obsidian)
-> 상태: **사실상 완료** — Step 0~6 + A/A-1 + B 자동 E2E + 04-20 세션에서 §B-1/§B-2/§C-1 모두 정리 + §C-2 v7 4/6. 잔여 v7-3 (Anthropic contextual chunk), v7-5 (schema yaml override) 2건은 Phase 4 후보로 검토 가능 (`plan/phase3-todo.md` §C-2)
+> 상태: **완료** — Step 0~6 + A/A-1 + B 자동 E2E + 04-20 세션에서 §B-1/§B-2/§C-1 모두 정리 + §C-2 v7 5/6 (v7-1/2/4/5/6). 잔여 v7-3 (Anthropic contextual chunk retrieval 전처리)만 Phase 4 §4-9 ①로 이관. Phase 3 끝.
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Qwen3 8B + Qwen3.6:35b-a3b + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
 
@@ -1652,27 +1652,72 @@ standard:
 | `8add8c4` | feat(llm) | Gemini model list filter+sort |
 | `61c7830` | feat(schema) | v7-1 decision tree + v7-2 anti-pattern |
 
-### 14.13 다음 세션 시작점
+### 14.13 §C-2 v7-5 schema yaml 사용자 override (2026-04-20 완료)
 
-**즉시 검증 (1건, 짧음)**
+**목표**: 빌트인 4 entity + 3 concept 타입 외에 사용자가 도메인별 타입을 `.wikey/schema.yaml`로 확장.
 
-- `./scripts/measure-determinism.sh raw/0_inbox/<small-source> -n 5` 실행 → v7-1+v7-2 효과 정량 측정 (Concepts CV 21.1% → 15% 목표 도달 여부)
-- 결과를 `activity/determinism-<source>-<date>.md`에 기록, README/log 동기화
+**구현 범위**
 
-**잔여 v7 (Phase 4 검토 가능, 2건)**
+1. **YAML 파서** (`wikey-core/src/schema.ts`)
+   - 의존성 없는 소형 파서 (`parseSchemaOverrideYaml`): `entity_types` / `concept_types` 배열 2개만 지원
+   - 이름 정규화(lowercase + `_` 외 특수문자 `_` 대체), 빌트인 타입과 이름 충돌 시 silent drop
+   - description 없거나 빈 항목은 건너뜀
+2. **FS 로더** (`loadSchemaOverride(wikiFS, path='.wikey/schema.yaml')`)
+   - 파일 없으면 `null`, 있으면 파싱 결과 반환
+   - Obsidian hidden folder 경로 → `vault.adapter` fallback 경로 (기존 `.wikey/` 패치 재사용)
+3. **validation + prompt 통합**
+   - `isValidEntityType/ConceptType`, `validateMention`, `buildSchemaPromptBlock` 모두 `schemaOverride?` 파라미터 받음
+   - `buildSchemaPromptBlock`이 추가 타입을 `(user-defined)` 라벨과 함께 prompt 블록에 포함 ("Entity 타입 (5개)" 식으로 카운트 반영)
+4. **canonicalizer.ts** — `CanonicalizeArgs.schemaOverride` 추가, validateAndBuildPage에 전달
+5. **ingest-pipeline.ts** — 인제스트 진입 시 `loadSchemaOverride(wikiFS)` 자동 로드, small/large 두 canonicalize 호출 모두에 전달
+6. **Obsidian 설정 탭** — `Schema Override` 섹션 + `SchemaOverrideEditModal`
+   - Edit: 현재 내용 또는 기본 템플릿 로드 → textarea → Save → `.wikey/schema.yaml` 저장
+   - Remove: 파일 삭제 → 빌트인만 활성
+   - 상태 표시: "Built-in only" / "+N entity, +M concept from ..." / "parses to no valid types"
 
-- **v7-3 Anthropic-style contextual chunk 재작성** (큰 작업, 검색 재현율 개선)
-  - 현재 wikey의 Gemma 4 contextual prefix는 생성 단계 프롬프트 보강용
-  - Anthropic 의도: chunk를 재작성해 embedding/BM25 인덱스에 반영 (retrieval 전처리)
-  - 인제스트와 별개로 검색 재현율 개선 효과 측정 필요
-  - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
-- **v7-5 schema yaml 사용자 override** (중간 작업, 스키마 확장)
-  - `.wikey/schema.yaml` 사용자 정의 entity/concept 타입 허용
-  - schema.ts에 `loadSchemaOverride()` 추가, 기본 7개 + 사용자 N개 합산
+**예시 `.wikey/schema.yaml`**
 
-**Phase 4 후보 (Phase 3 갭에서 발견)**
+```yaml
+entity_types:
+  - name: dataset
+    description: 공개된 구조화된 데이터 모음 (예: imagenet, kaggle-titanic)
+  - name: location
+    description: 지리적 지명·시설 (예: seoul, leverkusen)
 
-1. brief generation + ingest의 OCR 중복 제거 (캐싱) — 14.2 발견
-2. canonicalize에 stripBrokenWikilinks 적용 (source_page 한국어 wikilink 자동 정리) — 14.5 발견
-3. Stage 2 mention extraction + Stage 3 canonicalize에 사용자 prompt override 지원 — 14.3 발견
-4. API 키가 process listing 노출 (env/stdin으로 전환) — 14.2 OCR 호출 시 발견
+concept_types:
+  - name: regulation
+    description: 특정 국가·기관의 규제·법령 (예: gdpr, k-fda-guidelines)
+```
+
+**테스트**: 27건 추가 (YAML 파서 8 · validation 5 · getEntityTypes/ConceptTypes 2 · promptBlock 3 · FS 로더 4 · canonicalizer 통합 3 · prompt 주입 1 · built-in+override 1). 159→**186 pass**, 빌드 0 errors.
+
+**한계 (Phase 4 후보 §4-9 ④)**: 현재 v7-5는 **schema 타입**만 확장. Stage 2 mention extraction 프롬프트와 Stage 3 canonicalize 프롬프트 자체는 override 미지원. 필요 시 `.wikey/canonicalize_prompt.md`, `.wikey/mention_prompt.md`로 확장 가능.
+
+### 14.14 §C-2 v7-1 + v7-2 + v7-5 통합 결정성 재측정 시도 (PMS v6 baseline 대비)
+
+- 결과 파일: `activity/determinism-pms-post-v7-2026-04-20.md`
+- Baseline (PMS v6, 2026-04-19): Total CV **16.9%**, Entities **14.7%**, Concepts **33.4%**, range 22~38
+- 목표: Concepts CV 33.4% → ≤25% (v7-1 decision tree + v7-2 anti-pattern 강화 효과)
+
+**결과**: 5-run × 2회 시도 모두 measure-determinism.sh 자동화 race/UI reload 이슈로 통계 산출 불가. Run 4(1차 시도, 416s / 15E+27C=43) 1건만 유효 완료 → v7 파이프라인 정상 동작은 확인되나 CV 정량 비교 불가.
+
+- 1차 시도: 5 runs 중 Run 4만 정상. Run 1~3은 apply-button 체크가 인제스트 시작 전 `Ingest`로 오판(race condition). Run 5는 10분 timeout.
+- 스크립트 패치: `applyBtn.click()` 직후 "버튼이 `Ingest` 외 상태로 20 probe × 500ms = 10초 이내 전환되지 않으면 에러 기록" 가드 추가.
+- 2차 시도: 패치 후 5/5 모두 `ingest did not start (button never transitioned)`. Obsidian이 세션 중 리빌드된 플러그인을 수동 `Cmd+R`로 리로드하지 않아 UI 상태 불일치로 추정.
+
+**판정**: v7-1 decision tree + v7-2 anti-pattern의 CV 개선 효과는 **측정 미완** → Phase 4 §4-9 ⑥ (measure-determinism.sh 안정성 보강 + 재측정)으로 이관. v7-5 schema override 구현 자체는 28개 신규 테스트 + Obsidian UI 검증 완료로 Phase 3 내 종료.
+
+### 14.15 Phase 4로 이관된 항목
+
+Phase 3 완료 시점에 열어둔 항목 → `plan/phase4-todo.md` §4-9로 이관:
+
+1. **v7-3 Anthropic-style contextual chunk 재작성** — 검색 인덱스 전처리, 재현율 개선 (큰 스코프)
+2. brief generation + ingest OCR 중복 제거 (캐싱) — 14.2 발견
+3. canonicalize에 stripBrokenWikilinks 자동 적용 (source_page) — 14.5 발견
+4. Stage 2/3 프롬프트 사용자 override 지원 — 14.3 발견
+5. OCR API 키 process listing 노출 제거 (env/stdin 전환) — 14.2 발견
+6. **measure-determinism.sh 안정성 보강 + v7 결정성 재측정** — 14.14 발견. plugin reload 강제, audit-ingest JSON mtime 체크, apply-button 전환 timeout 상향 후 5-run × 2 재측정으로 v6 vs v7 CV 비교 완성
+
+### 14.16 Phase 3 종료 선언
+
+모든 §B/§C 항목 종료. v7-3만 Phase 4로 이관. 다음 세션부터 `plan/phase4-todo.md` §4-1 지식 그래프(NetworkX) 또는 §4-9 v7-3 우선 진입 검토.

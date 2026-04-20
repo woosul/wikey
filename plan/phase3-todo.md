@@ -1,7 +1,7 @@
 # Phase 3: Todo List — Obsidian 플러그인 (wikey-core + wikey-obsidian)
 
 > 기간: 2026-04-12 ~ 2026-04-20
-> 상태: **사실상 완료** (Step 0~6 + Must/Should + Could 3/5 + Eng H3+M3 + §B-1/§B-2/§B-3 + §C-1 + §C-2 v7 4/6 완료. **잔여 v7-3 (contextual chunk), v7-5 (schema yaml override) 2건은 Phase 4 검토 가능**)
+> 상태: **완료** (Step 0~6 + Must/Should + Could 3/5 + Eng H3+M3 + §B-1/§B-2/§B-3 + §C-1 + §C-2 v7 5/6 완료. **잔여 v7-3 (contextual chunk retrieval 전처리)는 `plan/phase4-todo.md` §4-9 ①로 이관**)
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Qwen3 8B + Qwen3.6:35b-a3b + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
 > 핵심 계획: `prompt_plan.md`
@@ -327,11 +327,12 @@ osascript -e 'quit app "Obsidian"' && sleep 3
   - UI element suffix 신규 차단: `*-button/-menu/-tab/-page/-screen/-dialog/-modal/-section/-panel/-widget/-icon`
   - DB column suffix 신규 차단: `*-id/-code/-number/-key/-flag/-status/-count/-amount/-total` (3-hyphen 이내만, 긴 명칭은 통과)
   - 테스트 4건 추가 (총 159 passed)
-- [ ] **[v7-3] Anthropic-style contextual chunk 재작성 (검색 재현율 개선)**
+- [~] **[v7-3] Anthropic-style contextual chunk 재작성 (검색 재현율 개선)** — Phase 4로 이관 (2026-04-20)
   - 현재 wikey의 Gemma 4 contextual prefix는 생성 단계 프롬프트 보강용
   - Anthropic 의도: chunk를 재작성해 embedding/BM25 인덱스에 반영 (retrieval 전처리)
-  - 인제스트와 별개로 검색 재현율 개선 효과 측정
+  - 인덱스 재빌드 파이프라인 변경 + 재현율 벤치마크 필요 → 큰 스코프
   - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
+  - 상세: `plan/phase4-todo.md` §4-9 ①
 - [x] **[v7-4] 5회 std dev 자동 측정 스크립트** — 2026-04-20 완료
   - `scripts/measure-determinism.sh <source-path> [-n N] [-o output.md]` 신규
   - Obsidian CDP (port 9222) 통해 audit panel을 N회 자동 구동, cleanup→ingest→count 반복
@@ -339,10 +340,15 @@ osascript -e 'quit app "Obsidian"' && sleep 3
   - 가드: wiki/ 경로 차단, source 미존재 시 종료, CDP 미연결 시 종료
   - 3-run smoke test로 검증 완료 (Quanta Robotics 가짜 소스, Entities CV 8.7%)
   - CI 통합 가능 (Obsidian 헤드리스 기동 환경 필요)
-- [ ] **[v7-5] schema yaml 사용자 override (`.wikey/schema.yaml`)**
-  - Phase D는 표시만 (활성 스키마 라인) — 편집 미구현
-  - schema.ts에 loadSchemaOverride() 추가, 사용자 정의 entity/concept 타입 허용
-  - 기본 7개 타입 + 사용자 추가 N개 = 합산 schema
+- [x] **[v7-5] schema yaml 사용자 override (`.wikey/schema.yaml`)** — 2026-04-20 완료
+  - `wikey-core/src/schema.ts`에 `loadSchemaOverride()` + `parseSchemaOverrideYaml()` 추가 (의존성 없음, 소형 YAML 파서)
+  - `SchemaOverride`, `SchemaCustomType` 타입 export (`wikey-core/src/types.ts`)
+  - `isValidEntityType/ConceptType`, `validateMention`, `buildSchemaPromptBlock`에 override 파라미터 추가
+  - `canonicalizer.ts` `CanonicalizeArgs.schemaOverride` 추가 — prompt + validation 전달
+  - `ingest-pipeline.ts`에서 `loadSchemaOverride(wikiFS)` 자동 로드 → 두 canonicalize 호출에 전달
+  - Obsidian 설정 탭에 **Schema Override** 섹션 + `SchemaOverrideEditModal` (Edit/Remove + 상태 표시)
+  - Built-in 7개와 이름 충돌 시 silent drop (reserved) · 사용자 정의 N개 합산
+  - 테스트 24건 추가 (YAML 파서/validation/prompt/FS 로더) — 159→183 pass, 빌드 0 errors
 - [x] **[v7-6] Pro 모델 옵션 UI 노출** — 2026-04-20 완료
   - 발견: `fetchModelList`는 이미 모든 Gemini 모델 동적 로드 중 → Pro 모델도 dropdown에 있었으나
     tts/image/video/customtools/native-audio/computer-use/robotics 변종도 함께 섞여 신호 잡힘
