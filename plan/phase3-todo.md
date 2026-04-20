@@ -293,10 +293,15 @@
   - Phase D는 표시만 (활성 스키마 라인) — 편집 미구현
   - schema.ts에 loadSchemaOverride() 추가, 사용자 정의 entity/concept 타입 허용
   - 기본 7개 타입 + 사용자 추가 N개 = 합산 schema
-- [ ] **[v7-6] Pro 모델 (`gemini-3.1-pro-preview`) 옵션 노출**
-  - 1회 시험: total=24, e=16, c=7, 220s — Concept을 매우 보수적으로 분류 (-68%)
-  - 사용자가 "정확/엄격 분류" 원할 때 Audit/Ingest 패널 model select에서 선택 가능
-  - settings.ingestModel + UI dropdown에 추가
+- [x] **[v7-6] Pro 모델 옵션 UI 노출** — 2026-04-20 완료
+  - 발견: `fetchModelList`는 이미 모든 Gemini 모델 동적 로드 중 → Pro 모델도 dropdown에 있었으나
+    tts/image/video/customtools/native-audio/computer-use/robotics 변종도 함께 섞여 신호 잡힘
+  - 수정 (`wikey-core/src/llm-client.ts`):
+    - 비텍스트 변종 정규식 필터 추가 (20개 → 13개로 축소)
+    - `sortGeminiModelsRecommended` 정렬: 2.5-flash → 2.5-flash family → 2.5-pro → 3.x flash → 3.x pro → legacy
+  - 결과: Audit/Ingest 패널 model select에서 `gemini-2.5-pro`(pos 4), `gemini-3-pro-preview`(pos 7), `gemini-3.1-pro-preview`(pos 8) 식별 용이
+  - 사용자가 "정확/엄격 분류" 원할 때 dropdown에서 즉시 선택 가능
+  - 테스트: 5건 추가 (총 155 passed) + Obsidian E2E 검증
 
 > **운영 안정성, 완전 통합, llama.cpp PoC는 Phase 4로 이동 → `plan/phase4-todo.md`**
 

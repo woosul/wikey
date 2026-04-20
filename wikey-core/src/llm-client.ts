@@ -208,7 +208,14 @@ export async function fetchModelList(
           // returns "no longer available to new users"). Keep explicit versioned IDs like
           // "gemini-2.0-flash-001" which remain callable.
           .filter((n: string) => n !== 'gemini-2.0-flash' && n !== 'gemini-2.0-flash-lite')
-          .sort()
+          // Drop non-text variants that the ingest/query pipeline can't use.
+          // Each token may appear at end (`*-tts`) or in middle (`*-tts-preview`).
+          .filter((n: string) => !(
+            /-(?:tts|customtools|image|video|embedding|robotics)(?:-|$)/.test(n)
+            || /-native-audio-/.test(n)
+            || /-computer-use-/.test(n)
+          ))
+          .sort((a: string, b: string) => sortGeminiModelsRecommended(a, b))
       }
       case 'anthropic': {
         const key = config.ANTHROPIC_API_KEY
@@ -251,6 +258,30 @@ export async function fetchModelList(
   } catch {
     return []
   }
+}
+
+/**
+ * Order Gemini model IDs so that recommended families surface first in the UI dropdown.
+ * Order: gemini-2.5-flash family → gemini-2.5-pro → gemini-3.x flash → gemini-3.x pro → rest.
+ * Within each bucket, alphabetical (so "-001" ordered before "-002").
+ *
+ * Why this ordering: 2.5-flash is the recommended ingest default (fast + cheap), 2.5-pro is
+ * the next step up for accuracy; 3.x is preview tier. Users scanning the dropdown should see
+ * stable production options before preview/experimental ones.
+ */
+export function sortGeminiModelsRecommended(a: string, b: string): number {
+  const bucket = (n: string): number => {
+    if (n === 'gemini-2.5-flash') return 0
+    if (n.startsWith('gemini-2.5-flash')) return 1
+    if (n === 'gemini-2.5-pro') return 2
+    if (n.startsWith('gemini-2.5-pro')) return 3
+    if (/^gemini-3(\.\d+)?-flash/.test(n)) return 4
+    if (/^gemini-3(\.\d+)?-pro/.test(n)) return 5
+    return 6
+  }
+  const ba = bucket(a), bb = bucket(b)
+  if (ba !== bb) return ba - bb
+  return a.localeCompare(b)
 }
 
 function stripThinkingBlock(text: string): string {

@@ -175,3 +175,70 @@ describe('LLMClient — Ollama', () => {
     expect(result).toBe('Ollama says hello')
   })
 })
+
+describe('Gemini model list filter', () => {
+  // Mirrors the regex in fetchModelList; we verify drop semantics directly.
+  const keep = (n: string): boolean => !(
+    /-(?:tts|customtools|image|video|embedding|robotics)(?:-|$)/.test(n)
+    || /-native-audio-/.test(n)
+    || /-computer-use-/.test(n)
+  )
+
+  it('keeps text-only Pro/Flash models', () => {
+    for (const m of ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-pro-preview', 'gemini-3.1-pro-preview', 'gemini-3.1-flash-lite-preview']) {
+      expect(keep(m), m).toBe(true)
+    }
+  })
+
+  it('drops audio/image/video/tts/customtools/embedding/computer-use/robotics variants', () => {
+    expect(keep('gemini-2.5-flash-image')).toBe(false)             // -image suffix
+    expect(keep('gemini-3-pro-image-preview')).toBe(false)         // -image- middle
+    expect(keep('gemini-3.1-flash-tts-preview')).toBe(false)       // -tts- middle
+    expect(keep('gemini-3.1-pro-preview-customtools')).toBe(false) // -customtools suffix
+    expect(keep('gemini-2.5-flash-native-audio-latest')).toBe(false) // -native-audio-
+    expect(keep('gemini-2.5-computer-use-preview-10-2025')).toBe(false) // -computer-use-
+    expect(keep('gemini-robotics-er-1.5-preview')).toBe(false)     // -robotics-
+    expect(keep('embedding-001')).toBe(true)  // not gemini- prefix; outer .startsWith filter would catch
+    expect(keep('gemini-embedding-001')).toBe(false)               // -embedding-
+  })
+})
+
+describe('sortGeminiModelsRecommended', () => {
+  it('puts gemini-2.5-flash first', async () => {
+    const { sortGeminiModelsRecommended } = await import('../llm-client.js')
+    const input = ['gemini-3-pro-preview', 'gemini-pro-latest', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-2.5-flash-lite']
+    const sorted = [...input].sort(sortGeminiModelsRecommended)
+    expect(sorted[0]).toBe('gemini-2.5-flash')
+  })
+
+  it('groups by family: 2.5-flash → 2.5-pro → 3.x flash → 3.x pro → other', async () => {
+    const { sortGeminiModelsRecommended } = await import('../llm-client.js')
+    const input = [
+      'gemini-pro-latest',
+      'gemini-3.1-pro-preview',
+      'gemini-2.5-pro',
+      'gemini-3.1-flash-lite-preview',
+      'gemini-2.5-flash-lite',
+      'gemini-2.5-flash',
+      'gemini-3-pro-preview',
+    ]
+    const sorted = [...input].sort(sortGeminiModelsRecommended)
+    // 2.5-flash first
+    expect(sorted[0]).toBe('gemini-2.5-flash')
+    // 2.5-flash-lite is also flash family (bucket 1) → before 2.5-pro
+    expect(sorted.indexOf('gemini-2.5-flash-lite')).toBeLessThan(sorted.indexOf('gemini-2.5-pro'))
+    // 2.5-pro before 3.x
+    expect(sorted.indexOf('gemini-2.5-pro')).toBeLessThan(sorted.indexOf('gemini-3.1-pro-preview'))
+    // 3.x flash before 3.x pro
+    expect(sorted.indexOf('gemini-3.1-flash-lite-preview')).toBeLessThan(sorted.indexOf('gemini-3-pro-preview'))
+    // legacy alias last
+    expect(sorted[sorted.length - 1]).toBe('gemini-pro-latest')
+  })
+
+  it('sorts within bucket alphabetically', async () => {
+    const { sortGeminiModelsRecommended } = await import('../llm-client.js')
+    const input = ['gemini-3.1-pro-preview', 'gemini-3-pro-preview']
+    const sorted = [...input].sort(sortGeminiModelsRecommended)
+    expect(sorted).toEqual(['gemini-3-pro-preview', 'gemini-3.1-pro-preview'])
+  })
+})
