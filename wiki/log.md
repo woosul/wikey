@@ -2,8 +2,17 @@
 title: 활동 로그
 type: log
 created: 2026-04-10
-updated: 2026-04-19
+updated: 2026-04-21
 ---
+
+## [2026-04-21] eval | 결정성 측정 (PMS v6 vs v7 post)
+
+- 대상: raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf
+- 방법: 수동 CDP 드라이브 audit panel (5-run, 각 run 후 entity/concept/source 삭제 + ingest-map 정리)
+- 결과: Entities CV 17.9%, Concepts CV 21.2% (-37% vs v6 33.4%), Total CV 7.9% (-53% vs v6 16.9%), 범위 22-26, 평균 320s
+- 판정: v7-1 decision tree + v7-2 anti-pattern + v7-5 schema override의 Concepts CV 목표(≤25%) 정량 확증
+- 산출물: activity/determinism-pms-post-v7-2026-04-21.md (Core/Variable 분석 + 잔여 canonicalization 변동 해부)
+- 후속: slug canonicalizer 2차 확장·E/C 경계 3건 schema 고정·measure-determinism.sh selector fix → Phase 4 §4.5.1
 
 ## [2026-04-20] ingest | OMRON_HEM-7600T.pdf
 
@@ -35,13 +44,6 @@ updated: 2026-04-19
 - 개념 생성: [[quality-guarantee-certificate]]
 - 개념 생성: [[medical-guideline]]
 - 추가 소스: [[source-omron-hem-7600t-manual]]
-
-
-## [2026-04-19] ingest | PMS_제품소개_R10_20220815.pdf
-
-- 엔티티 생성: [[lotus-pms]], [[goodstream-co-ltd]], [[lotus-scm]], [[groupware]], [[project-management-institute]], [[enterprise-resource-planning]], [[lotus-mes]], [[restful-api]], [[mqtt]], [[java]], [[alimtalk]], [[application-programming-interface]], [[integrated-member-database]]
-- 개념 생성: [[work-breakdown-structure]], [[project-management-body-of-knowledge]], [[bill-of-materials]], [[issue-management-ledger]], [[risk-management-ledger]], [[manufacturing-execution-system]], [[product-lifecycle-management]], [[supply-chain-management]], [[gantt-chart]], [[electronic-bill-of-materials]], [[single-sign-on]], [[business-registration-certificate]], [[corrective-and-preventive-action]]
-- 추가 소스: [[source-lotus-pms-product-intro]]
 
 
 ## [2026-04-19] ingest | 사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf

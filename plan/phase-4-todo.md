@@ -7,20 +7,35 @@
 
 ---
 
-## 1. 문서 전처리 파이프라인 (source → Markdown)
+## 4.0 UI 사전작업
 
-### §4-1. Docling + unhwp 메인화, MarkItDown은 fallback으로 강등
+- [ ] chat 패널 추가 : 대화창 전용 패널
+  - 아이콘 및 위치 : 상단 아이콘의 맨 앞에 위치하며, 아이콘은 'chat'
+  - 현재 상태 : 대화창 위에 각 패널에 overlay되어 있는 상태
+  - 변경 목표 : 각 패널의 특성 및 역할을 전담으로 처리
+  - 각 패널의 UI 변경 : 하단의 대화창 및 AI model은 삭제, 대신에 설정에서 지정된 Defaut AI Model명을 출력하고  모델 변경 안됨 (출력 형식 : 'Defaut AI Model : Google Gemini | gemini-2.5-flash'), 메시지창 지워진 만큼 상단 내용으로 채우기
+  - chat패널 : 기존의 대화창 UI를 그대로 유지하며, 초기값은 Default AI model(시작시)이며, provider와 model변경 가능
+- [ ] 대화창 내용 지우기 기능
+  - 기존 : 상단의 'trash'아이콘 삭제
+  - 변경 : 메시지창에 '/clear' command 입력
+- [ ] Dashboard
+  - dashboard 아이콘 변경 : 기존 home에서 graph (막대그래프)
+
+## 4.1 문서 전처리 파이프라인 (source → Markdown)
+
+### 4.1.1 Docling + unhwp 메인화, MarkItDown은 fallback으로 강등
 
 **결정 (2026-04-20)**: 현재 tier 1인 MarkItDown은 한국어 OCR 정확도·테이블 보존·HWP 미지원 등의 갭이 누적되어 품질 상한이 낮음. IBM Docling(TableFormer + layout model + ocrmac/RapidOCR/Tesseract)을 PDF/DOCX/PPTX/XLSX/HTML/이미지/TXT의 **메인 컨버터**로 승격하고, HWP/HWPX는 **unhwp**로 위임한다. MarkItDown 체인은 docling 미설치 환경 또는 경량 경로의 **fallback**으로 유지.
 
 **참조 스킬**:
+
 - docling SKILL: `claude-forge-custom/skills/docling/SKILL.md`
 - unhwp SKILL: `claude-forge-custom/skills/unhwp/SKILL.md`
 
-#### §4-1.1 Docling 통합 (Tier 1 메인, PDF/DOCX/PPTX/XLSX/HTML/이미지/TXT)
+#### 4.1.1.1 Docling 통합 (Tier 1 메인, PDF/DOCX/PPTX/XLSX/HTML/이미지/TXT)
 
 - [ ] 설치 경로 결정
-  - CLI (`uv tool install docling`) vs Python API (`uv pip install docling` in project venv)
+  - CLI (`uv tool install docling`) vs Python API (`uv pip install docling` in project venv) - 설치 여부 확인  후 설치
   - wikey는 execFile 호출이 이미 markitdown-ocr로 정착 → CLI 경로 기본, Python API는 옵션
 - [ ] `wikey-core/src/ingest-pipeline.ts:extractPdfText` 체인 재정렬
   - Tier 1: **docling** (`docling <path> --to md --ocr-engine ocrmac --ocr-lang ko-KR,en-US`)
@@ -30,27 +45,27 @@
   - Tier 5: page-render Vision OCR (Gemini, 현재 tier 6) — 최후 수단 유지
 - [ ] 옵션 매핑
   - `--table-mode accurate` vs `fast`: 설정에 `DOCLING_TABLE_MODE` 추가 (기본 accurate)
-  - `--image-export-mode placeholder`: RAG에서 토큰 절약, wiki 인제스트 기본값
+  - `--image-export-mode placeholder`: RAG에서 토큰 절약, wiki 인제스트 기본값 (docling 기본값 : image embedding with base64)
   - `--device mps` (M-series) 자동 감지 → OCR DPI와 유사하게 `DOCLING_DEVICE` env
 - [ ] `env-detect.ts` 보강 — docling CLI 존재 + 버전 감지 (현재 markitdown-ocr 감지와 동일 패턴)
 - [ ] 설정 탭 Environment 섹션에 Docling 상태 라인 추가
 
-#### §4-1.2 unhwp 통합 (Tier 1b 메인, HWP/HWPX)
+#### 4.1.1.2 unhwp 통합 (Tier 1b 메인, HWP/HWPX)
 
 - [ ] 파일 확장자 기반 분기 — `.hwp` / `.hwpx` 는 docling 건너뛰고 unhwp 직행
 - [ ] 호출 패턴: `python3 <vault>/skills/unhwp/convert.py <src> <out_dir>` 또는 vendored 스크립트
   - vendoring 여부: `scripts/vendored/unhwp-convert.py`로 복사해 플러그인 자족 운영 검토
   - 원격 SKILL 파일 의존 회피 (사용자 환경 차이)
-- [ ] 이미지 정책: `strip_base64_images()` 우선 적용 (토큰 절약, RAG 일관성)
+- [ ] 이미지 정책: `strip_base64_images()` 우선 적용 (토큰 절약, RAG 일관성), 이 이미지 정책은 docling에서도 동일하게 적용
 - [ ] `env-detect.ts`에 `python3 -c "import unhwp"` 체크 — 미설치 시 설정 탭에서 `pip install unhwp` 안내
 
-#### §4-1.3 MarkItDown 체인을 fallback으로 강등
+#### 4.1.1.3 MarkItDown 체인을 fallback으로 강등
 
 - [ ] 기존 `extractPdfText`의 tier 1 (MarkItDown) 호출을 tier 3으로 이동
 - [ ] Obsidian 환경 탐지 로직에서 우선순위 변경 반영 (docling 감지 → docling 사용, 미감지 → markitdown 계열로 회귀)
 - [ ] 통합 테스트: 동일 PDF 3종(텍스트 PDF, 스캔 PDF, 복잡 표) × (docling / markitdown / markitdown-ocr / pdftotext) 출력 비교
 
-#### §4-1.4 OCR 중복 호출 제거 (brief ↔ ingest 캐싱)
+#### 4.1.1.4 OCR 중복 호출 제거 (brief ↔ ingest 캐싱)
 
 (Phase 3 §14.2 발견 — 48p OMRON: Gemini vision OCR × 2회 = ~$0.08/건)
 
@@ -59,7 +74,7 @@
 - [ ] 적용 범위: `extractPdfText` 진입점 1곳에서 메모이제이션 → brief 생성·본 인제스트 모두 혜택
 - [ ] 테스트: 동일 파일 2회 호출 → 두번째는 캐시 히트 assertion
 
-#### §4-1.5 OCR API 키 process listing 노출 제거
+#### 4.1.1.5 OCR API 키 process listing 노출 제거
 
 (Phase 3 §14.2 발견 — `ps aux | grep markitdown`에 `--api-key=...` 평문 노출, 보안 갭)
 
@@ -67,13 +82,13 @@
 - [ ] 위치: `wikey-core/src/ingest-pipeline.ts:extractPdfText` 내 markitdown-ocr / Vision OCR 호출부
 - [ ] 검증: 인제스트 중 `ps aux | grep -E "markitdown|ocr"` 결과에 key 미노출
 
-#### §4-1.6 변환 품질 감지 및 tier 분기
+#### 4.1.1.6 변환 품질 감지 및 tier 분기
 
 - [ ] 품질 스코어: 테이블 깨짐(`|`만 연속), 빈 섹션 비율, 본문 최소 문자 수, OCR 신뢰도(log)
 - [ ] tier 1(docling) 출력이 임계 미달 → tier 2(markitdown-ocr) 재시도
 - [ ] 사용자 오버라이드: Audit 패널에 파일별 "converter" 드롭다운 (docling/markitdown/markitdown-ocr/vision-ocr)
 
-#### §4-1.7 성능 비교 테스트 (정량 baseline)
+#### 4.1.1.7 성능 비교 테스트 (정량 baseline)
 
 - [ ] 코퍼스
   - TWHB-16_001 파워디바이스 PDF (3.3MB, 텍스트 레이어 + 한국어 표)
@@ -83,19 +98,23 @@
 - [ ] 메트릭: 챕터 보존율, 테이블 행/열 정확도, 이미지 캡션 추출, 처리 시간, 메모리, 한국어 정확도
 - [ ] 변환기: docling / unhwp / markitdown / markitdown-ocr / pdftotext / pymupdf / page-render Vision OCR
 
-#### §4-1.8 변환 결과 캐시 (SHA256 기반, 재인제스트 스킵)
+#### 4.1.1.8 변환 결과 캐시 (SHA256 기반, 재인제스트 스킵)
 
-(§4-1.4 OCR 캐시의 일반화: 전체 변환 결과 영속 캐시)
+(§4.1.4 OCR 캐시의 일반화: 전체 변환 결과 영속 캐시)
 
 - [ ] 키: `sha256(original_bytes) + converter_tier + major_options`
 - [ ] 저장: `~/.cache/wikey/convert/<hash>.md`
 - [ ] Audit 패널에서 "Force re-convert" 토글로 캐시 무효화
 
+#### 4.1.1.9 md변환 결과 저장, 활용 및 이동
+
+[ ] md로 변환된 결과는 inbox에 저장하였다가, 원본이 이동하는 경로로 같이 이동
+
 ---
 
-## 2. 분류 및 파일 관리 (inbox → PARA, 이동에 강한 참조)
+## 4.2 분류 및 파일 관리 (inbox → PARA, 이동에 강한 참조)
 
-### §4-2. LLM 기반 3차/4차 분류 폴더 생성
+### 4.2.1 LLM 기반 3차/4차 분류 폴더 생성
 
 현재 `wikey-core/src/classify.ts`는 파일명 토큰 매칭으로 Dewey Decimal 3차(10개 대분류)까지 라우팅. 매칭 안 되는 파일은 2차 폴더까지만 이동.
 
@@ -105,13 +124,13 @@
 - [ ] **피드백 학습** — 사용자가 분류 결과 수정 시 `raw/CLASSIFY.md` 피드백 로그에 기록 + few-shot 예시로 반영
 - [ ] **비용 관리** — classify 전용 저가 모델(gemini-2.0-flash-lite 등) 지정 가능
 
-### §4-3. URI 기반 안정 참조 아키텍처 (PARA 이동에 불변)
+### 4.2.2 URI 기반 안정 참조 아키텍처 (PARA 이동에 불변)
 
 **배경**: PARA는 파일 활성도에 따라 Resources → Archive 이동이 기본. 현재 wikey는 경로 기반 매핑(`.ingest-map.json`) + 소스 페이지 본문의 원본 경로 참조 → 이동 시 stale.
 
 **결정 (2026-04-19)**: 경로 대신 **URI / 고정 ID 기반 안정 참조**. PARA 이동이 참조에 영향 없도록.
 
-#### 구현 로드맵
+#### 4.2.2.1 구현 로드맵
 
 - [ ] **소스 ID 체계** — 불변 ID 부여 (SHA256(content) 또는 UUID)
   - `.wikey/source-registry.json` — `{id: {current_path, hash, first_seen, ingested_pages[]}}`
@@ -135,7 +154,7 @@
 - [ ] **Audit 파이프라인 호환** — 판정 기준 hash 기반 (경로 대신). 이동만 됐을 뿐이면 재인제스트 대상 아님.
 - [ ] **PARA 이동 허용 + 이력 보존** — `path_history[]`에 이동 이력 append (auditing용). Archive 이동 시 wiki/sources에 "아카이브됨" 배너.
 
-#### 호환성 전략
+#### 4.2.2.2 호환성 전략
 
 - Phase 4 시작 시점에 `.ingest-map.json` → `.wikey/source-registry.json` 일괄 마이그레이션 스크립트 제공
 - wiki/sources 프론트매터 자동 변환 (기존 경로 → hash 계산 후 `source_id` 필드 추가)
@@ -143,9 +162,9 @@
 
 ---
 
-## 3. 인제스트 (LLM 추출 · 품질 관리)
+## 4.3 인제스트 (LLM 추출 · 품질 관리)
 
-### §4-4. 인제스트 프롬프트 시스템 (3-stage 전부 override)
+### 4.3.1 인제스트 프롬프트 시스템 (3-stage 전부 override)
 
 현재 v7-5까지: `.wikey/ingest_prompt.md` (Stage 1 summary) + `.wikey/schema.yaml` (schema 타입) override 지원. Stage 2/3 미지원.
 
@@ -163,7 +182,7 @@
 - [ ] 설정 탭 Ingest Prompt 섹션 확장 — 3개 prompt 모두 Edit/Reset 버튼 + 상태 표시
 - [ ] `wikey-core/src/canonicalizer.ts:buildCanonicalizerPrompt` 및 Stage 1 mention extractor에 override 파라미터 주입
 
-### §4-5. Provenance tracking
+### 4.3.2 Provenance tracking
 
 - [ ] 추출된 관계에 출처 표시
   - EXTRACTED: 소스에서 직접 발견
@@ -172,15 +191,15 @@
 - [ ] 위키 페이지 프론트매터에 `provenance` 필드 추가
 - [ ] Audit 패널에서 AMBIGUOUS 항목 리뷰 UI
 
-### §4-6. 증분 업데이트 (file hash 기반)
+### 4.3.3 증분 업데이트 (file hash 기반)
 
-(§4-3 source-registry와 연계)
+(§4.3 source-registry와 연계)
 
 - [ ] `.wikey/source-registry.json` hash 필드로 소스 변경 감지 → 해당 wiki 페이지만 재생성
 - [ ] 삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리
 - [ ] 부분 재인제스트 — chunk diff 기반 증분 (chunk hash 매칭)
 
-### §4-7. stripBrokenWikilinks 자동 적용 (source_page 본문)
+### 4.3.4 stripBrokenWikilinks 자동 적용 (source_page 본문)
 
 (Phase 3 §14.5 발견 — OMRON 261건 한국어 wikilink 수동 cleanup)
 
@@ -191,23 +210,23 @@
 
 ---
 
-## 4. 검색 재현율 · 지식 그래프
+## 4.4 검색 재현율 · 지식 그래프
 
-### §4-8. Anthropic-style contextual chunk 재작성 (v7-3, 검색 인덱스 전처리)
+### 4.4.1 Anthropic-style contextual chunk 재작성 (v7-3, 검색 인덱스 전처리)
 
 (Phase 3 §C-2에서 이관. 현재 Gemma 4 contextual prefix는 생성 단계 프롬프트 보강용)
 
 - [ ] chunk를 재작성해 embedding/BM25 **인덱스에 반영** (retrieval 전처리)
   - Anthropic 의도: 저장된 chunk 자체에 문서 맥락이 주입된 상태로 인덱스 구축
   - 기대 효과: 하이브리드 검색(BM25+임베딩)에서 짧은 chunk의 문맥 손실 감소 → 재현율 개선
-  - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
+  - 참조: [https://www.anthropic.com/engineering/contextual-retrieval](https://www.anthropic.com/engineering/contextual-retrieval)
 - [ ] PoC 범위
   - qmd 인덱스 재빌드 파이프라인에 "contextual rewrite" 스테이지 추가
   - 동일 코퍼스로 baseline vs rewrite 재현율 측정 (MRR, Recall@10)
   - 비용: chunk 수 × 추가 LLM 호출 — 대형 코퍼스에서 부담될 수 있어 로컬 Gemma4 기본
 - [ ] 결정 기준: 재현율 개선 ≥ 15% 시 파이프라인에 상설 통합, 미만이면 기각 기록
 
-### §4-9. 지식 그래프 (NetworkX)
+### 4.4.2 지식 그래프 (NetworkX)
 
 - [ ] entity/concept 간 관계를 그래프로 구축
   - wiki/entities, wiki/concepts의 위키링크를 edge로 변환
@@ -217,7 +236,7 @@
 - [ ] graph.html — 인터랙티브 시각화 (vis.js)
 - [ ] GRAPH_REPORT.md — god nodes, 핵심 연결, 추천 질문
 
-### §4-10. AST 기반 코드 파싱
+### 4.4.3 AST 기반 코드 파싱
 
 - [ ] 코드 파일은 LLM 없이 tree-sitter로 구조 추출
   - 함수/클래스/import 관계 자동 매핑
@@ -227,27 +246,52 @@
 
 ---
 
-## 5. 운영 · 안정성
+## 4.5 운영 · 안정성
 
-### §4-11. 결정성 측정 인프라 (measure-determinism.sh 보강)
+### 4.5.1 결정성 측정 인프라 (measure-determinism.sh 보강)
 
-(Phase 3 §14.14 발견 — 2회 시도 모두 race / UI reload 이슈로 CV 통계 산출 실패)
+Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니라 **measure-determinism.sh의 selector 버그**였다 (2026-04-21 해명): ingest 시작 시 apply button class가 `wikey-audit-apply-btn → wikey-audit-cancel-btn`으로 swap되지만 (`sidebar-chat.ts:999-1000`) 스크립트는 apply class만 query → null 반환 → transition 미감지. 2026-04-21 수동 CDP 드라이브 5/5 성공으로 파이프라인 결정성은 확증(§3.6.6).
 
-- [ ] **(a) plugin reload 강제** — 스크립트 진입 시 `app.plugins.disablePlugin('wikey'); await app.plugins.enablePlugin('wikey')` → 세션 중 리빌드된 플러그인이 수동 `Cmd+R` 없이도 반영
-- [ ] **(b) audit-ingest JSON 생성 확인** — 현재 5 retries × 1.5s = 7.5s 외에 JSON 파일 mtime이 현재 측정 세션보다 fresh한지 추가 체크
-- [ ] **(c) apply-button 전환 timeout 상향** — 10s (20 × 500ms) → 30s (60 × 500ms) + `.wikey-ingest-progress` notice 표시 병행 감지
-- [ ] **(d) per-run 실패 허용 정책** — 5회 중 N회(예: 3회) 정상 완료면 해당 runs만 통계 산출
-- [ ] **재측정 완료 후** → `activity/determinism-pms-post-v7-<date>.md`에 CV 표 + v7-1 decision tree 판정 (**개선 / 무효 / 악화**) + README/log 동기화
-- [ ] **측정 대상 제약** — 최소 15KB 이상·chunk ≥ 3개 (작은 소스로는 CV 측정 의미 없음, 사용자 지적 수용)
+#### 4.5.1.1 selector 수정 (핵심 fix)
 
-### §4-12. 운영 안정성 — 삭제·초기화·포팅
+- [ ] `scripts/measure-determinism.sh`의 `btnProbe` selector를 class-agnostic text 기반으로 교체:
+  ```js
+  const btns = [...panel.querySelectorAll('button')].filter(b => /apply|cancel/.test(b.className))
+  const txt = (btns[0]?.textContent || '').trim()
+  ```
+- [ ] 완료 detect도 같은 패턴으로 통일
+
+#### 4.5.1.2 script guard 정리 (Phase 3에서 이미 merge된 것들)
+
+- [X] apply-button 전환 probe (20 × 500ms) — merge됨
+- [X] stale Cancel 감지 → 진입 시 자동 클릭 — merge됨
+- [X] `cleanupForRerun`이 wiki/sources의 YAML title 3+char 토큰 overlap로 임의 slug 파일 삭제 — merge됨
+- [ ] snapshot-and-diff 방식 도입 — 현재 `readSourceTagsOf`는 raw PDF filename content match로 entity/concept 파일 못찾는 경우 있음 (frontmatter `sources:` 필드가 source-XYZ 형식일 때). 2026-04-21 수동 스크립트의 snapshot diff 방식 이식.
+
+#### 4.5.1.3 측정 재실행 (선택)
+
+- [ ] selector 수정 후 5-run smoke로 자동 스크립트 동작 검증 (수동 드라이브 대체 가능성 확인)
+- [ ] 측정 대상 제약 — 최소 15KB 이상·chunk ≥ 3개 (작은 소스로는 CV 측정 의미 없음)
+
+#### 4.5.1.4 canonicalizer 확장 (v7 잔여 variance 대응)
+
+2026-04-21 측정에서 count-level은 안정(Total CV 7.9%)이나 **naming-level 변동** 잔재:
+- 음역 다중 슬러그: `alimtalk` / `allimtok` / `alrimtok`
+- 축약 불일치: `integrated-member-database` ↔ `integrated-member-db`
+- E/C 경계 왕복: `mqtt` / `project-management-system` / `restful-api`
+
+- [ ] `canonicalize.ts`에 음역 정규화 테이블 (한국어 고유명 → canonical slug)
+- [ ] 약어/동의어 흡수 (sso-api / single-sign-on-api / single-sign-on → 하나)
+- [ ] E/C 경계 왕복 3건을 `.wikey/schema.yaml`에 고정 (`restful-api`=concept, `mqtt`=entity, etc.)
+
+### 4.5.2 운영 안정성 — 삭제·초기화·포팅
 
 - [ ] **원본/위키 삭제 안전장치** — dry-run 미리보기, 영향 범위 표시
 - [ ] **초기화 기능** — 선택적 리셋 (완전/인제스트/원본/인덱스/설정)
 - [ ] **bash→TS 완전 포팅** (validate-wiki, check-pii, cost-tracker, reindex) — Phase 3에서 이관. exec 래퍼는 안정 동작 중이라 우선순위 낮음
 - [ ] **qmd SDK import** — Phase 3에서 이관. CLI exec → 직접 import로 전환 시 지연 감소 + 에러 처리 개선. 난이도 높음 (현재 vendored CLI 구조)
 
-### §4-13. 로컬 추론 엔진 검토 (llama.cpp PoC)
+### 4.5.3 로컬 추론 엔진 검토 (llama.cpp PoC)
 
 - [ ] **Ollama vs llama.cpp 실측 gap 측정** — M4 Pro 48GB 환경에서 동일 Qwen3.6:35b-a3b GGUF로 비교
   - Ollama 0.20.5 (MLX 백엔드) vs `brew install llama.cpp` + `llama-server`
