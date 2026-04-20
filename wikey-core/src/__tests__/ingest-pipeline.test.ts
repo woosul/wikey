@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate } from '../ingest-pipeline.js'
+import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate, assertNotWikiPath } from '../ingest-pipeline.js'
 import type { WikiFS } from '../types.js'
 
 describe('formatLocalDate', () => {
@@ -138,5 +138,43 @@ describe('loadEffectiveIngestPrompt', () => {
     }
     const result = await loadEffectiveIngestPrompt(fs)
     expect(result).toBe(BUNDLED_INGEST_PROMPT)
+  })
+})
+
+describe('assertNotWikiPath', () => {
+  it('rejects bare wiki/* path', () => {
+    expect(() => assertNotWikiPath('wiki/sources/foo.md', 'ingest')).toThrow(/cannot ingest from wiki/)
+  })
+
+  it('rejects wiki at root (no trailing slash)', () => {
+    expect(() => assertNotWikiPath('wiki', 'ingest')).toThrow(/cannot ingest from wiki/)
+  })
+
+  it('rejects ./wiki/* relative path', () => {
+    expect(() => assertNotWikiPath('./wiki/entities/foo.md', 'generateBrief')).toThrow(/generateBrief: cannot ingest from wiki/)
+  })
+
+  it('rejects /wiki/* absolute-style path', () => {
+    expect(() => assertNotWikiPath('/wiki/concepts/foo.md', 'ingest')).toThrow(/cannot ingest from wiki/)
+  })
+
+  it('allows raw/* paths', () => {
+    expect(() => assertNotWikiPath('raw/0_inbox/foo.pdf', 'ingest')).not.toThrow()
+  })
+
+  it('allows paths that merely contain wiki as a substring', () => {
+    expect(() => assertNotWikiPath('raw/3_resources/wikipedia-export.md', 'ingest')).not.toThrow()
+    expect(() => assertNotWikiPath('raw/wiki-archive/foo.md', 'ingest')).not.toThrow()
+  })
+
+  it('embeds the offending path and caller in the error', () => {
+    try {
+      assertNotWikiPath('wiki/foo.md', 'myCaller')
+      throw new Error('should have thrown')
+    } catch (err: unknown) {
+      const msg = (err as Error).message
+      expect(msg).toContain('myCaller')
+      expect(msg).toContain('wiki/foo.md')
+    }
   })
 })

@@ -41,6 +41,21 @@ export interface IngestOptions {
   readonly onPlanReady?: IngestPlanGate
 }
 
+/**
+ * Reject ingest of paths inside wiki/ to prevent self-cycle (wiki page → entities/concepts of
+ * itself). Sources must come from raw/ or another non-wiki location.
+ */
+export function assertNotWikiPath(sourcePath: string, caller: string): void {
+  // Normalize leading slashes/redundant dots so "./wiki/...", "/wiki/..." also match
+  const norm = sourcePath.replace(/^\.?\//, '').replace(/^\/+/, '')
+  if (norm === 'wiki' || norm.startsWith('wiki/')) {
+    throw new Error(
+      `${caller}: cannot ingest from wiki/ (would create self-cycle). ` +
+      `Move the source out of wiki/ first or pass a raw/* path. Got: ${sourcePath}`
+    )
+  }
+}
+
 export async function ingest(
   sourcePath: string,
   wikiFS: WikiFS,
@@ -49,6 +64,7 @@ export async function ingest(
   onProgress?: IngestProgressCallback,
   opts?: IngestOptions,
 ): Promise<IngestResult> {
+  assertNotWikiPath(sourcePath, 'ingest')
   const log = (msg: string, ...rest: unknown[]) => console.info(`[Wikey ingest] ${msg}`, ...rest)
   log(`start: ${sourcePath}`)
 
@@ -608,6 +624,7 @@ export async function generateBrief(
   httpClient: HttpClient,
   opts?: { basePath?: string; execEnv?: Record<string, string> },
 ): Promise<string> {
+  assertNotWikiPath(sourcePath, 'generateBrief')
   const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
   const isPdf = sourceFilename.toLowerCase().endsWith('.pdf')
 

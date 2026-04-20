@@ -226,7 +226,12 @@
   - 한계: override는 Stage 1 summary call에만 적용. Stage 2 mention extraction과 Stage 3 canonicalize는
     하드코딩된 자체 프롬프트 사용 → entity/concept 페이지엔 override 영향 없음
   - 후속: Stage 2/3 프롬프트도 override 가능하게 하려면 별도 작업 필요 (Phase 4 후보)
-- [ ] **이슈 5 결정**: wiki/ 폴더 인제스트 가드 도입 여부 (현재 가드 없음 → wiki→wiki 사이클 위험, `activity/phase-3-test-results.md` 참조)
+- [x] **이슈 5 결정**: wiki/ 폴더 인제스트 가드 — 2026-04-20 추가
+  - 결정: 가드 도입 (wiki→wiki 사이클 차단)
+  - 구현: `wikey-core/src/ingest-pipeline.ts` `assertNotWikiPath()` 헬퍼 + `ingest()` / `generateBrief()` 진입점 호출
+  - 커버리지: bare wiki/, ./wiki/, /wiki/, wiki(루트) 모두 reject. raw/wiki-* 등 substring 매치는 허용
+  - 테스트: 7건 추가 (총 150 passed)
+  - UI 측 보강 불필요: IngestFileSuggestModal은 이미 wiki/ 필터링 (commands.ts:286). Cmd+Shift+I 핫키와 URI handler는 core 가드로 차단됨
 
 ### B-3. 2026-04-19 chunk 프롬프트 보정 검증 (신규)
 

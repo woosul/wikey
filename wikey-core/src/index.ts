@@ -33,6 +33,7 @@ export {
   INGEST_PROMPT_PATH,
   BUNDLED_INGEST_PROMPT,
   PlanRejectedError,
+  assertNotWikiPath,
 } from './ingest-pipeline.js'
 export type { IngestOptions } from './ingest-pipeline.js'
 export {
