@@ -1,4 +1,4 @@
-import type { EntityType, ConceptType, Mention } from './types.js'
+import type { EntityType, ConceptType, Mention, SchemaOverride, SchemaCustomType, WikiFS } from './types.js'
 
 /**
  * Phase B v6: Schema-Guided Extraction.
@@ -62,13 +62,28 @@ export const CONCEPT_DECISION_TREE = `
    - 단순 도메인 용어(예: "혈압", "정확도") · 제품 카테고리 · 기능 라벨은 entity·concept 모두 아님
 `.trim()
 
-/** Validate a mention's type_hint against the allowed schema. */
-export function isValidEntityType(t: string): t is EntityType {
-  return (ENTITY_TYPES as readonly string[]).includes(t)
+/** Validate a mention's type_hint against the allowed schema (optionally extended by override). */
+export function isValidEntityType(t: string, override?: SchemaOverride): t is EntityType {
+  if ((ENTITY_TYPES as readonly string[]).includes(t)) return true
+  if (override && override.entityTypes.some((x) => x.name === t)) return true
+  return false
 }
 
-export function isValidConceptType(t: string): t is ConceptType {
-  return (CONCEPT_TYPES as readonly string[]).includes(t)
+export function isValidConceptType(t: string, override?: SchemaOverride): t is ConceptType {
+  if ((CONCEPT_TYPES as readonly string[]).includes(t)) return true
+  if (override && override.conceptTypes.some((x) => x.name === t)) return true
+  return false
+}
+
+/** Merged list of built-in + override entity type names. */
+export function getEntityTypes(override?: SchemaOverride): readonly string[] {
+  if (!override || override.entityTypes.length === 0) return ENTITY_TYPES
+  return [...ENTITY_TYPES, ...override.entityTypes.map((x) => x.name)]
+}
+
+export function getConceptTypes(override?: SchemaOverride): readonly string[] {
+  if (!override || override.conceptTypes.length === 0) return CONCEPT_TYPES
+  return [...CONCEPT_TYPES, ...override.conceptTypes.map((x) => x.name)]
 }
 
 export interface ValidationOutcome {
@@ -82,18 +97,19 @@ export interface ValidationOutcome {
  * Validate a mention against schema. Returns valid + category/type, or invalid + reason.
  * Stage 2 canonicalizer uses this to decide drop vs keep.
  */
-export function validateMention(mention: Mention): ValidationOutcome {
+export function validateMention(mention: Mention, override?: SchemaOverride): ValidationOutcome {
   const hint = mention.type_hint
   if (!hint || hint === 'unknown') {
     return { valid: false, reason: 'no type_hint provided' }
   }
-  if (isValidEntityType(hint)) {
-    return { valid: true, category: 'entity', type: hint }
+  if (isValidEntityType(hint, override)) {
+    return { valid: true, category: 'entity', type: hint as EntityType }
   }
-  if (isValidConceptType(hint)) {
-    return { valid: true, category: 'concept', type: hint }
+  if (isValidConceptType(hint, override)) {
+    return { valid: true, category: 'concept', type: hint as ConceptType }
   }
-  return { valid: false, reason: `type_hint "${hint}" is not in schema (allowed: ${[...ENTITY_TYPES, ...CONCEPT_TYPES].join(', ')})` }
+  const allowed = [...getEntityTypes(override), ...getConceptTypes(override)].join(', ')
+  return { valid: false, reason: `type_hint "${hint}" is not in schema (allowed: ${allowed})` }
 }
 
 /**
@@ -211,24 +227,138 @@ export function detectAntiPattern(name: string): string | null {
 
 /**
  * Build a compact schema description for prompt injection. Used by Stage 2 canonicalizer
- * to constrain LLM output to allowed types.
+ * to constrain LLM output to allowed types. Optionally includes user-defined types from
+ * `.wikey/schema.yaml` (v7-5).
  */
-export function buildSchemaPromptBlock(): string {
+export function buildSchemaPromptBlock(override?: SchemaOverride): string {
   const lines: string[] = []
+  const eTotal = ENTITY_TYPES.length + (override?.entityTypes.length ?? 0)
+  const cTotal = CONCEPT_TYPES.length + (override?.conceptTypes.length ?? 0)
   lines.push('## 분류 스키마 (이 외 분류는 거부됨)')
   lines.push('')
-  lines.push('**Entity 타입 (4개)**:')
+  lines.push(`**Entity 타입 (${eTotal}개)**:`)
   for (const t of ENTITY_TYPES) {
     lines.push(`- \`${t}\`: ${ENTITY_TYPE_DESCRIPTIONS[t]}`)
   }
+  if (override) {
+    for (const t of override.entityTypes) {
+      lines.push(`- \`${t.name}\` (user-defined): ${t.description}`)
+    }
+  }
   lines.push('')
-  lines.push('**Concept 타입 (3개)**:')
+  lines.push(`**Concept 타입 (${cTotal}개)**:`)
   for (const t of CONCEPT_TYPES) {
     lines.push(`- \`${t}\`: ${CONCEPT_TYPE_DESCRIPTIONS[t]}`)
+  }
+  if (override) {
+    for (const t of override.conceptTypes) {
+      lines.push(`- \`${t.name}\` (user-defined): ${t.description}`)
+    }
   }
   lines.push('')
   lines.push(CONCEPT_DECISION_TREE)
   lines.push('')
   lines.push('**거부 패턴**: 한국어 라벨, X-management/-service/-support 단순 기능명, 비즈니스 객체(quotation/order/invoice 등), UI 요소(*-button/-menu/-page 등), DB 필드명(*-id/-code/-status 등)')
   return lines.join('\n')
+}
+
+// ── v7-5: User schema override (.wikey/schema.yaml) ──
+
+const RESERVED_ENTITY_NAMES = new Set<string>(ENTITY_TYPES)
+const RESERVED_CONCEPT_NAMES = new Set<string>(CONCEPT_TYPES)
+
+function normalizeTypeName(raw: string): string {
+  return raw.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_')
+}
+
+/**
+ * Minimal YAML parser for schema override. Only supports the narrow structure:
+ *   entity_types:
+ *     - name: <string>
+ *       description: <string>
+ *   concept_types:
+ *     - name: <string>
+ *       description: <string>
+ *
+ * No anchors/aliases/multiline scalars. Comments (`#`) and blanks ignored.
+ * Returns null if no valid types parsed (file empty, malformed, or all rejected).
+ */
+export function parseSchemaOverrideYaml(input: string): SchemaOverride | null {
+  if (!input.trim()) return null
+
+  type Section = 'entity' | 'concept' | null
+  let section: Section = null
+  const entityTypes: SchemaCustomType[] = []
+  const conceptTypes: SchemaCustomType[] = []
+  let current: { name?: string; description?: string } | null = null
+
+  const flush = () => {
+    if (!current) return
+    const name = current.name ? normalizeTypeName(current.name) : ''
+    const description = (current.description ?? '').trim()
+    current = null
+    if (!name || !description) return
+    if (section === 'entity') {
+      if (RESERVED_ENTITY_NAMES.has(name)) return
+      if (entityTypes.some((x) => x.name === name)) return
+      entityTypes.push({ name, description })
+    } else if (section === 'concept') {
+      if (RESERVED_CONCEPT_NAMES.has(name)) return
+      if (conceptTypes.some((x) => x.name === name)) return
+      conceptTypes.push({ name, description })
+    }
+  }
+
+  const unquote = (v: string): string => {
+    const t = v.trim()
+    if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
+      return t.slice(1, -1)
+    }
+    return t
+  }
+
+  for (const rawLine of input.split(/\r?\n/)) {
+    const line = rawLine.replace(/\s+#.*$/, '').replace(/^#.*$/, '')
+    if (!line.trim()) continue
+
+    const topMatch = line.match(/^(entity_types|concept_types)\s*:\s*$/)
+    if (topMatch) {
+      flush()
+      section = topMatch[1] === 'entity_types' ? 'entity' : 'concept'
+      continue
+    }
+
+    if (section === null) continue
+
+    const itemStart = line.match(/^\s*-\s+(name|description)\s*:\s*(.+)$/)
+    if (itemStart) {
+      flush()
+      current = {}
+      current[itemStart[1] as 'name' | 'description'] = unquote(itemStart[2])
+      continue
+    }
+
+    const contMatch = line.match(/^\s+(name|description)\s*:\s*(.+)$/)
+    if (contMatch && current) {
+      current[contMatch[1] as 'name' | 'description'] = unquote(contMatch[2])
+      continue
+    }
+  }
+  flush()
+
+  if (entityTypes.length === 0 && conceptTypes.length === 0) return null
+  return { entityTypes, conceptTypes }
+}
+
+/**
+ * Load `.wikey/schema.yaml` (or custom path) via the wiki filesystem.
+ * Returns null if the file is absent or parses to no valid types.
+ */
+export async function loadSchemaOverride(
+  wikiFS: WikiFS,
+  path = '.wikey/schema.yaml',
+): Promise<SchemaOverride | null> {
+  if (!(await wikiFS.exists(path))) return null
+  const raw = await wikiFS.read(path)
+  return parseSchemaOverrideYaml(raw)
 }

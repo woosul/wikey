@@ -1,5 +1,5 @@
 import { App, Modal, Notice, PluginSettingTab, Setting, TFile, requestUrl } from 'obsidian'
-import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, loadEffectiveIngestPrompt, fetchModelList, ANTHROPIC_PING_MODEL } from 'wikey-core'
+import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, loadEffectiveIngestPrompt, loadSchemaOverride, fetchModelList, ANTHROPIC_PING_MODEL } from 'wikey-core'
 import type { LLMProvider } from 'wikey-core'
 import type WikeyPlugin from './main'
 
@@ -18,6 +18,7 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderBasicModelSection(containerEl)
     this.renderIngestModelSection(containerEl)
     this.renderIngestPromptSection(containerEl)
+    this.renderSchemaOverrideSection(containerEl)
     this.renderGeneralSection(containerEl)
     this.renderApiKeysSection(containerEl)
     this.renderSearchSection(containerEl)
@@ -351,6 +352,78 @@ export class WikeySettingTab extends PluginSettingTab {
         `System prompt sent to the LLM during ingest. Edit to tune for your data; Reset to revert. Status: ${isCustom ? 'Custom override' : 'Bundled default'}.`,
       )
       if (resetButton) resetButton.disabled = !isCustom
+    })()
+  }
+
+  // ── Section: Schema Override (.wikey/schema.yaml — v7-5) ──
+  private renderSchemaOverrideSection(containerEl: HTMLElement): void {
+    containerEl.createEl('h3', { text: 'Schema Override' })
+
+    const { vault } = this.plugin.app
+    const path = '.wikey/schema.yaml'
+    const descEl = containerEl.createDiv({ cls: 'wikey-settings-status-desc' })
+    const statusSpan = descEl.createSpan({
+      text: 'Add domain-specific entity/concept types on top of the built-in 4+3. Status: …',
+    })
+
+    let removeButton: HTMLButtonElement | null = null
+    new Setting(containerEl)
+      .setName('Edit schema.yaml')
+      .setDesc('Extend canonicalizer with user-defined types (e.g. dataset, regulation). Built-in types always stay active.')
+      .addButton((btn) =>
+        btn.setButtonText('Edit').onClick(async () => {
+          try {
+            const exists = await vault.adapter.exists(path)
+            const current = exists ? await vault.adapter.read(path) : SCHEMA_OVERRIDE_TEMPLATE
+            new SchemaOverrideEditModal(this.plugin.app, current, async (next) => {
+              const parent = '.wikey'
+              if (!(await vault.adapter.exists(parent))) {
+                await vault.createFolder(parent)
+              }
+              await vault.adapter.write(path, next)
+              new Notice('Schema override saved.')
+              this.display()
+            }).open()
+          } catch (err) {
+            new Notice(`Failed to open schema editor: ${(err as Error).message}`)
+          }
+        }),
+      )
+      .addButton((btn) => {
+        removeButton = btn.buttonEl
+        btn.setButtonText('Remove').setDisabled(true).onClick(async () => {
+          if (!(await vault.adapter.exists(path))) {
+            new Notice('No schema override in use.')
+            return
+          }
+          if (!confirm(`Remove schema override? This deletes ${path}.`)) return
+          await vault.adapter.remove(path)
+          new Notice('Schema override removed — back to built-in types only.')
+          this.display()
+        })
+      })
+
+    // Async status update — reflect parsed override (type counts) so users see it took effect
+    void (async () => {
+      const exists = await vault.adapter.exists(path)
+      if (!exists) {
+        statusSpan.setText('Add domain-specific entity/concept types on top of the built-in 4+3. Status: Built-in only (no override).')
+        if (removeButton) removeButton.disabled = true
+        return
+      }
+      try {
+        const parsed = await loadSchemaOverride(this.plugin.wikiFS)
+        if (!parsed) {
+          statusSpan.setText(`Add domain-specific entity/concept types on top of the built-in 4+3. Status: File exists at ${path} but parses to no valid types.`)
+        } else {
+          statusSpan.setText(
+            `Add domain-specific entity/concept types on top of the built-in 4+3. Status: +${parsed.entityTypes.length} entity, +${parsed.conceptTypes.length} concept from ${path}.`,
+          )
+        }
+      } catch (err) {
+        statusSpan.setText(`Add domain-specific entity/concept types on top of the built-in 4+3. Status: parse error — ${(err as Error).message}`)
+      }
+      if (removeButton) removeButton.disabled = false
     })()
   }
 
@@ -777,6 +850,73 @@ class IngestPromptEditModal extends Modal {
     contentEl.createEl('h2', { text: 'Edit Ingest Prompt' })
     contentEl.createEl('p', {
       text: 'Edit the system prompt sent to the LLM during ingest. Keep the {{TODAY}}, {{INDEX_CONTENT}}, {{SOURCE_FILENAME}}, {{SOURCE_CONTENT}} placeholders or the pipeline will not receive the source.',
+      cls: 'wikey-ingest-prompt-help',
+    })
+    this.textarea = contentEl.createEl('textarea', {
+      cls: 'wikey-ingest-prompt-textarea',
+    })
+    this.textarea.value = this.initialContent
+    this.textarea.spellcheck = false
+
+    const footer = contentEl.createDiv({ cls: 'wikey-ingest-prompt-footer' })
+    const cancelBtn = footer.createEl('button', { text: 'Cancel' })
+    cancelBtn.addEventListener('click', () => this.close())
+    const saveBtn = footer.createEl('button', { text: 'Save', cls: 'mod-cta' })
+    saveBtn.addEventListener('click', async () => {
+      const next = this.textarea.value
+      try {
+        await this.onSave(next)
+        this.close()
+      } catch (err) {
+        new Notice(`Save failed: ${(err as Error).message}`)
+      }
+    })
+  }
+
+  onClose(): void {
+    this.contentEl.empty()
+  }
+}
+
+const SCHEMA_OVERRIDE_TEMPLATE = `# wikey schema override — .wikey/schema.yaml (v7-5)
+#
+# Add domain-specific entity/concept types on top of the built-in 4+3.
+# Built-in types (organization/person/product/tool · standard/methodology/document_type)
+# always stay active and cannot be overridden here.
+#
+# Remove this file to revert to built-in types only.
+
+entity_types:
+  - name: dataset
+    description: 공개된 구조화된 데이터 모음 (예: imagenet, kaggle-titanic)
+  - name: location
+    description: 지리적 지명·시설 (예: seoul, leverkusen)
+
+concept_types:
+  - name: regulation
+    description: 특정 국가·기관의 규제·법령 (예: gdpr, k-fda-guidelines)
+`
+
+/**
+ * Modal popup for editing `.wikey/schema.yaml` (v7-5).
+ * Uses the same textarea pattern as IngestPromptEditModal.
+ */
+class SchemaOverrideEditModal extends Modal {
+  private textarea!: HTMLTextAreaElement
+  constructor(
+    app: App,
+    private readonly initialContent: string,
+    private readonly onSave: (next: string) => Promise<void>,
+  ) {
+    super(app)
+  }
+
+  onOpen(): void {
+    const { contentEl, modalEl } = this
+    modalEl.addClass('wikey-ingest-prompt-modal')
+    contentEl.createEl('h2', { text: 'Edit Schema Override' })
+    contentEl.createEl('p', {
+      text: 'Define additional entity/concept types for the canonicalizer. Built-in types (organization/person/product/tool · standard/methodology/document_type) are always active and cannot be overridden here.',
       cls: 'wikey-ingest-prompt-help',
     })
     this.textarea = contentEl.createEl('textarea', {

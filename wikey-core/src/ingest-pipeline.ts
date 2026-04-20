@@ -14,6 +14,7 @@ import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
 import { createPage, updateIndex, appendLog, normalizeBase, type WrittenPage } from './wiki-ops.js'
 import { canonicalize } from './canonicalizer.js'
+import { loadSchemaOverride } from './schema.js'
 import type { Mention, EntityType, ConceptType } from './types.js'
 import { PROVIDER_VISION_DEFAULTS } from './provider-defaults.js'
 
@@ -109,6 +110,12 @@ export async function ingest(
     .map((f) => f.replace(/\.md$/i, ''))
   log(`existing wiki — entities=${existingEntityBases.length}, concepts=${existingConceptBases.length}`)
 
+  // v7-5: load .wikey/schema.yaml extension (if any) — feeds into canonicalizer
+  const schemaOverride = await loadSchemaOverride(wikiFS).catch(() => null) ?? undefined
+  if (schemaOverride) {
+    log(`schema override — entities=${schemaOverride.entityTypes.length}, concepts=${schemaOverride.conceptTypes.length}`)
+  }
+
   const today = formatLocalDate(new Date())
 
   if (!isLargeDoc) {
@@ -125,6 +132,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename, today, guideHint: opts?.guideHint, provider, model,
+      schemaOverride,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
 
@@ -177,6 +185,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
       sourceFilename, today, guideHint: opts?.guideHint, provider, model,
+      schemaOverride,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     if (canon.dropped.length > 0) {

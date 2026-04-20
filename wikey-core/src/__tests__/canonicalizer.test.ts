@@ -200,4 +200,61 @@ describe('buildCanonicalizerPrompt', () => {
     expect(prompt).toContain('PMBOK 표준 위주로 추출')
     expect(prompt).toContain('사용자 강조 지시')
   })
+
+  it('includes schema override custom types in prompt (v7-5)', () => {
+    const prompt = buildCanonicalizerPrompt({
+      mentions: [{ name: 'x', evidence: 'y' }],
+      existingEntityBases: [],
+      existingConceptBases: [],
+      sourceFilename: 'test.pdf',
+      schemaOverride: {
+        entityTypes: [{ name: 'dataset', description: '공개된 데이터 모음' }],
+        conceptTypes: [{ name: 'regulation', description: '규제·법령' }],
+      },
+    })
+    expect(prompt).toContain('dataset')
+    expect(prompt).toContain('공개된 데이터 모음')
+    expect(prompt).toContain('regulation')
+    expect(prompt).toContain('Entity 타입 (5개)')  // 4 built-in + 1 custom
+    expect(prompt).toContain('Concept 타입 (4개)')
+  })
+})
+
+describe('canonicalize — schema override (v7-5)', () => {
+  it('accepts custom entity type from override and builds page with entityType set', async () => {
+    const mentions: Mention[] = [
+      { name: 'imagenet', type_hint: 'dataset' as any, evidence: '이미지 분류 벤치마크' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'imagenet', type: 'dataset',
+        description: 'Stanford ImageNet 이미지 분류 벤치마크.',
+      }],
+      concepts: [],
+    }))
+    const result = await canonicalize({
+      ...baseArgs, llm, mentions,
+      schemaOverride: {
+        entityTypes: [{ name: 'dataset', description: 'X' }],
+        conceptTypes: [],
+      },
+    })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('imagenet.md')
+    expect(result.entities[0].entityType as any).toBe('dataset')
+    expect(result.entities[0].content).toContain('entity_type: dataset')
+  })
+
+  it('drops same custom type without override', async () => {
+    const mentions: Mention[] = [
+      { name: 'imagenet', type_hint: 'dataset' as any, evidence: '벤치마크' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'imagenet', type: 'dataset', description: 'X' }],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(0)
+    expect(result.dropped).toHaveLength(1)
+  })
 })

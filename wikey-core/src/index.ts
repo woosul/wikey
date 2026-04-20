@@ -18,7 +18,19 @@ export type {
   IngestPlanGate,
   QueryResult,
   SearchResult,
+  SchemaCustomType,
+  SchemaOverride,
 } from './types.js'
+
+export {
+  ENTITY_TYPES,
+  CONCEPT_TYPES,
+  getEntityTypes,
+  getConceptTypes,
+  parseSchemaOverrideYaml,
+  loadSchemaOverride,
+  buildSchemaPromptBlock,
+} from './schema.js'
 
 export { parseWikeyConf, loadConfig, resolveProvider } from './config.js'
 export { LLMClient, fetchModelList } from './llm-client.js'

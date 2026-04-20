@@ -1,6 +1,6 @@
 import type { LLMClient } from './llm-client.js'
 import type {
-  CanonicalizedResult, EntityType, ConceptType, Mention, WikiPage,
+  CanonicalizedResult, EntityType, ConceptType, Mention, SchemaOverride, WikiPage,
 } from './types.js'
 import {
   ENTITY_TYPES, CONCEPT_TYPES, isValidEntityType, isValidConceptType,
@@ -35,6 +35,8 @@ export interface CanonicalizeArgs {
   readonly guideHint?: string
   readonly provider: string
   readonly model: string
+  /** v7-5: user-defined schema extension from `.wikey/schema.yaml`. */
+  readonly schemaOverride?: SchemaOverride
 }
 
 interface RawCanonical {
@@ -46,7 +48,7 @@ interface RawCanonical {
 
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
-          sourceFilename, today, guideHint, provider, model } = args
+          sourceFilename, today, guideHint, provider, model, schemaOverride } = args
 
   if (mentions.length === 0) {
     return { entities: [], concepts: [], dropped: [] }
@@ -54,11 +56,11 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
 
   const prompt = buildCanonicalizerPrompt({
     mentions, existingEntityBases, existingConceptBases,
-    sourceFilename, guideHint,
+    sourceFilename, guideHint, schemaOverride,
   })
 
   const raw = await callLLMWithRetry(llm, prompt, provider, model)
-  return assembleCanonicalResult(raw, mentions, sourceFilename, today)
+  return assembleCanonicalResult(raw, mentions, sourceFilename, today, schemaOverride)
 }
 
 // ── Prompt construction ──
@@ -69,10 +71,11 @@ interface PromptArgs {
   existingConceptBases: readonly string[]
   sourceFilename: string
   guideHint?: string
+  schemaOverride?: SchemaOverride
 }
 
 export function buildCanonicalizerPrompt(args: PromptArgs): string {
-  const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint } = args
+  const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint, schemaOverride } = args
 
   const guideBlock = guideHint?.trim()
     ? `\n## 사용자 강조 지시 (우선 준수)\n\n> ${guideHint.trim()}\n`
@@ -94,7 +97,7 @@ export function buildCanonicalizerPrompt(args: PromptArgs): string {
 
 Source: ${sourceFilename}
 ${guideBlock}
-${buildSchemaPromptBlock()}
+${buildSchemaPromptBlock(schemaOverride)}
 
 ## 작업 규칙
 
@@ -137,6 +140,7 @@ function assembleCanonicalResult(
   mentions: readonly Mention[],
   sourceFilename: string,
   today: string,
+  schemaOverride?: SchemaOverride,
 ): CanonicalizedResult {
   const dropped: Array<{ mention: Mention; reason: string }> = []
   const keptBases = new Set<string>()
@@ -144,7 +148,7 @@ function assembleCanonicalResult(
   const concepts: WikiPage[] = []
 
   for (const e of raw.entities ?? []) {
-    const result = validateAndBuildPage(e, 'entity', sourceFilename, today)
+    const result = validateAndBuildPage(e, 'entity', sourceFilename, today, schemaOverride)
     if (!result.ok) continue
     entities.push(result.page)
     keptBases.add(normalizeBase(result.page.filename))
@@ -152,7 +156,7 @@ function assembleCanonicalResult(
   }
 
   for (const c of raw.concepts ?? []) {
-    const result = validateAndBuildPage(c, 'concept', sourceFilename, today)
+    const result = validateAndBuildPage(c, 'concept', sourceFilename, today, schemaOverride)
     if (!result.ok) continue
     // Cross-pool dedup: if entity with same base already kept, skip concept
     if (keptBases.has(normalizeBase(result.page.filename))) continue
@@ -184,6 +188,7 @@ function validateAndBuildPage(
   category: 'entity' | 'concept',
   sourceFilename: string,
   today: string,
+  schemaOverride?: SchemaOverride,
 ): PageBuildOk | PageBuildFail {
   const name = (raw.name ?? '').trim()
   if (!name) return { ok: false, reason: 'empty name' }
@@ -193,10 +198,10 @@ function validateAndBuildPage(
   if (antiPattern) return { ok: false, reason: antiPattern }
 
   const type = (raw.type ?? '').trim()
-  if (category === 'entity' && !isValidEntityType(type)) {
+  if (category === 'entity' && !isValidEntityType(type, schemaOverride)) {
     return { ok: false, reason: `invalid entity type "${type}"` }
   }
-  if (category === 'concept' && !isValidConceptType(type)) {
+  if (category === 'concept' && !isValidConceptType(type, schemaOverride)) {
     return { ok: false, reason: `invalid concept type "${type}"` }
   }
 

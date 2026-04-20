@@ -87,6 +87,20 @@ export type EntityType = 'organization' | 'person' | 'product' | 'tool'
 export type ConceptType = 'standard' | 'methodology' | 'document_type'
 
 /**
+ * v7-5: user-defined schema extension loaded from `.wikey/schema.yaml`.
+ * Names are lowercased/normalized; duplicates with built-ins are dropped.
+ */
+export interface SchemaCustomType {
+  readonly name: string
+  readonly description: string
+}
+
+export interface SchemaOverride {
+  readonly entityTypes: readonly SchemaCustomType[]
+  readonly conceptTypes: readonly SchemaCustomType[]
+}
+
+/**
  * A raw mention extracted from a chunk by Stage 1 (no classification yet).
  * Stage 2 canonicalizer turns these into WikiPage objects with type assigned.
  */
