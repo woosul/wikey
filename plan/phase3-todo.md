@@ -282,10 +282,13 @@
   - Anthropic 의도: chunk를 재작성해 embedding/BM25 인덱스에 반영 (retrieval 전처리)
   - 인제스트와 별개로 검색 재현율 개선 효과 측정
   - 참조: <https://www.anthropic.com/engineering/contextual-retrieval>
-- [ ] **[v7-4] 5회 std dev 자동 측정 → activity 로그 (회귀 감지 자동화)**
-  - 현재 `/tmp/v6-determinism.py` 같은 ad-hoc 스크립트로 측정
-  - `scripts/measure-determinism.sh` 신규 또는 cost-tracker 확장
-  - activity/determinism-log.md에 기록 → CI 통합 가능
+- [x] **[v7-4] 5회 std dev 자동 측정 스크립트** — 2026-04-20 완료
+  - `scripts/measure-determinism.sh <source-path> [-n N] [-o output.md]` 신규
+  - Obsidian CDP (port 9222) 통해 audit panel을 N회 자동 구동, cleanup→ingest→count 반복
+  - 출력: 콘솔 통계 + Markdown 표 (Run/Entities/Concepts/Total/Time + Mean/Std/CV + Core/Variable 분석)
+  - 가드: wiki/ 경로 차단, source 미존재 시 종료, CDP 미연결 시 종료
+  - 3-run smoke test로 검증 완료 (Quanta Robotics 가짜 소스, Entities CV 8.7%)
+  - CI 통합 가능 (Obsidian 헤드리스 기동 환경 필요)
 - [ ] **[v7-5] schema yaml 사용자 override (`.wikey/schema.yaml`)**
   - Phase D는 표시만 (활성 스키마 라인) — 편집 미구현
   - schema.ts에 loadSchemaOverride() 추가, 사용자 정의 entity/concept 타입 허용
