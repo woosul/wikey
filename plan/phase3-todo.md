@@ -270,13 +270,20 @@
 
 #### C-2. v7 후속 (인제스트 안정화 보강, 6건)
 
-- [ ] **[v7-1] schema에 `methodology` vs `document_type` 경계 명확화**
-  - 현재 Concepts CV 33.4% (5중 9~25 진동) — canonicalizer LLM이 같은 mention을 다르게 분류
-  - schema.ts 타입 설명 (CONCEPT_TYPE_DESCRIPTIONS) 보강 + canonicalizer 프롬프트에 분류 결정 트리 추가
-  - 목표: Concepts CV ~15% 이하
-- [ ] **[v7-2] anti-pattern에 운영 항목 추가 발굴**
-  - 인제스트 누적 중 새 회피 패턴 발견 시 schema.ts OPERATIONAL_ITEMS 또는 정규식 접미사에 추가
-  - 현재 차단: 한국어 / X-management/-service/-support / business object / *-list/-report/-form
+- [x] **[v7-1] schema methodology vs document_type 경계 명확화** — 2026-04-20 완료
+  - `CONCEPT_TYPE_DESCRIPTIONS` 보강: 각 타입에 "판단 기준" 한 줄씩 추가
+  - 신규 `CONCEPT_DECISION_TREE` export — canonicalizer 프롬프트에 4단계 분류 결정 트리 주입
+    1. 표준화 기관/약어 명시 → standard
+    2. 발행 가능 양식 → document_type
+    3. 절차/기법 → methodology
+    4. 모호 → drop
+  - `buildSchemaPromptBlock`에 decision tree 통합
+  - 목표 Concepts CV ~15% — 다음 5-run 측정으로 검증 (`scripts/measure-determinism.sh`로 자동화)
+- [x] **[v7-2] anti-pattern 운영 항목 추가** — 2026-04-20 완료
+  - OPERATIONAL_ITEMS에 8개 추가: workhours, employeerole, departmentcode, productcategory, paymentterm, shipmentstatus, returnpolicy, warrantyperiod
+  - UI element suffix 신규 차단: `*-button/-menu/-tab/-page/-screen/-dialog/-modal/-section/-panel/-widget/-icon`
+  - DB column suffix 신규 차단: `*-id/-code/-number/-key/-flag/-status/-count/-amount/-total` (3-hyphen 이내만, 긴 명칭은 통과)
+  - 테스트 4건 추가 (총 159 passed)
 - [ ] **[v7-3] Anthropic-style contextual chunk 재작성 (검색 재현율 개선)**
   - 현재 wikey의 Gemma 4 contextual prefix는 생성 단계 프롬프트 보강용
   - Anthropic 의도: chunk를 재작성해 embedding/BM25 인덱스에 반영 (retrieval 전처리)

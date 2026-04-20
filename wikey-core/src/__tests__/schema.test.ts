@@ -151,6 +151,37 @@ describe('detectAntiPattern', () => {
     expect(detectAntiPattern('apache-tomcat')).toBeNull()
     expect(detectAntiPattern('lotus-pms')).toBeNull()
   })
+
+  it('flags v7-2 operational variants (workhours, employee-role 등)', () => {
+    expect(detectAntiPattern('work-hours')).toContain('operational')
+    expect(detectAntiPattern('employee-role')).toContain('operational')
+    expect(detectAntiPattern('department-code')).toContain('operational')
+    expect(detectAntiPattern('payment-term')).toContain('operational')
+    expect(detectAntiPattern('warranty-period')).toContain('operational')
+  })
+
+  it('flags v7-2 UI element suffixes (button/menu/page 등)', () => {
+    expect(detectAntiPattern('login-button')).toContain('UI label')
+    expect(detectAntiPattern('settings-menu')).toContain('UI label')
+    expect(detectAntiPattern('home-page')).toContain('UI label')
+    expect(detectAntiPattern('dashboard-screen')).toContain('UI label')
+    expect(detectAntiPattern('confirm-modal')).toContain('UI label')
+    expect(detectAntiPattern('header-section')).toContain('UI label')
+    expect(detectAntiPattern('chart-widget')).toContain('UI label')
+  })
+
+  it('flags v7-2 DB column suffixes (-id/-code/-status 등)', () => {
+    expect(detectAntiPattern('user-id')).toContain('DB column')
+    expect(detectAntiPattern('order-status')).toContain('DB column')
+    expect(detectAntiPattern('error-code')).toContain('DB column')
+    expect(detectAntiPattern('part-number')).toContain('DB column')
+  })
+
+  it('does NOT flag legitimate concepts ending in similar suffixes (max 3 hyphens guard)', () => {
+    // long names with these suffixes are likely real domain concepts, not raw DB fields
+    expect(detectAntiPattern('international-securities-identification-number')).toBeNull()
+    expect(detectAntiPattern('global-positioning-system-status')).toBeNull()
+  })
 })
 
 describe('buildSchemaPromptBlock', () => {

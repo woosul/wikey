@@ -23,10 +23,44 @@ export const ENTITY_TYPE_DESCRIPTIONS: Record<EntityType, string> = {
 }
 
 export const CONCEPT_TYPE_DESCRIPTIONS: Record<ConceptType, string> = {
-  standard: '산업 표준·규격·프레임워크 (예: pmbok, work-breakdown-structure, gantt-chart).',
-  methodology: '방법론·이론·접근법 (예: agile, scrum, supply-chain-management).',
-  document_type: '문서 종류·증명서 유형 (예: business-registration-certificate, electronic-tax-invoice).',
+  standard:
+    '공식 발행되거나 산업 합의된 **명명된 규격·프레임워크·프로토콜** ' +
+    '(예: pmbok, work-breakdown-structure, gantt-chart, iso-13320, fda-21-cfr-part-11, hart-7, atex-zone-1). ' +
+    '판단 기준: 표준화 기관 또는 약어로 식별되며, 다수 조직이 공유하는 정의가 있다.',
+  methodology:
+    '특정 결과를 만드는 **반복 가능한 절차·접근법·기법** ' +
+    '(예: agile, scrum, supply-chain-management, process-analytical-technology). ' +
+    '판단 기준: "어떻게 한다"의 동작 원리 — 표준 문서가 없어도 업계에서 통용되는 방법.',
+  document_type:
+    '특정 양식을 갖는 **문서·증명서 유형명** ' +
+    '(예: business-registration-certificate, electronic-tax-invoice). ' +
+    '판단 기준: 종이/전자 양식으로 발행 가능하고 고유 항목 구조가 있다. 실제 인스턴스가 아닌 **유형**만.',
 }
+
+/**
+ * Decision tree for concept classification — emit alongside CONCEPT_TYPE_DESCRIPTIONS in canonicalizer prompt.
+ * Goal: reduce Concepts CV (measured 21% on Greendale, 33% on PMS).
+ */
+export const CONCEPT_DECISION_TREE = `
+## Concept 분류 결정 트리
+
+후보가 concept이라고 판단되면 다음 순서로 검사하세요:
+
+1. **표준화 기관(ISO/IEC/FDA/IEEE/W3C 등) 또는 약어가 이름에 명시되어 있나?** → \`standard\`
+   - 예: \`fda-21-cfr-part-11\`, \`iso-13320\`, \`iec-60601-1-2-2007\`
+   - 약어형(pmbok, erp, mes, opc-ua) 자체가 "위원회가 합의한 명명"이면 standard
+
+2. **양식·증명서·보고서로 인쇄·발행 가능한 "문서 유형"인가?** → \`document_type\`
+   - 예: \`business-registration-certificate\`, \`electronic-tax-invoice\`
+   - 주의: 실제 한 장의 문서가 아닌 **유형 이름**만 (인스턴스는 source 본문에 두기)
+
+3. **"이렇게 한다"의 절차·접근법·기법인가?** → \`methodology\`
+   - 예: \`agile\`, \`scrum\`, \`process-analytical-technology\`, \`supply-chain-management\`
+   - 동사형 한정사("management/control/optimization 등") + 도메인 결합으로 절차 의미가 있어야 함
+
+4. **위 셋 중 어디에도 명확히 들어가지 않는다** → **drop** (분류 불가)
+   - 단순 도메인 용어(예: "혈압", "정확도") · 제품 카테고리 · 기능 라벨은 entity·concept 모두 아님
+`.trim()
 
 /** Validate a mention's type_hint against the allowed schema. */
 export function isValidEntityType(t: string): t is EntityType {
@@ -132,6 +166,9 @@ export function detectAntiPattern(name: string): string | null {
     'weeklyreport', 'businessregistrationnumber',
     // v6+D+C 검증에서 새로 발견된 변형
     'deliveryconfirmation', '3dworkspace',
+    // v7-2 (2026-04-20) 추가 — 운영 잡음 패턴
+    'workhours', 'employeerole', 'departmentcode', 'productcategory',
+    'paymentterm', 'shipmentstatus', 'returnpolicy', 'warrantyperiod',
     // 'deliveryconfirmationlist' is caught by *-list suffix pattern below
   ])
   if (OPERATIONAL_ITEMS.has(normalized)) {
@@ -155,6 +192,20 @@ export function detectAntiPattern(name: string): string | null {
     return 'name ends with "-form" — likely UI form label, not industry-standard concept'
   }
 
+  // v7-2 (2026-04-20) — UI/메뉴 라벨이 entity로 회피하는 패턴
+  // *-button, *-menu, *-tab, *-page, *-screen, *-dialog, *-modal
+  // *-section, *-panel, *-widget, *-icon (UI atoms)
+  if (/-(button|menu|tab|page|screen|dialog|modal|section|panel|widget|icon)$/.test(lower)) {
+    return `name ends with UI element suffix — likely UI label, not entity/concept`
+  }
+
+  // v7-2 — 데이터 모델 필드 회피 패턴
+  // *-id, *-code, *-number, *-key, *-flag, *-status (DB column-style)
+  // 단, 산업 표준의 자연어 이름이 아닌 raw column suffix만 차단
+  if (/-(id|code|number|key|flag|status|count|amount|total)$/.test(lower) && lower.split('-').length <= 3) {
+    return `name ends with data-field suffix — likely DB column label, not industry-standard concept`
+  }
+
   return null
 }
 
@@ -176,6 +227,8 @@ export function buildSchemaPromptBlock(): string {
     lines.push(`- \`${t}\`: ${CONCEPT_TYPE_DESCRIPTIONS[t]}`)
   }
   lines.push('')
-  lines.push('**거부 패턴**: 한국어 라벨, X-management/-service/-support 단순 기능명, 비즈니스 객체(quotation/order/invoice 등)')
+  lines.push(CONCEPT_DECISION_TREE)
+  lines.push('')
+  lines.push('**거부 패턴**: 한국어 라벨, X-management/-service/-support 단순 기능명, 비즈니스 객체(quotation/order/invoice 등), UI 요소(*-button/-menu/-page 등), DB 필드명(*-id/-code/-status 등)')
   return lines.join('\n')
 }
