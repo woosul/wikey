@@ -262,10 +262,11 @@
   - 결과: **Entities CV 8.4% / Concepts CV 21.1% / Total CV 12.9%** (모두 PMS보다 양호)
   - Core ratio: Entities 9/11 (82%), Concepts 5/9 (56%) — Concepts 변동이 v7-1 강화 후보
   - 상세: `activity/determinism-greendale-2026-04-20.md`
-- [ ] **🟡 Lint 세션 — wiki 정리**
-  - 이번 세션 인제스트로 작성된 페이지들 중복/품질 검토
-  - log.md `, ,` cosmetic 잔존 (이전 인제스트 시점) 정리
-  - validate-wiki.sh 실행 (현재 PASS)
+- [x] **🟡 Lint 세션 — wiki 정리** — 2026-04-20 완료
+  - `, ,` cosmetic 1건 수정 (log.md L43, 정규식 `,(?:\s*,)+` → `,`)
+  - 검사 결과: validate-wiki.sh PASS, broken index links 0, 빈/너무 짧은 페이지 0
+  - 64 entities / 53 concepts / 11 sources — 모두 index.md 등재 확인
+  - OMRON source 페이지 79 wikilinks 모두 존재 base 가리킴 (이전 cleanup으로 261 → 79 → 0 broken)
 
 #### C-2. v7 후속 (인제스트 안정화 보강, 6건)
 
