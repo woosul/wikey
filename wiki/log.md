@@ -5,6 +5,22 @@ created: 2026-04-10
 updated: 2026-04-21
 ---
 
+## [2026-04-21] feat | §4.1.1.6 자동 force-ocr 감지 로직 (사용자 UI override 제거)
+
+- 배경: 사용자 피드백 "UI override 바람직하지 않음, 프로그램 로직으로 자동 판정". ROHM Wi-SUN 샘플(웹페이지 프린트 PDF)과 스캔 PDF 는 force-ocr 필요, PMS 제품소개(벡터 PDF)는 force-ocr 시 한국어 0자 regression — 자동 감지가 세 케이스를 모두 올바르게 처리해야.
+- 변경 (convert-quality.ts 신규 함수 4개): `countKoreanChars`, `koreanLongTokenRatio`, `hasKoreanRegression`, `bodyCharsPerPage`, `isLikelyScanPdf`. 테스트 9건 추가 (233 → 242 PASS).
+- 변경 (ingest-pipeline.ts tier 1 블록): 자동 retry 조건 확장 — `quality.decision === 'retry' OR isLikelyScanPdf(ok, pageCount)`. Regression guard 추가 — tier 1b 한국어가 tier 1 의 50% 미만이면 tier 1 롤백. Tier 1b 실패 시 tier 1 vs tier 1b score 비교 후 높은 쪽 채택.
+- 삭제 (사용자 override 제거): `ConverterOverride` 타입, `IngestOptions.converterOverride`, `IngestRunOptions.converterOverride`, `runTier()` 가드, tier 2/3/6 의 override 스킵 분기, docling-ocr 단독 실행 분기, sidebar-chat.ts 의 Converter 드롭다운 + 6개 option.
+- 유지: `Force re-convert` 체크박스 (캐시 bypass 디버그 토글 용).
+- 검증:
+  - ROHM Wi-SUN textlayer: 공백소실 60.20% > 30% → retry 자동 발동 (OK)
+  - ROHM Wi-SUN force-ocr: 공백소실 0.27%, 한국어 2,083 (textlayer 2,021 보다 개선) → accept
+  - PMS 제품소개 textlayer: 공백소실 4.93% < 30% → retry 스킵, accept (불필요한 비용 없음)
+  - PMS 제품소개 regression 가상 케이스: tier 1b 한국어 0 → tier 1 롤백 (안전)
+  - 스캔 PDF: 페이지당 < 100자 AND 한국어 < 50자 → retry 자동 발동
+- 검증 빌드: 242 PASS, wikey-core tsc + wikey-obsidian esbuild 0 errors.
+- 산출물: docs/samples/ROHM_Wi-SUN*.md 3종 실증 비교 기반.
+
 ## [2026-04-21] feat | §4.1.1 Docling 메인화 + unhwp + MarkItDown 강등 (전처리 파이프라인 전면 재편)
 
 - 결정: IBM Docling(TableFormer + layout model + ocrmac/RapidOCR/Tesseract)을 tier 1 메인 컨버터로 승격. HWP/HWPX는 unhwp 전용, MarkItDown은 tier 3 fallback 강등. 이미지(base64 data URI + 외부 URL)는 LLM 투입 직전 `[image] / [image: alt]` placeholder로 치환.

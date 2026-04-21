@@ -829,28 +829,14 @@ Click [[page name]] in answers to navigate to the wiki page.
     loadModels(providerSelect.value)
     providerSelect.addEventListener('change', () => loadModels(providerSelect.value))
 
-    // ── Converter override + Force re-convert (Phase 4.1.1.6 + §4.1.1.8) ──
-    const converterBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
-    converterBar.createEl('span', { text: 'Converter', cls: 'wikey-audit-stat' })
-    const converterSelect = converterBar.createEl('select', { cls: 'wikey-select' })
-    const converterOpts: Array<{ value: string; text: string; title?: string }> = [
-      { value: 'auto', text: 'Auto (tier chain)' },
-      { value: 'docling', text: 'Docling (tier 1)' },
-      { value: 'docling-ocr', text: 'Docling --force-ocr (scanned PDF)', title: '벡터 PDF에 쓰면 한국어 추출 실패할 수 있음. 스캔 PDF에만 사용.' },
-      { value: 'markitdown', text: 'MarkItDown (fallback)' },
-      { value: 'markitdown-ocr', text: 'MarkItDown-OCR (vision)' },
-      { value: 'vision-ocr', text: 'Page-render Vision (last resort)' },
-    ]
-    for (const opt of converterOpts) {
-      const el = converterSelect.createEl('option', { text: opt.text, attr: { value: opt.value } })
-      if (opt.title) el.title = opt.title
-    }
-    converterSelect.value = 'auto'
-
-    const forceWrap = converterBar.createEl('label', { cls: 'wikey-audit-stat' })
+    // ── Force re-convert (§4.1.1.8, 캐시 bypass 용 디버그 토글) ──
+    // 주의: Converter 수동 선택은 의도적으로 제거. force-ocr 트리거는 프로그램 로직이 자동 판정
+    // (한국어 공백 소실 > 30% OR 스캔 PDF 감지). 사용자 override 부담을 없애는 방향.
+    const toolsBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
+    const forceWrap = toolsBar.createEl('label', { cls: 'wikey-audit-stat' })
     const forceCb = forceWrap.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
-    forceWrap.createEl('span', { text: 'Force re-convert' })
-    forceWrap.title = '캐시를 무시하고 강제로 재변환 (비용 주의)'
+    forceWrap.createEl('span', { text: 'Force re-convert (bypass cache)' })
+    forceWrap.title = '캐시를 무시하고 원본부터 재변환. 변환 로직 디버그·재테스트 용.'
 
     let cancelRequested = false
 
@@ -1175,7 +1161,6 @@ Click [[page name]] in answers to navigate to the wiki page.
           }
         }, {
           autoMoveFromInbox: true,
-          converterOverride: converterSelect.value as any,
           forceReconvert: (forceCb as HTMLInputElement).checked,
         })
         if (rowSpinner) {

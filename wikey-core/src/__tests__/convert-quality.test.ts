@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { scoreConvertOutput, hasMissingKoreanWhitespace } from '../convert-quality.js'
+import {
+  scoreConvertOutput,
+  hasMissingKoreanWhitespace,
+  hasKoreanRegression,
+  countKoreanChars,
+  koreanLongTokenRatio,
+} from '../convert-quality.js'
 
 describe('scoreConvertOutput — accept', () => {
   it('정상 markdown → accept, score 1.0', () => {
@@ -132,5 +138,67 @@ describe('scoreConvertOutput — retry on Korean whitespace loss', () => {
     const r = scoreConvertOutput(md, { retryOnKoreanWhitespace: false })
     expect(r.flags).toContain('korean-whitespace-loss')
     expect(r.decision).toBe('reject')
+  })
+})
+
+describe('countKoreanChars', () => {
+  it('한글 음절만 집계', () => {
+    expect(countKoreanChars('hello 안녕 world')).toBe(2)
+    expect(countKoreanChars('English only')).toBe(0)
+    expect(countKoreanChars('가나다라마')).toBe(5)
+  })
+
+  it('이미지 태그 및 placeholder 제외', () => {
+    const md = '안녕 ![image](data:image/png;base64,xxx) 반갑 [image] 한국어'
+    // 안녕(2) + 반갑(2) + 한국어(3) = 7
+    expect(countKoreanChars(md)).toBe(7)
+  })
+})
+
+describe('koreanLongTokenRatio', () => {
+  it('ROHM Wi-SUN 스타일 공백 소실 재현', () => {
+    // 실측: textlayer 60.20%, forceocr 0.27%
+    const textlayer = [
+      '이것은음수kerning으로공백이소실된한국어텍스트입니다긴토큰',
+      '네이버블로그프린트PDF또는ROHMWiSUN매뉴얼에서자주나오는패턴',
+      '공백이없어서단어경계를찾을수없어긴하나의토큰으로인식됨',
+      '추가로한글글자수100자넘기기위한보충문장입니다여기에추가',
+    ].join(' ')
+    const ratio = koreanLongTokenRatio(textlayer)
+    expect(ratio).toBeGreaterThan(0.30)
+  })
+
+  it('한글 100자 미만 → 0 반환', () => {
+    expect(koreanLongTokenRatio('짧은 한글')).toBe(0)
+  })
+})
+
+describe('hasKoreanRegression', () => {
+  it('PMS 케이스: 15,549자 → 0자 = regression 감지', () => {
+    const baseline = '한국어 '.repeat(200) // 약 400자
+    const regressed = 'English only text after OCR failure'
+    expect(hasKoreanRegression(baseline, regressed)).toBe(true)
+  })
+
+  it('ROHM 케이스: 2,021자 → 2,083자 = regression 아님', () => {
+    const baseline = '한 국 어 '.repeat(500) // 공백 있는 정상 한글
+    const improved = '한 국 어 글 자 수 증 가 '.repeat(500)
+    expect(hasKoreanRegression(baseline, improved)).toBe(false)
+  })
+
+  it('baseline 한국어 < 100자 → regression 판단 무관 (false)', () => {
+    expect(hasKoreanRegression('short 한글', 'no korean at all')).toBe(false)
+  })
+
+  it('정확히 50% → regression 아님 (경계 미만만 감지)', () => {
+    const baseline = '한'.repeat(200)
+    const regressed = '한'.repeat(100) // 정확히 50% = base * 0.5
+    expect(hasKoreanRegression(baseline, regressed)).toBe(false)
+  })
+
+  it('50% 미만 → regression 감지', () => {
+    const baseline = '한'.repeat(200)
+    const regressed = '한'.repeat(99)
+    expect(hasKoreanRegression(baseline, regressed)).toBe(true)
   })
 })

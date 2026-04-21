@@ -59,7 +59,7 @@ export {
   PlanRejectedError,
   assertNotWikiPath,
 } from './ingest-pipeline.js'
-export type { IngestOptions, ConverterOverride } from './ingest-pipeline.js'
+export type { IngestOptions } from './ingest-pipeline.js'
 export {
   classifyFile,
   classifyFileAsync,

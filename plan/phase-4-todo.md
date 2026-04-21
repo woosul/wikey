@@ -98,7 +98,12 @@
 
 - [x] `wikey-core/src/convert-quality.ts` — 품질 스코어링(broken table / empty sections / min body chars / korean whitespace loss). 10건 단위 테스트.
 - [x] tier 1 docling 출력이 품질 미달 + 한국어 공백 소실 감지 → tier 1b (`docling --force-ocr`) 재시도. 여전히 미달이면 tier 2 폴스루.
-- [x] 사용자 오버라이드: Audit 패널 bottom bar에 Converter 드롭다운 (auto/docling/docling-ocr/markitdown/markitdown-ocr/vision-ocr) + Force re-convert 체크박스 추가. `IngestOptions.converterOverride` / `forceReconvert` 필드 + ingest-pipeline의 tier 가드 (`runTier()` helper). docling-ocr는 title hint로 "벡터 PDF에는 비권장" 경고 표시.
+- [x] 사용자 오버라이드 **제거** (2026-04-21 재결정) — 사용자 피드백: "UI override 바람직하지 않음, 프로그램 로직으로 자동 판정". Audit 패널의 Converter 드롭다운 제거, Force re-convert 체크박스만 유지 (캐시 bypass 디버그 용). `IngestOptions.converterOverride` / `ConverterOverride` 타입 삭제. `runTier()` 가드도 전면 제거.
+- [x] **자동 force-ocr 감지 2개 조건** 추가 (`convert-quality.ts` + `extractPdfText` tier 1 블록):
+  - **(a) 웹페이지 → PDF 프린트 패턴** — `koreanLongTokenRatio(md) > 30%` (ROHM Wi-SUN 실측 60.20% 감지)
+  - **(b) 스캔 PDF 패턴** — `isLikelyScanPdf(md, pageCount)`: 페이지당 본문 < 100자 AND 한국어 < 50자
+  - **(c) regression guard** — force-ocr 결과가 tier 1 대비 한국어 50% 미만이면 tier 1 롤백 (PMS ocrmac 벡터 PDF 독성 방어)
+  - 정상 텍스트 PDF (PMS 제품소개 4.93%) 는 retry 스킵 → 불필요한 비용 없음
 
 #### 4.1.1.7 성능 비교 테스트 (정량 baseline)
 

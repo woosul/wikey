@@ -88,9 +88,74 @@ export function scoreConvertOutput(md: string, opts?: QualityOptions): QualityRe
 }
 
 /**
+ * 본문 문자 밀도 — 페이지당 평균 본문 문자 수.
+ * 이미지 태그·placeholder·markdown 메타문자 제거 후 실제 텍스트 길이를 페이지 수로 나눔.
+ * 스캔 PDF (이미지 only, text-layer 거의 없음) 감지에 사용.
+ *
+ * 실증 기준 (PMS 31p → 83KB stripped → ~2.7KB/page):
+ *   - 정상 텍스트 PDF: > 500 chars/page (본문 밀집)
+ *   - 스캔 PDF: < 50 chars/page (text-layer 흔적만, 실제 정보는 이미지)
+ *   - 임계: 100 chars/page → 미만이면 force-ocr 필요
+ */
+export function bodyCharsPerPage(md: string, pageCount: number): number {
+  if (pageCount <= 0) return Number.POSITIVE_INFINITY // 페이지 수 모르면 감지 불가
+  const clean = md
+    .replace(/!\[.*?\]\([^)]+\)/g, '')
+    .replace(/\[image(?::[^\]]*)?\]/g, '')
+    .replace(/[#>*`|\-]/g, '') // markdown 메타문자 제거
+    .replace(/\s+/g, ' ')
+    .trim()
+  return clean.length / pageCount
+}
+
+/**
+ * 스캔 PDF 감지 — text-layer 가 거의 없어 force-ocr 이 필요한 경우.
+ * 임계: 페이지당 본문 100자 미만 + 한국어 50자 미만.
+ *
+ * 이중 조건인 이유: 영문 전용 단일 페이지 포스터 등 일부는 100 chars/page 미만이어도
+ * 정상일 수 있어 한국어 fallback 까지 요구.
+ */
+export function isLikelyScanPdf(md: string, pageCount: number): boolean {
+  if (pageCount <= 0) return false
+  const perPage = bodyCharsPerPage(md, pageCount)
+  const koreanTotal = countKoreanChars(md)
+  return perPage < 100 && koreanTotal < 50
+}
+
+/**
+ * 한글 음절 글자 수 — 이미지 placeholder 제외한 본문 기준.
+ * force-ocr 전후 regression 비교·공백 소실 임계 체크 공용.
+ */
+export function countKoreanChars(md: string): number {
+  const clean = md
+    .replace(/!\[.*?\]\([^)]+\)/g, '')
+    .replace(/\[image(?::[^\]]*)?\]/g, '')
+  return [...clean].filter((c) => c >= '가' && c <= '힯').length
+}
+
+/**
+ * force-ocr 재시도 결과가 한국어를 크게 잃었는지 감지.
+ * ocrmac 이 벡터 PDF 를 래스터화하면서 한글 글리프 인식에 실패하는 케이스
+ * (실측: PMS PDF 에서 textlayer 15,549자 → force-ocr 0자) 를 잡아 tier 1 으로 롤백한다.
+ *
+ * 기준: baseline(>=100자) 대비 regressed 가 50% 미만 → regression 판정.
+ */
+export function hasKoreanRegression(baselineMd: string, regressedMd: string): boolean {
+  const base = countKoreanChars(baselineMd)
+  const reg = countKoreanChars(regressedMd)
+  if (base < 100) return false // baseline 에 한국어 없으면 무관
+  return reg < base * 0.5
+}
+
+/**
  * 한국어 공백 소실 감지.
- * 네이버 블로그 프린트 PDF 등이 음수 kerning 으로만 간격을 표현 → text-layer 에 공백 없음.
- * 15자 이상 한글 토큰의 비율이 30% 초과면 공백 소실로 판단.
+ * 네이버 블로그 프린트 PDF·ROHM Wi-SUN 매뉴얼 등이 음수 kerning 으로만 간격을 표현
+ * → text-layer 에 공백 없음. 15자 이상 한글 토큰의 비율이 30% 초과면 공백 소실로 판단.
+ *
+ * 실측 (2026-04-21):
+ *   - ROHM Wi-SUN textlayer:  60.20% (감지 O, force-ocr 재시도가 정답)
+ *   - ROHM Wi-SUN force-ocr:  0.27% (정상)
+ *   - PMS 제품소개 textlayer: 4.93% (감지 X, force-ocr 스킵이 정답)
  */
 export function hasMissingKoreanWhitespace(md: string): boolean {
   // 이미지 태그 제거 (placeholder 도)
@@ -108,4 +173,16 @@ export function hasMissingKoreanWhitespace(md: string): boolean {
 
   const longTokens = tokens.filter((t) => t.length >= 15).length
   return longTokens / tokens.length > 0.30
+}
+
+/** 한국어 토큰 중 15자 이상 비율 (0.0 ~ 1.0). 임계 판정 + 로그 용. */
+export function koreanLongTokenRatio(md: string): number {
+  const clean = md
+    .replace(/!\[.*?\]\([^)]+\)/g, '')
+    .replace(/\[image(?::[^\]]*)?\]/g, '')
+  const korean = [...clean].filter((c) => c >= '가' && c <= '힯').length
+  if (korean < 100) return 0
+  const tokens = clean.split(/\s+/).filter((t) => [...t].some((c) => c >= '가' && c <= '힯'))
+  if (tokens.length === 0) return 0
+  return tokens.filter((t) => t.length >= 15).length / tokens.length
 }
