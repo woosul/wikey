@@ -1,7 +1,96 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-21 (Phase 4 §4.1 문서 전처리 파이프라인 완료)
+> 최신 갱신: 2026-04-22 (Phase 4 §4.5.1.5 v2 RAG chunk 폐지 + Phase A/B/C 이행 구현 완료, 측정 분리)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-22 (Phase 4 §4.5.1.5 v2 LLM Wiki Phase A/B/C 이행) 구현 완료 · 측정 분리
+
+### ⭐ 다음 세션 시작점
+
+**현재 상태**: §4.5.1.5 v2 구현 완료. RAG chunk 패턴 폐지 + LLM Wiki schema §19·§21 에 부합하는 **결정적 Phase A (섹션 파서, LLM 의존 0) + token-budget 2-route (FULL/SEGMENTED)** 로 ingest 파이프라인 재편. **251 → 290 tests PASS** (+39 신규 TDD). tsc 0 / esbuild 0. 설계 문서: `plan/phase-4-change-phase-abc.md` (v2, Codex 적대적 검증 반영).
+
+**핵심 산출물**:
+- `wikey-core/src/section-index.ts` — `parseSections` (결정적) + `buildSectionIndex` + `computeHeuristicPriority` (skip/core/support 결정적 휴리스틱) + `formatPeerContext` + `formatSourceTOC`
+- `wikey-core/src/provider-defaults.ts` — `PROVIDER_CONTEXT_BUDGETS` (4 provider: Gemini 1M / Claude 200K / OpenAI 1M / Ollama 32K) + `estimateTokens` (한국어 1.5, mixed 2.5, en 4.0 divisor + 30% margin) + `selectRoute`
+- `wikey-core/src/ingest-pipeline.ts` — `splitIntoChunks` / `MAX_SOURCE_CHARS` 삭제. Route FULL (summary + 1-call extractMentions + canon) / SEGMENTED (summary + 섹션별 extractMentions + canon). `Mention.source_chunk_id` → `source_section_idx`. `appendSectionTOCToSource` (Phase C 근거).
+- `scripts/ablation-ingest.sh` — ablation 자동화 (실험 1 작동, 실험 2-4 는 후속 infra)
+- 3 신규 테스트 파일 (section-index 22 + provider-budgets 14 + source-toc-append 3)
+
+### 🔴 최우선 다음 작업: §4.5.1.5 측정 세션 (Obsidian CDP 환경 필요)
+
+**선행**: Obsidian 을 다음 옵션으로 기동.
+```
+osascript -e 'quit app "Obsidian"' && sleep 3
+/Applications/Obsidian.app/Contents/MacOS/Obsidian --remote-debugging-port=9222 '--remote-allow-origins=*' &
+```
+
+**1. Ablation 실험 1 (Frozen markdown) — N=10**
+```bash
+./scripts/ablation-ingest.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10
+```
+Gate 판정:
+- Total CV ≤ 16% (baseline 32.5% 의 50%) → 섹션 경계 **> 50% 기여** → 30-run PMS main 진행
+- 16% < CV ≤ 26% → **20-50% 기여** → 30-run + 개선폭 재산정
+- CV > 26% → **< 20% 기여** → smoke 만 + `§4.5.1.6` (LLM 수준 variance) 신규
+
+**2. Route smoke (각 N=10)**
+```bash
+# Route FULL (Gemini, PMS → 한국어 ~55K tok, usable 748K → FULL)
+./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10
+
+# Route SEGMENTED (Ollama qwen3:8b, PMS → 55K tok > 20.4K usable → SEGMENTED)
+WIKEY_BASIC_PROVIDER=ollama WIKEY_BASIC_MODEL=qwen3:8b \
+  ./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10
+```
+확증 대상: Route 판정 결정성 10/10 동일, 섹션 priority 결정성 10/10 동일.
+
+**3. 30-run PMS main** (gate 통과 시)
+```bash
+./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 30
+```
+비교: §4.5.1.4 baseline Total CV 32.5% → v2 CV (mid-teens~low-20s 예상). Core entities 15% → ≥40% aspiration, Core concepts 23% → ≥50% aspiration.
+
+**4. 결과 수합 + `activity/phase-4-result.md §4.5.1.5` 에 측정 섹션 추가**. selective rollback 판정 (parseSections + TOC 유지는 기본, LLM 추가 단계가 CV 악화시 killable).
+
+**주의**: measure-determinism.sh 는 `cleanupForRerun` 이 신규 파일만 삭제 → pre-existing modification (예: 기존 page 의 source 목록 append) 은 diff 범위 밖 → 측정 후 `git checkout -- wiki/{index.md,log.md,<기존페이지>}` 수동 revert 필요.
+
+### 🟡 차순위 작업 (§4.5.1.5 측정 완료 후)
+
+1. **§4.5.1.6 신규 (조건부)** — ablation gate 결과 섹션 경계 기여 <20% 면 LLM 수준 variance 분석 과제 분리. 실험 2-4 (Extraction-only / Canon-only / seed+temp=0) 의 별도 Node infra 설계.
+2. **§4.2 URI 기반 안정 참조** — `.ingest-map.json` → `.wikey/source-registry.json` (hash 키). wiki/sources 프론트매터 `source_id` 필드 추가. `§4.1.1.9 vault rename/delete listener` 합동 구현.
+3. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
+
+### 🟢 저우선 / 보류 이관
+
+- **`scripts/cache-stats.sh`** — `~/.cache/wikey/convert/index.json` 직접 열람 가능하므로 우선순위 낮음.
+- **§4.1.1.5 `ps aux` 실측 검증** — 별도 security audit 세션.
+- **Ollama Route SEGMENTED 병렬화 (`Promise.all`)** — 별도 세션.
+- **Canonicalizer prompt 개선** — §4.5.1.7 후보.
+
+### 기술 부채 · 메모
+
+- **§4.5.1.5 v2 구현의 실측 검증 필요** — 빌드 + 테스트는 통과했지만 실제 Obsidian에서 end-to-end ingest 1회 이상 수동 검증 권장 (ablation 전에 sanity check). 특히 Route SEGMENTED 경로는 Ollama 환경 필요.
+- **Route FULL 의 `extractMentions(full-doc)` 프롬프트** — 현재 chunk 용으로 설계된 프롬프트 ("이 문서 청크에서 ... 추출") 그대로 사용. 전체 문서 투입 시에도 작동하지만 "청크" 워딩이 LLM 에 영향줄 수 있음 → v2.1 에서 프롬프트 분기 검토.
+- **`appendSectionTOCToSource` idempotency** — 재인제스트 시 기존 `## 섹션 인덱스` 블록을 regex 로 제거 후 재부착. source 페이지에 사용자가 수동으로 추가한 section 이 있으면 덮일 수 있음 (현재 상정 안 함).
+
+### 참고 명령
+
+```bash
+# 현재 코드베이스 상태
+npm run build:core      # tsc 0 errors
+npm run build:obsidian  # esbuild 0 errors  
+npm test                # 290/290 PASS
+
+# 이번 세션 신규 파일
+ls wikey-core/src/section-index.ts wikey-core/src/__tests__/{section-index,provider-budgets,source-toc-append}.test.ts
+cat plan/phase-4-change-phase-abc.md     # v2 설계 (24KB)
+cat scripts/ablation-ingest.sh           # 측정 스크립트
+
+# 측정 세션
+ls scripts/measure-determinism.sh scripts/ablation-ingest.sh
+```
 
 ---
 

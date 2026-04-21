@@ -28,6 +28,11 @@ import {
   isLikelyScanPdf,
   bodyCharsPerPage,
 } from './convert-quality.js'
+import { selectRoute } from './provider-defaults.js'
+import {
+  buildSectionIndex, computeHeuristicPriority, formatPeerContext, formatSourceTOC,
+  type Section, type SectionIndex,
+} from './section-index.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -145,11 +150,14 @@ export async function ingest(
   const llm = new LLMClient(httpClient, config)
   const isLocal = provider === 'ollama'
 
-  // Route: small doc → single call, large doc → chunked pipeline
-  const isLargeDoc = sourceContent.length > MAX_SOURCE_CHARS
+  // ── §4.5.1.5 v2: Route 판정 (token-budget 기반) ──
+  // FULL: 문서 전체를 1콜 extractMentions 로. schema §19 "LLM 이 독자" 모델.
+  // SEGMENTED: 섹션별로 peer context 와 함께 extractMentions (Ollama 소형 context + 초대형 문서).
+  const route = selectRoute(sourceContent, provider, model)
+  const sectionIndex = buildSectionIndex(sourceContent)
   let parsed: IngestRawResult
 
-  log(`source: ${sourceContent.length} chars, large=${sourceContent.length > MAX_SOURCE_CHARS}, provider=${provider}, model=${model}`)
+  log(`source: ${sourceContent.length} chars, route=${route}, sections=${sectionIndex.sections.length}, provider=${provider}, model=${model}`)
 
   // ── v6 3-stage pipeline ──
   // Stage 1: Summary LLM (source_page) + chunk LLM (mentions only, no classification)
@@ -171,17 +179,19 @@ export async function ingest(
 
   const today = formatLocalDate(new Date())
 
-  if (!isLargeDoc) {
-    // ── Small document: 1 summary call + 1 mentions call + 1 canonicalize call ──
+  // ── §4.5.1.5 v2 라우터 — FULL / SEGMENTED ──
+  // FULL: summary + 1 extractMentions(full-doc) + canonicalize. LLM 이 전체 문서를 읽는 독자 모델.
+  // SEGMENTED: summary + N extractMentions(core 섹션 + peer context) + canonicalize. Ollama / 초대형.
+  if (route === 'FULL') {
     const content = isLocal ? truncateSource(sourceContent) : sourceContent
-    onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: 3, message: `Summary (${model})...` })
+    onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: 3, message: `Summary (${model}) [FULL]` })
     const summaryParsed = await callLLMForSummary(llm, content, sourceFilename, indexContent, provider, model, promptTemplate)
 
-    onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model})...` })
+    onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model}) [FULL]` })
     const mentions = await extractMentions(llm, content, sourceFilename, provider, model)
-    log(`small-doc — summary done, mentions=${mentions.length}`)
+    log(`route=FULL — mentions=${mentions.length}`)
 
-    onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})...` })
+    onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename, today, guideHint: opts?.guideHint, provider, model,
@@ -197,43 +207,48 @@ export async function ingest(
       log_entry: canon.logEntry ?? summaryParsed.log_entry,
     }
   } else {
-    // ── Large document: Summary + chunked mention extraction + 1 canonicalize ──
-    const chunks = splitIntoChunks(sourceContent)
-    const totalSteps = chunks.length + 2  // summary + chunks + canonicalize
+    // ── SEGMENTED — 섹션별 심독 (core priority 만) + peer context ──
+    const coreSections = sectionIndex.sections.filter(
+      (s) => computeHeuristicPriority(s) === 'core' || computeHeuristicPriority(s) === 'support',
+    )
+    // support 섹션은 현 구현에서 core 와 동일 취급. skip 섹션만 완전 제외.
+    // (v2 향후 개선: support 를 snippet 만 spill)
+    const targetSections = coreSections.length > 0
+      ? coreSections
+      : sectionIndex.sections   // core/support 가 하나도 없으면(전부 skip) — 안전망으로 전부 처리
+    const totalSteps = targetSections.length + 2  // summary + N sections + canonicalize
 
-    // Step A: Summary → source_page (truncated for local, full for cloud)
-    onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: totalSteps, message: `Summary (${model}) [1/${totalSteps}]...` })
+    onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: totalSteps, message: `Summary (${model}) [SEGMENTED 1/${totalSteps}]` })
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
     const summaryParsed = await callLLMForSummary(llm, summaryContent, sourceFilename, indexContent, provider, model, promptTemplate)
     log(`summary done — index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
 
-    // Step B: Each chunk → mentions only (no classification)
     const allMentions: Mention[] = []
-    let chunkOk = 0, chunkFail = 0
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i]
+    let sectionOk = 0, sectionFail = 0
+    for (let i = 0; i < targetSections.length; i++) {
+      const section = targetSections[i]
       onProgress?.({
         step: 2, total: 4,
         subStep: i + 1, subTotal: totalSteps,
-        message: `Chunk ${i + 1}/${chunks.length} (${model})...`,
+        message: `Section ${i + 1}/${targetSections.length} §${section.idx} "${section.title}" [SEGMENTED]`,
       })
-      const chunkContent = isLocal ? truncateSource(chunk) : chunk
+      const peer = formatPeerContext(sectionIndex, section.idx, 300)
+      const content = buildSectionWithPeer(peer, section, isLocal)
       try {
-        const chunkMentions = await extractMentions(llm, chunkContent, sourceFilename, provider, model, i)
-        allMentions.push(...chunkMentions)
-        chunkOk++
+        const mentions = await extractMentions(llm, content, sourceFilename, provider, model, section.idx)
+        allMentions.push(...mentions)
+        sectionOk++
       } catch (err) {
-        chunkFail++
-        console.warn(`[Wikey ingest] chunk ${i + 1}/${chunks.length} failed:`, (err as Error).message)
+        sectionFail++
+        console.warn(`[Wikey ingest] section §${section.idx} "${section.title}" failed:`, (err as Error).message)
       }
     }
-    log(`mentions extracted — ok=${chunkOk}, failed=${chunkFail}, total=${allMentions.length}`)
+    log(`route=SEGMENTED — sections ok=${sectionOk}, failed=${sectionFail}, mentions=${allMentions.length}`)
 
-    // Step C: Single canonicalizer call — schema validation + acronym/existing dedup
     onProgress?.({
       step: 2, total: 4,
-      subStep: chunks.length + 1, subTotal: totalSteps,
-      message: `Canonicalizing (${model}) [${chunks.length + 1}/${totalSteps}]...`,
+      subStep: targetSections.length + 1, subTotal: totalSteps,
+      message: `Canonicalizing (${model}) [SEGMENTED ${targetSections.length + 1}/${totalSteps}]`,
     })
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
@@ -279,7 +294,8 @@ export async function ingest(
 
   const sourcePage: WikiPage = {
     filename: parsed.source_page.filename,
-    content: parsed.source_page.content,
+    // §4.5.1.5.6 Phase C: 섹션 TOC append (결정적 메타, LLM 호출 없음)
+    content: appendSectionTOCToSource(parsed.source_page.content, sectionIndex),
     category: 'sources',
   }
   const exists = await wikiFS.exists(`wiki/sources/${sourcePage.filename}`)
@@ -434,7 +450,7 @@ ${chunkContent}`
       name: m.name!.trim(),
       type_hint: (m.type_hint as Mention['type_hint']) ?? 'unknown',
       evidence: (m.evidence ?? '').trim(),
-      source_chunk_id: chunkIdx,
+      source_section_idx: chunkIdx,
     }))
 }
 
@@ -570,40 +586,34 @@ export function dedupAcronymsCrossPool<T extends { filename: string; content: st
 //   for deterministic auto-fill, replacing this function entirely.
 // ── v6 Phase A: extractFirstSentence moved to wiki-ops.ts.
 
-// ── Chunk splitter (Graphify-style: split by markdown headers) ──
+// ── §4.5.1.5 v2: splitIntoChunks 폐지 ──
+// RAG char-based chunking 은 LLM Wiki schema §19·§21 배격 대상. section-index.ts 의
+// 결정적 섹션 트리 + selectRoute (FULL/SEGMENTED) 로 교체됨.
 
-function splitIntoChunks(text: string, maxChunkSize = 8000): string[] {
-  // Split by ## headers
-  const sections = text.split(/(?=^## )/m)
-  const chunks: string[] = []
-  let current = ''
+/**
+ * Route SEGMENTED 의 각 섹션 호출에 peer context 를 주입한 chunk content 생성.
+ * Ollama 등 소형 context provider 에서는 섹션 body 자체가 budget 을 초과할 수 있어
+ * truncateSource 를 섹션 단위로 적용.
+ */
+function buildSectionWithPeer(peer: string, section: Section, isLocal: boolean): string {
+  const body = isLocal ? truncateSource(section.body) : section.body
+  return `${peer}\n\n---\n\n## §${section.idx} ${section.title}\n\n${body}`
+}
 
-  for (const section of sections) {
-    if (current.length + section.length > maxChunkSize && current.length > 0) {
-      chunks.push(current.trim())
-      current = ''
-    }
-    current += section
-  }
-  if (current.trim()) chunks.push(current.trim())
-
-  // If no headers found or single chunk too large, split by paragraphs
-  if (chunks.length <= 1 && text.length > maxChunkSize) {
-    const paragraphs = text.split(/\n\n+/)
-    const result: string[] = []
-    let buf = ''
-    for (const p of paragraphs) {
-      if (buf.length + p.length > maxChunkSize && buf.length > 0) {
-        result.push(buf.trim())
-        buf = ''
-      }
-      buf += p + '\n\n'
-    }
-    if (buf.trim()) result.push(buf.trim())
-    return result
-  }
-
-  return chunks
+/**
+ * §4.5.1.5.6 Phase C 근거 데이터 — source 페이지 body 끝에 섹션 TOC append.
+ * 쿼리 시 LLM 이 "이 섹션은 미심독됐다" 판단 가능한 결정적 메타 제공.
+ * Idempotent: 이미 "## 섹션 인덱스" 가 있으면 중복 없이 교체.
+ */
+export function appendSectionTOCToSource(
+  sourcePageContent: string,
+  sectionIndex: SectionIndex,
+): string {
+  const toc = formatSourceTOC(sectionIndex)
+  const base = sourcePageContent.trimEnd()
+  // 기존 TOC 가 있으면 제거 후 재부착 (idempotent)
+  const withoutExisting = base.replace(/\n*## 섹션 인덱스[\s\S]*$/m, '').trimEnd()
+  return `${withoutExisting}\n\n${toc}\n`
 }
 
 interface IngestRawResult {
@@ -842,7 +852,9 @@ tags: [태그1, 태그2]
 }
 \`\`\``
 
-const MAX_SOURCE_CHARS = 12_000
+// §4.5.1.5 v2: Ollama 전용 hard-cap. 섹션 단위로 적용되므로 Route SEGMENTED 의 단일 섹션이
+// budget 을 초과하는 예외 케이스에만 작동. FULL 경로 large-doc 분기는 삭제됨 — selectRoute 가 처리.
+const TRUNCATE_LIMIT = 12_000
 
 interface OcrEndpoint {
   readonly baseUrl: string
@@ -1407,10 +1419,10 @@ function errorMessage(err: unknown): string {
 }
 
 function truncateSource(text: string): string {
-  if (text.length <= MAX_SOURCE_CHARS) return text
+  if (text.length <= TRUNCATE_LIMIT) return text
   // Keep beginning and end for context
-  const headSize = Math.floor(MAX_SOURCE_CHARS * 0.7)
-  const tailSize = Math.floor(MAX_SOURCE_CHARS * 0.25)
+  const headSize = Math.floor(TRUNCATE_LIMIT * 0.7)
+  const tailSize = Math.floor(TRUNCATE_LIMIT * 0.25)
   const head = text.slice(0, headSize)
   const tail = text.slice(-tailSize)
   const skipped = text.length - headSize - tailSize

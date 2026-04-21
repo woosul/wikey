@@ -109,14 +109,17 @@ export interface SchemaOverride {
 }
 
 /**
- * A raw mention extracted from a chunk by Stage 1 (no classification yet).
+ * A raw mention extracted by Phase B (no classification yet).
  * Stage 2 canonicalizer turns these into WikiPage objects with type assigned.
+ *
+ * `source_section_idx` (v2 §4.5.1.5): 섹션 단위로 재편되면서 chunk id 대신 섹션 idx 참조.
+ * Route FULL 에서는 미설정, Route SEGMENTED 에서만 섹션 번호 주입 (debug/lint 용).
  */
 export interface Mention {
   readonly name: string
   readonly type_hint?: EntityType | ConceptType | 'unknown'
   readonly evidence: string
-  readonly source_chunk_id?: number
+  readonly source_section_idx?: number
 }
 
 /**

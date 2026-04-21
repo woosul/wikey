@@ -312,15 +312,76 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - [x] 단위 테스트 11건 추가 — 197 tests PASS
 - [~] 5-run 재측정 — **기능 확증 (pin/alias 5/5 run에서 정상 동작), CV 개선 미확증 (Total CV 5.7→32%, 원인은 post-processing 밖의 LLM extraction volume variance)**
 
-#### 4.5.1.5 LLM extraction variance 원인 분석 (신규, §4.5.1.4에서 분할)
+#### 4.5.1.5 LLM Wiki Phase A/B/C (v2) — 결정적 Phase A + 2-route + ablation 선행 + TDD
 
-> **선행 의존**: §4.1.1 Docling 메인화 완료 후 본 과제 재개. 현재 variance 악화의 원인 후보 중 하나는 **MarkItDown 변환 결과가 미구조화**라는 것 — 목차/섹션/표 경계가 불명확한 markdown이 chunk 분할을 불안정하게 만들어 LLM에 전달되는 단위가 run마다 달라질 수 있음. Docling(TableFormer + layout model)으로 **구조적 markdown**(제목 계층·표 셀·리스트)을 확보한 뒤 variance를 재측정하면 post-processing 밖의 문제 중 "전처리 품질" 성분을 분리 가능.
+> **설계 문서**: `plan/phase-4-change-phase-abc.md` (v2, 2026-04-21). v1 Codex 적대적 검증 NEEDS-REVISION → v2: Phase A 완전 결정적, Route 2분기, token-budget, 결정적 fallback, ablation 선행, N=30, 모든 verification TDD.
+>
+> **왜 재정의되었는가**: 원안(§4.5.1.5 v1)은 "chunk 분할 결정성 확인 + 10-run baseline + temperature/seed 재검증 + slug 변이" 였음. 그러나 §4.1 Docling 메인화 완료 직후 철학 재검토에서 **RAG chunk 패턴 자체가 schema §19·§21 배격 대상** 임이 드러나, 과제 범위를 "variance 측정" → "Phase A/B/C 이행 + 사후 variance 재측정" 으로 확장. Codex 교차 검증을 통해 v1(LLM Phase A 분류기) 의 stochastic 증설 위험 지적 수용 → v2(결정적 Phase A) 로 재설계.
 
-- [ ] **선행**: §4.1.1 Docling 전환 완료 후 PMS PDF의 markdown 재생성 (MarkItDown vs Docling diff 확보)
-- [ ] Chunk 분할 결정성 — Docling 변환 결과로 `extractPdfText` + chunk 분할이 run간 동일 output 내는지 확인 (log stderr에 chunk 수·경계 토큰 출력 추가)
-- [ ] 10+ run baseline — 5-run 표본으로는 Gemini 2.5 Flash의 true CV 측정 불가, N ≥ 10 으로 재평가 (Docling 변환본 기준)
-- [ ] Temperature/seed 옵션 재검증 — v6.1에서 기각됐지만 v7 schema + canonicalizer + Docling 환경에서 다시 측정
-- [ ] 새 slug 변이 추가 — `allimtalk` (오타) → `alimtalk` 추가, `*-system` suffix 중 PMS 섹션 기술 스택(`point-of-production-system`, `executive-information-system` 등) anti-pattern 검토
+**§0 Ablation — 스크립트 완성, 실행은 Obsidian CDP 환경에서 사용자 측 별도 run**
+
+- [x] `scripts/ablation-ingest.sh` 작성 (syntax check OK)
+- [x] 실험 1 (Frozen markdown) 경로 — measure-determinism.sh 위임 (convert-cache 로 인해 frozen 자동)
+- [ ] 실험 2-4: 현재 ingest-pipeline 내부 export 부재 → 후속 v2.1 infra (별도 Node helper 작성 필요, §4.5.1.5.7 후보로 이관)
+- [ ] Obsidian CDP 9222 기동 후 `./scripts/ablation-ingest.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10` 실행 → gate 판정 (이 세션 범위 외, 사용자 환경)
+
+**§1 Phase A 결정적 파서 (TDD) — 완료**
+
+- [x] RED: parseSections 결정성 (3회 동일 출력)
+- [x] RED: heading 패턴 — 0개, `## only`, mixed level, 공백 없는 `##기술스택`, 코드블록 내부 `#` 제외
+- [x] RED: 빈 섹션 병합 (threshold 5, plan v1 의 50 은 과도 → 하향) + 반복 page header 감지
+- [x] RED: table-only / preamble / heading-0 문서 분기
+- [x] RED: computeHeuristicPriority (skip/core/support) 각 분기
+- [x] RED: globalRepeaters 결정성 / formatPeerContext token cap / formatSourceTOC
+- [x] GREEN: `wikey-core/src/section-index.ts` 구현 (LLM 의존 0)
+- [x] REFACTOR: merge-warning propagation 추가
+- 검증: `npm test` 273/273 PASS (+22 신규 테스트, 기존 회귀 0)
+
+**§2 Token-budget Route 판정 (TDD) — 완료**
+
+- [x] RED: `estimateTokens` 한국어/영어/mixed (divisor 1.5/2.5/4.0) + 30% margin
+- [x] RED: `selectRoute` Gemini/Claude/OpenAI/Ollama 각 provider + PMS 83KB → 기대 Route
+- [x] GREEN: `provider-defaults.ts PROVIDER_CONTEXT_BUDGETS` + `estimateTokens` + `selectRoute`
+- 검증: 273 → 287 PASS (+14 신규 테스트)
+
+**§3-4 Route 구현 (TDD) — 완료**
+
+- [x] Route FULL 경로: summary + extractMentions(full-doc) + canonicalize (기존 small-doc 경로 재활용)
+- [x] Route SEGMENTED 경로: summary + 섹션별 extractMentions + canonicalize
+- [x] peer context 주입 (DOC_OVERVIEW/GLOBAL_REPEATERS/CURRENT_SECTION/LOCAL_NEIGHBORS)
+- [x] priority=skip 섹션 자동 제외 (target = core ∪ support)
+- [x] buildSectionWithPeer helper — SEGMENTED 의 섹션 body + peer context 결합
+- [x] truncateSource → TRUNCATE_LIMIT 으로 rename + 섹션 단위 적용 (Ollama)
+- 검증: tsc 0 errors, 287 tests PASS 유지
+
+**§5 기존 chunk 제거 + rename (TDD)**
+
+- [x] grep 전수조사: `source_chunk_id` 외부 노출 0 확증 (code 2곳만: types.ts:119, ingest-pipeline.ts:437)
+- [x] rename: `Mention.source_chunk_id` → `source_section_idx` (canonicalizer 는 참조 없어 로직 무변경)
+- [x] 검증: 273 tests PASS 유지
+- [x] `splitIntoChunks` 삭제, large-doc block 제거, `MAX_SOURCE_CHARS` → `TRUNCATE_LIMIT` (Ollama 섹션 hard-cap 용)
+- [x] 기존 large-doc 통합 테스트 없음 (기존 테스트는 helper 함수만 다뤘음 — Route 테스트는 섹션/provider-budget 테스트로 분리됨)
+
+**§6 Phase C 근거 데이터 (TDD) — 완료**
+
+- [x] RED: `appendSectionTOCToSource` 3 tests → FAIL
+- [x] GREEN: ingest-pipeline.ts `appendSectionTOCToSource` 구현 + source 페이지 작성 경로에 연결
+- [x] sidebar UI progress: Route FULL/SEGMENTED + Section i/N 메시지가 자동 전달 (sidebar 는 progress.message 를 투명하게 노출, 별도 수정 불필요)
+- 검증: tsc 0 errors, esbuild 0 errors, 290 tests PASS (+3)
+
+**§7 측정 — 빌드/테스트 완료, 런타임 측정은 사용자 CDP 환경에서 별도**
+
+- [x] 빌드 게이트: `npm run build:core` (tsc 0) + `build:obsidian` (esbuild 0) + `npm test` (251 → **290 PASS**) fresh 실행 증거 확보
+- [ ] 10-run smoke × 2 route: Route FULL (Gemini PMS) + Route SEGMENTED (Ollama PMS) — Obsidian CDP + API 키 환경에서 사용자 실행
+- [ ] Route 판정 결정성 + 섹션 priority 결정성 100% 확증 — 측정 세션에서 확인
+- [ ] 30-run PMS main (Gemini, ablation gate 통과 시) — §4.5.1.4 baseline CV 32.5% 대비 비교, 측정 세션
+
+**§8 문서 동기화**
+
+- [ ] `activity/phase-4-result.md §4.5.1.5` 확장 (이번 세션 구현 완료 기록)
+- [ ] `wiki/log.md` 엔트리
+- [ ] `plan/session-wrap-followups.md` §4.5.1.5 구현 완료 선언 + 측정 세션을 다음 과제로 지정
+- [ ] 단일 commit + push
 
 ### 4.5.2 운영 안정성 — 삭제·초기화·포팅
 

@@ -2,8 +2,21 @@
 title: 활동 로그
 type: log
 created: 2026-04-10
-updated: 2026-04-21
+updated: 2026-04-22
 ---
+
+## [2026-04-22] feat | §4.5.1.5 v2 RAG chunk 폐지 + LLM Wiki Phase A/B/C 이행 (구현 완료, 측정 분리)
+
+- 배경: §4.5.1.4 에서 SLUG_ALIASES/FORCED_CATEGORIES 로도 Total CV 32.5% 해소 못 함. 원인이 post-processing 밖임을 확증. §4.1 Docling 완료 직후 철학 재검토에서 **RAG chunk 자체가 `wikey.schema.md §19·§21` 배격 대상** 임이 드러남 — §19 "책을 훑어 목차+색인 만들고 필요한 장만 읽기" (Phase A/B/C), §21 "검색을 DB에 위임하면 다시 RAG". 현 `splitIntoChunks(8000)` 는 schema 위반 + variance 의 구조적 원인.
+- v1 → v2 경위: 초안(LLM Phase A 분류기 + Route 3분기 + char 임계)은 Claude 자체검증 8건 + Codex 적대적검증 12건 NEEDS-REVISION. 핵심 지적 수용 — (1) LLM Phase A 는 "retriever 변형" → 완전 결정적 파서로 전환 (2) Route 3분기 → 2분기 (FULL/SEGMENTED) (3) char 임계 → token-budget (한국어 ×2-3 margin) (4) "모두 core" fallback → 결정적 휴리스틱 (5) ablation 선행 (6) N=10 → N=30 (PMS main).
+- 신규 파일: `wikey-core/src/section-index.ts` (결정적 Phase A 파서, LLM 의존 0) + 테스트 3건 (22+14+3). `plan/phase-4-change-phase-abc.md` (v2 설계 문서). `scripts/ablation-ingest.sh`.
+- 수정 파일: `provider-defaults.ts` (ContextBudget + estimateTokens + selectRoute), `ingest-pipeline.ts` (splitIntoChunks/MAX_SOURCE_CHARS 삭제, Route FULL/SEGMENTED 로직, appendSectionTOCToSource for Phase C), `types.ts` (`Mention.source_chunk_id` → `source_section_idx` rename).
+- Route 결정: `selectRoute(md, provider, model)` — Gemini 2.5 Flash + PMS 83KB 한국어 → FULL, Ollama qwen3:8b + 동일 → SEGMENTED. SEGMENTED 는 core ∪ support 섹션만 추출 (skip 은 제외), 각 호출에 peer context (DOC_OVERVIEW + GLOBAL_REPEATERS + CURRENT_SECTION + LOCAL_NEIGHBORS, ~300 tok cap) 주입.
+- Phase C 근거: 소스 페이지 body 에 섹션 TOC (priority/본문 chars/warnings) 결정적 append — 쿼리 시 LLM 이 미심독 섹션 판단 근거.
+- 엣지 커버: heading-0, mixed level (##+###), 코드블록 내부 #, `##기술스택` (공백 없음), 반복 page header (suspicious-heading), bodyChars<5 merge (v1 의 50 은 과도 → 5 로 하향), table-only, preamble.
+- 검증: 251 → **290 tests PASS** (+39). tsc 0 errors, esbuild 0 errors.
+- 측정 분리: 10-run/30-run variance 측정은 Obsidian CDP (port 9222) + Gemini/Ollama API 키 환경에서 사용자 별도 세션. Ablation gate (섹션 경계 기여도 >50% / 20-50% / <20%) 후 30-run 진행 여부 결정. §4.5.1.4 baseline CV 32.5% 대비 개선 확증 대기.
+- 산출물: `plan/phase-4-change-phase-abc.md` v2, `activity/phase-4-result.md §4.5.1.5` (구현 집계 + 다음 세션 측정 가이드).
 
 ## [2026-04-21] eval | §4.1 완료 — 5개 코퍼스 벤치마크 + UI override 완전 제거 + body regression guard
 

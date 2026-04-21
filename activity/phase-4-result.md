@@ -663,3 +663,173 @@ PMS PDF 재측정 2회 (prompt 힌트 추가 vs 제거 비교):
 - `activity/determinism-pms-v7-4514-prompt-attempt-2026-04-21.md` — 시도 1 (prompt 힌트, Total CV 32%)
 - `activity/determinism-pms-v7-4514-2026-04-21.md` — 시도 2 (후처리만, Total CV 32.5%)
 
+#### 4.5.1.5 LLM Wiki Phase A/B/C (v2) — 결정적 Phase A + 2-route + ablation 선행 + TDD (2026-04-21, 진행중)
+
+**배경**. §4.5.1.4 Total CV 32.5% 는 post-processing 밖의 variance 임을 확증. 원인 후보로 "RAG chunk 경계 지터" 가 제1후보. 그러나 §4.1 Docling 메인화 직후 철학 재검토에서 **RAG chunk 패턴 자체가 `wikey.schema.md §19·§21` 배격 대상** 임이 드러남. §19 는 "전체를 정독하지 않되, 어디에 무엇이 있는지는 반드시 파악" (=Phase A/B/C 흐름) 을 명시, §21 은 "검색을 DB에 위임하면 다시 RAG가 된다" 고 경고. 따라서 §4.5.1.5 를 "variance 측정" 에서 **"Phase A/B/C 이행 + 사후 variance 재측정"** 으로 확장.
+
+**v1 → v2 경위**:
+- v1 초안: Phase A 를 LLM 분류기 (core/support/skip), Route 3분기 (SMALL/MEDIUM/LARGE, char 임계), Route 1 단일 호출 병합
+- Claude 자체 검증 (8건) + Codex 적대적 검증 (12건) → **판정 NEEDS-REVISION**
+- 핵심 지적: (1) LLM Phase A 분류기는 "retriever 의 변형" — schema §19 위반 (2) Route 1 내부 모순 (3) char 임계 한국어 브로큰 (4) 섹션 경계 주범 증거 부족 — ablation 필요 (5) N=10 은 inference grade 미달
+- **v2 핵심 전환**: Phase A 를 **완전 결정적** (코드만, LLM 없음) + Route **2분기** (FULL/SEGMENTED, token-budget) + 결정적 fallback + ablation 선행 + N=30 + 모든 검증 가능 단위 TDD
+
+**설계 문서**: `plan/phase-4-change-phase-abc.md` (v2, 2026-04-21 작성). v1 내용 → Codex findings → v2 rewrite 전 과정 수록.
+
+##### 4.5.1.5.1 plan/phase-4-todo.md §4.5.1.5 v2 체크박스 교체 (완료)
+
+기존 5 체크박스 ("chunk 분할 결정성 확인", "10-run baseline", "temperature/seed 재검증", "slug 변이 추가") → v2 8 섹션 24 체크박스 (§0 ablation, §1 Phase A 결정적 파서, §2 token-budget Route, §3-4 Route 구현, §5 chunk 제거 + rename, §6 Phase C 근거, §7 측정, §8 문서 동기화).
+
+##### 4.5.1.5.2 `section-index.ts` 결정적 Phase A 파서 + 22 TDD (완료)
+
+**신규 파일**: `wikey-core/src/section-index.ts` (~300 줄, LLM 의존 0)
+
+**Exports**:
+- `parseSections(md) → ReadonlyArray<Section>` — 결정적 파서
+- `buildSectionIndex(md) → SectionIndex` (sections + globalRepeaters + langHint)
+- `computeHeuristicPriority(s) → 'skip' | 'core' | 'support'` — 결정적 휴리스틱
+- `formatPeerContext(index, currentIdx, tokenCap)` — Route SEGMENTED peer context
+- `formatSourceTOC(index)` — 소스 페이지 Phase C 데이터
+
+**커버 엣지 케이스** (Codex #8 반영):
+- `^#{1,6}\s?` 범용 regex (Docling H2 외 unhwp/DOCX 대비)
+- 코드블록 펜스 내부 `#` 은 heading 으로 간주 안 함
+- 공백 없는 `##기술스택` 허용
+- 첫 `##` 이전 preamble → pseudo-section (warning `preamble`)
+- 빈 섹션 (bodyChars < 5) 만 병합 (v1 의 `< 50` 은 과도 — plan/impl 모두 5 로 하향)
+- 같은 title 3회+ 반복 + body<100 → `suspicious-heading` warning
+- heading 0 개 → 단일 pseudo-section (warning `no-headings`)
+- mixed level (`##` + `###`) → flat list + `mixed-level` warning
+- headingPattern 분류 (`toc`/`appendix`/`contact`/`revision`/`copyright`/`normal`) — `computeHeuristicPriority` 에서 skip 결정
+
+**단위 테스트**: `__tests__/section-index.test.ts` — 22 tests
+- 결정성 (같은 입력 3회 호출 identical)
+- heading 패턴 8 cases
+- 병합/감지 2 cases (merged-empty, suspicious-heading)
+- 메타 계산 4 cases (hasTable, acronymDensity, koreanCharCount, headingPattern)
+- computeHeuristicPriority 4 분기 (skip × 2, core, support)
+- buildSectionIndex globalRepeaters 결정성 2 cases
+- formatPeerContext 2 cases
+- formatSourceTOC 1 case
+
+**검증**: `npm test` — **251 → 273 PASS (+22), 0 fails**. 기존 테스트 회귀 0.
+
+##### 4.5.1.5.3 `Mention.source_chunk_id` → `source_section_idx` rename (완료)
+
+**grep 전수조사**: 외부 persistence 0건 확증. 코드 2곳만 참조 (`types.ts:119`, `ingest-pipeline.ts:437`). Frontmatter · wiki/log · 테스트 · 외부 fixture 모두 미참조 → rename 안전.
+
+**변경**:
+- `types.ts` — `readonly source_chunk_id?: number` → `readonly source_section_idx?: number` + comment 갱신 (섹션 단위 재편 설명)
+- `ingest-pipeline.ts:437` — `source_chunk_id: chunkIdx` → `source_section_idx: chunkIdx` (이 시점에 함수 파라미터는 `chunkIdx` 유지. v2 Route SEGMENTED 에서는 section.idx 를 pass)
+- `canonicalizer.ts` — 로직 무변경 (애초에 `source_chunk_id` 참조 없음)
+
+검증: 273/273 tests PASS.
+
+##### 4.5.1.5.4 `PROVIDER_CONTEXT_BUDGETS` + `estimateTokens` + `selectRoute` (TDD, 완료)
+
+**신규 `provider-defaults.ts` exports**:
+```typescript
+interface ContextBudget {
+  contextTokens: number
+  outputReserve: number      // 0~1, output 공간 비율
+  promptOverhead: number     // schema/template 고정 tokens
+}
+
+PROVIDER_CONTEXT_BUDGETS: Record<model, ContextBudget>
+// gemini-2.5-flash/pro: 1M / 0.25 / 2000 → usable 748K
+// claude-haiku/sonnet/opus 4-x: 200K / 0.25 / 2000 → 148K
+// gpt-4.1-mini/gpt-4.1: 1M / 0.25 / 2000 → 748K
+// qwen3:8b (Ollama): 32K / 0.30 / 2000 → 20.4K
+
+getProviderBudget(provider, model): ContextBudget
+estimateTokens(md): number     // divisor 1.5 (ko) / 2.5 (mixed) / 4 (en), ×1.3 margin
+selectRoute(md, provider, model): 'FULL' | 'SEGMENTED'
+```
+
+**TDD** (14 새 tests in `provider-budgets.test.ts`):
+- 4 provider × budget 엔트리 확증
+- getProviderBudget fallback (표에 없는 모델 → chat default → ultra-fallback)
+- estimateTokens 한국어/영어/mixed/빈 문자열 분기
+- selectRoute: Gemini + 50KB 한국어 → FULL, Ollama qwen3:8b + 동일 → SEGMENTED, tiny doc → 어느 provider 든 FULL, 결정성
+
+검증: 273 → 287/287 PASS (+14).
+
+##### 4.5.1.5.5 `ingest-pipeline.ts` Route FULL/SEGMENTED 재편 (완료)
+
+**제거**:
+- `splitIntoChunks(text, maxChunkSize=8000)` (구 line 575-607) — RAG char-cut 메타포 폐기
+- `MAX_SOURCE_CHARS = 12_000` export → 내부 상수 `TRUNCATE_LIMIT` (Ollama 섹션 hard-cap 전용)
+- Large-doc chunked loop (구 line 199-255) — Route SEGMENTED 로 교체
+
+**추가**:
+- Import: `selectRoute` (provider-defaults), `buildSectionIndex` / `computeHeuristicPriority` / `formatPeerContext` / `formatSourceTOC` (section-index)
+- 최상위 `const route = selectRoute(sourceContent, provider, model)` + `sectionIndex = buildSectionIndex(sourceContent)`
+- **Route FULL** 경로: `summary + extractMentions(full-doc) + canonicalize` (기존 small-doc 경로 구조 재활용). Progress message "Summary (model) [FULL]" / "Extracting mentions (model) [FULL]".
+- **Route SEGMENTED** 경로: `summary + 섹션별 extractMentions + canonicalize`. 섹션 target = `core ∪ support` (skip 제외). 각 섹션 호출마다 peer context (DOC_OVERVIEW + GLOBAL_REPEATERS + CURRENT_SECTION + LOCAL_NEIGHBORS) 주입 via `buildSectionWithPeer`. Progress "Section i/N §idx 'title' [SEGMENTED]".
+- `buildSectionWithPeer(peer, section, isLocal)` helper — Ollama 면 section.body 에 `truncateSource` 적용 (섹션 단위 hard-cap).
+
+**섹션 안전망**: 모든 섹션이 skip 이면 fallback 으로 `sectionIndex.sections` 전체를 target 으로 사용 → schema.md §19 의 "빠짐없이 파악" 보장.
+
+**Mention 필드**: `source_section_idx = section.idx` 를 extractMentions 호출 시 전달 → canonicalizer 는 미사용이지만 debug log / 향후 lint 에서 "어느 섹션에서 왔는지" 역추적 가능.
+
+검증: tsc 0 errors, 287/287 PASS 유지.
+
+##### 4.5.1.5.6 `appendSectionTOCToSource` — Phase C 근거 데이터 (TDD, 완료)
+
+**역할**: ingest 가 소스 페이지를 쓸 때 body 끝에 `formatSourceTOC(sectionIndex)` 결과를 idempotent append. 쿼리 시 LLM 이 TOC 를 읽고 "이 섹션은 미심독됐으니 온디맨드 재독" 결정 가능한 결정적 메타 제공.
+
+**Idempotent**: 기존 `## 섹션 인덱스` 가 있으면 제거 후 재부착 (재인제스트 안전).
+
+**구현 위치**: `ingest-pipeline.ts` 내 export (wiki-ops.ts 는 createPage 유지). sourcePage 작성 직전 `content: appendSectionTOCToSource(parsed.source_page.content, sectionIndex)`.
+
+**TDD** (3 새 tests in `source-toc-append.test.ts`): append 형식, 결정성, 빈 markdown edge case.
+
+검증: 287 → 290/290 PASS (+3).
+
+##### 4.5.1.5.7 Obsidian UI progress (완료 — 자동 연동)
+
+sidebar 는 `progress.message` 를 투명하게 노출하므로 별도 수정 불필요. ingest-pipeline 에서 갱신된 message ("Route FULL", "Section i/N §idx 'title' [SEGMENTED]") 가 자동 UI 표시.
+
+`esbuild.config.mjs production` → 0 errors.
+
+##### 4.5.1.5.8 Ablation 스크립트 (완료 — 실행은 사용자 세션)
+
+**`scripts/ablation-ingest.sh`** 작성:
+- 실험 1: `measure-determinism.sh` 위임 (convert-cache 로 인해 frozen markdown 자동)
+- 실험 2-4: 현재 ingest-pipeline 내부 export 부재 → §4.5.1.5.9 후보로 이관 (별도 Node helper 필요)
+
+**Gate 기준 기록**:
+- Total CV ≤ 16% (baseline 32.5% 의 50%) → 섹션 경계 **> 50% 기여** (주범) → 30-run PMS main 진행
+- 16% < CV ≤ 26% → **20-50% 기여** → 30-run + 개선폭 재산정
+- CV > 26% → **< 20% 기여** → smoke 만 + `§4.5.1.6` (LLM 수준 variance) 신규
+
+##### 4.5.1.5.9 이번 세션 구현 집계
+
+**신규 파일**:
+- `wikey-core/src/section-index.ts` (~300 줄, LLM 의존 0)
+- `wikey-core/src/__tests__/section-index.test.ts` (22 tests)
+- `wikey-core/src/__tests__/provider-budgets.test.ts` (14 tests)
+- `wikey-core/src/__tests__/source-toc-append.test.ts` (3 tests)
+- `scripts/ablation-ingest.sh`
+- `plan/phase-4-change-phase-abc.md` (v2 설계 문서)
+
+**수정 파일**:
+- `wikey-core/src/provider-defaults.ts` (+ContextBudget, PROVIDER_CONTEXT_BUDGETS, getProviderBudget, estimateTokens, selectRoute)
+- `wikey-core/src/ingest-pipeline.ts` (Route FULL/SEGMENTED 로직, chunk 삭제, appendSectionTOCToSource, buildSectionWithPeer, TRUNCATE_LIMIT rename)
+- `wikey-core/src/types.ts` (Mention 필드 rename)
+- `plan/phase-4-todo.md §4.5.1.5` (v2 체크박스 + 진행 반영)
+
+**테스트 증가**: 251 (§4.5.1.4 종료 시점) → **290 PASS** (+39, 모두 새로운 TDD).
+
+**빌드 증거**: tsc 0 errors, esbuild 0 errors.
+
+##### 4.5.1.5.10 다음 세션 — 측정/gate/roll-up
+
+측정 런타임은 Obsidian CDP + API 키 필요하므로 별도 세션.
+
+- [ ] Obsidian `--remote-debugging-port=9222 --remote-allow-origins='*'` 기동
+- [ ] `./scripts/ablation-ingest.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10` → 실험 1 결과 + gate 판정
+- [ ] gate 통과 시 `./scripts/measure-determinism.sh ... -n 30` → PMS main + §4.5.1.4 baseline 대비 비교
+- [ ] Route FULL (Gemini) + Route SEGMENTED (Ollama) 10-run smoke 각 1회
+- [ ] 결과 수합 후 `activity/phase-4-result.md §4.5.1.5` 에 측정 섹션 추가
+- [ ] §4.5.1.5 최종 결론: CV 개선폭 / selective rollback 판정 / §4.5.1.6 (LLM 수준 variance) 생성 여부
+
