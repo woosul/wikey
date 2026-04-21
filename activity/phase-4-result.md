@@ -1000,13 +1000,14 @@ Post-processing 수준:
 
 **4. `§4.5.1.6` 신규 (LLM 수준 variance + canonicalizer 3차 — 필수)**
 
-다음 세션 또는 별도 phase 로 분해:
+상세는 아래 `4.5.1.6` subject 참조 (todo mirror). 요약:
 
-- **§4.5.1.6.1**: Gemini `generationConfig.temperature=0` + `seed=42` 옵션 추가 → `wikey-core/src/llm-client.ts` 에 `extractionDeterminism` 플래그
-- **§4.5.1.6.2**: 동일 조건 10-run 재측정 → temperature/seed 기여분 정량
-- **§4.5.1.6.3**: `canonicalize.ts` SLUG_ALIASES 3차 확장 (allim-talk, kakao-alimtalk, ERP/SCM/MES suffix, BOM 5-variant)
-- **§4.5.1.6.4**: `FORCED_CATEGORIES` 를 post-processing 의 **1-pass** 가 아닌 **canonical resolution** (동일 slug 가 E/C 양쪽 등장 시 pool merge → 우선 axis 로 수렴) 로 업그레이드
-- **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 비교 — 섹션 분할 자체가 variance 증폭인지 분리 검증
+- **§4.5.1.6.1**: Gemini `generationConfig.temperature=0 + seed=42` 옵션 → `wikey-core/src/llm-client.ts` `extractionDeterminism` 플래그
+- **§4.5.1.6.2**: determinism=on 10-run 재측정 (목표 CV <15%)
+- **§4.5.1.6.3**: `canonicalize.ts SLUG_ALIASES` 3차 확장 — allim-talk/kakao-alimtalk/ERP/SCM/MES/BOM
+- **§4.5.1.6.4**: `FORCED_CATEGORIES` run-local 1-pass → canonical resolution 업그레이드
+- **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 분리 비교
+- **§4.5.1.6.6**: 개선 후 30-run 재측정 (목표 CV <10%)
 
 **5. 측정 infra 개선 (이 세션 부산물)**
 
@@ -1022,4 +1023,64 @@ Post-processing 수준:
 - `activity/smoke-3run-pms-0025.md` (infra 패치 검증용 3-run)
 - `scripts/measure-determinism.sh` (panel refresh 패치)
 - `activity/phase-4-result.md §4.5.1.5.11~.14` (이 섹션)
+
+#### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (2026-04-22 신규, 진행 전)
+
+> Mirror: `plan/phase-4-todo.md §4.5.1.6` (6 sub-task 체크박스). 이 섹션은 **진행 전 stub** — 다음 세션에서 실행 후 본문 상세화.
+
+**배경 (§4.5.1.5.13 에서 도출)**:
+
+§4.5.1.5 30-run 결과 Total CV 24.3% — baseline 32.5% 대비 25% 상대 감소로 Phase A/B/C 이행의 가치를 확증했으나 잔여 75% variance 가 두 층위에서 발생함을 N=30 데이터로 확증:
+
+1. **LLM 수준** — Gemini `temperature=0.1` 기본 + `seed` 미설정 → 동일 섹션·peer context 에서도 extraction 결과 stochastic.
+2. **Post-processing 수준** — canonicalize 미도달 신규 패턴 (`allim-talk`/`kakao-alimtalk` 5-variant, ERP/SCM/MES `-system` suffix 3-variant, BOM 5-variant, E/C 경계 왕복 `electronic-approval(-system)` / `restful-api` 쌍).
+
+**목표**:
+
+- Phase A: `§4.5.1.6.1` + `§4.5.1.6.2` 완료 시 Total CV **< 15%** (determinism 기여분 측정)
+- Phase B: `§4.5.1.6.3` + `§4.5.1.6.4` 완료 시 Total CV **< 10%** (canonicalizer + FORCED_CATEGORIES 업그레이드)
+- Phase C: `§4.5.1.6.5` (Route 분리 비교) + `§4.5.1.6.6` (최종 30-run 재측정)
+
+**하위 과제 (번호는 `plan/phase-4-todo.md §4.5.1.6` mirror)**:
+
+##### 4.5.1.6.1 Gemini determinism 옵션 (진행 전)
+
+- `wikey-core/src/llm-client.ts` 에 `extractionDeterminism: boolean` 플래그 추가
+- Gemini provider `generationConfig.temperature=0` + `seed=42` 적용
+- TDD: flag off (기존 동작) / flag on (temperature/seed 주입 확인) 단위 테스트
+
+##### 4.5.1.6.2 determinism=on 10-run 재측정 (진행 전)
+
+- `WIKEY_EXTRACTION_DETERMINISM=1 ./scripts/measure-determinism.sh ... -n 10`
+- 기여분 산정: (CV_off − CV_on) / CV_off
+- 목표: CV < 15%
+
+##### 4.5.1.6.3 canonicalize.ts SLUG_ALIASES 3차 확장 (진행 전)
+
+- `allim-talk`, `kakao-alimtalk` → `alimtalk`
+- `erp-system`, `enterprise-resource-planning-system` → `enterprise-resource-planning`
+- `supply-chain-management-system` → `supply-chain-management`
+- `point-of-production-system` → `manufacturing-execution-system`
+- `e-bom`, `e-bill-of-materials`, `electronic-bill-of-materials`, `engineering-bill-of-materials` → `bill-of-materials` (축 분리 여부 재검토)
+- `electronic-approval-system` → `electronic-approval`
+- 신규 TDD 최소 8건
+
+##### 4.5.1.6.4 FORCED_CATEGORIES canonical resolution 업그레이드 (진행 전)
+
+- 현재: `applyForcedCategories` 가 post-processing 1-pass 로 mention 을 올바른 pool 로 이동
+- 한계 (§4.5.1.5 30-run 에서 확증): 동일 slug 가 entity/concept pool 양쪽에 동시 등장한 run 존재 → run-local pin 으로는 일관성 부족
+- 업그레이드: canonical resolution (pool merge + axis 수렴) — 동일 slug 발견 시 우선 axis (FORCED_CATEGORIES 혹은 schema) 로 수렴, 반대 pool 에서 제거
+- TDD: 양쪽 pool 중복 시 수렴 동작 + 기존 pin 회귀 없음
+
+##### 4.5.1.6.5 Route FULL vs SEGMENTED 10-run 분리 비교 (진행 전)
+
+- 동일 PMS 소스를 Route FULL (Gemini 기본) / SEGMENTED (`WIKEY_BASIC_PROVIDER=ollama WIKEY_BASIC_MODEL=qwen3:8b`) 각 10-run
+- 섹션 분할 자체가 variance 증폭인지 vs provider 차이인지 분리
+- 가설: SEGMENTED CV > FULL CV (섹션별 호출 간 variance 누적)
+
+##### 4.5.1.6.6 개선 후 30-run 재측정 (진행 전)
+
+- §4.5.1.6.1~.4 모두 적용 상태에서 30-run PMS main
+- 목표 CV < 10%
+- baseline (§4.5.1.5 의 24.3%) 및 §4.5.1.4 baseline (32.5%) 모두와 비교 표
 
