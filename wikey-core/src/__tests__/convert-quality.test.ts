@@ -3,8 +3,11 @@ import {
   scoreConvertOutput,
   hasMissingKoreanWhitespace,
   hasKoreanRegression,
+  hasBodyRegression,
   countKoreanChars,
   koreanLongTokenRatio,
+  isLikelyScanPdf,
+  bodyCharsPerPage,
 } from '../convert-quality.js'
 
 describe('scoreConvertOutput — accept', () => {
@@ -200,5 +203,58 @@ describe('hasKoreanRegression', () => {
     const baseline = '한'.repeat(200)
     const regressed = '한'.repeat(99)
     expect(hasKoreanRegression(baseline, regressed)).toBe(true)
+  })
+})
+
+describe('hasBodyRegression (언어 무관 본문 regression)', () => {
+  it('영문 전용: baseline 1000자 → 100자 = regression 감지', () => {
+    const baseline = 'The quick brown fox jumps over the lazy dog. '.repeat(30) // ~1,350자
+    const regressed = 'Short text'
+    expect(hasBodyRegression(baseline, regressed)).toBe(true)
+  })
+
+  it('영문 전용: baseline 1000자 → 800자 = regression 아님', () => {
+    const baseline = 'x'.repeat(1000)
+    const regressed = 'x'.repeat(800)
+    expect(hasBodyRegression(baseline, regressed)).toBe(false)
+  })
+
+  it('baseline 500자 미만 → regression 판단 skip (false)', () => {
+    const baseline = 'short 400 chars baseline'
+    const regressed = ''
+    expect(hasBodyRegression(baseline, regressed)).toBe(false)
+  })
+
+  it('이미지 태그 제외 후 비교', () => {
+    const baseline = '본문 '.repeat(300) // 600자 이상
+    const regressed = '![image](data:image/png;base64,LONG_DATA_URI)'.repeat(100) + '작은 본문'
+    expect(hasBodyRegression(baseline, regressed)).toBe(true) // 이미지 strip 후 실제 본문은 작음
+  })
+})
+
+describe('isLikelyScanPdf', () => {
+  it('페이지당 10자 + 한국어 0 → scan PDF 판정', () => {
+    const md = 'A B C'.repeat(5) // 매우 짧음
+    expect(isLikelyScanPdf(md, 20)).toBe(true)
+  })
+
+  it('페이지당 500자 → 정상 텍스트 PDF', () => {
+    const md = '본문 내용이 풍부한 페이지 텍스트입니다. '.repeat(100)
+    expect(isLikelyScanPdf(md, 5)).toBe(false)
+  })
+
+  it('pageCount 0 → false (감지 무관)', () => {
+    expect(isLikelyScanPdf('any content', 0)).toBe(false)
+  })
+})
+
+describe('bodyCharsPerPage', () => {
+  it('pageCount 0 → Infinity (감지 무효화)', () => {
+    expect(bodyCharsPerPage('content', 0)).toBe(Number.POSITIVE_INFINITY)
+  })
+
+  it('본문 1000자 / 10페이지 → 100 chars/page', () => {
+    const md = 'x'.repeat(1000)
+    expect(bodyCharsPerPage(md, 10)).toBe(100)
   })
 })

@@ -147,6 +147,28 @@ export function hasKoreanRegression(baselineMd: string, regressedMd: string): bo
   return reg < base * 0.5
 }
 
+/** 본문 문자 수 — 이미지·markdown 메타문자·공백 정규화 후 순수 글자. */
+function bodyChars(md: string): number {
+  return md
+    .replace(/!\[.*?\]\([^)]+\)/g, '')
+    .replace(/\[image(?::[^\]]*)?\]/g, '')
+    .replace(/[#>*`|\-]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim().length
+}
+
+/**
+ * 본문 전반 regression 감지 — 언어 무관.
+ * 한국어 regression(hasKoreanRegression) 이 못 잡는 영문·숫자 전용 문서의 force-ocr 실패 케이스 보완.
+ * 기준: baseline(>=500자) 대비 regressed 가 50% 미만 → regression 판정.
+ */
+export function hasBodyRegression(baselineMd: string, regressedMd: string): boolean {
+  const base = bodyChars(baselineMd)
+  const reg = bodyChars(regressedMd)
+  if (base < 500) return false // baseline 이 너무 작으면 비교 무의미
+  return reg < base * 0.5
+}
+
 /**
  * 한국어 공백 소실 감지.
  * 네이버 블로그 프린트 PDF·ROHM Wi-SUN 매뉴얼 등이 음수 kerning 으로만 간격을 표현

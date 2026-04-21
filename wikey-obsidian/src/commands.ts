@@ -73,11 +73,10 @@ export interface IngestRunOptions {
    * - inbox panel: false (moveBtn handles destination manually via user selection)
    */
   autoMoveFromInbox?: boolean
-  /**
-   * 캐시 무시하고 강제 재변환 (디버그·재측정 용).
-   * converter 선택은 프로그램 로직이 자동 판정 — 한국어 공백 소실·스캔 PDF 감지 기반 force-ocr 자동 재시도.
-   */
-  forceReconvert?: boolean
+  // 주의: converter 선택 / 캐시 bypass 모두 사용자 UI 에서 제거됨.
+  // 전처리 ~ ingest 가 자동 흐름이므로 사용자가 변환 결과 검토 후 재변환 판단할 틈 없음.
+  // - converter 선택 → 자동 판정 (한국어 공백 소실·스캔 PDF 감지)
+  // - 캐시 무효화 → 필요 시 ~/.cache/wikey/convert/ 직접 삭제
 }
 
 export async function runIngest(
@@ -99,7 +98,6 @@ export async function runIngest(
       planGate: undefined,
       onProgress,
       autoMoveFromInbox: runOpts?.autoMoveFromInbox,
-      forceReconvert: runOpts?.forceReconvert,
     })
   }
 
@@ -148,7 +146,6 @@ export async function runIngest(
         onProgress?.(step, total, message, subStep, subTotal)
       },
       autoMoveFromInbox: runOpts?.autoMoveFromInbox,
-      forceReconvert: runOpts?.forceReconvert,
     })
 
     // If user hit [Back] during processing, the modal already flipped back to Brief.
@@ -173,7 +170,6 @@ async function runIngestCore(
     planGate: ((plan: IngestPlan) => Promise<boolean>) | undefined
     onProgress?: (step: number, total: number, message: string, subStep?: number, subTotal?: number) => void
     autoMoveFromInbox?: boolean
-    forceReconvert?: boolean
   },
 ): Promise<IngestRunResult> {
   try {
@@ -188,7 +184,6 @@ async function runIngestCore(
         execEnv: plugin.getExecEnv(),
         guideHint: ctx.guideHint,
         onPlanReady: ctx.planGate,
-        forceReconvert: ctx.forceReconvert,
       },
     )
 

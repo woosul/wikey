@@ -5,6 +5,19 @@ created: 2026-04-10
 updated: 2026-04-21
 ---
 
+## [2026-04-21] eval | §4.1 완료 — 5개 코퍼스 벤치마크 + UI override 완전 제거 + body regression guard
+
+- 배경: 사용자 피드백 "전처리~ingest 자동 흐름이므로 사용자 UI override 부담 없애고 로직을 탄탄하게". Force re-convert 체크박스도 사용자가 변환 결과를 검토할 틈이 없어 실용성 없음.
+- 추가 벤치마크 (3건): TWHB 파워디바이스 (37p 한국어 표), OMRON HEM-7600T (48p vector-only), 사업자등록증 (1p 스캔 후 OCR). 총 5개 코퍼스 (기존 PMS + ROHM 포함).
+- 결정적 발견: OMRON vector-only PDF 에서 MarkItDown/pdftotext/pymupdf 모두 1~48 bytes 출력 (사실상 실패). Docling --force-ocr 만이 9.2KB 구조화 출력 (19 headings + 77 tables). 자동 `isLikelyScanPdf` 감지 로직의 존재 이유를 실증.
+- UI override 완전 제거: `ConverterOverride` 타입 + `IngestOptions.converterOverride` + `IngestOptions.forceReconvert` + sidebar-chat Audit 패널의 converterBar / converterSelect / forceCb. `runTier()` 가드, extract*Text 의 overrides 파라미터, cache bypass 분기 모두 제거.
+- 로직 강화: `hasBodyRegression(baseline, regressed)` 신규 — 언어 무관 본문 regression 감지. baseline ≥ 500자 중 50% 미만으로 떨어지면 tier 1 롤백. OMRON 처럼 한국어 없는 PDF 에서도 force-ocr 독성 방어.
+- 구조 보존 정량 (5개 코퍼스 합계): Docling 212 headings + 294 실제 tables vs MarkItDown 0 heading + 0 실제 tables (TWHB/사업자등록증에서 셀 구분자 오잘 581개). 계획서 +20% 기준 수십 배 초과.
+- 검증 빌드: 242 → 251 tests PASS (hasBodyRegression 4 + isLikelyScanPdf 3 + bodyCharsPerPage 2), wikey-core tsc + wikey-obsidian esbuild 0 errors.
+- 산출물: `activity/phase-4-converter-benchmark.md` (5개 코퍼스 종합 리포트), `activity/phase-4-result.md §4.1.2` (완료 선언 + 성과 분석).
+- 해제된 선행 의존: **§4.5.1.5 variance 재측정** — Docling 구조적 markdown 확보로 "전처리 품질" 성분 분리 측정 준비 완료. 다음 세션 최우선.
+- 후속 Phase 로 이관: §4.1.1.9 vault rename/delete listener (§4.2.2 URI 참조와 합동), §4.1.1.5 ps aux 실측 (security audit 별도), scripts/cache-stats.sh (우선순위 낮음).
+
 ## [2026-04-21] feat | §4.1.1.6 자동 force-ocr 감지 로직 (사용자 UI override 제거)
 
 - 배경: 사용자 피드백 "UI override 바람직하지 않음, 프로그램 로직으로 자동 판정". ROHM Wi-SUN 샘플(웹페이지 프린트 PDF)과 스캔 PDF 는 force-ocr 필요, PMS 제품소개(벡터 PDF)는 force-ocr 시 한국어 0자 regression — 자동 감지가 세 케이스를 모두 올바르게 처리해야.

@@ -22,6 +22,7 @@ import { computeCacheKey, getCached, setCached } from './convert-cache.js'
 import {
   scoreConvertOutput,
   hasKoreanRegression,
+  hasBodyRegression,
   countKoreanChars,
   koreanLongTokenRatio,
   isLikelyScanPdf,
@@ -59,13 +60,10 @@ export interface IngestOptions {
   readonly guideHint?: string
   /** Stay-involved hook: called after extraction, before file writes. Return false to cancel (llm-wiki.md "read summaries" + "check updates"). */
   readonly onPlanReady?: IngestPlanGate
-  /**
-   * 캐시 무시하고 강제 재변환 (디버그·재측정 용).
-   * converter 선택은 프로그램 로직이 자동 판정한다 —
-   * 한국어 공백 소실·스캔 PDF 감지 기반 docling --force-ocr 자동 재시도,
-   * 한국어 regression 감지 시 tier 1 롤백.
-   */
-  readonly forceReconvert?: boolean
+  // 전처리 ~ ingest 가 자동 흐름이므로 converter 선택·캐시 무효화 모두 자동 로직이 처리.
+  // - converter 자동 판정: 한국어 공백 소실 > 30% OR 스캔 PDF 감지 → docling --force-ocr 재시도
+  // - regression 방어: force-ocr 이 한국어 50% 미만으로 떨어지면 tier 1 롤백
+  // - 캐시: 옵션 + sourceBytes 동일하면 자동 히트. 완전 재변환 필요 시 ~/.cache/wikey/convert/ 삭제.
 }
 
 /**
@@ -101,22 +99,21 @@ export async function ingest(
   const ext = (sourceFilename.toLowerCase().split('.').pop() ?? '')
 
   let sourceContent: string
-  const forceReconvert = opts?.forceReconvert ?? false
   if (ext === 'hwp' || ext === 'hwpx') {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (unhwp)...' })
-    sourceContent = await extractHwpText(sourcePath, opts?.basePath, opts?.execEnv, { forceReconvert })
+    sourceContent = await extractHwpText(sourcePath, opts?.basePath, opts?.execEnv)
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`HWP/HWPX extraction failed: ${sourceFilename} — install unhwp (pip install unhwp)`)
     }
   } else if (ext === 'pdf') {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (Docling)...' })
-    sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config, { forceReconvert })
+    sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`PDF text extraction failed: ${sourceFilename} — install docling (uv tool install docling) or markitdown (pip install markitdown[pdf])`)
     }
   } else if (DOCLING_DOC_FORMATS.has(ext)) {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (Docling)...' })
-    sourceContent = await extractDocumentText(sourcePath, opts?.basePath, opts?.execEnv, config, { forceReconvert })
+    sourceContent = await extractDocumentText(sourcePath, opts?.basePath, opts?.execEnv, config)
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`Document extraction failed: ${sourceFilename} — install docling (uv tool install docling)`)
     }
@@ -902,7 +899,6 @@ async function extractHwpText(
   sourcePath: string,
   basePath?: string,
   execEnv?: Record<string, string>,
-  overrides?: { forceReconvert?: boolean },
 ): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const { mkdtempSync, readFileSync, rmSync } = require('node:fs') as typeof import('node:fs')
@@ -921,14 +917,10 @@ async function extractHwpText(
     return ''
   }
   const cacheKey = computeCacheKey({ sourceBytes, converter: 'unhwp' })
-  if (!overrides?.forceReconvert) {
-    const cached = getCached(cacheKey)
-    if (cached != null) {
-      log(`cache hit — unhwp (${cached.length} chars)`)
-      return cached
-    }
-  } else {
-    log('forceReconvert — bypassing cache')
+  const cached = getCached(cacheKey)
+  if (cached != null) {
+    log(`cache hit — unhwp (${cached.length} chars)`)
+    return cached
   }
 
   const scriptPath = join(cwd, 'scripts', 'vendored', 'unhwp-convert.py')
@@ -966,7 +958,6 @@ async function extractDocumentText(
   basePath?: string,
   execEnv?: Record<string, string>,
   config?: WikeyConfig,
-  overrides?: { forceReconvert?: boolean },
 ): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const cwd = basePath ?? process.cwd()
@@ -990,14 +981,10 @@ async function extractDocumentText(
   }
   const majorOptions = doclingMajorOptions(config)
   const cacheKey = computeCacheKey({ sourceBytes, converter: 'docling', majorOptions })
-  if (!overrides?.forceReconvert) {
-    const cached = getCached(cacheKey)
-    if (cached != null) {
-      log(`cache hit — docling (${cached.length} chars)`)
-      return cached
-    }
-  } else {
-    log('forceReconvert — bypassing cache')
+  const cached = getCached(cacheKey)
+  if (cached != null) {
+    log(`cache hit — docling (${cached.length} chars)`)
+    return cached
   }
 
   const { mkdtempSync, rmSync } = require('node:fs') as typeof import('node:fs')
@@ -1084,7 +1071,6 @@ async function extractPdfText(
   basePath?: string,
   execEnv?: Record<string, string>,
   config?: WikeyConfig,
-  overrides?: { forceReconvert?: boolean },
 ): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const cwd = basePath ?? process.cwd()
@@ -1132,14 +1118,10 @@ async function extractPdfText(
       converter: 'pdf:1-docling',
       majorOptions: doclingMajorOptions(config),
     })
-    if (!overrides?.forceReconvert) {
-      const cached = getCached(doclingKey)
-      if (cached != null && !config?.DOCLING_DISABLE) {
-        log(`cache hit — pdf:1-docling (${cached.length} chars)`)
-        return cached
-      }
-    } else {
-      log('forceReconvert — bypassing cache')
+    const cached = getCached(doclingKey)
+    if (cached != null && !config?.DOCLING_DISABLE) {
+      log(`cache hit — pdf:1-docling (${cached.length} chars)`)
+      return cached
     }
   } catch (err) {
     warn(`read source for cache failed: ${errorMessage(err)}`)
@@ -1208,11 +1190,16 @@ async function extractPdfText(
             const retryMd = readDoclingOutput(retryDir, fullPath)
             const retryOk = accept('1b docling --force-ocr', retryMd)
             if (retryOk) {
-              // 한국어 regression guard — force-ocr 이 한글을 절반 이상 잃으면 tier 1 채택
+              // Regression guard — force-ocr 결과가 tier 1 대비 급감하면 tier 1 채택.
+              // 한국어 regression (50% 미만) + 언어 무관 본문 regression (500자+ 중 50% 미만) 이중 체크.
               if (hasKoreanRegression(ok, retryOk)) {
                 const baseKo = countKoreanChars(ok)
                 const retryKo = countKoreanChars(retryOk)
                 warn(`tier 1b korean regression — base=${baseKo} → force-ocr=${retryKo} (< 50%), falling back to tier 1`)
+                return finalize(ok, '1-docling')
+              }
+              if (hasBodyRegression(ok, retryOk)) {
+                warn(`tier 1b body regression — force-ocr total chars < 50% of tier 1, falling back to tier 1`)
                 return finalize(ok, '1-docling')
               }
               const retryQ = scoreConvertOutput(retryOk, { retryOnKoreanWhitespace: false })

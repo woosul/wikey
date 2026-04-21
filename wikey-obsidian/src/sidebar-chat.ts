@@ -829,14 +829,10 @@ Click [[page name]] in answers to navigate to the wiki page.
     loadModels(providerSelect.value)
     providerSelect.addEventListener('change', () => loadModels(providerSelect.value))
 
-    // ── Force re-convert (§4.1.1.8, 캐시 bypass 용 디버그 토글) ──
-    // 주의: Converter 수동 선택은 의도적으로 제거. force-ocr 트리거는 프로그램 로직이 자동 판정
-    // (한국어 공백 소실 > 30% OR 스캔 PDF 감지). 사용자 override 부담을 없애는 방향.
-    const toolsBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
-    const forceWrap = toolsBar.createEl('label', { cls: 'wikey-audit-stat' })
-    const forceCb = forceWrap.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
-    forceWrap.createEl('span', { text: 'Force re-convert (bypass cache)' })
-    forceWrap.title = '캐시를 무시하고 원본부터 재변환. 변환 로직 디버그·재테스트 용.'
+    // 주의: Converter 수동 선택 및 Force re-convert 체크박스 의도적으로 제거.
+    // - 변환기 선택 → 자동 로직 (한국어 공백 소실 > 30% OR 스캔 PDF 감지 → force-ocr 재시도)
+    // - 캐시 무효화 → ingest 워크플로우가 자동 흐름이라 사용자가 결과 검토 후 재변환 판단할 틈 없음.
+    //   필요 시 ~/.cache/wikey/convert/ 직접 삭제.
 
     let cancelRequested = false
 
@@ -1161,7 +1157,6 @@ Click [[page name]] in answers to navigate to the wiki page.
           }
         }, {
           autoMoveFromInbox: true,
-          forceReconvert: (forceCb as HTMLInputElement).checked,
         })
         if (rowSpinner) {
           rowSpinner.remove()

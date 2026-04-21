@@ -26,8 +26,10 @@
 - [x] 4.0.8 DEFAULT 라벨 통일 — `(use Default Model)`/`(provider default)` → `DEFAULT` (9개 위치 일괄)
 - [x] 4.0.9 사이드바 초기 폭 500px — `initialSidebarWidthApplied` 플래그 + `rightSplit.setSize(500)` 최초 1회만
 
-## 4.1 문서 전처리 파이프라인 (source → Markdown)
+## 4.1 문서 전처리 파이프라인 (source → Markdown) — **완료 (2026-04-21)**
 > tag: #core, #workflow
+> 최종 상태: Docling 메인화 + unhwp + MarkItDown fallback 강등 + 자동 force-ocr 감지 + 5개 코퍼스 실증. 251 tests PASS.
+> 상세: `activity/phase-4-result.md §4.1` + `activity/phase-4-converter-benchmark.md`
 
 ### 4.1.1 Docling + unhwp 메인화, MarkItDown은 fallback으로 강등
 
@@ -108,14 +110,14 @@
 #### 4.1.1.7 성능 비교 테스트 (정량 baseline)
 
 - [x] `scripts/benchmark-converters.sh` — 확장자별 변환기 매트릭스 (unhwp/docling/docling-force-ocr/markitdown/pdftotext/pymupdf) × bytes·time·korean_loss 측정. docling은 `--output <dir>` 방식으로 처리 (stdout 미지원).
-- [x] 1차 실측 완료 — `activity/phase-4-converter-benchmark-2026-04-21.md` (PMS_제품소개_R10 PDF). **핵심 발견**: docling-force-ocr는 벡터 PDF에서 한국어 0자 (ocrmac 벡터 래스터화 열화). 자동 재시도는 임계 기반이라 안전, Audit override 시 주의.
-- [ ] 추가 코퍼스 실측 — TWHB 파워디바이스 / OMRON HEM-7600T / 스캔 PDF 1건 / HWPX (실제 이미지 포함) → 후속.
+- [x] 1차 실측 완료 — `activity/phase-4-converter-benchmark.md` (PMS_제품소개_R10 PDF). **핵심 발견**: docling-force-ocr는 벡터 PDF에서 한국어 0자 (ocrmac 벡터 래스터화 열화). 자동 재시도는 임계 기반이라 안전.
+- [x] 추가 코퍼스 실측 완료 (2026-04-21) — **TWHB 파워디바이스 / OMRON HEM-7600T / 사업자등록증** 3건 추가 벤치마크. OMRON 결정적 케이스(vector-only PDF, MarkItDown 1 byte 실패 vs Docling --force-ocr 9.2KB) 로 `isLikelyScanPdf` 자동 감지 정당성 실증. `activity/phase-4-converter-benchmark.md` 5개 코퍼스 종합 리포트로 확장.
 
 #### 4.1.1.8 변환 결과 캐시 (§4.1.1.4와 통합 구현)
 
 - [x] `convert-cache.ts`에서 stats / cleanup / invalidate API 노출 + index.json 관찰성.
-- [x] Audit 패널 "Force re-convert" 체크박스 — `IngestOptions.forceReconvert` → 모든 extract*Text 함수에서 cache bypass.
-- [ ] CLI: `scripts/cache-stats.sh` — 후속 (명령줄에서 캐시 통계 조회 용).
+- [x] ~~Audit 패널 "Force re-convert" 체크박스~~ **재결정 (2026-04-21)**: 제거. 전처리~ingest 자동 흐름에서 사용자 검토 루프 없음 → 재변환 판단 근거 없음. 캐시 무효화는 `~/.cache/wikey/convert/` 직접 삭제.
+- [ ] CLI: `scripts/cache-stats.sh` — 후속 (명령줄에서 캐시 통계 조회 용). §4.1 범위 외로 이관.
 
 #### 4.1.1.9 md변환 결과 저장, 활용 및 이동
 
