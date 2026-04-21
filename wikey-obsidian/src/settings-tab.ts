@@ -57,7 +57,9 @@ export class WikeySettingTab extends PluginSettingTab {
       { label: 'Qwen3 8B', value: env.hasQwen3 ? 'Installed' : 'Optional', ok: env.hasQwen3, optional: true, desc: 'Ingest option (5.2GB, fast, JSON reliable)' },
       { label: 'Qwen3.6:35b-a3b', value: env.hasQwen36 ? 'Installed' : 'Optional', ok: env.hasQwen36, optional: true, desc: 'Ingest high-quality option (24GB MoE, ≥48GB RAM)' },
       { label: 'Gemma4', value: env.hasGemma4 ? 'Installed' : 'Optional', ok: env.hasGemma4, optional: true, desc: 'Query/CR synthesis option (not used for ingest)' },
-      { label: 'MarkItDown', value: env.hasMarkitdown ? 'Installed' : 'Not installed', ok: env.hasMarkitdown, desc: 'PDF/DOCX to Markdown converter (Microsoft)' },
+      { label: 'Docling', value: env.hasDocling ? `v${env.doclingVersion}` : 'Not installed', ok: env.hasDocling, desc: 'Main converter — PDF/DOCX/PPTX/XLSX/HTML/image (TableFormer + ocrmac). uv tool install docling' },
+      { label: 'unhwp', value: env.hasUnhwp ? 'Installed' : 'Optional', ok: env.hasUnhwp, optional: true, desc: 'HWP/HWPX (Hangul) converter. pip install unhwp' },
+      { label: 'MarkItDown', value: env.hasMarkitdown ? 'Installed' : 'Optional', ok: env.hasMarkitdown, optional: true, desc: 'Fallback converter (used when docling is unavailable)' },
       { label: 'MarkItDown OCR', value: env.hasMarkitdownOcr ? 'Installed' : 'Optional', ok: env.hasMarkitdownOcr, optional: true, desc: 'Scanned-PDF OCR fallback (markitdown-ocr + openai SDK, uses Ollama vision model)' },
     ]
 
@@ -104,9 +106,49 @@ export class WikeySettingTab extends PluginSettingTab {
         .addButton((btn) => btn.setButtonText('Ollama Install Guide').onClick(() => window.open('https://ollama.com')))
     }
 
+    if (!env.hasDocling) {
+      new Setting(containerEl)
+        .setDesc('Docling is the main document converter. Falls back to MarkItDown when unavailable.')
+        .addButton((btn) =>
+          btn.setButtonText('Docling Install Guide').onClick(() =>
+            window.open('https://docling-project.github.io/docling/installation/'),
+          ),
+        )
+    }
+
+    if (!env.hasUnhwp && env.pythonPath) {
+      new Setting(containerEl)
+        .setDesc('Install unhwp to ingest HWP/HWPX (Hangul) documents.')
+        .addButton((btn) =>
+          btn.setButtonText('Install unhwp').onClick(async () => {
+            btn.setButtonText('Installing...')
+            btn.setDisabled(true)
+            try {
+              const { execFile: ef } = require('node:child_process') as typeof import('node:child_process')
+              const { promisify: p } = require('node:util') as typeof import('node:util')
+              const execAsync = p(ef)
+              const shellPath = this.plugin.envStatus?.shellPath ?? process.env.PATH ?? ''
+              await execAsync('pip3', ['install', 'unhwp'], {
+                timeout: 120000,
+                env: { ...process.env, PATH: shellPath } as Record<string, string>,
+              })
+              btn.setButtonText('Installed')
+              btn.buttonEl.addClass('wikey-btn-success')
+              new Notice('unhwp installed successfully')
+              setTimeout(() => this.display(), 2000)
+            } catch (err: any) {
+              btn.setButtonText('Failed')
+              btn.buttonEl.addClass('wikey-btn-error')
+              new Notice(`Install failed: ${err?.message ?? err}`)
+              setTimeout(() => { btn.setButtonText('Install unhwp'); btn.setDisabled(false); btn.buttonEl.removeClass('wikey-btn-error') }, 3000)
+            }
+          }),
+        )
+    }
+
     if (!env.hasMarkitdown && env.pythonPath) {
       new Setting(containerEl)
-        .setDesc('Install MarkItDown for better PDF/DOCX ingestion.')
+        .setDesc('Install MarkItDown (fallback converter when docling is unavailable).')
         .addButton((btn) =>
           btn.setButtonText('Install MarkItDown').onClick(async () => {
             btn.setButtonText('Installing...')

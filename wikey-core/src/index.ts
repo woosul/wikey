@@ -33,6 +33,18 @@ export {
 } from './schema.js'
 
 export { parseWikeyConf, loadConfig, resolveProvider } from './config.js'
+export { stripEmbeddedImages, countEmbeddedImages } from './rag-preprocess.js'
+export { scoreConvertOutput, hasMissingKoreanWhitespace } from './convert-quality.js'
+export type { QualityResult, QualityOptions } from './convert-quality.js'
+export {
+  computeCacheKey,
+  getCached,
+  setCached,
+  invalidate as invalidateConvertCache,
+  cleanup as cleanupConvertCache,
+  stats as convertCacheStats,
+} from './convert-cache.js'
+export type { CacheKeyInput, CacheIndexEntry } from './convert-cache.js'
 export { LLMClient, fetchModelList } from './llm-client.js'
 export { createPage, updateIndex, appendLog, extractWikilinks } from './wiki-ops.js'
 export { query } from './query-pipeline.js'

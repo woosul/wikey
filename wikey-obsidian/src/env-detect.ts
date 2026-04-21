@@ -19,6 +19,9 @@ export interface EnvStatus {
   hasKiwipiepy: boolean
   hasMarkitdown: boolean
   hasMarkitdownOcr: boolean
+  hasDocling: boolean
+  doclingVersion: string
+  hasUnhwp: boolean
   ready: boolean
   issues: string[]
 }
@@ -37,6 +40,9 @@ const DEFAULT_STATUS: EnvStatus = {
   hasKiwipiepy: false,
   hasMarkitdown: false,
   hasMarkitdownOcr: false,
+  hasDocling: false,
+  doclingVersion: '',
+  hasUnhwp: false,
   ready: false,
   issues: [],
 }
@@ -194,6 +200,27 @@ async function checkMarkitdownOcr(pythonPath: string, env: Record<string, string
   }
 }
 
+async function checkDocling(env: Record<string, string>): Promise<{ ok: boolean; version: string }> {
+  try {
+    const { stdout } = await execFileAsync('docling', ['--version'], { env, timeout: 5000 })
+    // docling --version 출력 예: "Docling version: 2.90.0" 또는 "docling, version 2.90.0"
+    const m = stdout.match(/(\d+\.\d+\.\d+)/)
+    return { ok: true, version: m ? m[1] : stdout.trim().split('\n')[0].slice(0, 40) }
+  } catch {
+    return { ok: false, version: '' }
+  }
+}
+
+async function checkUnhwp(pythonPath: string, env: Record<string, string>): Promise<boolean> {
+  if (!pythonPath) return false
+  try {
+    await execFileAsync(pythonPath, ['-c', 'import unhwp'], { env, timeout: 5000 })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /**
  * 전체 환경 탐지 실행. 플러그인 onload에서 1회 호출.
  */
@@ -252,6 +279,14 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
 
   // 8. markitdown-ocr (스캔 PDF용 OCR fallback, 옵셔널)
   status.hasMarkitdownOcr = await checkMarkitdownOcr(status.pythonPath, env)
+
+  // 9. docling (tier 1 메인 컨버터)
+  const docling = await checkDocling(env)
+  status.hasDocling = docling.ok
+  status.doclingVersion = docling.version
+
+  // 10. unhwp (HWP/HWPX 전용, 옵셔널 — .hwp 소스를 다루는 경우만 필요)
+  status.hasUnhwp = await checkUnhwp(status.pythonPath, env)
 
   status.issues = issues
   status.ready = issues.length === 0

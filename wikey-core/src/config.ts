@@ -1,7 +1,12 @@
 import type { WikeyConfig, LLMProvider } from './types.js'
 import { PROVIDER_CHAT_DEFAULTS, CONTEXTUAL_DEFAULT_MODEL } from './provider-defaults.js'
 
-const NUMERIC_KEYS = new Set(['WIKEY_QMD_TOP_N', 'COST_LIMIT'])
+const NUMERIC_KEYS = new Set([
+  'WIKEY_QMD_TOP_N', 'COST_LIMIT',
+  'OCR_DPI', 'OCR_PARALLEL', 'OCR_MAX_PAGES',
+  'DOCLING_TIMEOUT_MS',
+])
+const BOOLEAN_KEYS = new Set(['DOCLING_DISABLE'])
 
 const DEFAULTS: WikeyConfig = {
   WIKEY_BASIC_MODEL: 'claude-code',
@@ -35,7 +40,13 @@ export function parseWikeyConf(content: string): Partial<WikeyConfig> {
 
     if (key === '' || value === '') continue
 
-    result[key] = NUMERIC_KEYS.has(key) ? Number(value) : value
+    if (NUMERIC_KEYS.has(key)) {
+      result[key] = Number(value)
+    } else if (BOOLEAN_KEYS.has(key)) {
+      ;(result as Record<string, unknown>)[key] = value === 'true' || value === '1' || value.toLowerCase() === 'yes'
+    } else {
+      result[key] = value
+    }
   }
 
   return result as Partial<WikeyConfig>

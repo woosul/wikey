@@ -49,6 +49,14 @@ export interface WikeyConfig {
   readonly OCR_DPI?: number
   readonly OCR_PARALLEL?: number
   readonly OCR_MAX_PAGES?: number
+
+  // Docling (tier 1 메인 컨버터). 미설정 시 실용적 기본값 사용.
+  readonly DOCLING_TABLE_MODE?: string          // 'accurate' (기본) | 'fast'
+  readonly DOCLING_DEVICE?: string              // 'mps' | 'cuda' | 'cpu' (자동 감지 후 오버라이드)
+  readonly DOCLING_OCR_ENGINE?: string          // 'ocrmac' | 'rapidocr' | 'tesseract' (OS별 기본)
+  readonly DOCLING_OCR_LANG?: string            // 기본 'ko-KR,en-US'
+  readonly DOCLING_TIMEOUT_MS?: number          // 기본 300000
+  readonly DOCLING_DISABLE?: boolean            // true = tier 1 스킵 (디버깅/벤치마크용)
 }
 
 // ── LLM ──
