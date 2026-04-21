@@ -47,3 +47,4 @@ wikey-obsidian/main.js
 
 # Claude Code session
 .claude/settings.local.json
+.claude/scheduled_tasks.lock

@@ -1,66 +1,50 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (Phase 4 §4.5.1.5 v2 RAG chunk 폐지 + Phase A/B/C 이행 구현 완료, 측정 분리)
+> 최신 갱신: 2026-04-22 (§4.5.1.5 측정 세션 완료 — 30-run Total CV 24.3%, §4.5.1.6 승격)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-22 (Phase 4 §4.5.1.5 v2 LLM Wiki Phase A/B/C 이행) 구현 완료 · 측정 분리
+## 2026-04-22 §4.5.1.5 측정 세션 완료 — §4.5.1.6 (LLM 수준 variance + canonicalizer 3차) 승격
 
 ### ⭐ 다음 세션 시작점
 
-**현재 상태**: §4.5.1.5 v2 구현 완료. RAG chunk 패턴 폐지 + LLM Wiki schema §19·§21 에 부합하는 **결정적 Phase A (섹션 파서, LLM 의존 0) + token-budget 2-route (FULL/SEGMENTED)** 로 ingest 파이프라인 재편. **251 → 290 tests PASS** (+39 신규 TDD). tsc 0 / esbuild 0. 설계 문서: `plan/phase-4-change-phase-abc.md` (v2, Codex 적대적 검증 반영).
+**§4.5.1.5 완료 요약**:
+- **30-run PMS 측정**: Total CV **32.5% → 24.3%** (baseline 대비 −8.2pp, 상대 −25.2%), 30/30 성공
+- **Gate 판정 (ratio 0.748)**: 섹션 경계 지터는 "주범(>50%)" 이 아닌 "기여자(20-50%)" → N=30 이 smoke 3-run 판정을 반증
+- **잔여 variance 75%**: (a) LLM 수준 (temperature=0.1/seed 미설정) + (b) canonicalizer 미도달 패턴 (`alimtalk` 5-variant, ERP/SCM/MES 3-variant, BOM 5-variant, E/C 경계 왕복)
+- **Selective rollback 불필요**: Phase A/B/C 유지 (철학적 근거 `wikey.schema.md §19·§21` + 25% 감소 증거 + 290 PASS)
+- **측정 infra 개선**: `scripts/measure-determinism.sh` panel refresh 패치 (`selectPanel` re-click guard 우회 — audit→chat→audit routing)
+- **산출물**: `activity/phase-4-5-1-5-pms-30run-2026-04-22.md` (30-run 원본), `activity/phase-4-result.md §4.5.1.5.11~.14`
 
-**핵심 산출물**:
-- `wikey-core/src/section-index.ts` — `parseSections` (결정적) + `buildSectionIndex` + `computeHeuristicPriority` (skip/core/support 결정적 휴리스틱) + `formatPeerContext` + `formatSourceTOC`
-- `wikey-core/src/provider-defaults.ts` — `PROVIDER_CONTEXT_BUDGETS` (4 provider: Gemini 1M / Claude 200K / OpenAI 1M / Ollama 32K) + `estimateTokens` (한국어 1.5, mixed 2.5, en 4.0 divisor + 30% margin) + `selectRoute`
-- `wikey-core/src/ingest-pipeline.ts` — `splitIntoChunks` / `MAX_SOURCE_CHARS` 삭제. Route FULL (summary + 1-call extractMentions + canon) / SEGMENTED (summary + 섹션별 extractMentions + canon). `Mention.source_chunk_id` → `source_section_idx`. `appendSectionTOCToSource` (Phase C 근거).
-- `scripts/ablation-ingest.sh` — ablation 자동화 (실험 1 작동, 실험 2-4 는 후속 infra)
-- 3 신규 테스트 파일 (section-index 22 + provider-budgets 14 + source-toc-append 3)
+### 🔴 최우선 다음 작업: §4.5.1.6 (LLM 수준 variance + canonicalizer 3차)
 
-### 🔴 최우선 다음 작업: §4.5.1.5 측정 세션 (Obsidian CDP 환경 필요)
+**목표**: Total CV 24.3% → **<15% (determinism 적용 후)** → **<10% (canonicalizer 3차 적용 후)**
 
-**선행**: Obsidian 을 다음 옵션으로 기동.
-```
-osascript -e 'quit app "Obsidian"' && sleep 3
-/Applications/Obsidian.app/Contents/MacOS/Obsidian --remote-debugging-port=9222 '--remote-allow-origins=*' &
-```
+**하위 과제** (`plan/phase-4-todo.md §4.5.1.6`):
 
-**1. Ablation 실험 1 (Frozen markdown) — N=10**
-```bash
-./scripts/ablation-ingest.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10
-```
-Gate 판정:
-- Total CV ≤ 16% (baseline 32.5% 의 50%) → 섹션 경계 **> 50% 기여** → 30-run PMS main 진행
-- 16% < CV ≤ 26% → **20-50% 기여** → 30-run + 개선폭 재산정
-- CV > 26% → **< 20% 기여** → smoke 만 + `§4.5.1.6` (LLM 수준 variance) 신규
+1. **§4.5.1.6.1** — `wikey-core/src/llm-client.ts` 에 `extractionDeterminism` 플래그 + Gemini `generationConfig.temperature=0 + seed=42` 옵션 (TDD)
+2. **§4.5.1.6.2** — determinism=on 조건 10-run 재측정 → temperature/seed 기여분 정량
+3. **§4.5.1.6.3** — `canonicalize.ts SLUG_ALIASES` 3차 확장:
+   - `allim-talk`, `kakao-alimtalk` → `alimtalk`
+   - `erp-system`, `enterprise-resource-planning-system` → `enterprise-resource-planning`
+   - `supply-chain-management-system` → `supply-chain-management`
+   - `point-of-production-system` → `manufacturing-execution-system`
+   - `e-bom`, `e-bill-of-materials`, `electronic-bill-of-materials`, `engineering-bill-of-materials` → `bill-of-materials` (축 분리 재검토)
+   - `electronic-approval-system` → `electronic-approval`
+4. **§4.5.1.6.4** — `FORCED_CATEGORIES` 강화: 동일 slug 가 E/C pool 양쪽 등장 시 axis pin (run-local 1-pass → canonical resolution)
+5. **§4.5.1.6.5** — Route FULL vs SEGMENTED 10-run 분리 비교 (섹션 분할의 variance 증폭 효과 분리)
+6. **§4.5.1.6.6** — 개선 후 30-run 재측정 → 최종 CV 확정
 
-**2. Route smoke (각 N=10)**
-```bash
-# Route FULL (Gemini, PMS → 한국어 ~55K tok, usable 748K → FULL)
-./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10
+**선행 체크**:
+- Obsidian `--remote-debugging-port=9222 --remote-allow-origins='*'` 기동 상태 유지
+- `.ingest-map.json` clean (§4.5.1.5.12 의 cleanup 로직이 마지막 run 뒤 자동 정리)
 
-# Route SEGMENTED (Ollama qwen3:8b, PMS → 55K tok > 20.4K usable → SEGMENTED)
-WIKEY_BASIC_PROVIDER=ollama WIKEY_BASIC_MODEL=qwen3:8b \
-  ./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10
-```
-확증 대상: Route 판정 결정성 10/10 동일, 섹션 priority 결정성 10/10 동일.
+### 🟡 차순위 작업
 
-**3. 30-run PMS main** (gate 통과 시)
-```bash
-./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 30
-```
-비교: §4.5.1.4 baseline Total CV 32.5% → v2 CV (mid-teens~low-20s 예상). Core entities 15% → ≥40% aspiration, Core concepts 23% → ≥50% aspiration.
-
-**4. 결과 수합 + `activity/phase-4-result.md §4.5.1.5` 에 측정 섹션 추가**. selective rollback 판정 (parseSections + TOC 유지는 기본, LLM 추가 단계가 CV 악화시 killable).
-
-**주의**: measure-determinism.sh 는 `cleanupForRerun` 이 신규 파일만 삭제 → pre-existing modification (예: 기존 page 의 source 목록 append) 은 diff 범위 밖 → 측정 후 `git checkout -- wiki/{index.md,log.md,<기존페이지>}` 수동 revert 필요.
-
-### 🟡 차순위 작업 (§4.5.1.5 측정 완료 후)
-
-1. **§4.5.1.6 신규 (조건부)** — ablation gate 결과 섹션 경계 기여 <20% 면 LLM 수준 variance 분석 과제 분리. 실험 2-4 (Extraction-only / Canon-only / seed+temp=0) 의 별도 Node infra 설계.
-2. **§4.2 URI 기반 안정 참조** — `.ingest-map.json` → `.wikey/source-registry.json` (hash 키). wiki/sources 프론트매터 `source_id` 필드 추가. `§4.1.1.9 vault rename/delete listener` 합동 구현.
-3. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
+1. **§4.2 URI 기반 안정 참조** — `.ingest-map.json` → `.wikey/source-registry.json` (hash 키). wiki/sources 프론트매터 `source_id` 필드 추가. `§4.1.1.9 vault rename/delete listener` 합동 구현.
+2. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
+3. **§4.5.1.5.7~.9 실험 2-4** (ablation 2-4 infra 보강) — Extraction-only / Canon-only / seed+temp=0 의 별도 Node helper 설계. §4.5.1.6.1 과 부분 겹침, 합쳐서 진행 가능.
 
 ### 🟢 저우선 / 보류 이관
 

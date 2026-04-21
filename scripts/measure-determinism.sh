@@ -211,9 +211,16 @@ for (let run = 1; run <= N_RUNS; run++) {
 
   const auditBtn = [...document.querySelectorAll('.wikey-header-btn')].find(b => b.getAttribute('aria-label') === 'Audit')
   if (!auditBtn) { results.push({ run, error: 'no audit button' }); continue }
-  // Always close+reopen for fresh data
+  // Force panel destroy+recreate by routing through another panel first.
+  // selectPanel() has a re-click guard (if activePanel === name, no-op), so
+  // clicking Audit twice keeps the same stale DOM. Switch to another panel
+  // (Chat) then back to Audit to trigger renderAuditSection() → audit-ingest.py
+  // re-exec and fresh missing-list.
   if (document.querySelector('.wikey-audit-panel')) {
-    auditBtn.click(); await new Promise(r => setTimeout(r, 1000))
+    const chatBtn = [...document.querySelectorAll('.wikey-header-btn')].find(b => b.getAttribute('aria-label') === 'Chat')
+    const dashBtn = [...document.querySelectorAll('.wikey-header-btn')].find(b => b.getAttribute('aria-label') === 'Dashboard')
+    const other = chatBtn || dashBtn
+    if (other) { other.click(); await new Promise(r => setTimeout(r, 600)) }
   }
   auditBtn.click(); await new Promise(r => setTimeout(r, 2500))
 

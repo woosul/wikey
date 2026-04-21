@@ -5,6 +5,19 @@ created: 2026-04-10
 updated: 2026-04-22
 ---
 
+## [2026-04-22] eval | §4.5.1.5 측정 — 30-run PMS Total CV 24.3% (baseline 32.5%, −8.2pp)
+
+- 측정: `./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 30` (Gemini 2.5 Flash, Obsidian CDP). 30/30 성공, 평균 5.6분/run, 총 190분.
+- Total CV **32.5% → 24.3%** (−8.2pp, 상대 −25.2%). Entities CV 36.4%, Concepts CV 31.1%. Core entities 3/40 (7.5%), Core concepts 4/47 (8.5%).
+- Gate ratio 24.3/32.5 = 0.748 → "20-50% 기여" 구간. smoke 3-run (CV 11.6%, ratio 0.357) 의 "> 50% 기여" 판정은 sample variability 로 과장 확인. N=10 subset CV ≈ 28% 로 N=3 신뢰 불가 재확증.
+- 잔여 variance 75%: (a) LLM 수준 (Gemini `temperature=0.1` 기본, seed 미설정), (b) canonicalizer 미도달 패턴 — `alimtalk` 5-variant (`allim-talk`, `kakao-alimtalk` 등), ERP/SCM/MES 3-variant, BOM 5-variant, E/C 경계 왕복 (`electronic-approval`/`-system`, `restful-api`/`representational-state-transfer-api`).
+- 판정: Phase A/B/C 이행 **유지** (CV 감소 + `wikey.schema.md §19·§21` 철학 + 290 PASS). Selective rollback 불필요.
+- 측정 infra 패치: `scripts/measure-determinism.sh` 에서 audit panel refresh 버그 수정. `selectPanel` 의 re-click guard (`if activePanel===name return`) 때문에 `auditBtn.click() × 2` 가 no-op → 첫 실행 10-run 중 1-run 만 성공. 해결: audit → chat → audit routing 으로 panel 강제 destroy+recreate.
+- 선결 실패: 첫 10-run (1/10 성공). 원인 확정 후 패치 → smoke 3-run (3/3) → 30-run (30/30) 순으로 검증.
+- 후속: §4.5.1.6 승격 — LLM determinism 플래그 (`temperature=0 + seed=42`) + canonicalizer 3차 확장 (ERP/SCM/MES suffix, BOM 5-variant, alimtalk 신규 alias) + FORCED_CATEGORIES canonical resolution 업그레이드. 목표 CV <15% (determinism) → <10% (canonicalizer 3차).
+- 산출물: `activity/phase-4-5-1-5-pms-30run-2026-04-22.md` (30-run 원본), `activity/smoke-3run-pms-0025.md`, `activity/phase-4-result.md §4.5.1.5.11~.14`, `plan/phase-4-todo.md §4.5.1.6` (신규 6 sub-task), `plan/session-wrap-followups.md` (§4.5.1.6 최우선).
+- wiki 오염 revert: 측정 중 ingest 로 `wiki/log.md` (+825), `wiki/index.md` (+85), `wiki/entities/goodstream-co-ltd.md`, `wiki/concepts/business-registration-certificate.md` 수정 발생 → `git checkout` 으로 원복 (measure-determinism.sh `cleanupForRerun` 는 신규 파일만 삭제, pre-existing mod 은 범위 밖).
+
 ## [2026-04-22] feat | §4.5.1.5 v2 RAG chunk 폐지 + LLM Wiki Phase A/B/C 이행 (구현 완료, 측정 분리)
 
 - 배경: §4.5.1.4 에서 SLUG_ALIASES/FORCED_CATEGORIES 로도 Total CV 32.5% 해소 못 함. 원인이 post-processing 밖임을 확증. §4.1 Docling 완료 직후 철학 재검토에서 **RAG chunk 자체가 `wikey.schema.md §19·§21` 배격 대상** 임이 드러남 — §19 "책을 훑어 목차+색인 만들고 필요한 장만 읽기" (Phase A/B/C), §21 "검색을 DB에 위임하면 다시 RAG". 현 `splitIntoChunks(8000)` 는 schema 위반 + variance 의 구조적 원인.

@@ -4,7 +4,7 @@
 > 전제: Phase 3 (Obsidian 플러그인 + 인제스트 파이프라인 v6) 완료
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md`와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트(LLM 추출)** → **4. 검색·그래프** → **5. 운영·안정성**
-> 상태 (2026-04-21): §4.0 완료, §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 §4.1.1 Docling 선행 후 재개
+> 상태 (2026-04-22): §4.0 완료, §4.1 완료, §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 구현+측정 완료 (Total CV 32.5% → 24.3%, −8.2pp). 다음 = §4.5.1.6 LLM 수준 variance + canonicalizer 3차
 
 ---
 
@@ -369,19 +369,41 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - [x] sidebar UI progress: Route FULL/SEGMENTED + Section i/N 메시지가 자동 전달 (sidebar 는 progress.message 를 투명하게 노출, 별도 수정 불필요)
 - 검증: tsc 0 errors, esbuild 0 errors, 290 tests PASS (+3)
 
-**§7 측정 — 빌드/테스트 완료, 런타임 측정은 사용자 CDP 환경에서 별도**
+**§7 측정 — 2026-04-22 30-run 완료**
 
 - [x] 빌드 게이트: `npm run build:core` (tsc 0) + `build:obsidian` (esbuild 0) + `npm test` (251 → **290 PASS**) fresh 실행 증거 확보
-- [ ] 10-run smoke × 2 route: Route FULL (Gemini PMS) + Route SEGMENTED (Ollama PMS) — Obsidian CDP + API 키 환경에서 사용자 실행
-- [ ] Route 판정 결정성 + 섹션 priority 결정성 100% 확증 — 측정 세션에서 확인
-- [ ] 30-run PMS main (Gemini, ablation gate 통과 시) — §4.5.1.4 baseline CV 32.5% 대비 비교, 측정 세션
+- [x] smoke 3-run (infra 패치 검증): Total CV 11.6% (N=3 → sample variability 큼, N=10+ 가이드 확증)
+- [ ] Route FULL (Gemini) / SEGMENTED (Ollama) 분리 10-run 비교 → **§4.5.1.6.5 로 이관**
+- [x] 30-run PMS main (Gemini) — Total CV 24.3% (baseline 32.5% 대비 −8.2pp, 상대 −25.2%)
+  - 실패 0/30, 평균 5.6분/run, 총 190분
+  - Core entities 3/40 (7.5%), Core concepts 4/47 (8.5%) — 매우 낮음
+  - Gate ratio 0.748 → "20-50% 기여" 구간 — 섹션 경계 지터는 기여자이나 주범 아님
+- [x] 측정 infra 패치 (`scripts/measure-determinism.sh` — audit→chat→audit panel refresh, `selectPanel` re-click guard 우회)
 
 **§8 문서 동기화**
 
-- [ ] `activity/phase-4-result.md §4.5.1.5` 확장 (이번 세션 구현 완료 기록)
-- [ ] `wiki/log.md` 엔트리
-- [ ] `plan/session-wrap-followups.md` §4.5.1.5 구현 완료 선언 + 측정 세션을 다음 과제로 지정
-- [ ] 단일 commit + push
+- [x] `activity/phase-4-result.md §4.5.1.5.11~.14` (measurement infra patch + 30-run 결과 + 최종 결론)
+- [ ] `wiki/log.md` 엔트리 (이번 turn)
+- [ ] `plan/session-wrap-followups.md` §4.5.1.5 측정 완료 선언 + §4.5.1.6 을 다음 과제로 지정 (이번 turn)
+- [ ] 단일 commit + push (이번 turn)
+
+#### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (신규, 2026-04-22)
+
+> **배경**. §4.5.1.5 30-run 측정 결과 Total CV 24.3% — baseline 32.5% 대비 25% 상대 감소했으나 잔여 75% variance 가 LLM 수준 (temperature/seed) + canonicalizer 미도달 패턴에서 발생함을 확증. N=30 데이터에서 `alimtalk` 5-variant, ERP/SCM/MES 3-variant, BOM 5-variant, E/C 경계 왕복 (`electronic-approval(-system)`, `restful-api`/`representational-state-transfer-api`) 등 신규 패턴 발견.
+
+- [ ] **§4.5.1.6.1**: Gemini `generationConfig.temperature=0 + seed=42` 옵션 → `wikey-core/src/llm-client.ts` 에 `extractionDeterminism` 플래그 추가 (TDD)
+- [ ] **§4.5.1.6.2**: determinism=on 조건 10-run 재측정 → temperature/seed 기여분 정량 (목표: Total CV <15%)
+- [ ] **§4.5.1.6.3**: `canonicalize.ts SLUG_ALIASES` 3차 확장
+  - `allim-talk`, `kakao-alimtalk` → `alimtalk` (카카오 공식)
+  - `erp-system`, `enterprise-resource-planning-system` → `enterprise-resource-planning` (E 측 pin)
+  - `supply-chain-management-system` → `supply-chain-management`
+  - `point-of-production-system` → `manufacturing-execution-system`
+  - `e-bom`, `e-bill-of-materials`, `electronic-bill-of-materials`, `engineering-bill-of-materials` → `bill-of-materials` (또는 축 분리 결정)
+  - `electronic-approval-system` → `electronic-approval`
+- [ ] **§4.5.1.6.4**: `FORCED_CATEGORIES` 강화 — 동일 slug 가 E/C pool 양쪽 등장 시 axis pin 적용 (현재 run-local 1-pass → canonical resolution 로 업그레이드)
+  - §4.5.1.4 에서 이미 `project-management-system` 을 pin 했지만 N=30 중 양쪽 등장 run 확인됨
+- [ ] **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 비교 — 섹션 분할 자체의 variance 증폭 효과 분리
+- [ ] **§4.5.1.6.6**: 개선 후 30-run 재측정 → Total CV 목표 <10%
 
 ### 4.5.2 운영 안정성 — 삭제·초기화·포팅
 
