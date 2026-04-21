@@ -291,9 +291,12 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 #### 4.5.1.5 LLM extraction variance 원인 분석 (신규, §4.5.1.4에서 분할)
 
-- [ ] Chunk 분할 결정성 — 동일 PDF의 `extractPdfText` + chunk 분할이 run간 동일 output 내는지 확인
-- [ ] 10+ run baseline — 5-run 표본으로는 Gemini 2.5 Flash의 true CV 측정 불가, N ≥ 10 으로 재평가
-- [ ] Temperature/seed 옵션 재검증 — v6.1에서 기각됐지만 v7 schema + canonicalizer 환경에서 다시 측정
+> **선행 의존**: §4.1.1 Docling 메인화 완료 후 본 과제 재개. 현재 variance 악화의 원인 후보 중 하나는 **MarkItDown 변환 결과가 미구조화**라는 것 — 목차/섹션/표 경계가 불명확한 markdown이 chunk 분할을 불안정하게 만들어 LLM에 전달되는 단위가 run마다 달라질 수 있음. Docling(TableFormer + layout model)으로 **구조적 markdown**(제목 계층·표 셀·리스트)을 확보한 뒤 variance를 재측정하면 post-processing 밖의 문제 중 "전처리 품질" 성분을 분리 가능.
+
+- [ ] **선행**: §4.1.1 Docling 전환 완료 후 PMS PDF의 markdown 재생성 (MarkItDown vs Docling diff 확보)
+- [ ] Chunk 분할 결정성 — Docling 변환 결과로 `extractPdfText` + chunk 분할이 run간 동일 output 내는지 확인 (log stderr에 chunk 수·경계 토큰 출력 추가)
+- [ ] 10+ run baseline — 5-run 표본으로는 Gemini 2.5 Flash의 true CV 측정 불가, N ≥ 10 으로 재평가 (Docling 변환본 기준)
+- [ ] Temperature/seed 옵션 재검증 — v6.1에서 기각됐지만 v7 schema + canonicalizer + Docling 환경에서 다시 측정
 - [ ] 새 slug 변이 추가 — `allimtalk` (오타) → `alimtalk` 추가, `*-system` suffix 중 PMS 섹션 기술 스택(`point-of-production-system`, `executive-information-system` 등) anti-pattern 검토
 
 ### 4.5.2 운영 안정성 — 삭제·초기화·포팅
