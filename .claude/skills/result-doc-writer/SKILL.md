@@ -62,14 +62,15 @@ wikey 프로젝트에서 작업 결과를 `activity/phase-N-result.md`에 기록
 
 | 레벨 | 형식 | 용도 | 마크다운 |
 |------|------|------|---------|
-| 작업 그룹 (top subject) | `N.1`, `N.2`, ... | 최상위 주제 | `## N.1 제목 #tag1 #tag2` |
+| 작업 그룹 (top subject) | `N.1`, `N.2`, ... | 최상위 주제 | `## N.1 제목` + 다음 줄 `> tag: #t1, #t2` |
 | 상세화 1단계 | `N.M.1`, `N.M.2`, ... | 주제 내 세부 | `### N.M.K 제목` |
 | 상세화 2단계 | `N.M.K.1`, ... | 더 세부 | `#### N.M.K.L 제목` |
 | 세부 task | `- [ ]` / `- [x]` | 실행 가능 단위 | 체크박스 목록 |
 
 예 (Phase 4 todo):
 ```markdown
-## 4.1 문서 전처리 파이프라인 #core #workflow
+## 4.1 문서 전처리 파이프라인
+> tag: #core, #workflow
 
 ### 4.1.1 Docling 통합 (Tier 1 메인)
 
@@ -85,13 +86,25 @@ wikey 프로젝트에서 작업 결과를 `activity/phase-N-result.md`에 기록
 
 ## 대분류 #tag (시스템 구성요소 관점)
 
-각 subject(`## N.` 최상위 섹션) 제목 끝에 **다중 `#tag`**로 대분류를 부착한다. 같은 subject가 여러 구성요소에 걸치면 복수로 붙인다.
+각 subject(`## N.` 최상위 섹션)는 **제목 바로 다음 줄에 `> tag: #t1, #t2` 형식의 블록quote 라인**으로 대분류를 부착한다. 같은 subject가 여러 구성요소에 걸치면 콤마로 구분해 복수로 기재한다.
+
+형식 규칙:
+- `> tag: ` 접두사 뒤에 태그들을 콤마+공백으로 구분 (`> tag: #design, #workflow`)
+- 제목 라인에는 `#tag` 를 **붙이지 않는다** — 제목은 순수 텍스트만
+- 태그 라인 다음은 빈 줄 하나, 그 아래 본문
 
 예:
 ```markdown
-## 4. UI/UX 고도화 #design #workflow
-## 7. 문서 전처리 (PDF · OCR tier chain) #core #workflow
-## 9. 로컬 LLM 모델 검증 #eval #infra
+## 4.4 UI/UX 고도화
+> tag: #design, #workflow
+
+(본문 시작)
+
+## 4.7 문서 전처리 (PDF · OCR tier chain)
+> tag: #core, #workflow
+
+## 4.9 로컬 LLM 모델 검증
+> tag: #eval, #infra
 ```
 
 ### 허용 대분류 (필요시 확장)
@@ -125,8 +138,8 @@ wikey 프로젝트에서 작업 결과를 `activity/phase-N-result.md`에 기록
 
 1. 최상단 meta 블록 (기간, 상태, 전제, 인프라, 참조 파일)
 2. `---` 구분선
-3. 첫 subject는 보통 `## 1. 개요 및 타임라인 #docs #architecture`
-4. 이후 subject들 (`## 2.` ~ `## N.`)은 위 원칙에 따라 주제별
+3. 첫 subject는 보통 `## 1.1 개요 및 타임라인` + 다음 줄 `> tag: #docs, #architecture`
+4. 이후 subject들 (`## 1.2` ~ `## 1.N` 또는 Phase 번호에 맞춰 `## N.M`)은 위 원칙에 따라 주제별
 5. 마지막 subject는 "Phase X 완료 체크리스트" 또는 "다음 Phase 준비 상태" 또는 "Phase N+1 이관 + 종료 선언" 중 해당 상황에 맞게
 
 ## 대응되는 todo 파일 체크리스트
@@ -135,7 +148,7 @@ wikey 프로젝트에서 작업 결과를 `activity/phase-N-result.md`에 기록
 
 1. meta 블록 (result와 동일하되 "번호 계층·mirror" 안내 포함)
 2. `---`
-3. `## N. 제목 #tag1 #tag2` — result와 동일한 번호·제목·태그
+3. `## N.M 제목` + 다음 줄 `> tag: #t1, #t2` — result와 동일한 번호·제목·태그
 4. 하위 `- [x] N.M 한 줄 요약`으로 체크박스 리스트
 5. 완료 안 된 항목은 `- [ ]` 또는 `- [~]`(진행 중)로 구분
 

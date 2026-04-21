@@ -12,7 +12,8 @@
 
 ---
 
-## 4.5 운영 · 안정성 #ops #eval
+## 4.5 운영 · 안정성
+> tag: #ops, #eval
 
 ### 4.5.1 결정성 측정 인프라 (measure-determinism.sh)
 

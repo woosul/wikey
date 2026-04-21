@@ -7,7 +7,8 @@
 
 ---
 
-## 4.0 UI 사전작업 #design #main-feature
+## 4.0 UI 사전작업
+> tag: #design, #main-feature
 
 - [ ] chat 패널 추가 : 대화창 전용 패널
   - 아이콘 및 위치 : 상단 아이콘의 맨 앞에 위치하며, 아이콘은 'chat'
@@ -21,7 +22,8 @@
 - [ ] Dashboard
   - dashboard 아이콘 변경 : 기존 home에서 graph (막대그래프)
 
-## 4.1 문서 전처리 파이프라인 (source → Markdown) #core #workflow
+## 4.1 문서 전처리 파이프라인 (source → Markdown)
+> tag: #core, #workflow
 
 ### 4.1.1 Docling + unhwp 메인화, MarkItDown은 fallback으로 강등
 
@@ -112,7 +114,8 @@
 
 ---
 
-## 4.2 분류 및 파일 관리 (inbox → PARA, 이동에 강한 참조) #workflow #core
+## 4.2 분류 및 파일 관리 (inbox → PARA, 이동에 강한 참조)
+> tag: #workflow, #core
 
 ### 4.2.1 LLM 기반 3차/4차 분류 폴더 생성
 
@@ -162,7 +165,8 @@
 
 ---
 
-## 4.3 인제스트 (LLM 추출 · 품질 관리) #core #engine #workflow
+## 4.3 인제스트 (LLM 추출 · 품질 관리)
+> tag: #core, #engine, #workflow
 
 ### 4.3.1 인제스트 프롬프트 시스템 (3-stage 전부 override)
 
@@ -210,7 +214,8 @@
 
 ---
 
-## 4.4 검색 재현율 · 지식 그래프 #eval #core
+## 4.4 검색 재현율 · 지식 그래프
+> tag: #eval, #core
 
 ### 4.4.1 Anthropic-style contextual chunk 재작성 (v7-3, 검색 인덱스 전처리)
 
@@ -246,7 +251,8 @@
 
 ---
 
-## 4.5 운영 · 안정성 #ops #eval
+## 4.5 운영 · 안정성
+> tag: #ops, #eval
 
 ### 4.5.1 결정성 측정 인프라 (measure-determinism.sh 보강)
 
