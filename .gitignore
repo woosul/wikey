@@ -1,6 +1,9 @@
 # Raw sources (PII protection)
 raw/
 
+# Obsidian Web Clipper 기본 저장 폴더 — 개인 수집 자료, 공개 리포에 노출 금지
+Clippings/
+
 # Obsidian (UI 상태 — 사용자마다 다름)
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
