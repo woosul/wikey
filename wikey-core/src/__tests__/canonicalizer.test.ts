@@ -1,5 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import { canonicalize, buildCanonicalizerPrompt } from '../canonicalizer.js'
+import {
+  canonicalize, buildCanonicalizerPrompt,
+  canonicalizeSlug, SLUG_ALIASES, FORCED_CATEGORIES,
+} from '../canonicalizer.js'
 import type { Mention } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
 
@@ -256,5 +259,141 @@ describe('canonicalize — schema override (v7-5)', () => {
     const result = await canonicalize({ ...baseArgs, llm, mentions })
     expect(result.entities).toHaveLength(0)
     expect(result.dropped).toHaveLength(1)
+  })
+})
+
+describe('canonicalize — v7 §4.5.1.4 slug aliases', () => {
+  it('canonicalizeSlug() maps known aliases to canonical form', () => {
+    expect(canonicalizeSlug('allimtok')).toBe('alimtalk')
+    expect(canonicalizeSlug('alrimtok')).toBe('alimtalk')
+    expect(canonicalizeSlug('sso-api')).toBe('single-sign-on-api')
+    expect(canonicalizeSlug('single-sign-on')).toBe('single-sign-on-api')
+    expect(canonicalizeSlug('integrated-member-db')).toBe('integrated-member-database')
+  })
+
+  it('canonicalizeSlug() is identity for unknown slugs', () => {
+    expect(canonicalizeSlug('mariadb')).toBe('mariadb')
+    expect(canonicalizeSlug('some-new-thing')).toBe('some-new-thing')
+  })
+
+  it('SLUG_ALIASES canonical targets do not chain (flat lookup)', () => {
+    // Every target must NOT itself be a key — otherwise variants would resolve
+    // through two lookups, which the single-read `canonicalizeSlug` doesn't do.
+    for (const target of Object.values(SLUG_ALIASES)) {
+      expect(SLUG_ALIASES).not.toHaveProperty(target)
+    }
+  })
+
+  it('applies alias remap to LLM output filename', async () => {
+    const mentions: Mention[] = [
+      { name: '알림톡', type_hint: 'product', evidence: '카카오 서비스' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'allimtok', type: 'product',
+        description: '카카오톡 비즈니스 알림 서비스.',
+      }],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('alimtalk.md')
+  })
+
+  it('collapses abbreviation to fullname slug', async () => {
+    const mentions: Mention[] = [
+      { name: 'SSO', type_hint: 'tool', evidence: '단일 로그인' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'sso-api', type: 'tool',
+        description: 'Single Sign-On API.',
+      }],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('single-sign-on-api.md')
+  })
+})
+
+describe('canonicalize — v7 §4.5.1.4 E/C boundary pins', () => {
+  it('FORCED_CATEGORIES pins mqtt to entity/tool', () => {
+    expect(FORCED_CATEGORIES['mqtt']).toEqual({ category: 'entity', type: 'tool' })
+  })
+
+  it('FORCED_CATEGORIES pins restful-api to concept/standard', () => {
+    expect(FORCED_CATEGORIES['restful-api']).toEqual({ category: 'concept', type: 'standard' })
+  })
+
+  it('moves pinned entity out of concept pool (mqtt)', async () => {
+    const mentions: Mention[] = [
+      { name: 'MQTT', type_hint: 'methodology', evidence: '경량 pub/sub 프로토콜' },
+    ]
+    // LLM mistakenly classifies mqtt as concept/methodology
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [],
+      concepts: [{
+        name: 'mqtt', type: 'methodology',
+        description: '경량 메시지 pub/sub 프로토콜.',
+      }],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('mqtt.md')
+    expect(result.entities[0].entityType).toBe('tool')
+    expect(result.entities[0].content).toContain('entity_type: tool')
+    expect(result.concepts).toHaveLength(0)
+  })
+
+  it('moves pinned concept out of entity pool (restful-api)', async () => {
+    const mentions: Mention[] = [
+      { name: 'RESTful API', type_hint: 'tool', evidence: 'HTTP 기반 웹 서비스' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'restful-api', type: 'tool',
+        description: 'HTTP 기반 자원 지향 웹 서비스 아키텍처.',
+      }],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(0)
+    expect(result.concepts).toHaveLength(1)
+    expect(result.concepts[0].filename).toBe('restful-api.md')
+    expect(result.concepts[0].conceptType).toBe('standard')
+    expect(result.concepts[0].content).toContain('concept_type: standard')
+  })
+
+  it('keeps pinned entity in entity pool (mqtt classified correctly)', async () => {
+    const mentions: Mention[] = [
+      { name: 'MQTT', type_hint: 'tool', evidence: '프로토콜' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'mqtt', type: 'tool',
+        description: '경량 pub/sub 프로토콜.',
+      }],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('mqtt.md')
+    expect(result.entities[0].entityType).toBe('tool')
+  })
+
+  it('dedupes when same pinned slug appears in both pools (entity wins)', async () => {
+    // Edge case: LLM emits mqtt in both pools. Entity pool runs first; second
+    // occurrence must be dropped, not double-counted.
+    const mentions: Mention[] = [
+      { name: 'mqtt', type_hint: 'tool', evidence: 'x' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'mqtt', type: 'tool', description: 'A' }],
+      concepts: [{ name: 'mqtt', type: 'methodology', description: 'B' }],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(1)
+    expect(result.concepts).toHaveLength(0)
   })
 })

@@ -5,6 +5,15 @@ created: 2026-04-10
 updated: 2026-04-21
 ---
 
+## [2026-04-21] eval | §4.5.1.4 canonicalizer 2차 확장 (pin/alias 기능 확증, CV 개선 미확증)
+
+- 변경: `canonicalize.ts`에 `SLUG_ALIASES` (음역·약어 통일) + `FORCED_CATEGORIES` (E/C 경계 pin) + `applyForcedCategories` 후처리. 단위 테스트 11건 추가 (197 tests PASS).
+- 측정: PMS PDF 5-run × 2회 (prompt 힌트 시도 1 + 후처리만 시도 2). 기능은 5/5 run에서 정상 동작 (mqtt→entity/tool, restful-api→concept/standard, single-sign-on-api 통합).
+- 결과: Total CV 5.7% → 32% (악화). 원인: post-processing 밖 LLM extraction volume variance. §4.5.1 baseline 자체가 Gemini sampling의 행운 값 가능성.
+- 판정: 코드 유지 (pin 일관성 정량 확증), CV 개선은 별도 원인 분석 후속 과제로 §4.5.1.5 분할.
+- 산출물: activity/determinism-pms-v7-4514-{prompt-attempt,}-2026-04-21.md, activity/phase-4-result.md §4.5.1.4
+- 후속: §4.5.1.5 — chunk 결정성 + 10+ run baseline + temperature/seed 재검증 + `allimtalk` 오타 추가.
+
 ## [2026-04-21] eval | 결정성 측정 자동 스크립트 재검증 (PMS 5-run, 자동)
 
 - 배경: Phase 4 §4.5.1로 scripts/measure-determinism.sh 개편 (selector class-agnostic, snapshot-diff, CDP 응답 경로 수정, 15KB 크기 가드). 자동 스크립트가 수동 드라이브 대체 가능한지 확증.

@@ -25,6 +25,63 @@ import { normalizeBase } from './wiki-ops.js'
 
 const MAX_JSON_RETRIES = 2
 
+/**
+ * v7 §4.5.1.4: Slug alias map — collapses naming-level variance observed
+ * across 5-run determinism measurements (PMS PDF, 2026-04-21).
+ *
+ * Scope:
+ *   1. Transliteration variants (Korean → English canonical)
+ *   2. Abbreviation ↔ fullname unification within one canonical slug
+ *   3. DB/SW convention collapsed to spelled-out form
+ *
+ * Each entry maps ALIAS → CANONICAL. The canonical is the target slug; it
+ * should itself appear NOT as a key (otherwise remapping is idempotent by
+ * fallthrough but clutters the table).
+ *
+ * Decision log (2026-04-21):
+ *   - `alimtalk` chosen as canonical for KakaoTalk-official spelling; `allimtok` /
+ *     `alrimtok` are romanization drift.
+ *   - `single-sign-on-api` chosen as canonical (protocol noun = API form); standalone
+ *     `single-sign-on` collapses here too because v7 measurements only observed it
+ *     as the API surface, not as the abstract method.
+ *   - `integrated-member-database` over `-db`: avoid abbreviation in slug (consistent
+ *     with wikey convention of spelled-out forms except for industry-standard acronyms
+ *     like `pmbok`/`erp`).
+ */
+export const SLUG_ALIASES: Readonly<Record<string, string>> = {
+  allimtok: 'alimtalk',
+  alrimtok: 'alimtalk',
+  'sso-api': 'single-sign-on-api',
+  'single-sign-on': 'single-sign-on-api',
+  'integrated-member-db': 'integrated-member-database',
+}
+
+export function canonicalizeSlug(base: string): string {
+  return SLUG_ALIASES[base] ?? base
+}
+
+/**
+ * v7 §4.5.1.4: Entity/Concept boundary pins — overrides LLM's category choice
+ * for slugs that oscillated between pools across runs.
+ *
+ * Pins: mqtt=entity (tool), restful-api=concept (standard), pms=entity (product).
+ * `mqtt` is a protocol tool, `restful-api` is a named architectural standard,
+ * `project-management-system` is a product category that LLM sometimes classified
+ * as methodology.
+ *
+ * Applied AFTER schema validation as a post-processing step, not via schema
+ * extension — the existing `.wikey/schema.yaml` only supports type vocabulary
+ * extension, not per-instance classification.
+ */
+export const FORCED_CATEGORIES: Readonly<Record<string, {
+  category: 'entity' | 'concept'
+  type: EntityType | ConceptType
+}>> = {
+  mqtt: { category: 'entity', type: 'tool' },
+  'restful-api': { category: 'concept', type: 'standard' },
+  'project-management-system': { category: 'entity', type: 'product' },
+}
+
 export interface CanonicalizeArgs {
   readonly llm: LLMClient
   readonly mentions: readonly Mention[]
@@ -152,7 +209,7 @@ function assembleCanonicalResult(
     if (!result.ok) continue
     entities.push(result.page)
     keptBases.add(normalizeBase(result.page.filename))
-    for (const alias of e.aliases ?? []) keptBases.add(normalizeBase(alias))
+    for (const alias of e.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias)))
   }
 
   for (const c of raw.concepts ?? []) {
@@ -162,22 +219,113 @@ function assembleCanonicalResult(
     if (keptBases.has(normalizeBase(result.page.filename))) continue
     concepts.push(result.page)
     keptBases.add(normalizeBase(result.page.filename))
-    for (const alias of c.aliases ?? []) keptBases.add(normalizeBase(alias))
+    for (const alias of c.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias)))
   }
 
-  // Track dropped mentions: anything in `mentions` whose normalized name (or hint) didn't survive
+  // v7 §4.5.1.4: apply E/C boundary pins (after schema validation + dedup)
+  const pinned = applyForcedCategories(entities, concepts, sourceFilename, today)
+
+  // Track dropped mentions: anything in `mentions` whose canonical base didn't survive
+  const pinnedBases = new Set<string>()
+  for (const p of pinned.entities) pinnedBases.add(normalizeBase(p.filename))
+  for (const p of pinned.concepts) pinnedBases.add(normalizeBase(p.filename))
   for (const m of mentions) {
-    const base = normalizeBase(m.name)
-    if (keptBases.has(base)) continue
+    const base = canonicalizeSlug(normalizeBase(m.name))
+    if (pinnedBases.has(base)) continue
     const reason = computeDropReason(m)
     dropped.push({ mention: m, reason })
   }
 
   return {
-    entities, concepts, dropped,
+    entities: pinned.entities,
+    concepts: pinned.concepts,
+    dropped,
     indexAdditions: raw.index_additions,
     logEntry: raw.log_entry,
   }
+}
+
+/**
+ * v7 §4.5.1.4: Post-process entity/concept pools against FORCED_CATEGORIES.
+ * If a pinned slug lands in the wrong pool, move it with its pinned type.
+ * Also de-duplicates if same canonical already in the target pool.
+ */
+function applyForcedCategories(
+  entities: WikiPage[], concepts: WikiPage[],
+  sourceFilename: string, today: string,
+): { entities: WikiPage[]; concepts: WikiPage[] } {
+  const outE: WikiPage[] = []
+  const outC: WikiPage[] = []
+  const targetBases = { entity: new Set<string>(), concept: new Set<string>() }
+
+  const placeIntoTarget = (page: WikiPage, forced: { category: 'entity' | 'concept'; type: EntityType | ConceptType }) => {
+    const base = normalizeBase(page.filename)
+    const pool = forced.category === 'entity' ? outE : outC
+    const seen = targetBases[forced.category]
+    if (seen.has(base)) return
+    seen.add(base)
+    // Rebuild with forced type so front-matter matches the new category
+    const isEntity = forced.category === 'entity'
+    const type = forced.type
+    const description = extractDescription(page.content)
+    const newPage: WikiPage = {
+      filename: page.filename,
+      category: isEntity ? 'entities' : 'concepts',
+      entityType: isEntity ? (type as EntityType) : undefined,
+      conceptType: !isEntity ? (type as ConceptType) : undefined,
+      content: buildPageContent({
+        name: base, type: type as string,
+        description: description || '(설명 없음)',
+        category: forced.category, sourceFilename, today,
+      }),
+    }
+    pool.push(newPage)
+  }
+
+  // Pass 1: entities pool → classify into outE (default) or outC (pinned concept)
+  for (const p of entities) {
+    const base = normalizeBase(p.filename)
+    const forced = FORCED_CATEGORIES[base]
+    if (forced) {
+      placeIntoTarget(p, forced)
+    } else {
+      if (targetBases.entity.has(base)) continue
+      targetBases.entity.add(base)
+      outE.push(p)
+    }
+  }
+  // Pass 2: concepts pool → classify into outC (default) or outE (pinned entity)
+  for (const p of concepts) {
+    const base = normalizeBase(p.filename)
+    // Skip if already placed by pin in entity pool
+    if (targetBases.entity.has(base)) continue
+    const forced = FORCED_CATEGORIES[base]
+    if (forced) {
+      placeIntoTarget(p, forced)
+    } else {
+      if (targetBases.concept.has(base)) continue
+      targetBases.concept.add(base)
+      outC.push(p)
+    }
+  }
+
+  return { entities: outE, concepts: outC }
+}
+
+function extractDescription(content: string): string {
+  // Front-matter ends at the second '---'; description is the first non-empty paragraph after `# title`
+  const parts = content.split(/\n---\n/)
+  const body = parts.length >= 2 ? parts.slice(1).join('\n---\n') : content
+  const lines = body.split('\n')
+  let seenTitle = false
+  for (const ln of lines) {
+    const t = ln.trim()
+    if (!seenTitle) { if (t.startsWith('# ')) seenTitle = true; continue }
+    if (!t) continue
+    if (t.startsWith('## ') || t.startsWith('- ')) break
+    return t
+  }
+  return ''
 }
 
 interface PageBuildOk { ok: true; page: WikiPage }
@@ -193,7 +341,9 @@ function validateAndBuildPage(
   const name = (raw.name ?? '').trim()
   if (!name) return { ok: false, reason: 'empty name' }
 
-  const base = normalizeBase(name)
+  // v7 §4.5.1.4: normalize LLM output through slug alias map BEFORE anti-pattern check,
+  // so variant spellings collapse to one canonical slug deterministically.
+  const base = canonicalizeSlug(normalizeBase(name))
   const antiPattern = detectAntiPattern(base)
   if (antiPattern) return { ok: false, reason: antiPattern }
 

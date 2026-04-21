@@ -283,9 +283,18 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - 축약 불일치: `integrated-member-database` ↔ `integrated-member-db`
 - E/C 경계 왕복: `mqtt` / `project-management-system` / `restful-api`
 
-- [ ] `canonicalize.ts`에 음역 정규화 테이블 (한국어 고유명 → canonical slug)
-- [ ] 약어/동의어 흡수 (sso-api / single-sign-on-api / single-sign-on → 하나)
-- [ ] E/C 경계 왕복 3건을 `.wikey/schema.yaml`에 고정 (`restful-api`=concept, `mqtt`=entity, etc.)
+- [x] `canonicalize.ts`에 음역 정규화 테이블 (`SLUG_ALIASES`) — `allimtok`/`alrimtok` → `alimtalk` (카카오 공식 표기)
+- [x] 약어/동의어 흡수 — `sso-api`/`single-sign-on` → `single-sign-on-api`, `integrated-member-db` → `-database`
+- [x] E/C 경계 왕복 3건 `canonicalize.ts` 내 `FORCED_CATEGORIES` + `applyForcedCategories` 후처리로 pin (schema.yaml은 type vocabulary 확장만 가능, instance classification 강제 불가)
+- [x] 단위 테스트 11건 추가 — 197 tests PASS
+- [~] 5-run 재측정 — **기능 확증 (pin/alias 5/5 run에서 정상 동작), CV 개선 미확증 (Total CV 5.7→32%, 원인은 post-processing 밖의 LLM extraction volume variance)**
+
+#### 4.5.1.5 LLM extraction variance 원인 분석 (신규, §4.5.1.4에서 분할)
+
+- [ ] Chunk 분할 결정성 — 동일 PDF의 `extractPdfText` + chunk 분할이 run간 동일 output 내는지 확인
+- [ ] 10+ run baseline — 5-run 표본으로는 Gemini 2.5 Flash의 true CV 측정 불가, N ≥ 10 으로 재평가
+- [ ] Temperature/seed 옵션 재검증 — v6.1에서 기각됐지만 v7 schema + canonicalizer 환경에서 다시 측정
+- [ ] 새 slug 변이 추가 — `allimtalk` (오타) → `alimtalk` 추가, `*-system` suffix 중 PMS 섹션 기술 스택(`point-of-production-system`, `executive-information-system` 등) anti-pattern 검토
 
 ### 4.5.2 운영 안정성 — 삭제·초기화·포팅
 

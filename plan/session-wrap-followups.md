@@ -1,7 +1,64 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-21 (Phase 4 시작 — §4.5.1 측정 인프라 자동화)
+> 최신 갱신: 2026-04-21 (Phase 4 §4.5.1.4 canonicalizer 2차 — 기능 완수, CV 개선 실패)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-21 (Phase 4 §4.5.1.4 canonicalizer 2차 확장) 마감
+
+### ⭐ 다음 세션 시작점
+
+**현재 상태**: Phase 4 §4.5.1.4 완료. canonicalize.ts에 SLUG_ALIASES + FORCED_CATEGORIES + applyForcedCategories 후처리 landed. **기능은 확증 (pin된 `mqtt`/`restful-api`/`single-sign-on-api`가 5/5 run에서 올바른 pool)**. 그러나 **정량 CV 개선은 실패** — 2회 재측정 모두 Total CV 32%, baseline 5.7% 대비 악화. 원인: LLM extraction volume의 run간 진동 (20~50 total). Post-processing 밖의 variance source.
+
+**결론**: 코드 유지 (pin 일관성은 정량 확증됨), CV 개선은 §4.5.1.5로 분할 이관.
+
+**산출물**:
+- `wikey-core/src/canonicalizer.ts` — SLUG_ALIASES + FORCED_CATEGORIES + applyForcedCategories
+- `wikey-core/src/__tests__/canonicalizer.test.ts` — 11 new tests (197 tests total PASS)
+- `activity/determinism-pms-v7-4514-prompt-attempt-2026-04-21.md` — prompt 힌트 시도 결과 (기각)
+- `activity/determinism-pms-v7-4514-2026-04-21.md` — 후처리만 시도 결과 (최종)
+- `activity/phase-4-result.md` §4.5.1.4 — 솔직 보고 + 결정 로그
+- `plan/phase-4-todo.md` §4.5.1.5 신규 생성 (variance 원인 분석 이관)
+
+**바로 시작 가능한 작업**:
+
+1. **🔴 §4.5.1.5 LLM extraction variance 원인 분석** (신규, 1-2 세션)
+   - chunk 분할 결정성: 동일 PDF의 `extractPdfText` → chunk 수 run간 동일한지 확인 (log stderr 추가)
+   - 10+ run baseline: 5-run으론 Gemini 2.5 Flash의 true CV 측정 불가 → N≥10
+   - Temperature=0 + seed 재검증: v6.1에서 기각된 실험, v7 schema + canonicalizer 환경에서 다시
+   - 새 slug 변이 추가: `allimtalk` (오타) → `alimtalk`, `*-system` suffix 기술 스택 (point-of-production-system 등) anti-pattern 검토
+
+2. **🟢 §4.1.1 Docling 메인화 + unhwp 위임** (큰 효과, 별도 세션)
+   - §4.5.1.5 결과 관계없이 진행 가능 (문서 전처리 레이어)
+   - MarkItDown → Docling 승격, HWP/HWPX → unhwp
+
+3. **🟡 §4.2.2 URI 기반 안정 참조** (중간 작업, PARA 이동 내성)
+
+### §4.5.1.4 구현 요점 (재참조)
+
+```typescript
+// canonicalize.ts 내 exports
+export const SLUG_ALIASES = {
+  allimtok: 'alimtalk', alrimtok: 'alimtalk',
+  'sso-api': 'single-sign-on-api', 'single-sign-on': 'single-sign-on-api',
+  'integrated-member-db': 'integrated-member-database',
+}
+export const FORCED_CATEGORIES = {
+  mqtt: { category: 'entity', type: 'tool' },
+  'restful-api': { category: 'concept', type: 'standard' },
+  'project-management-system': { category: 'entity', type: 'product' },
+}
+```
+
+- `canonicalizeSlug(base)` — `validateAndBuildPage` 에서 normalizeBase 이후 적용
+- `applyForcedCategories(entities, concepts, ...)` — `assembleCanonicalResult` 끝에서 후처리
+
+### 측정 교훈
+
+- Gemini 2.5 Flash + PMS 제품문서(기술 스택 섹션 포함)는 extraction volume variance 큼
+- 5-run 표본 CV 는 **신뢰도 낮음** — 적어도 10-run 이상으로 true CV 추정 필요
+- Post-processing (pin/alias)은 naming-level 변동 해소에는 유효하지만 **extraction volume variance에는 영향 없음**
 
 ---
 
