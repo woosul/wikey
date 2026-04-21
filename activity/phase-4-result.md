@@ -2,7 +2,10 @@
 
 > 기간: 2026-04-21 ~ (진행중)
 > 목표: 인제스트 고도화 + 지식 그래프 + 운영 안정성 (plan/phase-4-todo.md 참고)
-> 상태: 진행중 — 첫 완료분 §4.5.1 측정 인프라 수정 (2026-04-21)
+> 상태: 진행중 (2026-04-21)
+> - §4.5.1 측정 인프라 자동화 — 완료 (자동 스크립트가 수동 CDP 드라이브 대체)
+> - §4.5.1.4 canonicalizer 2차 (pin/alias) — 기능 완수 / CV 개선 미확증 (197 tests PASS)
+> - §4.5.1.5 LLM extraction variance 원인 분석 — **§4.1.1 Docling 메인화 선행** 후 재개 (미착수)
 > 전제: Phase 3 완료 (v7 3-stage, schema override, 결정성 CV Concepts -37% / Total -53%)
 > 인프라: Obsidian 1.12.7 + CDP 9222, Ollama 0.20.5, Node 22.17.0
 

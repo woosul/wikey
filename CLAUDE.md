@@ -249,3 +249,13 @@ npm run dev            # wikey-obsidian watch 모드
 
 `activity/phase-*-result.md` 작성·재구성 규칙은 **`result-doc-writer` 스킬**에 정의되어 있다. 해당 문서를 수정하거나 세션 결과를 기록할 때 그 스킬이 자동 트리거된다. (이전에 이 CLAUDE.md에 직접 기록하던 3원칙·번호체계·`#tag` 규칙은 2026-04-20에 스킬로 이관, 전역 토큰 절약.)
 
+## 문서 동기화 플로우 (필수)
+
+사용자가 "문서 동기화", "sync docs", "관련 문서 정리", "result/todo 업데이트" 유사 요청을 하면 **반드시 다음 순서**로 진행한다 (2026-04-21 고정):
+
+1. **result/todo 먼저** — `result-doc-writer` 스킬을 invoke해서 `activity/phase-*-result.md` + `plan/phase-*-todo.md`의 구조·번호·제목·태그·mirror를 점검·보강. 신규 subject가 있으면 result에 먼저 반영하고 todo가 그 구조를 따른다.
+2. **관련 문서 동기화** — `wiki/log.md` (해당 작업 eval/ingest/lint 엔트리), `plan/session-wrap-followups.md` (다음 세션 시작점), `~/.claude/projects/-Users-denny-Project-wikey/memory/` (phase status, MEMORY.md 인덱스), 필요 시 `wikey.schema.md`·`README.md` 등 result가 참조되는 곳 모두 업데이트.
+3. **추가·변경 파일 포함 commit/push** — 이 turn에서 미커밋인 변경 전체를 하나의 논리적 커밋으로 묶어 메시지에 "docs 동기화 + 관련 문서" 취지를 명시한 뒤 push.
+
+예외: 단순 오타 수정·한 줄 코드 변경처럼 문서 mirror가 불필요한 경우는 이 플로우를 건너뛰어도 된다. 판단 기준은 "result에 기록할 새 작업인가" — 그렇다면 반드시 이 순서.
+
