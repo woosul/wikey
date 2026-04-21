@@ -1,7 +1,78 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-21 (Phase 4 §4.0 UI 사전작업 완료)
+> 최신 갱신: 2026-04-21 (Phase 4 §4.1 문서 전처리 파이프라인 완료)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-21 (Phase 4 §4.1 문서 전처리 파이프라인 재편) 완료
+
+### ⭐ 다음 세션 시작점
+
+**현재 상태**: Phase 4 §4.1 완료 (Docling 메인화 + unhwp + MarkItDown fallback 강등 + 자동 force-ocr 감지 + 5개 코퍼스 실증 + UI override 완전 제거). 251 tests PASS. 4개 커밋 누적 (`e9af2bb → 708f9fc → d6f9a93 → f648e72`).
+
+**핵심 결과** (`activity/phase-4-converter-benchmark.md` 참조):
+- **Docling 212 headings + 294 실제 tables vs MarkItDown 0/0** — 계획서 +20% 기준 수십 배 초과
+- **OMRON vector-only PDF 결정적 케이스**: MarkItDown 1 byte / pdftotext 48 bytes 실패 vs Docling `--force-ocr` 9.2KB 성공 → `isLikelyScanPdf` 자동 감지 정당성 실증
+- **자동 판정 3신호** (UI override 대체): `koreanLongTokenRatio > 30%` (ROHM) + `isLikelyScanPdf` (OMRON) + `hasKoreanRegression`/`hasBodyRegression` (PMS·TWHB force-ocr 독성 방어)
+
+**산출물**:
+- `wikey-core/src/{rag-preprocess,convert-cache,convert-quality}.ts` + 각 테스트 파일
+- `wikey-core/src/ingest-pipeline.ts` — tier 체인 재구성 + 자동 감지 로직 + sidecar md 저장
+- `wikey-obsidian/src/{env-detect,settings-tab,sidebar-chat,commands}.ts` — Docling/unhwp 감지 + 설정 UI
+- `scripts/vendored/unhwp-convert.py` + `scripts/benchmark-converters.sh`
+- `docs/samples/{rp1-peripherals,Examples.hwpx,스마트공장...hwp,GOODSTREAM...md,ROHM_Wi-SUN.*}`
+- `activity/phase-4-converter-benchmark.md` (5개 코퍼스 종합 리포트)
+- `activity/phase-4-result.md §4.1` 전체 + §4.1.2 완료 선언
+- `plan/phase-4-4-1-agile-crystal.md` 계획서 (이번 Phase 시작 시 작성)
+
+### 🔴 최우선 다음 작업: §4.5.1.5 LLM extraction variance 재측정
+
+**선행 의존 §4.1 완료로 해제됨**. Docling 구조적 markdown 기준으로 variance "전처리 품질" 성분 분리 측정 가능.
+
+**목표**:
+1. Docling 변환본으로 PMS PDF 10+ run baseline (5-run으론 Gemini 2.5 Flash true CV 측정 불가)
+2. Chunk 분할 결정성 확인 — `extractPdfText` stderr 로그에 chunk 수 + 경계 토큰 출력 추가
+3. Temperature=0 + seed 재검증 (v6.1에서 기각됐지만 v7 schema + canonicalizer + Docling 환경에서 다시)
+4. `allimtalk` (오타) → `alimtalk` 추가 + `*-system` suffix 기술스택 anti-pattern 검토
+5. 측정 명령: `./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10`
+
+**주의사항**:
+- 자동 스크립트는 selector swap·CDP 응답 경로·snapshot diff 모두 정비됨 (§4.5.1 인프라)
+- `cleanupForRerun`은 신규 파일만 삭제 → pre-existing 페이지 modification (goodstream-co-ltd.md, index.md, log.md)는 diff 범위 밖 → 측정 후 `git checkout -- <paths>` 수동 revert 필요
+
+### 🟡 차순위 작업
+
+2. **§4.2 URI 기반 안정 참조** — `§4.1.1.9 vault rename/delete listener`와 합동 구현 (sidecar md 자동 이동/삭제).
+   - `.ingest-map.json` → `.wikey/source-registry.json` (hash 키)
+   - wiki/sources 프론트매터에 `source_id` 필드
+3. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
+
+### 🟢 §4.1 범위 외로 이관된 저우선 과제
+
+- **§4.1.1.5 `ps aux` 실측 검증** — API 키 env 주입 구현은 완료, 실 ingest run 중 수동 확인만 남음. 별도 security audit 세션 권장.
+- **`scripts/cache-stats.sh`** — `~/.cache/wikey/convert/index.json` 직접 열람 가능하므로 우선순위 낮음.
+
+### 기술 부채·메모
+
+- **docling --force-ocr 주의**: 벡터 PDF에 적용하면 한국어 OCR 실패 (ocrmac 래스터화 열화). 자동 로직이 regression guard로 방어하지만 수동 호출 시 주의.
+- **MarkItDown tables 수치 신뢰 X**: TWHB에서 tables 571개로 표시됐지만 실제 구조가 아닌 셀 구분자 오잘. Docling의 TableFormer 수치만 신뢰.
+- **docling 초기 실행**: ML 모델 ~1.5GB 다운로드 (`~/.cache/docling/`). 첫 인제스트 시 수분 지연 발생 가능.
+
+### 참고 명령
+
+```bash
+# 현재 코드베이스 상태
+npm run build   # wikey-core tsc + wikey-obsidian esbuild, 0 errors
+npm test        # 251 tests PASS
+
+# 벤치마크 재현
+bash scripts/benchmark-converters.sh <source_file> [output_dir]
+
+# 캐시 직접 확인
+ls -la ~/.cache/wikey/convert/
+cat ~/.cache/wikey/convert/index.json | python3 -m json.tool | head -30
+```
 
 ---
 
