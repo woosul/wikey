@@ -7,7 +7,7 @@
 
 ---
 
-## 4.0 UI 사전작업
+## 4.0 UI 사전작업 #design #main-feature
 
 - [ ] chat 패널 추가 : 대화창 전용 패널
   - 아이콘 및 위치 : 상단 아이콘의 맨 앞에 위치하며, 아이콘은 'chat'
@@ -21,7 +21,7 @@
 - [ ] Dashboard
   - dashboard 아이콘 변경 : 기존 home에서 graph (막대그래프)
 
-## 4.1 문서 전처리 파이프라인 (source → Markdown)
+## 4.1 문서 전처리 파이프라인 (source → Markdown) #core #workflow
 
 ### 4.1.1 Docling + unhwp 메인화, MarkItDown은 fallback으로 강등
 
@@ -112,7 +112,7 @@
 
 ---
 
-## 4.2 분류 및 파일 관리 (inbox → PARA, 이동에 강한 참조)
+## 4.2 분류 및 파일 관리 (inbox → PARA, 이동에 강한 참조) #workflow #core
 
 ### 4.2.1 LLM 기반 3차/4차 분류 폴더 생성
 
@@ -162,7 +162,7 @@
 
 ---
 
-## 4.3 인제스트 (LLM 추출 · 품질 관리)
+## 4.3 인제스트 (LLM 추출 · 품질 관리) #core #engine #workflow
 
 ### 4.3.1 인제스트 프롬프트 시스템 (3-stage 전부 override)
 
@@ -210,7 +210,7 @@
 
 ---
 
-## 4.4 검색 재현율 · 지식 그래프
+## 4.4 검색 재현율 · 지식 그래프 #eval #core
 
 ### 4.4.1 Anthropic-style contextual chunk 재작성 (v7-3, 검색 인덱스 전처리)
 
@@ -246,7 +246,7 @@
 
 ---
 
-## 4.5 운영 · 안정성
+## 4.5 운영 · 안정성 #ops #eval
 
 ### 4.5.1 결정성 측정 인프라 (measure-determinism.sh 보강)
 
@@ -254,24 +254,21 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 #### 4.5.1.1 selector 수정 (핵심 fix)
 
-- [ ] `scripts/measure-determinism.sh`의 `btnProbe` selector를 class-agnostic text 기반으로 교체:
-  ```js
-  const btns = [...panel.querySelectorAll('button')].filter(b => /apply|cancel/.test(b.className))
-  const txt = (btns[0]?.textContent || '').trim()
-  ```
-- [ ] 완료 detect도 같은 패턴으로 통일
+- [x] `scripts/measure-determinism.sh`의 `btnProbe` selector를 class-agnostic text 기반으로 교체 (`getActionBtn()` helper, apply·cancel 양쪽 매칭)
+- [x] 완료 detect도 같은 패턴으로 통일 (probe 양쪽 `btnText()` 호출)
+- [x] 부차: CDP response 추출 경로 수정 (`result.result.value` nested twice) + 15KB 최소 크기 가드 추가 (`-f/--force` 우회)
 
 #### 4.5.1.2 script guard 정리 (Phase 3에서 이미 merge된 것들)
 
 - [X] apply-button 전환 probe (20 × 500ms) — merge됨
 - [X] stale Cancel 감지 → 진입 시 자동 클릭 — merge됨
-- [X] `cleanupForRerun`이 wiki/sources의 YAML title 3+char 토큰 overlap로 임의 slug 파일 삭제 — merge됨
-- [ ] snapshot-and-diff 방식 도입 — 현재 `readSourceTagsOf`는 raw PDF filename content match로 entity/concept 파일 못찾는 경우 있음 (frontmatter `sources:` 필드가 source-XYZ 형식일 때). 2026-04-21 수동 스크립트의 snapshot diff 방식 이식.
+- [X] `cleanupForRerun`이 wiki/sources의 YAML title 3+char 토큰 overlap로 임의 slug 파일 삭제 — snapshot-diff 방식으로 대체됨 (임의 파일 삭제 리스크 제거)
+- [x] snapshot-and-diff 방식 도입 — `readSourceTagsOf` content-match 제거, pre-run `snapshotDirs()` + post-run `listDiff(baseline)` 로 신규 파일만 정확히 집계·삭제
 
 #### 4.5.1.3 측정 재실행 (선택)
 
-- [ ] selector 수정 후 5-run smoke로 자동 스크립트 동작 검증 (수동 드라이브 대체 가능성 확인)
-- [ ] 측정 대상 제약 — 최소 15KB 이상·chunk ≥ 3개 (작은 소스로는 CV 측정 의미 없음)
+- [x] selector 수정 후 5-run smoke로 자동 스크립트 동작 검증 (수동 드라이브 대체 가능성 확인) — PMS PDF 5/5 성공, Total CV 5.7% (수동 7.9%와 동일 분포). `activity/determinism-pms-auto-2026-04-21.md` 참고.
+- [x] 측정 대상 제약 — 최소 15KB 이상 (chunk ≥ 3 예상) 가드 추가. 미만 시 exit 2, `-f/--force` 로 우회 가능.
 
 #### 4.5.1.4 canonicalizer 확장 (v7 잔여 variance 대응)
 

@@ -1,7 +1,52 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-20 (§B/§C-1/§C-2 v7 4건 정리 — Phase 3 사실상 완료)
+> 최신 갱신: 2026-04-21 (Phase 4 시작 — §4.5.1 측정 인프라 자동화)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-21 (Phase 4 §4.5.1 측정 인프라 완료) 마감
+
+### ⭐ 다음 세션 시작점
+
+**현재 상태**: Phase 4 진행중. §4.5.1 결정성 측정 인프라 정비 완료. `scripts/measure-determinism.sh` 전면 개편 — selector class-swap 대응, snapshot-diff 기반 cleanup, 15KB 최소 크기 가드, CDP 응답 추출 경로 수정. PMS PDF 5-run 자동 측정 성공 (Total CV 5.7%, 수동 드라이브와 동일 분포 범위 재현). 자동 스크립트가 수동 드라이브 대체 가능 확증.
+
+**산출물**:
+- `activity/phase-4-result.md` (신규) — Phase 4 result 문서 시작, §4.5 섹션 첫 기록
+- `activity/determinism-pms-auto-2026-04-21.md` — 5-run 자동 측정 결과
+- `plan/phase-4-todo.md` — §4.5.1.1/1.2/1.3 체크박스 전부 완료 + `## 4.0~4.5` #tag 부착
+
+**바로 시작 가능한 작업**:
+
+1. **🟢 §4.5.1.4 canonicalizer 2차 확장** (naming-level 변동 해소, ~1-2h)
+   - 음역 다중 슬러그 정규화: `alimtalk`/`allimtok`/`alrimtok` → 하나
+   - 약어/동의어 흡수: `sso-api`/`single-sign-on-api`/`single-sign-on` → 하나
+   - E/C 경계 3건 `.wikey/schema.yaml` 고정: `restful-api`=concept, `mqtt`=entity, `project-management-system`=entity
+   - 측정: 수정 후 동일 PMS 5-run → Entities CV 목표 ≤15%
+
+2. **🟢 §4.1.1 Docling 메인화 + unhwp 위임** (가장 큰 효과, 별도 세션)
+   - 현재 tier 1 MarkItDown을 tier 3으로 강등
+   - Docling tier 1 (PDF/DOCX/PPTX/XLSX/HTML/이미지/TXT)
+   - unhwp tier 1b (HWP/HWPX)
+   - 캐싱 + OCR API 키 env 전환 (§4.1.1.4, §4.1.1.5)
+
+3. **🟡 §4.2.2 URI 기반 안정 참조** (PARA 이동 내성, 중간 작업)
+   - `.ingest-map.json` → `.wikey/source-registry.json` (hash 키)
+   - wiki/sources 프론트매터에 `source_id` 필드
+
+### §4.5.1 완료 상세
+
+- **selector fix (핵심)**: `getActionBtn()` helper로 class-agnostic 탐지. `sidebar-chat.ts:999-1000`의 apply↔cancel class swap에 무관하게 작동. 시작 probe 60×500ms(30s window) + 완료 probe 양쪽 통일.
+- **snapshot-diff**: pre-run `snapshotDirs()` + post-run `listDiff(baseline)` → 신규 파일만 정확 집계·삭제. `readSourceTagsOf` content-match 제거로 frontmatter `sources:` 형식 mismatch 리스크 제거.
+- **CDP 응답 추출 경로 수정**: `Runtime.evaluate` + `returnByValue=True` 실제 구조 `{id, result: {result: {type, value}}}` — `d['result']['value']`는 항상 빈 `[]` fallback. `d['result']['result']['value']` 로 교정 + fallback에 `cdp_error` 덤프.
+- **크기 가드**: 15KB 미만 (chunk <3 예상) → exit 2. `-f/--force` 우회.
+- **Stale Cancel guard**: 루프 진입 시 `Cancel` 텍스트 감지 → 자동 click으로 취소.
+- **5-run 검증**: PMS 3.5MB PDF, 5/5 성공. Total CV 5.7% (수동 v7 post 7.9%와 동일 범위). Time mean 278s (수동 320s 대비 -13%, CDP 연속 실행 이득).
+
+### 남은 measure-determinism 주의사항
+
+- `cleanupForRerun`은 **신규 파일만** 삭제 → pre-existing 페이지 modification (e.g. `goodstream-co-ltd.md`, `index.md`, `log.md`)은 diff 범위 밖 → 측정 후 `git checkout -- <paths>` 수동 revert 필요.
+- Final cleanup 이후 파일 수는 baseline 정확히 복구되지만, modified 페이지 내용은 남음.
 
 ---
 

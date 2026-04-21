@@ -5,6 +5,17 @@ created: 2026-04-10
 updated: 2026-04-21
 ---
 
+## [2026-04-21] eval | 결정성 측정 자동 스크립트 재검증 (PMS 5-run, 자동)
+
+- 배경: Phase 4 §4.5.1로 scripts/measure-determinism.sh 개편 (selector class-agnostic, snapshot-diff, CDP 응답 경로 수정, 15KB 크기 가드). 자동 스크립트가 수동 드라이브 대체 가능한지 확증.
+- 대상: raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf (동일 소스, 수동 v7 post 비교 baseline)
+- 방법: `./scripts/measure-determinism.sh -n 5` (audit panel 자동 클릭 + 텍스트 기반 버튼 상태 탐지 + pre/post dir snapshot diff)
+- 결과: 5/5 성공, Entities CV 20.1% / Concepts CV 15.7% / Total CV 5.7% / Time 278s
+- 수동 대비: Total CV -2.2pp, mean -1.8, Time -13% (동일 분포 범위 재현)
+- 판정: 자동 스크립트가 수동 CDP 드라이브 대체. 향후 결정성 회귀 감지 자동화 가능.
+- 산출물: activity/determinism-pms-auto-2026-04-21.md, activity/phase-4-result.md §4.5.1
+- 후속: §4.5.1.4 canonicalizer 2차 확장 (음역 정규화, E/C 경계 고정) → naming-level CV 추가 감소 목표
+
 ## [2026-04-21] eval | 결정성 측정 (PMS v6 vs v7 post)
 
 - 대상: raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf

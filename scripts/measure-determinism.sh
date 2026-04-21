@@ -27,11 +27,12 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 usage() {
   cat <<EOF
-사용법: ./scripts/measure-determinism.sh <source-path> [-n N] [-o output.md]
+사용법: ./scripts/measure-determinism.sh <source-path> [-n N] [-o output.md] [-f]
 
 옵션:
   -n N         반복 횟수 (기본 5)
   -o PATH      출력 Markdown 경로 (기본 activity/determinism-<name>-<date>.md)
+  -f, --force  크기 가드 우회 (15KB 미만/chunk<3 예상 소스)
   -h, --help   도움말
 EOF
   exit 0
@@ -40,11 +41,13 @@ EOF
 N_RUNS=5
 OUTPUT_PATH=""
 SOURCE_PATH=""
+FORCE=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -n) N_RUNS="$2"; shift 2 ;;
     -o) OUTPUT_PATH="$2"; shift 2 ;;
+    -f|--force) FORCE=1; shift ;;
     -h|--help) usage ;;
     *) SOURCE_PATH="$1"; shift ;;
   esac
@@ -64,6 +67,15 @@ fi
 
 if [[ ! -f "${PROJECT_DIR}/${SOURCE_PATH}" ]]; then
   echo "ERROR: source 파일 없음: ${PROJECT_DIR}/${SOURCE_PATH}" >&2
+  exit 2
+fi
+
+# 최소 크기 가드 (15KB) — 작은 소스는 chunk 1개로 rollup되어 CV 측정 의미 없음
+SRC_SIZE=$(stat -f%z "${PROJECT_DIR}/${SOURCE_PATH}" 2>/dev/null || stat -c%s "${PROJECT_DIR}/${SOURCE_PATH}" 2>/dev/null || echo 0)
+MIN_SIZE=15360  # 15KB
+if [[ "$SRC_SIZE" -lt "$MIN_SIZE" && "$FORCE" -ne 1 ]]; then
+  echo "ERROR: 소스 크기 ${SRC_SIZE}B < ${MIN_SIZE}B (15KB)." >&2
+  echo "       chunk 수 <3 예상 — CV 측정 의미 없음. 우회하려면 -f 추가." >&2
   exit 2
 fi
 
@@ -110,90 +122,95 @@ const basePath = adapter.basePath
 const fs = require('node:fs')
 const path = require('node:path')
 
+if (!plugin) return [{ run: 0, error: 'plugin not loaded' }]
+
+// Brief prompt off for this session (no user modal interrupts)
 const prevBrief = plugin.settings.ingestBriefs
 plugin.settings.ingestBriefs = 'never'
+plugin.skipIngestBriefsThisSession = true
 await plugin.saveSettings?.()
 
-function readSourceTagsOf(source) {
-  const ents = fs.readdirSync(path.join(basePath, 'wiki/entities'))
-    .filter(f => f.endsWith('.md'))
-    .filter(f => { try { return fs.readFileSync(path.join(basePath, 'wiki/entities', f), 'utf-8').includes(source) } catch { return false } })
-  const cons = fs.readdirSync(path.join(basePath, 'wiki/concepts'))
-    .filter(f => f.endsWith('.md'))
-    .filter(f => { try { return fs.readFileSync(path.join(basePath, 'wiki/concepts', f), 'utf-8').includes(source) } catch { return false } })
-  return { entities: ents, concepts: cons }
+// Snapshot directory state — for diff-based cleanup/collection (replaces content-match)
+function snapshotDirs() {
+  const rd = d => {
+    try { return new Set(fs.readdirSync(path.join(basePath, d)).filter(f => f.endsWith('.md'))) }
+    catch (_e) { return new Set() }
+  }
+  return { e: rd('wiki/entities'), c: rd('wiki/concepts'), s: rd('wiki/sources') }
 }
 
-async function cleanupForRerun() {
-  const { entities, concepts } = readSourceTagsOf(SOURCE_NAME)
-  for (const f of entities) try { fs.unlinkSync(path.join(basePath, 'wiki/entities', f)) } catch (_e) {}
-  for (const f of concepts) try { fs.unlinkSync(path.join(basePath, 'wiki/concepts', f)) } catch (_e) {}
-  // Delete source pages mentioning this source (by content OR by filename match)
-  // The audit-ingest fuzzy match uses normalized filename, so we delete any source whose
-  // normalized stem contains/is contained by the source-name stem (sans extension).
-  function normalize(s) { return s.toLowerCase().replace(/[^a-z0-9가-힣]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') }
-  const srcStem = SOURCE_NAME.replace(/\.[^.]+$/, '')
-  const srcStemNorm = normalize(srcStem)
-  for (const f of fs.readdirSync(path.join(basePath, 'wiki/sources'))) {
-    if (!f.endsWith('.md')) continue
-    const stem = f.replace(/\.md$/, '').replace(/^source-/, '')
-    const stemNorm = normalize(stem)
-    let shouldDelete = false
-    // 1) Content references
+function listDiff(baseline) {
+  const cur = snapshotDirs()
+  const diff = kind => [...cur[kind]].filter(f => !baseline[kind].has(f))
+  return { e: diff('e'), c: diff('c'), s: diff('s') }
+}
+
+// Class-agnostic button finder: class swaps apply ↔ cancel during ingest
+function getActionBtn() {
+  const panel = document.querySelector('.wikey-audit-panel')
+  if (!panel) return null
+  return [...panel.querySelectorAll('button')].filter(b => /apply|cancel/.test(b.className))[0] || null
+}
+
+function btnText() {
+  const b = getActionBtn()
+  return (b?.textContent || '').trim()
+}
+
+async function restoreSourceFile() {
+  if (await adapter.exists(SOURCE_PATH)) return
+  // File was auto-moved after ingest — walk raw/ to find and restore
+  function walk(dir) {
     try {
-      const c = fs.readFileSync(path.join(basePath, 'wiki/sources', f), 'utf-8')
-      if (c.includes(SOURCE_NAME) || c.includes(srcStem)) shouldDelete = true
-    } catch (_e) {}
-    // 2) Filename fuzzy match (matches audit-ingest.match logic)
-    if (!shouldDelete && srcStemNorm.length > 3 && stemNorm.length > 3) {
-      if (stemNorm.includes(srcStemNorm) || srcStemNorm.includes(stemNorm)) shouldDelete = true
-    }
-    if (shouldDelete) {
-      try { fs.unlinkSync(path.join(basePath, 'wiki/sources', f)) } catch (_e) {}
-    }
-  }
-  // Move file back to inbox if auto-moved
-  if (!await adapter.exists(SOURCE_PATH)) {
-    const allDirs = []
-    function walk(dir) {
-      try {
-        for (const e of fs.readdirSync(path.join(basePath, dir), { withFileTypes: true })) {
-          if (e.isDirectory()) { allDirs.push(`${dir}/${e.name}`); walk(`${dir}/${e.name}`) }
+      for (const e of fs.readdirSync(path.join(basePath, dir), { withFileTypes: true })) {
+        if (e.isDirectory()) {
+          const found = walk(`${dir}/${e.name}`)
+          if (found) return found
+        } else if (e.name === SOURCE_NAME) {
+          return `${dir}/${e.name}`
         }
-      } catch (_e) {}
-    }
-    walk('raw')
-    for (const d of allDirs) {
-      const try1 = `${d}/${SOURCE_NAME}`
-      if (await adapter.exists(try1)) {
-        await adapter.copy(try1, SOURCE_PATH)
-        await adapter.remove(try1)
-        break
       }
-    }
+    } catch (_e) {}
+    return null
   }
-  // Clean ingest-map
+  const found = walk('raw')
+  if (found && found !== SOURCE_PATH) {
+    try {
+      fs.renameSync(path.join(basePath, found), path.join(basePath, SOURCE_PATH))
+    } catch (_e) {}
+  }
+}
+
+async function cleanupForRerun(newFiles) {
+  // newFiles from previous run's diff — delete exactly those, no guessing
+  if (newFiles) {
+    for (const f of newFiles.e) try { fs.unlinkSync(path.join(basePath, 'wiki/entities', f)) } catch (_e) {}
+    for (const f of newFiles.c) try { fs.unlinkSync(path.join(basePath, 'wiki/concepts', f)) } catch (_e) {}
+    for (const f of newFiles.s) try { fs.unlinkSync(path.join(basePath, 'wiki/sources', f)) } catch (_e) {}
+  }
+  // ingest-map: remove this source's entry (keyed by path, which may drift after move)
   try {
     const m = JSON.parse(await adapter.read('wiki/.ingest-map.json'))
     let changed = false
-    for (const k of Object.keys(m)) if (k.includes(SOURCE_NAME)) { delete m[k]; changed = true }
+    for (const k of Object.keys(m)) {
+      if (k === SOURCE_PATH || k.endsWith('/' + SOURCE_NAME)) { delete m[k]; changed = true }
+    }
     if (changed) await adapter.write('wiki/.ingest-map.json', JSON.stringify(m, null, 2))
   } catch (_e) {}
-  // Clean log.md test entries (best-effort)
-  try {
-    const log = await adapter.read('wiki/log.md')
-    const re = new RegExp(`## \\[\\d{4}-\\d{2}-\\d{2}\\] ingest \\| ${SOURCE_NAME.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&')}.*?(?=^## |\\\\Z)`, 'sm')
-    const newLog = log.replace(re, '')
-    if (newLog !== log) await adapter.write('wiki/log.md', newLog)
-  } catch (_e) {}
+  await restoreSourceFile()
 }
 
 const results = []
+let prevNewFiles = null
+
 for (let run = 1; run <= N_RUNS; run++) {
-  await cleanupForRerun()
+  await cleanupForRerun(prevNewFiles)
   await new Promise(r => setTimeout(r, 800))
 
+  const baseline = snapshotDirs()
+
   const auditBtn = [...document.querySelectorAll('.wikey-header-btn')].find(b => b.getAttribute('aria-label') === 'Audit')
+  if (!auditBtn) { results.push({ run, error: 'no audit button' }); continue }
   // Always close+reopen for fresh data
   if (document.querySelector('.wikey-audit-panel')) {
     auditBtn.click(); await new Promise(r => setTimeout(r, 1000))
@@ -218,45 +235,78 @@ for (let run = 1; run <= N_RUNS; run++) {
   const cb = target.querySelector('input[type=checkbox], .wikey-audit-cb')
   if (cb && !cb.checked) { cb.click(); await new Promise(r => setTimeout(r, 200)) }
 
-  const applyBtn = [...document.querySelectorAll('.wikey-audit-panel button')].find(b => /^ingest/i.test(b.textContent?.trim() || ''))
-  if (!applyBtn) { results.push({ run, error: 'no apply btn' }); continue }
-
-  const startTs = Date.now()
-  applyBtn.click()
-  // Race-condition guard (v7 post-fix): wait for the apply button to transition
-  // AWAY from "Ingest" before entering the completion loop. Without this, the first
-  // probe inside the loop (1.5s after click) can catch the button still in its
-  // initial "Ingest" state — the loop then exits instantly with 0 entities/concepts.
-  let started = false
-  for (let probe = 0; probe < 20; probe++) {
-    await new Promise(r => setTimeout(r, 500))
-    const btnProbe = document.querySelector('.wikey-audit-panel .wikey-audit-apply-btn')?.textContent?.trim() || ''
-    if (btnProbe && !/^ingest$/i.test(btnProbe)) { started = true; break }
-  }
-  if (!started) {
-    results.push({ run, error: 'ingest did not start (button never transitioned)', elapsedMs: Date.now() - startTs }); continue
-  }
-  let elapsedMs = 0
-  while (true) {
-    await new Promise(r => setTimeout(r, 1500))
-    const btnNow = document.querySelector('.wikey-audit-panel .wikey-audit-apply-btn')?.textContent?.trim() || ''
-    if (/^ingest$/i.test(btnNow)) { elapsedMs = Date.now() - startTs; break }
-    if (Date.now() - startTs > 10 * 60 * 1000) {
-      results.push({ run, error: 'timeout 10min', elapsedMs: Date.now() - startTs }); break
+  // Defensive: if stale "Cancel" from a previous ingest is visible, click it away first
+  {
+    const b = getActionBtn()
+    const t = (b?.textContent || '').trim()
+    if (b && /cancel/i.test(t)) {
+      b.click()
+      await new Promise(r => setTimeout(r, 1000))
     }
   }
 
-  await new Promise(r => setTimeout(r, 2000))
-  const { entities, concepts } = readSourceTagsOf(SOURCE_NAME)
+  const applyBtn = getActionBtn()
+  if (!applyBtn) { results.push({ run, error: 'no apply/cancel btn found' }); continue }
+  if (applyBtn.hasAttribute('disabled')) {
+    results.push({ run, error: 'apply btn disabled (target unselected?)', cbChecked: cb?.checked }); continue
+  }
+  if (!/^ingest$/i.test((applyBtn.textContent || '').trim())) {
+    results.push({ run, error: 'button not Ingest at click', buttonText: applyBtn.textContent }); continue
+  }
+
+  const startTs = Date.now()
+  applyBtn.click()
+
+  // Phase 1: wait for button text to transition AWAY from "Ingest" (30s × 500ms probes)
+  // v7 fix: class-agnostic selector via getActionBtn() — class swaps to cancel-btn.
+  let started = false
+  let lastTxt = ''
+  for (let probe = 0; probe < 60; probe++) {
+    await new Promise(r => setTimeout(r, 500))
+    lastTxt = btnText()
+    if (lastTxt && !/^ingest$/i.test(lastTxt)) { started = true; break }
+  }
+  if (!started) {
+    results.push({ run, error: 'ingest did not start', elapsedMs: Date.now() - startTs, lastTxt }); continue
+  }
+
+  // Phase 2: wait for button text to return to "Ingest" (done) — 10min timeout
+  let elapsedMs = 0
+  let timedOut = false
+  while (true) {
+    await new Promise(r => setTimeout(r, 1500))
+    const txt = btnText()
+    if (/^ingest$/i.test(txt)) { elapsedMs = Date.now() - startTs; break }
+    if (Date.now() - startTs > 10 * 60 * 1000) {
+      elapsedMs = Date.now() - startTs; timedOut = true; break
+    }
+  }
+
+  await new Promise(r => setTimeout(r, 2000))  // filesystem flush settle
+  const diff = listDiff(baseline)
+  prevNewFiles = diff  // for next run's cleanup
+
+  if (timedOut) {
+    results.push({ run, error: 'timeout 10min', elapsedMs,
+      e: diff.e.length, c: diff.c.length, s: diff.s.length })
+    continue
+  }
+
   results.push({
     run, elapsedMs,
-    e: entities.length, c: concepts.length, total: entities.length + concepts.length + 1,
-    entityNames: entities.map(f => f.replace('.md', '')),
-    conceptNames: concepts.map(f => f.replace('.md', '')),
+    e: diff.e.length, c: diff.c.length, s: diff.s.length,
+    total: diff.e.length + diff.c.length + diff.s.length,
+    entityNames: diff.e.map(f => f.replace('.md', '')),
+    conceptNames: diff.c.map(f => f.replace('.md', '')),
+    sourceNames: diff.s.map(f => f.replace('.md', '')),
   })
 }
 
+// Final cleanup: remove last run's files + restore source
+await cleanupForRerun(prevNewFiles)
+
 plugin.settings.ingestBriefs = prevBrief
+plugin.skipIngestBriefsThisSession = false
 await plugin.saveSettings?.()
 return results
 JSEOF
@@ -270,17 +320,35 @@ echo "[measure-determinism] CDP 호출 중 (최대 ${N_RUNS} × 10분 = $((N_RUN
 timeout_sec=$((N_RUNS * 600))
 RAW_RESULTS=$(python3 /tmp/wikey-cdp.py file "$TMPJS" await "$timeout_sec")
 
-# Parse results JSON
+# Parse results JSON — CDP Runtime.evaluate returnByValue wraps as {result: {result: {type, value}}}
 echo "$RAW_RESULTS" > /tmp/wikey-determinism-raw.json
-RESULTS_JSON=$(echo "$RAW_RESULTS" | python3 -c "import json,sys; d=json.load(sys.stdin); print(json.dumps(d.get('result',{}).get('value',[])))")
+RESULTS_JSON=$(echo "$RAW_RESULTS" | python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+# CDP response: {id, result: {result: {type, value}}} — returnByValue nests twice
+inner = d.get('result', {}).get('result', {})
+if 'value' in inner:
+    print(json.dumps(inner['value']))
+else:
+    # surface error details if evaluation threw
+    print(json.dumps({'cdp_error': d}))
+")
 
 # Compute stats and write Markdown
 python3 - "$RESULTS_JSON" "$SOURCE_PATH" "$ABS_OUTPUT" "$N_RUNS" <<'PYEOF'
 import json, sys, os, statistics, datetime
-results = json.loads(sys.argv[1])
+payload = json.loads(sys.argv[1])
 source_path = sys.argv[2]
 output_path = sys.argv[3]
 n_runs = int(sys.argv[4])
+
+if isinstance(payload, dict) and 'cdp_error' in payload:
+    print(f'CDP evaluate failed:\n{json.dumps(payload["cdp_error"], indent=2)}', file=sys.stderr)
+    sys.exit(1)
+if not isinstance(payload, list):
+    print(f'Unexpected payload (not list): {payload!r}', file=sys.stderr)
+    sys.exit(1)
+results = payload
 
 ok = [r for r in results if 'error' not in r]
 err = [r for r in results if 'error' in r]
@@ -323,7 +391,7 @@ print(f'  Concepts: {len(con_core)}/{len(con_all)} ({len(con_core)/max(len(con_a
 # Markdown output
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 with open(output_path, 'w', encoding='utf-8') as f:
-    f.write(f'# v6 결정성 측정 — {os.path.basename(source_path)}\n\n')
+    f.write(f'# 결정성 측정 — {os.path.basename(source_path)}\n\n')
     f.write(f'> 일시: {datetime.date.today().isoformat()}\n')
     f.write(f'> Source: `{source_path}`\n')
     f.write(f'> Runs: {len(ok)} ({len(err)} failed)\n')
