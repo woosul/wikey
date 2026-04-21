@@ -3,6 +3,7 @@
 > 기간: 2026-04-21 ~ (진행중)
 > 목표: 인제스트 고도화 + 지식 그래프 + 운영 안정성 (plan/phase-4-todo.md 참고)
 > 상태: 진행중 (2026-04-21)
+> - §4.0 UI 사전작업 — 완료 (chat 전담 패널, /clear 커맨드, dashboard 아이콘 교체, 사이드바 500px, provider/model 편집)
 > - §4.5.1 측정 인프라 자동화 — 완료 (자동 스크립트가 수동 CDP 드라이브 대체)
 > - §4.5.1.4 canonicalizer 2차 (pin/alias) — 기능 완수 / CV 개선 미확증 (197 tests PASS)
 > - §4.5.1.5 LLM extraction variance 원인 분석 — **§4.1.1 Docling 메인화 선행** 후 재개 (미착수)
@@ -12,6 +13,251 @@
 ---
 
 > 문서 구성: `plan/phase-4-todo.md`의 4.0~4.5 번호를 1:1 mirror. Phase 3 패턴처럼 작업 주제(subject) 단위로 그룹화하고, 각 subject 내부는 진행 시간 순.
+
+---
+
+## 4.0 UI 사전작업
+> tag: #design, #main-feature
+
+### 4.0.1 Chat 전담 패널 분리 + Header 아이콘 재구성 (2026-04-21)
+
+**이전 상태**: `WikeyChatView` header 버튼 순서 `[dashboard][ingest+][audit][help][trash][reload][close]`. 하단 composer(`textarea + send + modelRow`)가 모든 패널에서 공유되어 audit/dashboard를 보는 중에도 "질문 입력창 + 모델 선택기"가 떠 있음 → 각 패널의 전담 역할이 흐려지는 overlay 문제.
+
+**결정 (사용자)**: 대화창(chat)을 first-class 패널로 승격. 비-chat 패널은 composer를 숨기고 하단에 `Default AI Model : Provider | model` readonly 라벨만 노출.
+
+**구현** (`wikey-obsidian/src/sidebar-chat.ts`):
+
+1. **ICONS 추가/교체**
+   - `ICONS.chat` 추가: Bootstrap Icons `chat` 말풍선 SVG (16×16)
+   - `ICONS.dashboard` 교체: 기존 집(home) → 막대그래프(`bar-chart`) SVG — 사용자 지시 "막대그래프"
+   - `ICONS.trash`는 header에서 제거됐으나 map 자체는 유지 (향후 재사용 가능성, dead-code lint는 별도)
+
+2. **`PanelName` 타입 확장**
+   ```typescript
+   type PanelName = 'chat' | 'dashboard' | 'audit' | 'ingest' | 'help'  // null 제거
+   ```
+   초기 `activePanel = 'chat'`, 항상 값 가짐.
+
+3. **Header 버튼 재구성**: `[chat][dashboard][ingest][audit][help][reload][close]` — chat이 first, trash 삭제.
+
+4. **`togglePanel` → `selectPanel` rename** — 재클릭이 no-op (on/off 토글 아닌 re-select):
+   ```typescript
+   private selectPanel(name: PanelName) {
+     if (this.activePanel === name) return  // 재클릭은 재선택
+     this.closeActivePanel()
+     this.activePanel = name
+     if (name === 'dashboard') this.openDashboard()
+     else if (name === 'audit') this.openAuditPanel()
+     else if (name === 'ingest') this.openIngestPanel()
+     else if (name === 'help') this.openHelp()
+     // chat: messagesEl이 chat view 자체, 별도 DOM 마운트 불필요
+     this.updatePanelBtnStates()
+     this.applyPanelVisibility()
+   }
+   ```
+   사용자 의도 명시: "재선택임 (on/off아님)"
+
+5. **`applyPanelVisibility()` 신규** — 한 지점에서 가시성 결정:
+   ```typescript
+   const isChat = this.activePanel === 'chat'
+   this.messagesEl.style.display = isChat ? '' : 'none'
+   this.inputWrapper.style.display = isChat ? '' : 'none'
+   this.modelRow.style.display = isChat ? '' : 'none'
+   this.readonlyModelBar.style.display = isChat ? 'none' : ''
+   if (!isChat) this.refreshReadonlyModelBar()
+   ```
+   기존 `openAuditPanel`의 `messagesEl.style.display='none'` 직접 호출, `closeActivePanel`의 audit 분기 restore도 제거 → 일원화.
+
+6. **Readonly Model Bar** — 비-chat 패널 하단:
+   ```
+   Default AI Model : Google Gemini | gemini-2.5-flash
+   ```
+   Provider pretty-name 매핑은 `settings-tab.ts:147-151, 266-269`와 일치:
+   ```typescript
+   const PROVIDER_PRETTY_NAMES = {
+     gemini: 'Google Gemini', anthropic: 'Anthropic Claude',
+     'claude-code': 'Anthropic Claude', openai: 'OpenAI Codex',
+     ollama: 'Local (Ollama)',
+   }
+   ```
+   `refreshReadonlyModelBar()`가 `resolveProvider('default', this.plugin.buildConfig())` 결과로 매 패널 전환 시 재렌더.
+
+**결과**: 빌드 0 errors, 197 tests PASS. CDP 9222 수동 검증으로 버튼 순서·readonly bar 포맷·active 상태 모두 확인.
+
+### 4.0.2 `/clear` 슬래시 커맨드 + placeholder (2026-04-21)
+
+**이전 상태**: Header의 trash 아이콘 클릭 → `clearChat()` 호출.
+
+**변경**: trash 버튼 제거. 대화창 입력 textarea에 `/clear`를 타이핑 후 Enter로 대체.
+
+```typescript
+private async handleSend() {
+  const question = this.inputEl.value.trim()
+  if (!question) return
+  if (question === '/clear') {
+    this.inputEl.value = ''
+    this.clearChat()
+    return
+  }
+  // ... 기존 LLM query 로직
+}
+```
+
+`clearChat()`: chat 히스토리 비우고, `activePanel !== 'chat'`이면 chat으로 복귀 + welcome 복원.
+
+placeholder 갱신: `'Ask a question… (type /clear to reset)'`.
+
+### 4.0.3 재시작/Reload 시 메시지 초기화 (2026-04-21)
+
+**이전 상태**: `main.ts loadSettings`가 `settings.persistChatHistory && savedChatHistory?.length` 조건에서 `chatHistory`를 복원. Obsidian 재시작/`Cmd+R` 시 이전 세션 대화가 그대로 노출.
+
+**변경 (사용자 지시 "재시작/reload 시 메시지창 초기화 추가")**:
+
+```typescript
+// 4. 대화 히스토리는 세션별 초기화 (재시작/reload 시 빈 상태 — §4.0 요구)
+this.chatHistory = []
+```
+
+복원 블록(3줄) 제거, 무조건 빈 배열. 저장 로직(`scheduleChatSave`/`saveSettings`)은 유지 — `savedChatHistory`가 data.json에 남지만 로드 시 무시되는 dead state (향후 정리 대상, `persistChatHistory` 토글 UI도 연쇄 정리 필요).
+
+### 4.0.4 Chat 패널 Provider/Model 편집 가능 (2026-04-21)
+
+**이전 상태**: chat 패널 하단 modelRow의 provider는 `<span class="wikey-chat-provider-label">` 읽기 전용(`provider.toUpperCase()` 표시), model만 `<select>` 드롭다운.
+
+**변경 (사용자 지시 "chat 패널의 기본값은 default ai model이지만, provider/model 모두 바꿀수 있도록")**: provider span → `<select>` 전환. Settings tab (`settings-tab.ts:147-151`)의 5개 옵션 그대로 재사용:
+
+```typescript
+const PROVIDER_OPTIONS = [
+  { value: 'ollama', label: 'Local (Ollama)' },
+  { value: 'gemini', label: 'Google Gemini' },
+  { value: 'anthropic', label: 'Anthropic Claude' },
+  { value: 'openai', label: 'OpenAI Codex' },
+  { value: 'claude-code', label: 'Anthropic Claude' },
+]
+```
+
+Provider 변경 핸들러 (settings-tab.ts:154-165 동일 동작):
+- `settings.basicModel = newProvider`
+- `settings.cloudModel = ''` (초기화)
+- `settings.ingestProvider` 빈 값이면 `ingestModel`도 초기화 (inherits 관계)
+- 저장 후 `modelSelect.empty()` → `(loading…)` 임시 옵션 → 새 provider로 `loadModelList()` 재호출 → 첫 모델 자동 선택 → 다시 저장
+- `refreshReadonlyModelBar()` 호출로 비-chat 패널이 다음 활성화될 때 새 값 반영
+
+또한 `modelRow`를 `inputWrapper` 밖 container 직속 형제로 **이동**. 당초 audit/ingest와 공유하는 설계를 시도했으나 사용자 재지시 "provider/model 편집은 chat 전용, audit/ingest는 readonly 유지"에 따라 최종적으로 chat 패널에서만 visible. audit/ingest 내부의 `.wikey-provider-model-bar`(inbox override용)는 별개 기능으로 유지.
+
+### 4.0.5 CSS 정비 — Readonly Bar · Active 버튼 · 2px 중첩 해소 (2026-04-21)
+
+**파일**: `wikey-obsidian/styles.css`.
+
+1. **`.wikey-readonly-model-bar` 신규**:
+   ```css
+   border-top: 1px solid var(--background-modifier-border);
+   flex-shrink: 0;
+   padding: 8px 10px;
+   font-size: 0.82em;
+   color: var(--text-muted);
+   display: flex; align-items: center; gap: 2px;
+   ```
+
+2. **`.wikey-dashboard` / `.wikey-chat-help`**: `flex: 1; min-height: 0; overflow-y: auto` 추가 (audit/ingest와 동일 패턴) → readonly bar가 항상 하단 고정. `border-top`/`border-bottom` 제거 → header의 `border-bottom`과 2px 중첩 해소.
+
+3. **`.wikey-header-btn-active`에 `:focus`·`:focus-visible` 변형 추가**:
+   ```css
+   .wikey-header-btn-active,
+   .wikey-header-btn-active:hover,
+   .wikey-header-btn-active:focus,
+   .wikey-header-btn-active:focus-visible {
+     background: var(--interactive-accent) !important;
+     color: white !important;
+   }
+   ```
+   **원인**: `.wikey-header-btn:focus` (specificity 0,2,0) vs `.wikey-header-btn-active` (0,1,0) — 전자가 specificity로 이겨 클릭 직후 focus 상태에서 icon만 accent color로 보였음. `:focus` 변형을 active 규칙에 포함해 동일 specificity로 맞춤. 결과: 1번 클릭으로 즉시 accent 배경 + 흰 텍스트.
+
+### 4.0.6 Audit/Ingest Inbox Override 드롭다운 자연 너비화 (2026-04-21)
+
+**이전 상태**: `.wikey-provider-model-bar .wikey-select { flex: 1; min-width: 0 }` → 두 드롭다운이 50/50으로 컨테이너 폭을 꽉 채움. 옵션 라벨이 짧아도 넓게 늘어남.
+
+**변경 (사용자 지시 "50%, 50%로 단순하게 나누지 말고, 안의 내용에 따라 크기")**:
+
+```css
+.wikey-provider-model-bar .wikey-select {
+  flex: 0 0 auto;
+  width: auto;
+  field-sizing: content;
+}
+.wikey-provider-model-bar { justify-content: flex-start; }
+.wikey-provider-model-bar select:nth-of-type(1) { min-width: 180px; }
+.wikey-provider-model-bar select:nth-of-type(2) { min-width: 240px; }
+```
+
+- **`field-sizing: content`**: Chromium 123+ / Electron 39 지원 CSS. Select가 **가장 긴 옵션** 기준이 아닌 **현재 선택된 옵션** 기준으로 폭을 계산 → 긴 모델명(`gemini-2.5-flash-preview-...`)이 드롭다운 폭을 부풀리는 문제 제거.
+- **좌측 정렬**: `.wikey-provider-model-bar`는 `.wikey-audit-apply-bar` 클래스도 공유하며 후자가 `justify-content: flex-end` — provider-model-bar에서 `flex-start`로 override.
+- **표준 min-width** (사용자 "provider는 크기를 이미알고, model도 표준사이즈를 알잖아?"): provider 180px ("Anthropic Claude" 길이), model 240px (전형 모델 ID). 사용자 최종 지시는 210/270에서 180/240으로 조정.
+
+Chat 패널의 `.wikey-chat-model-row .wikey-select`에도 동일 `field-sizing: content` + `flex: 0 0 auto` 적용 → 긴 옵션으로 부풀지 않음.
+
+### 4.0.7 DEFAULT 라벨 통일 (2026-04-21)
+
+**이전 상태**: 9개 위치에서 `(use Default Model)` (provider 빈 값), `(provider default)` (model 빈 값) 혼용 — settings-tab.ts 2곳, sidebar-chat.ts 7곳.
+
+**변경 (사용자 지시 "기본값 명칭도 (use Default Model) > DEFAULT로", "provider/model 모두")**:
+
+```bash
+sed -i "s/'(use Default Model)'/'DEFAULT'/g; s/'(provider default)'/'DEFAULT'/g" \
+  wikey-obsidian/src/sidebar-chat.ts wikey-obsidian/src/settings-tab.ts
+```
+
+추가로 `settings-tab.ts:288`의 description 텍스트 "Leave at (provider default) to inherit..." → "Leave at DEFAULT to inherit..." 수동 업데이트.
+
+### 4.0.8 사이드바 초기 폭 500px (2026-04-21)
+
+**배경**: Obsidian right sidebar 기본 폭(~300px)은 provider 180 + model 240 + gap + 여백이 들어가지 못함. 사용자 측정 시 workspace.json 저장 값 530px이 이미 있었으나 신규 설치/초기화 시에는 좁은 기본값.
+
+**변경 (사용자 지시 "사이드바 width초기값 500px으로")**:
+
+1. **Settings 스키마 확장** (`main.ts`):
+   ```typescript
+   interface WikeySettings {
+     // ...
+     initialSidebarWidthApplied: boolean  // 최초 1회 플래그
+   }
+   const DEFAULT_SETTINGS = { ..., initialSidebarWidthApplied: false }
+   ```
+
+2. **`applyInitialSidebarWidth()` 신규 메서드**:
+   ```typescript
+   private async applyInitialSidebarWidth() {
+     if (this.settings.initialSidebarWidthApplied) return
+     ;(this.app.workspace as any).rightSplit?.setSize?.(500)
+     this.settings = { ...this.settings, initialSidebarWidthApplied: true }
+     await this.saveSettings()
+   }
+   ```
+   `rightSplit.setSize(N)` API는 Obsidian 내부 메서드 (CDP로 prototype methods 확인: `serialize, setSize, toggle, collapse, expand, onSidedockResizeStart, recomputeChildrenDimensions`).
+
+3. **`activateChatView`의 양 분기에서 호출**: 기존 leaf 재활성화 / 신규 leaf 생성 모두. 최초 1회만 적용되고 이후 사용자 리사이즈 값은 plugin이 건드리지 않음 (Obsidian workspace.json이 관리).
+
+**검증 (CDP 측정)**: 리로드 + `activateChatView` 후 `app.workspace.rightSplit.containerEl.getBoundingClientRect().width` = 500. `settings.initialSidebarWidthApplied = true`.
+
+### 4.0.9 검증 및 반영 파일 요약
+
+- **빌드**: `npm run build` → 0 errors (wikey-core + wikey-obsidian)
+- **테스트**: `npm test` → 9 files / **197 tests PASS** (0 failed, wikey-core 미변경)
+- **수동 CDP 검증 (9222번 포트)**:
+  - Header 순서: `[chat][dashboard][ingest][audit][help][reload][close]` ✓
+  - 사이드바 폭 500px ✓
+  - audit 패널 DEFAULT/DEFAULT 드롭다운: width 180/240px, `justify-content: flex-start` ✓
+  - active 버튼: 첫 클릭에 accent 배경 + white 텍스트 (focus 상태에서도 유지) ✓
+  - readonly bar: `Default AI Model : Google Gemini | gemini-2.5-flash` 하단 고정 ✓
+  - `/clear` → 히스토리 비워짐 + welcome 복원 ✓
+  - 재시작 → chatHistory 빈 상태 (복원 안 됨) ✓
+  - 스크린샷 보존: `/tmp/wikey-{chat-bottom,audit,audit-after,audit-v3,audit-v4,audit-500}.png`
+
+- **변경 파일 (diff 규모)**:
+  - `wikey-obsidian/src/sidebar-chat.ts` (+120 / -40): 아이콘·PanelName·selectPanel·applyPanelVisibility·prettyProvider·PROVIDER_OPTIONS·readonlyModelBar·/clear·modelRow 이동
+  - `wikey-obsidian/src/main.ts` (+14 / -4): `initialSidebarWidthApplied` 설정·`applyInitialSidebarWidth()`·savedChatHistory 복원 제거
+  - `wikey-obsidian/src/settings-tab.ts` (-4, 라벨 일괄 치환): `(use Default Model)`/`(provider default)` → `DEFAULT`
+  - `wikey-obsidian/styles.css` (+30 / -8): readonly-model-bar 신규·header-btn-active focus 변형·provider-model-bar 자연 너비/좌측 정렬/min-width·dashboard/help flex+border 정비·chat-model-row select field-sizing
 
 ---
 

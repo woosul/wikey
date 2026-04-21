@@ -39,6 +39,8 @@ interface WikeySettings {
   feedback: Array<{ question: string; answer: string; vote: string; timestamp: string }>
   persistChatHistory: boolean
   savedChatHistory: ReadonlyArray<{ role: 'user' | 'assistant' | 'error'; content: string }>
+  // 최초 1회 사이드바 초기 폭을 500px로 설정 — 이후엔 사용자 리사이즈 존중
+  initialSidebarWidthApplied: boolean
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -67,6 +69,7 @@ const DEFAULT_SETTINGS: WikeySettings = {
   feedback: [],
   persistChatHistory: true,
   savedChatHistory: [],
+  initialSidebarWidthApplied: false,
 }
 
 export type { WikeySettings }
@@ -276,10 +279,8 @@ export default class WikeyPlugin extends Plugin {
     // 3. credentials.json (API 키)
     this.loadCredentials()
 
-    // 4. 대화 히스토리 복원
-    if (this.settings.persistChatHistory && this.settings.savedChatHistory?.length) {
-      this.chatHistory = [...this.settings.savedChatHistory]
-    }
+    // 4. 대화 히스토리는 세션별 초기화 (재시작/reload 시 빈 상태 — §4.0 요구)
+    this.chatHistory = []
   }
 
   async saveSettings() {
@@ -451,6 +452,7 @@ export default class WikeyPlugin extends Plugin {
     const existing = this.app.workspace.getLeavesOfType(WIKEY_CHAT_VIEW)
     if (existing.length > 0) {
       this.app.workspace.revealLeaf(existing[0])
+      await this.applyInitialSidebarWidth()
       return
     }
 
@@ -458,7 +460,15 @@ export default class WikeyPlugin extends Plugin {
     if (leaf) {
       await leaf.setViewState({ type: WIKEY_CHAT_VIEW, active: true })
       this.app.workspace.revealLeaf(leaf)
+      await this.applyInitialSidebarWidth()
     }
+  }
+
+  private async applyInitialSidebarWidth() {
+    if (this.settings.initialSidebarWidthApplied) return
+    ;(this.app.workspace as any).rightSplit?.setSize?.(500)
+    this.settings = { ...this.settings, initialSidebarWidthApplied: true }
+    await this.saveSettings()
   }
 }
 

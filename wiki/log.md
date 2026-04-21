@@ -5,6 +5,16 @@ created: 2026-04-10
 updated: 2026-04-21
 ---
 
+## [2026-04-21] ui | §4.0 UI 사전작업 — Chat 전담 패널 + /clear + 사이드바 500px + DEFAULT 라벨
+
+- 변경: wikey-obsidian 플러그인 UI 전면 정비. chat을 first-class 패널로 승격 (header 첫 아이콘, 비-chat 패널은 composer 숨기고 `Default AI Model : Provider | model` readonly 라벨), dashboard 아이콘 home→bar-chart, trash 버튼 삭제하고 `/clear` 슬래시 커맨드로 대체, chat 패널 provider/model 모두 편집 가능 (span→select 전환).
+- UX: `togglePanel→selectPanel` rename (재클릭 no-op, on/off 아닌 re-select). 재시작/reload 시 `chatHistory=[]` 초기화 (savedChatHistory 복원 블록 제거). 사이드바 초기 폭 500px 1회 자동 적용 (`initialSidebarWidthApplied` 플래그 + `rightSplit.setSize(500)`).
+- CSS: `.wikey-readonly-model-bar` 신규, dashboard/help `flex:1 + overflow-y:auto`로 readonly bar 하단 고정, header-btn-active에 `:focus`/`:focus-visible` 변형 (1-click accent 배경 복구), provider-model-bar 드롭다운 `field-sizing:content + flex:0 0 auto + justify-content:flex-start` 좌측 정렬·자연 너비, provider 180px / model 240px min-width.
+- 라벨: `(use Default Model)` / `(provider default)` → `DEFAULT` 9개 위치 일괄 통일.
+- 검증: `npm run build` 0 errors, `npm test` 197 PASS. CDP 9222 수동 검증 — 사이드바 500px, 버튼 순서, readonly bar 포맷, `/clear`, active 버튼 배경, 드롭다운 폭 180/240 모두 확인.
+- 산출물: activity/phase-4-result.md §4.0, plan/phase-4-todo.md §4.0 체크
+- 변경 파일: wikey-obsidian/src/{sidebar-chat.ts,main.ts,settings-tab.ts}, wikey-obsidian/styles.css
+
 ## [2026-04-21] eval | §4.5.1.4 canonicalizer 2차 확장 (pin/alias 기능 확증, CV 개선 미확증)
 
 - 변경: `canonicalize.ts`에 `SLUG_ALIASES` (음역·약어 통일) + `FORCED_CATEGORIES` (E/C 경계 pin) + `applyForcedCategories` 후처리. 단위 테스트 11건 추가 (197 tests PASS).

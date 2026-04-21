@@ -1,7 +1,36 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-21 (Phase 4 §4.5.1.4 canonicalizer 2차 — 기능 완수, CV 개선 실패)
+> 최신 갱신: 2026-04-21 (Phase 4 §4.0 UI 사전작업 완료)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-21 (Phase 4 §4.0 UI 사전작업) 마감
+
+### ⭐ 다음 세션 시작점
+
+**현재 상태**: Phase 4 §4.0 UI 사전작업 9개 항목 모두 완료. wikey-obsidian 플러그인 UI 전면 정비 — chat을 first-class 패널로 분리, 비-chat 패널은 `Default AI Model : Provider | model` readonly 라벨만 노출, trash 아이콘 대신 `/clear` 슬래시 커맨드, dashboard 아이콘 home→bar-chart, provider/model 편집 UI는 chat 패널에서만, 사이드바 초기 폭 500px 1회 자동 적용, DEFAULT 라벨 통일, 드롭다운 자연 너비 + 좌측 정렬.
+
+**검증**: `npm run build` 0 errors, `npm test` 197 PASS. CDP 9222 수동 측정 — 사이드바 500px, 드롭다운 180/240, active 버튼 배경, readonly bar 포맷, `/clear` 동작, 재시작 시 메시지 초기화 모두 확인.
+
+**산출물**:
+- `wikey-obsidian/src/sidebar-chat.ts` (+120/-40): 아이콘·PanelName·selectPanel·applyPanelVisibility·prettyProvider·PROVIDER_OPTIONS·readonlyModelBar·/clear
+- `wikey-obsidian/src/main.ts` (+14/-4): `initialSidebarWidthApplied` + `applyInitialSidebarWidth()` + savedChatHistory 복원 제거
+- `wikey-obsidian/src/settings-tab.ts` (라벨 일괄 치환): `(use Default Model)`/`(provider default)` → `DEFAULT`
+- `wikey-obsidian/styles.css` (+30/-8): readonly-model-bar 신규, header-btn-active focus 변형, provider-model-bar 자연 너비·좌측·min-width, dashboard/help flex+border 정비, chat-model-row field-sizing
+- `activity/phase-4-result.md` §4.0 (신규 9개 하위 섹션)
+- `plan/phase-4-todo.md` §4.0 체크박스 모두 `[x]`
+
+**바로 시작 가능한 작업**:
+
+1. **🟢 §4.1.1 Docling 메인화 + unhwp 위임** (다음 우선순위 — §4.5.1.5의 선행)
+   - IBM Docling을 PDF/DOCX/PPTX/XLSX/HTML/이미지/TXT의 Tier 1 메인 컨버터로 승격
+   - HWP/HWPX는 unhwp로 위임
+   - MarkItDown 체인을 fallback(tier 3)으로 강등
+   - 설치 경로, `extractPdfText` 체인 재정렬, `env-detect.ts` 보강, 설정 탭 상태 라인
+   - 상세: `plan/phase-4-todo.md` §4.1.1.1~8
+2. **🔵 §4.5.1.5 LLM extraction variance 원인 분석** (Docling 전환 후)
+3. **🔵 §4.2 URI 기반 안정 참조** (독립 가능, PARA 이동 내성)
 
 ---
 

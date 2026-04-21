@@ -227,7 +227,7 @@ export class WikeySettingTab extends PluginSettingTab {
       try {
         const models = await fetchModelList(provider, this.plugin.buildConfig(), this.plugin.httpClient)
         selectEl.innerHTML = ''
-        selectEl.appendChild(new Option('(provider default)', ''))
+        selectEl.appendChild(new Option('DEFAULT', ''))
         let matched = false
         for (const m of models) {
           const opt = new Option(m, m)
@@ -262,7 +262,7 @@ export class WikeySettingTab extends PluginSettingTab {
       'Provider',
       'Provider for document ingestion. Leave empty to use Default Model.',
       [
-        { value: '', label: '(use Default Model)' },
+        { value: '', label: 'DEFAULT' },
         { value: 'ollama', label: 'Local (Ollama)' },
         { value: 'gemini', label: 'Google Gemini' },
         { value: 'openai', label: 'OpenAI Codex' },
@@ -285,7 +285,7 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderModelDropdown(
       containerEl,
       'Model',
-      'Model for ingestion, dynamically loaded from the provider API. Leave at (provider default) to inherit wikey-core defaults.',
+      'Model for ingestion, dynamically loaded from the provider API. Leave at DEFAULT to inherit wikey-core defaults.',
       effectiveIngestProvider,
       this.plugin.settings.ingestModel || '',
       async (value) => {
@@ -538,7 +538,7 @@ export class WikeySettingTab extends PluginSettingTab {
       .setDesc('e.g. gemini-2.5-flash, gpt-4o, gemma4:26b. Leave blank for provider default.')
       .addText((text) =>
         text
-          .setPlaceholder('(provider default)')
+          .setPlaceholder('DEFAULT')
           .setValue(this.plugin.settings.ocrModel || '')
           .onChange(async (value) => {
             this.plugin.settings.ocrModel = value.trim()
@@ -803,7 +803,7 @@ export class WikeySettingTab extends PluginSettingTab {
     if (!this.plugin.settings.advancedLLM) return
 
     const providerOptions: Record<string, string> = {
-      '': '(use Default Model)',
+      '': 'DEFAULT',
       'ollama': 'Local (Ollama)',
       'gemini': 'Google Gemini',
       'anthropic': 'Anthropic Claude',

@@ -4,24 +4,27 @@
 > 전제: Phase 3 (Obsidian 플러그인 + 인제스트 파이프라인 v6) 완료
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md`와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트(LLM 추출)** → **4. 검색·그래프** → **5. 운영·안정성**
-> 상태 (2026-04-21): §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 §4.1.1 Docling 선행 후 재개
+> 상태 (2026-04-21): §4.0 완료, §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 §4.1.1 Docling 선행 후 재개
 
 ---
 
 ## 4.0 UI 사전작업
 > tag: #design, #main-feature
 
-- [ ] chat 패널 추가 : 대화창 전용 패널
-  - 아이콘 및 위치 : 상단 아이콘의 맨 앞에 위치하며, 아이콘은 'chat'
-  - 현재 상태 : 대화창 위에 각 패널에 overlay되어 있는 상태
-  - 변경 목표 : 각 패널의 특성 및 역할을 전담으로 처리
-  - 각 패널의 UI 변경 : 하단의 대화창 및 AI model은 삭제, 대신에 설정에서 지정된 Defaut AI Model명을 출력하고  모델 변경 안됨 (출력 형식 : 'Defaut AI Model : Google Gemini | gemini-2.5-flash'), 메시지창 지워진 만큼 상단 내용으로 채우기
-  - chat패널 : 기존의 대화창 UI를 그대로 유지하며, 초기값은 Default AI model(시작시)이며, provider와 model변경 가능
-- [ ] 대화창 내용 지우기 기능
-  - 기존 : 상단의 'trash'아이콘 삭제
-  - 변경 : 메시지창에 '/clear' command 입력
-- [ ] Dashboard
-  - dashboard 아이콘 변경 : 기존 home에서 graph (막대그래프)
+- [x] 4.0.1 chat 패널 추가 — first-class 패널로 승격 + header 아이콘 재구성
+  - chat 아이콘 first position, dashboard 아이콘 home → bar-chart 교체
+  - PanelName에 'chat' 추가/null 제거, 초기 activePanel='chat'
+  - togglePanel → selectPanel rename (재클릭 no-op)
+  - 비-chat 패널에서 composer/modelRow 숨김 + `Default AI Model : Provider | model` readonly 라벨 하단 고정
+- [x] 4.0.2 대화창 내용 지우기 — trash 버튼 삭제 + `/clear` 슬래시 커맨드
+  - handleSend 최상단 감지, placeholder 'Ask a question… (type /clear to reset)'
+- [x] 4.0.3 Dashboard 아이콘 변경 — home → bar-chart (Bootstrap Icons)
+- [x] 4.0.4 재시작/reload 시 메시지창 초기화 — main.ts loadSettings의 savedChatHistory 복원 제거
+- [x] 4.0.5 Chat 패널 provider/model 모두 편집 가능 — provider span → select 전환, PROVIDER_OPTIONS 재사용
+- [x] 4.0.6 CSS 정비 — readonly-model-bar 신규, dashboard/help flex+border 정비, active 버튼 focus 변형 추가 (1-click accent 배경 적용)
+- [x] 4.0.7 Audit/Ingest inbox override 드롭다운 자연 너비화 — field-sizing:content, flex-start 좌측 정렬, provider 180/model 240 min-width
+- [x] 4.0.8 DEFAULT 라벨 통일 — `(use Default Model)`/`(provider default)` → `DEFAULT` (9개 위치 일괄)
+- [x] 4.0.9 사이드바 초기 폭 500px — `initialSidebarWidthApplied` 플래그 + `rightSplit.setSize(500)` 최초 1회만
 
 ## 4.1 문서 전처리 파이프라인 (source → Markdown)
 > tag: #core, #workflow

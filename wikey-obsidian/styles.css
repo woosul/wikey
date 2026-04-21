@@ -70,7 +70,9 @@
 }
 
 .wikey-header-btn-active,
-.wikey-header-btn-active:hover {
+.wikey-header-btn-active:hover,
+.wikey-header-btn-active:focus,
+.wikey-header-btn-active:focus-visible {
   background: var(--interactive-accent) !important;
   color: white !important;
   border-radius: 4px;
@@ -254,10 +256,11 @@
 .wikey-chat-help {
   padding: 16px 14px;
   background: var(--background-primary-alt, var(--background-secondary));
-  border-top: 1px solid var(--background-modifier-border);
-  border-bottom: 1px solid var(--background-modifier-border);
   font-size: 0.88em;
   color: var(--text-normal);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .wikey-chat-help h2 {
@@ -271,10 +274,11 @@
 .wikey-dashboard {
   padding: 14px;
   background: var(--background-primary-alt, var(--background-secondary));
-  border-top: 1px solid var(--background-modifier-border);
-  border-bottom: 1px solid var(--background-modifier-border);
   font-size: 0.88em;
   color: var(--text-normal);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .wikey-dashboard-section {
@@ -837,11 +841,22 @@
 .wikey-provider-model-bar {
   padding-top: 6px;
   border-top: none;
+  justify-content: flex-start;
 }
 
 .wikey-provider-model-bar .wikey-select {
-  flex: 1;
-  min-width: 0;
+  flex: 0 0 auto;
+  width: auto;
+  field-sizing: content;
+}
+
+/* Provider (1st select): fit 'Anthropic Claude'. Model (2nd): fit typical model id. */
+.wikey-provider-model-bar select:nth-of-type(1) {
+  min-width: 180px;
+}
+
+.wikey-provider-model-bar select:nth-of-type(2) {
+  min-width: 240px;
 }
 
 .wikey-audit-apply-summary {
@@ -1002,6 +1017,33 @@
   align-items: center;
   gap: 4px;
   padding: 2px 0 6px;
+}
+
+.wikey-chat-model-row .wikey-select {
+  flex: 0 0 auto;
+  width: auto;
+  field-sizing: content;
+}
+
+/* Readonly model bar (비-chat 패널 하단) */
+.wikey-readonly-model-bar {
+  border-top: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+  padding: 8px 10px;
+  font-size: 0.82em;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.wikey-readonly-model-label {
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.wikey-readonly-model-value {
+  color: var(--text-normal);
 }
 
 .wikey-chat-model-label {

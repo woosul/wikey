@@ -13,7 +13,8 @@ interface ChatMessage {
 
 // Bootstrap SVG icons (inline, 16x16)
 const ICONS = {
-  dashboard: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8.354 1.146a.5.5 0 0 0-.708 0l-6 6A.5.5 0 0 0 1.5 7.5v7a.5.5 0 0 0 .5.5h4.5a.5.5 0 0 0 .5-.5v-4h2v4a.5.5 0 0 0 .5.5H14a.5.5 0 0 0 .5-.5v-7a.5.5 0 0 0-.146-.354L13 5.793V2.5a.5.5 0 0 0-.5-.5h-1a.5.5 0 0 0-.5.5v1.293zM2.5 14V7.707l5.5-5.5 5.5 5.5V14H10v-4a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v4z"/></svg>',
+  chat: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.678 11.894a1 1 0 0 1 .287.801 11 11 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8 8 0 0 0 8 14c3.996 0 7-2.807 7-6s-3.004-6-7-6-7 2.808-7 6c0 1.468.617 2.83 1.678 3.894m-.493 3.905a22 22 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a10 10 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9 9 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105"/></svg>',
+  dashboard: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M4 11H2v3h2zm5-4H7v7h2zm5-5v12h-2V2zm-2-1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM6 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm-5 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1z"/></svg>',
   audit: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8s-3-5.5-8-5.5S0 8 0 8s3 5.5 8 5.5S16 8 16 8M1.173 8a13 13 0 0 1 1.66-2.043C4.12 4.668 5.88 3.5 8 3.5s3.879 1.168 5.168 2.457A13 13 0 0 1 14.828 8q-.086.13-.195.288c-.335.48-.83 1.12-1.465 1.755C11.879 11.332 10.119 12.5 8 12.5s-3.879-1.168-5.168-2.457A13 13 0 0 1 1.172 8z"/><path d="M8 5.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5M4.5 8a3.5 3.5 0 1 1 7 0 3.5 3.5 0 0 1-7 0"/></svg>',
   plus: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4"/></svg>',
   question: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M5.255 5.786a.237.237 0 0 0 .241.247h.825c.138 0 .248-.113.266-.25.09-.656.54-1.134 1.342-1.134.686 0 1.314.343 1.314 1.168 0 .635-.374.927-.965 1.371-.673.489-1.206 1.06-1.168 1.987l.003.217a.25.25 0 0 0 .25.246h.811a.25.25 0 0 0 .25-.25v-.105c0-.718.273-.927 1.01-1.486.609-.463 1.244-.977 1.244-2.056 0-1.511-1.276-2.241-2.673-2.241-1.267 0-2.655.59-2.75 2.286m1.557 5.763c0 .533.425.927 1.01.927.609 0 1.028-.394 1.028-.927 0-.552-.42-.94-1.029-.94-.584 0-1.009.388-1.009.94"/></svg>',
@@ -27,7 +28,27 @@ const ICONS = {
   folder: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3H14a2 2 0 0 1 2 2v1.5a.5.5 0 0 1-1 0V5a1 1 0 0 0-1-1H9.828a3 3 0 0 1-2.12-.879l-.83-.828A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/><path d="M14.5 5.5a.5.5 0 0 0-.468.324L12.78 9H3.22l-1.252-3.176A.5.5 0 0 0 1.5 5.5a.5.5 0 0 0-.49.412L.008 11.91a.5.5 0 0 0 .49.588h15.004a.5.5 0 0 0 .49-.588l-1.002-5.998A.5.5 0 0 0 14.5 5.5"/></svg>',
 }
 
-type PanelName = 'dashboard' | 'audit' | 'ingest' | 'help' | null
+type PanelName = 'chat' | 'dashboard' | 'audit' | 'ingest' | 'help'
+
+const PROVIDER_PRETTY_NAMES: Readonly<Record<string, string>> = {
+  gemini: 'Google Gemini',
+  anthropic: 'Anthropic Claude',
+  'claude-code': 'Anthropic Claude',
+  openai: 'OpenAI Codex',
+  ollama: 'Local (Ollama)',
+}
+
+function prettyProvider(p: string): string {
+  return PROVIDER_PRETTY_NAMES[p] ?? p
+}
+
+const PROVIDER_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
+  { value: 'ollama', label: 'Local (Ollama)' },
+  { value: 'gemini', label: 'Google Gemini' },
+  { value: 'anthropic', label: 'Anthropic Claude' },
+  { value: 'openai', label: 'OpenAI Codex' },
+  { value: 'claude-code', label: 'Anthropic Claude' },
+]
 
 /**
  * Row progress with chunk-level subStep interpolation.
@@ -51,8 +72,13 @@ export class WikeyChatView extends ItemView {
   private inputEl!: HTMLTextAreaElement
   private sendBtn!: HTMLButtonElement
   private ingestPanel: HTMLElement | null = null
-  private activePanel: PanelName = null
+  private activePanel: PanelName = 'chat'
   private panelBtns: Record<string, HTMLElement> = {}
+  private inputWrapper!: HTMLElement
+  private modelRow!: HTMLElement
+  private providerSelect!: HTMLSelectElement
+  private modelSelect!: HTMLSelectElement
+  private readonlyModelBar!: HTMLElement
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -75,11 +101,11 @@ export class WikeyChatView extends ItemView {
     header.createEl('span', { text: 'Wikey', cls: 'wikey-chat-title' })
     const actions = header.createDiv({ cls: 'wikey-chat-header-actions' })
 
-    this.panelBtns.dashboard = this.makeHeaderBtn(actions, ICONS.dashboard, 'Dashboard', () => this.togglePanel('dashboard'))
-    this.panelBtns.ingest = this.makeHeaderBtn(actions, ICONS.plus, 'Ingest', () => this.togglePanel('ingest'))
-    this.panelBtns.audit = this.makeHeaderBtn(actions, ICONS.audit, 'Audit', () => this.togglePanel('audit'))
-    this.panelBtns.help = this.makeHeaderBtn(actions, ICONS.question, 'Help', () => this.togglePanel('help'))
-    this.makeHeaderBtn(actions, ICONS.trash, 'Clear Chat', () => this.clearChat())
+    this.panelBtns.chat = this.makeHeaderBtn(actions, ICONS.chat, 'Chat', () => this.selectPanel('chat'))
+    this.panelBtns.dashboard = this.makeHeaderBtn(actions, ICONS.dashboard, 'Dashboard', () => this.selectPanel('dashboard'))
+    this.panelBtns.ingest = this.makeHeaderBtn(actions, ICONS.plus, 'Ingest', () => this.selectPanel('ingest'))
+    this.panelBtns.audit = this.makeHeaderBtn(actions, ICONS.audit, 'Audit', () => this.selectPanel('audit'))
+    this.panelBtns.help = this.makeHeaderBtn(actions, ICONS.question, 'Help', () => this.selectPanel('help'))
     this.makeHeaderBtn(actions, ICONS.reload, 'Reload', () => (this.app as any).commands?.executeCommandById?.('app:reload'))
     this.makeHeaderBtn(actions, ICONS.close, 'Close', () => this.leaf.detach())
 
@@ -87,13 +113,13 @@ export class WikeyChatView extends ItemView {
     this.messagesEl = container.createDiv({ cls: 'wikey-chat-messages' })
     for (const msg of this.plugin.chatHistory) this.renderMessage(msg)
 
-    // ── Input Area ──
-    const inputWrapper = container.createDiv({ cls: 'wikey-chat-input-wrapper' })
-    const inputArea = inputWrapper.createDiv({ cls: 'wikey-chat-input-area' })
+    // ── Input Area (chat 패널 전용) ──
+    this.inputWrapper = container.createDiv({ cls: 'wikey-chat-input-wrapper' })
+    const inputArea = this.inputWrapper.createDiv({ cls: 'wikey-chat-input-area' })
 
     this.inputEl = inputArea.createEl('textarea', {
       cls: 'wikey-chat-input',
-      attr: { placeholder: 'Ask a question...', rows: '3' },
+      attr: { placeholder: 'Ask a question… (type /clear to reset)', rows: '3' },
     })
 
     this.sendBtn = inputArea.createEl('button', { cls: 'wikey-chat-send-btn' })
@@ -104,30 +130,77 @@ export class WikeyChatView extends ItemView {
     })
     this.sendBtn.addEventListener('click', () => this.handleSend())
 
-    // Model selector: "AI Model : PROVIDER — model-name (V)"
-    const modelRow = inputWrapper.createDiv({ cls: 'wikey-chat-model-row' })
+    // ── Model Row (provider + model select, chat/audit/ingest 공용) ──
+    this.modelRow = container.createDiv({ cls: 'wikey-chat-model-row' })
     const config = this.plugin.buildConfig()
     const { provider, model: currentModel } = resolveProvider('default', config)
 
-    modelRow.createEl('span', { text: 'AI Model', cls: 'wikey-chat-model-label' })
-    modelRow.createEl('span', { text: ':', cls: 'wikey-chat-model-sep' })
-    modelRow.createEl('span', { text: provider.toUpperCase(), cls: 'wikey-chat-provider-label' })
-    modelRow.createEl('span', { text: '\u2014', cls: 'wikey-chat-model-sep' })
+    this.modelRow.createEl('span', { text: 'AI Model', cls: 'wikey-chat-model-label' })
+    this.modelRow.createEl('span', { text: ':', cls: 'wikey-chat-model-sep' })
 
-    const modelSelect = modelRow.createEl('select', { cls: 'wikey-select' })
-    // 현재 모델을 초기 옵션으로 추가 (API 로드 전)
+    this.providerSelect = this.modelRow.createEl('select', { cls: 'wikey-select wikey-chat-provider-select' })
+    for (const opt of PROVIDER_OPTIONS) {
+      const o = this.providerSelect.createEl('option', { text: opt.label, attr: { value: opt.value } })
+      if (opt.value === provider) o.selected = true
+    }
+    this.modelRow.createEl('span', { text: '\u2014', cls: 'wikey-chat-model-sep' })
+
+    this.modelSelect = this.modelRow.createEl('select', { cls: 'wikey-select' })
     const savedModel = this.plugin.settings.cloudModel || currentModel
-    modelSelect.createEl('option', { text: savedModel, attr: { value: savedModel } })
+    this.modelSelect.createEl('option', { text: savedModel, attr: { value: savedModel } })
 
-    modelSelect.addEventListener('change', async () => {
-      this.plugin.settings.cloudModel = modelSelect.value
+    this.providerSelect.addEventListener('change', async () => {
+      const newProvider = this.providerSelect.value
+      this.plugin.settings.basicModel = newProvider
+      this.plugin.settings.cloudModel = ''
+      if (!this.plugin.settings.ingestProvider) this.plugin.settings.ingestModel = ''
       await this.plugin.saveSettings()
+      this.modelSelect.empty()
+      this.modelSelect.createEl('option', { text: '(loading…)', attr: { value: '' } })
+      await this.loadModelList(newProvider, this.modelSelect, '')
+      this.plugin.settings.cloudModel = this.modelSelect.value
+      await this.plugin.saveSettings()
+      this.refreshReadonlyModelBar()
     })
 
-    // 비동기로 API에서 모델 목록 로드
-    this.loadModelList(provider, modelSelect, savedModel)
+    this.modelSelect.addEventListener('change', async () => {
+      this.plugin.settings.cloudModel = this.modelSelect.value
+      await this.plugin.saveSettings()
+      this.refreshReadonlyModelBar()
+    })
+
+    this.loadModelList(provider, this.modelSelect, savedModel)
+
+    // ── Readonly Model Bar (비-chat 패널 전용) ──
+    this.readonlyModelBar = container.createDiv({ cls: 'wikey-readonly-model-bar' })
+    this.refreshReadonlyModelBar()
 
     if (this.plugin.chatHistory.length === 0) this.showWelcome()
+    this.applyPanelVisibility()
+    this.updatePanelBtnStates()
+  }
+
+  private refreshReadonlyModelBar() {
+    if (!this.readonlyModelBar) return
+    this.readonlyModelBar.empty()
+    const { provider, model } = resolveProvider('default', this.plugin.buildConfig())
+    const effectiveModel = this.plugin.settings.cloudModel || model
+    this.readonlyModelBar.createEl('span', { text: 'Default AI Model', cls: 'wikey-readonly-model-label' })
+    this.readonlyModelBar.createEl('span', { text: ' : ' })
+    this.readonlyModelBar.createEl('span', { text: prettyProvider(provider), cls: 'wikey-readonly-model-value' })
+    this.readonlyModelBar.createEl('span', { text: ' | ' })
+    this.readonlyModelBar.createEl('span', { text: effectiveModel, cls: 'wikey-readonly-model-value' })
+  }
+
+  private applyPanelVisibility() {
+    const isChat = this.activePanel === 'chat'
+    this.messagesEl.style.display = isChat ? '' : 'none'
+    if (this.inputWrapper) this.inputWrapper.style.display = isChat ? '' : 'none'
+    if (this.modelRow) this.modelRow.style.display = isChat ? '' : 'none'
+    if (this.readonlyModelBar) {
+      this.readonlyModelBar.style.display = isChat ? 'none' : ''
+      if (!isChat) this.refreshReadonlyModelBar()
+    }
   }
 
   async onClose() { /* cleanup */ }
@@ -141,23 +214,19 @@ export class WikeyChatView extends ItemView {
     return btn
   }
 
-  // ── Panel Toggle (exclusive) ──
+  // ── Panel Select (exclusive, re-click = no-op) ──
 
-  private togglePanel(name: PanelName) {
-    if (this.activePanel === name) {
-      // 같은 패널 재클릭 → 닫기
-      this.closeActivePanel()
-      this.activePanel = null
-    } else {
-      // 다른 패널 → 기존 닫고 새로 열기
-      this.closeActivePanel()
-      this.activePanel = name
-      if (name === 'dashboard') this.openDashboard()
-      else if (name === 'audit') this.openAuditPanel()
-      else if (name === 'ingest') this.openIngestPanel()
-      else if (name === 'help') this.openHelp()
-    }
+  private selectPanel(name: PanelName) {
+    if (this.activePanel === name) return
+    this.closeActivePanel()
+    this.activePanel = name
+    if (name === 'dashboard') this.openDashboard()
+    else if (name === 'audit') this.openAuditPanel()
+    else if (name === 'ingest') this.openIngestPanel()
+    else if (name === 'help') this.openHelp()
+    // chat: 별도 DOM 마운트 불필요 (messagesEl이 chat view 자체)
     this.updatePanelBtnStates()
+    this.applyPanelVisibility()
     this.syncWelcomeVisibility()
   }
 
@@ -171,7 +240,6 @@ export class WikeyChatView extends ItemView {
     if (this.auditPanel) {
       this.auditPanel.remove()
       this.auditPanel = null
-      this.messagesEl.style.display = ''
     }
     if (this.helpPanel) {
       this.helpPanel.remove()
@@ -198,8 +266,12 @@ export class WikeyChatView extends ItemView {
     this.plugin.settings = { ...this.plugin.settings, savedChatHistory: [] }
     this.plugin.saveSettings()
     this.messagesEl.empty()
-    this.activePanel = null
+    if (this.activePanel !== 'chat') {
+      this.closeActivePanel()
+      this.activePanel = 'chat'
+    }
     this.updatePanelBtnStates()
+    this.applyPanelVisibility()
     this.showWelcome()
   }
 
@@ -209,9 +281,9 @@ export class WikeyChatView extends ItemView {
     w.createEl('p', { text: 'e.g. "Key specs of DJI O3?", "Compare RAG vs LLM Wiki"', cls: 'wikey-chat-welcome-hint' })
   }
 
-  /** 특수 패널이 열려 있으면 welcome 숨김, 모두 닫히고 대화 비어 있으면 복원 */
+  /** 비-chat 패널이 열려 있으면 welcome 숨김, chat 복귀 + 대화 비어 있으면 복원 */
   private syncWelcomeVisibility() {
-    const hasPanel = this.activePanel !== null
+    const hasPanel = this.activePanel !== 'chat'
     const welcomeEl = this.messagesEl.querySelector('.wikey-chat-welcome') as HTMLElement | null
 
     if (hasPanel) {
@@ -228,6 +300,12 @@ export class WikeyChatView extends ItemView {
   private async handleSend() {
     const question = this.inputEl.value.trim()
     if (!question) return
+
+    if (question === '/clear') {
+      this.inputEl.value = ''
+      this.clearChat()
+      return
+    }
 
     this.messagesEl.querySelector('.wikey-chat-welcome')?.remove()
 
@@ -580,7 +658,6 @@ Click [[page name]] in answers to navigate to the wiki page.
   private openAuditPanel() {
     this.auditPanel = createDiv({ cls: 'wikey-audit-panel' })
     this.messagesEl.parentElement?.insertBefore(this.auditPanel, this.messagesEl)
-    this.messagesEl.style.display = 'none'
     this.renderAuditSection(this.auditPanel)
   }
 
@@ -722,7 +799,7 @@ Click [[page name]] in answers to navigate to the wiki page.
     const providerBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
     const providerSelect = providerBar.createEl('select', { cls: 'wikey-select' })
     const providerOptions = [
-      { value: '', text: '(use Default Model)' },
+      { value: '', text: 'DEFAULT' },
       { value: 'ollama', text: 'Local' },
       { value: 'gemini', text: 'Google Gemini' },
       { value: 'openai', text: 'OpenAI Codex' },
@@ -736,13 +813,13 @@ Click [[page name]] in answers to navigate to the wiki page.
 
     const modelSelect = providerBar.createEl('select', { cls: 'wikey-select' })
     const savedIngestModel = this.plugin.settings.ingestModel || ''
-    modelSelect.createEl('option', { text: '(provider default)', attr: { value: '' } })
+    modelSelect.createEl('option', { text: 'DEFAULT', attr: { value: '' } })
 
     const loadModels = async (provider: string) => {
       const config = this.plugin.buildConfig()
       const models = await fetchModelList(provider as any, config, this.plugin.httpClient)
       modelSelect.empty()
-      const defaultOpt = modelSelect.createEl('option', { text: '(provider default)', attr: { value: '' } })
+      const defaultOpt = modelSelect.createEl('option', { text: 'DEFAULT', attr: { value: '' } })
       if (!savedIngestModel) defaultOpt.selected = true
       for (const m of models) {
         const opt = modelSelect.createEl('option', { text: m, attr: { value: m } })
@@ -1546,7 +1623,7 @@ Click [[page name]] in answers to navigate to the wiki page.
     const providerBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
     const inboxProviderSelect = providerBar.createEl('select', { cls: 'wikey-select' })
     const inboxProviderOptions = [
-      { value: '', text: '(use Default Model)' },
+      { value: '', text: 'DEFAULT' },
       { value: 'ollama', text: 'Local' },
       { value: 'gemini', text: 'Google Gemini' },
       { value: 'openai', text: 'OpenAI Codex' },
@@ -1560,11 +1637,11 @@ Click [[page name]] in answers to navigate to the wiki page.
 
     const inboxModelSelect = providerBar.createEl('select', { cls: 'wikey-select' })
     const savedInboxModel = this.plugin.settings.ingestModel || ''
-    inboxModelSelect.createEl('option', { text: '(provider default)', attr: { value: '' } })
+    inboxModelSelect.createEl('option', { text: 'DEFAULT', attr: { value: '' } })
 
     const loadInboxModels = async (provider: string) => {
       inboxModelSelect.empty()
-      const def = inboxModelSelect.createEl('option', { text: '(provider default)', attr: { value: '' } })
+      const def = inboxModelSelect.createEl('option', { text: 'DEFAULT', attr: { value: '' } })
       if (!savedInboxModel) def.selected = true
       if (!provider) return
       try {
