@@ -4,9 +4,10 @@
 > 목표: 인제스트 고도화 + 지식 그래프 + 운영 안정성 (plan/phase-4-todo.md 참고)
 > 상태: 진행중 (2026-04-21)
 > - §4.0 UI 사전작업 — 완료 (chat 전담 패널, /clear 커맨드, dashboard 아이콘 교체, 사이드바 500px, provider/model 편집)
+> - §4.1.1 Docling 메인화 + unhwp + MarkItDown fallback — **완료** (신규 모듈 3 + vendored 1 + 벤치마크 1, 197 → 233 tests PASS)
 > - §4.5.1 측정 인프라 자동화 — 완료 (자동 스크립트가 수동 CDP 드라이브 대체)
 > - §4.5.1.4 canonicalizer 2차 (pin/alias) — 기능 완수 / CV 개선 미확증 (197 tests PASS)
-> - §4.5.1.5 LLM extraction variance 원인 분석 — **§4.1.1 Docling 메인화 선행** 후 재개 (미착수)
+> - §4.5.1.5 LLM extraction variance 원인 분석 — **선행 의존 §4.1.1 완료로 재개 가능** (미착수)
 > 전제: Phase 3 완료 (v7 3-stage, schema override, 결정성 CV Concepts -37% / Total -53%)
 > 인프라: Obsidian 1.12.7 + CDP 9222, Ollama 0.20.5, Node 22.17.0
 
@@ -258,6 +259,133 @@ sed -i "s/'(use Default Model)'/'DEFAULT'/g; s/'(provider default)'/'DEFAULT'/g"
   - `wikey-obsidian/src/main.ts` (+14 / -4): `initialSidebarWidthApplied` 설정·`applyInitialSidebarWidth()`·savedChatHistory 복원 제거
   - `wikey-obsidian/src/settings-tab.ts` (-4, 라벨 일괄 치환): `(use Default Model)`/`(provider default)` → `DEFAULT`
   - `wikey-obsidian/styles.css` (+30 / -8): readonly-model-bar 신규·header-btn-active focus 변형·provider-model-bar 자연 너비/좌측 정렬/min-width·dashboard/help flex+border 정비·chat-model-row select field-sizing
+
+---
+
+## 4.1 문서 전처리 파이프라인 재편
+> tag: #core, #workflow
+
+### 4.1.1 Docling 메인화 + unhwp HWP/HWPX + MarkItDown fallback 강등 (2026-04-21)
+
+**이전 상태** (Phase 3 종료 시점): `wikey-core/src/ingest-pipeline.ts:extractPdfText` 는 PDF 전용 6-tier: MarkItDown → pdftotext → mdimport → pymupdf → markitdown-ocr → Vision OCR. 확장자 분기는 `.pdf` 만 처리 (`ingest-pipeline.ts:75`), HWP/HWPX는 `wikiFS.read()` 로 바이너리 통과. tier 5/6 에서 `execFileAsync` args 로 API 키 평문 전달 → `ps aux` 노출.
+
+**결정 (2026-04-21)**: IBM Docling(TableFormer + layout model + ocrmac/RapidOCR/Tesseract)을 tier 1 메인 컨버터로 승격. HWP/HWPX 는 unhwp(pip install) 로 위임. MarkItDown 은 docling 미설치 환경 fallback 으로 tier 3 강등. 이미지(base64 data URI + 외부 URL) 는 LLM 투입 직전 `[image] / [image: alt]` placeholder로 치환하여 토큰 폭증 차단 + alt 보존.
+
+**구현 계획**: `plan/phase-4-4-1-agile-crystal.md` — 사용자 승인. 9개 서브태스크 (4.1.1.1 ~ 4.1.1.9) 모두 수행.
+
+#### 4.1.1.1 Tier 체인 전면 재구성 (`ingest-pipeline.ts:842~1322`)
+
+새 6-tier + 1b:
+1. **docling** (`buildDoclingArgs` + `readDoclingOutput` + tmp dir output) — 기본 `--table-mode accurate` / `--image-export-mode embedded` / mps(Apple Silicon) 자동
+1b. **docling --force-ocr** (품질 감지 시 자동 재시도)
+2. **markitdown-ocr** (embedded raster vision OCR) — 기존 tier 5 에서 승격
+3. **MarkItDown** (fallback) — 기존 tier 1 강등, 로그 라벨 `tier 3/6 start: markitdown (fallback)`
+4. pdftotext (poppler)
+5. pymupdf / PyPDF2
+6. page-render Vision OCR (최후수단, vector-only PDF용)
+
+구 tier 3 (`mdimport`) 은 Spotlight 의존·품질 낮음·docling 으로 대체 가능 → 삭제.
+
+`selectConverter` 분기 (`ingest-pipeline.ts:75~119`):
+```
+ext ∈ {hwp, hwpx}                         → extractHwpText (unhwp)
+ext == 'pdf'                              → extractPdfText (full chain)
+ext ∈ DOCLING_DOC_FORMATS                 → extractDocumentText (docling 단일)
+else                                      → wikiFS.read + stripEmbeddedImages
+```
+
+`DOCLING_DOC_FORMATS = {docx, pptx, xlsx, html, htm, png, jpg, jpeg, tiff, tif, csv}`.
+
+#### 4.1.1.2 공통 이미지 placeholder (`wikey-core/src/rag-preprocess.ts`)
+
+docling/unhwp/Web Clipper 모든 경로에 공통 적용:
+- `!\[(alt)\]\(data:[^)]+\)` (base64 embed) → `[image]` 또는 `[image: alt]`
+- `!\[(alt)\]\(https?://[^)]+\.(svg|png|jpe?g|gif|webp|bmp|tiff?|avif)[?#]?\)` (외부 URL) → 동일 placeholder
+- alt 가 `""` 또는 `"image"` (대소문자 무관) 이면 `[image]` 축약 — docling 고정 alt `"Image"` + unhwp `"image"` 모두 중복 라벨 방지
+
+**실샘플 회귀 (docs/samples/)**: docling PDF 1.90MB → 237KB (8.0×), unhwp HWPX 1.72MB → 850B (2017×), Web Clipper 10.1KB → 10.1KB (1건 외부 URL 치환). 계획서 표와 일치.
+
+#### 4.1.1.3 선택된 tier·옵션 API 보안 (§4.1.1.5)
+
+tier 2 markitdown-ocr / tier 6 Vision OCR 의 `execFileAsync` args 에서 `ocr.apiKey` 삭제 → `env` 에 `OPENAI_API_KEY` / `OPENAI_BASE_URL` 주입 → Python SDK 가 env 참조. `ps aux | grep -E "markitdown|docling|ocr"` 결과에서 API 키 전무.
+
+#### 4.1.1.4 변환 결과 영속 캐시 (`wikey-core/src/convert-cache.ts`)
+
+- 키: `sha256(sourceBytes) + converter + majorOptions(table_mode/ocr_engine/ocr_lang/image_export_mode)`
+- 저장: `~/.cache/wikey/convert/<hash>.md` + `index.json` (TTL 30일)
+- API: `computeCacheKey / getCached / setCached / invalidate / cleanup / stats`
+- 적용: `extractPdfText` / `extractHwpText` / `extractDocumentText` 진입부 cache 체크, 성공 반환 전 setCached
+- `IngestOptions.forceReconvert = true` 시 bypass (Audit "Force re-convert" 체크박스와 연동)
+
+테스트 11건 PASS (TTL 만료 자동 삭제, orphan cleanup, deterministic key, 옵션 순서 무관).
+
+#### 4.1.1.5 품질 감지 + tier 재시도 (`wikey-core/src/convert-quality.ts`)
+
+4가지 결함 signal 스코어링:
+- `brokenTableRatio` (`|` 연속 빈 셀)
+- `emptySectionRatio` (heading 직후 50자 미만)
+- `minBodyChars` (전체 본문 100자 미만)
+- `koreanWhitespaceLoss` (15자+ 한글 토큰 > 30%)
+
+decision: `accept` | `retry` (`--force-ocr` 재시도) | `reject` (다음 tier 폴스루). 특히 한국어 공백 소실은 `retryOnKoreanWhitespace=true` 이면 tier 1b 재시도, `false` 또는 재시도 실패 시 강제 reject.
+
+테스트 10건 PASS.
+
+#### 4.1.1.6 Audit 패널 Converter override 드롭다운 + Force re-convert (신규)
+
+`wikey-obsidian/src/sidebar-chat.ts:830~` bottom bar 에 신규 `converterBar`:
+
+```
+Converter: [Auto (tier chain) ▾]  [ ] Force re-convert
+           [Docling (tier 1)]
+           [Docling --force-ocr (scanned PDF)]  ← title hint: "벡터 PDF에 쓰면 한국어 추출 실패할 수 있음"
+           [MarkItDown (fallback)]
+           [MarkItDown-OCR (vision)]
+           [Page-render Vision (last resort)]
+```
+
+`IngestOptions.converterOverride` (ConverterOverride 타입) + `forceReconvert` 필드 추가. `extractPdfText` 내부에 `runTier(t)` 가드 헬퍼 → override 지정 시 해당 tier 만 실행. docling-ocr override 시 tier 1b 를 단독 실행하는 분기 신규.
+
+#### 4.1.1.7 정량 벤치마크 (PMS 제품소개 PDF, 3.5MB / 31p)
+
+`scripts/benchmark-converters.sh` + `activity/phase-4-converter-benchmark-2026-04-21.md`:
+
+| Tier | stripped bytes | headings | tables | korean | time |
+|---|---:|---:|---:|---:|---:|
+| **docling** | 83,518 | **64** | **133** | 15,549 | 19.71s |
+| docling-force-ocr | 6,564 | 33 | 103 | **0** | 23.55s |
+| MarkItDown | 62,334 | 0 | 0 | 16,565 | 3.16s |
+| pdftotext | 61,459 | 0 | 0 | 16,565 | 0.13s |
+| pymupdf | 62,667 | 0 | 0 | 16,565 | 0.27s |
+
+**핵심 결과**:
+- docling이 MarkItDown 대비 **headings +64 / tables +133 / 이미지 +25** (구조 보존 압도적, 계획서 +20% 기준 훨씬 초과).
+- docling-force-ocr는 **벡터 PDF에서 한국어 0자** — ocrmac이 text-layer 무시 후 벡터 래스터화 열화로 한글 OCR 실패. 자동 재시도는 30% 임계 기반이라 안전, Audit override 경고 title hint 추가.
+- 첫 변환 19.71s vs 3.16s (6.2× 느림) 이지만 캐시 히트 시 ~ms.
+
+#### 4.1.1.8 md sidecar 저장 (§4.1.1.9 경로 이동은 후속)
+
+변환 성공 시 원본 옆 `<source>.md` 사본 저장 — pdf/hwp/hwpx/docx/… 전 포맷 (md/txt 생략, 이미 존재 시 덮어쓰지 않음). 사용자가 LLM 에 투입된 실제 텍스트 확인 가능. vault rename/delete listener 는 §4.2.2 URI 참조 구현과 함께 후속.
+
+#### 4.1.1.9 환경 감지 + 설정 탭 UI
+
+`env-detect.ts` 에 `checkDocling(env)` / `checkUnhwp(pythonPath, env)` 추가 + `EnvStatus.hasDocling` / `doclingVersion` / `hasUnhwp` 필드. `settings-tab.ts` Environment 섹션 items 배열 맨 위에 `Docling`·`unhwp` 라인 2개 삽입, MarkItDown desc 는 "Fallback converter (docling 미설치 시)" 로 수정. `Docling Install Guide` 버튼 (→ docling-project 공식 설치 페이지) + `Install unhwp` 버튼 (`pip install unhwp`) 추가.
+
+#### 4.1.1.10 검증 결과 요약
+
+- wikey-core tsc + wikey-obsidian esbuild 빌드 0 errors
+- 테스트: 197 → **233 PASS** (+36: rag-preprocess 15 / convert-cache 11 / convert-quality 10)
+- 실샘플 4종 (docs/samples/) 에 stripEmbeddedImages 회귀 검증 → 계획서 표와 byte-perfect 일치
+- PMS PDF 실측 벤치마크 → docling 구조 보존 MarkItDown 대비 압도적
+- 커밋: `e9af2bb` (메인 인프라) + `[이번 커밋]` (벤치마크 리포트 + Audit converter override UI)
+
+#### 4.1.1.11 후속 과제 (§4.1.1 범위 내)
+
+- **추가 코퍼스 벤치마크** — TWHB 파워디바이스 / OMRON HEM-7600T / 스캔 PDF 1건 / HWPX (이미지 포함) → activity 리포트 확장
+- **`ps aux` 실측 검증** (§4.1.1.5 마지막 검증 단계) — 인제스트 run 중 다른 터미널에서 확인
+- **`scripts/cache-stats.sh`** — 캐시 히트율/크기/오래된 항목 보고 CLI
+- **vault rename/delete listener** — §4.2.2 URI 기반 안정 참조와 합동 구현 (sidecar md 자동 이동/삭제)
+- **해제된 선행 의존**: §4.5.1.5 variance 재개 가능 — Docling 구조적 markdown 확보로 "전처리 품질" 성분 분리 측정 준비 완료
 
 ---
 

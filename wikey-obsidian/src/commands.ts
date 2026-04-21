@@ -73,6 +73,10 @@ export interface IngestRunOptions {
    * - inbox panel: false (moveBtn handles destination manually via user selection)
    */
   autoMoveFromInbox?: boolean
+  /** Audit override — 'auto' | 'docling' | 'docling-ocr' | 'markitdown' | 'markitdown-ocr' | 'vision-ocr'. */
+  converterOverride?: 'auto' | 'docling' | 'docling-ocr' | 'markitdown' | 'markitdown-ocr' | 'vision-ocr'
+  /** Audit override — 캐시 무시하고 강제 재변환. */
+  forceReconvert?: boolean
 }
 
 export async function runIngest(
@@ -94,6 +98,8 @@ export async function runIngest(
       planGate: undefined,
       onProgress,
       autoMoveFromInbox: runOpts?.autoMoveFromInbox,
+      converterOverride: runOpts?.converterOverride,
+      forceReconvert: runOpts?.forceReconvert,
     })
   }
 
@@ -142,6 +148,8 @@ export async function runIngest(
         onProgress?.(step, total, message, subStep, subTotal)
       },
       autoMoveFromInbox: runOpts?.autoMoveFromInbox,
+      converterOverride: runOpts?.converterOverride,
+      forceReconvert: runOpts?.forceReconvert,
     })
 
     // If user hit [Back] during processing, the modal already flipped back to Brief.
@@ -166,6 +174,8 @@ async function runIngestCore(
     planGate: ((plan: IngestPlan) => Promise<boolean>) | undefined
     onProgress?: (step: number, total: number, message: string, subStep?: number, subTotal?: number) => void
     autoMoveFromInbox?: boolean
+    converterOverride?: IngestRunOptions['converterOverride']
+    forceReconvert?: boolean
   },
 ): Promise<IngestRunResult> {
   try {
@@ -180,6 +190,8 @@ async function runIngestCore(
         execEnv: plugin.getExecEnv(),
         guideHint: ctx.guideHint,
         onPlanReady: ctx.planGate,
+        converterOverride: ctx.converterOverride,
+        forceReconvert: ctx.forceReconvert,
       },
     )
 

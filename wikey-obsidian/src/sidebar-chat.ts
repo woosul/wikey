@@ -829,6 +829,29 @@ Click [[page name]] in answers to navigate to the wiki page.
     loadModels(providerSelect.value)
     providerSelect.addEventListener('change', () => loadModels(providerSelect.value))
 
+    // ── Converter override + Force re-convert (Phase 4.1.1.6 + §4.1.1.8) ──
+    const converterBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
+    converterBar.createEl('span', { text: 'Converter', cls: 'wikey-audit-stat' })
+    const converterSelect = converterBar.createEl('select', { cls: 'wikey-select' })
+    const converterOpts: Array<{ value: string; text: string; title?: string }> = [
+      { value: 'auto', text: 'Auto (tier chain)' },
+      { value: 'docling', text: 'Docling (tier 1)' },
+      { value: 'docling-ocr', text: 'Docling --force-ocr (scanned PDF)', title: '벡터 PDF에 쓰면 한국어 추출 실패할 수 있음. 스캔 PDF에만 사용.' },
+      { value: 'markitdown', text: 'MarkItDown (fallback)' },
+      { value: 'markitdown-ocr', text: 'MarkItDown-OCR (vision)' },
+      { value: 'vision-ocr', text: 'Page-render Vision (last resort)' },
+    ]
+    for (const opt of converterOpts) {
+      const el = converterSelect.createEl('option', { text: opt.text, attr: { value: opt.value } })
+      if (opt.title) el.title = opt.title
+    }
+    converterSelect.value = 'auto'
+
+    const forceWrap = converterBar.createEl('label', { cls: 'wikey-audit-stat' })
+    const forceCb = forceWrap.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
+    forceWrap.createEl('span', { text: 'Force re-convert' })
+    forceWrap.title = '캐시를 무시하고 강제로 재변환 (비용 주의)'
+
     let cancelRequested = false
 
     const getFiltered = (): string[] => {
@@ -1150,7 +1173,11 @@ Click [[page name]] in answers to navigate to the wiki page.
             const pct = computeRowPct(step, subStep, subTotal)
             row.style.setProperty('--progress', `${pct}%`)
           }
-        }, { autoMoveFromInbox: true })
+        }, {
+          autoMoveFromInbox: true,
+          converterOverride: converterSelect.value as any,
+          forceReconvert: (forceCb as HTMLInputElement).checked,
+        })
         if (rowSpinner) {
           rowSpinner.remove()
           rowSpinner = null

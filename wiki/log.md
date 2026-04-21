@@ -5,6 +5,22 @@ created: 2026-04-10
 updated: 2026-04-21
 ---
 
+## [2026-04-21] feat | §4.1.1 Docling 메인화 + unhwp + MarkItDown 강등 (전처리 파이프라인 전면 재편)
+
+- 결정: IBM Docling(TableFormer + layout model + ocrmac/RapidOCR/Tesseract)을 tier 1 메인 컨버터로 승격. HWP/HWPX는 unhwp 전용, MarkItDown은 tier 3 fallback 강등. 이미지(base64 data URI + 외부 URL)는 LLM 투입 직전 `[image] / [image: alt]` placeholder로 치환.
+- 변경 (core): wikey-core/src/{rag-preprocess,convert-cache,convert-quality}.ts 신규 + `extractPdfText` 전체 재구성 + `extractHwpText`·`extractDocumentText` 신규 + `selectConverter` 확장자 분기. `DOCLING_TABLE_MODE/DEVICE/OCR_ENGINE/OCR_LANG/TIMEOUT_MS/DISABLE` 설정 키. `ConverterOverride` 타입 + `IngestOptions.converterOverride/forceReconvert`.
+- 변경 (obsidian): env-detect에 `checkDocling`/`checkUnhwp` + `hasDocling/doclingVersion/hasUnhwp` 필드. settings-tab Environment 섹션에 Docling/unhwp 라인 + 설치 가이드 버튼. sidebar-chat Audit 패널 bottom bar에 Converter 드롭다운(6개 옵션, docling-ocr에 "벡터 PDF 비권장" title hint) + Force re-convert 체크박스.
+- 보안: tier 2 markitdown-ocr + tier 6 Vision OCR의 `execFile` args에서 `ocr.apiKey` 제거 → env(`OPENAI_API_KEY`/`OPENAI_BASE_URL`) 주입. ps aux 노출 제거.
+- 캐시: `sha256(sourceBytes) + converter + majorOptions` 키, `~/.cache/wikey/convert/<hash>.md`, TTL 30일. `forceReconvert` bypass.
+- 품질 감지: broken tables / empty sections / min body / korean whitespace loss 스코어링 → accept / retry(--force-ocr) / reject 결정. 한국어 공백 소실 감지 시 tier 1b 자동 재시도.
+- sidecar: 변환 후 원본 옆 `<source>.md` 저장 (LLM 투입 결과 사용자 확인용).
+- 벤치마크: `scripts/benchmark-converters.sh` 신규. PMS PDF(3.5MB, 31p) 실측 → Docling 83KB stripped / 64 headings / 133 tables / 15,549 korean / 19.71s. MarkItDown 62KB / 0 headings / 0 tables / 16,565 korean / 3.16s. **docling이 구조 보존에서 MarkItDown 대비 압도적**. 함정: docling --force-ocr 는 벡터 PDF에서 한국어 0자 (ocrmac 래스터화 열화).
+- 실샘플 회귀 (docs/samples/ 4종): docling PDF 8×, unhwp HWPX 2017×, Web Clipper 1건 외부 URL strip. 계획서 표와 일치.
+- 검증: 197 → 233 tests PASS (+36). wikey-core tsc + wikey-obsidian esbuild 빌드 0 errors.
+- 산출물: plan/phase-4-4-1-agile-crystal.md (계획서), activity/phase-4-result.md §4.1.1, activity/phase-4-converter-benchmark-2026-04-21.md.
+- 후속: 추가 코퍼스 벤치마크 (TWHB/OMRON/스캔/HWPX 이미지 포함), ps aux 실측, cache-stats.sh, vault rename/delete listener.
+- 해제: §4.5.1.5 variance 재측정 선행 의존 완료 → Docling 구조적 markdown 기준으로 재개 가능.
+
 ## [2026-04-21] ui | §4.0 UI 사전작업 — Chat 전담 패널 + /clear + 사이드바 500px + DEFAULT 라벨
 
 - 변경: wikey-obsidian 플러그인 UI 전면 정비. chat을 first-class 패널로 승격 (header 첫 아이콘, 비-chat 패널은 composer 숨기고 `Default AI Model : Provider | model` readonly 라벨), dashboard 아이콘 home→bar-chart, trash 버튼 삭제하고 `/clear` 슬래시 커맨드로 대체, chat 패널 provider/model 모두 편집 가능 (span→select 전환).

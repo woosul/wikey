@@ -45,6 +45,14 @@ export function formatLocalDate(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+export type ConverterOverride =
+  | 'auto'            // 기본 tier 체인
+  | 'docling'         // tier 1 만 강제
+  | 'docling-ocr'     // tier 1b (--force-ocr) 강제
+  | 'markitdown'      // tier 3 직행
+  | 'markitdown-ocr'  // tier 2 직행
+  | 'vision-ocr'      // tier 6 직행
+
 export interface IngestOptions {
   readonly basePath?: string
   readonly execEnv?: Record<string, string>
@@ -52,6 +60,10 @@ export interface IngestOptions {
   readonly guideHint?: string
   /** Stay-involved hook: called after extraction, before file writes. Return false to cancel (llm-wiki.md "read summaries" + "check updates"). */
   readonly onPlanReady?: IngestPlanGate
+  /** Audit override — 특정 tier 만 강제 (기본 'auto'). */
+  readonly converterOverride?: ConverterOverride
+  /** Audit override — 캐시 무시하고 강제 재변환. */
+  readonly forceReconvert?: boolean
 }
 
 /**
@@ -87,21 +99,23 @@ export async function ingest(
   const ext = (sourceFilename.toLowerCase().split('.').pop() ?? '')
 
   let sourceContent: string
+  const converterOverride: ConverterOverride = opts?.converterOverride ?? 'auto'
+  const forceReconvert = opts?.forceReconvert ?? false
   if (ext === 'hwp' || ext === 'hwpx') {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (unhwp)...' })
-    sourceContent = await extractHwpText(sourcePath, opts?.basePath, opts?.execEnv)
+    sourceContent = await extractHwpText(sourcePath, opts?.basePath, opts?.execEnv, { forceReconvert })
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`HWP/HWPX extraction failed: ${sourceFilename} — install unhwp (pip install unhwp)`)
     }
   } else if (ext === 'pdf') {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (Docling)...' })
-    sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
+    sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config, { converterOverride, forceReconvert })
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`PDF text extraction failed: ${sourceFilename} — install docling (uv tool install docling) or markitdown (pip install markitdown[pdf])`)
     }
   } else if (DOCLING_DOC_FORMATS.has(ext)) {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (Docling)...' })
-    sourceContent = await extractDocumentText(sourcePath, opts?.basePath, opts?.execEnv, config)
+    sourceContent = await extractDocumentText(sourcePath, opts?.basePath, opts?.execEnv, config, { forceReconvert })
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`Document extraction failed: ${sourceFilename} — install docling (uv tool install docling)`)
     }
@@ -887,6 +901,7 @@ async function extractHwpText(
   sourcePath: string,
   basePath?: string,
   execEnv?: Record<string, string>,
+  overrides?: { forceReconvert?: boolean },
 ): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const { mkdtempSync, readFileSync, rmSync } = require('node:fs') as typeof import('node:fs')
@@ -905,10 +920,14 @@ async function extractHwpText(
     return ''
   }
   const cacheKey = computeCacheKey({ sourceBytes, converter: 'unhwp' })
-  const cached = getCached(cacheKey)
-  if (cached != null) {
-    log(`cache hit — unhwp (${cached.length} chars)`)
-    return cached
+  if (!overrides?.forceReconvert) {
+    const cached = getCached(cacheKey)
+    if (cached != null) {
+      log(`cache hit — unhwp (${cached.length} chars)`)
+      return cached
+    }
+  } else {
+    log('forceReconvert — bypassing cache')
   }
 
   const scriptPath = join(cwd, 'scripts', 'vendored', 'unhwp-convert.py')
@@ -946,6 +965,7 @@ async function extractDocumentText(
   basePath?: string,
   execEnv?: Record<string, string>,
   config?: WikeyConfig,
+  overrides?: { forceReconvert?: boolean },
 ): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const cwd = basePath ?? process.cwd()
@@ -969,19 +989,30 @@ async function extractDocumentText(
   }
   const majorOptions = doclingMajorOptions(config)
   const cacheKey = computeCacheKey({ sourceBytes, converter: 'docling', majorOptions })
-  const cached = getCached(cacheKey)
-  if (cached != null) {
-    log(`cache hit — docling (${cached.length} chars)`)
-    return cached
+  if (!overrides?.forceReconvert) {
+    const cached = getCached(cacheKey)
+    if (cached != null) {
+      log(`cache hit — docling (${cached.length} chars)`)
+      return cached
+    }
+  } else {
+    log('forceReconvert — bypassing cache')
   }
 
-  const args = buildDoclingArgs(fullPath, config)
+  const { mkdtempSync, rmSync } = require('node:fs') as typeof import('node:fs')
+  const os = require('node:os') as typeof import('node:os')
+  const tmpDir = mkdtempSync(join(os.tmpdir(), 'wikey-docling-'))
+  const args = buildDoclingArgs(fullPath, tmpDir, config)
   const timeout = config?.DOCLING_TIMEOUT_MS ?? 300000
   try {
-    const { stdout } = await execFileAsync('docling', args, {
+    await execFileAsync('docling', args, {
       timeout, maxBuffer: 100 * 1024 * 1024, env,
     })
-    const md = extractDoclingMarkdown(stdout)
+    const md = readDoclingOutput(tmpDir, fullPath)
+    if (!md) {
+      warn('docling produced empty output')
+      return ''
+    }
     const counts = countEmbeddedImages(md)
     const stripped = stripEmbeddedImages(md)
     log(`docling OK — ${md.length} chars (raw), ${stripped.length} chars (stripped), images=${counts.dataUri}+${counts.externalUrl}`)
@@ -990,6 +1021,8 @@ async function extractDocumentText(
   } catch (err: unknown) {
     warn(`docling error: ${errorMessage(err)}`)
     return ''
+  } finally {
+    try { rmSync(tmpDir, { recursive: true, force: true }) } catch { /* cleanup best-effort */ }
   }
 }
 
@@ -1004,43 +1037,45 @@ function doclingMajorOptions(config?: WikeyConfig): Record<string, unknown> {
 }
 
 /**
- * Docling CLI args 빌드. stdout 출력으로 옵션 고정.
+ * Docling CLI args 빌드. --output 은 디렉토리만 받으므로 tmp dir 지정 (stdout 미지원).
  */
-function buildDoclingArgs(fullPath: string, config?: WikeyConfig): string[] {
+function buildDoclingArgs(fullPath: string, outputDir: string, config?: WikeyConfig, forceOcr = false): string[] {
   const tableMode = config?.DOCLING_TABLE_MODE || 'accurate'
   const device = config?.DOCLING_DEVICE || (process.platform === 'darwin' ? 'mps' : 'cpu')
   const ocrEngine = config?.DOCLING_OCR_ENGINE || (process.platform === 'darwin' ? 'ocrmac' : 'rapidocr')
   const ocrLang = config?.DOCLING_OCR_LANG || 'ko-KR,en-US'
-  return [
+  const args = [
     fullPath,
     '--to', 'md',
-    '--output', '-',                     // stdout
+    '--output', outputDir,
     '--table-mode', tableMode,
     '--device', device,
     '--ocr-engine', ocrEngine,
     '--ocr-lang', ocrLang,
     '--image-export-mode', 'embedded',   // strip 함수가 후처리
   ]
+  if (forceOcr) args.push('--force-ocr')
+  return args
 }
 
 /**
- * docling stdout 에서 markdown 본문만 추출. CLI 는 진행 로그를 stdout 섞는 경우가 있어
- * markdown heading (`# `) 이후만 채택하거나, fallback 으로 전체 반환.
+ * docling 이 지정된 output 디렉토리에 생성한 .md 파일을 찾아 내용 반환.
+ * docling 은 `<source-stem>.md` 로 저장 (예: rp1-peripherals.pdf → rp1-peripherals.md).
  */
-function extractDoclingMarkdown(stdout: string): string {
-  if (!stdout) return ''
-  // docling --output - 는 markdown 직접 출력. 단, 초기 릴리스에서 로그가 섞일 수 있어
-  // 첫 heading/문장 이전 log-like 라인을 제거.
-  const lines = stdout.split('\n')
-  let firstContentIdx = 0
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i]
-    if (l.startsWith('#') || l.startsWith('![') || (l.trim().length > 0 && !/^\[\d|INFO|WARNING|ERROR/.test(l))) {
-      firstContentIdx = i
-      break
-    }
+function readDoclingOutput(outputDir: string, sourcePath: string): string {
+  const { readdirSync, readFileSync: rf } = require('node:fs') as typeof import('node:fs')
+  const path = require('node:path') as typeof import('node:path')
+  const srcBase = path.basename(sourcePath).replace(/\.[^.]+$/, '')
+  try {
+    const files = readdirSync(outputDir)
+    // 정확한 stem 매칭 우선, 없으면 첫 .md 파일
+    const exact = files.find((f) => f === `${srcBase}.md`)
+    const anyMd = exact ?? files.find((f) => f.endsWith('.md'))
+    if (!anyMd) return ''
+    return rf(path.join(outputDir, anyMd), 'utf-8')
+  } catch {
+    return ''
   }
-  return lines.slice(firstContentIdx).join('\n')
 }
 
 async function extractPdfText(
@@ -1048,6 +1083,7 @@ async function extractPdfText(
   basePath?: string,
   execEnv?: Record<string, string>,
   config?: WikeyConfig,
+  overrides?: { converterOverride?: ConverterOverride; forceReconvert?: boolean },
 ): Promise<string> {
   const { join } = require('node:path') as typeof import('node:path')
   const cwd = basePath ?? process.cwd()
@@ -1087,6 +1123,7 @@ async function extractPdfText(
 
   // 캐시 조회 — tier 와 무관하게 원본 파일 + 공통 옵션 기준.
   // tier 가 바뀌면 키가 달라져 miss. 동일 tier 재실행만 히트 (docling 안정이 목표).
+  const converterOverride: ConverterOverride = overrides?.converterOverride ?? 'auto'
   const { readFileSync: rf } = require('node:fs') as typeof import('node:fs')
   let sourceBytes: Buffer | null = null
   try {
@@ -1097,10 +1134,16 @@ async function extractPdfText(
       converter: 'pdf:1-docling',
       majorOptions: doclingMajorOptions(config),
     })
-    const cached = getCached(doclingKey)
-    if (cached != null && !config?.DOCLING_DISABLE) {
-      log(`cache hit — pdf:1-docling (${cached.length} chars)`)
-      return cached
+    if (!overrides?.forceReconvert && converterOverride === 'auto') {
+      const cached = getCached(doclingKey)
+      if (cached != null && !config?.DOCLING_DISABLE) {
+        log(`cache hit — pdf:1-docling (${cached.length} chars)`)
+        return cached
+      }
+    } else if (overrides?.forceReconvert) {
+      log('forceReconvert — bypassing cache')
+    } else {
+      log(`converterOverride=${converterOverride} — bypassing auto cache`)
     }
   } catch (err) {
     warn(`read source for cache failed: ${errorMessage(err)}`)
@@ -1126,31 +1169,41 @@ async function extractPdfText(
     return Math.min(2000, Math.max(200, pdfPageCount * 30))
   })()
 
+  // converterOverride 가드 — 'auto' 또는 특정 tier 강제 시 해당 tier 만 실행
+  const runTier = (t: 'docling' | 'docling-ocr' | 'markitdown' | 'markitdown-ocr' | 'vision-ocr'): boolean => {
+    if (converterOverride === 'auto') return true
+    return converterOverride === t
+  }
+
   // 1. Docling (tier 1 메인 컨버터 — TableFormer + layout model + ocrmac)
-  if (!config?.DOCLING_DISABLE) {
+  if (runTier('docling') && !config?.DOCLING_DISABLE) {
     log(`tier 1/6 start: docling — ${fullPath}`)
+    const { mkdtempSync, rmSync } = require('node:fs') as typeof import('node:fs')
+    const os = require('node:os') as typeof import('node:os')
+    const tmpDir = mkdtempSync(join(os.tmpdir(), 'wikey-docling-'))
     try {
-      const args = buildDoclingArgs(fullPath, config)
+      const args = buildDoclingArgs(fullPath, tmpDir, config)
       const timeout = config?.DOCLING_TIMEOUT_MS ?? 300000
-      const { stdout } = await execFileAsync('docling', args, {
+      await execFileAsync('docling', args, {
         timeout, maxBuffer: 100 * 1024 * 1024, env,
       })
-      const md = extractDoclingMarkdown(stdout)
+      const md = readDoclingOutput(tmpDir, fullPath)
       const ok = accept('1 docling', md)
       if (ok) {
         // 품질 평가 — 한국어 공백 소실 등 감지되면 tier 1b (force-ocr) 재시도.
         const quality = scoreConvertOutput(ok, { retryOnKoreanWhitespace: true })
         log(`tier 1 docling quality — score=${quality.score.toFixed(2)}, decision=${quality.decision}, flags=[${quality.flags.join(',')}]`)
         if (quality.decision === 'accept') return finalize(ok, '1-docling')
-        if (quality.decision === 'retry') {
+        if (quality.decision === 'retry' && runTier('docling-ocr')) {
           // tier 1b: docling --force-ocr 로 재시도 (공백 소실 케이스)
           log('tier 1b/6 start: docling --force-ocr')
+          const retryDir = mkdtempSync(join(os.tmpdir(), 'wikey-docling-ocr-'))
           try {
-            const retryArgs = [...args, '--force-ocr']
-            const { stdout: retryOut } = await execFileAsync('docling', retryArgs, {
+            const retryArgs = buildDoclingArgs(fullPath, retryDir, config, true)
+            await execFileAsync('docling', retryArgs, {
               timeout, maxBuffer: 100 * 1024 * 1024, env,
             })
-            const retryMd = extractDoclingMarkdown(retryOut)
+            const retryMd = readDoclingOutput(retryDir, fullPath)
             const retryOk = accept('1b docling --force-ocr', retryMd)
             if (retryOk) {
               const retryQ = scoreConvertOutput(retryOk, { retryOnKoreanWhitespace: false })
@@ -1160,6 +1213,8 @@ async function extractPdfText(
             }
           } catch (err: unknown) {
             warn(`tier 1b docling --force-ocr error: ${errorMessage(err)}`)
+          } finally {
+            try { rmSync(retryDir, { recursive: true, force: true }) } catch { /* ignore */ }
           }
         }
         // decision = 'reject' → tier 2 로 폴스루 (ok 버리지 않고 finalize 하지 않음)
@@ -1167,15 +1222,39 @@ async function extractPdfText(
       }
     } catch (err: unknown) {
       warn(`tier 1 docling error: ${errorMessage(err)}`)
+    } finally {
+      try { rmSync(tmpDir, { recursive: true, force: true }) } catch { /* ignore */ }
     }
-  } else {
+  } else if (config?.DOCLING_DISABLE) {
     log('tier 1 docling skipped — DOCLING_DISABLE=true')
+  } else {
+    log(`tier 1 docling skipped — converterOverride=${converterOverride}`)
+  }
+
+  // 1b (독립). converterOverride='docling-ocr' 이면 tier 1b 를 단독 실행 (스캔 PDF override).
+  if (converterOverride === 'docling-ocr' && !config?.DOCLING_DISABLE) {
+    log('tier 1b/6 start: docling --force-ocr (override)')
+    const { mkdtempSync: mk, rmSync: rm } = require('node:fs') as typeof import('node:fs')
+    const os2 = require('node:os') as typeof import('node:os')
+    const dir = mk(join(os2.tmpdir(), 'wikey-docling-ocr-ov-'))
+    try {
+      const a = buildDoclingArgs(fullPath, dir, config, true)
+      const timeout = config?.DOCLING_TIMEOUT_MS ?? 300000
+      await execFileAsync('docling', a, { timeout, maxBuffer: 100 * 1024 * 1024, env })
+      const md = readDoclingOutput(dir, fullPath)
+      const ok = accept('1b docling --force-ocr (override)', md)
+      if (ok) return finalize(ok, '1b-docling-force-ocr')
+    } catch (err: unknown) {
+      warn(`tier 1b (override) error: ${errorMessage(err)}`)
+    } finally {
+      try { rm(dir, { recursive: true, force: true }) } catch { /* ignore */ }
+    }
   }
 
   // 2. markitdown-ocr (embedded raster image OCR via Vision API)
   // Docling 이 ocrmac/tesseract 로 커버 못한 스캔본 보조. Docling 실패 시 vision fallback.
   const ocr = resolveOcrEndpoint(config)
-  if (ocr.apiKey) {
+  if (runTier('markitdown-ocr') && ocr.apiKey) {
     log(`tier 2/6 start: markitdown-ocr — provider=${ocr.providerLabel}, model=${ocr.model}`)
     try {
       const ocrEnv = { ...env, OPENAI_API_KEY: ocr.apiKey, OPENAI_BASE_URL: ocr.baseUrl }
@@ -1198,11 +1277,16 @@ print(result.text_content)
     } catch (err: unknown) {
       warn(`tier 2 markitdown-ocr error: ${errorMessage(err)}`)
     }
+  } else if (!runTier('markitdown-ocr')) {
+    log(`tier 2 markitdown-ocr skipped — converterOverride=${converterOverride}`)
   } else {
     log(`tier 2 markitdown-ocr skipped — no apiKey for provider=${ocr.providerLabel}`)
   }
 
   // 3. MarkItDown (docling 미설치 환경 fallback)
+  if (!runTier('markitdown')) {
+    log(`tier 3 markitdown skipped — converterOverride=${converterOverride}`)
+  } else {
   log(`tier 3/6 start: markitdown (fallback)`)
   try {
     const { stdout } = await execFileAsync('python3', [
@@ -1213,8 +1297,13 @@ print(result.text_content)
   } catch (err: unknown) {
     warn(`tier 3 markitdown error: ${errorMessage(err)}`)
   }
+  }
 
   // 4. pdftotext (poppler) — 텍스트 PDF 저비용 백업
+  // pdftotext / pymupdf 는 override 에 명시 안된 경우 'auto' 에서만 실행 (fallback 전용).
+  if (converterOverride !== 'auto') {
+    log(`tier 4-5 skipped — converterOverride=${converterOverride}`)
+  } else {
   log(`tier 4/6 start: pdftotext`)
   try {
     const { stdout } = await execFileAsync('pdftotext', [fullPath, '-'], {
@@ -1256,10 +1345,16 @@ except ImportError:
   } catch (err: unknown) {
     warn(`tier 5 pymupdf/PyPDF2 error: ${errorMessage(err)}`)
   }
+  }
 
   // 6. Page-render Vision OCR fallback (vector-only / scanned PDFs without embedded images)
   // markitdown-ocr (tier 2)는 embedded raster image만 OCR. text-as-paths나 vector-only 매뉴얼은
   // page를 PNG로 렌더 후 vision LLM에 전송해야 추출 가능.
+  if (!runTier('vision-ocr')) {
+    log(`tier 6 vision-ocr skipped — converterOverride=${converterOverride}`)
+    warn(`all applicable tiers failed for ${sourcePath}`)
+    return ''
+  }
   log(`tier 6/6 start: page-render Vision OCR — provider=${ocr.providerLabel}, model=${ocr.model}`)
   if (!ocr.apiKey) {
     warn(`tier 6 skipped — no apiKey for provider=${ocr.providerLabel}`)

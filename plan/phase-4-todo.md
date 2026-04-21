@@ -75,7 +75,7 @@
 - [x] tier 1 MarkItDown → tier 3 fallback으로 이동. 로그 라벨 `tier 3/6 start: markitdown (fallback)`.
 - [x] 진행 메시지 `"Extracting (MarkItDown)..."` → `"Extracting (Docling)..."` (ext에 따라 unhwp/Docling 동적).
 - [x] settings-tab에서 MarkItDown 항목 desc를 "Fallback converter (used when docling is unavailable)"로 수정.
-- [ ] 통합 테스트: 동일 PDF 3종(텍스트 PDF, 스캔 PDF, 복잡 표) × (docling / markitdown / markitdown-ocr / pdftotext) 출력 비교 — `scripts/benchmark-converters.sh` 로 인프라 제공, 실측은 후속.
+- [x] 통합 테스트: PMS PDF(3.5MB, 31p)로 5종 변환기 비교 완료 — `activity/phase-4-converter-benchmark-2026-04-21.md`. Docling은 MarkItDown 대비 headings +64 / tables +133 / 이미지 +25 (구조 보존 압도적). 다른 PDF 실측은 후속.
 
 #### 4.1.1.4 변환 결과 캐시 (brief ↔ ingest 공통)
 
@@ -98,17 +98,19 @@
 
 - [x] `wikey-core/src/convert-quality.ts` — 품질 스코어링(broken table / empty sections / min body chars / korean whitespace loss). 10건 단위 테스트.
 - [x] tier 1 docling 출력이 품질 미달 + 한국어 공백 소실 감지 → tier 1b (`docling --force-ocr`) 재시도. 여전히 미달이면 tier 2 폴스루.
-- [ ] 사용자 오버라이드: Audit 패널에 파일별 "converter" 드롭다운 (docling/docling-ocr/markitdown/markitdown-ocr/vision-ocr) — UI 작업 후속으로 이관.
+- [x] 사용자 오버라이드: Audit 패널 bottom bar에 Converter 드롭다운 (auto/docling/docling-ocr/markitdown/markitdown-ocr/vision-ocr) + Force re-convert 체크박스 추가. `IngestOptions.converterOverride` / `forceReconvert` 필드 + ingest-pipeline의 tier 가드 (`runTier()` helper). docling-ocr는 title hint로 "벡터 PDF에는 비권장" 경고 표시.
 
 #### 4.1.1.7 성능 비교 테스트 (정량 baseline)
 
-- [x] `scripts/benchmark-converters.sh` — 확장자별 변환기 매트릭스 (unhwp/docling/docling-force-ocr/markitdown/pdftotext/pymupdf) × bytes·time·korean_loss 측정.
-- [ ] 실측 코퍼스 실행 및 리포트 — TWHB 파워디바이스 / OMRON HEM-7600T / 스캔 PDF 1건 / HWP+HWPX 각 1건 → `activity/phase-4-converter-benchmark-*.md` 생성 (후속).
+- [x] `scripts/benchmark-converters.sh` — 확장자별 변환기 매트릭스 (unhwp/docling/docling-force-ocr/markitdown/pdftotext/pymupdf) × bytes·time·korean_loss 측정. docling은 `--output <dir>` 방식으로 처리 (stdout 미지원).
+- [x] 1차 실측 완료 — `activity/phase-4-converter-benchmark-2026-04-21.md` (PMS_제품소개_R10 PDF). **핵심 발견**: docling-force-ocr는 벡터 PDF에서 한국어 0자 (ocrmac 벡터 래스터화 열화). 자동 재시도는 임계 기반이라 안전, Audit override 시 주의.
+- [ ] 추가 코퍼스 실측 — TWHB 파워디바이스 / OMRON HEM-7600T / 스캔 PDF 1건 / HWPX (실제 이미지 포함) → 후속.
 
 #### 4.1.1.8 변환 결과 캐시 (§4.1.1.4와 통합 구현)
 
 - [x] `convert-cache.ts`에서 stats / cleanup / invalidate API 노출 + index.json 관찰성.
-- [ ] CLI: `scripts/cache-stats.sh` (후속). Audit 패널 "Force re-convert" 토글 (§4.1.1.6 UI와 함께 후속).
+- [x] Audit 패널 "Force re-convert" 체크박스 — `IngestOptions.forceReconvert` → 모든 extract*Text 함수에서 cache bypass.
+- [ ] CLI: `scripts/cache-stats.sh` — 후속 (명령줄에서 캐시 통계 조회 용).
 
 #### 4.1.1.9 md변환 결과 저장, 활용 및 이동
 
