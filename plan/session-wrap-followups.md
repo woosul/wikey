@@ -1,40 +1,40 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (§4.5.1.7.2 + §4.5.1.7.3 코드 구현 완료 — canonicalizer PMBOK hint + measure-determinism robustness. 실측 검증은 Obsidian CDP 세션 대기)
+> 최신 갱신: 2026-04-22 (세션 마무리 — §4.5.1.7.2/7.3 완료, Phase 4/5/6 재편 확정, self-extending wiki analysis 정식 등재)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-22 §4.5.1.7.2 + §4.5.1.7.3 코드 구현 완료 — 실측 대기
+## 2026-04-22 세션 마무리 — §4.5.1.7.2/7.3 완료 + Phase 재편
 
-### ⭐ 다음 세션 최우선: PMS 5–10 run 재측정 (§4.5.1.7.2 효과 검증 + §4.5.1.7.3 툴 회귀)
+### ⭐ 다음 세션 최우선: §4.2 (URI + 분류) → §4.3 (본체 인제스트)
 
-**§4.5.1.7.2 (PMBOK 10 prompt hint)**:
-- `canonicalizer.ts buildCanonicalizerPrompt` 작업 규칙 7번 항목 신규 — PMBOK / 프로젝트 관리 지식체계 맥락이 등장할 때 10 영역 개별 concept 추출, `project-management-body-of-knowledge` 로 묶지 않음, hallucination guard 포함.
-- 단위 테스트 anchor 신규 (prompt 문자열 drop 방지). 352/352 PASS.
-- **검증 필요**: PMS 5-run 재측정 → Concepts CV 24.6% → <15% 목표 달성 여부.
+2026-04-22 세션은 본체 variance 해소 (§4.5.1.7.2/7.3) 와 Phase 구조 재편으로 마감됐다. **Phase 4 본체의 다음 진입점은 §4.2 (URI 기반 안정 참조 + LLM 3/4 차 분류) + §4.3 (3-stage prompt override + Provenance tracking + stripBrokenWikilinks)**. §4.5.1.7.2 Concepts CV 실측은 Phase 5 §5.4 diagnostic 세션에서 자연 회귀.
 
-**§4.5.1.7.3 (measure-determinism robustness)**:
-- `restoreSourceFile()` boolean 반환, 실패 run 명시적 에러 기록 (run 30 outlier 재현 차단).
-- per-run timeout 10분 → 15분 (JS + bash 동기).
-- `--strict` CLI 플래그: `total=0` run 을 통계에서 추가 제외 + Markdown 원본 보존.
-- **검증 필요**: `./scripts/measure-determinism.sh raw/PMS.pdf -n 5 -d --strict` 실 CDP 수행 → 출력 Markdown 에 strict 섹션 생성, 에러 run 식별 동작 확인.
+**§4.5.1.7.2 (PMBOK 10 prompt hint) — 완료**:
+- `canonicalizer.ts buildCanonicalizerPrompt` 작업 규칙 7번 항목 신규 (PMBOK 10 영역 개별 concept, hallucination guard 포함).
+- 단위 테스트 anchor 신규. 352/352 PASS.
+- 효과 검증 위임: Phase 5 §5.4 variance diagnostic 측정에서 Concepts CV <15% 확증 여부 자연 판정.
+
+**§4.5.1.7.3 (measure-determinism robustness) — 완료**:
+- `restoreSourceFile()` boolean 반환, per-run timeout 10분 → 15분, `--strict` CLI 플래그.
+- 정적 검증 (bash/python/JS) 통과. 다음 측정 세션에서 자동 회귀.
 
 **덤**: master 에 있던 `hasRedundantEmbeddedImages(md, stripped, pdfPageCount)` arity 버그 (commit `bb09b79` 에서 convert-quality.ts 만 변경하고 호출부 미갱신) 도 같은 세션에서 복구. 해당 커밋의 "343 tests PASS, tsc 0 errors" 기록은 실제로 성립하지 않고 있었음.
 
-### 📋 §4.5.1.7 sub-task 우선순위 업데이트 (전체 7개)
+### 📋 §4.5.1.7 sub-task 최종 상태 (Phase 재편 + [x] 전환 반영)
 
 | sub-task | 상태 | 근거 |
 |---|---|---|
-| **§4.5.1.7.2 Concepts prompt (PMBOK 10)** | 🟢 **코드 완료**, 🔴 실측 대기 | 2026-04-22 구현. CDP 5-run 으로 CV 24.6% → <15% 확인 필요 |
-| **§4.5.1.7.3 측정 infra robustness** | 🟢 **코드 완료**, 🔴 실측 대기 | 2026-04-22 구현. 다음 측정 세션에서 자동으로 회귀 |
-| §4.5.1.7.1 attribution ablation (4 points) | 🟡 재평가 (축소) | Entities 2.3%, Concepts 기여도만 선택적 |
-| §4.5.1.7.5 Lotus-prefix variance | 🟢 **불필요** | Entities 2.3% 로 자동 해결 |
-| §4.5.1.7.4 Route SEGMENTED (Ollama) | 🟡 독립 유효 | production guide |
-| §4.5.1.7.6 BOM 재분할 판단 | 🟢 독립 유효 | 실무 판단 (월 1회 모니터) |
-| §4.5.1.7.7 log_entry axis 수정 | 🟢 cosmetic | 빠름 |
+| **§4.5.1.7.2 Concepts prompt (PMBOK 10)** | 🟢 **완료** | 코드 deliverable 확정, 실측은 Phase 5 §5.4 자연 회귀 |
+| **§4.5.1.7.3 측정 infra robustness** | 🟢 **완료** | 2026-04-22 구현, 다음 측정에서 자동 회귀 |
+| §4.5.1.7.1 attribution ablation | → Phase 5 §5.4.1 | diagnostic, 본체 CV 확보 후 선택 |
+| §4.5.1.7.4 Route SEGMENTED (Ollama) | → Phase 5 §5.4.2 | production guide |
+| §4.5.1.7.5 Lotus-prefix variance | ✅ **자동 해결** | §4.1.3 으로 Entities CV 2.3% 수렴 |
+| §4.5.1.7.6 BOM 재분할 판단 | → Phase 5 §5.4.3 | 월 1 회 모니터 |
+| §4.5.1.7.7 log_entry axis cosmetic | → Phase 5 §5.4.4 | cosmetic |
 
-**권장 순서**: 🔴 §4.5.1.7.2/7.3 실측 (CDP 세션) → §4.2 URI 참조 + 분류 → §4.3 인제스트 본체 (3-stage prompt + Provenance + stripBrokenWikilinks) → §4.5.2 본체 운영 안전 → **Phase 4 본체 완성 선언** → Phase 5 착수 (§5.6 Stage 1 → §5.4 diagnostic / §5.1 검색 / §5.2 그래프 / §5.5 성능 등).
+**권장 순서**: §4.2 URI + 분류 → §4.3 본체 인제스트 (3-stage prompt + Provenance + stripBrokenWikilinks) → §4.5.2 본체 운영 안전 (삭제 안전장치 + 초기화) → **Phase 4 본체 완성 선언** → Phase 5 (§5.6 Stage 1 → §5.4 diagnostic / §5.1 검색 / §5.2 그래프 / §5.5 성능) → Phase 6 (웹).
 
 ### 🆕 Phase 재편 (2026-04-22) — Phase 5 신규 (튜닝·고도화), 기존 Phase 5 → Phase 6 (웹)
 

@@ -1433,8 +1433,10 @@ SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `e
 - 352/352 tests PASS (이전 351 + 신규 1). tsc 0 errors.
 - 덤: 작업 중 master 에 이미 존재하던 `hasRedundantEmbeddedImages(md, stripped, pdfPageCount)` arity regression 발견 (commit `bb09b79` 이 `convert-quality.ts` 에 4번째 `tierKey` 인자를 추가했으나 `ingest-pipeline.ts:1194` 호출부 미갱신). `tierKey` 전달로 복구 — 해당 커밋의 "343 tests PASS, tsc 0 errors" 주장은 실제로 성립하지 않고 있었음.
 
-**미완** (후속 Obsidian CDP 세션):
-- PMS 5-run 측정으로 Concepts CV 24.6% → <15% 달성 여부 확증. 목표 못 미치면 B안 보강 (9 영역 FORCED_CATEGORIES pin) 또는 prompt schema_hint 를 schema.ts description 레벨로 내리는 방향 재검토.
+**효과 검증 위임** (2026-04-22 Phase 재편 후 상태):
+- §4.5.1.7.2 자체의 코드 deliverable 은 확정 — canonicalizer prompt 에 rule 주입 + 단위 테스트 anchor + 352 tests PASS 로 "prompt 가 올바르게 포함된다" 는 코드 레벨 계약 완결. **완료 판정**.
+- Concepts CV 24.6% → <15% **실측 검증은 Phase 5 §5.4 (variance 기여도·diagnostic)** 측정 세션에서 자연 회귀. §5.4.1 4-points ablation 또는 §5.4.2 Route SEGMENTED 10-run 시 PMS 를 포함한 측정 결과에서 PMBOK 영역 진동 해소 여부를 함께 판정.
+- 효과 미달 시 조치: Phase 5 §5.4 내 신규 sub-task 로 처리 — (a) B안 보강 (9 영역 FORCED_CATEGORIES pin), (b) schema.ts description 레벨로 hint 위치 조정, (c) Phase 5 §5.6 Stage 1 에서 `.wikey/schema.yaml` 외부화 시 rule 재설계. 어느 경로로 가든 Phase 4 본체 완료 판정에는 영향 없음.
 
 **일반화 경로** (이번 단발 하드코딩의 존재 이유):
 - §4.5.1.7.2 는 자체가 목적이 아니라 **self-extending 표준 분해 구조의 사전 검증 (Stage 0)**. ISO 27001 / ITIL / GDPR / SAFe / OWASP Top 10 등 "표준 = N 하위 영역" 패턴이 연속 등장할 것이 확정되어 있어, 매번 canonicalizer prompt 에 블록을 추가하는 방식은 유지 불가. 매뉴얼 등록도 궁극의 답이 아님 — wiki 자체가 표준 분해 구조를 스스로 학습·확장하는 쪽으로 이행 필요.

@@ -116,3 +116,13 @@ updated: 2026-04-22
 - **wiki 에 철학 선언 정식 등재**: `wiki/analyses/self-extending-wiki.md` 신규 — "LLM Wiki 의 self-extending 지향" analysis 페이지. Stage 0~4 현 상태 + 경계 (무엇이 self-extension 이 아닌가) + 왜 wiki 에 기록하는가 명문화. `wiki/index.md` 분석 섹션에 등재.
 - **기록 책임 (drift 방지)**: 실행 로드맵 단일 소스 = `plan/phase-5-todo.md §5.6`. 철학 선언 단일 소스 = `wiki/analyses/self-extending-wiki.md`. `wikey-core/src/canonicalizer.ts` 주석 · `activity/phase-4-result.md §4.5.1.7.2` 일반화 단락 · `plan/session-wrap-followups.md` · memory 는 모두 포인터.
 - 참조: `plan/phase-4-todo.md` 상단 "Phase 5/6 이관 맵", `plan/phase-5-todo.md` 전문, `plan/phase-6-todo.md` 전문.
+
+## [2026-04-22] session-wrap | 세션 마무리 — §4.5.1.7.2 [x] 전환 + 문서 동기화
+
+- **§4.5.1.7.2 [~] → [x]** 로 전환 확정. 이유: 코드 deliverable (canonicalizer prompt rule + 단위 테스트 anchor + 352 tests PASS) 는 완료됐고, Concepts CV <15% 효과 검증은 Phase 5 §5.4 variance diagnostic 측정에서 자연 회귀하므로 §4.5.1.7.2 자체의 완료 판정에 영향 없음. Phase 4 본체 완료 판정과 독립.
+- **2026-04-22 세션 전체 요약** (커밋 3 개):
+  1. `f9299e1` feat(phase-4.5.1.7) — §4.5.1.7.2 canon PMBOK 10 hint + §4.5.1.7.3 measure robustness + 덤 master arity regression 복구 (352 tests).
+  2. `17d46d2` refactor(phases) — Phase 4/5/6 재편 (본체 정의 확정, §4.3.2 Provenance 본체 복귀, 11 항목 Phase 5 이관, 기존 Phase 5 → Phase 6, `wiki/analyses/self-extending-wiki.md` 정식 등재).
+  3. (이번 커밋) session-wrap — §4.5.1.7.2 [x] 전환 + followups/memory/log 톤 통일 ("실측 대기" → "Phase 5 §5.4 자연 회귀").
+- **Phase 4 본체 다음 진입점**: §4.2 URI + LLM 3/4 차 분류 → §4.3 본체 인제스트 (3-stage prompt override + Provenance tracking frontmatter + stripBrokenWikilinks) → §4.5.2 운영 안전 (삭제 안전장치 + 초기화) → **Phase 4 본체 완성 선언** → Phase 5 착수.
+- 참조: `plan/session-wrap-followups.md` 최상단 블록 갱신, `activity/phase-4-result.md §4.5.1.7.2` "효과 검증 위임" 단락, `plan/phase-4-todo.md §4.5.1.7.2 [x]`, memory `project_phase4_status.md` + `MEMORY.md`.

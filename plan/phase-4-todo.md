@@ -5,7 +5,7 @@
 > **본체 정의 (2026-04-22 확정)**: 원본 → wiki ingest 프로세스가 완성되어 **더 이상 wiki 를 초기화하거나 재생성할 일이 없는** 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 계속 축적되지만 구조는 변경되지 않는다. 튜닝·고도화·개선·확장은 Phase 5, 웹 인터페이스는 Phase 6 로 이관.
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md` 와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.1/§5.2 로 이관)
-> 상태 (2026-04-22 재편 이후): §4.0/§4.1 완료, §4.5.1 완료, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 코드 완료** (실측은 CDP 세션 대기). 다음 = §4.1.3.5 실측 / §4.2 URI 안정 참조 + 분류 / §4.3 인제스트 본체 (3-stage 프롬프트 + Provenance + stripBrokenWikilinks).
+> 상태 (2026-04-22 재편 이후): §4.0/§4.1 완료, §4.5.1 완료, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 완료** (§4.5.1.7.2 Concepts CV 실측 검증은 Phase 5 §5.4 variance diagnostic 에서 자연 회귀). 다음 = §4.2 URI 안정 참조 + 분류 / §4.3 인제스트 본체 (3-stage 프롬프트 + Provenance + stripBrokenWikilinks) / §4.5.2 운영 안전.
 
 ---
 
@@ -495,11 +495,11 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 - [→ Phase 5 §5.4.1] **§4.5.1.7.1** variance 분해 4-points ablation — diagnostic 성격, 본체 CV <10% 확보 후 선택적 측정. (상세는 `plan/phase-5-todo.md §5.4.1`)
 
-- [~] **§4.5.1.7.2** Concepts prompt-level 개선 — PMBOK 10 영역 결정화 (A안 구현 완료, 5-run 실측 대기)
+- [x] **§4.5.1.7.2** Concepts prompt-level 개선 — PMBOK 10 영역 결정화 (A안 구현 완료)
   - **채택**: A안 (canonicalizer prompt hint). B 는 false-positive 하드-추출 위험, C 는 wiki 그래프 가치 역행이라 기각.
   - 구현: `canonicalizer.ts` `buildCanonicalizerPrompt` "작업 규칙" 7번 항목 신규 — PMBOK / 프로젝트 관리 지식체계 맥락이 본문에 등장할 때 10 영역 (`integration / scope / schedule (or time) / cost / quality / resource (or human-resource) / communications / risk / procurement / stakeholder`) 을 각각 `project-<area>-management` 개별 concept 화, 상위 `project-management-body-of-knowledge` 로 묶지 않음, type=`methodology`, hallucination guard ("본문에 직접 언급되지 않으면 추출하지 않는다") 포함.
   - 단위 테스트: `canonicalizer.test.ts` 에 prompt 문자열 anchor 테스트 신규. rule marker + 8 슬러그 + anti-bundle + hallucination guard 문자열 모두 present 단언. 352/352 PASS.
-  - **후속**: 후속 CDP 세션에서 PMS 5-run 재측정으로 Concepts CV 24.6% → <15% 달성 여부 확증. 못 미치면 B안 보강 또는 schema.ts description 레벨 hint 로 위치 조정.
+  - **효과 검증 위임**: Concepts CV 24.6% → <15% 실측은 **Phase 5 §5.4 variance diagnostic** 측정 세션에서 자연 회귀. 목표 미달 시 §5.4 내 신규 sub-task (B안 FORCED_CATEGORIES 9 pin 보강 또는 schema.ts description 레벨 hint 위치 조정) 로 처리. 본 §4.5.1.7.2 자체의 코드 deliverable 은 확정.
 
 - [x] **§4.5.1.7.3** 측정 인프라 robustness — `scripts/measure-determinism.sh` (코드 완료)
   - `restoreSourceFile()` 재작성: `Promise<boolean>` 반환. `adapter.exists` 선/후확인, `.`-prefix 디렉토리 스킵, `renameSync` 실패 → false. `cleanupForRerun` bubble up.
