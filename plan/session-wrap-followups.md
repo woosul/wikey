@@ -1,53 +1,53 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (§4.5.1.6 구현 + 10-run 완료 CV 7.2%, 30-run 백그라운드 진행 중)
+> 최신 갱신: 2026-04-22 (§4.5.1.6 완전 완료 — 29-run Total CV 9.2%, baseline 24.3% → −62% 상대)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-22 §4.5.1.6 세션 — determinism + canonicalizer 3차 (CV 24.3%→7.2% on 10-run)
+## 2026-04-22 §4.5.1.6 완료 — determinism + canonicalizer 3차 (29-run Total CV 9.2%)
 
 ### ⭐ 다음 세션 시작점
 
-**§4.5.1.6 구현 완료** (§4.5.1.6.1/3/4):
-- **determinism flag**: `WIKEY_EXTRACTION_DETERMINISM` config → `temperature=0 + seed=42` 를 Gemini summary/extract/canonicalize 호출에 주입. Obsidian 플러그인 `extractionDeterminism` setting + measure-determinism.sh `-d` 플래그.
-- **SLUG_ALIASES 3차 확장** (5→20): alimtalk 4-variant, ERP/SCM/MES/BOM/PoP/RESTful/TCP-IP/MQTT spelled-out variants → canonical.
-- **FORCED_CATEGORIES 3차 확장** (3→13): ERP/SCM/MES/PLM/APS/전자결재/SSO/TCP-IP/VPN/BOM pin. SLUG_ALIASES → pin chain 으로 canonical axis 수렴.
-- **Tests**: 315 PASS (290 → +25). Build 0 errors.
+**§4.5.1.6 전체 완료** (구현 §4.5.1.6.1/3/4 + 측정 §4.5.1.6.2/6):
 
-**§4.5.1.6.2 10-run 측정 완료**:
-- Total CV **24.3% → 7.2%** (−17.1pp, 상대 **−70.4%**). Phase A 목표 <15% 및 Phase B 목표 <10% 모두 달성.
-- Entities CV 36.4% → 13.9%, Concepts CV 31.1% → 28.9%.
-- Core entities 8% → **58%** (7.7x), core concepts 9% → **50%** (5.9x).
-- Union 사이즈 급감: entities 40→31, concepts 47→22 (alias 수렴 효과).
-- 9/10 run 성공 (1 timeout 10분). Time/run mean 326.9s (baseline 336.9s, 유사).
-- 산출물: `activity/phase-4-5-1-6-pms-10run-determinism-2026-04-22.md`.
+| 지표 | §4.5.1.5 baseline | §4.5.1.6 10-run | §4.5.1.6 29-run | 누적 Δ 상대 |
+|------|------------------:|-----------------:|-----------------:|------------:|
+| Total CV | 24.3% | 7.2% | **9.2%** | **−62.1%** |
+| Entities CV | 36.4% | 13.9% | 11.1% | −69.5% |
+| Concepts CV | 31.1% | 28.9% | 27.0% | −13.2% |
+| Union size (E+C) | 87 | 53 | 53 | −39.1% |
 
-**§4.5.1.6.6 30-run 최종 측정 진행 중** (백그라운드):
-- 출력: `activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md`
-- 예상 완료 시각: 시작 후 ~3시간 (30 × ~5.5분). 이 세션 종료 전 통합 예정.
+- 구현 (commit 29ca6a9):
+  - `WIKEY_EXTRACTION_DETERMINISM` config → Gemini `temperature=0 + seed=42` summary/extract/canonicalize 3 지점 주입
+  - SLUG_ALIASES 5→20 (alimtalk 4-variant + ERP/SCM/MES -system suffix + BOM 4-variant + RESTful/TCP-IP/MQTT spelled-out)
+  - FORCED_CATEGORIES 3→13 pin (ERP/SCM/MES/PLM/APS/전자결재/SSO/TCP-IP/VPN/BOM)
+  - Obsidian 플러그인 `extractionDeterminism` setting + `measure-determinism.sh -d` CLI
+  - Tests 290→315 PASS, build 0 errors
+- 10-run 측정 (§4.5.1.6.2): Total CV 7.2% (상대 −70.4%). Run10 10분 timeout outlier.
+- 30-run 측정 (§4.5.1.6.6): 29-run valid 기준 Total CV 9.2%. Run 30 은 툴 edge case (0/0/0 3s — `restoreSourceFile` 복구 실패).
+- Total 값이 **{35, 41, 43, 45} 4 값** 으로 극도로 양자화 — determinism + canon 3차 가 LLM output 을 이산 분포로 수렴시킴.
+- 판정: Phase A/B 목표 (<15%, <10%) 모두 달성. §4.5.1.6.5 는 <10% 달성으로 §4.5.1.7 이관.
 
-### 🟡 다음 세션 차순위 (§4.5.1.6 30-run 결과에 따라)
+### 🔴 다음 세션 최우선 후보 (하나 선택)
 
-1. **§4.5.1.6.5 Route FULL vs SEGMENTED** — 30-run CV 가 <10% 유지 시 diagnostic 가치 낮음 → §4.5.1.7 으로 이관. SEGMENTED 실행 조건: Ollama qwen3:8b 로 provider 전환 후 10-run (수동 비교).
-2. **§4.5.1.7 후보 — variance 분해 측정** — determinism/alias/pin 3 개를 독립 토글해 기여분 분리. 분해 방법: 3 개 조합 (off/on) 행렬 중 4 points 만 (all-on, all-off, det-only, canon-only) 측정.
-3. **§4.2 URI 기반 안정 참조** — `.ingest-map.json` → `.wikey/source-registry.json` (hash 키). wiki/sources 프론트매터 `source_id` 필드 추가. `§4.1.1.9 vault rename/delete listener` 합동 구현.
-4. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
+1. **§4.5.1.7 variance 분해 측정** — determinism/alias/pin 3 요소의 기여분 분리. 현재는 3 개 동시 적용한 결과만 보유. 분해 방법: `off/on` 행렬의 4 points (all-off baseline=24.3%, det-only, canon-only, all-on=9.2%) 를 각 10-run 측정. 기여 추정치 (50-60% / 20-30% / 15-25%) 실측 검증.
+2. **§4.2 URI 기반 안정 참조** — `.ingest-map.json` → `.wikey/source-registry.json` (hash 키). wiki/sources 프론트매터 `source_id` 필드 추가. `§4.1.1.9 vault rename/delete listener` 합동 구현. PARA 이동 내성 확보.
+3. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
 
-### 🟢 저우선 / 보류 이관
+### 🟡 측정 인프라 followup (이번 세션 발견)
 
-- **log.md "엔티티/개념 생성" 문구 불일치** — `logEntry` 가 LLM 원본 출력 (pin 적용 전) 이므로 FORCED_CATEGORIES 로 이동된 slug 는 파일 위치 ↔ log 문구가 엇갈림. cosmetic 이슈, 파일 위치는 정확. 개선 방식: canonicalizer 에서 pin 후 log body 를 결정적으로 재생성.
-- **BOM 축 재분할 검토** — §4.5.1.6.3 에서 eBOM/mBOM/engineering-BOM 등을 `bill-of-materials` 로 모두 collapse. 실무상 eBOM/mBOM 구분 필요 시 re-split 검토.
+- **`measure-determinism.sh restoreSourceFile()` edge case** — 30-run 중 run 30 에서 파일 복구 실패로 0/0/0 3s outlier 발생. `walk()` 가 raw/ 트리 전체를 탐색하지만 extension 변경·심링크·이동 큐 race 중 하나에서 놓침. 재현 빈도 낮음 (1/40) 이나 대규모 측정 신뢰성 문제. `adapter.exists(SOURCE_PATH)` 체크 후 absent 일 때 명시적 error 반환으로 수정하면 통계에 outlier 섞이지 않음.
+- **run-level timeout 재발 검토** — 10-run run10 이 10분 초과 timeout. 30-run 에서는 재현 안 함. provisional 가설: Gemini quota/latency spike. 재발 시 script 의 per-run timeout 을 15-20분 으로 상향.
+
+### 🟢 저우선 / 보류
+
+- **log.md "엔티티/개념 생성" 문구 불일치** — canonicalizer.ts `assembleCanonicalResult` 의 `logEntry: raw.log_entry` 는 LLM 원본 (pin 적용 전 axis). FORCED_CATEGORIES 로 이동된 slug 는 파일 위치 ↔ log 문구 엇갈림. cosmetic 이슈, 파일 위치는 정확. 개선: pin 후 log body 를 결정적으로 재생성 (wiki-ops.ts `appendLog` 패턴 참조).
+- **BOM 축 재분할** — §4.5.1.6.3 eBOM/mBOM/engineering-BOM 전부 `bill-of-materials` 로 collapse. 실무상 eBOM vs mBOM 구분 필요 시 re-split 검토 (§4.5.1.7+).
 - **`scripts/cache-stats.sh`** — `~/.cache/wikey/convert/index.json` 직접 열람 가능하므로 우선순위 낮음.
 - **§4.1.1.5 `ps aux` 실측 검증** — 별도 security audit 세션.
 - **Ollama Route SEGMENTED 병렬화 (`Promise.all`)** — 별도 세션.
-- **Canonicalizer prompt 개선** — §4.5.1.7 후보.
-
-### 기술 부채 · 메모
-
-- **§4.5.1.6 10-run run10 timeout** — 10분 cap 초과로 1/10 실패. 30-run 에서 재현 빈도 관찰 중. provisional 가설: Gemini quota/latency spike. 재발 빈번 시 script 의 per-run timeout 을 15-20분 으로 상향 검토.
-- **`log_entry` axis 불일치 (위 cosmetic)** — canonicalizer.ts `assembleCanonicalResult` 의 `logEntry: raw.log_entry` 는 LLM 원본. pin 후 재구성 방식: `entities + concepts` 목록을 결정적으로 포맷 (현 wiki-ops.ts `appendLog` 패턴 참조).
-- **`appendSectionTOCToSource` idempotency** — 재인제스트 시 기존 `## 섹션 인덱스` 블록을 regex 로 제거 후 재부착. source 페이지에 사용자가 수동으로 추가한 section 이 있으면 덮일 수 있음 (현재 상정 안 함).
+- **Canonicalizer prompt 개선** — §4.5.1.7 후보 (Concepts CV 27% 남은 이유: project-management 9개 하위 영역을 LLM 이 일부 run 에서만 concept 로 추출).
 
 ### 참고 명령
 
@@ -56,13 +56,15 @@
 npm run build           # wikey-core tsc + wikey-obsidian esbuild, 0 errors
 npm test                # 315 tests PASS
 
-# 이번 세션 신규/수정 파일
-git log --stat HEAD~1..HEAD
+# determinism 재현 (prod 에서도 사용 가능)
+echo "WIKEY_EXTRACTION_DETERMINISM=1" >> wikey.conf
 
 # 측정 재실행
 ./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10 -d
-./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 30 -d \
-  -o activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md
+./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 30 -d
+
+# 측정 후 wiki/ 오염 revert (필수)
+git checkout -- wiki/entities/goodstream-co-ltd.md wiki/index.md wiki/log.md
 ```
 
 ---

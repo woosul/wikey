@@ -4,7 +4,7 @@
 > 전제: Phase 3 (Obsidian 플러그인 + 인제스트 파이프라인 v6) 완료
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md`와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트(LLM 추출)** → **4. 검색·그래프** → **5. 운영·안정성**
-> 상태 (2026-04-22): §4.0 완료, §4.1 완료, §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 구현+측정 완료 (Total CV 32.5% → 24.3%, −8.2pp). 다음 = §4.5.1.6 LLM 수준 variance + canonicalizer 3차
+> 상태 (2026-04-22): §4.0 완료, §4.1 완료, §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성). 다음 = §4.2 URI 안정 참조 / §4.3 인제스트 고도화 / §4.5.1.7 variance 분해 (조건부).
 
 ---
 
@@ -387,7 +387,7 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - [ ] `plan/session-wrap-followups.md` §4.5.1.5 측정 완료 선언 + §4.5.1.6 을 다음 과제로 지정 (이번 turn)
 - [ ] 단일 commit + push (이번 turn)
 
-#### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (2026-04-22, 진행 중)
+#### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (2026-04-22, 완료)
 
 > **배경**. §4.5.1.5 30-run 측정 결과 Total CV 24.3% — baseline 32.5% 대비 25% 상대 감소했으나 잔여 75% variance 가 LLM 수준 (temperature/seed) + canonicalizer 미도달 패턴에서 발생함을 확증. N=30 데이터에서 `alimtalk` 5-variant, ERP/SCM/MES 3-variant, BOM 5-variant, E/C 경계 왕복 (`electronic-approval(-system)`, `restful-api`/`representational-state-transfer-api`) 등 신규 패턴 발견.
 
@@ -413,8 +413,8 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
   - 신규 10 pin: `enterprise-resource-planning`, `supply-chain-management`, `manufacturing-execution-system`, `product-lifecycle-management`, `advanced-planning-and-scheduling`, `electronic-approval`, `single-sign-on-api`, `tcp-ip`, `virtual-private-network`, `bill-of-materials`
   - SLUG_ALIASES → pin resolution chain 으로 canonical axis 수렴 구현
   - 4 신규 test block PASS
-- [ ] **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 비교 — §4.5.1.6.2/6.6 결과에 따라 조건부 실행 (FULL <10% 도달 시 §4.5.1.7 이관)
-- [ ] **§4.5.1.6.6**: 개선 후 30-run 재측정 → Total CV 목표 <10% (§4.5.1.6.2 10-run 결과 확인 후 연속 실행)
+- [~] **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 비교 — FULL 에서 목표 <10% 조기 달성으로 **§4.5.1.7 이관** (diagnostic 가치 감소)
+- [x] **§4.5.1.6.6**: 개선 후 30-run 재측정 → 29-run valid Total CV **9.2%** (목표 <10% 달성, run 30 툴 edge case outlier). 누적 §4.5.1.5 baseline 24.3% → 9.2% (−62% 상대).
 
 ### 4.5.2 운영 안정성 — 삭제·초기화·포팅
 

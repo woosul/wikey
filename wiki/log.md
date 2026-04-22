@@ -5,6 +5,19 @@ created: 2026-04-10
 updated: 2026-04-22
 ---
 
+## [2026-04-22] eval | §4.5.1.6 측정 — determinism + canon 3차 → 29-run Total CV 9.2% (baseline 24.3% → −62% 상대)
+
+- 구현: §4.5.1.6.1 `WIKEY_EXTRACTION_DETERMINISM` flag (Gemini temperature=0 + seed=42), §4.5.1.6.3 SLUG_ALIASES 3차 (5→20, alimtalk 4-variant + ERP/SCM/MES -system suffix + BOM 4-variant + RESTful/TCP-IP/MQTT spelled-out), §4.5.1.6.4 FORCED_CATEGORIES 3차 (3→13 pin, ERP/SCM/MES/PLM/APS/전자결재/SSO/TCP-IP/VPN/BOM). Tests 290→315 PASS, build 0 errors.
+- 10-run 측정 (§4.5.1.6.2): Total CV **24.3% → 7.2%** (−17.1pp, 상대 −70.4%). Entities CV 36.4% → 13.9%. Core entities 3/40 (8%) → 18/31 (58%), concepts 4/47 (9%) → 11/22 (50%). Union 사이즈 급감 87 → 53 (alias 수렴). 9/10 run 성공 (run10 timeout).
+- 30-run 측정 (§4.5.1.6.6, 29-run valid + 1 tool outlier): Total CV **9.2%** (목표 <10% 달성), Entities CV 11.1%, Concepts CV 27.0%. Total 값이 {35, 41, 43, 45} 4 값으로 극도로 양자화. Mean 41.21 (10-run mean 41.89와 일치).
+- Run 30 outlier 해설: 0/0/0 + 3s elapsed. 측정 스크립트 `restoreSourceFile()` 가 이전 run 의 `autoMoveFromInbox` 후 원본 복구 실패. 툴 버그, production code 아님 — followup 로 `walk()` 강화 필요.
+- 기여 추정 (분리 측정은 §4.5.1.7): determinism ~50-60%, SLUG_ALIASES ~20-30%, FORCED_CATEGORIES ~15-25% of 24.3% baseline.
+- 잔여 variance 9.2% 원인: Concepts CV 27.0% (BOM/project-knowledge-areas variance), Entities CV 11.1% (Lotus-prefix 3 변형 가끔 동시 출현).
+- 판정: Phase A/B 목표 모두 달성. §4.5.1.6 종료. §4.5.1.6.5 Route 비교는 <10% 달성으로 §4.5.1.7 이관 (diagnostic 가치 감소).
+- 산출물: `activity/phase-4-5-1-6-pms-10run-determinism-2026-04-22.md` (10-run 원본), `activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md` (30-run 원본 + 29-run 보정), `activity/phase-4-result.md §4.5.1.6.1~.6`, `plan/phase-4-todo.md §4.5.1.6` 모두 완료.
+- wiki 오염 revert: 측정 중 `wiki/log.md`, `wiki/index.md`, `wiki/entities/goodstream-co-ltd.md` 수정 발생 → `git checkout` 원복.
+- Commits: 29ca6a9 (§4.5.1.6.1/3/4 구현 + 10-run), 1f2783e (session-wrap docs).
+
 ## [2026-04-22] eval | §4.5.1.5 측정 — 30-run PMS Total CV 24.3% (baseline 32.5%, −8.2pp)
 
 - 측정: `./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 30` (Gemini 2.5 Flash, Obsidian CDP). 30/30 성공, 평균 5.6분/run, 총 190분.
