@@ -126,3 +126,13 @@ updated: 2026-04-22
   3. (이번 커밋) session-wrap — §4.5.1.7.2 [x] 전환 + followups/memory/log 톤 통일 ("실측 대기" → "Phase 5 §5.4 자연 회귀").
 - **Phase 4 본체 다음 진입점**: §4.2 URI + LLM 3/4 차 분류 → §4.3 본체 인제스트 (3-stage prompt override + Provenance tracking frontmatter + stripBrokenWikilinks) → §4.5.2 운영 안전 (삭제 안전장치 + 초기화) → **Phase 4 본체 완성 선언** → Phase 5 착수.
 - 참조: `plan/session-wrap-followups.md` 최상단 블록 갱신, `activity/phase-4-result.md §4.5.1.7.2` "효과 검증 위임" 단락, `plan/phase-4-todo.md §4.5.1.7.2 [x]`, memory `project_phase4_status.md` + `MEMORY.md`.
+
+## [2026-04-22] docs | §4.3.2 범위 확장 — 쿼리 응답 원본 backlink 렌더링 (Part B)
+
+- 사용자 질문: 대화창 답변에 wiki 페이지 링크는 걸리는데 **원본 (raw/ 소스) 에 대한 backlink** 도 걸렸으면 좋겠다. 어느 단계에서 하는 게 좋은가?
+- 판정: **Phase 4 §4.3.2 Provenance tracking 에 Part B 로 포함**. data model (frontmatter `provenance`) 과 쿼리 응답 렌더링은 같은 의미론 단위 — 본체 완료 선언 시점에 "근거 체인이 원본 파일까지 닿는 citation UX" 를 갖춰야 본체 정의와 정합.
+- 철학 점검 (사용자 `llm-wiki-kor.md` + `wikey.schema.md` 기준): **위배 없음**. citation/provenance 강화 방향, raw/ 불변성 영향 없음 (읽기 링크만), 3 계층 분리 영향 없음. 현재도 `wiki/sources/source-*.md` 본문에 원본 경로가 `> 원시 소스:` 라인으로 이미 명시되어 있어 data flow 는 존재 — Part B 는 답변 → wiki → source → 원본 3-hop 을 답변 → 원본 1-hop 으로 단축하는 UX 개선.
+- 가드: wikilink 주 링크, 원본 📄 보조 링크 (약한 affordance). wiki 계층 우회 습관 방지 위해 CSS/레이아웃 제약. `wiki/analyses/self-extending-wiki.md` 의 "경계" 단락과 같은 궤.
+- §4.3.2 신규 3 체크박스: (a) `query-pipeline.ts` citations 구조화 반환, (b) `source-resolver.ts` (source_id → current_path/uri/mime_type 해석), (c) `sidebar-chat.ts` 응답 렌더링 (내부/외부/tombstone 클릭 핸들러). + 철학 가드 한 줄.
+- 선결: §4.2.2 source-registry + §4.3.2 Part A frontmatter `provenance`.
+- 참조: `plan/phase-4-todo.md §4.3.2` (Part A + Part B 분리 기록), `plan/session-wrap-followups.md` 최상단 블록, memory `project_phase4_status.md` description.

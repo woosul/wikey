@@ -11,6 +11,8 @@
 
 2026-04-22 세션은 본체 variance 해소 (§4.5.1.7.2/7.3) 와 Phase 구조 재편으로 마감됐다. **Phase 4 본체의 다음 진입점은 §4.2 (URI 기반 안정 참조 + LLM 3/4 차 분류) + §4.3 (3-stage prompt override + Provenance tracking + stripBrokenWikilinks)**. §4.5.1.7.2 Concepts CV 실측은 Phase 5 §5.4 diagnostic 세션에서 자연 회귀.
 
+**§4.3.2 Provenance 확장 (2026-04-22 세션 말 추가 기록)**: frontmatter `provenance` data model 뿐 아니라 **쿼리 응답에 원본 파일 backlink 렌더링** 까지 §4.3.2 Part B 로 포함. 현재 답변이 wiki 페이지 wikilink 까지만 걸리는 3-hop 을 1-hop 으로 단축 (답변 → 원본). wikilink 는 주 링크, 원본은 📄 보조 링크 (약한 affordance) 로 배치해 wiki 계층 우회 습관 방지. 구현은 §4.2.2 source-registry + §4.3.2 Part A frontmatter 가 선결. 철학 점검 완료 (citation/provenance 강화, raw/ 불변성 영향 없음).
+
 **§4.5.1.7.2 (PMBOK 10 prompt hint) — 완료**:
 - `canonicalizer.ts buildCanonicalizerPrompt` 작업 규칙 7번 항목 신규 (PMBOK 10 영역 개별 concept, hallucination guard 포함).
 - 단위 테스트 anchor 신규. 352/352 PASS.

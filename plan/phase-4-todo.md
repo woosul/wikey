@@ -303,9 +303,13 @@
 - [ ] 설정 탭 Ingest Prompt 섹션 확장 — 3개 prompt 모두 Edit/Reset 버튼 + 상태 표시
 - [ ] `wikey-core/src/canonicalizer.ts:buildCanonicalizerPrompt` 및 Stage 1 mention extractor에 override 파라미터 주입
 
-### 4.3.2 Provenance tracking (frontmatter data model — 본체 필수)
+### 4.3.2 Provenance tracking — frontmatter + 쿼리 응답 원본 backlink 렌더링 (본체 필수)
 
 > **본체 포함 근거 (2026-04-22)**: 이 항목은 wiki 페이지 프론트매터에 `provenance` 필드를 신규 추가하는 **data model 변경**이다. Phase 5 로 미루면 Phase 4 내에 쌓인 wiki 페이지는 provenance 필드 없이 존재하게 되고, Phase 5 도입 시점에 전체 wiki 재인제스트가 필요해져 본체 정의 ("wiki 재생성 없음") 를 직접 위반한다. 따라서 Phase 4 본체에 포함 확정.
+>
+> **범위 확장 (2026-04-22, 사용자 요청)**: data model (frontmatter `provenance` 필드) 뿐 아니라 **쿼리 응답에서 원본 파일 backlink 렌더링** 까지 포함. wiki 계층이 본체 완료 선언 시점에 "근거 체인이 원본 파일까지 닿는 citation UX" 를 갖춘 상태가 되어야 본체 정의 ("원본 → wiki ingest 프로세스 완성") 와 정합. 현재는 답변이 wiki 페이지 wikilink 까지만 걸리고 `wiki/sources/source-*.md` 의 `> 원시 소스: raw/...` 라인을 한 번 더 펼쳐봐야 원본에 닿음 — 3-hop → 1-hop 단축. 철학 점검: citation/provenance 강화 방향, raw/ 불변성 유지 (읽기 링크만).
+
+**Part A — frontmatter `provenance` data model** (§4.2.2 완료 이후):
 
 - [ ] **추출된 관계에 출처 표시** (전부 프론트매터 `provenance: { type, ref, confidence? }` 배열로 저장)
   - `EXTRACTED`: 소스에서 직접 발견 → `{ type: 'extracted', ref: 'sources/<source_id>' }`
@@ -315,6 +319,16 @@
 - [ ] **Audit 패널에서 AMBIGUOUS 항목 리뷰 UI** — accept/reject/edit 시 provenance 업데이트
 - [ ] **§4.2.2 URI 참조 연계** — `ref` 값은 source_id 기반 (경로 무관, PARA 이동 불변)
 - [ ] **Phase 5 §5.6.3 Stage 3 (in-source self-declaration) 전제** — self-declare 로 생성된 decomposition 은 `provenance: { type: 'self-declared', ref, confidence }` 로 표시되어야 오염 전파 추적 가능
+
+**Part B — 쿼리 응답 원본 backlink 렌더링** (Part A + §4.2.2 source-registry 완료 이후):
+
+- [ ] **`wikey-core/src/query-pipeline.ts` 응답 구조화** — 답변 텍스트와 함께 `citations: Array<{ wikiPage: string; sourceIds: string[]; excerpt?: string }>` 반환. 인용된 wiki 페이지의 `sources:` 프론트매터 + 해당 페이지의 `provenance[].ref` 를 추적해 source_id 목록 구성.
+- [ ] **Source registry 조회 헬퍼** (`wikey-core/src/source-resolver.ts` 신규 또는 `wiki-ops.ts` 확장) — source_id → `{ current_path, title, uri, mime_type }` 해석. PARA 이동 후에도 §4.2.2 source-registry 에서 최신 경로 반환. 삭제된 소스 (tombstone) 는 "원본 삭제됨" marker 반환.
+- [ ] **`wikey-obsidian/src/sidebar-chat.ts` 응답 렌더링** — 답변 렌더링 시 wikilink 는 **주 링크** (기존 유지), 원본 파일은 **보조 링크** (📄 아이콘 + 괄호 안 파일명 같은 약한 affordance) 로 배치. 클릭 핸들러:
+  - 내부 경로 (`file://<vault>/raw/...`) → Obsidian 워크스페이스에서 reveal, vault 외부 앱으로 파일 열기 (PDF viewer 등).
+  - 외부 URI (`https://...`) → 시스템 브라우저.
+  - tombstone → "원본 삭제됨" 알림, 클릭 비활성.
+- [ ] **철학 가드 — wiki 계층 우회 방지** — 답변 UI 구성 시 원본 backlink 를 wikilink 보다 강조하지 않도록 CSS/레이아웃 제약. `wiki/analyses/self-extending-wiki.md` 의 "경계 — 무엇이 self-extension 이 아닌가" 와 같은 궤로, 원본은 "검증용" 포지션 유지 (decomposition + compounding 의 wiki 가치가 사용자 workflow 의 주축).
 
 ### 4.3.3 stripBrokenWikilinks 자동 적용 (source_page 본문)
 
