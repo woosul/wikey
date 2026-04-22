@@ -27,6 +27,7 @@ import {
   countKoreanChars,
   hasKoreanRegression,
   hasBodyRegression,
+  hasRedundantEmbeddedImages,
 } from '../wikey-core/dist/convert-quality.js'
 import { stripEmbeddedImages } from '../wikey-core/dist/rag-preprocess.js'
 
@@ -148,7 +149,8 @@ async function benchmark() {
         if (koRegress || bodyRegress) {
           console.log(`    → regression — keeping tier 1`)
         } else if (a1b.decision === 'accept') {
-          finalTier = '1b-docling-force-ocr'
+          // §4.1.3: Tier 1b 원인에 따라 tierKey suffix 분기 (scan vs korean-loss).
+          finalTier = a1.isScan ? '1b-docling-force-ocr-scan' : '1b-docling-force-ocr-kloss'
           finalMd = t1bRun.md
           finalRaw = t1bRun.raw
           finalA = a1b
@@ -169,13 +171,16 @@ async function benchmark() {
       finalTier = 'REJECT → fall through'
     }
 
-    // Sidecar 저장 — 사용자 설계 (§4.1.3): 원본.md = 이미지 포함 raw 를 저장.
+    // Sidecar 저장 — 사용자 설계 (§4.1.3):
+    //   원본.md = vector PDF 는 raw (이미지 포함), 스캔/force-ocr-scan 은 stripped.
     //   LLM 투입용 stripped 는 benchmark 내부 analyze() 전용, 디스크에 남지 않음.
     //   ingest-pipeline::extractPdfText::finalize 와 동일 정책.
     if (finalRaw && !finalTier.startsWith('REJECT')) {
       try {
-        writeFileSync(`${pdf}.md`, finalRaw, 'utf8')
-        console.log(`    sidecar (raw, images) → ${pdf}.md (${finalRaw.length} chars, tier=${finalTier})`)
+        const useStripped = hasRedundantEmbeddedImages(finalRaw, finalMd, pageCount, finalTier)
+        const sidecarContent = useStripped ? finalMd : finalRaw
+        writeFileSync(`${pdf}.md`, sidecarContent, 'utf8')
+        console.log(`    sidecar ${useStripped ? '(stripped — scan/force-ocr)' : '(raw — images)'} → ${pdf}.md (${sidecarContent.length} chars, tier=${finalTier})`)
       } catch (err) {
         console.log(`    sidecar save failed: ${err.message}`)
       }

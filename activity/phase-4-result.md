@@ -554,19 +554,33 @@ tier 1 docling 실행
 **핵심**. PMS 는 §4.5.1.5/6 기간 내내 `accept` 판정을 받아 오염된 MD 가 변동분석 baseline 이었음. §4.1.3.1~3 도입 후 `retry-no-ocr` 로 escalation → Tier 1a 로 **OCR 파편 1,390 라인 제거** (56.4% picture bbox 내부 오염이 bodyChars 56,255 → 47,979, koreanChars 18,654 → 15,549 로 실측 감소). 다른 3 코퍼스는 기존 경로 유지 (regression 없음).
 
 **Sidecar 생성 — 파일 생성 루틴 확정** (사용자 §4.1.3 설계):
-- 구조: **원본.pdf → 원본.md (이미지 포함 raw) → LLM투입용.md (stripped, 메모리 전용)**
-- 파일시스템에 남는 것: 원본.pdf + 원본.md (이미지 포함). ingest 후 원본.pdf 는 PARA 하위로 분류 이동.
+- 구조: **원본.pdf → 원본.md → LLM투입용.md (stripped, 메모리 전용)**
+- 파일시스템에 남는 것: 원본.pdf + 원본.md. ingest 후 원본.pdf 는 PARA 하위로 분류 이동.
 - 메모리/파이프라인: stripEmbeddedImages 적용된 LLM 투입용 — wiki 생성 후 사라짐.
-- 이 설계 반영: `extractPdfText::finalize` 가 sidecar 를 raw md (이미지 embedded) 로 저장, stripped 는 cache + caller 반환.
-- `ingest-pipeline.ts` ingest 함수의 기존 sidecar 로직 (131-144) 에 `ext !== 'pdf'` 조건 추가 — PDF 는 위 finalize 에서 raw 로 이미 저장되므로 stripped 로 덮어쓰는 path 차단.
 
-**생성된 sidecar** (각 tier 채택 기준 raw, 이미지 포함):
-- `raw/0_inbox/PMS_제품소개_R10_20220815.pdf.md` (**6,339,748 chars**, 1a-docling-no-ocr) ← gitignored
-- `docs/samples/ROHM_Wi-SUN Juta통신모듈(BP35CO-J15).pdf.md` (**1,505,611 chars**, 1b-docling-force-ocr)
-- `docs/samples/rp1-peripherals.pdf.md` (**1,897,465 chars**, 1-docling)
-- `raw/0_inbox/사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf.md` (**599,454 chars**, 1-docling) ← gitignored
+**원본.md 의 이미지 포함 여부 — tier 기반 분기** (사용자 명시: "스캔이미지로 판정되어 ocr 옵션이 들어가면 이미지가 필요없다"; "소규모 문서는 판정 기준 아님"):
 
-`benchmark-tier-4-1-3.mjs` 는 `{ md: stripped, raw, dur }` 구조로 처리 — analyze/tier 비교는 stripped, sidecar 저장은 raw.
+| 조건 | sidecar | 이유 |
+|---|---|---|
+| `isLikelyScanPdf = true` | **stripped** | Scan PDF (30p 계약서 스캔 포함) — 이미지 = 텍스트 내용 중복 |
+| tierKey `1b-docling-force-ocr-scan` | **stripped** | scan 원인으로 force-ocr — 이미지가 OCR 소스 |
+| tierKey `1b-docling-force-ocr-kloss` | **raw** | 한글 공백 소실 원인으로 force-ocr — 원본이 vector PDF (ROHM diagram 유지) |
+| tierKey `1a-docling-no-ocr` | **raw** | pollution escalation — vector PDF (PMS UI 스크린샷 유지) |
+| tierKey `1-docling` | **raw** | 기본 vector PDF 경로 |
+
+구현:
+- `wikey-core/src/convert-quality.ts` — `hasRedundantEmbeddedImages(rawMd, strippedMd, pageCount, tierKey)` 신규 (5 TDD 테스트).
+- `wikey-core/src/ingest-pipeline.ts::extractPdfText` — Tier 1b 원인 분기 (`tier1bKey = isScan ? '...-scan' : '...-kloss'`). `finalize` 에서 `hasRedundantEmbeddedImages` 로 stripped vs raw 판정.
+- `wikey-core/src/ingest-pipeline.ts::ingest` — 기존 sidecar 블록에 `ext !== 'pdf'` 조건 추가 (PDF 는 finalize 에서 이미 처리).
+- `scripts/benchmark-tier-4-1-3.mjs` — 동일 로직 반영.
+
+**실측 벤치마크 — 사용자 기준에 정확히 매핑**:
+- `raw/0_inbox/PMS_제품소개_R10_20220815.pdf.md` — **raw** (6,339,748 chars, 1a-docling-no-ocr) ← gitignored
+- `docs/samples/ROHM_Wi-SUN Juta통신모듈(BP35CO-J15).pdf.md` — **raw** (1,505,611 chars, 1b-docling-force-ocr-kloss) ✓ diagram 유지
+- `docs/samples/rp1-peripherals.pdf.md` — **raw** (1,897,465 chars, 1-docling)
+- `raw/0_inbox/사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf.md` — **raw** (599,454 chars, 1-docling) ← gitignored
+
+**열린 질문 (기준 밖)**: GOODSTREAM 은 "기존 OCR 저장본 스캔" 이라 `isLikelyScanPdf=false` 이고 `tierKey=1-docling`. 사용자 기준에 해당 안 되어 raw 유지. 이미지 파편화 관찰은 별도 이슈 (Tier 1 default 의 bitmap OCR 영향 가능성) — 후속 검토.
 
 **기록**: `activity/phase-4-1-3-benchmark-2026-04-22.md` (요약 테이블 + Tier별 상세).
 

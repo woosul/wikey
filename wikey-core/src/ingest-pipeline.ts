@@ -27,6 +27,7 @@ import {
   koreanLongTokenRatio,
   isLikelyScanPdf,
   bodyCharsPerPage,
+  hasRedundantEmbeddedImages,
 } from './convert-quality.js'
 import { selectRoute } from './provider-defaults.js'
 import {
@@ -1149,12 +1150,17 @@ async function extractPdfText(
       })
       setCached(cacheKey, stripped, { source: sourcePath, converter: `pdf:${tierKey}` })
     }
-    // §4.1.3 파일 생성 루틴: 파일시스템에 남는 sidecar 는 "원본.md" — 이미지 포함 raw.
-    // LLM 투입용 stripped 는 메모리/캐시 전용 (caller 에게 return, wiki 생성 후 사라짐).
+    // §4.1.3 파일 생성 루틴: 파일시스템에 남는 sidecar 는 "원본.md".
+    //   - 스캔 PDF / 기존 OCR 저장 소규모 폼 (사업자등록증 등): 이미지 내용이 이미 텍스트에
+    //     들어가 있어 base64 embedded 가 중복 + 파일 어지러움 → stripped 저장.
+    //   - vector PDF (diagram/chart/screenshot 이 의미 있는 경우): raw (이미지 포함) 저장.
+    // LLM 투입용 stripped 는 항상 caller 반환 (wiki 생성 후 사라짐).
     try {
       const { writeFileSync: wf } = require('node:fs') as typeof import('node:fs')
-      wf(`${fullPath}.md`, md, 'utf-8')
-      log(`sidecar .md saved (raw, images included) → ${sourcePath}.md (${md.length} chars, tier=${tierKey})`)
+      const useStripped = hasRedundantEmbeddedImages(md, stripped, pdfPageCount)
+      const sidecarContent = useStripped ? stripped : md
+      wf(`${fullPath}.md`, sidecarContent, 'utf-8')
+      log(`sidecar .md saved (${useStripped ? 'stripped — scan/small-doc images redundant' : 'raw — vector PDF, images kept'}) → ${sourcePath}.md (${sidecarContent.length} chars, tier=${tierKey})`)
     } catch (err) {
       warn(`sidecar .md save failed: ${errorMessage(err)}`)
     }
@@ -1297,7 +1303,11 @@ async function extractPdfText(
               const retryQ = scoreConvertOutput(retryOk, { retryOnKoreanWhitespace: false })
               const retryRatio = koreanLongTokenRatio(retryOk)
               log(`tier 1b quality — score=${retryQ.score.toFixed(2)}, decision=${retryQ.decision}, koreanLong=${(retryRatio * 100).toFixed(1)}%`)
-              if (retryQ.decision === 'accept') return finalize(retryOk, '1b-docling-force-ocr')
+              // §4.1.3: Tier 1b 원인 따라 tierKey suffix 분기.
+              //   - scan origin → sidecar 이미지 strip (이미지 = OCR 소스)
+              //   - korean-loss origin → sidecar 이미지 유지 (vector PDF diagram 의미 있음)
+              const tier1bKey = isScan ? '1b-docling-force-ocr-scan' : '1b-docling-force-ocr-kloss'
+              if (retryQ.decision === 'accept') return finalize(retryOk, tier1bKey)
               // retry 결과도 품질 미달 — tier 1 이 tier 1b 보다 나은지 보고 더 나은 쪽 채택
               const baseQ = scoreConvertOutput(ok, { retryOnKoreanWhitespace: false })
               if (baseQ.score > retryQ.score) {

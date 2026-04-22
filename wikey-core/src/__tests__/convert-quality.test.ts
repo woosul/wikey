@@ -9,6 +9,7 @@ import {
   isLikelyScanPdf,
   bodyCharsPerPage,
   hasImageOcrPollution,
+  hasRedundantEmbeddedImages,
 } from '../convert-quality.js'
 
 describe('scoreConvertOutput — accept', () => {
@@ -502,6 +503,56 @@ describe('scoreConvertOutput — §4.1.3.2 retry-no-ocr decision', () => {
     expect(rClean.flags).not.toContain('image-ocr-pollution')
     expect(rPolluted.flags).toContain('image-ocr-pollution')
     expect(rClean.score - rPolluted.score).toBeGreaterThanOrEqual(0.35)
+  })
+})
+
+describe('hasRedundantEmbeddedImages — §4.1.3 sidecar 이미지 strip 판정', () => {
+  it('scan PDF (isLikelyScanPdf=true) → true, tierKey 무관', () => {
+    // isLikelyScanPdf: per-page < 100 chars AND korean < 50
+    const stripped = 'A B C'.repeat(5)   // 매우 짧음
+    const raw = '![Image](data:image/png;base64,XXX)\n' + stripped
+    expect(hasRedundantEmbeddedImages(raw, stripped, 20, '1-docling')).toBe(true)
+  })
+
+  it("Tier 1b force-ocr-scan (30p 계약서 스캔 스타일) → true (OCR 결과 텍스트 = 이미지 내용)", () => {
+    // 대규모 문서 (bodyChars > 2000) 여도 scan origin 이면 strip. 사용자 명시:
+    // "소규모가 아니라 스캔이미지로 판정되어 ocr 옵션이 들어가면 이미지가 필요없다"
+    const stripped = '본문 추출 결과 텍스트 여러 문단이 이어집니다. '.repeat(200)  // ~8000 chars
+    const raw = '![Image](data:image/png;base64,XXX)\n' + stripped
+    expect(hasRedundantEmbeddedImages(raw, stripped, 30, '1b-docling-force-ocr-scan')).toBe(true)
+  })
+
+  it("Tier 1b force-ocr-kloss (ROHM 한글 공백 소실) → false (vector PDF, diagram 유지)", () => {
+    // ROHM 데이터시트: force-ocr 사용했지만 원본이 vector PDF 이고 pinout/diagram 이미지 유지 필요.
+    const stripped = 'ROHM Wi-SUN 모듈 사양 정보 여러 문장 '.repeat(150)  // ~4500 chars
+    const raw = '![Image](data:image/png;base64,XXX)\n' + stripped
+    expect(hasRedundantEmbeddedImages(raw, stripped, 5, '1b-docling-force-ocr-kloss')).toBe(false)
+  })
+
+  it("Tier 1a no-ocr (PMS pollution escalation) → false (vector PDF, UI 스크린샷 유지)", () => {
+    const stripped = 'PMS 제품소개 본문 여러 문장 이어집니다 '.repeat(200)  // ~7000 chars
+    const raw = '![Image](data:image/png;base64,XXX)\n' + stripped
+    expect(hasRedundantEmbeddedImages(raw, stripped, 31, '1a-docling-no-ocr')).toBe(false)
+  })
+
+  it("Tier 1 accept 대규모 문서 → false (vector PDF, 이미지 의미 있음)", () => {
+    const stripped = '충분히 긴 정상 본문 문장입니다 여러 문단이 이어집니다. '.repeat(100)  // ~4000 chars
+    const raw = '![Image](data:image/png;base64,XXX)\n' + stripped
+    expect(hasRedundantEmbeddedImages(raw, stripped, 30, '1-docling')).toBe(false)
+  })
+
+  it("Tier 1 accept 소규모 문서 (GOODSTREAM 기존 OCR 저장본 스타일) → false", () => {
+    // 사용자 명시: 문서 규모는 판정 기준이 아님. Tier 1 accept 면 raw 유지.
+    // GOODSTREAM 같은 기존 OCR 저장본의 이미지 파편화는 별개 이슈.
+    const stripped = '사업자등록번호 상호 대표자 '.repeat(20)  // ~250 chars
+    const raw = Array(5).fill('![Image](data:image/png;base64,AAAA)').join('\n') + '\n' + stripped
+    expect(hasRedundantEmbeddedImages(raw, stripped, 1, '1-docling')).toBe(false)
+  })
+
+  it('이미지 없음 → false (strip 불필요)', () => {
+    const stripped = '짧은 본문 내용'
+    const raw = stripped
+    expect(hasRedundantEmbeddedImages(raw, stripped, 1, '1-docling')).toBe(false)
   })
 })
 

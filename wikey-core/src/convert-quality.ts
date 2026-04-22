@@ -284,6 +284,49 @@ export function hasMissingKoreanWhitespace(md: string): boolean {
   return longTokens / tokens.length > 0.30
 }
 
+/**
+ * Sidecar MD 저장 시 embedded 이미지를 제거할지 판단 (§4.1.3 확장).
+ *
+ * 사용자 설계 원칙:
+ *   - 원본.md 는 "사람이 볼 때 의미 있는" 이미지만 포함한다.
+ *   - "스캔이미지로 판정되어 OCR 옵션이 들어간 경우" → 이미지 내용이 OCR 로 텍스트화 되었으므로
+ *     base64 embedded 를 중복 저장하면 파편 + 파일 어지러움.
+ *   - vector PDF (PMS UI 스크린샷 · ROHM 데이터시트 · RP1 매뉴얼) 는 diagram/chart 가
+ *     text 와 별도 의미를 가지므로 유지.
+ *
+ * 판정 (OR):
+ *   1. `isLikelyScanPdf` (본문 <100/page AND 한국어 <50) — 확정 스캔 PDF.
+ *      30p 계약서 스캔처럼 대규모 문서도 포함.
+ *   2. tierKey === `1b-docling-force-ocr-scan` — scan PDF 감지되어 force-ocr 로 전환된 케이스.
+ *      docling 이 전체 이미지를 OCR 해서 텍스트 추출. 이미지 자체가 OCR 소스.
+ *
+ * 포함하지 않는 케이스:
+ *   - `1b-docling-force-ocr-kloss` (한국어 공백 소실 원인) — ROHM 데이터시트처럼 vector PDF 의
+ *     pinout/diagram 이미지는 여전히 의미 있음. 유지.
+ *   - `1a-docling-no-ocr` — pollution escalation. bitmap OCR 억제 후에도 다이어그램·스크린샷
+ *     자체는 의미 있음.
+ *   - `1-docling` accept — vector PDF 기본 경로, 이미지 유지.
+ *
+ * 문서 규모(bodyChars) 는 판정 기준이 아님 — 사용자 명시:
+ *   "소규모가 아니라 스캔이미지로 판정되어 ocr 옵션이 들어가면 이미지가 필요없다".
+ */
+export function hasRedundantEmbeddedImages(
+  rawMd: string,
+  strippedMd: string,
+  pageCount: number,
+  tierKey: string,
+): boolean {
+  // 이미지가 없으면 판정 자체가 무의미 (raw == stripped).
+  const hadImages = rawMd.length > strippedMd.length
+  if (!hadImages) return false
+  // 1. Scan PDF 감지 — text-layer 거의 없어 페이지 전체가 이미지인 경우.
+  if (isLikelyScanPdf(strippedMd, pageCount)) return true
+  // 2. Tier 1b force-ocr 채택 + 원인이 scan PDF — docling 이 vector text 무시하고 전체 OCR.
+  //    원인이 korean-loss (ROHM 등 vector PDF 공백 소실) 는 제외 — diagram 유지.
+  if (tierKey === '1b-docling-force-ocr-scan') return true
+  return false
+}
+
 /** 한국어 토큰 중 15자 이상 비율 (0.0 ~ 1.0). 임계 판정 + 로그 용. */
 export function koreanLongTokenRatio(md: string): number {
   const clean = md
