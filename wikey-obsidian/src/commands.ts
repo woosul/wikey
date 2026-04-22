@@ -1,6 +1,6 @@
 import { FuzzySuggestModal, Notice, TFile } from 'obsidian'
 import type WikeyPlugin from './main'
-import { generateBrief, ingest, PlanRejectedError, type IngestPlan, classifyFileAsync, moveFile } from 'wikey-core'
+import { generateBrief, ingest, PlanRejectedError, type IngestPlan, classifyFileAsync, movePair } from 'wikey-core'
 import { WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { IngestFlowModal } from './ingest-modals'
 
@@ -210,11 +210,18 @@ async function runIngestCore(
           config: plugin.buildConfig(),
         })
         if (classifyResult.destination) {
-          moveFile(basePath, sourcePath, classifyResult.destination)
+          // §4.2 S2-3: movePair — original + sidecar 가 한 쌍으로 이동 + registry 갱신 + frontmatter rewrite.
+          const result = await movePair({
+            basePath,
+            sourceVaultPath: sourcePath,
+            destDir: classifyResult.destination,
+            wikiFS: plugin.wikiFS,
+          })
           const newSourcePath = join(classifyResult.destination, filename)
-          updateIngestMapPath(basePath, sourcePath, newSourcePath)
           finalSourcePath = newSourcePath
-          console.info(`[Wikey ingest] auto-moved to PARA: ${sourcePath} → ${newSourcePath} (${classifyResult.hint})`)
+          console.info(
+            `[Wikey ingest] auto-moved to PARA: ${sourcePath} → ${newSourcePath} (${classifyResult.hint}) sidecar=${result.movedSidecar}${result.sidecarSkipReason ? ` [${result.sidecarSkipReason}]` : ''}`,
+          )
         } else {
           console.info(`[Wikey ingest] auto-move skipped (classify returned no destination): ${sourcePath}`)
         }

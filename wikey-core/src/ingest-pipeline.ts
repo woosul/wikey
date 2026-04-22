@@ -12,7 +12,25 @@ import type {
 } from './types.js'
 import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
-import { createPage, updateIndex, appendLog, normalizeBase, type WrittenPage } from './wiki-ops.js'
+import {
+  createPage,
+  updateIndex,
+  appendLog,
+  normalizeBase,
+  injectSourceFrontmatter,
+  type WrittenPage,
+  type SourceFrontmatter,
+} from './wiki-ops.js'
+import { computeFileId, computeFullHash, sidecarVaultPath } from './uri.js'
+import {
+  loadRegistry,
+  saveRegistry,
+  upsert as registryUpsert,
+  findById as registryFindById,
+  REGISTRY_PATH,
+  type SourceRecord,
+  type SourceRegistry,
+} from './source-registry.js'
 import { canonicalize } from './canonicalizer.js'
 import { loadSchemaOverride } from './schema.js'
 import type { Mention, EntityType, ConceptType } from './types.js'
@@ -297,15 +315,35 @@ export async function ingest(
   const createdPages: string[] = []
   const updatedPages: string[] = []
 
+  // §4.2 Stage 1 S1-3: v3 frontmatter + registry upsert.
+  const v3Meta = await buildV3SourceMeta(wikiFS, sourcePath, opts?.basePath, ext, `wiki/sources/${parsed.source_page.filename}`)
   const sourcePage: WikiPage = {
     filename: parsed.source_page.filename,
     // §4.5.1.5.6 Phase C: 섹션 TOC append (결정적 메타, LLM 호출 없음)
-    content: appendSectionTOCToSource(parsed.source_page.content, sectionIndex),
+    content: injectSourceFrontmatter(
+      appendSectionTOCToSource(parsed.source_page.content, sectionIndex),
+      v3Meta.frontmatter,
+    ),
     category: 'sources',
   }
   const exists = await wikiFS.exists(`wiki/sources/${sourcePage.filename}`)
   await createPage(wikiFS, sourcePage)
   ;(exists ? updatedPages : createdPages).push(sourcePage.filename)
+
+  // Registry upsert — record source + associate with this ingested page.
+  if (v3Meta.record) {
+    const reg = await loadRegistry(wikiFS)
+    const existing = registryFindById(reg, v3Meta.id)
+    const record: SourceRecord = existing
+      ? {
+          ...existing,
+          ingested_pages: existing.ingested_pages.includes(`wiki/sources/${sourcePage.filename}`)
+            ? existing.ingested_pages
+            : [...existing.ingested_pages, `wiki/sources/${sourcePage.filename}`],
+        }
+      : v3Meta.record
+    await saveRegistry(wikiFS, registryUpsert(reg, v3Meta.id, record))
+  }
 
   for (const entity of parsed.entities ?? []) {
     const page: WikiPage = { filename: entity.filename, content: entity.content, category: 'entities' }
@@ -1593,6 +1631,86 @@ print('\\n\\n'.join(f'## Page {i+1}\\n\\n{results[i]}' for i in range(total)))
 
   warn(`all 6 tiers failed for ${sourcePath}`)
   return ''
+}
+
+/**
+ * §4.2 Stage 1 S1-3: build v3 frontmatter + registry record for the source.
+ *
+ * Returns both the frontmatter block (to inject into the source page) and
+ * the registry record (to upsert). If bytes cannot be read (vault FS
+ * without a backing basePath), returns frontmatter only.
+ */
+async function buildV3SourceMeta(
+  wikiFS: WikiFS,
+  sourcePath: string,
+  basePath: string | undefined,
+  ext: string,
+  ingestedPagePath: string,
+): Promise<{ id: string; frontmatter: SourceFrontmatter; record: SourceRecord | null }> {
+  let bytes: Uint8Array | null = null
+  let size = 0
+  if (basePath) {
+    try {
+      const { readFileSync, statSync } = require('node:fs') as typeof import('node:fs')
+      const { join } = require('node:path') as typeof import('node:path')
+      const fullPath = join(basePath, sourcePath)
+      bytes = readFileSync(fullPath)
+      size = statSync(fullPath).size
+    } catch {
+      // Fall back to reading through wikiFS as text — last resort.
+      try {
+        const raw = await wikiFS.read(sourcePath)
+        bytes = new TextEncoder().encode(raw)
+        size = bytes.length
+      } catch {
+        bytes = null
+      }
+    }
+  }
+
+  if (!bytes) {
+    // No bytes available — synthesize id from sourcePath so frontmatter still exists.
+    const fallback = new TextEncoder().encode(sourcePath)
+    const fm: SourceFrontmatter = {
+      source_id: computeFileId(fallback),
+      vault_path: sourcePath,
+      hash: computeFullHash(fallback),
+      size: 0,
+      first_seen: new Date().toISOString(),
+    }
+    return { id: fm.source_id, frontmatter: fm, record: null }
+  }
+
+  const source_id = computeFileId(bytes)
+  const hash = computeFullHash(bytes)
+  const first_seen = new Date().toISOString()
+
+  // Sidecar exists for non-md/non-txt sources that went through a converter.
+  const hasSidecar = ext && ext !== 'md' && ext !== 'txt' && !!(await wikiFS
+    .exists(`${sourcePath}.md`)
+    .catch(() => false))
+  const sidecar_vault_path = hasSidecar ? sidecarVaultPath(sourcePath) : undefined
+
+  const frontmatter: SourceFrontmatter = {
+    source_id,
+    vault_path: sourcePath,
+    ...(sidecar_vault_path ? { sidecar_vault_path } : {}),
+    hash,
+    size,
+    first_seen,
+  }
+
+  const record: SourceRecord = {
+    vault_path: sourcePath,
+    ...(sidecar_vault_path ? { sidecar_vault_path } : {}),
+    hash,
+    size,
+    first_seen,
+    ingested_pages: [ingestedPagePath],
+    path_history: [{ vault_path: sourcePath, at: first_seen }],
+    tombstone: false,
+  }
+  return { id: source_id, frontmatter, record }
 }
 
 function errorMessage(err: unknown): string {

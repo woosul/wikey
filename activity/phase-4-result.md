@@ -669,6 +669,201 @@ Total 값 분포 {36, 44, 46} 3 값으로 양자화. Core entities 19/27 (70%), 
 
 ---
 
+## 4.2 분류 및 파일 관리 (inbox → PARA, pair 이동 · registry · listener)
+> tag: #workflow, #core
+
+**상태** (2026-04-23): Stage 1 (ID & vault_path foundation) + Stage 2 (pair move + frontmatter rewrite) 구현 완료. Stage 3 (LLM 3/4차 분류 정제) · Stage 4 (vault listener + reconcile) 는 다음 세션.
+**증거**: wikey-core 352 → **399 tests PASS** (+47), bash smoke 6/6, `npm run build` (tsc + esbuild) 0 errors.
+**계획 문서**: `plan/phase-4-2-plan.md` v3 (codex rescue 2차 검증 결과 6 concern 전부 반영).
+
+### 4.2.1 계획 수립 + codex 2차 검증 (2026-04-22~23)
+
+**배경 — 사용자 추가 제약** (2026-04-22). 원본 (`.pdf`, `.xls[x]`, `.hwp[x]`, `.doc[x]`, `.ppt[x]`) 이 docling/unhwp 으로 변환되어 `<원본>.<ext>.md` sidecar 가 생긴 경우, 시스템 자동 이동(auto-classify, Audit Apply, bash `--move`, vault `on('rename')`) 시 반드시 pair 로 함께 이동. 사용자 수동 이동은 예외.
+
+**계획 v1 → v2 → v3 진화**:
+
+- **v1** (초안): Part A (LLM 3/4차 분류 + pair 이동) → Part C (bash) → Part B (registry) 순. 문제: movePair 를 먼저 만들면 registry 없이 구현 → 나중에 retrofit 하면서 plugin 호출처·테스트 2회 touch.
+- **v2** (의존성 재정렬, 사용자 지적 "URI구조를 먼저 만들고 그 다음 이동이나 다른 규칙들이 붙어야..."): Stage 1 URI foundation → Stage 2 pair move → Stage 3 분류 정제 → Stage 4 listener. codex 검증 선행.
+- **v3** (codex rescue 2차 검증 FAIL gate 반영). Critical 2 · High 2 · Medium 3 concern 전부 반영:
+
+| codex finding | v3 반영 |
+|---------------|---------|
+| Critical #1 `wikey://vault/...` 커스텀 scheme 이 Obsidian `registerObsidianProtocolHandler` 로 작동 안 함 | URI **저장 폐기** → `source_id` + `vault_path` 만 저장, URI 는 render/open 시점 `buildObsidianOpenUri(vaultName, vaultPath)` / `buildFileUri(absPath)` 로 derive |
+| Critical #2 번들 id 가 vault-relative path 기반이면 PARA 이동 시 id 변경 (불변 key 깨짐) | 번들 내부 **bundle-relative** `(sorted path, sha256(bytes))` 페어 정렬 → 개행 직렬화 → 재해싱. `computeBundleId(entries)` 가 vault 위치 독립 |
+| High #3 이동 후 이미 작성된 `wiki/sources/*.md` frontmatter 의 `vault_path` 가 stale | `rewriteSourcePageMeta` 신규 + movePair 가 `ingested_pages[]` 순회하며 post-move rewrite |
+| High #4 bash `--move` 가 vault.on('rename') 에 의존 → Obsidian 미실행 시 이벤트 유실 | `scripts/registry-update.mjs` node CLI 신규 — bash 가 즉시 registry 갱신. plugin startup reconcile 이 이중 안전망 |
+| Medium #5 64-bit prefix 재사용은 full-hash 비교 없으면 silent alias 위험 | registry `findByIdPrefix(reg, prefixHex, bytes)` — prefix 매칭 후 `record.hash === computeFullHash(bytes)` 로 full-hash verify |
+| Medium #6 movePair 가 URI syntax 에 과결합 | movePair 는 `vault_path` 만 다룸. URI derive 는 별도 함수군 |
+| Medium #7 30 테스트 부족 + migration inventory 누락 | 42 → 실제 **+47** 로 확장, `scripts/measure-determinism.sh` 의 `.ingest-map.json` 참조도 교체 |
+
+**계획 문서 산출**: `plan/phase-4-2-plan.md` (v3, 10 섹션 · 290 라인). 작업 진입 순서는 Stage 1 → Stage 2 → Stage 3/4 (별도 세션).
+
+### 4.2.2 Stage 1 — ID & vault_path foundation (registry)
+
+URI 는 저장하지 않고 `source_id` + `vault_path` 만 저장. 번들 id 는 내부 relative path 기반으로 이동 무관 불변. prefix 충돌은 full-hash verify 로 해소.
+
+#### 4.2.2.1 `wikey-core/src/uri.ts` (S1-1, 17 tests)
+
+**함수 export**:
+- `computeFileId(bytes)` → `sha256:<16 hex prefix>` (개인 위키 scale 충돌 무시, prefix verify 루틴 보조로 잔여 위험 제거).
+- `computeBundleId(entries: BundleEntry[])` — 입력은 `{relativePath, bytes}` 배열. 내부에서 `relativePath.localeCompare` 정렬 → `path\tsha256(bytes)` 줄 단위 직렬화 → 재해싱. 이동 무관 불변 (핵심 테스트 케이스).
+- `computeExternalId(uri)` → `uri-hash:<16 hex>` (외부 URI pass-through, fetching 은 Phase 5).
+- `computeFullHash(bytes)` → 64 hex, registry `hash` 필드용 무결성 검증.
+- `buildObsidianOpenUri(vaultName, vaultPath)` → `obsidian://open?vault=<enc>&file=<enc>` (한국어 percent-encoding).
+- `buildFileUri(absolutePath)` → `file:///...` (외부 앱 open).
+- `formatDisplayPath(vaultPath)` → 원문 그대로 (UI 툴팁·로그용).
+- `verifyFullHash(prefixHex, bytes)` — prefix 충돌 시 registry.findByIdPrefix 가 사용.
+- `sidecarVaultPath(originalVaultPath)` → `${path}.md`.
+
+증거: `__tests__/uri.test.ts` 17 tests green — 번들 이동 시 동일 id, 입력 순서 독립, prefix+bytes 검증, 한국어 round-trip 모두 통과.
+
+#### 4.2.2.2 `wikey-core/src/source-registry.ts` (S1-2, 12 tests)
+
+**스키마** (`.wikey/source-registry.json`, key = `source_id`):
+```json
+{
+  "sha256:<prefix>": {
+    "vault_path": "raw/.../file.pdf",
+    "sidecar_vault_path": "raw/.../file.pdf.md",
+    "hash": "<full 64 hex>",
+    "size": 3634821,
+    "first_seen": "2026-04-23T...",
+    "ingested_pages": ["wiki/sources/source-xxx.md"],
+    "path_history": [{"vault_path":"...","at":"..."}],
+    "tombstone": false
+  }
+}
+```
+
+**API**: `loadRegistry`, `saveRegistry`, `findById`, `findByIdPrefix` (full-hash verify 내장), `findByPath` (path_history 포함), `findByHash`, `upsert`, `recordMove`, `recordDelete`, `restoreTombstone`, `reconcile(walker)`.
+
+- `loadRegistry` 는 JSON parse 실패 시 `.wikey/source-registry.json.bak` 로 snapshot + 빈 객체 반환 (warn 로그 1회). 테스트에서 재현 확인.
+- `recordMove` 는 `path_history` append + `vault_path`·`sidecar_vault_path` 갱신 (sidecar 미지정 시 기존값 유지).
+- `reconcile(walker)` 는 외부 이동 (bash / Finder) 감지 — walker 가 반환한 `{vault_path, bytes}` 목록의 full-hash 와 레코드 `hash` 매칭 → path 갱신. Stage 4 의 startup scan 에서 사용.
+
+증거: `__tests__/source-registry.test.ts` 12 tests green (CRUD · history · tombstone · prefix 충돌 시나리오 · reconcile 외부 이동).
+
+#### 4.2.2.3 `wikey-core/src/wiki-ops.ts` 확장 (S1-3 + S2-2, +7 tests)
+
+**신규 export**:
+- `injectSourceFrontmatter(content, meta)` — source 페이지에 v3 frontmatter 주입. 기존 frontmatter 의 비관리 키 (`title`, `tags`) 보존, 관리 키 (`source_id`, `vault_path`, `sidecar_vault_path`, `hash`, `size`, `first_seen`) 교체.
+- `rewriteSourcePageMeta(content, {vault_path, sidecar_vault_path?})` — Stage 2 post-move 전용. `vault_path`·`sidecar_vault_path` 만 갱신, 다른 관리 필드는 불변. sidecar 가 `null` 이면 필드 제거, `undefined` 면 무변경.
+
+yaml 이스케이프는 경량 구현 — YAML-sensitive 문자 (`: # @ & * ! | > ' " % \` \t`) 또는 선행·후행 공백 있으면 `JSON.stringify` 로 따옴표 감쌈. Obsidian 이 생성하는 일반적인 키·값은 bare 로 유지.
+
+증거: `__tests__/wiki-ops.test.ts` 기존 27 → **34 tests** (+7). 한국어 idempotent · stale 값 교체 · sidecar add/remove · 본문 보존 검증.
+
+#### 4.2.2.4 `ingest-pipeline.ts` 배선 + registry upsert (S1-3)
+
+**변경점**:
+- `buildV3SourceMeta(wikiFS, sourcePath, basePath, ext, ingestedPagePath)` 헬퍼 신규 — 원본 bytes 를 `readFileSync(basePath/sourcePath)` 로 직접 읽어 `computeFileId` / `computeFullHash` / `statSync.size` 계산. basePath 없으면 wikiFS.read 폴백 → UTF-8 인코딩해서 `{record:null, frontmatter:path 기반 synthesized}` 반환 (frontmatter 자체는 항상 작성, registry 는 bytes 있을 때만).
+- sidecar 존재 여부는 `wikiFS.exists(${sourcePath}.md)` 로 감지. md/txt 원본은 sidecar 개념 없음.
+- `sourcePage.content = injectSourceFrontmatter(appendSectionTOCToSource(...), v3Meta.frontmatter)` — 기존 섹션 TOC append 체인 위에 v3 frontmatter 주입.
+- 직후 `loadRegistry` → `findById(v3Meta.id)` 존재하면 `ingested_pages[]` 에 현재 페이지 append, 없으면 신규 record 로 `upsert`. `saveRegistry` 로 JSON 저장.
+
+효과: 이제 모든 신규 ingest 가 (a) v3 frontmatter 로 source 페이지 기록, (b) `.wikey/source-registry.json` 에 레코드 생성 · 연결. 동일 content 재인제스트 시 기존 레코드 재사용으로 중복 방지.
+
+#### 4.2.2.5 `scripts/migrate-ingest-map.mjs` + `measure-determinism.sh` 패치 (S1-4)
+
+- 마이그레이션 스크립트 신규. 기존 `wiki/.ingest-map.json` 이 있으면 경로 키 순회 → 파일 bytes 재해싱 → `source_id` 발급 → `.wikey/source-registry.json` 레코드 생성. `--dry-run` 플래그 지원. 파일 부재 시 exit 0 + "no-op" 로그. 현재 볼트는 map 파일 없음 → 무작업 확인.
+- **smoke**: dummy `.ingest-map.json` 으로 `/tmp/wikey-mig-test/` 샌드박스 구성 → `node migrate-ingest-map.mjs` 실행 → registry JSON 생성 확인 (sidecar pair 감지 포함). hash `779221dd...` 로 검증.
+- `scripts/measure-determinism.sh` 의 `cleanupForRerun` 에 registry 정리 블록 추가 — `.wikey/source-registry.json` 의 `vault_path` 또는 `path_history[]` 가 SOURCE_PATH 에 매칭되는 레코드 삭제. 기존 `.ingest-map.json` 블록은 transitional 호환용으로 유지.
+
+### 4.2.3 Stage 2 — Pair move + frontmatter rewrite (post-move)
+
+사용자 제약 "원본 + sidecar md pair 불변 이동" 을 registry 위에 구현. 이동 후 `ingested_pages[]` 의 모든 source 페이지 frontmatter 가 자동 갱신된다.
+
+#### 4.2.3.1 `wikey-core/src/classify.ts::movePair` (S2-1, 8 tests)
+
+```typescript
+export async function movePair(opts: {
+  basePath: string
+  sourceVaultPath: string
+  destDir: string
+  wikiFS: WikiFS
+}): Promise<MovePairResult>
+```
+
+**내부 절차** (원자성 지향):
+1. idempotent guard — sourceFullPath === destFullPath 면 no-op 반환 (movedOriginal=false).
+2. `registry.findByPath(sourceVaultPath)` → id 확보 (legacy fallback: filesystem convention).
+3. `renameSync(original)` → sidecar 존재 여부 분기:
+   - `is-md-original`: `.md`/`.txt` 원본이면 sidecar 개념 없음, skip.
+   - `not-found`: `${path}.md` 없음 → 원본만 이동.
+   - `dest-conflict`: 대상에 sidecar 이미 존재 → 원본만 이동 + warn.
+   - 정상: sidecar rename.
+4. `registry.recordMove` + `ingested_pages[]` 순회하며 `rewriteSourcePageMeta` 호출 → 각 페이지 frontmatter `vault_path`·`sidecar_vault_path` 갱신. 실패는 warn 로그하고 계속 (원본 이동은 이미 완료).
+5. `saveRegistry`.
+
+**결과 객체**: `{movedOriginal, movedSidecar, sidecarSkipReason?, sourceId?, rewrittenSourcePages[]}`.
+
+증거: `__tests__/move-pair.test.ts` 8 tests green — 핵심 6 시나리오 + 다중 ingested_pages 동시 rewrite + idempotent 이미-대상 no-op.
+
+#### 4.2.3.2 플러그인 호출처 2곳 전환 (S2-3, S2-4)
+
+- `wikey-obsidian/src/commands.ts::runIngest` 내 `autoMoveFromInbox` 분기: `moveFile + updateIngestMapPath` → `movePair(...)` 로 교체. 로그 포맷 `sidecar=true/false [skipReason]` 추가.
+- `wikey-obsidian/src/sidebar-chat.ts` Audit Apply 버튼 Phase 2 이동 경로: `moveFile + updateIngestMapPath` → `movePair(...)` 교체. 동적 import 제거.
+- `saveIngestMap` / `updateIngestMapPath` 함수는 `commands.ts` 에 legacy 로 유지 (ingest 직후 초기 레코드 생성에 여전히 사용) — 단일 릴리스 deprecation 후 Phase 5 에서 제거 예정.
+
+#### 4.2.3.3 `scripts/registry-update.mjs` node CLI (S2-5)
+
+bash ↔ registry 브릿지. `Obsidian 오프라인 상태에서도` `.wikey/source-registry.json` 을 즉시 갱신 (codex High #4 핵심 대응).
+
+**서브커맨드**:
+- `--record-move <id-or-path> <new-vault-path> [<new-sidecar-vault-path>]`
+- `--record-delete <id-or-path>`
+- `--find-by-path <vault-path>`
+- `--find-by-hash <full-sha256>`
+
+atomic write: `renameSync(tmp, REGISTRY_PATH)` 로 partial write 방지. id-or-path 는 직접 id 매칭 → `vault_path` 매칭 → `path_history[]` 매칭 순으로 해결.
+
+수동 smoke: `/tmp/reg-test` 샌드박스에 seed 레코드 → `--record-move` → `--find-by-path (new)` / `--find-by-path (old via history)` 둘 다 JSON 반환 확인.
+
+#### 4.2.3.4 `scripts/classify-inbox.sh --move` pair 지원 (S2-6) + `classify-hint.sh` sidecar 표시 (S2-7)
+
+**classify-inbox.sh 변경**:
+1. 원본 `mv` 후 `${src}.md` 존재하면 대상에 같이 이동 (`dest-conflict` 시 skip + warn).
+2. 최종 위치를 vault-relative 로 변환 (trailing slash·디렉토리/파일 분기 모두 처리) 후 `cd $PROJECT_DIR && node scripts/registry-update.mjs --record-move <rel_src> <rel_dst> <rel_sidecar>` 호출. node 미존재 / registry 파일 없음 / CLI 실패 모두 warn 만 남기고 continue (bash move 는 이미 완료 → reconcile 이 복구 안전망).
+
+**classify-hint.sh 변경**: `${path}.md` sidecar 존재하면 hint 끝에 `(+ sidecar)` 접미. PDF/CAD/기타 분기 모두 표시.
+
+**smoke `scripts/tests/pair-move.smoke.sh`** (2 케이스, 6 assertion):
+- Case 1: pair 이동 (original + sidecar → dest 도달, inbox 에서 제거).
+- Case 2: registry `vault_path` · `sidecar_vault_path` 가 Obsidian 오프라인에서도 즉시 갱신.
+- 실행 결과: **ALL PASS (6/6 assertion)**.
+
+### 4.2.4 Integration 검증
+
+**`__tests__/integration-pair-move.test.ts`** (3 tests, end-to-end):
+
+1. **E2E 단일 소스**: seed ingested state → movePair → 원본·sidecar 이동 + registry vault_path 갱신 + path_history +1 + source 페이지 frontmatter 의 managed 필드 업데이트 + 비관리 컨텐츠 보존.
+2. **multi-page**: 동일 source_id 에 `ingested_pages` 2개 → movePair 후 둘 다 frontmatter rewrite 완료.
+3. **reconcile**: 외부에서 파일 `renameSync` (registry 모름) → `registry.reconcile(walker)` → full-hash 매칭으로 경로 복구 + path_history append.
+
+증거: 3/3 PASS.
+
+### 4.2.5 세션 최종 증거
+
+| 항목 | baseline | 최종 | 증거 |
+|------|----------|------|------|
+| wikey-core tests | 352 | **399** (+47) | `npm test --prefix wikey-core` Test Files 19 passed, Tests 399 passed |
+| Stage 1 단위 | — | 36 (uri 17 + registry 12 + wiki-ops +7) | 각 파일 green |
+| Stage 2 단위 | — | 8 (move-pair) + Integration 3 | green |
+| bash smoke | — | 6/6 assertion | `scripts/tests/pair-move.smoke.sh` ALL PASS |
+| `npm run build` | — | 0 errors (tsc + esbuild production) | log |
+
+**신규/수정 파일**:
+- 신규: `wikey-core/src/uri.ts`, `source-registry.ts`, `__tests__/uri.test.ts`, `__tests__/source-registry.test.ts`, `__tests__/move-pair.test.ts`, `__tests__/integration-pair-move.test.ts`, `scripts/migrate-ingest-map.mjs`, `scripts/registry-update.mjs`, `scripts/tests/pair-move.smoke.sh`, `plan/phase-4-2-plan.md`.
+- 변경: `wikey-core/src/classify.ts` (+movePair 외 4 export), `wiki-ops.ts` (+injectSourceFrontmatter · rewriteSourcePageMeta · SourceFrontmatter 타입), `ingest-pipeline.ts` (+buildV3SourceMeta 헬퍼 · registry upsert · injectSourceFrontmatter 배선), `index.ts` (신규 export 블록), `__tests__/wiki-ops.test.ts` (+7), `wikey-obsidian/src/commands.ts` · `sidebar-chat.ts` (movePair 전환), `scripts/classify-inbox.sh` (pair + registry CLI 호출), `scripts/lib/classify-hint.sh` (sidecar 표시), `scripts/measure-determinism.sh` (registry cleanup), `plan/phase-4-todo.md §4.2` (v3 stage 구조).
+
+### 4.2.6 Stage 3/4 이관 + 호환성
+
+- **Stage 3** (LLM 3/4차 분류 정제, `CLASSIFY_PROVIDER`/`MODEL`, Audit "Re-classify" 토글, CLASSIFY.md 피드백 append): 본 세션 미진입. 다음 세션 착수. Stage 1/2 와 독립이라 순서 선택적.
+- **Stage 4** (vault listener + startup reconcile + Audit hash 판정): 리스크 높음 (double-rename race, debounce tuning). 별도 세션 필수. Stage 4 완료 시 §4.1.1.9 두 번째 체크박스 자동 해소.
+- **호환성**: 현재 `wiki/sources/` 비어있고 `.ingest-map.json` 없음 (fresh vault) → 마이그레이션 실질 무작업. `moveFile` · `saveIngestMap` · `updateIngestMapPath` 는 transitional 로 남김. 경로 기반 API 완전 제거는 Phase 5 §5.3.
+
+---
+
 ## 4.5 운영 · 안정성
 > tag: #ops, #eval
 

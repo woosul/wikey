@@ -231,54 +231,61 @@
 
 ---
 
-## 4.2 분류 및 파일 관리 (inbox → PARA, 이동에 강한 참조)
+## 4.2 분류 및 파일 관리 (inbox → PARA, pair 이동·registry·listener)
 > tag: #workflow, #core
+> 상세 계획: `plan/phase-4-2-plan.md` (v3, 2026-04-22 codex 검증 반영).
+> **v3 핵심 변경**: URI 저장 폐기 → `source_id` + `vault_path` 만 저장. URI 는 view-time derive (`obsidian://open?...` / `file://...`). 번들 id 는 내부 relative path 기반으로 이동 무관 불변.
 
-### 4.2.1 LLM 기반 3차/4차 분류 폴더 생성
+#### 사용자 제약 (2026-04-22)
 
-현재 `wikey-core/src/classify.ts`는 파일명 토큰 매칭으로 Dewey Decimal 3차(10개 대분류)까지 라우팅. 매칭 안 되는 파일은 2차 폴더까지만 이동.
+원본 (`.pdf`/`.xls[x]`/`.hwp[x]`/`.doc[x]`/`.ppt[x]`) + `<원본>.<ext>.md` sidecar 가 생긴 경우, 시스템 자동 이동(auto-classify, Audit Apply, bash `--move`, vault `on('rename')`) 시 반드시 pair 로 함께 이동. 사용자 수동 이동은 예외.
 
-- [ ] **LLM 3차 분류** — 토큰 매칭 실패 시 파일명 + 첫 200자 미리보기를 보고 `300_science`~`900_lifestyle` 중 선택. 자신 없으면 `000_general`로 안전 배치.
-- [ ] **LLM 4차 제품 폴더 제안** — 제품 매뉴얼·CAD 등은 LLM이 파일명에서 제품명 slug 추출(`Kyosho-Mini-Z/`, `DJI-O3-Air-Unit/`) 후 신규 폴더 생성·이동
-- [ ] **Audit 패널 UI**에 "Re-classify with LLM" 토글 — 자동 2차 폴더 결과를 3차/4차까지 확장
-- [ ] **피드백 학습** — 사용자가 분류 결과 수정 시 `raw/CLASSIFY.md` 피드백 로그에 기록 + few-shot 예시로 반영
-- [ ] **비용 관리** — classify 전용 저가 모델(gemini-2.0-flash-lite 등) 지정 가능
+### 4.2.1 Stage 1 — ID & vault_path foundation (registry) — **완료 (2026-04-23)**
 
-### 4.2.2 URI 기반 안정 참조 아키텍처 (PARA 이동에 불변)
+- [x] **S1-1** `wikey-core/src/uri.ts` — `computeFileId(bytes)`, `computeBundleId(entries[])` (번들 내부 relative path 기반), `computeExternalId(uri)`, `buildObsidianOpenUri`, `buildFileUri`, `formatDisplayPath`, `verifyFullHash(prefix, full, bytes)`. vitest **17** (목표 12 초과 달성).
+- [x] **S1-2** `wikey-core/src/source-registry.ts` — `.wikey/source-registry.json` CRUD + `findByIdPrefix` (full-hash verify 내장), `findByPath`, `findByHash`, `upsert`, `recordMove`, `recordDelete`, `restoreTombstone`, `reconcile(walker)`. vitest **12**.
+- [x] **S1-3** `ingest-pipeline.ts` + `wiki-ops.ts` — source 페이지 frontmatter 를 v3 §2.3 포맷(`source_id` + `vault_path` + `sidecar_vault_path` + `hash` + `size` + `first_seen`)으로 작성. registry 기록은 ingest 직후 + 이동 전. URI 필드 저장 X. vitest +**7** (wiki-ops.test.ts 확장, injectSourceFrontmatter 3 + rewriteSourcePageMeta 4).
+- [x] **S1-4** `scripts/migrate-ingest-map.mjs` — `.ingest-map.json` 존재 시 경로 키 → hash 재계산 → registry. **`scripts/measure-determinism.sh` 의 ingest-map 참조도 registry cleanup 으로 교체 완료**.
 
-**배경**: PARA는 파일 활성도에 따라 Resources → Archive 이동이 기본. 현재 wikey는 경로 기반 매핑(`.ingest-map.json`) + 소스 페이지 본문의 원본 경로 참조 → 이동 시 stale.
+### 4.2.2 Stage 2 — Pair move + frontmatter rewrite — **완료 (2026-04-23)**
 
-**결정 (2026-04-19)**: 경로 대신 **URI / 고정 ID 기반 안정 참조**. PARA 이동이 참조에 영향 없도록.
+- [x] **S2-1** `wikey-core/src/classify.ts` — `movePair` async export (기존 `moveFile` 은 legacy 유지). registry 경유 이동 + post-move frontmatter rewrite. vitest **8**.
+- [x] **S2-2** `wikey-core/src/wiki-ops.ts` — `rewriteSourcePageMeta(pagePath, {vault_path, sidecar_vault_path?})` YAML safe-edit (S1-3 과 묶어 구현).
+- [x] **S2-3** 플러그인 `commands.ts` `autoMoveFromInbox` 분기 → `movePair` 전환. `updateIngestMapPath` 호출 제거 (registry 가 대체).
+- [x] **S2-4** 플러그인 `sidebar-chat.ts` Audit Apply → `movePair` 전환.
+- [x] **S2-5** `scripts/registry-update.mjs` 신규 CLI — `--record-move`, `--record-delete`, `--find-by-path`, `--find-by-hash`. atomic write (tmp + renameSync). bash 가 Obsidian 오프라인에서도 registry 즉시 갱신 (codex High #4 반영).
+- [x] **S2-6** `scripts/classify-inbox.sh --move` — pair 감지 후 원본 + sidecar `mv` + `registry-update.mjs --record-move` 호출. trailing slash·directory·file 분기 모두 처리.
+- [x] **S2-7** `scripts/lib/classify-hint.sh` — sidecar 존재 시 힌트에 `(+ sidecar)` 표시.
+- [x] **Integration** `__tests__/integration-pair-move.test.ts` — ingest → movePair → frontmatter rewrite → registry 정합 E2E + reconcile mock. vitest **3**.
+- [x] **Bash smoke** `scripts/tests/pair-move.smoke.sh` — Obsidian 미실행 상태에서도 registry 즉시 갱신 검증. 2 케이스 (6 assertion) 모두 PASS.
 
-#### 4.2.2.1 구현 로드맵
+### 4.2.3 Stage 3 — 분류 정제 (LLM 3/4차, 모델 키, UI, 피드백)
 
-- [ ] **소스 ID 체계** — 불변 ID 부여 (SHA256(content) 또는 UUID)
-  - `.wikey/source-registry.json` — `{id: {current_path, hash, first_seen, ingested_pages[]}}`
-  - 신규 ingest 시 ID 발급, 기존 파일 재감지 시 hash 매칭으로 ID 복구
-- [ ] **wiki/sources 프론트매터 리팩토링**
-  - 기존: `raw/original_path: raw/3_resources/.../file.pdf` (경로 하드코딩)
-  - 신규: `source_id: sha256:abc123... / uri: file:///vault/raw/.../file.pdf`
-  - 본문 `> 원시 소스:` 라인은 UI 표시용
-- [ ] **`.ingest-map.json` → `.wikey/source-registry.json` 교체**
-  - 키: source_id (이동 불변)
-  - 값: `{current_path, hash, source_page, ingested_at}`
-  - 마이그레이션: 기존 경로 키 → hash 기반 id로 rewrite하는 one-shot 스크립트
-- [ ] **파일 이동 감지 + registry 갱신**
-  - `vault.on('rename')` → hash 재계산 없이 경로만 업데이트
-  - `vault.on('modify')` → hash 변경 시 재인제스트 candidate (Audit 표시)
-  - `vault.on('delete')` → registry 항목 tombstone + "원본 삭제됨" 배너
-- [ ] **CLASSIFY.md `.meta.yaml` URI 패턴 확장**
-  - 로컬: `uri: file://vault-relative/path` + `source_id`
-  - 외부: `uri: https://confluence.company.com/...`
-  - 공통 인터페이스로 로컬·외부 모두 처리
-- [ ] **Audit 파이프라인 호환** — 판정 기준 hash 기반 (경로 대신). 이동만 됐을 뿐이면 재인제스트 대상 아님.
-- [ ] **PARA 이동 허용 + 이력 보존** — `path_history[]`에 이동 이력 append (auditing용). Archive 이동 시 wiki/sources에 "아카이브됨" 배너.
+(v2 의 §4.2.1 LLM 파트 흡수)
 
-#### 4.2.2.2 호환성 전략
+- [ ] **S3-1** `classifyWithLLM` 프롬프트 — 4차 제품 slug 힌트 강화 ("기존 폴더 재사용 우선, 없으면 `NNN_topic` 규칙"). vitest 4.
+- [ ] **S3-2** `CLASSIFY_PROVIDER` / `CLASSIFY_MODEL` — `resolveProvider('classify', cfg)` 추가. 미지정 시 `ingest` 승계. vitest 2.
+- [ ] **S3-3** Audit 패널 "Re-classify with LLM" 토글 — 2차만 결정된 row.
+- [ ] **S3-4** CLASSIFY.md 피드백 append — 사용자 dropdown 변경 시 "## 피드백 로그" 섹션에 line append.
 
-- Phase 4 시작 시점에 `.ingest-map.json` → `.wikey/source-registry.json` 일괄 마이그레이션 스크립트 제공
-- wiki/sources 프론트매터 자동 변환 (기존 경로 → hash 계산 후 `source_id` 필드 추가)
-- 경로 기반 접근 API는 한 릴리스 deprecation 후 제거
+### 4.2.4 Stage 4 — Vault listener + startup reconciliation (§4.1.1.9 [ ] 해소 포함)
+
+- [ ] **S4-1** `main.ts` `vault.on('rename')` — registry recordMove + pair 자동 동행. debounce 200ms + expectedRename queue 로 movePair 유래 이벤트 skip (double-move guard).
+- [ ] **S4-2** `vault.on('delete')` — `recordDelete` + source 페이지 "원본 삭제됨" callout.
+- [ ] **S4-3** `main.ts` onload → `registry.reconcile(vault.getFiles())` startup scan — bash/외부 이동 유실분 복구 (codex High #4 이중 안전망).
+- [ ] **S4-4** Audit 파이프라인 hash 기반 판정 — `findByHash(hash) !== null && vault_path 다름` → 재인제스트 제외. 경로 기반 API deprecation warning.
+
+### 4.2.5 호환성 전략
+
+- 현재 `wiki/sources/` 비어있음 (2026-04-22 확인) + `.ingest-map.json` 없음 → 마이그레이션 no-op. S1-4 스크립트는 장래 복구용.
+- `moveFile` 은 Stage 2 에서 deprecated wrapper 로 유지. Phase 5 에 제거.
+- 경로 기반 API (frontmatter `raw_original_path`, Audit 경로 매칭) 는 Stage 4 에서 warning only. 완전 제거는 Phase 5 §5.3.
+
+### 4.2.6 범위 밖 — Phase 5 이관
+
+- 경로 기반 API 완전 제거 → §5.3.
+- CLASSIFY.md `.meta.yaml` 외부 URI 패턴 (Confluence/SharePoint) → §5.7.
+- LLM 피드백 few-shot 자동 재프롬프트 → §5.6.
 
 ---
 

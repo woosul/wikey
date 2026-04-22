@@ -10,9 +10,15 @@ classify_hint() {
   name=$(basename "$path")
   local ext="${name##*.}"
 
+  # §4.2 S2-7: sidecar pair 존재 표시.
+  local sidecar_suffix=""
+  if [ -f "$path" ] && [ -f "${path}.md" ]; then
+    sidecar_suffix=" (+ sidecar)"
+  fi
+
   # Rule 1: .meta.yaml
   if [[ "$name" == *.meta.yaml ]]; then
-    echo "URI 참조 — classification 필드 확인"
+    echo "URI 참조 — classification 필드 확인${sidecar_suffix}"
     return
   fi
 
@@ -34,11 +40,11 @@ classify_hint() {
 
   # Rule 4-7: Extension-based
   case "$ext" in
-    pdf)   echo "3_resources/30_manual/ (PDF 문서)" ;;
+    pdf)   echo "3_resources/30_manual/ (PDF 문서)${sidecar_suffix}" ;;
     md)    echo "3_resources/60_note/ (마크다운 노트)" ;;
-    stl|step|obj|3mf) echo "3_resources/40_cad/ (CAD 파일)" ;;
+    stl|step|obj|3mf) echo "3_resources/40_cad/ (CAD 파일)${sidecar_suffix}" ;;
     c|h|cpp|ino|py)   echo "3_resources/50_firmware/ (소스코드)" ;;
     exe|dll|bin|hex)   echo "3_resources/50_firmware/ (바이너리/펌웨어)" ;;
-    *)     echo "3_resources/ (CLASSIFY.md 참조)" ;;
+    *)     echo "3_resources/ (CLASSIFY.md 참조)${sidecar_suffix}" ;;
   esac
 }

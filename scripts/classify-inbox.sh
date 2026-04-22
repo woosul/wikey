@@ -116,9 +116,53 @@ cmd_move() {
   fi
   mkdir -p "$dst_dir"
 
-  # 이동
+  # 이동 (원본)
   mv "$src" "$dst"
   log_ok "이동 완료: $(basename "$src") → ${dst#${RAW_DIR}/}"
+
+  # §4.2 S2-6: pair — sidecar <src>.md 가 있으면 같이 이동.
+  local sidecar_src="${src}.md"
+  local sidecar_moved=""
+  if [ -f "$sidecar_src" ]; then
+    local dst_base
+    if [ -d "$dst" ]; then
+      dst_base="${dst%/}/$(basename "$src").md"
+    else
+      dst_base="${dst}.md"
+    fi
+    if [ -e "$dst_base" ]; then
+      log_warn "sidecar 대상에 이미 존재 — skip: ${dst_base#${RAW_DIR}/}"
+    else
+      mv "$sidecar_src" "$dst_base"
+      log_ok "sidecar 이동: $(basename "$sidecar_src") → ${dst_base#${RAW_DIR}/}"
+      sidecar_moved="$dst_base"
+    fi
+  fi
+
+  # §4.2 S2-6: registry 즉시 갱신 (Obsidian 오프라인에서도 일관성 유지).
+  # 경로는 vault-relative 로 변환해 registry-update.mjs 에 전달.
+  local rel_src="${src#${PROJECT_DIR}/}"
+  local final_dst
+  if [[ "$dst" == */ ]]; then
+    final_dst="${dst}$(basename "$src")"
+  elif [ -d "$dst" ]; then
+    final_dst="${dst%/}/$(basename "$src")"
+  else
+    final_dst="$dst"
+  fi
+  local rel_dst="${final_dst#${PROJECT_DIR}/}"
+  local rel_sidecar=""
+  if [ -n "$sidecar_moved" ]; then
+    rel_sidecar="${sidecar_moved#${PROJECT_DIR}/}"
+  fi
+  if [ -f "${PROJECT_DIR}/.wikey/source-registry.json" ]; then
+    if command -v node >/dev/null 2>&1; then
+      (cd "$PROJECT_DIR" && node scripts/registry-update.mjs --record-move "$rel_src" "$rel_dst" "$rel_sidecar" >/dev/null 2>&1) \
+        || log_warn "registry 갱신 실패 — Obsidian 재기동 시 reconcile 로 복구됨"
+    else
+      log_warn "node 를 찾을 수 없어 registry 갱신 생략"
+    fi
+  fi
 }
 
 # --- 메인 ---

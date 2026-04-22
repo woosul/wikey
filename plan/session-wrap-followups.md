@@ -1,7 +1,42 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (세션 마무리 — §4.5.1.7.2/7.3 완료, Phase 4/5/6 재편 확정, self-extending wiki analysis 정식 등재)
+> 최신 갱신: 2026-04-23 (§4.2 Stage 1+2 완료 — URI/registry foundation + pair move + frontmatter rewrite)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-23 세션 마무리 — §4.2 Stage 1+2 완료
+
+### ⭐ 다음 세션 최우선: §4.2 Stage 3 → Stage 4 → §4.3 (본체 인제스트)
+
+2026-04-23 세션은 §4.2 Stage 1 (URI/registry foundation) + Stage 2 (pair move + frontmatter rewrite) 완료로 마감. **다음 세션 진입점**은 Stage 3 · Stage 4 — 그 뒤 §4.3 (3-stage prompt override + Provenance tracking + stripBrokenWikilinks) 로 이어진다.
+
+**완료 내역** (detail: `activity/phase-4-result.md §4.2`):
+- plan v1→v2→v3 진화, codex rescue 2차 검증 FAIL gate 6 concern (Critical 2 · High 2 · Medium 3) 전부 반영.
+- 신규: `uri.ts`, `source-registry.ts`, `move-pair.test.ts`, `integration-pair-move.test.ts`, `registry-update.mjs`, `migrate-ingest-map.mjs`, `pair-move.smoke.sh`, `plan/phase-4-2-plan.md`.
+- 변경: `classify.ts (+movePair)`, `wiki-ops.ts (+injectSourceFrontmatter/rewriteSourcePageMeta)`, `ingest-pipeline.ts (buildV3SourceMeta)`, `commands.ts / sidebar-chat.ts (movePair 전환)`, `classify-inbox.sh / classify-hint.sh (pair + sidecar 표시)`, `measure-determinism.sh (registry cleanup)`.
+- 증거: wikey-core 352→**399 PASS (+47)**. bash smoke 6/6. build 0 errors.
+
+### 🔴 Stage 3 — LLM 3/4차 분류 정제 (다음 세션 착수 후보)
+
+- **S3-1** `classifyWithLLM` 프롬프트 — 4차 제품 slug 힌트 강화 ("기존 폴더 재사용 우선, 없으면 `NNN_topic` 규칙"). vitest 4.
+- **S3-2** `CLASSIFY_PROVIDER` / `CLASSIFY_MODEL` — `resolveProvider('classify', cfg)` 추가. 미지정 시 `ingest` 승계. vitest 2.
+- **S3-3** Audit 패널 "Re-classify with LLM" 토글 — 2차만 결정된 row.
+- **S3-4** CLASSIFY.md 피드백 append — 사용자 dropdown 변경 시 "## 피드백 로그" 섹션에 line append.
+
+### 🔴 Stage 4 — Vault listener + startup reconciliation (별도 세션 필수)
+
+- **S4-1** `main.ts` `vault.on('rename')` — registry recordMove + pair 자동 동행. debounce 200ms + expectedRename queue 로 movePair 유래 이벤트 skip (double-move guard).
+- **S4-2** `vault.on('delete')` — `recordDelete` + source 페이지 "원본 삭제됨" callout.
+- **S4-3** `main.ts` onload → `registry.reconcile(vault.getFiles())` startup scan — bash/외부 이동 유실분 복구 (codex High #4 이중 안전망).
+- **S4-4** Audit 파이프라인 hash 기반 판정 — `findByHash(hash) !== null && vault_path 다름` → 재인제스트 제외. 경로 기반 API deprecation warning.
+- 리스크: double-rename race / debounce tuning 이 까다로움. Stage 3 과 같은 세션에 섞지 말 것 권장.
+
+### 📋 이관 대기 (Stage 3/4 이후)
+
+- §4.3 본체 인제스트 — 3-stage prompt override + **§4.3.2 Provenance tracking Part A (frontmatter data) / Part B (쿼리 응답 원본 backlink 렌더링, 2026-04-22 확장 기록)** + stripBrokenWikilinks.
+- §4.1.1.9 두 번째 체크박스 (`vault.on('rename')` sidecar 처리) — Stage 4 에서 자동 해소 예정.
+- 경로 기반 API 완전 제거 · Audit hash 판정 일반화 → Phase 5 §5.3.
 
 ---
 

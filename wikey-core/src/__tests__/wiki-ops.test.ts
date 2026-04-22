@@ -1,7 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { createPage, updateIndex, appendLog, extractWikilinks, normalizeBase, extractFirstSentence, stripBrokenWikilinks } from '../wiki-ops.js'
+import {
+  createPage,
+  updateIndex,
+  appendLog,
+  extractWikilinks,
+  normalizeBase,
+  extractFirstSentence,
+  stripBrokenWikilinks,
+  injectSourceFrontmatter,
+  rewriteSourcePageMeta,
+} from '../wiki-ops.js'
 import type { WikiFS, WikiPage } from '../types.js'
-import type { WrittenPage } from '../wiki-ops.js'
+import type { WrittenPage, SourceFrontmatter } from '../wiki-ops.js'
 
 function createMockFS(files: Record<string, string> = {}): WikiFS {
   const store = new Map(Object.entries(files))
@@ -300,5 +310,112 @@ describe('extractWikilinks', () => {
     const content = '[[esc|Electronic Speed Controller]] and [[fc]]'
     const result = extractWikilinks(content)
     expect(result).toEqual(['esc', 'fc'])
+  })
+})
+
+// ── Phase 4.2 Stage 1 S1-3 / Stage 2 S2-2 ──
+
+const META: SourceFrontmatter = {
+  source_id: 'sha256:a3f2b19c4e8d0f72',
+  vault_path: 'raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf',
+  sidecar_vault_path:
+    'raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf.md',
+  hash: 'a3f2b19c4e8d0f72c9d1e5f6abcdef1234567890abcdef1234567890abcdef12',
+  size: 3634821,
+  first_seen: '2026-04-23T00:00:00.000Z',
+}
+
+describe('injectSourceFrontmatter — v3 format', () => {
+  it('adds frontmatter when content has none', () => {
+    const result = injectSourceFrontmatter('# 제목\n\n본문', META)
+    expect(result).toMatch(/^---\nsource_id: sha256:a3f2b19c4e8d0f72\n/)
+    expect(result).toContain('vault_path: raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf')
+    expect(result).toContain('# 제목')
+  })
+
+  it('preserves non-managed LLM frontmatter keys (title, tags)', () => {
+    const existing = '---\ntitle: PMS 제품소개\ntags: [manual, product]\n---\n\n# 제목\n본문'
+    const result = injectSourceFrontmatter(existing, META)
+    expect(result).toContain('title: PMS 제품소개')
+    expect(result).toContain('tags: [manual, product]')
+    expect(result).toContain('source_id: sha256:a3f2b19c4e8d0f72')
+    // Managed keys are replaced, not duplicated.
+    expect(result.match(/source_id:/g)?.length).toBe(1)
+  })
+
+  it('replaces stale managed keys (old vault_path is dropped)', () => {
+    const stale =
+      '---\nsource_id: sha256:oldoldoldoldoldo\nvault_path: raw/0_inbox/PMS.pdf\nhash: oldhash\n---\n\n본문'
+    const result = injectSourceFrontmatter(stale, META)
+    expect(result).not.toContain('sha256:oldoldoldoldoldo')
+    expect(result).not.toContain('raw/0_inbox/PMS.pdf')
+    expect(result).toContain('source_id: sha256:a3f2b19c4e8d0f72')
+    expect(result).toContain(
+      'vault_path: raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf',
+    )
+  })
+})
+
+describe('rewriteSourcePageMeta — post-move frontmatter patch', () => {
+  const pageContent = `---
+title: PMS 제품소개
+source_id: sha256:a3f2b19c4e8d0f72
+vault_path: raw/0_inbox/PMS_제품소개_R10.pdf
+sidecar_vault_path: raw/0_inbox/PMS_제품소개_R10.pdf.md
+hash: a3f2b19c4e8d0f72...
+size: 100
+first_seen: 2026-04-23T00:00:00.000Z
+---
+
+# 제목
+
+본문`
+
+  it('updates vault_path and sidecar_vault_path only, preserves other fields', () => {
+    const result = rewriteSourcePageMeta(pageContent, {
+      vault_path: 'raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf',
+      sidecar_vault_path:
+        'raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf.md',
+    })
+    expect(result).toContain(
+      'vault_path: raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf',
+    )
+    expect(result).not.toContain('raw/0_inbox/PMS_제품소개_R10.pdf')
+    // Other managed fields preserved.
+    expect(result).toContain('source_id: sha256:a3f2b19c4e8d0f72')
+    expect(result).toContain('hash: a3f2b19c4e8d0f72...')
+    expect(result).toContain('size: 100')
+    expect(result).toContain('title: PMS 제품소개')
+    // Body preserved.
+    expect(result).toContain('# 제목')
+    expect(result).toContain('본문')
+  })
+
+  it('removes sidecar_vault_path when sidecar becomes null', () => {
+    const result = rewriteSourcePageMeta(pageContent, {
+      vault_path: 'raw/3_resources/20_report/PMS_제품소개_R10.pdf',
+      sidecar_vault_path: null,
+    })
+    expect(result).not.toContain('sidecar_vault_path')
+  })
+
+  it('adds sidecar_vault_path when previously absent', () => {
+    const noSidecar = pageContent.replace(/sidecar_vault_path: .*\n/, '')
+    const result = rewriteSourcePageMeta(noSidecar, {
+      vault_path: 'raw/3_resources/30_manual/x.pdf',
+      sidecar_vault_path: 'raw/3_resources/30_manual/x.pdf.md',
+    })
+    expect(result).toContain('sidecar_vault_path: raw/3_resources/30_manual/x.pdf.md')
+  })
+
+  it('idempotent on Korean paths (calling twice yields same output)', () => {
+    const patch = {
+      vault_path: 'raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf',
+      sidecar_vault_path:
+        'raw/3_resources/30_manual/500_natural_science/PMS_제품소개_R10.pdf.md',
+    }
+    const once = rewriteSourcePageMeta(pageContent, patch)
+    const twice = rewriteSourcePageMeta(once, patch)
+    expect(twice).toBe(once)
   })
 })

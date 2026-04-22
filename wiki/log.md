@@ -2,8 +2,19 @@
 title: 활동 로그
 type: log
 created: 2026-04-10
-updated: 2026-04-22
+updated: 2026-04-23
 ---
+
+## [2026-04-23] feat | §4.2 Stage 1+2 — URI/registry foundation + pair move + frontmatter rewrite
+
+- 계획: plan v1→v2→v3 진화 (codex rescue 2차 검증 FAIL gate 6 concern 전부 반영). URI 저장 폐기, `source_id` + `vault_path` 만 저장, URI 는 view-time derive. 번들 id 는 내부 relative path 기반. 64-bit prefix + full-hash verify. bash 가 node CLI 로 registry 즉시 갱신. 계획서: `plan/phase-4-2-plan.md`.
+- 신규 모듈: `wikey-core/src/uri.ts` (computeFileId/BundleId/ExternalId, buildObsidian/FileUri, verifyFullHash, sidecarVaultPath), `source-registry.ts` (CRUD + findByIdPrefix full-hash verify + reconcile walker).
+- frontmatter: `wiki-ops.ts` 에 `injectSourceFrontmatter` (비관리 키 보존) + `rewriteSourcePageMeta` (post-move patch). `ingest-pipeline.ts` 가 `buildV3SourceMeta` 헬퍼로 bytes 에서 id/hash 계산 → frontmatter 주입 + registry upsert.
+- 이동: `classify.ts::movePair` (registry 경유 + post-move frontmatter rewrite, 6 케이스 + 원자성). plugin `commands.ts` autoMoveFromInbox · `sidebar-chat.ts` Audit Apply 둘 다 `movePair` 전환.
+- bash: `scripts/registry-update.mjs` 신규 CLI (`--record-move/delete/find-by-*`, atomic write). `classify-inbox.sh --move` 가 pair + registry CLI 호출. `lib/classify-hint.sh` 에 `(+ sidecar)` 표시.
+- migration: `scripts/migrate-ingest-map.mjs` (no-op 현재) + `scripts/measure-determinism.sh` registry cleanup 블록 교체.
+- 테스트: 352 → **399 PASS (+47)**. uri 17 + source-registry 12 + wiki-ops +7 + move-pair 8 + integration 3. bash smoke 6/6. `npm run build` 0 errors.
+- Stage 3 (LLM 3/4차 분류 정제) · Stage 4 (vault listener + startup reconcile) 다음 세션. 호환성: `wiki/sources/` 비어있음 + `.ingest-map.json` 없음 → 마이그레이션 무작업.
 
 ## [2026-04-22] reset | 초기화 — §4.1.3 실험 baseline 확보
 

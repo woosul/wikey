@@ -67,8 +67,38 @@ export {
   loadClassifyRules,
   clearClassifyRulesCache,
   moveFile,
+  movePair,
 } from './classify.js'
-export type { ClassifyResult, ClassifyLLMDeps } from './classify.js'
+export type { ClassifyResult, ClassifyLLMDeps, MovePairResult, MovePairOptions } from './classify.js'
+export {
+  computeFileId,
+  computeBundleId,
+  computeExternalId,
+  computeFullHash,
+  buildObsidianOpenUri,
+  buildFileUri,
+  formatDisplayPath,
+  verifyFullHash,
+  sidecarVaultPath,
+} from './uri.js'
+export type { BundleEntry } from './uri.js'
+export {
+  loadRegistry,
+  saveRegistry,
+  findById as registryFindById,
+  findByIdPrefix as registryFindByIdPrefix,
+  findByPath as registryFindByPath,
+  findByHash as registryFindByHash,
+  upsert as registryUpsert,
+  recordMove as registryRecordMove,
+  recordDelete as registryRecordDelete,
+  restoreTombstone as registryRestoreTombstone,
+  reconcile as registryReconcile,
+  REGISTRY_PATH,
+} from './source-registry.js'
+export type { SourceRecord, SourceRegistry, PathHistoryEntry, WalkerEntry } from './source-registry.js'
+export { injectSourceFrontmatter, rewriteSourcePageMeta } from './wiki-ops.js'
+export type { SourceFrontmatter } from './wiki-ops.js'
 export {
   validateWiki,
   checkPii,

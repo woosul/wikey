@@ -3,6 +3,99 @@ import type { WikiFS, WikiPage } from './types.js'
 const WIKI_PREFIX = 'wiki/'
 const WIKILINK_RE = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g
 
+// ── Phase 4.2 Stage 1 S1-3 / Stage 2 S2-2 ──
+
+export interface SourceFrontmatter {
+  readonly source_id: string
+  readonly vault_path: string
+  readonly sidecar_vault_path?: string
+  readonly hash: string
+  readonly size: number
+  readonly first_seen: string
+}
+
+const FRONTMATTER_BLOCK = /^---\n([\s\S]*?)\n---\n?/
+
+/**
+ * Inject or normalize v3 source-page frontmatter. Preserves other YAML fields
+ * the LLM produced (title, tags, etc.) and replaces only the managed keys.
+ */
+export function injectSourceFrontmatter(content: string, meta: SourceFrontmatter): string {
+  const managed = buildManagedYaml(meta)
+  const match = content.match(FRONTMATTER_BLOCK)
+  if (!match) {
+    return `---\n${managed}\n---\n\n${content.replace(/^\n+/, '')}`
+  }
+  const preserved = filterManagedKeys(match[1])
+  const body = content.slice(match[0].length)
+  const merged = preserved ? `${preserved}\n${managed}` : managed
+  return `---\n${merged}\n---\n${body.startsWith('\n') ? body : '\n' + body}`
+}
+
+/**
+ * Stage 2 S2-2 — update only vault_path / sidecar_vault_path on an existing page.
+ * Other fields (source_id/hash/size/first_seen/preserved LLM fields) untouched.
+ */
+export function rewriteSourcePageMeta(
+  content: string,
+  patch: { vault_path: string; sidecar_vault_path?: string | null },
+): string {
+  const match = content.match(FRONTMATTER_BLOCK)
+  if (!match) return content
+  const lines = match[1].split('\n')
+  const keep: string[] = []
+  for (const line of lines) {
+    if (/^\s*vault_path\s*:/.test(line)) continue
+    if (/^\s*sidecar_vault_path\s*:/.test(line)) continue
+    keep.push(line)
+  }
+  keep.push(`vault_path: ${yamlString(patch.vault_path)}`)
+  if (patch.sidecar_vault_path) {
+    keep.push(`sidecar_vault_path: ${yamlString(patch.sidecar_vault_path)}`)
+  }
+  const body = content.slice(match[0].length)
+  return `---\n${keep.join('\n')}\n---\n${body.startsWith('\n') ? body : '\n' + body}`
+}
+
+function buildManagedYaml(m: SourceFrontmatter): string {
+  const lines: string[] = [
+    `source_id: ${m.source_id}`,
+    `vault_path: ${yamlString(m.vault_path)}`,
+  ]
+  if (m.sidecar_vault_path) lines.push(`sidecar_vault_path: ${yamlString(m.sidecar_vault_path)}`)
+  lines.push(`hash: ${m.hash}`)
+  lines.push(`size: ${m.size}`)
+  lines.push(`first_seen: ${m.first_seen}`)
+  return lines.join('\n')
+}
+
+const MANAGED_KEYS = new Set([
+  'source_id',
+  'vault_path',
+  'sidecar_vault_path',
+  'hash',
+  'size',
+  'first_seen',
+])
+
+function filterManagedKeys(yaml: string): string {
+  return yaml
+    .split('\n')
+    .filter((line) => {
+      const k = line.match(/^\s*([A-Za-z0-9_]+)\s*:/)
+      if (!k) return true
+      return !MANAGED_KEYS.has(k[1])
+    })
+    .join('\n')
+    .trim()
+}
+
+function yamlString(s: string): string {
+  // Quote when the string contains yaml-sensitive characters; otherwise leave bare.
+  if (/[:#@&*!|>'"%`\t]/.test(s) || /^\s|\s$/.test(s)) return JSON.stringify(s)
+  return s
+}
+
 export async function createPage(
   wikiFS: WikiFS,
   page: WikiPage,

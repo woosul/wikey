@@ -221,7 +221,25 @@ async function cleanupForRerun(newFiles) {
     for (const f of newFiles.c) try { fs.unlinkSync(path.join(basePath, 'wiki/concepts', f)) } catch (_e) {}
     for (const f of newFiles.s) try { fs.unlinkSync(path.join(basePath, 'wiki/sources', f)) } catch (_e) {}
   }
-  // ingest-map: remove this source's entry (keyed by path, which may drift after move)
+  // §4.2 Stage 1 S1-4: source-registry cleanup (replaces legacy .ingest-map.json handling).
+  // Remove registry entries that reference this source by vault_path or historical path.
+  try {
+    const m = JSON.parse(await adapter.read('.wikey/source-registry.json'))
+    let changed = false
+    for (const id of Object.keys(m)) {
+      const r = m[id]
+      const vp = r && r.vault_path
+      const inHistory = Array.isArray(r && r.path_history) && r.path_history.some(
+        (h) => h && (h.vault_path === SOURCE_PATH || (h.vault_path || '').endsWith('/' + SOURCE_NAME)),
+      )
+      if (vp === SOURCE_PATH || (typeof vp === 'string' && vp.endsWith('/' + SOURCE_NAME)) || inHistory) {
+        delete m[id]
+        changed = true
+      }
+    }
+    if (changed) await adapter.write('.wikey/source-registry.json', JSON.stringify(m, null, 2))
+  } catch (_e) {}
+  // Legacy ingest-map cleanup retained temporarily for transitional runs.
   try {
     const m = JSON.parse(await adapter.read('wiki/.ingest-map.json'))
     let changed = false

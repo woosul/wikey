@@ -349,7 +349,7 @@ export async function classifyFileAsync(
 }
 
 /**
- * inbox 파일을 대상 폴더로 이동
+ * inbox 파일을 대상 폴더로 이동 (legacy — Phase 4.2 부터는 movePair 권장).
  */
 export function moveFile(basePath: string, sourcePath: string, destDir: string): void {
   const { join, basename } = require('node:path') as typeof import('node:path')
@@ -360,4 +360,129 @@ export function moveFile(basePath: string, sourcePath: string, destDir: string):
 
   const name = basename(sourcePath)
   renameSync(join(basePath, sourcePath), join(fullDest, name))
+}
+
+// ─────────────────────────────────────────────────────────────
+//  Phase 4.2 Stage 2 S2-1 — movePair (pair-aware move).
+// ─────────────────────────────────────────────────────────────
+
+import {
+  loadRegistry,
+  saveRegistry,
+  findByPath as registryFindByPath,
+  recordMove as registryRecordMove,
+} from './source-registry.js'
+import { rewriteSourcePageMeta } from './wiki-ops.js'
+
+export interface MovePairResult {
+  readonly movedOriginal: boolean
+  readonly movedSidecar: boolean
+  readonly sidecarSkipReason?: 'not-found' | 'dest-conflict' | 'is-md-original'
+  readonly sourceId?: string
+  readonly rewrittenSourcePages: readonly string[]
+}
+
+export interface MovePairOptions {
+  readonly basePath: string
+  readonly sourceVaultPath: string
+  readonly destDir: string
+  readonly wikiFS: WikiFS
+}
+
+export async function movePair(opts: MovePairOptions): Promise<MovePairResult> {
+  const { join, basename, dirname } = require('node:path') as typeof import('node:path')
+  const { renameSync, mkdirSync, existsSync, statSync } = require('node:fs') as typeof import('node:fs')
+
+  const destDir = opts.destDir.endsWith('/') ? opts.destDir : `${opts.destDir}/`
+  const sourceFullPath = join(opts.basePath, opts.sourceVaultPath)
+  const name = basename(opts.sourceVaultPath)
+  const destFullDir = join(opts.basePath, destDir)
+  const destFullPath = join(destFullDir, name)
+
+  // Idempotent guard: if already at dest, nothing to do.
+  if (sourceFullPath === destFullPath) {
+    return { movedOriginal: false, movedSidecar: false, rewrittenSourcePages: [] }
+  }
+
+  if (!existsSync(sourceFullPath)) {
+    return { movedOriginal: false, movedSidecar: false, rewrittenSourcePages: [] }
+  }
+  const isDir = statSync(sourceFullPath).isDirectory()
+  mkdirSync(destFullDir, { recursive: true })
+
+  // Registry lookup before the move so we know the associated pages.
+  const registry = await loadRegistry(opts.wikiFS)
+  const lookup = registryFindByPath(registry, opts.sourceVaultPath)
+
+  // Move original
+  renameSync(sourceFullPath, destFullPath)
+  const newOriginalVaultPath = destDir + name
+
+  let movedSidecar = false
+  let sidecarSkipReason: MovePairResult['sidecarSkipReason'] | undefined
+  let newSidecarVaultPath: string | undefined
+
+  if (isDir) {
+    sidecarSkipReason = undefined // folder bundles have no sidecar
+  } else if (isMdOriginal(name)) {
+    sidecarSkipReason = 'is-md-original'
+  } else {
+    const sidecarSource = sourceFullPath + '.md'
+    const sidecarDest = destFullPath + '.md'
+    if (!existsSync(sidecarSource)) {
+      sidecarSkipReason = 'not-found'
+    } else if (existsSync(sidecarDest)) {
+      sidecarSkipReason = 'dest-conflict'
+    } else {
+      renameSync(sidecarSource, sidecarDest)
+      movedSidecar = true
+      newSidecarVaultPath = newOriginalVaultPath + '.md'
+    }
+  }
+
+  const rewrittenPages: string[] = []
+  let updatedRegistry = registry
+  let sourceId: string | undefined
+
+  if (lookup) {
+    sourceId = lookup.id
+    updatedRegistry = registryRecordMove(
+      registry,
+      lookup.id,
+      newOriginalVaultPath,
+      newSidecarVaultPath ?? (movedSidecar ? undefined : lookup.record.sidecar_vault_path),
+    )
+
+    // Rewrite frontmatter on every ingested source page.
+    for (const pagePath of lookup.record.ingested_pages) {
+      try {
+        const content = await opts.wikiFS.read(pagePath)
+        const rewritten = rewriteSourcePageMeta(content, {
+          vault_path: newOriginalVaultPath,
+          sidecar_vault_path: newSidecarVaultPath ?? null,
+        })
+        if (rewritten !== content) {
+          await opts.wikiFS.write(pagePath, rewritten)
+        }
+        rewrittenPages.push(pagePath)
+      } catch (err) {
+        console.warn(`[movePair] rewrite failed for ${pagePath}: ${(err as Error).message}`)
+      }
+    }
+  }
+
+  await saveRegistry(opts.wikiFS, updatedRegistry)
+
+  return {
+    movedOriginal: true,
+    movedSidecar,
+    sidecarSkipReason,
+    sourceId,
+    rewrittenSourcePages: rewrittenPages,
+  }
+}
+
+function isMdOriginal(filename: string): boolean {
+  const lower = filename.toLowerCase()
+  return lower.endsWith('.md') || lower.endsWith('.txt')
 }

@@ -1,6 +1,6 @@
 import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
-import { query, resolveProvider, classifyFile, classifyFileAsync, moveFile, fetchModelList } from 'wikey-core'
+import { query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair, fetchModelList } from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
 import type { IngestRunResult } from './commands'
 
@@ -1835,13 +1835,18 @@ Click [[page name]] in answers to navigate to the wiki page.
           rowSpinner = null
         }
 
-        // Phase 2: Move to PARA only on success, then update ingest-map
+        // Phase 2: §4.2 S2-4 — movePair 로 원본+sidecar 동반 이동 + registry 갱신 + frontmatter rewrite.
         if (result.success) {
           try {
-            moveFile(basePath, ingestPath, fileDest)
-            const destFull = `${fileDest.replace(/\/+$/, '')}/${name}`
-            const { updateIngestMapPath } = await import('./commands')
-            updateIngestMapPath(basePath, ingestPath, destFull)
+            const moveResult = await movePair({
+              basePath,
+              sourceVaultPath: ingestPath,
+              destDir: fileDest,
+              wikiFS: this.plugin.wikiFS,
+            })
+            console.info(
+              `[Wikey] post-ingest movePair: ${ingestPath} → ${fileDest} sidecar=${moveResult.movedSidecar}${moveResult.sidecarSkipReason ? ` [${moveResult.sidecarSkipReason}]` : ''}`,
+            )
           } catch (err) {
             console.warn('[Wikey] post-ingest move failed:', name, err)
           }
