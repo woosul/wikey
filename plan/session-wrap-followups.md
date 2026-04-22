@@ -1,11 +1,73 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (§4.5.1.5 측정 세션 완료 — 30-run Total CV 24.3%, §4.5.1.6 승격)
+> 최신 갱신: 2026-04-22 (§4.5.1.6 구현 + 10-run 완료 CV 7.2%, 30-run 백그라운드 진행 중)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-22 §4.5.1.5 측정 세션 완료 — §4.5.1.6 (LLM 수준 variance + canonicalizer 3차) 승격
+## 2026-04-22 §4.5.1.6 세션 — determinism + canonicalizer 3차 (CV 24.3%→7.2% on 10-run)
+
+### ⭐ 다음 세션 시작점
+
+**§4.5.1.6 구현 완료** (§4.5.1.6.1/3/4):
+- **determinism flag**: `WIKEY_EXTRACTION_DETERMINISM` config → `temperature=0 + seed=42` 를 Gemini summary/extract/canonicalize 호출에 주입. Obsidian 플러그인 `extractionDeterminism` setting + measure-determinism.sh `-d` 플래그.
+- **SLUG_ALIASES 3차 확장** (5→20): alimtalk 4-variant, ERP/SCM/MES/BOM/PoP/RESTful/TCP-IP/MQTT spelled-out variants → canonical.
+- **FORCED_CATEGORIES 3차 확장** (3→13): ERP/SCM/MES/PLM/APS/전자결재/SSO/TCP-IP/VPN/BOM pin. SLUG_ALIASES → pin chain 으로 canonical axis 수렴.
+- **Tests**: 315 PASS (290 → +25). Build 0 errors.
+
+**§4.5.1.6.2 10-run 측정 완료**:
+- Total CV **24.3% → 7.2%** (−17.1pp, 상대 **−70.4%**). Phase A 목표 <15% 및 Phase B 목표 <10% 모두 달성.
+- Entities CV 36.4% → 13.9%, Concepts CV 31.1% → 28.9%.
+- Core entities 8% → **58%** (7.7x), core concepts 9% → **50%** (5.9x).
+- Union 사이즈 급감: entities 40→31, concepts 47→22 (alias 수렴 효과).
+- 9/10 run 성공 (1 timeout 10분). Time/run mean 326.9s (baseline 336.9s, 유사).
+- 산출물: `activity/phase-4-5-1-6-pms-10run-determinism-2026-04-22.md`.
+
+**§4.5.1.6.6 30-run 최종 측정 진행 중** (백그라운드):
+- 출력: `activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md`
+- 예상 완료 시각: 시작 후 ~3시간 (30 × ~5.5분). 이 세션 종료 전 통합 예정.
+
+### 🟡 다음 세션 차순위 (§4.5.1.6 30-run 결과에 따라)
+
+1. **§4.5.1.6.5 Route FULL vs SEGMENTED** — 30-run CV 가 <10% 유지 시 diagnostic 가치 낮음 → §4.5.1.7 으로 이관. SEGMENTED 실행 조건: Ollama qwen3:8b 로 provider 전환 후 10-run (수동 비교).
+2. **§4.5.1.7 후보 — variance 분해 측정** — determinism/alias/pin 3 개를 독립 토글해 기여분 분리. 분해 방법: 3 개 조합 (off/on) 행렬 중 4 points 만 (all-on, all-off, det-only, canon-only) 측정.
+3. **§4.2 URI 기반 안정 참조** — `.ingest-map.json` → `.wikey/source-registry.json` (hash 키). wiki/sources 프론트매터 `source_id` 필드 추가. `§4.1.1.9 vault rename/delete listener` 합동 구현.
+4. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
+
+### 🟢 저우선 / 보류 이관
+
+- **log.md "엔티티/개념 생성" 문구 불일치** — `logEntry` 가 LLM 원본 출력 (pin 적용 전) 이므로 FORCED_CATEGORIES 로 이동된 slug 는 파일 위치 ↔ log 문구가 엇갈림. cosmetic 이슈, 파일 위치는 정확. 개선 방식: canonicalizer 에서 pin 후 log body 를 결정적으로 재생성.
+- **BOM 축 재분할 검토** — §4.5.1.6.3 에서 eBOM/mBOM/engineering-BOM 등을 `bill-of-materials` 로 모두 collapse. 실무상 eBOM/mBOM 구분 필요 시 re-split 검토.
+- **`scripts/cache-stats.sh`** — `~/.cache/wikey/convert/index.json` 직접 열람 가능하므로 우선순위 낮음.
+- **§4.1.1.5 `ps aux` 실측 검증** — 별도 security audit 세션.
+- **Ollama Route SEGMENTED 병렬화 (`Promise.all`)** — 별도 세션.
+- **Canonicalizer prompt 개선** — §4.5.1.7 후보.
+
+### 기술 부채 · 메모
+
+- **§4.5.1.6 10-run run10 timeout** — 10분 cap 초과로 1/10 실패. 30-run 에서 재현 빈도 관찰 중. provisional 가설: Gemini quota/latency spike. 재발 빈번 시 script 의 per-run timeout 을 15-20분 으로 상향 검토.
+- **`log_entry` axis 불일치 (위 cosmetic)** — canonicalizer.ts `assembleCanonicalResult` 의 `logEntry: raw.log_entry` 는 LLM 원본. pin 후 재구성 방식: `entities + concepts` 목록을 결정적으로 포맷 (현 wiki-ops.ts `appendLog` 패턴 참조).
+- **`appendSectionTOCToSource` idempotency** — 재인제스트 시 기존 `## 섹션 인덱스` 블록을 regex 로 제거 후 재부착. source 페이지에 사용자가 수동으로 추가한 section 이 있으면 덮일 수 있음 (현재 상정 안 함).
+
+### 참고 명령
+
+```bash
+# 현재 코드베이스 상태
+npm run build           # wikey-core tsc + wikey-obsidian esbuild, 0 errors
+npm test                # 315 tests PASS
+
+# 이번 세션 신규/수정 파일
+git log --stat HEAD~1..HEAD
+
+# 측정 재실행
+./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10 -d
+./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 30 -d \
+  -o activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md
+```
+
+---
+
+## 2026-04-22 §4.5.1.5 측정 세션 완료 (이전)
 
 ### ⭐ 다음 세션 시작점
 
@@ -17,64 +79,7 @@
 - **측정 infra 개선**: `scripts/measure-determinism.sh` panel refresh 패치 (`selectPanel` re-click guard 우회 — audit→chat→audit routing)
 - **산출물**: `activity/phase-4-5-1-5-pms-30run-2026-04-22.md` (30-run 원본), `activity/phase-4-result.md §4.5.1.5.11~.14`
 
-### 🔴 최우선 다음 작업: §4.5.1.6 (LLM 수준 variance + canonicalizer 3차)
-
-**목표**: Total CV 24.3% → **<15% (determinism 적용 후)** → **<10% (canonicalizer 3차 적용 후)**
-
-**하위 과제** (`plan/phase-4-todo.md §4.5.1.6`):
-
-1. **§4.5.1.6.1** — `wikey-core/src/llm-client.ts` 에 `extractionDeterminism` 플래그 + Gemini `generationConfig.temperature=0 + seed=42` 옵션 (TDD)
-2. **§4.5.1.6.2** — determinism=on 조건 10-run 재측정 → temperature/seed 기여분 정량
-3. **§4.5.1.6.3** — `canonicalize.ts SLUG_ALIASES` 3차 확장:
-   - `allim-talk`, `kakao-alimtalk` → `alimtalk`
-   - `erp-system`, `enterprise-resource-planning-system` → `enterprise-resource-planning`
-   - `supply-chain-management-system` → `supply-chain-management`
-   - `point-of-production-system` → `manufacturing-execution-system`
-   - `e-bom`, `e-bill-of-materials`, `electronic-bill-of-materials`, `engineering-bill-of-materials` → `bill-of-materials` (축 분리 재검토)
-   - `electronic-approval-system` → `electronic-approval`
-4. **§4.5.1.6.4** — `FORCED_CATEGORIES` 강화: 동일 slug 가 E/C pool 양쪽 등장 시 axis pin (run-local 1-pass → canonical resolution)
-5. **§4.5.1.6.5** — Route FULL vs SEGMENTED 10-run 분리 비교 (섹션 분할의 variance 증폭 효과 분리)
-6. **§4.5.1.6.6** — 개선 후 30-run 재측정 → 최종 CV 확정
-
-**선행 체크**:
-- Obsidian `--remote-debugging-port=9222 --remote-allow-origins='*'` 기동 상태 유지
-- `.ingest-map.json` clean (§4.5.1.5.12 의 cleanup 로직이 마지막 run 뒤 자동 정리)
-
-### 🟡 차순위 작업
-
-1. **§4.2 URI 기반 안정 참조** — `.ingest-map.json` → `.wikey/source-registry.json` (hash 키). wiki/sources 프론트매터 `source_id` 필드 추가. `§4.1.1.9 vault rename/delete listener` 합동 구현.
-2. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
-3. **§4.5.1.5.7~.9 실험 2-4** (ablation 2-4 infra 보강) — Extraction-only / Canon-only / seed+temp=0 의 별도 Node helper 설계. §4.5.1.6.1 과 부분 겹침, 합쳐서 진행 가능.
-
-### 🟢 저우선 / 보류 이관
-
-- **`scripts/cache-stats.sh`** — `~/.cache/wikey/convert/index.json` 직접 열람 가능하므로 우선순위 낮음.
-- **§4.1.1.5 `ps aux` 실측 검증** — 별도 security audit 세션.
-- **Ollama Route SEGMENTED 병렬화 (`Promise.all`)** — 별도 세션.
-- **Canonicalizer prompt 개선** — §4.5.1.7 후보.
-
-### 기술 부채 · 메모
-
-- **§4.5.1.5 v2 구현의 실측 검증 필요** — 빌드 + 테스트는 통과했지만 실제 Obsidian에서 end-to-end ingest 1회 이상 수동 검증 권장 (ablation 전에 sanity check). 특히 Route SEGMENTED 경로는 Ollama 환경 필요.
-- **Route FULL 의 `extractMentions(full-doc)` 프롬프트** — 현재 chunk 용으로 설계된 프롬프트 ("이 문서 청크에서 ... 추출") 그대로 사용. 전체 문서 투입 시에도 작동하지만 "청크" 워딩이 LLM 에 영향줄 수 있음 → v2.1 에서 프롬프트 분기 검토.
-- **`appendSectionTOCToSource` idempotency** — 재인제스트 시 기존 `## 섹션 인덱스` 블록을 regex 로 제거 후 재부착. source 페이지에 사용자가 수동으로 추가한 section 이 있으면 덮일 수 있음 (현재 상정 안 함).
-
-### 참고 명령
-
-```bash
-# 현재 코드베이스 상태
-npm run build:core      # tsc 0 errors
-npm run build:obsidian  # esbuild 0 errors  
-npm test                # 290/290 PASS
-
-# 이번 세션 신규 파일
-ls wikey-core/src/section-index.ts wikey-core/src/__tests__/{section-index,provider-budgets,source-toc-append}.test.ts
-cat plan/phase-4-change-phase-abc.md     # v2 설계 (24KB)
-cat scripts/ablation-ingest.sh           # 측정 스크립트
-
-# 측정 세션
-ls scripts/measure-determinism.sh scripts/ablation-ingest.sh
-```
+→ 후속 작업으로 §4.5.1.6 신규 생성 (위 섹션 참조).
 
 ---
 
