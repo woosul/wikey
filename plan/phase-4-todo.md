@@ -259,21 +259,53 @@
 - [x] **Integration** `__tests__/integration-pair-move.test.ts` — ingest → movePair → frontmatter rewrite → registry 정합 E2E + reconcile mock. vitest **3**.
 - [x] **Bash smoke** `scripts/tests/pair-move.smoke.sh` — Obsidian 미실행 상태에서도 registry 즉시 갱신 검증. 2 케이스 (6 assertion) 모두 PASS.
 
-### 4.2.3 Stage 3 — 분류 정제 (LLM 3/4차, 모델 키, UI, 피드백)
+### 4.2.3 Stage 3 — 분류 정제 (LLM 3/4차, 모델 키, UI, 피드백) — **다음 세션 후보**
 
-(v2 의 §4.2.1 LLM 파트 흡수)
+(v2 의 §4.2.1 LLM 파트 흡수. Stage 1/2 와 독립 — 단독 진입 가능. 상세 설계: `plan/phase-4-2-plan.md §4` + `activity/phase-4-result.md §4.2.7`.)
 
-- [ ] **S3-1** `classifyWithLLM` 프롬프트 — 4차 제품 slug 힌트 강화 ("기존 폴더 재사용 우선, 없으면 `NNN_topic` 규칙"). vitest 4.
-- [ ] **S3-2** `CLASSIFY_PROVIDER` / `CLASSIFY_MODEL` — `resolveProvider('classify', cfg)` 추가. 미지정 시 `ingest` 승계. vitest 2.
-- [ ] **S3-3** Audit 패널 "Re-classify with LLM" 토글 — 2차만 결정된 row.
-- [ ] **S3-4** CLASSIFY.md 피드백 append — 사용자 dropdown 변경 시 "## 피드백 로그" 섹션에 line append.
+- [ ] **S3-1** `classifyWithLLM` 프롬프트 — 4차 제품 slug 힌트 강화 (vitest 4)
+  - 현재 프롬프트는 Dewey 10 대분류까지만 명시. 4차(제품 slug) 가이드 부재로 LLM 이 매번 다른 slug 제안 → 폴더 난립.
+  - 추가 지시문: "대상 부모 폴더(2차+3차) 아래의 기존 `NNN_topic` 폴더가 있으면 **재사용 우선**. 파일명·키워드가 기존 slug 에 매칭 안 될 때만 `NNN_topic` 규칙으로 새 slug 제안 — 영문 kebab 또는 한글, 3~20자, 숫자 prefix 없음."
+  - 출력 스키마 무변경 (`{destination, reason}`).
+  - 호출 전 `wikiFS.list(parent)` 로 기존 slug 목록을 프롬프트 컨텍스트에 inject.
+  - 테스트: (a) 기존 slug 재사용, (b) 신규 slug 생성, (c) 2차 fallback, (d) JSON 파싱 실패.
+- [ ] **S3-2** `CLASSIFY_PROVIDER` / `CLASSIFY_MODEL` 설정 키 (vitest 2)
+  - `types.ts WikeyConfig` 에 `WIKEY_CLASSIFY_PROVIDER?: string`, `WIKEY_CLASSIFY_MODEL?: string` 추가.
+  - `config.ts resolveProvider`: `'classify'` 케이스 추가 — 지정되면 사용, 미지정 시 `resolveProvider('ingest', cfg)` 그대로 승계.
+  - `wikey.conf` 주석 블록: "classify 는 파일명+경로만 보므로 `gemini-2.0-flash-lite` / `gpt-4o-mini` 같은 저가 모델로 충분. 미지정 시 ingest 모델 사용."
+  - 테스트: (a) 미지정 → ingest 승계, (b) 명시 → 지정값 사용.
+- [ ] **S3-3** Audit 패널 "Re-classify with LLM" 토글
+  - `sidebar-chat.ts` Audit row 렌더링에서 `needsThirdLevel=true` (2차만 결정된) row 에만 체크박스 노출.
+  - 체크 상태는 row 단위 로컬 (모달 재오픈 시 초기화).
+  - Apply 직전 체크된 row 는 `classifyFileAsync` 재호출 (LLM), dropdown 값을 새 destination 으로 override.
+  - 실패 시 warn + 기존 dropdown 값 유지.
+- [ ] **S3-4** CLASSIFY.md 피드백 append
+  - `sidebar-chat.ts` Apply 직전, dropdown 값이 LLM 제안값과 다르면 append.
+  - `raw/CLASSIFY.md` 말단에 `## 피드백 로그` 섹션이 없으면 생성 + append `- YYYY-MM-DD <filename> → <user-choice> (LLM: <llm-choice>, 사유: <reason>)`.
+  - 동일 파일 재호출 시 중복 append 방지 (마지막 엔트리 hash 비교).
+  - few-shot 재주입은 Phase 5 §5.6. 본 작업은 append only.
 
-### 4.2.4 Stage 4 — Vault listener + startup reconciliation (§4.1.1.9 [ ] 해소 포함)
+### 4.2.4 Stage 4 — Vault listener + startup reconciliation (§4.1.1.9 [ ] 해소 포함) — **별도 세션 필수**
 
-- [ ] **S4-1** `main.ts` `vault.on('rename')` — registry recordMove + pair 자동 동행. debounce 200ms + expectedRename queue 로 movePair 유래 이벤트 skip (double-move guard).
-- [ ] **S4-2** `vault.on('delete')` — `recordDelete` + source 페이지 "원본 삭제됨" callout.
-- [ ] **S4-3** `main.ts` onload → `registry.reconcile(vault.getFiles())` startup scan — bash/외부 이동 유실분 복구 (codex High #4 이중 안전망).
-- [ ] **S4-4** Audit 파이프라인 hash 기반 판정 — `findByHash(hash) !== null && vault_path 다름` → 재인제스트 제외. 경로 기반 API deprecation warning.
+리스크 포인트 (double-rename race / debounce tuning / Obsidian API 특성) 많음. Stage 3 과 섞지 말 것. 상세 설계: `plan/phase-4-2-plan.md §5` + `activity/phase-4-result.md §4.2.7`.
+
+- [ ] **S4-1** `main.ts` `vault.on('rename', (file, oldPath) => …)`
+  - registry `findByPath(oldPath)` → `recordMove(id, file.path)` + `path_history` append + `ingested_pages` frontmatter rewrite.
+  - **Pair 자동 동행**: 사용자가 Obsidian UI 에서 원본만 rename 한 경우 `file.path + '.md'` 사이드카도 즉시 rename (`vault.rename`). 사이드카가 없으면 skip.
+  - **Double-move guard**: movePair 가 발행 예정 rename 경로를 `plugin.expectedRenames` Map (key=newPath, value=timestamp) 에 등록. 리스너는 큐 매칭 시 소비(delete) + skip. 200ms debounce 로 renames 연속 처리.
+- [ ] **S4-2** `vault.on('delete')`
+  - `registry.recordDelete(id)` → source 페이지에 `> [!warning] 원본 삭제됨 (YYYY-MM-DD)` callout append.
+  - Obsidian `.trash/` 로 이동된 경우는 rename 이벤트 먼저 → delete 이벤트 순으로 발생 → expectedRename 큐에서 처리 가능 여부 확인.
+  - 파일 재등장 시 (onload reconcile) `restoreTombstone` 자동 호출.
+- [ ] **S4-3** `main.ts` onload → `registry.reconcile(walker)` startup scan
+  - `walker = async () => { const files = plugin.app.vault.getFiles(); return files.map(f => ({ vault_path: f.path, bytes: await readBytes(f) })) }`.
+  - registry 의 각 레코드 `vault_path` 를 현재 fs 와 비교. 매칭되는 hash 의 파일이 다른 경로에 있으면 `recordMove`. 누락 (hash 도 없음) 은 `recordDelete` (tombstone).
+  - bash/Finder 오프라인 이동 유실분 복구 (codex High #4 이중 안전망).
+  - 대용량 볼트 대응: 파일 수 > 500 시 worker 분할 또는 incremental hashing (mtime 기반 skip).
+- [ ] **S4-4** Audit 파이프라인 hash 기반 "이동만 됨" 판정
+  - `scripts/audit-ingest.py` + `ingest-pipeline.ts` 에서 source 비교 시 hash 우선: `registry.findByHash(hash) !== null && vault_path 다름` → 재인제스트 제외, registry 의 `vault_path` 만 갱신.
+  - 경로 기반 API 호출부에 `deprecation warning` 로그 추가 (1회만). 완전 제거는 Phase 5 §5.3.
+  - **Stage 4 완료와 동시에 §4.1.1.9 두 번째 체크박스 (vault rename/delete listener) 자동 해소**.
 
 ### 4.2.5 호환성 전략
 

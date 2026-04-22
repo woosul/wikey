@@ -862,6 +862,53 @@ atomic write: `renameSync(tmp, REGISTRY_PATH)` 로 partial write 방지. id-or-p
 - **Stage 4** (vault listener + startup reconcile + Audit hash 판정): 리스크 높음 (double-rename race, debounce tuning). 별도 세션 필수. Stage 4 완료 시 §4.1.1.9 두 번째 체크박스 자동 해소.
 - **호환성**: 현재 `wiki/sources/` 비어있고 `.ingest-map.json` 없음 (fresh vault) → 마이그레이션 실질 무작업. `moveFile` · `saveIngestMap` · `updateIngestMapPath` 는 transitional 로 남김. 경로 기반 API 완전 제거는 Phase 5 §5.3.
 
+### 4.2.7 Stage 3/4 잔여 작업 상세 설계 (다음 세션용 참조)
+
+본 섹션은 Stage 1+2 세션 종료 시점에 Stage 3/4 에 대해 결정된 설계 메모. 실제 구현 시 `plan/phase-4-todo.md §4.2.3/§4.2.4` + `plan/phase-4-2-plan.md §4/§5` 와 교차 참조.
+
+#### 4.2.7.1 Stage 3 구현 포인트 (단독 세션 가능, 예상 ~3h)
+
+- **S3-1 프롬프트 4차 slug 힌트**: `classifyWithLLM` 호출 직전 `wikiFS.list(parent2nd3rd)` 로 기존 NNN_topic 폴더 목록을 뽑아 프롬프트 컨텍스트에 inject. LLM 이 기존 목록을 보고 재사용 결정. hallucination guard: "목록에 없는 slug 를 제안할 때는 reason 에 이유 명시". 테스트는 mock LLM 으로 4 케이스 (재사용·신규·2차 fallback·파싱 실패).
+- **S3-2 classify 모델 키**: `resolveProvider('classify', cfg)` 추가는 기존 `resolveProvider` 함수의 case 확장 — `ingest` / `lint` / `summarize` 와 동일 패턴. 실제 LLM 호출은 `classify.ts::classifyWithLLM` 내부만 변경. `wikey.conf` 주석 블록은 기존 `INGEST_PROVIDER` 인접에 배치.
+- **S3-3 Audit Re-classify 토글**: `sidebar-chat.ts` Audit row 렌더링에 checkbox DOM 추가. row 는 `wikey-audit-row` 클래스. `needsThirdLevel` 플래그는 `classifyFile(name, isDir).needsThirdLevel` 로 판정 (이미 export 됨). checkbox 이벤트 리스너에서 row 의 데이터-uuid 를 키로 `reclassifyMap: Map<string, boolean>` 에 저장. Apply 버튼의 plan 생성 루프에서 해당 row 는 `classifyFileAsync` 재호출 경로로 분기.
+- **S3-4 CLASSIFY.md 피드백 append**: sidebar-chat.ts Apply 버튼에서 dropdown 의 `data-llm-suggested` attribute (render 시 저장) 와 현재값 비교. 차이 있으면 `appendFeedbackLogEntry(wikiFS, {filename, userChoice, llmChoice, llmReason, at})` 헬퍼 호출. 헬퍼는 `raw/CLASSIFY.md` read → `## 피드백 로그` 섹션 위치 탐색 (없으면 append) → entry append.
+
+**의존성**: 없음. Stage 1/2 와 독립.
+
+**완료 판정**: vitest +6 green, 수동 UI smoke (2차 fallback row 에 checkbox 노출 + Apply 시 re-classify 동작 + feedback 엔트리 기록).
+
+#### 4.2.7.2 Stage 4 구현 포인트 (별도 세션 필수, 예상 ~4h + 측정)
+
+- **S4-1 vault.on('rename')**:
+  - Obsidian `Plugin.registerEvent(vault.on('rename', handler))` 로 등록. handler 는 `(file: TAbstractFile, oldPath: string) => Promise<void>`.
+  - **Expected-rename queue 프로토콜**: movePair 호출 직전 `plugin.expectedRenames.set(newFullPath, Date.now())` 등록 + 5초 TTL. 리스너는 queue 매칭 시 consume + skip (Stage 2 의 자체 rename 이 registry 를 이미 갱신했으므로 재동작 불필요).
+  - **Sidecar 자동 동행**: queue 매칭 실패(= 사용자가 UI 에서 직접 이동) → `registry.findByPath(oldPath)` 로 sidecar_vault_path 확인 → 존재하면 `vault.rename(sidecarFile, newSidecarPath)` 직접 호출. sidecar 의 rename 이벤트는 queue 에 미리 등록해서 2차 재귀 방지.
+  - **Debounce**: 200ms 윈도우에서 동일 file path 연속 rename 은 마지막 것만 처리. `Map<string, NodeJS.Timeout>` 로 pending handler 관리.
+- **S4-2 vault.on('delete')**: 동일 패턴. 삭제된 파일의 `registry.findByPath` → `recordDelete`. Source 페이지에 callout append 는 `wiki-ops.ts::appendDeletedSourceBanner(pagePath)` 헬퍼로 분리 (rewriteSourcePageMeta 와 별개). 재등장 (다음 세션 onload 시) 은 S4-3 reconcile 이 `restoreTombstone` 처리.
+- **S4-3 onload reconcile**:
+  - `plugin.onload()` 의 기존 init 체인 말미에 `await this.runReconcile()` 추가.
+  - `runReconcile` 은 `registry.reconcile(walker)` 호출. walker 는 `app.vault.getFiles()` 순회하며 각 TFile 의 bytes 를 `app.vault.readBinary(f)` 로 읽음. 대용량 볼트는 `size > 50MB` skip + warn.
+  - Incremental 최적화: mtime 이 `record.first_seen` 이후 변하지 않은 파일은 hash 재계산 skip (bytes 로드 안 함). 재계산 대상만 walker 배열에 포함.
+  - Reconcile 결과는 Notice 로 요약 ("N 파일 경로 복구, M 파일 tombstone").
+- **S4-4 Audit hash 판정**:
+  - `scripts/audit-ingest.py` 의 비교 루프에서 path 매칭 전에 hash 매칭 시도 추가.
+  - `ingest-pipeline.ts` 의 중복 감지도 동일 로직. 이미 `registry.findByHash(hash)` 가 있으므로 호출부만 추가.
+  - 경로 기반 API (예: ingest-map, 구 frontmatter `raw_original_path` 참조 코드) 에 `console.warn('[deprecated] path-based API, use registry')` 1회 로그. 진입점별 `warnOnce` Set 으로 중복 억제.
+
+**의존성**: Stage 1 (registry reconcile) 필수. Stage 2 (movePair expectedRenames) 권장 (queue 프로토콜 설계 공유).
+
+**완료 판정**:
+- vitest: S4-1 rename handler unit test (mock vault + expectedRenames queue, 3 케이스: queue 매칭 skip / 매칭 실패 시 sidecar 동행 / debounce), S4-3 reconcile 통합 테스트 확장 (mtime skip), S4-4 hash 판정 1 케이스. 총 +6.
+- 수동 smoke: Obsidian UI 에서 파일 이동 → registry 자동 갱신 + sidecar 동행. bash mv 후 Obsidian 재기동 → reconcile 로 경로 복구 Notice.
+- 회귀: pair-move.smoke.sh 재실행 (Stage 2 영역 보존), 기존 vitest 399 → +6 = 405 목표.
+
+#### 4.2.7.3 Stage 3/4 이후 Phase 5 이관 확정 항목
+
+- 경로 기반 API **완전 제거** (ingest-map 파일 자체 삭제, 구 frontmatter 필드 제거, 구 API 함수 제거) → **Phase 5 §5.3 증분 업데이트** 세션.
+- CLASSIFY.md `.meta.yaml` 외부 URI 패턴 (Confluence/SharePoint/S3) → **Phase 5 §5.7 운영 포팅**.
+- LLM 피드백 few-shot **자동 재프롬프트 반영** → **Phase 5 §5.6 self-extending**.
+- Registry 대용량 볼트 (> 10,000 파일) 최적화 — LMDB 이관 등 → Phase 5 §5.5 (등장 시 착수).
+
 ---
 
 ## 4.5 운영 · 안정성

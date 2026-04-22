@@ -38,6 +38,52 @@
 - §4.1.1.9 두 번째 체크박스 (`vault.on('rename')` sidecar 처리) — Stage 4 에서 자동 해소 예정.
 - 경로 기반 API 완전 제거 · Audit hash 판정 일반화 → Phase 5 §5.3.
 
+### 🎯 다음 세션 실행 체크리스트
+
+**옵션 A: Stage 3 단독 (~3h)** — 단독 진입 가능, Stage 1/2 와 독립. 상세: `phase-4-todo.md §4.2.3` + `plan/phase-4-2-plan.md §4` + `activity/phase-4-result.md §4.2.7.1`.
+
+```
+1. S3-1 classifyWithLLM 프롬프트 4차 slug 힌트 (vitest 4, RED→GREEN)
+   - 기존 NNN_topic 폴더 목록을 프롬프트 컨텍스트에 inject
+   - hallucination guard: "목록에 없는 slug 제안 시 reason 에 이유 명시"
+2. S3-2 CLASSIFY_PROVIDER / CLASSIFY_MODEL 키 (vitest 2)
+   - types.ts + config.ts resolveProvider('classify') 추가, 미지정 시 ingest 승계
+   - wikey.conf 주석 블록 — 저가 모델 안내
+3. S3-3 Audit Re-classify 토글 UI (sidebar-chat.ts, needsThirdLevel row 에만)
+4. S3-4 CLASSIFY.md 피드백 append (appendFeedbackLogEntry 헬퍼)
+5. 통합 smoke (실제 inbox 파일로 Re-classify → feedback 엔트리 확인)
+6. npm test → 405+ PASS, npm run build → 0 errors
+7. 문서 동기화 + 단일 commit
+```
+
+**옵션 B: Stage 4 단독 (~4h + 측정)** — 별도 세션 필수. Stage 1 의 reconcile / Stage 2 의 movePair 의존. 상세: `phase-4-todo.md §4.2.4` + `plan/phase-4-2-plan.md §5` + `activity/phase-4-result.md §4.2.7.2`.
+
+```
+1. S4-1 vault.on('rename') + expectedRenames queue 프로토콜 (unit test 3)
+   - movePair 가 newPath 를 queue 에 pre-register → 리스너에서 매칭 시 skip
+   - queue 매칭 실패 = 사용자 UI 이동 → sidecar 자동 동행 + 200ms debounce
+2. S4-2 vault.on('delete') — recordDelete + source 페이지 callout append
+3. S4-3 onload reconcile — app.vault.getFiles() walker + mtime skip 최적화 (integ test 확장)
+4. S4-4 Audit hash 판정 + 경로 API deprecation warning (1회 로그)
+5. 수동 smoke: Obsidian UI 이동, bash mv 후 재기동 모두 registry 복구 확인
+6. pair-move.smoke.sh 재실행 + npm test 405+ PASS
+7. §4.1.1.9 두 번째 체크박스 자동 해소 (todo 에서 [x])
+8. 문서 동기화 + 단일 commit
+```
+
+**권장 순서**: A → B (분류 안정화 먼저 → listener 는 race 디버깅 고립 세션). 시간 여유 있으면 A+B 같은 세션, 커밋은 분리.
+
+### 📊 Phase 4.2 전체 진행 상태 (Stage 별)
+
+| Stage | 상태 | 테스트 | 비고 |
+|-------|------|--------|------|
+| Stage 1 (ID/registry) | ✅ 완료 | 17+12+7 | wikey-core 399 PASS |
+| Stage 2 (pair move) | ✅ 완료 | 8+3+smoke 6/6 | movePair + frontmatter rewrite |
+| Stage 3 (분류 정제) | ⏸️ 대기 | +6 예정 | Stage 1/2 와 독립 |
+| Stage 4 (listener+reconcile) | ⏸️ 대기 | +6 예정 | Stage 1/2 의존 |
+
+**Phase 4.2 완료 시점 → §4.3 본체 인제스트 (3-stage + Provenance A/B + stripBrokenWikilinks) 진입.**
+
 ---
 
 ## 2026-04-22 세션 마무리 — §4.5.1.7.2/7.3 완료 + Phase 재편
