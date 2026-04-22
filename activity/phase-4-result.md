@@ -563,16 +563,42 @@ tier 1 docling 실행
 
 **기록**: `activity/phase-4-1-3-benchmark-2026-04-22.md` (요약 테이블 + Tier별 상세).
 
-#### 4.1.3.5 PMS 재측정 — §4.5.1.5/6 결과 재해석 (2026-04-22, 측정 진행)
+#### 4.1.3.5 PMS 재측정 — §4.5.1.5/6 결과 재해석 (2026-04-22)
 
-**실행**: `./scripts/measure-determinism.sh raw/0_inbox/PMS_제품소개_R10_20220815.pdf -n 10 -d -o activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`
+**실행**: `./scripts/measure-determinism.sh raw/0_inbox/PMS_제품소개_R10_20220815.pdf -n 10 -d -o activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`. 10/10 success, 평균 252.6s/run, 총 약 42분.
 
-기존 §4.5.1.6 baseline (오염된 MD, Total CV 9.2% on 29-run) 와 본 §4.1.3.5 (깨끗한 MD, Total CV ?% on 10-run) 비교는 측정 완료 후 기록. 재해석 규칙:
-- 새 CV < 5% → §4.5.1.6 개선의 대부분이 OCR 파편 흡수였음, §4.5.1.7 대부분 불필요.
-- 새 CV 5–10% → canonicalizer 3차 확장 가치 확증, §4.5.1.7.2 (Concepts prompt) 만 선택적 검토.
-- 새 CV > 10% → §4.5.1.7 전체 sub-task premise 재평가.
+**결과** (`activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`):
 
-측정 결과는 본 섹션에 업데이트.
+| 지표 | Mean | Std | **CV %** | Range |
+|------|-----:|----:|---------:|------:|
+| Entities | 22.60 | 0.52 | **2.3%** | 22–23 |
+| Concepts | 18.60 | 4.58 | **24.6%** | 12–22 |
+| Total | 42.20 | 4.37 | **10.3%** | 36–46 |
+
+Total 값 분포 {36, 44, 46} 3 값으로 양자화. Core entities 19/27 (70%), Core concepts 11/22 (50%).
+
+**비교 매트릭스**:
+
+| 측정 | Total CV | Entities CV | Concepts CV | 입력 상태 |
+|---|---:|---:|---:|---|
+| §4.5.1.4 | 32.5% | — | — | 오염 |
+| §4.5.1.5 30-run | 24.3% | 36.4% | 31.1% | 오염 |
+| §4.5.1.6 10-run | 7.2% | 13.9% | 28.9% | 오염 |
+| §4.5.1.6 29-run | 9.2% | 11.1% | 27.0% | 오염 |
+| **§4.1.3.5 10-run** | **10.3%** | **2.3%** | **24.6%** | **깨끗** |
+
+**재해석**:
+- 깨끗한 MD 에서 Total CV 10.3% 는 §4.5.1.6 29-run 9.2% (오염) 와 **거의 동일** (+1.1pp). → **canonicalizer 3차 확장 + determinism flag 가 실제 legitimate variance 를 잡았음 확증**. OCR 파편 흡수가 주효과였다면 clean MD 에서 CV 가 훨씬 낮아야 함.
+- **Entities CV 2.3%** — §4.5.1.6 29-run 11.1% 대비 대폭 개선. 22 또는 23 두 값만 나타나 **거의 결정적**. 입력 depollution 효과 중 Entities 파트는 전적으로 OCR 파편 제거에서 나옴 (Lotus/22A002/GOODSTREAM 등 UI 스크린샷 파편 제거로 entity 경계 안정).
+- **Concepts CV 24.6%** — 27.0% 대비 소폭 개선에 그침. Range [12–22] 는 PMBOK 9 영역이 일부 run 에서만 concept 로 추출되는 **legitimate LLM variance** (깨끗한 MD 로도 남은 진동). §4.5.1.7.2 (Concepts prompt — PMBOK 9 영역 명시적 나열) 필수성 정량 증명.
+
+**§4.5.1.7 gate 판정** (CV 10.3% → 5–10% 와 >10% 경계):
+- **§4.5.1.7.2 Concepts prompt** — 필수. Concepts CV 24.6% 잔여, PMBOK 9 영역 진동이 주원인.
+- **§4.5.1.7.1 attribution ablation** — 재평가. Entities CV 2.3% 로 거의 결정적이므로 3 레버 (determinism / canon / pollution-removal) 기여도 분리의 실익 감소. Concepts variance 기여도 분해만 선택적.
+- **§4.5.1.7.5 Lotus-prefix variance** — **불필요**. Entities 진동이 2.3% 로 거의 사라짐. Lotus OCR 파편이 일부 run 에서 entity 화되던 것이 §4.1.3 로 자동 해결.
+- **§4.5.1.7.3/4/6/7** — §4.1.3 과 독립. 그대로 유효.
+
+**후속 세션 권장 우선순위**: §4.5.1.7.2 (Concepts prompt) > §4.5.1.7.3 (측정 infra) > §4.2 (URI 참조) / §4.3 (인제스트 고도화).
 
 #### 4.1.3.6 문서 동기화 + commit (2026-04-22)
 

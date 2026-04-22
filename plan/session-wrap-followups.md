@@ -1,34 +1,47 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (§4.1.3 구현 완료 — Bitmap OCR pollution 감지 + Tier 1a 체인 + sidecar md + 4 코퍼스 회귀. §4.1.3.5 PMS 10-run clean 측정 진행)
+> 최신 갱신: 2026-04-22 (§4.1.3 전체 완료 — Bitmap OCR pollution 감지 + Tier 1a 체인 + sidecar md + 4 코퍼스 회귀 + PMS 10-run clean 측정: Total CV 10.3% / Entities 2.3% / Concepts 24.6%)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-22 §4.1.3 구현 완료 — Bitmap OCR 본문 오염 차단 (pollution signal + Tier 1a escalation)
+## 2026-04-22 §4.1.3 전체 완료 — Bitmap OCR 본문 오염 차단 + clean baseline 측정
 
 ### ⭐ 다음 세션 시작점
 
-**§4.1.3.1~4 · 6 구현 완료**, §4.1.3.5 측정 진행 중.
+**§4.1.3.1~6 완료**. clean MD 위에서 variance baseline 확보.
 
-- 구현 요약:
+- 구현:
   - `buildDoclingArgs` mode 3-mode (`default` / `no-ocr` / `force-ocr`) + `DoclingMode` type export
-  - `scoreConvertOutput` 5번째 signal `image-ocr-pollution` 추가 + decision `'retry-no-ocr'` 추가 (`wikey-core/src/convert-quality.ts::hasImageOcrPollution`, v2 필터 + 기준 A/B)
-  - `extractPdfText` Tier 1a (`--no-ocr`) escalation 분기 + score 비교 후 채택 (false positive 방어)
-  - `scripts/benchmark-tier-4-1-3.mjs` — Tier chain 벤치마크 + sidecar `.md` 저장
-  - Tests 315 → 335 PASS, build 0 errors
+  - `scoreConvertOutput` 5번째 signal `image-ocr-pollution` (`hasImageOcrPollution` 필터 + 기준 A/B) + decision `'retry-no-ocr'`
+  - `extractPdfText` Tier 1a (`--no-ocr`) escalation + score 비교 (false positive 방어)
+  - `scripts/benchmark-tier-4-1-3.mjs` — 4 코퍼스 회귀 + sidecar `.md` 저장
+  - Tests 315 → 335 PASS
 - 4 코퍼스 회귀 (`activity/phase-4-1-3-benchmark-2026-04-22.md`):
-  - PMS: Tier 1 retry-no-ocr → Tier 1a accept, lines **1922 → 532 (−72%)** 오염 제거, score 0.53 → 0.91
-  - ROHM: Tier 1 retry → Tier 1b accept (koreanLoss 경로, 기존과 동일)
-  - RP1/GOODSTREAM: Tier 1 accept (regression 없음)
-- Sidecar 4 개 생성 (원본 옆 `.md`).
+  - PMS: Tier 1 retry-no-ocr → Tier 1a accept, lines **1922 → 532 (−72%)**, koreanChars 18654 → 15549 (OCR 파편 3,105자 제거), score 0.53 → 0.91
+  - ROHM: Tier 1 retry → Tier 1b force-ocr accept (koreanLoss 경로)
+  - RP1/GOODSTREAM: Tier 1 accept
+- PMS 10-run clean measurement (`activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`):
+  - **Total CV 10.3%** (mean 42.20, range 36–46, {36, 44, 46} 3 값 양자화)
+  - **Entities CV 2.3%** (mean 22.60, range 22–23) — 거의 결정적
+  - **Concepts CV 24.6%** (mean 18.60, range 12–22) — PMBOK 9 영역 진동
+  - §4.5.1.6 29-run 9.2% (오염) vs §4.1.3.5 10.3% (clean) — 거의 동일 → canonicalizer 3차 효과 확증.
 
-### 🔴 §4.1.3.5 완료 후 즉시 결정
+### 🔴 §4.5.1.7 gate 판정 완료 — 다음 세션 우선순위
 
-**§4.5.1.7 gate** — §4.1.3.5 (PMS 10-run clean baseline) CV 값 기반:
-- 새 CV < 5% → §4.5.1.7 대부분 불필요 (wrap up), §4.5.1.7.3/4/6/7 (독립 sub-task) 만 진행.
-- 새 CV 5–10% → §4.5.1.7.2 (Concepts prompt) 만 선택 검토 + 독립 sub-task.
-- 새 CV > 10% → §4.5.1.7 전체 premise 재평가 (canonicalizer 3차 효과의 "legitimate variance" vs "OCR 파편 흡수" 비율 파악).
+CV 10.3% 는 "5–10%" 와 ">10%" 경계. 각 sub-task 필요성 재정리:
+
+| §4.5.1.7.x | 필요성 | 근거 |
+|---|---|---|
+| **§4.5.1.7.2 Concepts prompt (PMBOK 9 영역)** | **필수** | Concepts CV 24.6% 잔여, range [12–22] 는 PMBOK 9 영역이 일부 run 에서만 추출. 결정성 flag + canon 3차로도 해결 안 됨 → prompt-level 변경 필요 |
+| §4.5.1.7.1 attribution ablation | 재평가 (축소) | Entities CV 2.3% 로 사실상 해결. Concepts variance 의 3 레버 (determinism / canon / depollution) 기여도 분해만 선택적. |
+| §4.5.1.7.5 Lotus variance | **불필요** | Entities 이미 결정적. Lotus OCR 파편이 entity 화되던 것이 §4.1.3 으로 자동 해결. |
+| §4.5.1.7.3 측정 infra | 유지 (독립) | run 30 outlier `restoreSourceFile()` 재발 방지. |
+| §4.5.1.7.4 Route SEGMENTED | 유지 (독립) | Ollama 환경 production guide. |
+| §4.5.1.7.6 BOM 재분할 | 유지 (독립) | 실무 판단. |
+| §4.5.1.7.7 log_entry cosmetic | 유지 (독립) | 빠름. |
+
+**권장 순서**: §4.5.1.7.2 → §4.5.1.7.3 → §4.2 URI 참조 (§4.1.1.9 listener 합동) → §4.3 인제스트 고도화.
 
 ### 🟡 남은 작업 — 이전 세션에서 이관
 

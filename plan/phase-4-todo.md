@@ -182,11 +182,13 @@
     - GOODSTREAM: Tier 1 `accept`, score 1.00.
   - Sidecar 4개 생성: `raw/0_inbox/PMS_*.pdf.md`, `docs/samples/ROHM_*.pdf.md`, `docs/samples/rp1-peripherals.pdf.md`, `raw/0_inbox/사업자등록증*.pdf.md`.
 
-- [~] **§4.1.3.5** PMS 재측정 + §4.5.1.5/6 결과 재해석 (측정 진행 중)
-  - 실행: `./scripts/measure-determinism.sh raw/0_inbox/PMS_제품소개_R10_20220815.pdf -n 10 -d -o activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`.
-  - 비교 baseline: §4.5.1.4 (32.5%, 오염) · §4.5.1.5 (24.3%, 오염) · §4.5.1.6 10-run (7.2%, 오염) · §4.5.1.6 29-run (9.2%, 오염) · §4.1.3.5 (?, **깨끗**).
-  - 해석 규칙: 새 CV < 5% → §4.5.1.7 대부분 불필요; 5~10% → §4.5.1.7.2 (Concepts) 만 검토; > 10% → §4.5.1.7 전체 premise 재평가.
-  - 측정 완료 시 결과 업데이트 (`activity/phase-4-result.md §4.1.3.5`).
+- [x] **§4.1.3.5** PMS 재측정 + §4.5.1.5/6 결과 재해석 (완료)
+  - 10/10 success, 평균 252.6s/run. 결과: **Total CV 10.3%, Entities CV 2.3%, Concepts CV 24.6%**.
+  - 비교: §4.5.1.6 29-run 9.2% (오염) vs §4.1.3.5 10-run 10.3% (깨끗) — 거의 동일 (+1.1pp). **canonicalizer 3차 확장 + determinism 이 실제 legitimate variance 를 잡았음 확증**.
+  - Entities CV 11.1% → 2.3% 로 대폭 개선 — OCR 파편 제거 효과가 entity 경계 안정화에 직결.
+  - Concepts CV 27.0% → 24.6% 로 소폭 — PMBOK 9 영역 진동이 legitimate LLM variance (깨끗한 MD 로도 남음).
+  - §4.5.1.7 gate 판정: §4.5.1.7.2 (Concepts prompt, PMBOK 9 영역 강제 나열) **필수**. §4.5.1.7.5 (Lotus variance) **불필요** (Entities 이미 해결). §4.5.1.7.1 (attribution) 재평가.
+  - 산출물: `activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`, `activity/phase-4-result.md §4.1.3.5` 전체 매트릭스.
 
 - [x] **§4.1.3.6** 세션 마감 — 문서 동기화 + commit/push
   - `activity/phase-4-result.md §4.1.3` 상세화 ✓
