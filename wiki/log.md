@@ -95,3 +95,13 @@ updated: 2026-04-22
   - 잔여 variance 는 **Concepts PMBOK 9 영역 추출 진동** 이 주원인 (Entities 는 2.3% 거의 결정적).
 - 판정: CV 10.3% 는 §4.5.1.7 gate "5–10%" 와 ">10%" 경계. **§4.5.1.7.2 (Concepts prompt, PMBOK 9 영역 강제 나열)** 은 필수. §4.5.1.7.1 (attribution), §4.5.1.7.5 (Lotus variance) 등은 재평가 (Entities CV 2.3% 면 Lotus 진동 자동 해결 가능성 높음).
 - 산출물: `activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`.
+
+## [2026-04-22] feat | §4.5.1.7.2 + §4.5.1.7.3 코드 구현 완료 — 실측 대기
+
+- **§4.5.1.7.2** (`wikey-core/src/canonicalizer.ts`): `buildCanonicalizerPrompt` "작업 규칙" 7번 항목 신규 — PMBOK / 프로젝트 관리 지식체계 맥락이 본문에 등장할 때 PMBOK 10 knowledge areas (`integration / scope / schedule (or time) / cost / quality / resource (or human-resource) / communications / risk / procurement / stakeholder`) 을 각각 `project-<area>-management` 개별 concept 로 추출, 상위 `project-management-body-of-knowledge` 로 묶지 말 것, type=`methodology`, "본문에 직접 언급되지 않으면 추출하지 않는다" hallucination guard 포함. A안 채택 (B=false-positive 위험, C=wiki 그래프 가치 역행).
+- 단위 테스트 신규 (`canonicalizer.test.ts`): prompt 문자열 anchor — rule marker + 8 슬러그 + anti-bundle + hallucination guard 모두 present 단언. 352/352 PASS (+1), tsc 0 errors.
+- **§4.5.1.7.3** (`scripts/measure-determinism.sh`): `restoreSourceFile()` → `Promise<boolean>` 전환, `.`-prefix 디렉토리 스킵, 실패 시 run 에러 명시 기록 (run 30 outlier 재현 차단). per-run timeout 10분 → 15분 (JS `15*60*1000` + bash `timeout_sec=$((N_RUNS*900))`). `--strict` CLI 플래그 신규 — `total=0` run 을 통계에서 추가 제외, Markdown 에 "Strict 제외 run (total=0)" 섹션으로 원본 보존. banner + `--help` 문구 동기.
+- 검증: `bash -n` syntax OK, Python heredoc `ast.parse` OK, JS heredoc `node --check` (async IIFE wrap 후) OK.
+- 덤: master에 존재하던 `hasRedundantEmbeddedImages(md, stripped, pdfPageCount)` arity 버그 (`bb09b79` 커밋이 `convert-quality.ts` 에만 4번째 `tierKey` 추가, `ingest-pipeline.ts:1194` 호출부 미갱신) 도 `tierKey` 인자 전달로 복구. 해당 커밋의 "343 tests PASS, tsc 0 errors" 주장은 실제로 성립하지 않고 있었음.
+- **실측 대기**: §4.5.1.7.2 효과 검증 (PMS 5-run 재측정, Concepts CV 24.6% → <15% 목표) 은 Obsidian CDP 세션에서 후속. §4.5.1.7.3 robustness 는 다음 측정 세션에서 자동 회귀.
+- 참조: `activity/phase-4-result.md §4.5.1.7.2 / §4.5.1.7.3` (구현 완료 + 실측 대기 로 전환), `plan/phase-4-todo.md §4.5.1.7.2 [~]` / `§4.5.1.7.3 [x]`, `plan/session-wrap-followups.md` 최상단 블록.

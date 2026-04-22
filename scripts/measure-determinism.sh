@@ -27,7 +27,7 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 usage() {
   cat <<EOF
-사용법: ./scripts/measure-determinism.sh <source-path> [-n N] [-o output.md] [-f] [-d]
+사용법: ./scripts/measure-determinism.sh <source-path> [-n N] [-o output.md] [-f] [-d] [--strict]
 
 옵션:
   -n N                반복 횟수 (기본 5)
@@ -35,6 +35,9 @@ usage() {
   -f, --force         크기 가드 우회 (15KB 미만/chunk<3 예상 소스)
   -d, --determinism   §4.5.1.6.1 — plugin.settings.extractionDeterminism=true 강제
                       (runs 동안 temperature=0 + seed=42 주입, 종료 시 원복)
+      --strict        §4.5.1.7.3 — total=0 (source 복원 실패 / 빈 인제스트) run 을
+                      통계에서 추가 제외. Core/Variable 분석도 strict pool 기준.
+                      (원본 데이터는 Markdown 에 "제외 run" 섹션으로 보존)
   -h, --help          도움말
 EOF
   exit 0
@@ -45,6 +48,7 @@ OUTPUT_PATH=""
 SOURCE_PATH=""
 FORCE=0
 DETERMINISM=0
+STRICT=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -52,6 +56,7 @@ while [[ $# -gt 0 ]]; do
     -o) OUTPUT_PATH="$2"; shift 2 ;;
     -f|--force) FORCE=1; shift ;;
     -d|--determinism) DETERMINISM=1; shift ;;
+    --strict) STRICT=1; shift ;;
     -h|--help) usage ;;
     *) SOURCE_PATH="$1"; shift ;;
   esac
@@ -114,6 +119,9 @@ if [[ "$DETERMINISM" -eq 1 ]]; then
 else
   echo "[measure-determinism] determinism: off (baseline sampling)"
 fi
+if [[ "$STRICT" -eq 1 ]]; then
+  echo "[measure-determinism] strict: ON (total=0 runs excluded from statistics)"
+fi
 echo
 
 # 측정 JS를 임시 파일로 작성 (parameterized)
@@ -173,13 +181,18 @@ function btnText() {
   return (b?.textContent || '').trim()
 }
 
+// §4.5.1.7.3: boolean 반환 — walk()/rename 실패하거나 파일 자체가 사라졌다면 false.
+// caller 는 false 일 때 run 을 건너뛰고 에러 기록. 이전 구현은 silent pass 로
+// 다음 run 을 속행시켜 0/0/0 outlier (30-run 측정의 run 30 사례) 를 생성했다.
 async function restoreSourceFile() {
-  if (await adapter.exists(SOURCE_PATH)) return
-  // File was auto-moved after ingest — walk raw/ to find and restore
+  if (await adapter.exists(SOURCE_PATH)) return true
+  // File was auto-moved after ingest — walk raw/ to find and restore.
+  // .obsidian/.trash 등 인제스트 대상이 될 수 없는 경로는 제외.
   function walk(dir) {
     try {
       for (const e of fs.readdirSync(path.join(basePath, dir), { withFileTypes: true })) {
         if (e.isDirectory()) {
+          if (e.name.startsWith('.')) continue
           const found = walk(`${dir}/${e.name}`)
           if (found) return found
         } else if (e.name === SOURCE_NAME) {
@@ -193,8 +206,12 @@ async function restoreSourceFile() {
   if (found && found !== SOURCE_PATH) {
     try {
       fs.renameSync(path.join(basePath, found), path.join(basePath, SOURCE_PATH))
-    } catch (_e) {}
+    } catch (_e) {
+      return false
+    }
   }
+  // rename 성공 여부와 무관하게 최종 존재 확인을 통해 진짜 복구 여부 반환.
+  return await adapter.exists(SOURCE_PATH)
 }
 
 async function cleanupForRerun(newFiles) {
@@ -213,14 +230,21 @@ async function cleanupForRerun(newFiles) {
     }
     if (changed) await adapter.write('wiki/.ingest-map.json', JSON.stringify(m, null, 2))
   } catch (_e) {}
-  await restoreSourceFile()
+  return await restoreSourceFile()
 }
 
 const results = []
 let prevNewFiles = null
 
 for (let run = 1; run <= N_RUNS; run++) {
-  await cleanupForRerun(prevNewFiles)
+  // §4.5.1.7.3: restore 실패를 명시적으로 감지해 run 을 error 로 기록.
+  // 이전 구현은 silent pass 로 다음 run 에 진입 → applyBtn 즉시 완료하며
+  // 0/0/0 valid row 를 생성 (run 30 outlier).
+  const restored = await cleanupForRerun(prevNewFiles)
+  if (!restored) {
+    results.push({ run, error: 'source restore failed — raw/ 에서 파일을 찾을 수 없음' })
+    continue
+  }
   await new Promise(r => setTimeout(r, 800))
 
   const baseline = snapshotDirs()
@@ -293,14 +317,16 @@ for (let run = 1; run <= N_RUNS; run++) {
     results.push({ run, error: 'ingest did not start', elapsedMs: Date.now() - startTs, lastTxt }); continue
   }
 
-  // Phase 2: wait for button text to return to "Ingest" (done) — 10min timeout
+  // Phase 2: wait for button text to return to "Ingest" (done) — 15min timeout
+  // §4.5.1.7.3: 10분 → 15분 상향. §4.5.1.6.2 run10 timeout 관찰로 드물지만 long tail
+  // (Gemini slow response + Segmented route) 가 기존 한도를 넘는 사례가 있었음.
   let elapsedMs = 0
   let timedOut = false
   while (true) {
     await new Promise(r => setTimeout(r, 1500))
     const txt = btnText()
     if (/^ingest$/i.test(txt)) { elapsedMs = Date.now() - startTs; break }
-    if (Date.now() - startTs > 10 * 60 * 1000) {
+    if (Date.now() - startTs > 15 * 60 * 1000) {
       elapsedMs = Date.now() - startTs; timedOut = true; break
     }
   }
@@ -310,7 +336,7 @@ for (let run = 1; run <= N_RUNS; run++) {
   prevNewFiles = diff  // for next run's cleanup
 
   if (timedOut) {
-    results.push({ run, error: 'timeout 10min', elapsedMs,
+    results.push({ run, error: 'timeout 15min', elapsedMs,
       e: diff.e.length, c: diff.c.length, s: diff.s.length })
     continue
   }
@@ -343,8 +369,9 @@ sed -i.bak "s|__N_RUNS__|${N_RUNS}|g; s|__SOURCE_PATH__|${SOURCE_PATH}|g; s|__DE
 rm -f "${TMPJS}.bak"
 
 # Run via CDP
-echo "[measure-determinism] CDP 호출 중 (최대 ${N_RUNS} × 10분 = $((N_RUNS * 10))분 타임아웃)..."
-timeout_sec=$((N_RUNS * 600))
+# §4.5.1.7.3: per-run timeout 10분 → 15분 (JS 내부 timer 와 동기).
+echo "[measure-determinism] CDP 호출 중 (최대 ${N_RUNS} × 15분 = $((N_RUNS * 15))분 타임아웃)..."
+timeout_sec=$((N_RUNS * 900))
 RAW_RESULTS=$(python3 /tmp/wikey-cdp.py file "$TMPJS" await "$timeout_sec")
 
 # Parse results JSON — CDP Runtime.evaluate returnByValue wraps as {result: {result: {type, value}}}
@@ -362,13 +389,14 @@ else:
 ")
 
 # Compute stats and write Markdown
-python3 - "$RESULTS_JSON" "$SOURCE_PATH" "$ABS_OUTPUT" "$N_RUNS" "$DETERMINISM" <<'PYEOF'
+python3 - "$RESULTS_JSON" "$SOURCE_PATH" "$ABS_OUTPUT" "$N_RUNS" "$DETERMINISM" "$STRICT" <<'PYEOF'
 import json, sys, os, statistics, datetime
 payload = json.loads(sys.argv[1])
 source_path = sys.argv[2]
 output_path = sys.argv[3]
 n_runs = int(sys.argv[4])
 determinism = int(sys.argv[5]) == 1
+strict = int(sys.argv[6]) == 1
 
 if isinstance(payload, dict) and 'cdp_error' in payload:
     print(f'CDP evaluate failed:\n{json.dumps(payload["cdp_error"], indent=2)}', file=sys.stderr)
@@ -378,11 +406,21 @@ if not isinstance(payload, list):
     sys.exit(1)
 results = payload
 
-ok = [r for r in results if 'error' not in r]
+ok_raw = [r for r in results if 'error' not in r]
 err = [r for r in results if 'error' in r]
 
-print(f'\nResults: {len(ok)} ok / {len(err)} errors')
+# §4.5.1.7.3 --strict: total=0 (source 복원 실패 / 빈 인제스트) run 추가 제외.
+# raw 통계와 별도로 strict pool 생성해 "valid 측정" 구분.
+if strict:
+    zero_runs = [r for r in ok_raw if r.get('total', 0) == 0]
+    ok = [r for r in ok_raw if r.get('total', 0) > 0]
+else:
+    zero_runs = []
+    ok = ok_raw
+
+print(f'\nResults: {len(ok)} ok / {len(err)} errors' + (f' / {len(zero_runs)} strict-excluded (total=0)' if strict else ''))
 for r in err: print(f'  ERR run {r["run"]}: {r["error"]}')
+for r in zero_runs: print(f'  ZERO run {r["run"]}: 0/0/0 (strict 제외)')
 if not ok:
     print('NO valid runs', file=sys.stderr); sys.exit(3)
 
@@ -422,8 +460,11 @@ with open(output_path, 'w', encoding='utf-8') as f:
     f.write(f'# 결정성 측정 — {os.path.basename(source_path)}\n\n')
     f.write(f'> 일시: {datetime.date.today().isoformat()}\n')
     f.write(f'> Source: `{source_path}`\n')
-    f.write(f'> Runs: {len(ok)} ({len(err)} failed)\n')
+    strict_suffix = f', {len(zero_runs)} strict-excluded' if strict and zero_runs else ''
+    f.write(f'> Runs: {len(ok)} valid ({len(err)} failed{strict_suffix})\n')
     f.write(f'> Determinism: {"ON (temperature=0, seed=42)" if determinism else "off (baseline sampling)"}\n')
+    if strict:
+        f.write(f'> Strict: ON (total=0 run 은 valid 통계에서 제외)\n')
     f.write(f'> 도구: `scripts/measure-determinism.sh`\n\n')
     f.write('## 결과\n\n')
     f.write('| Run | Entities | Concepts | Total | Time(s) |\n')
@@ -433,6 +474,10 @@ with open(output_path, 'w', encoding='utf-8') as f:
     if err:
         f.write('\n실패 run:\n')
         for r in err: f.write(f'- run {r["run"]}: {r["error"]}\n')
+    if strict and zero_runs:
+        f.write('\nStrict 제외 run (total=0):\n')
+        for r in zero_runs:
+            f.write(f'- run {r["run"]}: 0/0/0 (time={r.get("elapsedMs", 0)/1000:.1f}s)\n')
     f.write('\n## 통계\n\n')
     f.write('| 지표 | Mean | Std | **CV %** | Range |\n')
     f.write('|------|-----:|----:|---------:|------:|\n')

@@ -224,6 +224,7 @@ ${buildSchemaPromptBlock(schemaOverride)}
 4. **거부 패턴 자동 제외**: 한국어 라벨, X-management/X-service 같은 단순 기능명, 비즈니스 객체(quotation/order 등)는 schema 위반이므로 제외.
 5. **filename 형식**: \`name\` 필드는 base name만 (소문자, 하이픈 구분, .md/디렉토리 prefix 금지).
 6. **description**: 1~2문장, 산업 표준 정의 위주 (기능 설명 X).
+7. **PMBOK 10 knowledge areas 개별 추출** (concepts 결정화): 본문에 PMBOK / 프로젝트 관리 지식체계 맥락이 등장하면 다음 10 영역은 각각 **별도 concept** 로 추출하고 상위 \`project-management-body-of-knowledge\` 하나로 묶지 말 것. 본문에 해당 영역이 직접 언급되지 않으면 추출하지 않는다 (hallucination 금지): \`project-integration-management\`, \`project-scope-management\`, \`project-schedule-management\` (또는 \`project-time-management\`), \`project-cost-management\`, \`project-quality-management\`, \`project-resource-management\` (또는 \`project-human-resource-management\`), \`project-communications-management\`, \`project-risk-management\`, \`project-procurement-management\`, \`project-stakeholder-management\`. 각 영역 type 은 \`methodology\`.
 
 ## 입력 mention (${mentions.length}개)
 

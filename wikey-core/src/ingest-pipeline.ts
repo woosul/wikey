@@ -1191,7 +1191,7 @@ async function extractPdfText(
     // LLM 투입용 stripped 는 항상 caller 반환 (wiki 생성 후 사라짐).
     try {
       const { writeFileSync: wf } = require('node:fs') as typeof import('node:fs')
-      const useStripped = hasRedundantEmbeddedImages(md, stripped, pdfPageCount)
+      const useStripped = hasRedundantEmbeddedImages(md, stripped, pdfPageCount, tierKey)
       const sidecarContent = useStripped ? stripped : md
       wf(`${fullPath}.md`, sidecarContent, 'utf-8')
       log(`sidecar .md saved (${useStripped ? 'stripped — scan/small-doc images redundant' : 'raw — vector PDF, images kept'}) → ${sourcePath}.md (${sidecarContent.length} chars, tier=${tierKey})`)

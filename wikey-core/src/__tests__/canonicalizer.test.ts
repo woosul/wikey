@@ -204,6 +204,31 @@ describe('buildCanonicalizerPrompt', () => {
     expect(prompt).toContain('사용자 강조 지시')
   })
 
+  it('includes PMBOK 10 knowledge areas hint (§4.5.1.7.2)', () => {
+    const prompt = buildCanonicalizerPrompt({
+      mentions: [{ name: 'x', evidence: 'y' }],
+      existingEntityBases: [],
+      existingConceptBases: [],
+      sourceFilename: 'test.pdf',
+    })
+    // Rule marker — anchors the PMBOK section so later prompt edits can't silently drop it
+    expect(prompt).toContain('PMBOK 10 knowledge areas 개별 추출')
+    // All 10 PMBOK knowledge areas must be individually listed (N=30 showed the
+    // 9-area bundle ↔ split oscillation was the main Concepts CV driver)
+    expect(prompt).toContain('project-integration-management')
+    expect(prompt).toContain('project-scope-management')
+    expect(prompt).toContain('project-cost-management')
+    expect(prompt).toContain('project-quality-management')
+    expect(prompt).toContain('project-communications-management')
+    expect(prompt).toContain('project-risk-management')
+    expect(prompt).toContain('project-procurement-management')
+    expect(prompt).toContain('project-stakeholder-management')
+    // Anti-bundle instruction (do NOT collapse into the umbrella slug)
+    expect(prompt).toContain('묶지 말 것')
+    // Hallucination guard (only extract when mentioned)
+    expect(prompt).toContain('직접 언급되지 않으면 추출하지 않는다')
+  })
+
   it('includes schema override custom types in prompt (v7-5)', () => {
     const prompt = buildCanonicalizerPrompt({
       mentions: [{ name: 'x', evidence: 'y' }],

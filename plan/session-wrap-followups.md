@@ -1,32 +1,46 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (§4.1.3 전체 완료 — Bitmap OCR pollution + source scan + text layer corruption 감지 + OCR engine/lang 자동 매핑 + 5 코퍼스 회귀 + PMS 10-run clean Total CV 10.3%)
+> 최신 갱신: 2026-04-22 (§4.5.1.7.2 + §4.5.1.7.3 코드 구현 완료 — canonicalizer PMBOK hint + measure-determinism robustness. 실측 검증은 Obsidian CDP 세션 대기)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-22 §4.5.1.7.2 + §4.5.1.7.3 코드 구현 완료 — 실측 대기
+
+### ⭐ 다음 세션 최우선: PMS 5–10 run 재측정 (§4.5.1.7.2 효과 검증 + §4.5.1.7.3 툴 회귀)
+
+**§4.5.1.7.2 (PMBOK 10 prompt hint)**:
+- `canonicalizer.ts buildCanonicalizerPrompt` 작업 규칙 7번 항목 신규 — PMBOK / 프로젝트 관리 지식체계 맥락이 등장할 때 10 영역 개별 concept 추출, `project-management-body-of-knowledge` 로 묶지 않음, hallucination guard 포함.
+- 단위 테스트 anchor 신규 (prompt 문자열 drop 방지). 352/352 PASS.
+- **검증 필요**: PMS 5-run 재측정 → Concepts CV 24.6% → <15% 목표 달성 여부.
+
+**§4.5.1.7.3 (measure-determinism robustness)**:
+- `restoreSourceFile()` boolean 반환, 실패 run 명시적 에러 기록 (run 30 outlier 재현 차단).
+- per-run timeout 10분 → 15분 (JS + bash 동기).
+- `--strict` CLI 플래그: `total=0` run 을 통계에서 추가 제외 + Markdown 원본 보존.
+- **검증 필요**: `./scripts/measure-determinism.sh raw/PMS.pdf -n 5 -d --strict` 실 CDP 수행 → 출력 Markdown 에 strict 섹션 생성, 에러 run 식별 동작 확인.
+
+**덤**: master 에 있던 `hasRedundantEmbeddedImages(md, stripped, pdfPageCount)` arity 버그 (commit `bb09b79` 에서 convert-quality.ts 만 변경하고 호출부 미갱신) 도 같은 세션에서 복구. 해당 커밋의 "343 tests PASS, tsc 0 errors" 기록은 실제로 성립하지 않고 있었음.
+
+### 📋 §4.5.1.7 sub-task 우선순위 업데이트 (전체 7개)
+
+| sub-task | 상태 | 근거 |
+|---|---|---|
+| **§4.5.1.7.2 Concepts prompt (PMBOK 10)** | 🟢 **코드 완료**, 🔴 실측 대기 | 2026-04-22 구현. CDP 5-run 으로 CV 24.6% → <15% 확인 필요 |
+| **§4.5.1.7.3 측정 infra robustness** | 🟢 **코드 완료**, 🔴 실측 대기 | 2026-04-22 구현. 다음 측정 세션에서 자동으로 회귀 |
+| §4.5.1.7.1 attribution ablation (4 points) | 🟡 재평가 (축소) | Entities 2.3%, Concepts 기여도만 선택적 |
+| §4.5.1.7.5 Lotus-prefix variance | 🟢 **불필요** | Entities 2.3% 로 자동 해결 |
+| §4.5.1.7.4 Route SEGMENTED (Ollama) | 🟡 독립 유효 | production guide |
+| §4.5.1.7.6 BOM 재분할 판단 | 🟢 독립 유효 | 실무 판단 (월 1회 모니터) |
+| §4.5.1.7.7 log_entry axis 수정 | 🟢 cosmetic | 빠름 |
+
+**권장 순서**: 🔴 §4.5.1.7.2/7.3 실측 (CDP 세션) → §4.2 URI 참조 → §4.3 인제스트 고도화 → §4.5.1.7.4/6/7.
 
 ---
 
 ## 2026-04-22 §4.1.3 전체 완료 — source PDF 기반 근본 감지 (scan + text layer corruption) + OCR engine fallback
 
-### ⭐ 다음 세션 최우선: §4.5.1.7.2 (Concepts prompt PMBOK 10 sub-area 결정화)
-
-§4.1.3.5 측정 결과 (Entities CV **2.3%**, Concepts CV **24.6%**) 기반 gate 판정:
-- Entities 는 거의 결정적 (§4.1.3 효과). Lotus 진동 자동 해결.
-- Concepts 잔여 variance 의 주 원인 = PMBOK 10 knowledge areas 가 일부 run 에서만 concept 로 분해 ↔ 다른 run 에서 1개 묶음 진동.
-- prompt-level 변경 (§4.5.1.7.2) 이 유일한 해법 — canonicalizer + determinism 로는 해결 불가.
-
-### 📋 §4.5.1.7 sub-task 우선순위 (전체 7개)
-
-| sub-task | 상태 | 근거 |
-|---|---|---|
-| **§4.5.1.7.2 Concepts prompt (PMBOK 10)** | 🔴 **필수** | Concepts CV 24.6% 주원인 |
-| §4.5.1.7.1 attribution ablation (4 points) | 🟡 재평가 (축소) | Entities 이미 2.3%, Concepts 기여도만 선택적 |
-| §4.5.1.7.5 Lotus-prefix variance | 🟢 **불필요** | Entities 2.3% 로 자동 해결 |
-| §4.5.1.7.3 측정 infra robustness | 🟡 독립 유효 | run 30 outlier 재발 방지 |
-| §4.5.1.7.4 Route SEGMENTED (Ollama) | 🟡 독립 유효 | production guide |
-| §4.5.1.7.6 BOM 재분할 판단 | 🟢 독립 유효 | 실무 판단 (월 1회 모니터) |
-| §4.5.1.7.7 log_entry axis 수정 | 🟢 cosmetic | 빠름 |
-
-**권장 순서**: §4.5.1.7.2 → §4.5.1.7.3 → §4.2 URI 참조 → §4.3 인제스트 고도화 → §4.5.1.7.4/6/7.
+### ⭐ (이전 세션 최우선: §4.5.1.7.2 — 위 2026-04-22 항목에서 코드 완료로 전환됨)
 
 ### 🟢 §4.5.4 rapidocr Linux 실측 (맨 뒤 todo 로 이동, 2026-04-22 신규)
 

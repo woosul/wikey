@@ -1393,9 +1393,9 @@ SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `e
 - 산출물: `activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md` (원본 + 보정 분석).
 - 코드 state: 315 PASS, build 0 errors 유지.
 
-#### 4.5.1.7 variance 분해 + prompt-level 개선 + 측정 인프라 강화 (2026-04-22 신규, 진행 전)
+#### 4.5.1.7 variance 분해 + prompt-level 개선 + 측정 인프라 강화 (2026-04-22 신규, §4.5.1.7.2/7.3 코드 완료)
 
-> Mirror: `plan/phase-4-todo.md §4.5.1.7`. 이 섹션은 **진행 전 stub** — 다음 세션에서 실행 후 본문 상세화.
+> Mirror: `plan/phase-4-todo.md §4.5.1.7`. §4.5.1.7.2 (Concepts prompt hint) 와 §4.5.1.7.3 (measure-determinism robustness) 는 2026-04-22 구현 완료 — 실측 검증만 후속 Obsidian CDP 세션 대기. §4.5.1.7.1/7.4/7.6/7.7 은 여전히 진행 전.
 
 **왜 필요한가** (§4.5.1.6 종료 시점에 남은 gap 3 축):
 
@@ -1432,20 +1432,54 @@ SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `e
 - 각 point 10-run. 총 ~4 시간 (or A/D 기존값 재활용 시 2시간).
 - 구현 노트: canon off 를 위해 `WIKEY_CANON_V3_DISABLE=1` 같은 env 신규 + canonicalizer.ts 에서 v3 entry 만 bypass (v2 유지).
 
-##### 4.5.1.7.2 Concepts prompt 개선 — PMBOK 9 영역 결정화 (진행 전)
+##### 4.5.1.7.2 Concepts prompt 개선 — PMBOK 10 영역 결정화 (구현 완료, 실측 대기)
 
-- 3 접근 중 선택:
-  - A안: canonicalizer prompt 에 "PMBOK 10 knowledge areas (integration/scope/time/cost/quality/HR/communications/risk/procurement/stakeholder management) 는 **개별 concept** 로 추출, 상위 `project-management-body-of-knowledge` 로 묶지 않음" 명시
-  - B안: FORCED_CATEGORIES 에 9 개 slug 를 모두 concept/methodology pin + prompt hint
-  - C안: anti-pattern 에 "-management" suffix 는 `project-management-body-of-knowledge` 로 흡수 (반대 방향)
-- 선택 기준: wiki 그래프 가치 + 검색 정확도 측면에서 분해 (A/B) 가 유리 예상. 5-run 측정 후 채택.
-- 목표: Concepts CV 27% → <15%.
+**선택**: A안 (canonicalizer prompt-level hint). B안 (FORCED_CATEGORIES 9 개 pin) 은 매 소스마다 등장 보장이 없어 false-positive 하드-추출을 유발할 수 있고, C안 (-management 흡수) 은 방향이 반대라 wiki 그래프 가치를 낮춘다고 판단. A안은 slug 단위가 아닌 **prompt 조건부 분해 지침** 이라 "본문에 등장 시에만" 추출되도록 hallucination guard 도 함께 명시 가능.
 
-##### 4.5.1.7.3 측정 인프라 robustness (진행 전)
+**구현** (`wikey-core/src/canonicalizer.ts` `buildCanonicalizerPrompt`):
+- "작업 규칙" 블록에 7번 항목 신규 추가 — PMBOK / 프로젝트 관리 지식체계 맥락이 본문에 등장할 때 10 영역을 각각 `project-<area>-management` base 로 개별 concept 화, 상위 `project-management-body-of-knowledge` 로 묶지 말 것. type=`methodology`.
+- 10 영역 명시: `integration / scope / schedule (or time) / cost / quality / resource (or human-resource) / communications / risk / procurement / stakeholder management`.
+- Hallucination guard: "본문에 해당 영역이 직접 언급되지 않으면 추출하지 않는다" 문장 추가 — 빈 프롬프트 영역 강제 생성 방지.
 
-- `restoreSourceFile()`: `walk(raw/)` 후 `adapter.exists(SOURCE_PATH)` 확인. absent → `results.push({run, error: 'source restore failed'})` + continue. outlier 를 raw 통계에 섞이지 않게.
-- per-run timeout 상향: 10분 → 15-20분 (§4.5.1.6.2 run10 timeout 원인 관찰 후 조정).
-- `--strict` CLI 옵션 추가: error/zero-output run 자동 제외 후 통계 출력.
+**테스트** (`canonicalizer.test.ts` 신규 `it('includes PMBOK 10 knowledge areas hint (§4.5.1.7.2)')`):
+- 프롬프트 문자열이 rule marker (`PMBOK 10 knowledge areas 개별 추출`), 10 영역 중 핵심 8 슬러그, anti-bundle (`묶지 말 것`), hallucination guard (`직접 언급되지 않으면 추출하지 않는다`) 모두 포함하는지 단언.
+- 후속 prompt 편집에서 이 가이드가 조용히 drop 되는 것을 막는 anchor.
+
+**검증 결과**:
+- 352/352 tests PASS (이전 351 + 신규 1). tsc 0 errors.
+- 덤: 작업 중 master 에 이미 존재하던 `hasRedundantEmbeddedImages(md, stripped, pdfPageCount)` arity regression 발견 (commit `bb09b79` 이 `convert-quality.ts` 에 4번째 `tierKey` 인자를 추가했으나 `ingest-pipeline.ts:1194` 호출부 미갱신). `tierKey` 전달로 복구 — 해당 커밋의 "343 tests PASS, tsc 0 errors" 주장은 실제로 성립하지 않고 있었음.
+
+**미완** (후속 Obsidian CDP 세션):
+- PMS 5-run 측정으로 Concepts CV 24.6% → <15% 달성 여부 확증. 목표 못 미치면 B안 보강 (9 영역 FORCED_CATEGORIES pin) 또는 prompt schema_hint 를 schema.ts description 레벨로 내리는 방향 재검토.
+
+##### 4.5.1.7.3 측정 인프라 robustness — `scripts/measure-determinism.sh` (구현 완료, 실측 대기)
+
+**배경**. §4.5.1.6.6 run 30 outlier (0/0/0 3s) 가 `restoreSourceFile()` silent-pass 에서 유래. raw 통계가 21.1% 로 왜곡되어 29-run valid 9.2% 를 별도 보정 분석으로 복원해야 했다. N≥30 대규모 측정을 반복 가능하게 하려면 측정 툴 자체가 source 복원 실패/빈 인제스트를 자동 감지·제외해야 한다.
+
+**구현** (3 포인트):
+
+1. **`restoreSourceFile()` boolean 반환** — 기존 void → `Promise<boolean>`.
+   - `adapter.exists(SOURCE_PATH)` 선확인, true 면 early return.
+   - `walk('raw')` 으로 재탐색 시 `.`-prefix 디렉토리 (`.obsidian/.trash` 등) 스킵.
+   - `renameSync` try/catch 실패 시 false. 최종 `adapter.exists()` 재확인으로 진짜 복구 여부 반환.
+   - `cleanupForRerun()` 은 반환값을 그대로 bubble up.
+   - run loop 는 `if (!restored) results.push({run, error: 'source restore failed — raw/ 에서 파일을 찾을 수 없음'})` + `continue`.
+
+2. **per-run timeout 10분 → 15분** — JS 내부 `15 * 60 * 1000` + bash `timeout_sec=$((N_RUNS * 900))` 동기.
+   - 근거: §4.5.1.6.2 run10 timeout 관찰로 long-tail (Gemini slow response + Segmented route) 이 기존 한도에 근접하는 사례 존재.
+
+3. **`--strict` CLI 옵션 신규** — 에러 run 은 원래도 `ok` 풀에서 빠졌지만, `total=0` 로 통과한 "빈 인제스트" run 은 raw 통계에 남아 평균·CV 를 왜곡.
+   - `--strict` 시 Python 블록이 `ok_raw` 에서 `total > 0` 만 분리한 `ok` pool 로 통계 재계산.
+   - Markdown 에는 "Strict 제외 run (total=0)" 섹션을 별도로 써서 원본 데이터 보존.
+   - banner (`[measure-determinism] strict: ON`) 추가 + `--help` 에 설명 신규.
+   - `--help` 요약: "total=0 (source 복원 실패 / 빈 인제스트) run 을 통계에서 추가 제외. Core/Variable 분석도 strict pool 기준."
+
+**검증**:
+- `bash -n scripts/measure-determinism.sh` → syntax OK.
+- `./scripts/measure-determinism.sh --help` → 신규 `--strict` 포함 출력 확인.
+- Python heredoc `ast.parse` → OK.
+- JS heredoc (async IIFE wrap 후) `node --check` → OK.
+- 실제 CDP 측정은 Obsidian 기동 + §4.5.1.7.2 Concepts 측정과 묶어서 후속 세션 수행.
 
 ##### 4.5.1.7.4 Route SEGMENTED 10-run (진행 전)
 

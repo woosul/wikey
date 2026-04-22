@@ -4,7 +4,7 @@
 > 전제: Phase 3 (Obsidian 플러그인 + 인제스트 파이프라인 v6) 완료
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md`와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트(LLM 추출)** → **4. 검색·그래프** → **5. 운영·안정성**
-> 상태 (2026-04-22): §4.0 완료, §4.1 완료, §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성). 다음 = §4.2 URI 안정 참조 / §4.3 인제스트 고도화 / §4.5.1.7 variance 분해 (조건부).
+> 상태 (2026-04-22): §4.0 완료, §4.1 완료, §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 코드 완료** (실측은 CDP 세션 대기). 다음 = §4.2 URI 안정 참조 / §4.3 인제스트 고도화 / §4.5.1.7 나머지 sub-task (§4.5.1.7.1/7.4/7.6/7.7).
 
 ---
 
@@ -504,20 +504,18 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
   - 산출: A/B/C/D 4 CV 값 + 단일-레버 기여분 (B-A 차, C-A 차, D-B 차 등)
   - 구현 노트: determinism off 는 측정 CLI 에서 `-d` 미주입, canon off 는 canonicalizer.ts 의 SLUG_ALIASES/FORCED_CATEGORIES 를 feature-flag 로 runtime 제어 필요 (새 env `WIKEY_CANON_V3_DISABLE=1`)
 
-- [ ] **§4.5.1.7.2** Concepts prompt-level 개선 — project-management sub-area 결정화
-  - 현 현상: `project-integration/scope/time/cost/quality/human-resource/communications/risk/procurement-management` 9 개가 run 별로 1 (묶음) ↔ 9 (분해) 진동. Concepts CV 27% 의 주 원인.
-  - 접근 (A안): canonicalizer prompt 에 "PMBOK 10 knowledge areas 는 **개별 concept** 로 추출, 상위 `project-management-body-of-knowledge` 로 묶지 않는다" 명시.
-  - 접근 (B안): FORCED_CATEGORIES 에 9 개 slug 를 모두 concept/methodology 로 pin 하되 prompt 에서도 hint.
-  - 접근 (C안): anti-pattern 에 "-management" suffix 는 최상위 `project-management-body-of-knowledge` 로 흡수 추가 (반대 방향 — 묶음 일원화).
-  - 선택 기준: entity 그래프 가치 + 검색 정확도 측면에서 분해 (A/B) 가 유리 예상. 단, 측정 필요.
-  - 5-run 검증 후 채택.
+- [~] **§4.5.1.7.2** Concepts prompt-level 개선 — PMBOK 10 영역 결정화 (A안 구현 완료, 5-run 실측 대기)
+  - **채택**: A안 (canonicalizer prompt hint). B 는 false-positive 하드-추출 위험, C 는 wiki 그래프 가치 역행이라 기각.
+  - 구현: `canonicalizer.ts` `buildCanonicalizerPrompt` "작업 규칙" 7번 항목 신규 — PMBOK / 프로젝트 관리 지식체계 맥락이 본문에 등장할 때 10 영역 (`integration / scope / schedule (or time) / cost / quality / resource (or human-resource) / communications / risk / procurement / stakeholder`) 을 각각 `project-<area>-management` 개별 concept 화, 상위 `project-management-body-of-knowledge` 로 묶지 않음, type=`methodology`, hallucination guard ("본문에 직접 언급되지 않으면 추출하지 않는다") 포함.
+  - 단위 테스트: `canonicalizer.test.ts` 에 prompt 문자열 anchor 테스트 신규. rule marker + 8 슬러그 + anti-bundle + hallucination guard 문자열 모두 present 단언. 352/352 PASS.
+  - **후속**: 후속 CDP 세션에서 PMS 5-run 재측정으로 Concepts CV 24.6% → <15% 달성 여부 확증. 못 미치면 B안 보강 또는 schema.ts description 레벨 hint 로 위치 조정.
 
-- [ ] **§4.5.1.7.3** 측정 인프라 robustness — `scripts/measure-determinism.sh` edge case 해소
-  - `restoreSourceFile()` 가 `walk(raw/)` 실패 시 silent pass 로 다음 run 진입 → 0/0/0 3s outlier 생성. 수정 방향:
-    - `adapter.exists(SOURCE_PATH)` 로 복구 후 존재 확인. absent 이면 `results.push({run, error: 'source restore failed'})` + continue.
-    - `walk()` 범위에 `.obsidian/.trash/` 제외. `.md` sidecar 생성 시 같이 따라가는지 점검.
-  - per-run timeout 상향 검토 (현 10분 → 15-20분) — §4.5.1.6.2 run10 timeout 재현 관찰.
-  - 통계 계산 시 error/zero-output run 자동 제외 옵션 (`--strict`).
+- [x] **§4.5.1.7.3** 측정 인프라 robustness — `scripts/measure-determinism.sh` (코드 완료)
+  - `restoreSourceFile()` 재작성: `Promise<boolean>` 반환. `adapter.exists` 선/후확인, `.`-prefix 디렉토리 스킵, `renameSync` 실패 → false. `cleanupForRerun` bubble up.
+  - run loop: `!restored` → `results.push({error:'source restore failed — raw/ 에서 파일을 찾을 수 없음'})` + `continue`. run 30 스타일 outlier 원천 차단.
+  - per-run timeout: 10분 → 15분 (JS 내부 timer + bash `timeout_sec=$((N_RUNS * 900))` 동기, banner 문구도 갱신).
+  - `--strict` CLI 옵션 신규: Python stats 블록이 `total=0` run 을 `ok` pool 에서 추가 제외. Markdown 에는 "Strict 제외 run (total=0)" 섹션으로 원본 데이터 보존. `--help` 설명 + banner 라인 추가.
+  - 검증: `bash -n` syntax OK, Python `ast.parse` OK, JS `node --check` (async IIFE wrap) OK.
 
 - [ ] **§4.5.1.7.4** Route SEGMENTED 10-run baseline — Ollama qwen3:8b 환경의 variance 프로파일
   - 전제: Ollama 설치 + qwen3:8b 모델 pull. `WIKEY_BASIC_MODEL=ollama` 설정.
