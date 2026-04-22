@@ -27,13 +27,15 @@ PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 usage() {
   cat <<EOF
-사용법: ./scripts/measure-determinism.sh <source-path> [-n N] [-o output.md] [-f]
+사용법: ./scripts/measure-determinism.sh <source-path> [-n N] [-o output.md] [-f] [-d]
 
 옵션:
-  -n N         반복 횟수 (기본 5)
-  -o PATH      출력 Markdown 경로 (기본 activity/determinism-<name>-<date>.md)
-  -f, --force  크기 가드 우회 (15KB 미만/chunk<3 예상 소스)
-  -h, --help   도움말
+  -n N                반복 횟수 (기본 5)
+  -o PATH             출력 Markdown 경로 (기본 activity/determinism-<name>-<date>.md)
+  -f, --force         크기 가드 우회 (15KB 미만/chunk<3 예상 소스)
+  -d, --determinism   §4.5.1.6.1 — plugin.settings.extractionDeterminism=true 강제
+                      (runs 동안 temperature=0 + seed=42 주입, 종료 시 원복)
+  -h, --help          도움말
 EOF
   exit 0
 }
@@ -42,12 +44,14 @@ N_RUNS=5
 OUTPUT_PATH=""
 SOURCE_PATH=""
 FORCE=0
+DETERMINISM=0
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -n) N_RUNS="$2"; shift 2 ;;
     -o) OUTPUT_PATH="$2"; shift 2 ;;
     -f|--force) FORCE=1; shift ;;
+    -d|--determinism) DETERMINISM=1; shift ;;
     -h|--help) usage ;;
     *) SOURCE_PATH="$1"; shift ;;
   esac
@@ -105,6 +109,11 @@ ABS_OUTPUT="${PROJECT_DIR}/${OUTPUT_PATH}"
 echo "[measure-determinism] source: ${SOURCE_PATH}"
 echo "[measure-determinism] runs: ${N_RUNS}"
 echo "[measure-determinism] output: ${OUTPUT_PATH}"
+if [[ "$DETERMINISM" -eq 1 ]]; then
+  echo "[measure-determinism] determinism: ON (temperature=0, seed=42)"
+else
+  echo "[measure-determinism] determinism: off (baseline sampling)"
+fi
 echo
 
 # 측정 JS를 임시 파일로 작성 (parameterized)
@@ -114,6 +123,7 @@ trap "rm -f $TMPJS" EXIT
 cat > "$TMPJS" <<'JSEOF'
 const N_RUNS = __N_RUNS__
 const SOURCE_PATH = '__SOURCE_PATH__'
+const DETERMINISM = __DETERMINISM__ === 1
 const SOURCE_NAME = SOURCE_PATH.split('/').pop()
 
 const plugin = window.app.plugins.plugins.wikey
@@ -128,6 +138,12 @@ if (!plugin) return [{ run: 0, error: 'plugin not loaded' }]
 const prevBrief = plugin.settings.ingestBriefs
 plugin.settings.ingestBriefs = 'never'
 plugin.skipIngestBriefsThisSession = true
+
+// §4.5.1.6.1 — determinism toggle applied for this measurement session only.
+const prevDeterminism = plugin.settings.extractionDeterminism
+if (DETERMINISM) {
+  plugin.settings = { ...plugin.settings, extractionDeterminism: true }
+}
 await plugin.saveSettings?.()
 
 // Snapshot directory state — for diff-based cleanup/collection (replaces content-match)
@@ -312,14 +328,18 @@ for (let run = 1; run <= N_RUNS; run++) {
 // Final cleanup: remove last run's files + restore source
 await cleanupForRerun(prevNewFiles)
 
-plugin.settings.ingestBriefs = prevBrief
+plugin.settings = {
+  ...plugin.settings,
+  ingestBriefs: prevBrief,
+  extractionDeterminism: prevDeterminism,
+}
 plugin.skipIngestBriefsThisSession = false
 await plugin.saveSettings?.()
 return results
 JSEOF
 
 # Substitute parameters
-sed -i.bak "s|__N_RUNS__|${N_RUNS}|g; s|__SOURCE_PATH__|${SOURCE_PATH}|g" "$TMPJS"
+sed -i.bak "s|__N_RUNS__|${N_RUNS}|g; s|__SOURCE_PATH__|${SOURCE_PATH}|g; s|__DETERMINISM__|${DETERMINISM}|g" "$TMPJS"
 rm -f "${TMPJS}.bak"
 
 # Run via CDP
@@ -342,12 +362,13 @@ else:
 ")
 
 # Compute stats and write Markdown
-python3 - "$RESULTS_JSON" "$SOURCE_PATH" "$ABS_OUTPUT" "$N_RUNS" <<'PYEOF'
+python3 - "$RESULTS_JSON" "$SOURCE_PATH" "$ABS_OUTPUT" "$N_RUNS" "$DETERMINISM" <<'PYEOF'
 import json, sys, os, statistics, datetime
 payload = json.loads(sys.argv[1])
 source_path = sys.argv[2]
 output_path = sys.argv[3]
 n_runs = int(sys.argv[4])
+determinism = int(sys.argv[5]) == 1
 
 if isinstance(payload, dict) and 'cdp_error' in payload:
     print(f'CDP evaluate failed:\n{json.dumps(payload["cdp_error"], indent=2)}', file=sys.stderr)
@@ -402,6 +423,7 @@ with open(output_path, 'w', encoding='utf-8') as f:
     f.write(f'> 일시: {datetime.date.today().isoformat()}\n')
     f.write(f'> Source: `{source_path}`\n')
     f.write(f'> Runs: {len(ok)} ({len(err)} failed)\n')
+    f.write(f'> Determinism: {"ON (temperature=0, seed=42)" if determinism else "off (baseline sampling)"}\n')
     f.write(f'> 도구: `scripts/measure-determinism.sh`\n\n')
     f.write('## 결과\n\n')
     f.write('| Run | Entities | Concepts | Total | Time(s) |\n')

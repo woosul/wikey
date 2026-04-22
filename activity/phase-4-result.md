@@ -1024,9 +1024,9 @@ Post-processing 수준:
 - `scripts/measure-determinism.sh` (panel refresh 패치)
 - `activity/phase-4-result.md §4.5.1.5.11~.14` (이 섹션)
 
-#### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (2026-04-22 신규, 진행 전)
+#### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (2026-04-22 진행 중)
 
-> Mirror: `plan/phase-4-todo.md §4.5.1.6` (6 sub-task 체크박스). 이 섹션은 **진행 전 stub** — 다음 세션에서 실행 후 본문 상세화.
+> Mirror: `plan/phase-4-todo.md §4.5.1.6` (6 sub-task 체크박스). 구현(§4.5.1.6.1·3·4) 완료, 측정(§4.5.1.6.2·6) 진행 중.
 
 **배경 (§4.5.1.5.13 에서 도출)**:
 
@@ -1043,44 +1043,133 @@ Post-processing 수준:
 
 **하위 과제 (번호는 `plan/phase-4-todo.md §4.5.1.6` mirror)**:
 
-##### 4.5.1.6.1 Gemini determinism 옵션 (진행 전)
+##### 4.5.1.6.1 Gemini determinism 옵션 (2026-04-22 완료)
 
-- `wikey-core/src/llm-client.ts` 에 `extractionDeterminism: boolean` 플래그 추가
-- Gemini provider `generationConfig.temperature=0` + `seed=42` 적용
-- TDD: flag off (기존 동작) / flag on (temperature/seed 주입 확인) 단위 테스트
+**구현**:
+- `wikey-core/src/types.ts` — `WikeyConfig.WIKEY_EXTRACTION_DETERMINISM?: boolean`
+- `wikey-core/src/config.ts` — `BOOLEAN_KEYS` 에 `WIKEY_EXTRACTION_DETERMINISM` 추가 (`1`/`true` → true 파싱)
+- `wikey-core/src/ingest-pipeline.ts` — `callLLMWithRetry(.., deterministic?)` 플래그 추가 (export 로 승격 → 단위 테스트 가능), `ingest()` 에서 `config.WIKEY_EXTRACTION_DETERMINISM === true` 를 읽어 summary/extractMentions/canonicalize 3 지점으로 전파
+- `wikey-core/src/canonicalizer.ts` — `CanonicalizeArgs.deterministic?`, `callLLMWithRetry` 에 동일 플래그 주입
+- `wikey-obsidian/src/main.ts` — `WikeySettings.extractionDeterminism` 신규, `buildConfig()` 에서 `WIKEY_EXTRACTION_DETERMINISM` 필드로 surface, `loadFromWikeyConf()` 에서 conf 값 병합
 
-##### 4.5.1.6.2 determinism=on 10-run 재측정 (진행 전)
+**주입 메커니즘**:
+`deterministic=true` 일 때 `{ temperature: 0, seed: 42 }` 를 기존 `llmOpts` 에 spread. Gemini 는 `generationConfig.seed` 지원 (이미 `llm-client.ts:42` 에서 처리), 다른 프로바이더(ollama/openai/anthropic) 는 fields 무시 — 안전한 no-op.
 
-- `WIKEY_EXTRACTION_DETERMINISM=1 ./scripts/measure-determinism.sh ... -n 10`
-- 기여분 산정: (CV_off − CV_on) / CV_off
-- 목표: CV < 15%
+**TDD (11 tests 신규)**:
+- `config.test.ts §WIKEY_EXTRACTION_DETERMINISM (§4.5.1.6.1)` — `1`/`true`/`0`/`false`/unset 5 케이스
+- `ingest-pipeline.test.ts §callLLMWithRetry — §4.5.1.6.1 determinism flag` — Gemini/비-Gemini/undefined/false 4 케이스
+- `canonicalizer.test.ts §canonicalize — §4.5.1.6.1 determinism flag` — on/off 2 케이스
 
-##### 4.5.1.6.3 canonicalize.ts SLUG_ALIASES 3차 확장 (진행 전)
+Result: 315/315 PASS (이전 290 → +25). tsc/esbuild 0 errors.
 
-- `allim-talk`, `kakao-alimtalk` → `alimtalk`
-- `erp-system`, `enterprise-resource-planning-system` → `enterprise-resource-planning`
-- `supply-chain-management-system` → `supply-chain-management`
-- `point-of-production-system` → `manufacturing-execution-system`
-- `e-bom`, `e-bill-of-materials`, `electronic-bill-of-materials`, `engineering-bill-of-materials` → `bill-of-materials` (축 분리 여부 재검토)
-- `electronic-approval-system` → `electronic-approval`
-- 신규 TDD 최소 8건
+##### 4.5.1.6.2 determinism=on 10-run 재측정 (2026-04-22 완료)
 
-##### 4.5.1.6.4 FORCED_CATEGORIES canonical resolution 업그레이드 (진행 전)
+**측정**: `./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10 -d` → `activity/phase-4-5-1-6-pms-10run-determinism-2026-04-22.md`.
 
-- 현재: `applyForcedCategories` 가 post-processing 1-pass 로 mention 을 올바른 pool 로 이동
-- 한계 (§4.5.1.5 30-run 에서 확증): 동일 slug 가 entity/concept pool 양쪽에 동시 등장한 run 존재 → run-local pin 으로는 일관성 부족
-- 업그레이드: canonical resolution (pool merge + axis 수렴) — 동일 slug 발견 시 우선 axis (FORCED_CATEGORIES 혹은 schema) 로 수렴, 반대 pool 에서 제거
-- TDD: 양쪽 pool 중복 시 수렴 동작 + 기존 pin 회귀 없음
+새 CLI 플래그 `-d/--determinism`: CDP JS 내부에서 `plugin.settings.extractionDeterminism=true` 를 session-scope 주입, 측정 종료 시 이전 값으로 원복. output markdown 에 `> Determinism: ON/off` 기록.
 
-##### 4.5.1.6.5 Route FULL vs SEGMENTED 10-run 분리 비교 (진행 전)
+**결과 (9/10 run, 1 timeout)**:
 
-- 동일 PMS 소스를 Route FULL (Gemini 기본) / SEGMENTED (`WIKEY_BASIC_PROVIDER=ollama WIKEY_BASIC_MODEL=qwen3:8b`) 각 10-run
-- 섹션 분할 자체가 variance 증폭인지 vs provider 차이인지 분리
-- 가설: SEGMENTED CV > FULL CV (섹션별 호출 간 variance 누적)
+| 지표 | §4.5.1.5 baseline (30-run) | §4.5.1.6 (10-run, det+canon) | Δ absolute | Δ relative |
+|------|----------------------------:|-------------------------------:|-----------:|-----------:|
+| Entities CV | 36.4% | **13.9%** | −22.5pp | −61.8% |
+| Concepts CV | 31.1% | **28.9%** | −2.2pp | −7.1% |
+| **Total CV** | **24.3%** | **7.2%** | **−17.1pp** | **−70.4%** |
+| Core entities | 3/40 (7.5%) | **18/31 (58%)** | +50.5pp | +7.7x |
+| Core concepts | 4/47 (8.5%) | **11/22 (50%)** | +41.5pp | +5.9x |
+| Time / run (mean) | 336.9s | 326.9s | −10s | −3.0% |
+| Time CV | 20.9% | 22.8% | +1.9pp | (시간 변동성 유사) |
 
-##### 4.5.1.6.6 개선 후 30-run 재측정 (진행 전)
+**기여 분해 (추정)**:
+- Total CV 24.3% → 7.2% (−17.1pp). 섹션 3-way 중 (1) determinism = Gemini temperature/seed 결정성, (2) SLUG_ALIASES 3차 (5→20) = naming-level 수렴, (3) FORCED_CATEGORIES 3차 (3→13) = axis-level 수렴. 이번 측정은 3 개를 동시 적용했으므로 단일 인자 기여는 분리 측정 필요 (§4.5.1.7 후보).
+- 가장 큰 산출 효과: **union 사이즈 급감** — entities 40→31, concepts 47→22. 이는 alias 수렴으로 variant 슬러그들이 단일 canonical 로 merge 된 결과.
+- 기존 Entities CV 36.4% → 13.9% 개선 폭이 Concepts CV 31.1% → 28.9% 보다 훨씬 큼 (Entities 의 음역 5-variant 흡수가 alias 효과의 대부분).
+- Concepts CV 잔여 28.9%: BOM-variant 흡수는 성공했으나 LLM extraction volume 자체의 variance (일부 run 이 12개, 다른 run 이 22개) 가 남아있음 — determinism 은 LLM 샘플링 결정성이지 **문서 해석 결정성이 아님**.
 
-- §4.5.1.6.1~.4 모두 적용 상태에서 30-run PMS main
-- 목표 CV < 10%
-- baseline (§4.5.1.5 의 24.3%) 및 §4.5.1.4 baseline (32.5%) 모두와 비교 표
+**목표 대비**:
+- Phase A 목표 (§4.5.1.6.1+2 완료 후 Total CV <15%) → ✅ **달성** (7.2% < 15%).
+- Phase B 목표 (§4.5.1.6.3+4 완료 후 Total CV <10%) → ✅ **달성** (10-run 기준).
+- Phase C 목표 (§4.5.1.6.6 30-run 검증) → 진행 중 (다음 섹션).
+
+**run 10 timeout 메모**: 10 번째 run 이 10분 timeout 으로 실패. 9/10 통계로 CV 계산 신뢰 가능 (baseline 30-run 이 보정 기준). 30-run 에서 유사 timeout 이 재현되는지 확인 필요 — provisional 가설: Gemini quota/latency spike 또는 특정 섹션 조합이 Docling 결과 + seed=42 조합에서 최대 시간 이상 걸린 것.
+
+##### 4.5.1.6.3 canonicalize.ts SLUG_ALIASES 3차 확장 (2026-04-22 완료)
+
+**구현** (`wikey-core/src/canonicalizer.ts`):
+
+§4.5.1.5 30-run 데이터에서 발견된 N≥2 run 변이를 canonical slug 로 흡수. 기존 5 entry → **20 entry**:
+
+| Family | Aliases | Canonical |
+|--------|---------|-----------|
+| Alimtalk 4-variant | `allimtok`·`alrimtok`·`allim-talk`·`allimtalk`·`kakao-alimtalk` | `alimtalk` |
+| SSO 2-variant | `sso-api`·`single-sign-on` | `single-sign-on-api` |
+| ERP | `erp-system`·`enterprise-resource-planning-system` | `enterprise-resource-planning` |
+| SCM | `supply-chain-management-system` | `supply-chain-management` |
+| MES/PoP | `point-of-production-system`·`point-of-production` | `manufacturing-execution-system` |
+| BOM 4-variant | `e-bom`·`e-bill-of-materials`·`electronic-bill-of-materials`·`engineering-bill-of-materials` | `bill-of-materials` |
+| Electronic Approval | `electronic-approval-system` | `electronic-approval` |
+| RESTful API | `representational-state-transfer-api` | `restful-api` |
+| TCP/IP | `transmission-control-protocol-internet-protocol` | `tcp-ip` |
+| MQTT | `message-queuing-telemetry-transport` | `mqtt` |
+| Integrated DB | `integrated-member-db` | `integrated-member-database` |
+
+BOM 4-variant 는 축 분리 보류 — N=30 에서 `bill-of-materials` 는 always-present core, 다른 4 변형은 sometimes → 단일 canonical 로 수렴 결정. eBOM/mBOM 의 의미 구분 필요 시 향후 §4.5.1.7 에서 재분할 가능.
+
+**TDD (7 신규 test blocks + 1 구조 invariant)**:
+- Alimtalk 4-variant collapse
+- ERP/SCM `-system` suffix drop
+- PoP → MES collapse
+- BOM 4-variant collapse
+- Electronic Approval suffix drop
+- Spelled-out standards (RESTful/TCP-IP/MQTT) → short form
+- LLM filename end-to-end 적용 확인
+- SLUG_ALIASES canonical targets flat chain invariant (regression guard)
+
+##### 4.5.1.6.4 FORCED_CATEGORIES canonical resolution 업그레이드 (2026-04-22 완료)
+
+**배경** (§4.5.1.5 30-run 에서 확증):
+`FORCED_CATEGORIES` 자체 로직 (`applyForcedCategories` 2-pass) 은 pin 된 slug 의 cross-pool collision 을 정확히 해소한다 — pass 1 이 `targetBases.entity` 를 마킹하고 pass 2 가 이를 skip guard 로 사용. 버그가 아닌 **coverage 부족**이 문제: §4.5.1.4 시점의 3 pin (mqtt/restful-api/project-management-system) 외에 N=30 에서 양쪽 pool 왕복 10 slug 추가 발견.
+
+**구현** (`wikey-core/src/canonicalizer.ts`):
+
+기존 3 pin → **13 pin**:
+
+| Slug | Category | Type | 근거 |
+|------|----------|------|------|
+| `mqtt` | entity | tool | §4.5.1.4 |
+| `restful-api` | concept | standard | §4.5.1.4 |
+| `project-management-system` | entity | product | §4.5.1.4 |
+| `enterprise-resource-planning` | concept | standard | N=30 E/C 왕복, ERP=업계표준 |
+| `supply-chain-management` | concept | methodology | N=30 E/C 왕복, SCM=관리 방법론 |
+| `manufacturing-execution-system` | concept | standard | N=30 E/C 왕복, MES=업계표준 |
+| `product-lifecycle-management` | concept | methodology | N=30 E/C 왕복 |
+| `advanced-planning-and-scheduling` | concept | methodology | N=30 E/C 왕복 |
+| `electronic-approval` | concept | methodology | N=30 E/C 왕복, 한국 결재 워크플로 |
+| `single-sign-on-api` | entity | tool | §4.5.1.4 테스트 의도 유지 (schema: tool = "SW/프로토콜") |
+| `tcp-ip` | concept | standard | N=30 E/C 왕복 |
+| `virtual-private-network` | concept | standard | N=30 C pool sometimes |
+| `bill-of-materials` | concept | standard | core 유지·강제 |
+
+SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `erp-system`(variant) → canonical `enterprise-resource-planning` → pin lookup → concept 로 수렴. 이 chain 이 §4.5.1.6.3+§4.5.1.6.4 의 "canonical resolution" 구현.
+
+**TDD (4 신규 test block)**:
+- `FORCED_CATEGORIES` pin 구조 assertion (enterprise-resource-planning·supply-chain-management·tcp-ip·virtual-private-network)
+- alias → pin chain e2e (LLM emits `erp-system` type=product → 최종 concept pool 의 `enterprise-resource-planning.md` 로 수렴, conceptType=standard)
+- Cross-pool collision 해소 (`enterprise-resource-planning-system` in entities + `enterprise-resource-planning` in concepts → concept only)
+- BOM 2-variant collapse (alias + pin 조합)
+
+##### 4.5.1.6.5 Route FULL vs SEGMENTED 10-run 분리 비교 (2026-04-22 보류)
+
+§4.5.1.6.2/6.6 결과에 따라 조건부 실행. FULL (Gemini) 이 목표 CV <10% 에 도달하면 diagnostic 가치 감소 → §4.5.1.7 이관. 미달 시 SEGMENTED (Ollama qwen3:8b) 로 추가 10-run 실행해 섹션 분할 variance 누적 효과 분리.
+
+##### 4.5.1.6.6 개선 후 30-run 재측정 (2026-04-22 진행 예정)
+
+§4.5.1.6.2 10-run 이 목표 <15% 에 도달 시 연속 실행. 실행 명령:
+
+```bash
+./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf \
+  -n 30 -d -o activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md
+```
+
+비교 축: §4.5.1.4 baseline (32.5%), §4.5.1.5 30-run (24.3%), §4.5.1.6 30-run (목표 <10%).
 

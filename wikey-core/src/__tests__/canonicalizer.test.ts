@@ -317,6 +317,41 @@ describe('canonicalize — v7 §4.5.1.4 slug aliases', () => {
   })
 })
 
+describe('canonicalize — §4.5.1.6.1 determinism flag', () => {
+  function makeCapturingLLM(jsonResponse: string): { llm: LLMClient; capturedOpts: any[] } {
+    const capturedOpts: any[] = []
+    const llm = {
+      call: vi.fn().mockImplementation(async (_prompt: string, opts: any) => {
+        capturedOpts.push(opts)
+        return '```json\n' + jsonResponse + '\n```'
+      }),
+    } as unknown as LLMClient
+    return { llm, capturedOpts }
+  }
+
+  it('omits temperature/seed when deterministic is not set', async () => {
+    const { llm, capturedOpts } = makeCapturingLLM('{"entities":[],"concepts":[]}')
+    await canonicalize({
+      ...baseArgs, llm,
+      mentions: [{ name: 'x', type_hint: 'organization', evidence: 'y' }],
+    })
+    expect(capturedOpts).toHaveLength(1)
+    expect(capturedOpts[0].temperature).toBeUndefined()
+    expect(capturedOpts[0].seed).toBeUndefined()
+  })
+
+  it('injects temperature=0 and seed=42 when deterministic=true', async () => {
+    const { llm, capturedOpts } = makeCapturingLLM('{"entities":[],"concepts":[]}')
+    await canonicalize({
+      ...baseArgs, llm, deterministic: true,
+      mentions: [{ name: 'x', type_hint: 'organization', evidence: 'y' }],
+    })
+    expect(capturedOpts[0].temperature).toBe(0)
+    expect(capturedOpts[0].seed).toBe(42)
+    expect(capturedOpts[0].jsonMode).toBe(true)
+  })
+})
+
 describe('canonicalize — v7 §4.5.1.4 E/C boundary pins', () => {
   it('FORCED_CATEGORIES pins mqtt to entity/tool', () => {
     expect(FORCED_CATEGORIES['mqtt']).toEqual({ category: 'entity', type: 'tool' })
@@ -395,5 +430,129 @@ describe('canonicalize — v7 §4.5.1.4 E/C boundary pins', () => {
     const result = await canonicalize({ ...baseArgs, llm, mentions })
     expect(result.entities).toHaveLength(1)
     expect(result.concepts).toHaveLength(0)
+  })
+})
+
+describe('canonicalize — §4.5.1.6.3 SLUG_ALIASES 3rd expansion', () => {
+  it('collapses alimtalk 4-variant (allim-talk/allimtalk/kakao-alimtalk/allimtok → alimtalk)', () => {
+    expect(canonicalizeSlug('allim-talk')).toBe('alimtalk')
+    expect(canonicalizeSlug('allimtalk')).toBe('alimtalk')
+    expect(canonicalizeSlug('kakao-alimtalk')).toBe('alimtalk')
+    expect(canonicalizeSlug('allimtok')).toBe('alimtalk')
+  })
+
+  it('drops -system suffix for ERP/SCM (→ methodology slug)', () => {
+    expect(canonicalizeSlug('erp-system')).toBe('enterprise-resource-planning')
+    expect(canonicalizeSlug('enterprise-resource-planning-system')).toBe('enterprise-resource-planning')
+    expect(canonicalizeSlug('supply-chain-management-system')).toBe('supply-chain-management')
+  })
+
+  it('collapses point-of-production (system) → manufacturing-execution-system', () => {
+    expect(canonicalizeSlug('point-of-production-system')).toBe('manufacturing-execution-system')
+    expect(canonicalizeSlug('point-of-production')).toBe('manufacturing-execution-system')
+  })
+
+  it('collapses BOM 4-variant → bill-of-materials', () => {
+    expect(canonicalizeSlug('e-bom')).toBe('bill-of-materials')
+    expect(canonicalizeSlug('e-bill-of-materials')).toBe('bill-of-materials')
+    expect(canonicalizeSlug('electronic-bill-of-materials')).toBe('bill-of-materials')
+    expect(canonicalizeSlug('engineering-bill-of-materials')).toBe('bill-of-materials')
+  })
+
+  it('drops -system suffix for electronic-approval', () => {
+    expect(canonicalizeSlug('electronic-approval-system')).toBe('electronic-approval')
+  })
+
+  it('maps spelled-out standards to their short industry-canonical form', () => {
+    expect(canonicalizeSlug('representational-state-transfer-api')).toBe('restful-api')
+    expect(canonicalizeSlug('transmission-control-protocol-internet-protocol')).toBe('tcp-ip')
+    expect(canonicalizeSlug('message-queuing-telemetry-transport')).toBe('mqtt')
+  })
+
+  it('applies alias remap to LLM output filenames (end-to-end for new entries)', async () => {
+    const mentions: Mention[] = [
+      { name: 'allim-talk', type_hint: 'product', evidence: 'x' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'allim-talk', type: 'product', description: '카카오 알림톡' }],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('alimtalk.md')
+  })
+
+  it('SLUG_ALIASES canonical targets remain flat (no chain)', () => {
+    for (const target of Object.values(SLUG_ALIASES)) {
+      expect(SLUG_ALIASES).not.toHaveProperty(target)
+    }
+  })
+})
+
+describe('canonicalize — §4.5.1.6.4 FORCED_CATEGORIES canonical resolution', () => {
+  it('pins enterprise-resource-planning to concept/standard', () => {
+    expect(FORCED_CATEGORIES['enterprise-resource-planning']).toEqual(
+      { category: 'concept', type: 'standard' }
+    )
+  })
+
+  it('pins supply-chain-management to concept/methodology', () => {
+    expect(FORCED_CATEGORIES['supply-chain-management']).toEqual(
+      { category: 'concept', type: 'methodology' }
+    )
+  })
+
+  it('pins tcp-ip and virtual-private-network to concept/standard', () => {
+    expect(FORCED_CATEGORIES['tcp-ip']).toEqual({ category: 'concept', type: 'standard' })
+    expect(FORCED_CATEGORIES['virtual-private-network']).toEqual({ category: 'concept', type: 'standard' })
+  })
+
+  it('moves aliased entity (erp-system) out of entity pool via pin (ERP is concept)', async () => {
+    // LLM emits `erp-system` classified as entity/product.
+    // Alias maps to `enterprise-resource-planning`; pin forces concept/standard.
+    const mentions: Mention[] = [
+      { name: 'ERP', type_hint: 'product', evidence: 'ERP 시스템' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'erp-system', type: 'product', description: 'ERP' }],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(0)
+    expect(result.concepts).toHaveLength(1)
+    expect(result.concepts[0].filename).toBe('enterprise-resource-planning.md')
+    expect(result.concepts[0].conceptType).toBe('standard')
+  })
+
+  it('preserves pin when slug appears in both pools after alias (enterprise-resource-planning)', async () => {
+    // LLM emits same canonical in both pools via different aliases.
+    const mentions: Mention[] = [
+      { name: 'ERP', type_hint: 'standard', evidence: 'x' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'enterprise-resource-planning-system', type: 'product', description: 'A' }],
+      concepts: [{ name: 'enterprise-resource-planning', type: 'standard', description: 'B' }],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(0)
+    expect(result.concepts).toHaveLength(1)
+    expect(result.concepts[0].filename).toBe('enterprise-resource-planning.md')
+  })
+
+  it('collapses BOM variants to single concept via alias + pin', async () => {
+    const mentions: Mention[] = [
+      { name: 'BOM', type_hint: 'standard', evidence: '자재명세서' },
+    ]
+    // Simulate LLM emitting two BOM variants that would both alias to bill-of-materials.
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [],
+      concepts: [
+        { name: 'engineering-bill-of-materials', type: 'standard', description: 'eBOM' },
+        { name: 'bill-of-materials', type: 'standard', description: 'BOM 표준' },
+      ],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.concepts).toHaveLength(1)
+    expect(result.concepts[0].filename).toBe('bill-of-materials.md')
   })
 })

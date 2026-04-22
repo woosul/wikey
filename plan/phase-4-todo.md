@@ -387,23 +387,34 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - [ ] `plan/session-wrap-followups.md` §4.5.1.5 측정 완료 선언 + §4.5.1.6 을 다음 과제로 지정 (이번 turn)
 - [ ] 단일 commit + push (이번 turn)
 
-#### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (신규, 2026-04-22)
+#### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (2026-04-22, 진행 중)
 
 > **배경**. §4.5.1.5 30-run 측정 결과 Total CV 24.3% — baseline 32.5% 대비 25% 상대 감소했으나 잔여 75% variance 가 LLM 수준 (temperature/seed) + canonicalizer 미도달 패턴에서 발생함을 확증. N=30 데이터에서 `alimtalk` 5-variant, ERP/SCM/MES 3-variant, BOM 5-variant, E/C 경계 왕복 (`electronic-approval(-system)`, `restful-api`/`representational-state-transfer-api`) 등 신규 패턴 발견.
 
-- [ ] **§4.5.1.6.1**: Gemini `generationConfig.temperature=0 + seed=42` 옵션 → `wikey-core/src/llm-client.ts` 에 `extractionDeterminism` 플래그 추가 (TDD)
-- [ ] **§4.5.1.6.2**: determinism=on 조건 10-run 재측정 → temperature/seed 기여분 정량 (목표: Total CV <15%)
-- [ ] **§4.5.1.6.3**: `canonicalize.ts SLUG_ALIASES` 3차 확장
-  - `allim-talk`, `kakao-alimtalk` → `alimtalk` (카카오 공식)
-  - `erp-system`, `enterprise-resource-planning-system` → `enterprise-resource-planning` (E 측 pin)
+- [x] **§4.5.1.6.1**: Gemini `generationConfig.temperature=0 + seed=42` 옵션 → `wikey-core/src/llm-client.ts` 에 `extractionDeterminism` 플래그 추가 (TDD)
+  - `WikeyConfig.WIKEY_EXTRACTION_DETERMINISM?: boolean`, `BOOLEAN_KEYS` 등록
+  - `callLLMWithRetry(.., deterministic?)` 로 summary/extractMentions/canonicalize 3 지점 전파
+  - Obsidian 플러그인: `WikeySettings.extractionDeterminism`, `buildConfig()` surface, `wikey.conf` 로드
+  - 11 신규 tests PASS (config:5, ingest-pipeline:4, canonicalizer:2)
+- [x] **§4.5.1.6.2**: determinism=on 조건 10-run 재측정 → Total CV 24.3% → **7.2%** (−70.4% 상대 감소, 목표 <15% 크게 초과 달성). Core entities 8%→58%, concepts 9%→50%. 9/10 run 성공 (1 timeout).
+- [x] **§4.5.1.6.3**: `canonicalize.ts SLUG_ALIASES` 3차 확장 (5 → 20 entry)
+  - `allim-talk`, `allimtalk`, `kakao-alimtalk` → `alimtalk` (카카오 공식)
+  - `erp-system`, `enterprise-resource-planning-system` → `enterprise-resource-planning`
   - `supply-chain-management-system` → `supply-chain-management`
-  - `point-of-production-system` → `manufacturing-execution-system`
-  - `e-bom`, `e-bill-of-materials`, `electronic-bill-of-materials`, `engineering-bill-of-materials` → `bill-of-materials` (또는 축 분리 결정)
+  - `point-of-production(-system)` → `manufacturing-execution-system`
+  - `e-bom`, `e-bill-of-materials`, `electronic-bill-of-materials`, `engineering-bill-of-materials` → `bill-of-materials`
   - `electronic-approval-system` → `electronic-approval`
-- [ ] **§4.5.1.6.4**: `FORCED_CATEGORIES` 강화 — 동일 slug 가 E/C pool 양쪽 등장 시 axis pin 적용 (현재 run-local 1-pass → canonical resolution 로 업그레이드)
-  - §4.5.1.4 에서 이미 `project-management-system` 을 pin 했지만 N=30 중 양쪽 등장 run 확인됨
-- [ ] **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 비교 — 섹션 분할 자체의 variance 증폭 효과 분리
-- [ ] **§4.5.1.6.6**: 개선 후 30-run 재측정 → Total CV 목표 <10%
+  - `representational-state-transfer-api` → `restful-api`
+  - `transmission-control-protocol-internet-protocol` → `tcp-ip`
+  - `message-queuing-telemetry-transport` → `mqtt`
+  - 8 신규 test block PASS (invariant guard 포함)
+- [x] **§4.5.1.6.4**: `FORCED_CATEGORIES` 3차 확장 (3 → 13 pin) — cross-pool 수렴
+  - §4.5.1.4 3 pin 유지 (`mqtt`/`restful-api`/`project-management-system`)
+  - 신규 10 pin: `enterprise-resource-planning`, `supply-chain-management`, `manufacturing-execution-system`, `product-lifecycle-management`, `advanced-planning-and-scheduling`, `electronic-approval`, `single-sign-on-api`, `tcp-ip`, `virtual-private-network`, `bill-of-materials`
+  - SLUG_ALIASES → pin resolution chain 으로 canonical axis 수렴 구현
+  - 4 신규 test block PASS
+- [ ] **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 비교 — §4.5.1.6.2/6.6 결과에 따라 조건부 실행 (FULL <10% 도달 시 §4.5.1.7 이관)
+- [ ] **§4.5.1.6.6**: 개선 후 30-run 재측정 → Total CV 목표 <10% (§4.5.1.6.2 10-run 결과 확인 후 연속 실행)
 
 ### 4.5.2 운영 안정성 — 삭제·초기화·포팅
 

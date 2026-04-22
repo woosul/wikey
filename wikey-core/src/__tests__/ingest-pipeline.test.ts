@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate, assertNotWikiPath } from '../ingest-pipeline.js'
+import { describe, it, expect, vi } from 'vitest'
+import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate, assertNotWikiPath, callLLMWithRetry } from '../ingest-pipeline.js'
 import type { WikiFS } from '../types.js'
+import type { LLMClient } from '../llm-client.js'
 
 describe('formatLocalDate', () => {
   it('returns YYYY-MM-DD in local timezone (not UTC)', () => {
@@ -138,6 +139,51 @@ describe('loadEffectiveIngestPrompt', () => {
     }
     const result = await loadEffectiveIngestPrompt(fs)
     expect(result).toBe(BUNDLED_INGEST_PROMPT)
+  })
+})
+
+describe('callLLMWithRetry — §4.5.1.6.1 determinism flag', () => {
+  function makeMockLLM(): { llm: LLMClient; capturedOpts: any[] } {
+    const capturedOpts: any[] = []
+    const llm = {
+      call: vi.fn().mockImplementation(async (_prompt: string, opts: any) => {
+        capturedOpts.push(opts)
+        return '```json\n{"source_page":{"filename":"s.md","content":"x"}}\n```'
+      }),
+    } as unknown as LLMClient
+    return { llm, capturedOpts }
+  }
+
+  it('omits temperature/seed when deterministic is false', async () => {
+    const { llm, capturedOpts } = makeMockLLM()
+    await callLLMWithRetry(llm, 'p', 'gemini', 'gemini-2.5-flash', false)
+    expect(capturedOpts).toHaveLength(1)
+    expect(capturedOpts[0].temperature).toBeUndefined()
+    expect(capturedOpts[0].seed).toBeUndefined()
+  })
+
+  it('injects temperature=0 and seed=42 into Gemini opts when deterministic=true', async () => {
+    const { llm, capturedOpts } = makeMockLLM()
+    await callLLMWithRetry(llm, 'p', 'gemini', 'gemini-2.5-flash', true)
+    expect(capturedOpts[0].temperature).toBe(0)
+    expect(capturedOpts[0].seed).toBe(42)
+    expect(capturedOpts[0].responseMimeType).toBe('application/json')
+    expect(capturedOpts[0].jsonMode).toBe(true)
+  })
+
+  it('injects temperature=0 and seed=42 into non-Gemini opts too', async () => {
+    const { llm, capturedOpts } = makeMockLLM()
+    await callLLMWithRetry(llm, 'p', 'ollama', 'qwen3:8b', true)
+    expect(capturedOpts[0].temperature).toBe(0)
+    expect(capturedOpts[0].seed).toBe(42)
+    expect(capturedOpts[0].jsonMode).toBe(true)
+  })
+
+  it('omits determinism opts when flag is undefined', async () => {
+    const { llm, capturedOpts } = makeMockLLM()
+    await callLLMWithRetry(llm, 'p', 'gemini', 'gemini-2.5-flash')
+    expect(capturedOpts[0].temperature).toBeUndefined()
+    expect(capturedOpts[0].seed).toBeUndefined()
   })
 })
 

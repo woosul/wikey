@@ -41,6 +41,10 @@ interface WikeySettings {
   savedChatHistory: ReadonlyArray<{ role: 'user' | 'assistant' | 'error'; content: string }>
   // 최초 1회 사이드바 초기 폭을 500px로 설정 — 이후엔 사용자 리사이즈 존중
   initialSidebarWidthApplied: boolean
+  // §4.5.1.6.1 — extraction determinism toggle. When true, ingest pipeline
+  // injects temperature=0 + seed=42 into all LLM calls. Primarily used by
+  // measure-determinism.sh; can also be enabled via wikey.conf for prod runs.
+  extractionDeterminism: boolean
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -70,6 +74,7 @@ const DEFAULT_SETTINGS: WikeySettings = {
   persistChatHistory: true,
   savedChatHistory: [],
   initialSidebarWidthApplied: false,
+  extractionDeterminism: false,
 }
 
 export type { WikeySettings }
@@ -323,6 +328,7 @@ export default class WikeyPlugin extends Plugin {
         ingestProvider: (conf.INGEST_PROVIDER as string) || '',
         lintProvider: (conf.LINT_PROVIDER as string) || '',
         summarizeProvider: (conf.SUMMARIZE_PROVIDER as string) || '',
+        extractionDeterminism: conf.WIKEY_EXTRACTION_DETERMINISM === true || this.settings.extractionDeterminism,
       }
     } catch {
       // wikey.conf 없음 — data.json 값 유지
@@ -445,6 +451,7 @@ export default class WikeyPlugin extends Plugin {
       COST_LIMIT: this.settings.costLimit,
       OCR_PROVIDER: this.settings.ocrProvider || undefined,
       OCR_MODEL: this.settings.ocrModel || undefined,
+      WIKEY_EXTRACTION_DETERMINISM: this.settings.extractionDeterminism || undefined,
     }
   }
 

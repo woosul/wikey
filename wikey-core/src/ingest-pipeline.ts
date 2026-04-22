@@ -149,6 +149,8 @@ export async function ingest(
   const { provider, model } = resolveProvider('ingest', config)
   const llm = new LLMClient(httpClient, config)
   const isLocal = provider === 'ollama'
+  // §4.5.1.6.1: WIKEY_EXTRACTION_DETERMINISM=1 → temperature=0 + seed=42 on extraction calls.
+  const deterministic = config.WIKEY_EXTRACTION_DETERMINISM === true
 
   // ── §4.5.1.5 v2: Route 판정 (token-budget 기반) ──
   // FULL: 문서 전체를 1콜 extractMentions 로. schema §19 "LLM 이 독자" 모델.
@@ -185,17 +187,17 @@ export async function ingest(
   if (route === 'FULL') {
     const content = isLocal ? truncateSource(sourceContent) : sourceContent
     onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: 3, message: `Summary (${model}) [FULL]` })
-    const summaryParsed = await callLLMForSummary(llm, content, sourceFilename, indexContent, provider, model, promptTemplate)
+    const summaryParsed = await callLLMForSummary(llm, content, sourceFilename, indexContent, provider, model, promptTemplate, deterministic)
 
     onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model}) [FULL]` })
-    const mentions = await extractMentions(llm, content, sourceFilename, provider, model)
+    const mentions = await extractMentions(llm, content, sourceFilename, provider, model, undefined, deterministic)
     log(`route=FULL — mentions=${mentions.length}`)
 
     onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride,
+      schemaOverride, deterministic,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
 
@@ -220,7 +222,7 @@ export async function ingest(
 
     onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: totalSteps, message: `Summary (${model}) [SEGMENTED 1/${totalSteps}]` })
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
-    const summaryParsed = await callLLMForSummary(llm, summaryContent, sourceFilename, indexContent, provider, model, promptTemplate)
+    const summaryParsed = await callLLMForSummary(llm, summaryContent, sourceFilename, indexContent, provider, model, promptTemplate, deterministic)
     log(`summary done — index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
 
     const allMentions: Mention[] = []
@@ -235,7 +237,7 @@ export async function ingest(
       const peer = formatPeerContext(sectionIndex, section.idx, 300)
       const content = buildSectionWithPeer(peer, section, isLocal)
       try {
-        const mentions = await extractMentions(llm, content, sourceFilename, provider, model, section.idx)
+        const mentions = await extractMentions(llm, content, sourceFilename, provider, model, section.idx, deterministic)
         allMentions.push(...mentions)
         sectionOk++
       } catch (err) {
@@ -253,7 +255,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
       sourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride,
+      schemaOverride, deterministic,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     if (canon.dropped.length > 0) {
@@ -382,10 +384,11 @@ export async function ingest(
  */
 async function callLLMForSummary(
   llm: LLMClient, sourceContent: string, sourceFilename: string,
-  indexContent: string, provider: string, model: string, promptTemplate?: string,
+  indexContent: string, provider: string, model: string,
+  promptTemplate?: string, deterministic?: boolean,
 ): Promise<IngestRawResult> {
   const prompt = buildIngestPrompt(sourceContent, sourceFilename, indexContent, promptTemplate)
-  return callLLMWithRetry(llm, prompt, provider, model)
+  return callLLMWithRetry(llm, prompt, provider, model, deterministic)
 }
 
 /**
@@ -394,7 +397,7 @@ async function callLLMForSummary(
  */
 async function extractMentions(
   llm: LLMClient, chunkContent: string, sourceFilename: string,
-  provider: string, model: string, chunkIdx?: number,
+  provider: string, model: string, chunkIdx?: number, deterministic?: boolean,
 ): Promise<Mention[]> {
   const prompt = `이 문서 청크에서 잠재적으로 wiki 페이지가 될 만한 **mention(언급)**을 추출하세요.
 
@@ -442,7 +445,7 @@ Source: ${sourceFilename}
 
 ${chunkContent}`
 
-  const raw = await callLLMWithRetry(llm, prompt, provider, model)
+  const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
   const mentions = ((raw as any).mentions ?? []) as Array<{ name?: string; type_hint?: string; evidence?: string }>
   return mentions
     .filter((m) => m.name && m.name.trim().length > 0)
@@ -506,13 +509,20 @@ ${chunkContent}`
   return callLLMWithRetry(llm, prompt, provider, model)
 }
 
-async function callLLMWithRetry(
+/**
+ * §4.5.1.6.1: When `deterministic=true`, inject `temperature=0` + `seed=42` into
+ * LLM call options so repeated extraction runs over the same prompt converge
+ * (measured CV target <15%). Exported for unit testing the determinism seam.
+ */
+export async function callLLMWithRetry(
   llm: LLMClient, prompt: string, provider: string, model: string,
+  deterministic?: boolean,
 ): Promise<IngestRawResult> {
+  const detOpts = deterministic ? { temperature: 0, seed: 42 } : {}
   for (let attempt = 0; attempt <= MAX_JSON_RETRIES; attempt++) {
     const llmOpts = provider === 'gemini'
-      ? { provider: provider as any, model, responseMimeType: 'application/json' as const, jsonMode: true }
-      : { provider: provider as any, model, jsonMode: true }
+      ? { provider: provider as any, model, responseMimeType: 'application/json' as const, jsonMode: true, ...detOpts }
+      : { provider: provider as any, model, jsonMode: true, ...detOpts }
     const response = await llm.call(prompt, llmOpts)
     const parsed = extractJsonBlock(response)
     if (parsed) return parsed

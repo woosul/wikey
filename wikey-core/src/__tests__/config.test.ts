@@ -64,6 +64,33 @@ INGEST_MODEL=opus
     expect(result.SUMMARIZE_PROVIDER).toBe('gemini')
     expect(result.INGEST_PROVIDER).toBeUndefined()
   })
+
+  describe('WIKEY_EXTRACTION_DETERMINISM (§4.5.1.6.1)', () => {
+    it('parses "1" as true', () => {
+      const result = parseWikeyConf('WIKEY_EXTRACTION_DETERMINISM=1')
+      expect(result.WIKEY_EXTRACTION_DETERMINISM).toBe(true)
+    })
+
+    it('parses "true" as true', () => {
+      const result = parseWikeyConf('WIKEY_EXTRACTION_DETERMINISM=true')
+      expect(result.WIKEY_EXTRACTION_DETERMINISM).toBe(true)
+    })
+
+    it('parses "0" as false', () => {
+      const result = parseWikeyConf('WIKEY_EXTRACTION_DETERMINISM=0')
+      expect(result.WIKEY_EXTRACTION_DETERMINISM).toBe(false)
+    })
+
+    it('parses "false" as false', () => {
+      const result = parseWikeyConf('WIKEY_EXTRACTION_DETERMINISM=false')
+      expect(result.WIKEY_EXTRACTION_DETERMINISM).toBe(false)
+    })
+
+    it('is undefined when not set', () => {
+      const result = parseWikeyConf('WIKEY_BASIC_MODEL=gemini')
+      expect(result.WIKEY_EXTRACTION_DETERMINISM).toBeUndefined()
+    })
+  })
 })
 
 describe('resolveProvider', () => {

@@ -43,6 +43,13 @@ export interface WikeyConfig {
 
   readonly COST_LIMIT: number
 
+  /**
+   * §4.5.1.6.1: when true, extraction LLM calls (summary, mentions, canonicalize)
+   * inject `temperature=0 + seed=42` for deterministic sampling. Measured against
+   * Gemini 2.5 Flash; safe no-op on providers that ignore the fields.
+   */
+  readonly WIKEY_EXTRACTION_DETERMINISM?: boolean
+
   // OCR fallback (markitdown-ocr + page-render Vision). 미설정 시 WIKEY_BASIC_MODEL로 resolve.
   readonly OCR_PROVIDER?: string
   readonly OCR_MODEL?: string

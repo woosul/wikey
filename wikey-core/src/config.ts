@@ -6,7 +6,7 @@ const NUMERIC_KEYS = new Set([
   'OCR_DPI', 'OCR_PARALLEL', 'OCR_MAX_PAGES',
   'DOCLING_TIMEOUT_MS',
 ])
-const BOOLEAN_KEYS = new Set(['DOCLING_DISABLE'])
+const BOOLEAN_KEYS = new Set(['DOCLING_DISABLE', 'WIKEY_EXTRACTION_DETERMINISM'])
 
 const DEFAULTS: WikeyConfig = {
   WIKEY_BASIC_MODEL: 'claude-code',

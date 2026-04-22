@@ -49,11 +49,48 @@ const MAX_JSON_RETRIES = 2
  *     like `pmbok`/`erp`).
  */
 export const SLUG_ALIASES: Readonly<Record<string, string>> = {
+  // §4.5.1.4 (original pins)
   allimtok: 'alimtalk',
   alrimtok: 'alimtalk',
   'sso-api': 'single-sign-on-api',
   'single-sign-on': 'single-sign-on-api',
   'integrated-member-db': 'integrated-member-database',
+
+  // §4.5.1.6.3 — 30-run PMS data (2026-04-22) added variants:
+  //
+  // Alimtalk 5-variant: KakaoTalk official spelling is `alimtalk`;
+  // `allim-talk` / `allimtalk` / `kakao-alimtalk` were all observed in N=30.
+  'allim-talk': 'alimtalk',
+  allimtalk: 'alimtalk',
+  'kakao-alimtalk': 'alimtalk',
+
+  // ERP/SCM: drop trailing `-system` so the canonical slug is the methodology name.
+  // (Pool axis is pinned in FORCED_CATEGORIES; see §4.5.1.6.4.)
+  'erp-system': 'enterprise-resource-planning',
+  'enterprise-resource-planning-system': 'enterprise-resource-planning',
+  'supply-chain-management-system': 'supply-chain-management',
+
+  // MES family: "point of production (system)" is a Korean synonym for MES;
+  // collapse to `manufacturing-execution-system` so variants don't split.
+  'point-of-production-system': 'manufacturing-execution-system',
+  'point-of-production': 'manufacturing-execution-system',
+
+  // BOM family — engineering/electronic variants collapse into the generic
+  // industry-standard term. If the wiki later needs to distinguish eBOM from
+  // mBOM we'll re-split then; for now N=30 showed all five spellings as
+  // low-confidence variance.
+  'e-bom': 'bill-of-materials',
+  'e-bill-of-materials': 'bill-of-materials',
+  'electronic-bill-of-materials': 'bill-of-materials',
+  'engineering-bill-of-materials': 'bill-of-materials',
+
+  // Electronic approval — Korean business workflow. Drop the `-system` suffix.
+  'electronic-approval-system': 'electronic-approval',
+
+  // Standards with spelled-out aliases — prefer the short industry-recognised form.
+  'representational-state-transfer-api': 'restful-api',
+  'transmission-control-protocol-internet-protocol': 'tcp-ip',
+  'message-queuing-telemetry-transport': 'mqtt',
 }
 
 export function canonicalizeSlug(base: string): string {
@@ -77,9 +114,27 @@ export const FORCED_CATEGORIES: Readonly<Record<string, {
   category: 'entity' | 'concept'
   type: EntityType | ConceptType
 }>> = {
+  // §4.5.1.4 (original pins)
   mqtt: { category: 'entity', type: 'tool' },
   'restful-api': { category: 'concept', type: 'standard' },
   'project-management-system': { category: 'entity', type: 'product' },
+
+  // §4.5.1.6.4 — 30-run PMS data (2026-04-22) showed the slugs below flipping
+  // between entity and concept pools across runs. All are industry-standard
+  // *categories* or *methodologies*, not specific products, so the canonical
+  // axis is concept; the `type` field matches schema sub-type conventions.
+  'enterprise-resource-planning': { category: 'concept', type: 'standard' },
+  'supply-chain-management': { category: 'concept', type: 'methodology' },
+  'manufacturing-execution-system': { category: 'concept', type: 'standard' },
+  'product-lifecycle-management': { category: 'concept', type: 'methodology' },
+  'advanced-planning-and-scheduling': { category: 'concept', type: 'methodology' },
+  'electronic-approval': { category: 'concept', type: 'methodology' },
+  // SSO-API stays entity/tool (schema: tool = "소프트웨어/프로토콜"); matches
+  // the §4.5.1.4 canonicalizer test where LLM emits `type: 'tool'`.
+  'single-sign-on-api': { category: 'entity', type: 'tool' },
+  'tcp-ip': { category: 'concept', type: 'standard' },
+  'virtual-private-network': { category: 'concept', type: 'standard' },
+  'bill-of-materials': { category: 'concept', type: 'standard' },
 }
 
 export interface CanonicalizeArgs {
@@ -94,6 +149,11 @@ export interface CanonicalizeArgs {
   readonly model: string
   /** v7-5: user-defined schema extension from `.wikey/schema.yaml`. */
   readonly schemaOverride?: SchemaOverride
+  /**
+   * §4.5.1.6.1: inject temperature=0 + seed=42 into canonicalizer LLM calls when true.
+   * Mirrors the flag plumbed through ingest-pipeline extraction calls.
+   */
+  readonly deterministic?: boolean
 }
 
 interface RawCanonical {
@@ -105,7 +165,7 @@ interface RawCanonical {
 
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
-          sourceFilename, today, guideHint, provider, model, schemaOverride } = args
+          sourceFilename, today, guideHint, provider, model, schemaOverride, deterministic } = args
 
   if (mentions.length === 0) {
     return { entities: [], concepts: [], dropped: [] }
@@ -116,7 +176,7 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
     sourceFilename, guideHint, schemaOverride,
   })
 
-  const raw = await callLLMWithRetry(llm, prompt, provider, model)
+  const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
   return assembleCanonicalResult(raw, mentions, sourceFilename, today, schemaOverride)
 }
 
@@ -405,11 +465,13 @@ function computeDropReason(mention: Mention): string {
 
 async function callLLMWithRetry(
   llm: LLMClient, prompt: string, provider: string, model: string,
+  deterministic?: boolean,
 ): Promise<RawCanonical> {
+  const detOpts = deterministic ? { temperature: 0, seed: 42 } : {}
   for (let attempt = 0; attempt <= MAX_JSON_RETRIES; attempt++) {
     const llmOpts = provider === 'gemini'
-      ? { provider: provider as any, model, responseMimeType: 'application/json' as const, jsonMode: true }
-      : { provider: provider as any, model, jsonMode: true }
+      ? { provider: provider as any, model, responseMimeType: 'application/json' as const, jsonMode: true, ...detOpts }
+      : { provider: provider as any, model, jsonMode: true, ...detOpts }
     const response = await llm.call(prompt, llmOpts)
     const parsed = extractJsonBlock(response)
     if (parsed) return parsed
