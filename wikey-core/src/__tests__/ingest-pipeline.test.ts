@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate, assertNotWikiPath, callLLMWithRetry, buildDoclingArgs } from '../ingest-pipeline.js'
+import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate, assertNotWikiPath, callLLMWithRetry, buildDoclingArgs, defaultOcrLangForEngine, defaultOcrEngine } from '../ingest-pipeline.js'
 import type { WikiFS } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
 
@@ -184,6 +184,55 @@ describe('callLLMWithRetry — §4.5.1.6.1 determinism flag', () => {
     await callLLMWithRetry(llm, 'p', 'gemini', 'gemini-2.5-flash')
     expect(capturedOpts[0].temperature).toBeUndefined()
     expect(capturedOpts[0].seed).toBeUndefined()
+  })
+})
+
+describe('defaultOcrEngine — §4.1.3 platform fallback', () => {
+  it('macOS 에서는 ocrmac (Apple Vision, 한국어 우수)', () => {
+    // 이 테스트 환경이 macOS 인 경우만 검증. 아니면 rapidocr 기대.
+    const expected = process.platform === 'darwin' ? 'ocrmac' : 'rapidocr'
+    expect(defaultOcrEngine()).toBe(expected)
+  })
+})
+
+describe('defaultOcrLangForEngine — §4.1.3 engine 별 lang 코드 매핑', () => {
+  it('ocrmac → BCP-47 (ko-KR,en-US)', () => {
+    expect(defaultOcrLangForEngine('ocrmac')).toBe('ko-KR,en-US')
+  })
+
+  it('rapidocr → 언어명 (korean,english) — paddleOCR 모델', () => {
+    expect(defaultOcrLangForEngine('rapidocr')).toBe('korean,english')
+  })
+
+  it('easyocr → ISO 639-1 (ko,en)', () => {
+    expect(defaultOcrLangForEngine('easyocr')).toBe('ko,en')
+  })
+
+  it('tesseract → ISO 639-2 (kor,eng)', () => {
+    expect(defaultOcrLangForEngine('tesseract')).toBe('kor,eng')
+    expect(defaultOcrLangForEngine('tesserocr')).toBe('kor,eng')
+  })
+
+  it('unknown engine → fallback (ko-KR,en-US)', () => {
+    expect(defaultOcrLangForEngine('unknown-engine')).toBe('ko-KR,en-US')
+  })
+})
+
+describe('buildDoclingArgs — §4.1.3 engine 별 lang 자동 매핑', () => {
+  it('config DOCLING_OCR_ENGINE=rapidocr 지정 시 lang 도 korean,english 로 자동', () => {
+    const args = buildDoclingArgs('/tmp/p.pdf', '/tmp/out', { DOCLING_OCR_ENGINE: 'rapidocr' } as any, 'default')
+    expect(args).toContain('--ocr-engine')
+    expect(args[args.indexOf('--ocr-engine') + 1]).toBe('rapidocr')
+    expect(args).toContain('--ocr-lang')
+    expect(args[args.indexOf('--ocr-lang') + 1]).toBe('korean,english')
+  })
+
+  it('config DOCLING_OCR_LANG 명시 지정 시 해당 값 우선', () => {
+    const args = buildDoclingArgs('/tmp/p.pdf', '/tmp/out', {
+      DOCLING_OCR_ENGINE: 'rapidocr',
+      DOCLING_OCR_LANG: 'korean,english,chinese',
+    } as any, 'default')
+    expect(args[args.indexOf('--ocr-lang') + 1]).toBe('korean,english,chinese')
   })
 })
 

@@ -1047,13 +1047,47 @@ async function extractDocumentText(
  */
 export type DoclingMode = 'default' | 'no-ocr' | 'force-ocr'
 
+/**
+ * 기본 OCR engine — platform 별 fallback.
+ *   - macOS: ocrmac (Apple Vision, ANE 가속, 한국어 우수)
+ *   - 그 외 (Linux/Windows): rapidocr (paddleOCR 모델 탑재, cross-platform)
+ */
+export function defaultOcrEngine(): string {
+  return process.platform === 'darwin' ? 'ocrmac' : 'rapidocr'
+}
+
+/**
+ * 기본 OCR 언어 코드 — engine 별로 다른 형식 (docling 공식 소스 확증):
+ *   - ocrmac     : BCP-47 (`ko-KR`, `en-US`)
+ *   - rapidocr   : 언어명 (`korean`, `english`) — paddleOCR 모델 파일명
+ *   - easyocr    : ISO 639-1 (`ko`, `en`)
+ *   - tesseract  : ISO 639-2 (`kor`, `eng`)
+ * 사용자 명시적 `DOCLING_OCR_LANG` 설정이 없으면 engine 에 맞는 기본값 반환.
+ */
+export function defaultOcrLangForEngine(engine: string): string {
+  switch (engine) {
+    case 'ocrmac':
+      return 'ko-KR,en-US'
+    case 'rapidocr':
+      return 'korean,english'   // paddleOCR Korean + English 모델
+    case 'easyocr':
+      return 'ko,en'
+    case 'tesseract':
+    case 'tesserocr':
+      return 'kor,eng'
+    default:
+      return 'ko-KR,en-US'      // fallback (unknown engine)
+  }
+}
+
 /** docling 옵션 중 캐시 키에 포함할 것들 (결과 달라지는 옵션만). §4.1.3.1: `mode` 필드로 Tier 1/1a/1b 캐시 분리. */
 function doclingMajorOptions(config?: WikeyConfig, mode: DoclingMode = 'default'): Record<string, unknown> {
+  const engine = config?.DOCLING_OCR_ENGINE || defaultOcrEngine()
   return {
     mode,
     table_mode: config?.DOCLING_TABLE_MODE || 'accurate',
-    ocr_engine: config?.DOCLING_OCR_ENGINE || (process.platform === 'darwin' ? 'ocrmac' : 'rapidocr'),
-    ocr_lang: config?.DOCLING_OCR_LANG || 'ko-KR,en-US',
+    ocr_engine: engine,
+    ocr_lang: config?.DOCLING_OCR_LANG || defaultOcrLangForEngine(engine),
     image_export_mode: 'embedded',
   }
 }
@@ -1069,8 +1103,8 @@ export function buildDoclingArgs(
 ): string[] {
   const tableMode = config?.DOCLING_TABLE_MODE || 'accurate'
   const device = config?.DOCLING_DEVICE || (process.platform === 'darwin' ? 'mps' : 'cpu')
-  const ocrEngine = config?.DOCLING_OCR_ENGINE || (process.platform === 'darwin' ? 'ocrmac' : 'rapidocr')
-  const ocrLang = config?.DOCLING_OCR_LANG || 'ko-KR,en-US'
+  const ocrEngine = config?.DOCLING_OCR_ENGINE || defaultOcrEngine()
+  const ocrLang = config?.DOCLING_OCR_LANG || defaultOcrLangForEngine(ocrEngine)
   const args = [
     fullPath,
     '--to', 'md',

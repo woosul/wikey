@@ -44,6 +44,22 @@ updated: 2026-04-22
   - GOODSTREAM: 453 → **599,454 chars**
 - raw/ 하위 sidecar 는 `.gitignore` 의 `raw/` 규칙으로 자동 제외. docs/samples/ 하위 sidecar 만 git tracked.
 
+## [2026-04-22] feat | §4.1.3 OCR engine fallback 등록 — engine 별 lang 자동 매핑
+
+- 사용자 요청: "ocrmac 은 macOS 전용 → paddleOCR fallback 등록".
+- docling 공식 source (`pipeline_options.py`) 확증된 engine 별 lang 형식:
+  - ocrmac: BCP-47 (`ko-KR,en-US`)
+  - rapidocr: 언어명 (`korean,english`) — paddleOCR 모델
+  - easyocr: ISO 639-1 (`ko,en`)
+  - tesseract/tesserocr: ISO 639-2 (`kor,eng`)
+- 신규 export: `defaultOcrEngine()` — platform 별 (darwin → ocrmac, else → rapidocr).
+- 신규 export: `defaultOcrLangForEngine(engine)` — engine 에 맞는 기본 lang 자동 선택.
+- `buildDoclingArgs` / `doclingMajorOptions` 에서 `DOCLING_OCR_LANG` 명시 설정 없으면 engine 에 맞는 기본값 적용 (기존 ocrmac 고정 형식 오류 해소).
+- `wikey.conf` 주석 업데이트 — platform fallback 동작 + engine 별 lang 형식 문서화.
+- 테스트: 343 → **351 PASS** (+8: defaultOcrEngine 1, defaultOcrLangForEngine 5, engine-aware args 2).
+- macOS 환경 실측: 기존 ocrmac + ko-KR,en-US 동일 결과 유지 (regression 없음).
+- Linux/Windows 환경 실측은 다음 세션 — paddleOCR PP-OCRv5 Korean 모델 다운로드 + rapidocr CLI 경로 검증.
+
 ## [2026-04-22] fix | §4.1.3 sidecar — tier 기반 이미지 strip 분기 + source PDF scan 감지
 
 - 사용자 명시: "스캔이미지로 판정되어 ocr 옵션이 들어가면 이미지가 필요없다" (30p 계약서 스캔 포함). "소규모 문서" 는 판정 기준 아님. 단 "한글 관련 문제는 다른 케이스" (ROHM 은 vector PDF diagram 유지 필요).
