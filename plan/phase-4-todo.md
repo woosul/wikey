@@ -135,83 +135,65 @@
 - 후속 (UI 중심): §4.1.1.3 통합 테스트 실측, §4.1.1.5 ps aux 검증, §4.1.1.6 Audit converter override 드롭다운, §4.1.1.7 벤치마크 실측, §4.1.1.9 rename/delete listener (§4.2.2 URI 참조와 합동)
 - 해제된 선행 의존: §4.5.1.5 (variance 재개) 가능 — Docling 구조적 markdown 확보 완료
 
-### 4.1.3 Bitmap OCR 본문 오염 차단 + 검증 모듈 설계 확장 (2026-04-22 신규, 진행 전)
+### 4.1.3 Bitmap OCR 본문 오염 차단 + 검증 모듈 설계 확장 (2026-04-22, 구현 완료 / §4.1.3.5 측정 진행)
 
-> **배경 · 프로세스 오류 확증**. §4.5.1.6 10-run/29-run 측정을 완료한 직후 사용자 지적으로 **근본 오염** 발견. PMS 제품소개 PDF 의 Docling 변환 결과(`raw/.../PMS_*.pdf.md`) 가 UI 스크린샷 · 대시보드 목업 내부의 텍스트를 bitmap OCR 로 추출해 본문 흐름에 **interleave** 함. Docling JSON bbox 분석 결과 **texts 의 56.4% (831/1473) 가 picture 영역 내부에 공간적으로 포함**. §4.5.1.5/6 의 CV 측정이 **오염된 입력 위에서 수행**되었으므로 결과의 상당 부분은 "진짜 LLM variance" 가 아닌 "OCR 파편이 가끔 extracted되는 무작위성" 을 측정했을 가능성.
+> **배경 · 프로세스 오류 확증**. §4.5.1.6 29-run 측정 완료 직후 사용자 지적으로 **근본 오염** 발견. PMS 제품소개 PDF 의 Docling 변환 결과(`raw/.../PMS_*.pdf.md`) 가 UI 스크린샷 · 대시보드 목업 내부의 텍스트를 bitmap OCR 로 추출해 본문 흐름에 **interleave**. Docling JSON bbox 분석 결과 **texts 의 56.4% (831/1473) 가 picture 영역 내부에 공간적으로 포함**. §4.5.1.5/6 의 CV 측정이 **오염된 입력 위에서 수행**되었으므로 결과의 상당 부분은 "진짜 LLM variance" 가 아닌 "OCR 파편이 가끔 extracted되는 무작위성" 을 측정했을 가능성.
 
-> **검증 모듈의 설계 결함**. `wikey-core/src/convert-quality.ts::scoreConvertOutput` 은 호출 경로 (`ingest-pipeline.ts:1194/1227/1232`) 와 4 개 signal (`broken-tables`, `empty-sections`, `min-body-chars`, `korean-whitespace-loss`) 을 갖지만, 모든 signal 이 **"text-layer 실패"** 범주만 커버. **"bitmap OCR 이 본문에 interleave"** 범주에 대한 signal 부재. PMS 는 4 개 모두 통과 (korean-long-token 4.93% < 30% 임계) 하여 `accept` 판정을 받고 LLM 파이프라인으로 전달. 이게 **프로세스 오류** — 모듈 존재·호출·flag 모두 정상이나 signal set 이 불완전.
+> **검증 모듈의 설계 결함 → 해소**. `scoreConvertOutput` 4 signal (`broken-tables`, `empty-sections`, `min-body-chars`, `korean-whitespace-loss`) 은 모두 "text-layer 실패" 범주로 PMS 같은 bitmap OCR interleave 케이스를 감지 못함. §4.1.3.2 에서 **5번째 signal `image-ocr-pollution` 추가** + decision enum 에 `'retry-no-ocr'` 추가로 해소.
 
-> **설계 의도 재확인** (사용자). Tier 1 은 "문서 인식 (vector text) + 이미지는 base64 embedded, bitmap OCR 없음" 이 원래 의도였음. Docling CLI 기본값 `--ocr` (enabled) 은 bitmap 영역에 OCR 을 적용하므로, 설계 의도를 구현하려면 `--no-ocr` 명시 필요. 현재 코드는 Tier 1 에서 `--no-ocr` 을 누락하여 Docling 기본 bitmap OCR 이 항상 돌고 있었음.
+> **루틴 아키텍처 (재확정, 2026-04-22)**. "docling 기본값 → 결과 검증 → 실패 유형별 escalation":
+>   - Tier 1 (`default`) = docling CLI 기본값 그대로 유지 (사용자 원칙 — 기본값 먼저 시도)
+>   - `retry-no-ocr` (pollution) → Tier 1a (`--no-ocr`) 비교 후 채택
+>   - `retry` (korean loss) OR `isScan` → Tier 1b (`--force-ocr`) + regression guard
 
 **선행 의존**:
 - §4.5.1.6 완료 (2026-04-22) — baseline 24.3% → 9.2% 이 확보되었으나 § 4.1.3 완료 후 재해석 필요.
 
-**gates §4.5.1.7 (§4.1.3 완료가 선행 조건)**.
+**gates §4.5.1.7 (§4.1.3.5 측정 결과에 따라 sub-task premise 재평가)**.
 
-- [ ] **§4.1.3.1** MD 튜닝 — `buildDoclingArgs` Tier 1 기본을 `--no-ocr` 로 전환 (TDD)
-  - `buildDoclingArgs(forceOcr=false, ocrEnabled=false)` → `--no-ocr` 추가 (Tier 1, 설계 의도 일치)
-  - 신규 파라미터 `ocrEnabled?: boolean` 추가 → `true` 일 때 `--no-ocr` 생략 (Tier 1a 재시도용)
-  - `forceOcr=true` → 기존 동작 유지 (`--force-ocr` + ocr-engine/lang), `--no-ocr` 생략
-  - 단위 테스트: Tier 1 args 에 `--no-ocr` 포함 / Tier 1a args 에 `--no-ocr` 없음 / Tier 1b args 에 `--force-ocr` 있음.
+- [x] **§4.1.3.1** `buildDoclingArgs` mode 파라미터 (TDD)
+  - `DoclingMode = 'default' | 'no-ocr' | 'force-ocr'` 타입 export.
+  - `'default'`: ocr-engine/lang 포함, `--no-ocr`/`--force-ocr` 없음 (docling CLI 기본값).
+  - `'no-ocr'`: `--no-ocr` 만, ocr-engine/lang 생략.
+  - `'force-ocr'`: `--force-ocr` + ocr-engine/lang.
+  - `doclingMajorOptions` 에 `mode` 필드 추가 → Tier 1 / 1a / 1b 캐시 키 분리.
+  - 증거: `wikey-core/src/__tests__/ingest-pipeline.test.ts` 5 신규 테스트 통과.
 
-- [ ] **§4.1.3.2** Tier 체인 확장 — `extractPdfText` 에 Tier 1a 삽입
-  - 순서: **Tier 1 (`--no-ocr`) → Tier 1a (`--ocr`) → Tier 1b (`--force-ocr`) → Tier 2 (markitdown) → ...**
-  - Tier 1a 트리거: Tier 1 결과가 `scoreConvertOutput → reject` OR `isLikelyScanPdf(md, pageCount) === true`.
-    - 이유: Tier 1 에서 `--no-ocr` 이므로 스캔 PDF 는 본문 extract 실패 → Tier 1a 에서 bitmap OCR 활성화로 복구.
-  - Tier 1b 트리거: Tier 1a 결과가 `hasMissingKoreanWhitespace` OR text-layer 전체 공백 소실 패턴.
-  - Regression guard: 기존 `hasKoreanRegression` / `hasBodyRegression` 재활용 + Tier 1a/1b 간 비교.
-  - 단위 테스트: Tier 1 accept 시 1a 호출 안 함 / Tier 1 reject 시 1a 호출 / 1a accept 시 1b 호출 안 함.
+- [x] **§4.1.3.2** `scoreConvertOutput` `image-ocr-pollution` signal + `retry-no-ocr` decision
+  - `hasImageOcrPollution(md)` 신규 — 필터(`bodyChars ≥ 2000` AND `markerCount ≥ 5`) + 기준 A(마커 ±5 window 내 <20자 라인 3연속) + 기준 B(전체 <20자 파편 비율 > 50%) OR 조합.
+  - `scoreConvertOutput` decision 에 `'retry-no-ocr'` 추가, score 감점 `−0.4` (koreanLoss 동급).
+  - 우선순위: `koreanLoss > pollution > score-based`.
+  - 증거: `wikey-core/src/__tests__/convert-quality.test.ts` 13 신규 테스트 통과. 4 코퍼스 실측 캘리브레이션 (PMS 62.5% pollution ✓, ROHM 42.7%/GOODSTREAM 60%는 bodyChars·markerCount 필터 또는 koreanLoss 우선 처리로 false positive 방어).
 
-- [ ] **§4.1.3.3** 검증 모듈 signal 추가 — `scoreConvertOutput` 에 `image-ocr-pollution` 추가
-  - **설계 원칙 확장**: "text-layer 실패 감지" → "**본문 흐름에 섞인 non-body 콘텐츠 감지**" 로 signal set 의 의미를 넓힘.
-  - 신규 signal 구현 (`hasImageOcrPollution(md: string): boolean`):
-    - 기준 A: `<!-- image -->` (or `![image](...)`) placeholder 마커 직전·직후 N 라인 윈도우에 **짧은 파편 (<20 자) 클러스터** (3개 이상 연속) 존재.
-    - 기준 B: 전체 라인 중 "공백 1개 + 1-3 단어만" 패턴이 > 20% (본문 흐름이라기에는 파편이 과다).
-    - 기준 C: 연속 라인에서 한국어 음절/숫자/영자 혼재 비율이 급격히 변동 (본문은 연속, OCR 파편은 이질).
-    - 세 기준 중 2개 이상 true → pollution 판정.
-  - `scoreConvertOutput` 점수 감점: `-0.4` (Korean whitespace loss 와 동급 — 치명적).
-  - Decision: pollution 감지 시 `decision = 'retry-no-ocr'` 또는 `'reject'` (tier chain 이 `--no-ocr` 재시도 또는 fallthrough 결정).
-  - 단위 테스트: PMS 기존 polluted MD 로 pollution=true / 정상 MD (TWHB, GOODSTREAM 사업자등록증 등) 로 pollution=false.
-  - 통계적 검증: 5 개 벤치마크 코퍼스 전수 검사 → 오탐지/미탐지 비율.
+- [x] **§4.1.3.3** `extractPdfText` 에 Tier 1a 삽입
+  - `quality.decision === 'retry-no-ocr'` 분기 추가 → `buildDoclingArgs(..., 'no-ocr')` 실행.
+  - Tier 1a score > Tier 1 score → Tier 1a 채택. 반대면 Tier 1 유지 (false positive 방어).
+  - Tier 1a 실패 (exception / 본문 < 50자) → Tier 1 유지.
+  - 기존 Tier 1b (`retry` / `isScan`) 경로는 변경 없음, regression guard 유지.
+  - 증거: wikey-core 빌드 0 errors, 전체 335 tests PASS (+20 vs 315 이전 baseline).
 
-- [ ] **§4.1.3.4** 회귀 테스트 (5 개 벤치마크 코퍼스)
-  - PMS (vector PDF + screenshots), ROHM Wi-SUN (korean whitespace loss), TWHB (tables), OMRON HEM-7600T (scan PDF), GOODSTREAM 사업자등록증 (simple).
-  - 각 문서에 대해:
-    1. 캐시 invalidate (`~/.cache/wikey/convert/<hash>.md` 삭제).
-    2. 새 tier 체인 (§4.1.3.1, §4.1.3.2) 으로 재변환.
-    3. `scoreConvertOutput` (§4.1.3.3 확장본) 결과 기록.
-    4. 본문 품질 육안 검증 — 각 문서의 핵심 섹션·표가 정상 보존되는가.
-  - 예상 결과:
-    - PMS: Tier 1 (`--no-ocr`) 에서 OCR 파편 제거된 clean 본문 확보, accept.
-    - ROHM: Tier 1 (`--no-ocr`) → quality reject (korean whitespace loss 는 vector text 자체 문제) → Tier 1a (`--ocr`) → 여전히 loss → Tier 1b (`--force-ocr`) → accept.
-    - OMRON: Tier 1 (`--no-ocr`) → reject (본문 empty, 스캔) → Tier 1a (`--ocr`) 또는 Tier 1b (`--force-ocr`) → accept.
-    - TWHB / GOODSTREAM: Tier 1 accept 예상.
+- [x] **§4.1.3.4** Tier chain 회귀 벤치마크 (4 코퍼스 — docs/samples 2 + raw 2)
+  - 스크립트: `scripts/benchmark-tier-4-1-3.mjs` (신규). Tier 1 → decision 분기 → Tier 1a/1b 자동 실행 → 최종 채택 MD 를 원본 옆 sidecar `.md` 에 저장.
+  - 대상: PMS (pollution), ROHM (koreanLoss), RP1 (영문 vector), GOODSTREAM (단순). OMRON/TWHB 는 실행 시간 이유로 본 라운드 제외.
+  - 결과 (`activity/phase-4-1-3-benchmark-2026-04-22.md`):
+    - PMS: Tier 1 `retry-no-ocr` → **Tier 1a `1a-docling-no-ocr` accept**, lines 1922 → **532 (−72%)**, score 0.53 → 0.91.
+    - ROHM: Tier 1 `retry` → Tier 1b `1b-docling-force-ocr` accept, score 0.56 → 0.94.
+    - RP1: Tier 1 `accept`, score 0.93.
+    - GOODSTREAM: Tier 1 `accept`, score 1.00.
+  - Sidecar 4개 생성: `raw/0_inbox/PMS_*.pdf.md`, `docs/samples/ROHM_*.pdf.md`, `docs/samples/rp1-peripherals.pdf.md`, `raw/0_inbox/사업자등록증*.pdf.md`.
 
-- [ ] **§4.1.3.5** PMS 재측정 + §4.5.1.5/6 결과 재해석
-  - PMS sidecar `.md` 삭제 + 캐시 invalidate.
-  - `./scripts/measure-determinism.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10 -d` 실행 (10-run).
-  - 결과 비교:
-    | baseline | Total CV | 입력 상태 |
-    |---|---|---|
-    | §4.5.1.4 | 32.5% | 오염 |
-    | §4.5.1.5 | 24.3% | 오염 |
-    | §4.5.1.6 | 9.2% | 오염 |
-    | §4.1.3.5 (new) | ? | 깨끗 |
-  - 해석:
-    - 새 CV < 9.2% → canonicalizer 3차 확장이 실제 효과 있었음 (alias/pin 이 legitimate variant 흡수).
-    - 새 CV ≈ 9.2% → 이전 개선의 상당 부분이 OCR 파편 흡수 효과 (alias 가 `22A002` 같은 OCR 파편을 canonical 로 뭉쳤던 것).
-    - 새 CV > 9.2% → deeper 문제 (deterministic Phase A/B/C 이행에도 불구, vector text 만으로도 variance 유지).
-  - 각 시나리오별 §4.5.1.7 재평가:
-    - 새 CV < 5% → §4.5.1.7 대부분 불필요, wrap up.
-    - 새 CV 5-10% → §4.5.1.7.2 (Concepts prompt) 만 검토.
-    - 새 CV > 10% → §4.5.1.7 전체 sub-task 재평가 (각 task 의 premise 가 살아있는지 확인).
+- [~] **§4.1.3.5** PMS 재측정 + §4.5.1.5/6 결과 재해석 (측정 진행 중)
+  - 실행: `./scripts/measure-determinism.sh raw/0_inbox/PMS_제품소개_R10_20220815.pdf -n 10 -d -o activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`.
+  - 비교 baseline: §4.5.1.4 (32.5%, 오염) · §4.5.1.5 (24.3%, 오염) · §4.5.1.6 10-run (7.2%, 오염) · §4.5.1.6 29-run (9.2%, 오염) · §4.1.3.5 (?, **깨끗**).
+  - 해석 규칙: 새 CV < 5% → §4.5.1.7 대부분 불필요; 5~10% → §4.5.1.7.2 (Concepts) 만 검토; > 10% → §4.5.1.7 전체 premise 재평가.
+  - 측정 완료 시 결과 업데이트 (`activity/phase-4-result.md §4.1.3.5`).
 
-- [ ] **§4.1.3.6** 세션 마감 — 문서 동기화 + commit/push
-  - `activity/phase-4-result.md §4.1.3` 상세화 (각 sub-task 증거).
-  - `plan/phase-4-todo.md §4.1.3` 체크박스 업데이트.
-  - `plan/session-wrap-followups.md` 갱신 (§4.5.1.7 gate 해제 여부 · 다음 우선순위).
+- [x] **§4.1.3.6** 세션 마감 — 문서 동기화 + commit/push
+  - `activity/phase-4-result.md §4.1.3` 상세화 ✓
+  - `plan/phase-4-todo.md §4.1.3` 체크박스 업데이트 ✓ (이 파일)
+  - `plan/session-wrap-followups.md` 갱신 — §4.5.1.7 gate 는 §4.1.3.5 측정 완료 시 해제.
   - `wiki/log.md` fix/eval 엔트리.
-  - `~/.claude/.../memory/project_phase4_status.md` + MEMORY.md 인덱스.
+  - `~/.claude/.../memory/project_phase4_status.md` + MEMORY.md.
   - 단일 commit + push.
 
 **§4.5.1.7 에 미치는 영향** (gated):

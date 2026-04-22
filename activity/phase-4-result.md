@@ -482,6 +482,111 @@ tier 1 docling 실행
 
 **§4.5.1.5 LLM extraction variance 재측정** — Docling 구조적 markdown 확보로 선행 의존 해제. `plan/phase-4-todo.md §4.5.1.5` 에 명시된대로 Docling 변환본 기준으로 10+ run baseline + chunk 결정성 + temperature/seed 재검증 가능. 다음 세션 최우선 과제.
 
+### 4.1.3 Bitmap OCR 본문 오염 차단 + 검증 모듈 설계 확장 (2026-04-22)
+> tag: #fix, #eval, #converter, #phase-4-1-3
+
+**배경**. §4.5.1.6 29-run Total CV 9.2% 커밋 직후 사용자 지적으로 **근본 오염** 발견. PMS 제품소개 PDF 의 Docling 변환 결과가 UI 스크린샷·대시보드 목업 내부의 텍스트를 bitmap OCR 로 추출해 본문 흐름에 **interleave**. Docling JSON bbox 분석 결과 texts 의 **56.4% (831/1473) 가 picture 영역 내부**. `scoreConvertOutput` 4 signal (broken-tables / empty-sections / min-body-chars / korean-whitespace-loss) 모두 "text-layer 실패" 범주에 한정되어 **"bitmap OCR interleave"** 는 전혀 감지하지 못했던 설계 결함이 근본 원인. §4.5.1.5/6 의 variance 측정이 이 오염 MD 위에서 수행되었음.
+
+**루틴 아키텍처 (재확정, 2026-04-22)**. "docling 기본값 → 결과 검증 → 실패 유형별 escalation":
+1. Tier 1 (`default`) = docling CLI 기본값 그대로 (bitmap OCR on by Docling default)
+2. `scoreConvertOutput` 확장 signal 기반 branching:
+   - `accept` → finalize (Tier 1)
+   - `retry-no-ocr` (image-ocr-pollution) → Tier 1a (`--no-ocr`) 재시도 → score 비교 후 채택
+   - `retry` (korean-whitespace-loss) → Tier 1b (`--force-ocr`) 재시도
+   - `reject` OR `isLikelyScanPdf` → Tier 1b 또는 Tier 2 fallthrough
+
+#### 4.1.3.1 `buildDoclingArgs` mode 파라미터 (2026-04-22)
+
+**변경**: `wikey-core/src/ingest-pipeline.ts`. 기존 `forceOcr: boolean` 2진 파라미터를 `DoclingMode = 'default' | 'no-ocr' | 'force-ocr'` 3-mode 로 전환.
+- `'default'`: ocr-engine/lang 포함, `--no-ocr`/`--force-ocr` 없음 (docling CLI 기본)
+- `'no-ocr'`: `--no-ocr` 만, ocr-engine/lang 생략 (bitmap OCR 억제)
+- `'force-ocr'`: `--force-ocr` + ocr-engine/lang (vector 무시)
+- `doclingMajorOptions` 에 `mode` 필드 추가 → Tier 1 / 1a / 1b 캐시 키 분리.
+
+**증거**. `wikey-core/src/__tests__/ingest-pipeline.test.ts` 에 5 TDD 테스트 (모드별 args assertion). 통과.
+
+#### 4.1.3.2 `scoreConvertOutput` `image-ocr-pollution` signal + `retry-no-ocr` decision (2026-04-22)
+
+**변경**: `wikey-core/src/convert-quality.ts`. `hasImageOcrPollution` 신규 함수 + `scoreConvertOutput` decision enum 에 `'retry-no-ocr'` 추가.
+
+**감지 로직 (v2, 실측 기반)**:
+- 필수 필터: `bodyChars ≥ 2000` AND `markerCount ≥ 5` — 소규모 문서(사업자등록증 등) false positive 방어.
+- 기준 A: `[image]` / `![...](...)` / `<!-- image -->` placeholder ±5 window 내 <20자 라인 3연속 (리스트 마커 제외).
+- 기준 B: 전체 비어있지 않은 라인 중 <20자 파편 비율 > 50%.
+- A 또는 B 만족 시 pollution 판정, score −0.4.
+
+**Decision 우선순위** (동시 감지 시): `koreanLoss > pollution > score-based`.
+
+**실측 캘리브레이션** (4 코퍼스):
+| 코퍼스 | markers | fragRatio | bodyChars | 판정 |
+|---|---|---|---|---|
+| PMS | 25 | 62.5% | 56,255 | **pollution ✓** (기준 B) |
+| ROHM | 5 | 42.7% | 4,896 | koreanLoss 우선 (pollution ✗) |
+| RP1 | 19 | 14.0% | 236,858 | accept (pollution ✗) |
+| GOODSTREAM | 5 | 60.0% | 453 | bodyChars 필터로 차단 (pollution ✗) |
+
+**증거**. `wikey-core/src/__tests__/convert-quality.test.ts` 에 13 TDD 테스트 (기준 A·B 분리, 필터 경계, decision 우선순위). 통과.
+
+#### 4.1.3.3 `extractPdfText` Tier 1a 삽입 (default-first, failure-specific escalation, 2026-04-22)
+
+**변경**: `wikey-core/src/ingest-pipeline.ts::extractPdfText`. `quality.decision === 'retry-no-ocr'` 분기 추가로 Tier 1a (`buildDoclingArgs(..., 'no-ocr')`) 실행.
+- Tier 1a score > Tier 1 score → Tier 1a 채택 (`1a-docling-no-ocr`)
+- Tier 1a score ≤ Tier 1 score → Tier 1 유지 (false positive 방어, 경고 로그)
+- Tier 1a 실패 (exception 또는 본문 < 50자) → Tier 1 유지
+
+기존 Tier 1b (`retry` 또는 `isScan`) 경로는 변경 없음. regression guard (Korean/Body) + score 비교 로직도 유지.
+
+**증거**. 빌드 0 errors, 전체 335 tests PASS.
+
+#### 4.1.3.4 5 코퍼스 회귀 벤치마크 — Tier chain 동작 실증 (2026-04-22)
+
+**스크립트**: `scripts/benchmark-tier-4-1-3.mjs` (신규). 각 코퍼스에 대해 Tier 1 (default) 실행 → decision 에 따라 Tier 1a 또는 1b 자동 실행 → 최종 채택 MD 를 원본 옆 sidecar `.md` 로 저장.
+
+**4 코퍼스 결과** (사용자 선택: docs/samples 2개 + raw 2개, OMRON/TWHB 는 실행 시간 이유로 제외):
+
+| 코퍼스 | pages | Tier 1 decision | Tier 1 score | 최종 Tier | 최종 score | lines Δ |
+|---|---|---|---|---|---|---|
+| **PMS** | 31 | **retry-no-ocr (image-ocr-pollution)** | 0.53 | **1a-docling-no-ocr** | 0.91 | **1922 → 532 (−72%)** |
+| ROHM | 5 | retry (korean-whitespace-loss) | 0.56 | 1b-docling-force-ocr | 0.94 | 145 → 103 |
+| RP1 | 93 | accept | 0.93 | 1-docling | 0.93 | 4099 |
+| GOODSTREAM | 1 | accept | 1.00 | 1-docling | 1.00 | 49 |
+
+**핵심**. PMS 는 §4.5.1.5/6 기간 내내 `accept` 판정을 받아 오염된 MD 가 변동분석 baseline 이었음. §4.1.3.1~3 도입 후 `retry-no-ocr` 로 escalation → Tier 1a 로 **OCR 파편 1,390 라인 제거** (56.4% picture bbox 내부 오염이 bodyChars 56,255 → 47,979, koreanChars 18,654 → 15,549 로 실측 감소). 다른 3 코퍼스는 기존 경로 유지 (regression 없음).
+
+**Sidecar 생성 실증** (사용자 §4.1.3 지시 "최종 변환 파일을 동일 폴더 .md 로"):
+- `raw/0_inbox/PMS_제품소개_R10_20220815.pdf.md` (47,979 chars, 1a-docling-no-ocr)
+- `docs/samples/ROHM_Wi-SUN Juta통신모듈(BP35CO-J15).pdf.md` (4,714 chars, 1b-docling-force-ocr)
+- `docs/samples/rp1-peripherals.pdf.md` (236,858 chars, 1-docling)
+- `raw/0_inbox/사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf.md` (453 chars, 1-docling)
+
+`benchmark-tier-4-1-3.mjs` 에 sidecar write 로직 추가 (ingest-pipeline.ts §4.1.1.9 과 동일 규칙, 단 benchmark 는 재실행 목적상 overwrite 허용).
+
+**기록**: `activity/phase-4-1-3-benchmark-2026-04-22.md` (요약 테이블 + Tier별 상세).
+
+#### 4.1.3.5 PMS 재측정 — §4.5.1.5/6 결과 재해석 (2026-04-22, 측정 진행)
+
+**실행**: `./scripts/measure-determinism.sh raw/0_inbox/PMS_제품소개_R10_20220815.pdf -n 10 -d -o activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`
+
+기존 §4.5.1.6 baseline (오염된 MD, Total CV 9.2% on 29-run) 와 본 §4.1.3.5 (깨끗한 MD, Total CV ?% on 10-run) 비교는 측정 완료 후 기록. 재해석 규칙:
+- 새 CV < 5% → §4.5.1.6 개선의 대부분이 OCR 파편 흡수였음, §4.5.1.7 대부분 불필요.
+- 새 CV 5–10% → canonicalizer 3차 확장 가치 확증, §4.5.1.7.2 (Concepts prompt) 만 선택적 검토.
+- 새 CV > 10% → §4.5.1.7 전체 sub-task premise 재평가.
+
+측정 결과는 본 섹션에 업데이트.
+
+#### 4.1.3.6 문서 동기화 + commit (2026-04-22)
+
+- `activity/phase-4-result.md §4.1.3` (이 섹션) — 각 sub-task 증거 상세.
+- `plan/phase-4-todo.md §4.1.3` — 체크박스 모두 `[x]`, 상단 status 갱신, 실제 구현과 일치하도록 sub-task 설명 업데이트 (§4.1.3.1 "Tier 1 기본을 --no-ocr 로 전환" → "mode 파라미터 ('default'|'no-ocr'|'force-ocr') 도입, Tier 1 은 docling 기본값 유지").
+- `plan/phase-4-1-3-bitmap-ocr-fix.md` — 실측 값 반영.
+- `plan/session-wrap-followups.md` — §4.1.3 완료 선언, §4.5.1.7 gate 해제 + 시나리오별 권장 우선순위.
+- `wiki/log.md` — `fix` + `eval` 엔트리.
+- `~/.claude/projects/-Users-denny-Project-wikey/memory/project_phase4_status.md` + MEMORY.md.
+
+#### 4.1.3.7 해제된 선행 의존
+
+**§4.5.1.7** (attribution ablation / Concepts prompt / Lotus variance 등) — §4.1.3.5 결과 (PMS 10-run clean baseline) 에 따라 각 sub-task 의 premise 를 재평가한 뒤 선별 진행. measurement infra (§4.5.1.7.3), Route SEGMENTED (§4.5.1.7.4), BOM 재분할 (§4.5.1.7.6), log_entry cosmetic (§4.5.1.7.7) 은 §4.1.3 와 독립이라 유효.
+
 ---
 
 ## 4.5 운영 · 안정성

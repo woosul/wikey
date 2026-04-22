@@ -1,24 +1,29 @@
 /**
- * 변환 품질 스코어링 (Phase 4.1.1.6).
+ * 변환 품질 스코어링 (Phase 4.1.1.6 초안 + §4.1.3.2 확장).
  *
- * Docling tier 1 출력이 특정 실패 패턴에 해당하면 tier 1b (force-ocr) 재시도 또는
- * tier 2 (markitdown-ocr) 폴스루를 트리거한다. 판단 기준은 4가지 결함 signal:
+ * Docling tier 1 출력이 특정 실패 패턴에 해당하면 tier 1a (no-ocr) / 1b (force-ocr) 재시도 또는
+ * tier 2 (markitdown-ocr) 폴스루를 트리거한다. 판단 기준 signal:
  *
  *   1. brokenTableRatio : `|` 만 연속되는 행의 비율 (TableFormer 실패)
  *   2. emptySectionRatio : 헤딩 직후 본문 50자 미만 비율 (섹션 추출 실패)
  *   3. minBodyChars : 전체 본문 최소 문자 수 (아예 추출 실패)
  *   4. koreanWhitespaceLoss : 15자+ 한글 토큰 비율 > 30% (text-layer 공백 소실)
+ *   5. imageOcrPollution (§4.1.3.2): image placeholder 근접에 짧은 파편 클러스터
+ *      (UI 스크린샷 내 OCR 텍스트가 본문에 interleave 된 경우)
  *
  * 결과 `decision`:
- *   - `accept`: score ≥ DOCLING_QUALITY_MIN_SCORE (기본 0.6)
- *   - `retry` : 한국어 공백 소실 감지 — docling --force-ocr 로 재시도
- *   - `reject`: 그 외 품질 미달 — 다음 tier 폴스루
+ *   - `accept`       : score ≥ DOCLING_QUALITY_MIN_SCORE (기본 0.6)
+ *   - `retry`        : 한국어 공백 소실 감지 — docling --force-ocr 로 재시도 (Tier 1b)
+ *   - `retry-no-ocr` : image OCR 파편 감지 — docling --no-ocr 로 재시도 (Tier 1a, §4.1.3.2)
+ *   - `reject`       : 그 외 품질 미달 — 다음 tier 폴스루
+ *
+ * 우선순위 (동시 감지 시): koreanLoss > pollution > score-based.
  */
 
 export interface QualityResult {
   readonly score: number           // 0.0 ~ 1.0
   readonly flags: string[]         // 발견된 결함 라벨들
-  readonly decision: 'accept' | 'retry' | 'reject'
+  readonly decision: 'accept' | 'retry' | 'retry-no-ocr' | 'reject'
 }
 
 export interface QualityOptions {
@@ -65,19 +70,26 @@ export function scoreConvertOutput(md: string, opts?: QualityOptions): QualityRe
   const koreanLoss = hasMissingKoreanWhitespace(md)
   if (koreanLoss) flags.push('korean-whitespace-loss')
 
+  // 5. image OCR 파편 오염 (§4.1.3.2) — bitmap OCR 이 UI 스크린샷 텍스트를 본문에 interleave.
+  //    docling CLI 기본 --ocr 에서 발생. 감지 시 --no-ocr 재시도 (Tier 1a) 유도.
+  const pollution = hasImageOcrPollution(md)
+  if (pollution) flags.push('image-ocr-pollution')
+
   // score 계산 — signal 없을수록 높음
   let score = 1.0
   score -= brokenTableRatio * 0.3
   score -= emptySectionRatio * 0.3
   score -= koreanLoss ? 0.4 : 0
+  score -= pollution ? 0.4 : 0
   score = Math.max(0, Math.min(1, score))
 
-  // 결정
-  // 한국어 공백 소실은 결과가 사실상 불사용 가능 — retry 가능하면 retry, 아니면 reject
-  // (score 가 minScore 이상이어도 다음 tier 폴스루 유도).
+  // 결정 — 우선순위: koreanLoss > pollution > score-based.
+  // 한국어 공백 소실이나 이미지 OCR 오염은 score 가 minScore 이상이어도 재시도/폴스루 유도.
   let decision: QualityResult['decision']
   if (koreanLoss) {
     decision = retryKr ? 'retry' : 'reject'
+  } else if (pollution) {
+    decision = 'retry-no-ocr'
   } else if (score >= minScore) {
     decision = 'accept'
   } else {
@@ -85,6 +97,81 @@ export function scoreConvertOutput(md: string, opts?: QualityOptions): QualityRe
   }
 
   return { score, flags, decision }
+}
+
+/**
+ * 이미지 OCR 파편 감지 (§4.1.3.2 — v2, 실측 기반 보강).
+ *
+ * docling CLI 기본 `--ocr` 은 PDF 내 bitmap 이미지 (UI 스크린샷·대시보드 목업 등) 를 OCR 처리해
+ * 본문 흐름에 파편 텍스트를 interleave 한다. 예 (PMS 제품소개 실측):
+ *   ```
+ *   [image]
+ *   로그인
+ *   일반 Classic
+ *   22A002 참여
+ *   ```
+ * 이 파편들은 LLM 파이프라인에서 legit content 로 오해되어 false entity/concept 생성을 유발.
+ *
+ * 필수 필터 (둘 다 만족해야 평가 진행 — false positive 방어):
+ *   - bodyChars ≥ 2000 : 1-2 페이지 폼/등록증 (GOODSTREAM 스타일 짧은 필드) 은 pollution 개념 무의미.
+ *   - markerCount ≥ 5  : 마커 개수가 적으면 pollution 패턴 신호 부족.
+ *
+ * 두 가지 판정 기준 (OR — 하나라도 만족 시 pollution):
+ *   기준 A (마커 근접 클러스터): 각 마커의 ±5 라인 window 내 <20자 비어있지 않은 라인이 3개 이상 연속.
+ *     - 리스트 마커 (`-`, `*`, `+`, `\d+.`) 가 붙은 라인은 정상 리스트로 간주하여 제외.
+ *   기준 B (대규모 파편 비율): 전체 비어있지 않은 라인 중 <20자 파편 (마커/리스트 제외) 비율 > 50%.
+ *     - 실측 (4 코퍼스): PMS 62.5% (pollution), ROHM 42.7%, RP1 14.0%, GOODSTREAM 60.0%(제외: bodyChars 필터).
+ *
+ * 추후 후보 (실측 확장 — §4.1.3.4 결과 따라):
+ *   - 기준 C: 연속 라인 간 한국어/영어/숫자 혼재 비율의 Z-score 변동.
+ */
+export function hasImageOcrPollution(md: string): boolean {
+  const bodyCharsTotal = md.trim().length
+  if (bodyCharsTotal < 2000) return false   // 소규모 문서 (폼·등록증 등) 는 pollution 평가 제외
+
+  const lines = md.split('\n')
+  const imgMarker = /(<!--\s*image\s*-->)|(!\[[^\]]*\]\([^)]*\))|(\[image(?::[^\]]*)?\])/i
+  const listMarker = /^\s*([-*+]\s|\d+\.\s)/
+
+  const imgLines: number[] = []
+  for (let i = 0; i < lines.length; i++) {
+    if (imgMarker.test(lines[i])) imgLines.push(i)
+  }
+  if (imgLines.length < 5) return false     // 마커 개수 부족 → 신호 불충분
+
+  const WINDOW = 5
+  const SHORT_CHAR_LIMIT = 20
+  const MIN_CLUSTER = 3
+
+  // 기준 A: marker ±5 window 내 <20자 라인 3연속.
+  for (const imgLine of imgLines) {
+    const start = Math.max(0, imgLine - WINDOW)
+    const end = Math.min(lines.length - 1, imgLine + WINDOW)
+    let consecutive = 0
+    for (let i = start; i <= end; i++) {
+      if (i === imgLine) { consecutive = 0; continue }
+      const l = lines[i].trim()
+      if (l.length === 0) continue               // 빈 라인 skip (reset 안 함)
+      if (imgMarker.test(l)) { consecutive = 0; continue }
+      if (listMarker.test(l)) { consecutive = 0; continue }
+      if (l.length < SHORT_CHAR_LIMIT) {
+        consecutive++
+        if (consecutive >= MIN_CLUSTER) return true
+      } else {
+        consecutive = 0
+      }
+    }
+  }
+
+  // 기준 B: 전체 비어있지 않은 라인 중 <20자 파편 비율 > 50%.
+  const nonEmpty = lines.filter((l) => l.trim().length > 0)
+  if (nonEmpty.length === 0) return false
+  const fragLines = nonEmpty.filter((l) => {
+    const t = l.trim()
+    return t.length > 0 && t.length < SHORT_CHAR_LIMIT && !imgMarker.test(l) && !listMarker.test(l)
+  }).length
+  const fragRatio = fragLines / nonEmpty.length
+  return fragRatio > 0.50
 }
 
 /**

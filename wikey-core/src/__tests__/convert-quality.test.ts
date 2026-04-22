@@ -8,6 +8,7 @@ import {
   koreanLongTokenRatio,
   isLikelyScanPdf,
   bodyCharsPerPage,
+  hasImageOcrPollution,
 } from '../convert-quality.js'
 
 describe('scoreConvertOutput — accept', () => {
@@ -245,6 +246,262 @@ describe('isLikelyScanPdf', () => {
 
   it('pageCount 0 → false (감지 무관)', () => {
     expect(isLikelyScanPdf('any content', 0)).toBe(false)
+  })
+})
+
+describe('hasImageOcrPollution — §4.1.3.2 (v2: bodyChars ≥ 2000, markers ≥ 5 필터)', () => {
+  // 헬퍼: 긴 정상 본문 (기준 통과용 bodyChars 채우기).
+  const filler = Array(20).fill('이것은 정상적인 본문 문장입니다. 여러 단어로 구성되어 있고 일반 paragraph 흐름을 가집니다. 문서가 정상적으로 변환되었을 때 기대되는 본문 형태를 재현합니다.').join('\n')
+
+  it('소규모 문서 (bodyChars < 2000) → false (필터)', () => {
+    const md = [
+      '# 제목', '', '짧은 본문', '',
+      '[image]', '로그인', '메뉴', 'Home',
+      '[image]', '버튼', '홈', '설정',
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(false) // bodyChars 필터에 걸림
+  })
+
+  it('마커 수 < 5 → false (필터)', () => {
+    const md = [
+      '# 제목', filler, '',
+      '[image]', '로그인', '메뉴', '홈',
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(false) // markers 1 < 5
+  })
+
+  it('마커 없음 → false', () => {
+    const md = [
+      '# 제목', filler,
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(false)
+  })
+
+  it('마커 + 정상 본문 (짧은 파편 없음) → false', () => {
+    const md = [
+      '# 제목', '',
+      filler, '',
+      '[image]', '',
+      '이미지 뒤에 이어지는 캡션과 본문 내용이 정상적으로 이어집니다 충분히 긴 문장.',
+      '추가 설명 문장도 충분한 길이를 가지고 있으며 파편으로 오인되지 않습니다.',
+      '[image]', '',
+      '두 번째 이미지 뒤에도 적절한 설명이 이어집니다 파편 없음.',
+      '[image]', '',
+      '세 번째도 정상 캡션입니다 설명이 길게 이어집니다.',
+      '[image]', '',
+      '네 번째도 마찬가지로 정상적입니다 파편 없음.',
+      '[image]', '',
+      '다섯 번째 이미지 뒤 설명 문장입니다 길게 이어집니다 정상.',
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(false)
+  })
+
+  it('기준 A — [image] 마커 ±5 윈도우 내 <20자 라인 3연속 → true (5+ markers, 큰 본문)', () => {
+    // PMS 실측 패턴 재현: 각 이미지 주변에 짧은 OCR 파편 연속.
+    const polluted = Array(5).fill([
+      '[image]',
+      '로그인',
+      '일반 Classic',
+      '22A002 참여',
+    ].join('\n')).join('\n\n')
+    const md = [
+      '# 제품 소개',
+      filler,
+      '',
+      polluted,
+      '',
+      filler,
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(true)
+  })
+
+  it('기준 A — ![Image](data:image/...) 형태도 감지 (strip 전 원본)', () => {
+    const polluted = Array(5).fill([
+      '![Image](data:image/png;base64,AAAA)',
+      '로그인',
+      '메뉴 (6)',
+      '업무공유',
+    ].join('\n')).join('\n\n')
+    const md = [
+      '# 문서',
+      filler,
+      '',
+      polluted,
+      '',
+      filler,
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(true)
+  })
+
+  it('기준 A — <!-- image --> HTML 주석 형태도 감지', () => {
+    const polluted = Array(5).fill([
+      '<!-- image -->',
+      '메뉴',
+      '버튼 A',
+      'Home',
+    ].join('\n')).join('\n\n')
+    const md = [
+      '# 문서',
+      filler,
+      '',
+      polluted,
+      '',
+      filler,
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(true)
+  })
+
+  it('리스트 아이템 (- A / - B / - C) 은 파편으로 오인하지 않음', () => {
+    const withLists = Array(5).fill([
+      '[image]',
+      '- 항목 A',
+      '- 항목 B',
+      '- 항목 C',
+    ].join('\n')).join('\n\n')
+    const md = [
+      '# 문서',
+      filler,
+      '',
+      withLists,
+      '',
+      filler,
+      filler, // fragRatio 낮추기 위해 긴 본문 더 삽입
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(false)
+  })
+
+  it('번호 리스트 (1. A / 2. B / 3. C) 역시 오인 없음', () => {
+    const withLists = Array(5).fill([
+      '[image]',
+      '1. 절차 A',
+      '2. 절차 B',
+      '3. 절차 C',
+    ].join('\n')).join('\n\n')
+    const md = [
+      '# 문서',
+      filler,
+      '',
+      withLists,
+      '',
+      filler,
+      filler,
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(false)
+  })
+
+  it('기준 B — 마커 근접 기준 A 미충족이어도 전체 파편 비율 > 50% → true', () => {
+    // PMS 실측: 마커 주변에 빈 줄이 많아 <20자 3연속이 성립 안 되지만, 전체 파편 비율이 압도적.
+    // 마커 5개 + 각 마커 주변은 긴 본문 (기준 A 차단) + 다른 곳에 파편 대량 (기준 B 잡음).
+    const longLine = '정상적인 길이의 본문 문장이 여기에 들어가 paragraph 흐름을 유지합니다.'
+    const fragLine = '이건 짧은 파편입니다'   // 12자 (<20)
+    const markerBlock = Array(5).fill(['[image]', longLine].join('\n')).join('\n\n')
+    const fragBlock = Array(200).fill(fragLine).join('\n')
+    const md = [
+      '# 문서',
+      longLine, longLine, longLine,
+      '',
+      markerBlock,
+      '',
+      longLine, longLine,
+      '',
+      fragBlock,
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(true)
+  })
+
+  it('기준 A/B 모두 false — 큰 정상 문서 → false', () => {
+    // 마커 5개이지만 주변 파편 없고 전체 파편 비율 낮음.
+    const md = [
+      '# 정상 문서',
+      filler, '',
+      '[image]', '',
+      filler, '',
+      '[image]', '',
+      filler, '',
+      '[image]', '',
+      filler, '',
+      '[image]', '',
+      filler, '',
+      '[image]', '',
+      filler,
+    ].join('\n')
+    expect(hasImageOcrPollution(md)).toBe(false)
+  })
+})
+
+describe('scoreConvertOutput — §4.1.3.2 retry-no-ocr decision', () => {
+  const filler = Array(20).fill('이것은 정상적인 본문 문장입니다. 여러 단어로 구성되어 있고 일반 paragraph 흐름을 가집니다. 문서가 정상적으로 변환되었을 때 기대되는 본문 형태를 재현합니다.').join('\n')
+  const pollutionBlock = Array(5).fill(['[image]', '로그인', '일반 Classic', '22A002 참여'].join('\n')).join('\n\n')
+
+  it('image-ocr-pollution 감지 + korean whitespace loss 없음 → retry-no-ocr', () => {
+    const md = [
+      '# 제품 소개 문서',
+      filler,
+      '',
+      pollutionBlock,
+      '',
+      '이어지는 정상 본문입니다 이미지 이후에도 의미있는 설명이 이어집니다.',
+    ].join('\n')
+    const r = scoreConvertOutput(md, { retryOnKoreanWhitespace: true })
+    expect(r.flags).toContain('image-ocr-pollution')
+    expect(r.decision).toBe('retry-no-ocr')
+  })
+
+  it('image-ocr-pollution + korean whitespace loss 동시 → retry (koreanLoss 우선)', () => {
+    const koreanLossFiller = Array(20).fill([
+      '이것은정상적인한국어문장이지만공백이없습니다긴토큰하나로인식됨',
+      '그리고이렇게긴토큰들이계속이어집니다오랫동안지속되는패턴입니다',
+      '공백이사라진블로그프린트같은문제가있습니다연속해서긴토큰발생',
+    ].join('\n')).join('\n')
+    const md = [
+      '# 문서',
+      koreanLossFiller,
+      '',
+      pollutionBlock,
+      '',
+      koreanLossFiller,
+    ].join('\n')
+    const r = scoreConvertOutput(md, { retryOnKoreanWhitespace: true })
+    expect(r.flags).toContain('image-ocr-pollution')
+    expect(r.flags).toContain('korean-whitespace-loss')
+    expect(r.decision).toBe('retry') // korean whitespace loss 우선
+  })
+
+  it('image-ocr-pollution 없음 + 정상 → accept', () => {
+    const md = [
+      '# 문서',
+      filler,
+      '',
+      '## 섹션',
+      filler,
+    ].join('\n')
+    const r = scoreConvertOutput(md)
+    expect(r.flags).not.toContain('image-ocr-pollution')
+    expect(r.decision).toBe('accept')
+  })
+
+  it('pollution 감지 시 score 감점 (-0.4)', () => {
+    const clean = [
+      '# 문서',
+      filler,
+      '',
+      '[image]', '', filler, '',
+      '[image]', '', filler, '',
+      '[image]', '', filler, '',
+      '[image]', '', filler, '',
+      '[image]', '', filler,
+    ].join('\n')
+    const polluted = [
+      '# 문서',
+      filler,
+      '',
+      pollutionBlock,
+    ].join('\n')
+    const rClean = scoreConvertOutput(clean)
+    const rPolluted = scoreConvertOutput(polluted)
+    expect(rClean.flags).not.toContain('image-ocr-pollution')
+    expect(rPolluted.flags).toContain('image-ocr-pollution')
+    expect(rClean.score - rPolluted.score).toBeGreaterThanOrEqual(0.35)
   })
 })
 

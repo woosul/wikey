@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate, assertNotWikiPath, callLLMWithRetry } from '../ingest-pipeline.js'
+import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate, assertNotWikiPath, callLLMWithRetry, buildDoclingArgs } from '../ingest-pipeline.js'
 import type { WikiFS } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
 
@@ -184,6 +184,52 @@ describe('callLLMWithRetry — §4.5.1.6.1 determinism flag', () => {
     await callLLMWithRetry(llm, 'p', 'gemini', 'gemini-2.5-flash')
     expect(capturedOpts[0].temperature).toBeUndefined()
     expect(capturedOpts[0].seed).toBeUndefined()
+  })
+})
+
+describe('buildDoclingArgs — §4.1.3.1 mode parameter', () => {
+  it("mode='default' (기본값): docling CLI 기본값 유지 — --no-ocr/--force-ocr 없음, ocr-engine/lang 포함", () => {
+    const args = buildDoclingArgs('/tmp/p.pdf', '/tmp/out')
+    expect(args).not.toContain('--no-ocr')
+    expect(args).not.toContain('--force-ocr')
+    expect(args).toContain('--ocr-engine')
+    expect(args).toContain('--ocr-lang')
+  })
+
+  it("mode='default' 명시: 기본값과 동일 동작", () => {
+    const args = buildDoclingArgs('/tmp/p.pdf', '/tmp/out', undefined, 'default')
+    expect(args).not.toContain('--no-ocr')
+    expect(args).not.toContain('--force-ocr')
+    expect(args).toContain('--ocr-engine')
+  })
+
+  it("mode='no-ocr': --no-ocr 포함, ocr-engine/lang 생략 (bitmap OCR 억제)", () => {
+    const args = buildDoclingArgs('/tmp/p.pdf', '/tmp/out', undefined, 'no-ocr')
+    expect(args).toContain('--no-ocr')
+    expect(args).not.toContain('--force-ocr')
+    expect(args).not.toContain('--ocr-engine')
+    expect(args).not.toContain('--ocr-lang')
+  })
+
+  it("mode='force-ocr': --force-ocr + ocr-engine/lang 포함, --no-ocr 없음", () => {
+    const args = buildDoclingArgs('/tmp/p.pdf', '/tmp/out', undefined, 'force-ocr')
+    expect(args).toContain('--force-ocr')
+    expect(args).toContain('--ocr-engine')
+    expect(args).toContain('--ocr-lang')
+    expect(args).not.toContain('--no-ocr')
+  })
+
+  it('공통 args: source path, --to md, --output, --table-mode, --device, --image-export-mode 포함', () => {
+    const args = buildDoclingArgs('/tmp/p.pdf', '/tmp/out')
+    expect(args[0]).toBe('/tmp/p.pdf')
+    expect(args).toContain('--to')
+    expect(args).toContain('md')
+    expect(args).toContain('--output')
+    expect(args).toContain('/tmp/out')
+    expect(args).toContain('--table-mode')
+    expect(args).toContain('--device')
+    expect(args).toContain('--image-export-mode')
+    expect(args).toContain('embedded')
   })
 })
 

@@ -1036,9 +1036,18 @@ async function extractDocumentText(
   }
 }
 
-/** docling 옵션 중 캐시 키에 포함할 것들 (결과 달라지는 옵션만). */
-function doclingMajorOptions(config?: WikeyConfig): Record<string, unknown> {
+/**
+ * Docling tier mode (§4.1.3.1).
+ *   - 'default'  : Tier 1. docling CLI 기본값 그대로. bitmap OCR 은 docling 기본 (--ocr) 이 활성.
+ *   - 'no-ocr'   : Tier 1a. image-ocr-pollution 감지 시 escalation. bitmap OCR 억제.
+ *   - 'force-ocr': Tier 1b. korean-whitespace-loss / scan-pdf 감지 시 escalation. vector text 무시하고 전체 OCR.
+ */
+export type DoclingMode = 'default' | 'no-ocr' | 'force-ocr'
+
+/** docling 옵션 중 캐시 키에 포함할 것들 (결과 달라지는 옵션만). §4.1.3.1: `mode` 필드로 Tier 1/1a/1b 캐시 분리. */
+function doclingMajorOptions(config?: WikeyConfig, mode: DoclingMode = 'default'): Record<string, unknown> {
   return {
+    mode,
     table_mode: config?.DOCLING_TABLE_MODE || 'accurate',
     ocr_engine: config?.DOCLING_OCR_ENGINE || (process.platform === 'darwin' ? 'ocrmac' : 'rapidocr'),
     ocr_lang: config?.DOCLING_OCR_LANG || 'ko-KR,en-US',
@@ -1047,9 +1056,14 @@ function doclingMajorOptions(config?: WikeyConfig): Record<string, unknown> {
 }
 
 /**
- * Docling CLI args 빌드. --output 은 디렉토리만 받으므로 tmp dir 지정 (stdout 미지원).
+ * Docling CLI args 빌드 (§4.1.3.1 — mode 파라미터). `--output` 은 디렉토리만 받으므로 tmp dir 지정 (stdout 미지원).
  */
-function buildDoclingArgs(fullPath: string, outputDir: string, config?: WikeyConfig, forceOcr = false): string[] {
+export function buildDoclingArgs(
+  fullPath: string,
+  outputDir: string,
+  config?: WikeyConfig,
+  mode: DoclingMode = 'default',
+): string[] {
   const tableMode = config?.DOCLING_TABLE_MODE || 'accurate'
   const device = config?.DOCLING_DEVICE || (process.platform === 'darwin' ? 'mps' : 'cpu')
   const ocrEngine = config?.DOCLING_OCR_ENGINE || (process.platform === 'darwin' ? 'ocrmac' : 'rapidocr')
@@ -1060,11 +1074,22 @@ function buildDoclingArgs(fullPath: string, outputDir: string, config?: WikeyCon
     '--output', outputDir,
     '--table-mode', tableMode,
     '--device', device,
-    '--ocr-engine', ocrEngine,
-    '--ocr-lang', ocrLang,
     '--image-export-mode', 'embedded',   // strip 함수가 후처리
   ]
-  if (forceOcr) args.push('--force-ocr')
+  switch (mode) {
+    case 'default':
+      // Tier 1: docling CLI 기본값 그대로 (bitmap OCR on by Docling default).
+      args.push('--ocr-engine', ocrEngine, '--ocr-lang', ocrLang)
+      break
+    case 'no-ocr':
+      // Tier 1a: image-ocr-pollution escalation. bitmap OCR 억제.
+      args.push('--no-ocr')
+      break
+    case 'force-ocr':
+      // Tier 1b: korean-whitespace-loss / scan-pdf escalation. vector text 무시, 전체 OCR.
+      args.push('--force-ocr', '--ocr-engine', ocrEngine, '--ocr-lang', ocrLang)
+      break
+  }
   return args
 }
 
@@ -1194,6 +1219,40 @@ async function extractPdfText(
         const quality = scoreConvertOutput(ok, { retryOnKoreanWhitespace: true })
         log(`tier 1 docling quality — score=${quality.score.toFixed(2)}, decision=${quality.decision}, koreanLong=${(ratio * 100).toFixed(1)}%, perPage=${perPage.toFixed(0)}, isScan=${isScan}, flags=[${quality.flags.join(',')}]`)
         if (quality.decision === 'accept' && !isScan) return finalize(ok, '1-docling')
+
+        // Tier 1a (§4.1.3.3): image-ocr-pollution escalation — docling --no-ocr 로 재시도.
+        // PMS 제품소개 스타일 (vector PDF + UI 스크린샷 embedded) 에서 bitmap OCR 파편 제거.
+        // 비교 후 더 나은 쪽 채택 (false positive 방어: 실제 스캔 PDF 는 --no-ocr 로 본문 손실).
+        if (quality.decision === 'retry-no-ocr') {
+          log(`tier 1a/6 start: docling --no-ocr (image-ocr-pollution detected)`)
+          const noOcrDir = mkdtempSync(join(os.tmpdir(), 'wikey-docling-no-ocr-'))
+          try {
+            const noOcrArgs = buildDoclingArgs(fullPath, noOcrDir, config, 'no-ocr')
+            await execFileAsync('docling', noOcrArgs, {
+              timeout, maxBuffer: 100 * 1024 * 1024, env,
+            })
+            const noOcrMd = readDoclingOutput(noOcrDir, fullPath)
+            const noOcrOk = accept('1a docling --no-ocr', noOcrMd)
+            if (noOcrOk) {
+              const noOcrQ = scoreConvertOutput(noOcrOk, { retryOnKoreanWhitespace: false })
+              log(`tier 1a quality — score=${noOcrQ.score.toFixed(2)}, decision=${noOcrQ.decision}, flags=[${noOcrQ.flags.join(',')}]`)
+              if (noOcrQ.score > quality.score) {
+                return finalize(noOcrOk, '1a-docling-no-ocr')
+              }
+              warn(`tier 1a score (${noOcrQ.score.toFixed(2)}) not greater than tier 1 (${quality.score.toFixed(2)}) — keeping tier 1 despite pollution`)
+              return finalize(ok, '1-docling')
+            }
+            // noOcrOk null (본문 너무 짧음) → tier 1 유지
+            warn('tier 1a --no-ocr produced insufficient body — keeping tier 1')
+            return finalize(ok, '1-docling')
+          } catch (err: unknown) {
+            warn(`tier 1a docling --no-ocr error: ${errorMessage(err)} — keeping tier 1`)
+            return finalize(ok, '1-docling')
+          } finally {
+            try { rmSync(noOcrDir, { recursive: true, force: true }) } catch { /* ignore */ }
+          }
+        }
+
         const shouldRetry = quality.decision === 'retry' || isScan
         if (shouldRetry) {
           // tier 1b: docling --force-ocr 로 재시도
@@ -1205,7 +1264,7 @@ async function extractPdfText(
           log(`tier 1b/6 start: docling --force-ocr (${reason})`)
           const retryDir = mkdtempSync(join(os.tmpdir(), 'wikey-docling-ocr-'))
           try {
-            const retryArgs = buildDoclingArgs(fullPath, retryDir, config, true)
+            const retryArgs = buildDoclingArgs(fullPath, retryDir, config, 'force-ocr')
             await execFileAsync('docling', retryArgs, {
               timeout, maxBuffer: 100 * 1024 * 1024, env,
             })

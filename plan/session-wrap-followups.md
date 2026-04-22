@@ -1,11 +1,51 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (§4.5.1.6 완전 완료 — 29-run Total CV 9.2%, baseline 24.3% → −62% 상대)
+> 최신 갱신: 2026-04-22 (§4.1.3 구현 완료 — Bitmap OCR pollution 감지 + Tier 1a 체인 + sidecar md + 4 코퍼스 회귀. §4.1.3.5 PMS 10-run clean 측정 진행)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-22 §4.5.1.6 완료 — determinism + canonicalizer 3차 (29-run Total CV 9.2%)
+## 2026-04-22 §4.1.3 구현 완료 — Bitmap OCR 본문 오염 차단 (pollution signal + Tier 1a escalation)
+
+### ⭐ 다음 세션 시작점
+
+**§4.1.3.1~4 · 6 구현 완료**, §4.1.3.5 측정 진행 중.
+
+- 구현 요약:
+  - `buildDoclingArgs` mode 3-mode (`default` / `no-ocr` / `force-ocr`) + `DoclingMode` type export
+  - `scoreConvertOutput` 5번째 signal `image-ocr-pollution` 추가 + decision `'retry-no-ocr'` 추가 (`wikey-core/src/convert-quality.ts::hasImageOcrPollution`, v2 필터 + 기준 A/B)
+  - `extractPdfText` Tier 1a (`--no-ocr`) escalation 분기 + score 비교 후 채택 (false positive 방어)
+  - `scripts/benchmark-tier-4-1-3.mjs` — Tier chain 벤치마크 + sidecar `.md` 저장
+  - Tests 315 → 335 PASS, build 0 errors
+- 4 코퍼스 회귀 (`activity/phase-4-1-3-benchmark-2026-04-22.md`):
+  - PMS: Tier 1 retry-no-ocr → Tier 1a accept, lines **1922 → 532 (−72%)** 오염 제거, score 0.53 → 0.91
+  - ROHM: Tier 1 retry → Tier 1b accept (koreanLoss 경로, 기존과 동일)
+  - RP1/GOODSTREAM: Tier 1 accept (regression 없음)
+- Sidecar 4 개 생성 (원본 옆 `.md`).
+
+### 🔴 §4.1.3.5 완료 후 즉시 결정
+
+**§4.5.1.7 gate** — §4.1.3.5 (PMS 10-run clean baseline) CV 값 기반:
+- 새 CV < 5% → §4.5.1.7 대부분 불필요 (wrap up), §4.5.1.7.3/4/6/7 (독립 sub-task) 만 진행.
+- 새 CV 5–10% → §4.5.1.7.2 (Concepts prompt) 만 선택 검토 + 독립 sub-task.
+- 새 CV > 10% → §4.5.1.7 전체 premise 재평가 (canonicalizer 3차 효과의 "legitimate variance" vs "OCR 파편 흡수" 비율 파악).
+
+### 🟡 남은 작업 — 이전 세션에서 이관
+
+**§4.5.1.6 완료 상태 (2026-04-22 앞서)**:
+
+| 지표 | §4.5.1.5 baseline | §4.5.1.6 10-run | §4.5.1.6 29-run | 누적 Δ 상대 |
+|------|------------------:|-----------------:|-----------------:|------------:|
+| Total CV | 24.3% | 7.2% | **9.2%** | **−62.1%** |
+| Entities CV | 36.4% | 13.9% | 11.1% | −69.5% |
+| Concepts CV | 31.1% | 28.9% | 27.0% | −13.2% |
+| Union size (E+C) | 87 | 53 | 53 | −39.1% |
+
+**이 baseline 은 오염된 MD 위에서 측정** — §4.1.3.5 로 재해석 예정.
+
+---
+
+## 2026-04-22 §4.5.1.6 완료 — determinism + canonicalizer 3차 (29-run Total CV 9.2%, 오염 baseline)
 
 ### ⭐ 다음 세션 시작점
 
