@@ -565,6 +565,35 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - [ ] 장점: 속도↑, 세밀한 양자화 제어 (IQ2~BF16, Unsloth Dynamic 2.0), 백그라운드 데몬 불필요
 - [ ] 단점: 모델 스와핑 별도 도구 필요, provider 분기 재작성, GGUF 수동 다운로드
 
+### 4.5.4 rapidocr (paddleOCR PP-OCRv5 Korean) fallback 실측 — Linux/Windows 환경 (2026-04-22 후속, 맨 뒤 이동)
+
+> **배경**. §4.1.3 에서 `defaultOcrEngine()` + `defaultOcrLangForEngine()` 로 platform 별 engine/lang 자동 매핑 등록 완료. macOS → ocrmac + `ko-KR,en-US`, Linux/Windows → rapidocr + `korean,english`. 코드 레벨은 등록됐으나 **macOS 세션에서 rapidocr 실제 OCR 품질 검증 불가**. Linux 환경에서 실측 필요.
+
+- [ ] **§4.5.4.1** Linux 환경 준비
+  - `uv tool install "docling[rapidocr]"` — rapidocr-onnxruntime extras 포함 설치.
+  - 테스트 환경: Ubuntu 22.04 또는 Docker (wikey-core 실행).
+  - 기본 rapidocr 모델: Chinese + English (paddleOCR 기본 탑재). Korean 은 별도 모델 로드 필요할 가능성.
+
+- [ ] **§4.5.4.2** rapidocr + `korean,english` CLI 실측
+  - 명령: `docling <test.pdf> --to md --output /tmp --ocr-engine rapidocr --ocr-lang korean,english --force-ocr`
+  - 테스트 코퍼스: CONTRACT (용역계약서, 한글 OCR 난도 높음), GOODSTREAM (사업자등록증).
+  - 검증: rapidocr 가 `korean` lang 지정을 실제로 받아들이는지. 안 받으면 `--ocr-engine easyocr --ocr-lang ko,en` 대안 검토.
+
+- [ ] **§4.5.4.3** PP-OCRv5 Korean 모델 수동 로드 (skill 권고 경로)
+  - docling skill 문서 `~/.claude/skills/docling/reference/korean-ocr-advanced.md` 의 PaddleOCR PP-OCRv5 Korean 전환 가이드.
+  - CLI 로는 불가 — Python API (`RapidOcrOptions(rec_model_path=...)`) 경로.
+  - Korean 가중치 다운로드 (`huggingface_hub: PaddlePaddle/korean_PP-OCRv5_mobile_rec`).
+  - `scripts/benchmark-tier-4-1-3.mjs` 를 Python 호출 방식으로 확장하거나 별도 `scripts/ocr-python-api.py` 헬퍼 추가.
+
+- [ ] **§4.5.4.4** macOS ocrmac vs Linux rapidocr 품질 비교 (CONTRACT·GOODSTREAM)
+  - 동일 PDF 에 대해 두 engine 결과 비교: 한글 자수, OCR 오류 건수, 본문 구조 정확도.
+  - ocrmac 대비 rapidocr 품질이 충분 (80%+) 하면 production fallback 으로 등록.
+  - 부족하면 Linux 환경에서는 `markitdown[pdf]` + OpenAI Vision fallback (tier 2/3) 경로 고려.
+
+- [ ] **§4.5.4.5** 결과 기록 + fallback 매트릭스 문서화
+  - `activity/phase-4-5-4-rapidocr-linux-<date>.md` 신규.
+  - `~/.claude/skills/docling/reference/korean-ocr-advanced.md` 에 실측 갱신 (커뮤니티 consensus 와 일치 여부).
+
 ---
 
 ## Phase 3 완료분 요약 (참고)

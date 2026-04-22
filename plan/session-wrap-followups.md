@@ -1,11 +1,60 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-22 (§4.1.3 전체 완료 — Bitmap OCR pollution 감지 + Tier 1a 체인 + sidecar md + 4 코퍼스 회귀 + PMS 10-run clean 측정: Total CV 10.3% / Entities 2.3% / Concepts 24.6%)
+> 최신 갱신: 2026-04-22 (§4.1.3 전체 완료 — Bitmap OCR pollution + source scan + text layer corruption 감지 + OCR engine/lang 자동 매핑 + 5 코퍼스 회귀 + PMS 10-run clean Total CV 10.3%)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-22 §4.1.3 전체 완료 — Bitmap OCR 본문 오염 차단 + clean baseline 측정
+## 2026-04-22 §4.1.3 전체 완료 — source PDF 기반 근본 감지 (scan + text layer corruption) + OCR engine fallback
+
+### ⭐ 다음 세션 최우선: §4.5.1.7.2 (Concepts prompt PMBOK 10 sub-area 결정화)
+
+§4.1.3.5 측정 결과 (Entities CV **2.3%**, Concepts CV **24.6%**) 기반 gate 판정:
+- Entities 는 거의 결정적 (§4.1.3 효과). Lotus 진동 자동 해결.
+- Concepts 잔여 variance 의 주 원인 = PMBOK 10 knowledge areas 가 일부 run 에서만 concept 로 분해 ↔ 다른 run 에서 1개 묶음 진동.
+- prompt-level 변경 (§4.5.1.7.2) 이 유일한 해법 — canonicalizer + determinism 로는 해결 불가.
+
+### 📋 §4.5.1.7 sub-task 우선순위 (전체 7개)
+
+| sub-task | 상태 | 근거 |
+|---|---|---|
+| **§4.5.1.7.2 Concepts prompt (PMBOK 10)** | 🔴 **필수** | Concepts CV 24.6% 주원인 |
+| §4.5.1.7.1 attribution ablation (4 points) | 🟡 재평가 (축소) | Entities 이미 2.3%, Concepts 기여도만 선택적 |
+| §4.5.1.7.5 Lotus-prefix variance | 🟢 **불필요** | Entities 2.3% 로 자동 해결 |
+| §4.5.1.7.3 측정 infra robustness | 🟡 독립 유효 | run 30 outlier 재발 방지 |
+| §4.5.1.7.4 Route SEGMENTED (Ollama) | 🟡 독립 유효 | production guide |
+| §4.5.1.7.6 BOM 재분할 판단 | 🟢 독립 유효 | 실무 판단 (월 1회 모니터) |
+| §4.5.1.7.7 log_entry axis 수정 | 🟢 cosmetic | 빠름 |
+
+**권장 순서**: §4.5.1.7.2 → §4.5.1.7.3 → §4.2 URI 참조 → §4.3 인제스트 고도화 → §4.5.1.7.4/6/7.
+
+### 🟢 §4.5.4 rapidocr Linux 실측 (맨 뒤 todo 로 이동, 2026-04-22 신규)
+
+§4.1.3 의 OCR engine fallback 은 코드 레벨 등록 완료 (`defaultOcrEngine()` + `defaultOcrLangForEngine()`), macOS 환경에서만 실측. Linux/Windows 환경의 rapidocr + PP-OCRv5 Korean 실측은 별도 세션 (별도 Linux 환경 필요).
+
+### 📦 §4.1.3 전체 구현 요약
+
+- 구현:
+  - `buildDoclingArgs` mode 3-mode (`default` / `no-ocr` / `force-ocr`)
+  - `scoreConvertOutput` 5번째 signal `image-ocr-pollution` + decision `'retry-no-ocr'`
+  - `extractPdfText` Tier 1a (`--no-ocr`) escalation + Tier 1b 원인 분기 (scan vs kloss)
+  - `hasRedundantEmbeddedImages` — tier 기반 sidecar strip 판정
+  - **source PDF scan 감지** (pymupdf 이미지 덮힘률 + text layer 검증)
+  - **`defaultOcrEngine()` + `defaultOcrLangForEngine()`** — platform 별 engine/lang 자동 매핑
+  - `scripts/benchmark-tier-4-1-3.mjs` — 5 코퍼스 회귀 + sidecar 저장
+  - Tests 315 → **351 PASS** (+36)
+- 5 코퍼스 최종 매핑 (`activity/phase-4-1-3-benchmark-2026-04-22.md`):
+  - PMS → `1a-docling-no-ocr` raw (UI 스크린샷)
+  - ROHM → `1b-force-ocr-kloss` raw (diagram)
+  - RP1 → `1-docling` raw
+  - GOODSTREAM → `1b-force-ocr-scan` stripped 393 chars ✓
+  - CONTRACT → `1b-force-ocr-scan` stripped 6024 chars, **한글 0 → 2810 복원** ✓
+- PMS 10-run clean baseline (`activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`):
+  - Total CV 10.3% / Entities 2.3% / Concepts 24.6%
+
+---
+
+## 2026-04-22 §4.1.3 전체 완료 — Bitmap OCR 본문 오염 차단 + clean baseline 측정 (초기 기록)
 
 ### ⭐ 다음 세션 시작점
 

@@ -574,22 +574,46 @@ tier 1 docling 실행
 - `wikey-core/src/ingest-pipeline.ts::ingest` — 기존 sidecar 블록에 `ext !== 'pdf'` 조건 추가 (PDF 는 finalize 에서 이미 처리).
 - `scripts/benchmark-tier-4-1-3.mjs` — 동일 로직 반영.
 
-**Source PDF 기반 scan 감지 추가** (2026-04-22 재보강): MD 기반 `isLikelyScanPdf` 가 docling bitmap OCR 결과를 입력받아 GOODSTREAM/CONTRACT 같은 "기존 OCR 저장 스캔본" 을 놓침. 사용자 지적: "순수 이미지 스캔본 PDF 인데 isLikelyScanPdf=false 라는 판정이 잘못된 것. 후속 보정 말고 원본 판정에 집중." → pymupdf 로 **각 페이지 최대 이미지 면적 / 페이지 면적 비율** 직접 측정 (> 0.7 이면 scan-like page). scan-like 페이지가 전체의 50% 초과이면 `isScanBySource=true`.
+**Source PDF 기반 scan + text layer corruption 감지** (2026-04-22 근본 수정): MD 기반 `isLikelyScanPdf` 가 docling bitmap OCR 결과를 입력받아 GOODSTREAM/CONTRACT 같은 스캔 PDF 를 놓침. 사용자 지적: "isLikelyScanPdf=false 라는 판정이 잘못된 것. 후속 보정 말고 원본 판정에 집중". 사용자 원칙: "기본값 변환 → 불량값 → OCR 적용 흐름에 들어오면 scan 문서".
 
-- `extractPdfText` 초반 pymupdf subprocess 호출 → `scanRatioBySource` 획득.
-- Tier 1 accept + `isScanBySource=true` + `!isScanByMd` → `tierKey = '1-docling-scan'` (Tier 1 유지, sidecar strip 트리거).
-- `hasRedundantEmbeddedImages` 가 `tierKey === '1-docling-scan'` 도 strip 조건으로 인식.
+`extractPdfText` 초반 pymupdf subprocess 로 source PDF 직접 분석:
+- `scanRatio` = 페이지 대비 최대 이미지 면적 > 0.7 비율
+- `textLayerChars` / `textLayerKoreanChars` = text layer 직접 추출 통계
 
-**실측 벤치마크 — 5 코퍼스 (사용자 기준 정확히 매핑)**:
-| 코퍼스 | pages | scan-by-source | tierKey | sidecar |
-|---|---:|---:|---|---|
-| ROHM | 5 | 0% | `1b-docling-force-ocr-kloss` | raw (diagram 유지) |
-| RP1 | 93 | 0% | `1-docling` | raw |
-| PMS | 31 | 0% | `1a-docling-no-ocr` | raw (UI 스크린샷 유지) |
-| **GOODSTREAM** | 1 | **100%** | **`1-docling-scan`** | **stripped 453 chars** ✓ |
-| **CONTRACT** | 6 | **100%** | **`1-docling-scan`** | **stripped 8114 chars** ✓ |
+세 축 감지:
+- `isScanByMd` = `isLikelyScanPdf(md, pageCount)` (기존 MD 기반)
+- `isScanBySource` = `scanRatio > 0.5`
+- `textLayerCorrupted` = filename 한국어 AND textLayerChars > 500 AND textLayerKoreanChars < 50 (CONTRACT 같은 비표준 폰트 매핑)
 
-사용자 "소규모는 판정 기준 아님" 명시 충족: CONTRACT (6p 계약서 스캔, bodyChars 8114 — 소규모 아님) 도 source 기반 scan 감지로 정확히 strip 대상. bodyChars 임계 의존성 제거.
+→ `isScan = isScanByMd || isScanBySource || textLayerCorrupted`
+→ Tier 1 accept 이어도 `isScan=true` 이면 **Tier 1b force-ocr 진입** (사용자 원칙 "scan 판정 → OCR 적용").
+→ Tier 1b accept → `1b-docling-force-ocr-scan` + sidecar strip.
+→ Tier 1b regression → `1-docling-scan` rollback (scan 정보 유지, sidecar strip).
+
+**OCR engine + lang 자동 매핑** (사용자 "ocrmac 은 macOS 전용 → paddleOCR fallback 등록"):
+- `defaultOcrEngine()` — darwin → `ocrmac`, else → `rapidocr` (paddleOCR 모델 내장)
+- `defaultOcrLangForEngine(engine)` — docling 공식 source 확증된 형식:
+  - `ocrmac` → `ko-KR,en-US` (BCP-47)
+  - `rapidocr` → `korean,english` (paddleOCR)
+  - `easyocr` → `ko,en` (ISO 639-1)
+  - `tesseract` → `kor,eng` (ISO 639-2)
+- 이전 코드는 platform fallback 있었으나 lang 은 `ko-KR` 고정 → rapidocr 에 잘못된 값 전달 위험. 사용자 힌트 "ko 옵션도 넣어야" 가 이 문제 지적.
+
+**실측 벤치마크 — 5 코퍼스 최종 매핑 + sidecar 내용 확인**:
+
+| 코퍼스 | pages | scan% | corrupted | 채택 Tier | sidecar |
+|---|---:|---:|---:|---|---|
+| ROHM | 5 | 0% | false | `1b-force-ocr-kloss` | raw 1.5MB (diagram 유지) |
+| RP1 | 93 | 0% | false | `1-docling` | raw 1.9MB |
+| PMS | 31 | 0% | false | `1a-docling-no-ocr` | raw 6.3MB (UI 스크린샷) |
+| **GOODSTREAM** | 1 | **100%** | false | `1b-force-ocr-scan` | **stripped 393 chars** ✓ |
+| **CONTRACT** | 6 | **100%** | **true** | `1b-force-ocr-scan` | **stripped 6024 chars, 한글 0 → 2810** ✓ |
+
+**sidecar 실측 확인 (이전 세션 패턴 수정 — 파일 실제 읽음)**:
+- CONTRACT before: `Etr8l E +:S AE AqEA-l (E7l gr^{)` (비표준 폰트 매핑) → after: `프로젝트 수행 용역 계약서 (턴키 방식)`, `₩241,000,000`
+- GOODSTREAM before: `사 업 자 드 ⊃ 트 로 증`, `r협~EWl 서 비 스 제 조 업` → after: `사업자등록증`, `서비스 제조업`, `소프트웨어개발,자문 및 공급`
+
+bodyChars/markerCount heuristic 의존성 완전 제거. 사용자 "소규모는 판정 기준 아님" + "후속 보정 말고 원본 판정" 명시 충족. text layer corruption 까지 원본 source 기반 감지로 완결.
 
 **기록**: `activity/phase-4-1-3-benchmark-2026-04-22.md` (요약 테이블 + Tier별 상세).
 
