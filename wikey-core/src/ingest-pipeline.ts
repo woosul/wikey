@@ -128,9 +128,11 @@ export async function ingest(
     sourceContent = stripEmbeddedImages(raw)
   }
 
-  // §4.1.1.9 — md 사본 저장: 변환이 필요했던 포맷(pdf/hwp/hwpx/docx/...)은 원본 옆에
+  // §4.1.1.9 — md 사본 저장: 변환이 필요했던 포맷 (hwp/hwpx/docx/...)은 원본 옆에
   // `<source>.md` 로 저장하여 사용자가 변환 결과를 직접 확인 가능. 원본이 이미 md 면 생략.
-  if (ext && ext !== 'md' && ext !== 'txt') {
+  // §4.1.3 — PDF 는 `extractPdfText::finalize` 에서 이미지 포함 raw MD 를 sidecar 로 저장하므로
+  // 여기서 skip. (이 블록의 `sourceContent` 는 stripped LLM 투입용이라 덮어쓰면 원본 손실.)
+  if (ext && ext !== 'md' && ext !== 'txt' && ext !== 'pdf') {
     const sidecarPath = `${sourcePath}.md`
     try {
       const exists = await wikiFS.exists(sidecarPath).catch(() => false)
@@ -1146,6 +1148,15 @@ async function extractPdfText(
         majorOptions: doclingMajorOptions(config),
       })
       setCached(cacheKey, stripped, { source: sourcePath, converter: `pdf:${tierKey}` })
+    }
+    // §4.1.3 파일 생성 루틴: 파일시스템에 남는 sidecar 는 "원본.md" — 이미지 포함 raw.
+    // LLM 투입용 stripped 는 메모리/캐시 전용 (caller 에게 return, wiki 생성 후 사라짐).
+    try {
+      const { writeFileSync: wf } = require('node:fs') as typeof import('node:fs')
+      wf(`${fullPath}.md`, md, 'utf-8')
+      log(`sidecar .md saved (raw, images included) → ${sourcePath}.md (${md.length} chars, tier=${tierKey})`)
+    } catch (err) {
+      warn(`sidecar .md save failed: ${errorMessage(err)}`)
     }
     return stripped
   }

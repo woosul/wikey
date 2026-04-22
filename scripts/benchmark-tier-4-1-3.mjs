@@ -111,6 +111,7 @@ async function benchmark() {
 
     let finalTier = '1-docling'
     let finalMd = t1.md
+    let finalRaw = t1.raw     // §4.1.3: sidecar 저장용 raw (이미지 포함)
     let finalA = a1
     let t1aRun = null
     let t1bRun = null
@@ -128,6 +129,7 @@ async function benchmark() {
         if (a1a.score > a1.score) {
           finalTier = '1a-docling-no-ocr'
           finalMd = t1aRun.md
+          finalRaw = t1aRun.raw
           finalA = a1a
         } else {
           console.log(`    → tier 1a score not greater, keeping tier 1`)
@@ -148,6 +150,7 @@ async function benchmark() {
         } else if (a1b.decision === 'accept') {
           finalTier = '1b-docling-force-ocr'
           finalMd = t1bRun.md
+          finalRaw = t1bRun.raw
           finalA = a1b
         } else {
           // score 비교
@@ -166,12 +169,13 @@ async function benchmark() {
       finalTier = 'REJECT → fall through'
     }
 
-    // Sidecar 저장 — 최종 채택 MD 를 원본 옆에 `.md` 로 기록 (사용자 §4.1.3 지시).
-    //   ingest-pipeline 의 §4.1.1.9 규칙과 동일. 이미 존재하면 덮어쓰기 (bench 재실행이 갱신 목적).
-    if (finalMd && !finalTier.startsWith('REJECT')) {
+    // Sidecar 저장 — 사용자 설계 (§4.1.3): 원본.md = 이미지 포함 raw 를 저장.
+    //   LLM 투입용 stripped 는 benchmark 내부 analyze() 전용, 디스크에 남지 않음.
+    //   ingest-pipeline::extractPdfText::finalize 와 동일 정책.
+    if (finalRaw && !finalTier.startsWith('REJECT')) {
       try {
-        writeFileSync(`${pdf}.md`, finalMd, 'utf8')
-        console.log(`    sidecar → ${pdf}.md (${finalMd.length} chars, tier=${finalTier})`)
+        writeFileSync(`${pdf}.md`, finalRaw, 'utf8')
+        console.log(`    sidecar (raw, images) → ${pdf}.md (${finalRaw.length} chars, tier=${finalTier})`)
       } catch (err) {
         console.log(`    sidecar save failed: ${err.message}`)
       }

@@ -27,7 +27,22 @@ updated: 2026-04-22
   - PMS: Tier 1 retry-no-ocr → Tier 1a `1a-docling-no-ocr` accept — lines **1922 → 532 (−72%)**, score 0.53 → 0.91. koreanChars 18,654 → 15,549 (OCR 파편 3,105자 제거).
   - ROHM: Tier 1 retry (koreanLoss) → Tier 1b force-ocr accept (기존 경로 유지).
   - RP1, GOODSTREAM: Tier 1 accept.
-- Sidecar `.md` 4 개 생성 (원본 옆, §4.1.1.9 규칙 확장 — benchmark 재실행 시 overwrite 허용).
+- Sidecar `.md` 4 개 생성 (원본 옆).
+
+## [2026-04-22] fix | §4.1.3 sidecar 저장 정책 수정 — 원본.md = 이미지 포함 raw
+
+- 사용자 설계 확정: **원본.pdf → 원본.md (이미지 포함 raw) → LLM투입용.md (stripped, 메모리 전용)**. 파일시스템에 남는 것은 원본.pdf + 원본.md. stripped 는 wiki 생성 후 사라짐.
+- 이전 구현은 stripped (LLM 투입용) 을 sidecar 로 저장. 원본 이미지가 소실되는 문제.
+- 변경:
+  - `wikey-core/src/ingest-pipeline.ts::extractPdfText::finalize` — sidecar 를 **raw md (이미지 embedded)** 로 저장. stripped 는 cache + caller 반환 유지.
+  - `ingest-pipeline.ts` ingest 함수의 sidecar 블록 (131-144) — `ext !== 'pdf'` 조건 추가. PDF 는 finalize 에서 raw 로 이미 저장됐으므로 stripped 로 덮어쓰기 차단. hwp/hwpx/docx/... 는 기존 로직 유지 (후속 작업에서 동일 정책 확장).
+  - `scripts/benchmark-tier-4-1-3.mjs` — `{ md, raw }` 구조로 분리. analyze 는 stripped, sidecar 저장은 raw.
+- 재실행 결과 (sidecar 크기 급증, 이미지 포함 확증):
+  - PMS: 47,979 → **6,339,748 chars**
+  - ROHM: 4,714 → **1,505,611 chars**
+  - RP1: 236,858 → **1,897,465 chars**
+  - GOODSTREAM: 453 → **599,454 chars**
+- raw/ 하위 sidecar 는 `.gitignore` 의 `raw/` 규칙으로 자동 제외. docs/samples/ 하위 sidecar 만 git tracked.
 
 ## [2026-04-22] eval | §4.1.3.5 PMS 10-run determinism (clean MD baseline)
 

@@ -16,25 +16,25 @@
 ### ROHM (docs/samples/ROHM_Wi-SUN Juta통신모듈(BP35CO-J15).pdf)
 
 - pages: 5
-- **Tier 1 (default)**: dur=7.2s, score=0.56, decision=`retry`, flags=`[korean-whitespace-loss]`, isScan=false, koreanLong=42.1%, bodyChars=4896, lines=145, koreanChars=2112, perPage=868
-- **Tier 1b (--force-ocr)**: dur=10.6s, score=0.94, decision=`accept`, flags=`[]`, bodyChars=4714, lines=103, koreanChars=2083
+- **Tier 1 (default)**: dur=7.6s, score=0.56, decision=`retry`, flags=`[korean-whitespace-loss]`, isScan=false, koreanLong=42.1%, bodyChars=4896, lines=145, koreanChars=2112, perPage=868
+- **Tier 1b (--force-ocr)**: dur=10.9s, score=0.94, decision=`accept`, flags=`[]`, bodyChars=4714, lines=103, koreanChars=2083
 - **최종 채택**: `1b-docling-force-ocr`, score=0.94, flags=`[]`
 
 ### RP1 (docs/samples/rp1-peripherals.pdf)
 
 - pages: 93
-- **Tier 1 (default)**: dur=73.7s, score=0.93, decision=`accept`, flags=`[]`, isScan=false, koreanLong=0.0%, bodyChars=236858, lines=4099, koreanChars=1, perPage=1344
+- **Tier 1 (default)**: dur=74.9s, score=0.93, decision=`accept`, flags=`[]`, isScan=false, koreanLong=0.0%, bodyChars=236858, lines=4099, koreanChars=1, perPage=1344
 - **최종 채택**: `1-docling`, score=0.93, flags=`[]`
 
 ### PMS (raw/0_inbox/PMS_제품소개_R10_20220815.pdf)
 
 - pages: 31
-- **Tier 1 (default)**: dur=28.1s, score=0.53, decision=`retry-no-ocr`, flags=`[image-ocr-pollution]`, isScan=false, koreanLong=3.8%, bodyChars=56255, lines=1922, koreanChars=18654, perPage=1011
+- **Tier 1 (default)**: dur=28.9s, score=0.53, decision=`retry-no-ocr`, flags=`[image-ocr-pollution]`, isScan=false, koreanLong=3.8%, bodyChars=56255, lines=1922, koreanChars=18654, perPage=1011
 - **Tier 1a (--no-ocr)**: dur=12.9s, score=0.91, decision=`accept`, flags=`[]`, bodyChars=47979, lines=532, koreanChars=15549
 - **최종 채택**: `1a-docling-no-ocr`, score=0.91, flags=`[]`
 
 ### GOODSTREAM (raw/0_inbox/사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf)
 
 - pages: 1
-- **Tier 1 (default)**: dur=5.8s, score=1.00, decision=`accept`, flags=`[]`, isScan=false, koreanLong=1.1%, bodyChars=453, lines=49, koreanChars=182, perPage=383
+- **Tier 1 (default)**: dur=6.5s, score=1.00, decision=`accept`, flags=`[]`, isScan=false, koreanLong=1.1%, bodyChars=453, lines=49, koreanChars=182, perPage=383
 - **최종 채택**: `1-docling`, score=1.00, flags=`[]`
