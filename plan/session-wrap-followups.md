@@ -34,7 +34,41 @@
 | §4.5.1.7.6 BOM 재분할 판단 | 🟢 독립 유효 | 실무 판단 (월 1회 모니터) |
 | §4.5.1.7.7 log_entry axis 수정 | 🟢 cosmetic | 빠름 |
 
-**권장 순서**: 🔴 §4.5.1.7.2/7.3 실측 (CDP 세션) → §4.2 URI 참조 → §4.3 인제스트 고도화 → §4.5.1.7.4/6/7.
+**권장 순서**: 🔴 §4.5.1.7.2/7.3 실측 (CDP 세션) → §4.2 URI 참조 + 분류 → §4.3 인제스트 본체 (3-stage prompt + Provenance + stripBrokenWikilinks) → §4.5.2 본체 운영 안전 → **Phase 4 본체 완성 선언** → Phase 5 착수 (§5.6 Stage 1 → §5.4 diagnostic / §5.1 검색 / §5.2 그래프 / §5.5 성능 등).
+
+### 🆕 Phase 재편 (2026-04-22) — Phase 5 신규 (튜닝·고도화), 기존 Phase 5 → Phase 6 (웹)
+
+본체 정의 확정: **원본 → wiki ingest 프로세스가 완성되어 더 이상 wiki 를 초기화하거나 재생성할 일이 없는 상태**. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 축적되지만 구조는 변경되지 않는다.
+
+Phase 4 (본체) 에 남는 항목:
+- §4.0 UI / §4.1 문서 전처리 (완료)
+- §4.2 분류·URI 참조 (본체 data model)
+- §4.3 인제스트 본체 (3-stage prompt override / **Provenance tracking — frontmatter 추가라 Phase 4 필수** / stripBrokenWikilinks)
+- §4.5.1 결정성 (§4.5.1.7.2/7.3 실측 대기)
+- §4.5.2 본체 운영 안전 (삭제 안전장치 + 초기화만)
+
+Phase 5 신규 (튜닝·고도화·개선·확장, `plan/phase-5-todo.md`):
+- §5.1 검색 재현율 고도화 (←§4.4.1 contextual chunk)
+- §5.2 지식 그래프·시각화 (←§4.4.2 NetworkX / §4.4.3 AST)
+- §5.3 인제스트 증분 업데이트 (←§4.3.3)
+- §5.4 variance 기여도·diagnostic (←§4.5.1.7.1/.4/.6/.7)
+- §5.5 성능·엔진 확장 (←§4.5.3 llama.cpp / §4.5.4 rapidocr)
+- **§5.6 표준 분해 self-extending (←§4.5.5, 현재 §4.5.1.7.2 PMBOK 하드코딩이 Stage 0)**
+- §5.7 운영 인프라 포팅 (←§4.5.2 일부)
+
+Phase 6 (`plan/phase-6-todo.md`): 기존 Phase 5 웹 환경 전체 이관.
+
+### 🆕 §5.6 표준 분해 규칙 self-extending 구조 (2026-04-22 신규, §4.5.1.7.2 실측 gated)
+
+§4.5.1.7.2 의 PMBOK 10 영역 하드코딩은 **Stage 0 사전 검증**. 철학 선언은 `wiki/analyses/self-extending-wiki.md` (wiki 본체 analysis 페이지) 에 정식 기록됨.
+
+**4 단계 로드맵 (상세: `plan/phase-5-todo.md §5.6`)**:
+1. **Stage 1** — `.wikey/schema.yaml` `standard_decompositions` 필드 + canonicalizer 로더화. 두 번째 표준 등장 시 즉시 착수.
+2. **Stage 2** — extraction graph 기반 suggestion. Audit UI "표준 분해로 등록하시겠습니까?" carding.
+3. **Stage 3** — 소스 본문의 "표준 개요 섹션" 을 section-index 가 감지해 runtime decomposition 자동 생성.
+4. **Stage 4** — wiki 전체 mention graph cross-source convergence (Phase 5 내 최후 단계, Phase 6 이관 없음).
+
+§5.6 가 **실행 로드맵 단일 기록 소스**, `wiki/analyses/self-extending-wiki.md` 가 **철학 선언 단일 기록 소스** (drift 방지). canonicalizer.ts 주석·phase-4-result §4.5.1.7.2·memory·본 followups 는 모두 포인터.
 
 ---
 

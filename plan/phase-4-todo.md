@@ -1,10 +1,35 @@
-# Phase 4: 인제스트 고도화 + 지식 그래프
+# Phase 4: 본체 완성 — 원본 → wiki ingest 프로세스 (구조 고정)
 
 > 기간: Phase 3 완료 후
 > 전제: Phase 3 (Obsidian 플러그인 + 인제스트 파이프라인 v6) 완료
-> 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md`와 1:1 mirror
-> 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트(LLM 추출)** → **4. 검색·그래프** → **5. 운영·안정성**
-> 상태 (2026-04-22): §4.0 완료, §4.1 완료, §4.5.1 완료, §4.5.1.4 기능 완수/CV 미확증, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 코드 완료** (실측은 CDP 세션 대기). 다음 = §4.2 URI 안정 참조 / §4.3 인제스트 고도화 / §4.5.1.7 나머지 sub-task (§4.5.1.7.1/7.4/7.6/7.7).
+> **본체 정의 (2026-04-22 확정)**: 원본 → wiki ingest 프로세스가 완성되어 **더 이상 wiki 를 초기화하거나 재생성할 일이 없는** 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 계속 축적되지만 구조는 변경되지 않는다. 튜닝·고도화·개선·확장은 Phase 5, 웹 인터페이스는 Phase 6 로 이관.
+> 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md` 와 1:1 mirror
+> 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.1/§5.2 로 이관)
+> 상태 (2026-04-22 재편 이후): §4.0/§4.1 완료, §4.5.1 완료, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 코드 완료** (실측은 CDP 세션 대기). 다음 = §4.1.3.5 실측 / §4.2 URI 안정 참조 + 분류 / §4.3 인제스트 본체 (3-stage 프롬프트 + Provenance + stripBrokenWikilinks).
+
+---
+
+## Phase 5/6 이관 맵 (2026-04-22 재편)
+
+이전에 Phase 4 하위였던 다음 항목들은 본체 완성 정의 ("wiki 재생성 유발하지 않음") 에 해당하므로 **Phase 5 (튜닝·고도화·개선·확장)** 또는 **Phase 6 (웹)** 로 이동. 상세는 해당 파일 참조.
+
+| 이관 전 § (Phase 4) | 이관 후 | 제목 / 사유 |
+|---|---|---|
+| §4.3.3 증분 업데이트 | → Phase 5 §5.3.1 | source-registry hash 기반 재인제스트 로직. §4.2.2 data model 이 본체에 완비되어 로직만 후속 추가 가능. wiki 재생성 없음. |
+| §4.4.1 contextual chunk 재작성 | → Phase 5 §5.1.1 | qmd 인덱스만 재빌드, wiki/ 무관. |
+| §4.4.2 지식 그래프 (NetworkX) | → Phase 5 §5.2.1 | 신규 산출물, wiki/ 읽기 전용 소비. |
+| §4.4.3 AST 기반 코드 파싱 | → Phase 5 §5.2.2 | 신규 소스 타입, 기존 wiki 무관. |
+| §4.5.1.7.1 attribution ablation | → Phase 5 §5.4.1 | diagnostic 측정, 본체 variance 해소 (§4.5.1.7.2/7.3) 이후 선택적. |
+| §4.5.1.7.4 Route SEGMENTED | → Phase 5 §5.4.2 | Ollama production guide. |
+| §4.5.1.7.6 BOM 재분할 판단 | → Phase 5 §5.4.3 | 월 1 회 모니터 성격. |
+| §4.5.1.7.7 log_entry axis cosmetic | → Phase 5 §5.4.4 | 표시 cosmetic, wiki 재생성 없음. |
+| §4.5.2 bash→TS 포팅 · qmd SDK import | → Phase 5 §5.7.1/§5.7.2 | 리팩토링, 동작 유지. (§4.5.2 의 삭제 안전장치 + 초기화는 본체 유지) |
+| §4.5.3 llama.cpp PoC | → Phase 5 §5.5.1 | provider 추가, 기존 wiki 무관. |
+| §4.5.4 rapidocr Linux 실측 | → Phase 5 §5.5.2 | platform 확장, 기존 wiki 무관. |
+| §4.5.5 표준 분해 self-extending (4 단계) | → Phase 5 §5.6 | 신규 인제스트만 영향, 기존 wiki 보존. (2026-04-22 본 세션 진행 중인 §4.5.1.7.2 PMBOK 하드코딩이 §5.6 의 Stage 0 사전 검증) |
+| 기존 Phase 5 (웹 환경) 전량 | → **Phase 6** (`plan/phase-6-todo.md`) | 웹 인터페이스는 본체·고도화 완료 후. |
+
+**본체 복귀 1 항목**: 이전 분류안에서 잠깐 Phase 5 후보였던 **§4.3.2 Provenance tracking** 은 frontmatter 에 `provenance` 필드 신규 추가 = data model 변경 → wiki 재생성 유발 → Phase 4 본체에 유지 확정.
 
 ---
 
@@ -278,68 +303,41 @@
 - [ ] 설정 탭 Ingest Prompt 섹션 확장 — 3개 prompt 모두 Edit/Reset 버튼 + 상태 표시
 - [ ] `wikey-core/src/canonicalizer.ts:buildCanonicalizerPrompt` 및 Stage 1 mention extractor에 override 파라미터 주입
 
-### 4.3.2 Provenance tracking
+### 4.3.2 Provenance tracking (frontmatter data model — 본체 필수)
 
-- [ ] 추출된 관계에 출처 표시
-  - EXTRACTED: 소스에서 직접 발견
-  - INFERRED: LLM이 추론 (confidence score 포함)
-  - AMBIGUOUS: 리뷰 필요 (사용자 확인 대기)
-- [ ] 위키 페이지 프론트매터에 `provenance` 필드 추가
-- [ ] Audit 패널에서 AMBIGUOUS 항목 리뷰 UI
+> **본체 포함 근거 (2026-04-22)**: 이 항목은 wiki 페이지 프론트매터에 `provenance` 필드를 신규 추가하는 **data model 변경**이다. Phase 5 로 미루면 Phase 4 내에 쌓인 wiki 페이지는 provenance 필드 없이 존재하게 되고, Phase 5 도입 시점에 전체 wiki 재인제스트가 필요해져 본체 정의 ("wiki 재생성 없음") 를 직접 위반한다. 따라서 Phase 4 본체에 포함 확정.
 
-### 4.3.3 증분 업데이트 (file hash 기반)
+- [ ] **추출된 관계에 출처 표시** (전부 프론트매터 `provenance: { type, ref, confidence? }` 배열로 저장)
+  - `EXTRACTED`: 소스에서 직접 발견 → `{ type: 'extracted', ref: 'sources/<source_id>' }`
+  - `INFERRED`: LLM 이 추론 → `{ type: 'inferred', confidence: 0.0~1.0, ref: '...' }`
+  - `AMBIGUOUS`: 리뷰 필요 → `{ type: 'ambiguous', reason: '...', ref: '...' }` + 사용자 확인 대기
+- [ ] **위키 페이지 프론트매터 스키마 확장** — `provenance` 필드 (optional array) 를 entities/concepts/analyses 공통 스키마에 추가
+- [ ] **Audit 패널에서 AMBIGUOUS 항목 리뷰 UI** — accept/reject/edit 시 provenance 업데이트
+- [ ] **§4.2.2 URI 참조 연계** — `ref` 값은 source_id 기반 (경로 무관, PARA 이동 불변)
+- [ ] **Phase 5 §5.6.3 Stage 3 (in-source self-declaration) 전제** — self-declare 로 생성된 decomposition 은 `provenance: { type: 'self-declared', ref, confidence }` 로 표시되어야 오염 전파 추적 가능
 
-(§4.3 source-registry와 연계)
+### 4.3.3 stripBrokenWikilinks 자동 적용 (source_page 본문)
 
-- [ ] `.wikey/source-registry.json` hash 필드로 소스 변경 감지 → 해당 wiki 페이지만 재생성
-- [ ] 삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리
-- [ ] 부분 재인제스트 — chunk diff 기반 증분 (chunk hash 매칭)
+(Phase 3 §14.5 발견 — OMRON 261 건 한국어 wikilink 수동 cleanup)
 
-### 4.3.4 stripBrokenWikilinks 자동 적용 (source_page 본문)
+- [ ] 현재 canonicalizer 는 entity/concept 페이지 + log entry 에만 적용
+- [ ] 누락: Stage 1 summary 가 생성하는 source_page 본문 wikilink
+- [ ] 위치: `wikey-core/src/canonicalizer.ts` 또는 `ingest-pipeline.ts` 의 summary 후처리
+- [ ] writtenPages 기반 정리 → canonical 페이지에 없는 wikilink 는 텍스트로 강등
 
-(Phase 3 §14.5 발견 — OMRON 261건 한국어 wikilink 수동 cleanup)
-
-- [ ] 현재 canonicalizer는 entity/concept 페이지 + log entry에만 적용
-- [ ] 누락: Stage 1 summary가 생성하는 source_page 본문 wikilink
-- [ ] 위치: `wikey-core/src/canonicalizer.ts` 또는 `ingest-pipeline.ts`의 summary 후처리
-- [ ] writtenPages 기반 정리 → canonical 페이지에 없는 wikilink는 텍스트로 강등
+**§4.3 에서 Phase 5 로 이관**: 기존 §4.3.3 증분 업데이트 (hash diff 재인제스트 로직) → Phase 5 §5.3.1. §4.2.2 source-registry 의 hash 필드는 본체에 포함되므로 Phase 5 에서 로직만 추가 가능.
 
 ---
 
-## 4.4 검색 재현율 · 지식 그래프
-> tag: #eval, #core
+## 4.4 (이관됨) — 검색 재현율 · 지식 그래프
 
-### 4.4.1 Anthropic-style contextual chunk 재작성 (v7-3, 검색 인덱스 전처리)
-
-(Phase 3 §C-2에서 이관. 현재 Gemma 4 contextual prefix는 생성 단계 프롬프트 보강용)
-
-- [ ] chunk를 재작성해 embedding/BM25 **인덱스에 반영** (retrieval 전처리)
-  - Anthropic 의도: 저장된 chunk 자체에 문서 맥락이 주입된 상태로 인덱스 구축
-  - 기대 효과: 하이브리드 검색(BM25+임베딩)에서 짧은 chunk의 문맥 손실 감소 → 재현율 개선
-  - 참조: [https://www.anthropic.com/engineering/contextual-retrieval](https://www.anthropic.com/engineering/contextual-retrieval)
-- [ ] PoC 범위
-  - qmd 인덱스 재빌드 파이프라인에 "contextual rewrite" 스테이지 추가
-  - 동일 코퍼스로 baseline vs rewrite 재현율 측정 (MRR, Recall@10)
-  - 비용: chunk 수 × 추가 LLM 호출 — 대형 코퍼스에서 부담될 수 있어 로컬 Gemma4 기본
-- [ ] 결정 기준: 재현율 개선 ≥ 15% 시 파이프라인에 상설 통합, 미만이면 기각 기록
-
-### 4.4.2 지식 그래프 (NetworkX)
-
-- [ ] entity/concept 간 관계를 그래프로 구축
-  - wiki/entities, wiki/concepts의 위키링크를 edge로 변환
-  - vis.js 또는 Obsidian Graph View 연동
-  - 클러스터링: Leiden 알고리즘 (graspologic) 기반 토픽 그룹핑
-- [ ] graph.json 출력 — 영속 그래프 데이터
-- [ ] graph.html — 인터랙티브 시각화 (vis.js)
-- [ ] GRAPH_REPORT.md — god nodes, 핵심 연결, 추천 질문
-
-### 4.4.3 AST 기반 코드 파싱
-
-- [ ] 코드 파일은 LLM 없이 tree-sitter로 구조 추출
-  - 함수/클래스/import 관계 자동 매핑
-  - 지원 언어: Python, JS/TS, Go, Rust, C/C++
-- [ ] 프로젝트 코드베이스도 위키로 관리 가능
-- [ ] 코드 변경 시 AST diff로 영향 범위 자동 감지
+> 2026-04-22 재편으로 Phase 5 이관. 전량 "wiki 재생성을 유발하지 않는" 범주 (인덱스만 재빌드 / 신규 산출물 / 신규 소스 타입).
+>
+> - 기존 §4.4.1 Anthropic contextual chunk 재작성 → **Phase 5 §5.1.1**
+> - 기존 §4.4.2 지식 그래프 (NetworkX) → **Phase 5 §5.2.1**
+> - 기존 §4.4.3 AST 기반 코드 파싱 → **Phase 5 §5.2.2**
+>
+> 상세는 `plan/phase-5-todo.md`.
 
 ---
 
@@ -485,24 +483,17 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - [~] **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 비교 — FULL 에서 목표 <10% 조기 달성으로 **§4.5.1.7 이관** (diagnostic 가치 감소)
 - [x] **§4.5.1.6.6**: 개선 후 30-run 재측정 → 29-run valid Total CV **9.2%** (목표 <10% 달성, run 30 툴 edge case outlier). 누적 §4.5.1.5 baseline 24.3% → 9.2% (−62% 상대).
 
-#### 4.5.1.7 variance 분해 + prompt-level 개선 + 측정 인프라 강화 (2026-04-22 신규, 진행 전)
+#### 4.5.1.7 variance 분해 + prompt-level 개선 + 측정 인프라 강화 (2026-04-22 신규, 본체는 §4.5.1.7.2/7.3 두 항목만)
 
-> **배경**. §4.5.1.6 은 3 개 레버 (determinism, SLUG_ALIASES, FORCED_CATEGORIES) 를 **동시** 적용한 결과 Total CV 9.2% 를 확보했으나 **(a) 개별 기여도 미분리**, **(b) Concepts CV 27% 잔여 (Entities 11% 대비 2.4× 높음)**, **(c) 측정 툴 edge case (run 30)** 3 건이 남았다. §4.5.1.7 은 이 3 건을 분리·측정·해결해 **production 용 권장 설정** 과 **N≥30 측정 신뢰성** 을 확보한다.
+> **배경**. §4.5.1.6 은 3 개 레버 (determinism, SLUG_ALIASES, FORCED_CATEGORIES) 를 **동시** 적용한 결과 Total CV 9.2% 를 확보했으나 **(a) 개별 기여도 미분리**, **(b) Concepts CV 27% 잔여 (Entities 11% 대비 2.4× 높음)**, **(c) 측정 툴 edge case (run 30)** 3 건이 남았다. 본체 스코프는 **Concepts CV 잔여 해소 (7.2)** 와 **측정 툴 robustness (7.3)** 만. 기여도 분해·Route/BOM/log cosmetic 같은 diagnostic 은 Phase 5 §5.4 로 이관.
 
-**필요성**:
-- 기여도 미분리 → "determinism 없이도 <10% 유지 가능한가?" 같은 비용-효과 의사결정 불가. Ollama 환경 (seed 미지원) 에선 alias + pin 만으로 충분한지 답 없음.
-- Concepts CV 27% → project-management 9 하위 영역 (integration/scope/time/cost/quality/HR/communications/risk/procurement) 이 일부 run 에선 분해, 다른 run 에선 1 개로 묶임. **slug alias 로 해결 불가 — prompt-level 변경 필요**.
-- run 30 outlier → raw CV 21.1% 로 왜곡 (29-run valid 9.2% 가 진값). N≥30 대규모 측정 반복 수행을 위해 측정 툴 robustness 필수.
+**필요성** (본체 범위):
+- Concepts CV 27% → project-management 9 하위 영역 (integration/scope/time/cost/quality/HR/communications/risk/procurement) 이 일부 run 에선 분해, 다른 run 에선 1 개로 묶임. **slug alias 로 해결 불가 — prompt-level 변경 필요** (§4.5.1.7.2).
+- run 30 outlier → raw CV 21.1% 로 왜곡 (29-run valid 9.2% 가 진값). N≥30 대규모 측정 반복을 위해 측정 툴 robustness 필수 (§4.5.1.7.3).
 
-**하위 과제**:
+**본체 스코프** (§4.5.1.7.2/7.3 실측만 남음):
 
-- [ ] **§4.5.1.7.1** variance 분해 측정 — 4 points ablation (10-run 각, 총 ~4시간)
-  - point A: all-off (baseline §4.5.1.5 24.3%)
-  - point B: determinism-only (WIKEY_EXTRACTION_DETERMINISM=1, SLUG_ALIASES/FORCED_CATEGORIES 는 §4.5.1.4 원본 복구)
-  - point C: canon-only (alias + pin 최신, determinism=off)
-  - point D: all-on (§4.5.1.6 현재 = 9.2%)
-  - 산출: A/B/C/D 4 CV 값 + 단일-레버 기여분 (B-A 차, C-A 차, D-B 차 등)
-  - 구현 노트: determinism off 는 측정 CLI 에서 `-d` 미주입, canon off 는 canonicalizer.ts 의 SLUG_ALIASES/FORCED_CATEGORIES 를 feature-flag 로 runtime 제어 필요 (새 env `WIKEY_CANON_V3_DISABLE=1`)
+- [→ Phase 5 §5.4.1] **§4.5.1.7.1** variance 분해 4-points ablation — diagnostic 성격, 본체 CV <10% 확보 후 선택적 측정. (상세는 `plan/phase-5-todo.md §5.4.1`)
 
 - [~] **§4.5.1.7.2** Concepts prompt-level 개선 — PMBOK 10 영역 결정화 (A안 구현 완료, 5-run 실측 대기)
   - **채택**: A안 (canonicalizer prompt hint). B 는 false-positive 하드-추출 위험, C 는 wiki 그래프 가치 역행이라 기각.
@@ -517,80 +508,34 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
   - `--strict` CLI 옵션 신규: Python stats 블록이 `total=0` run 을 `ok` pool 에서 추가 제외. Markdown 에는 "Strict 제외 run (total=0)" 섹션으로 원본 데이터 보존. `--help` 설명 + banner 라인 추가.
   - 검증: `bash -n` syntax OK, Python `ast.parse` OK, JS `node --check` (async IIFE wrap) OK.
 
-- [ ] **§4.5.1.7.4** Route SEGMENTED 10-run baseline — Ollama qwen3:8b 환경의 variance 프로파일
-  - 전제: Ollama 설치 + qwen3:8b 모델 pull. `WIKEY_BASIC_MODEL=ollama` 설정.
-  - SEGMENTED Route 강제 (PMS 문서 크기에서 Ollama 32K context → 자동 SEGMENTED).
-  - determinism=on 조건 (seed 옵션은 Ollama 도 지원). 10-run CV 측정.
-  - 가설: SEGMENTED CV > FULL CV (섹션별 호출 간 variance 누적).
-  - 실측 후 production 권장 "Gemini + determinism + SEGMENTED (문서가 크면)" vs "Ollama + determinism" 비교.
+- [→ Phase 5 §5.4.2] **§4.5.1.7.4** Route SEGMENTED 10-run baseline — Ollama qwen3:8b production guide. (상세는 `plan/phase-5-todo.md §5.4.2`)
 
-- [ ] **§4.5.1.7.5** Lotus-prefix 3-variant 분석 — Entities CV 11% 의 주 원인
-  - 29-run 관찰: `lotus-pms`/`lotus-scm`/`lotus-mes` 3 개가 일부 run 에서만 동시 등장 (Entities total 28 vs 22).
-  - 원인: PMS 문서 기술스택 섹션에 3 제품이 병렬 언급되는데 LLM 이 일관되게 추출 안 함.
-  - 해결 방향: (a) PROVIDER 규칙 — "Lotus X" 형식 모두 entity 로, (b) prompt 에 product line 인식 hint, (c) canonicalizer 에 `lotus-*` 그룹 rule.
-  - 5-run 측정 후 채택.
+- [x] **§4.5.1.7.5** Lotus-prefix 3-variant 분석 — **§4.1.3 으로 자동 해결**. §4.1.3.5 측정에서 Entities CV 11.1% → 2.3% 로 떨어지면서 Lotus 진동은 text layer cleanup 으로 사라짐. 별도 rule 불필요 확인.
 
-- [ ] **§4.5.1.7.6** BOM 축 재분할 판단 — eBOM vs mBOM vs single canonical
-  - 현재 (§4.5.1.6.3): `e-bom`/`engineering-bill-of-materials`/`electronic-bill-of-materials`/`e-bill-of-materials` → `bill-of-materials` 일괄 collapse.
-  - 실무: eBOM (Engineering BOM, 설계 단계) vs mBOM (Manufacturing BOM, 제조 단계) 은 **다른 문서**. 프로젝트 규모 성장 시 구분 필요.
-  - 판단 기준: wiki 가 BOM 을 참조하는 다른 소스 인제스트 시 eBOM/mBOM 을 구별해서 언급하는지 모니터. 월 1 회 lint 에서 확인.
-  - 재분할 결정 시 canonical 3 개 (`bill-of-materials`, `engineering-bom`, `manufacturing-bom`) + alias 재구성.
+- [→ Phase 5 §5.4.3] **§4.5.1.7.6** BOM 축 재분할 판단 — 월 1 회 lint 모니터 성격. (상세는 `plan/phase-5-todo.md §5.4.3`)
 
-- [ ] **§4.5.1.7.7** `log_entry` axis 불일치 수정 (cosmetic)
-  - canonicalizer.ts `assembleCanonicalResult` 의 `logEntry: raw.log_entry` 는 LLM 원본. FORCED_CATEGORIES 로 이동된 slug 는 파일 위치 ↔ log 문구 엇갈림.
-  - 수정: pin 후 `pinned.entities` + `pinned.concepts` 로부터 결정적 log body 재생성. 기존 wiki-ops.ts `appendLog` 패턴 참조.
-  - TDD: pin 으로 axis 가 바뀐 slug 의 log 엔트리가 "엔티티 생성" → "개념 생성" 으로 올바르게 전환되는지.
+- [→ Phase 5 §5.4.4] **§4.5.1.7.7** `log_entry` axis cosmetic — 표시 cosmetic, wiki 재생성 없음. (상세는 `plan/phase-5-todo.md §5.4.4`)
 
-### 4.5.2 운영 안정성 — 삭제·초기화·포팅
+### 4.5.2 운영 안전 — 삭제·초기화 (본체 필수)
+
+> 운영 안정성 subject 에서 본체 필수인 두 항목만 유지. bash→TS 포팅, qmd SDK import 는 Phase 5 §5.7 로 이관 (동작 유지 리팩토링).
 
 - [ ] **원본/위키 삭제 안전장치** — dry-run 미리보기, 영향 범위 표시
 - [ ] **초기화 기능** — 선택적 리셋 (완전/인제스트/원본/인덱스/설정)
-- [ ] **bash→TS 완전 포팅** (validate-wiki, check-pii, cost-tracker, reindex) — Phase 3에서 이관. exec 래퍼는 안정 동작 중이라 우선순위 낮음
-- [ ] **qmd SDK import** — Phase 3에서 이관. CLI exec → 직접 import로 전환 시 지연 감소 + 에러 처리 개선. 난이도 높음 (현재 vendored CLI 구조)
 
-### 4.5.3 로컬 추론 엔진 검토 (llama.cpp PoC)
+**§4.5.2 에서 Phase 5 로 이관**:
+- 기존 bash→TS 완전 포팅 (validate-wiki / check-pii / cost-tracker / reindex) → **Phase 5 §5.7.1**
+- 기존 qmd SDK import (CLI exec → 직접 import) → **Phase 5 §5.7.2**
 
-- [ ] **Ollama vs llama.cpp 실측 gap 측정** — M4 Pro 48GB 환경에서 동일 Qwen3.6:35b-a3b GGUF로 비교
-  - Ollama 0.20.5 (MLX 백엔드) vs `brew install llama.cpp` + `llama-server`
-  - 동일 chunk·프롬프트로 latency/토큰/메모리 실측
-  - 커뮤니티 측정치: 단일 요청 10~30% overhead (Go 런타임 + HTTP 직렬화)
-  - wikey는 단일 사용자 + 순차 chunk → 동시요청 3x gap 해당 없음
-  - **판정 기준**: 실측 gap ≥15%면 전환, 미만이면 Ollama 유지
-- [ ] **전환 시 통합 경로**
-  - `llama-server`는 OpenAI-compat API 제공 → `wikey-core/llm-client.ts`에 `llamacpp` provider 추가
-  - `llama-swap` (Go proxy)로 모델 auto-load/unload → Ollama 스타일 UX 재현
-  - GGUF 파일 직접 관리 (모델 경로 설정 UI 추가)
-- [ ] 장점: 속도↑, 세밀한 양자화 제어 (IQ2~BF16, Unsloth Dynamic 2.0), 백그라운드 데몬 불필요
-- [ ] 단점: 모델 스와핑 별도 도구 필요, provider 분기 재작성, GGUF 수동 다운로드
+## 4.5.3 / 4.5.4 / 4.5.5 (이관됨) — 성능·엔진 확장 및 self-extending
 
-### 4.5.4 rapidocr (paddleOCR PP-OCRv5 Korean) fallback 실측 — Linux/Windows 환경 (2026-04-22 후속, 맨 뒤 이동)
-
-> **배경**. §4.1.3 에서 `defaultOcrEngine()` + `defaultOcrLangForEngine()` 로 platform 별 engine/lang 자동 매핑 등록 완료. macOS → ocrmac + `ko-KR,en-US`, Linux/Windows → rapidocr + `korean,english`. 코드 레벨은 등록됐으나 **macOS 세션에서 rapidocr 실제 OCR 품질 검증 불가**. Linux 환경에서 실측 필요.
-
-- [ ] **§4.5.4.1** Linux 환경 준비
-  - `uv tool install "docling[rapidocr]"` — rapidocr-onnxruntime extras 포함 설치.
-  - 테스트 환경: Ubuntu 22.04 또는 Docker (wikey-core 실행).
-  - 기본 rapidocr 모델: Chinese + English (paddleOCR 기본 탑재). Korean 은 별도 모델 로드 필요할 가능성.
-
-- [ ] **§4.5.4.2** rapidocr + `korean,english` CLI 실측
-  - 명령: `docling <test.pdf> --to md --output /tmp --ocr-engine rapidocr --ocr-lang korean,english --force-ocr`
-  - 테스트 코퍼스: CONTRACT (용역계약서, 한글 OCR 난도 높음), GOODSTREAM (사업자등록증).
-  - 검증: rapidocr 가 `korean` lang 지정을 실제로 받아들이는지. 안 받으면 `--ocr-engine easyocr --ocr-lang ko,en` 대안 검토.
-
-- [ ] **§4.5.4.3** PP-OCRv5 Korean 모델 수동 로드 (skill 권고 경로)
-  - docling skill 문서 `~/.claude/skills/docling/reference/korean-ocr-advanced.md` 의 PaddleOCR PP-OCRv5 Korean 전환 가이드.
-  - CLI 로는 불가 — Python API (`RapidOcrOptions(rec_model_path=...)`) 경로.
-  - Korean 가중치 다운로드 (`huggingface_hub: PaddlePaddle/korean_PP-OCRv5_mobile_rec`).
-  - `scripts/benchmark-tier-4-1-3.mjs` 를 Python 호출 방식으로 확장하거나 별도 `scripts/ocr-python-api.py` 헬퍼 추가.
-
-- [ ] **§4.5.4.4** macOS ocrmac vs Linux rapidocr 품질 비교 (CONTRACT·GOODSTREAM)
-  - 동일 PDF 에 대해 두 engine 결과 비교: 한글 자수, OCR 오류 건수, 본문 구조 정확도.
-  - ocrmac 대비 rapidocr 품질이 충분 (80%+) 하면 production fallback 으로 등록.
-  - 부족하면 Linux 환경에서는 `markitdown[pdf]` + OpenAI Vision fallback (tier 2/3) 경로 고려.
-
-- [ ] **§4.5.4.5** 결과 기록 + fallback 매트릭스 문서화
-  - `activity/phase-4-5-4-rapidocr-linux-<date>.md` 신규.
-  - `~/.claude/skills/docling/reference/korean-ocr-advanced.md` 에 실측 갱신 (커뮤니티 consensus 와 일치 여부).
+> 2026-04-22 재편으로 Phase 5 이관.
+>
+> - 기존 §4.5.3 로컬 추론 엔진 검토 (llama.cpp PoC) → **Phase 5 §5.5.1**
+> - 기존 §4.5.4 rapidocr (paddleOCR PP-OCRv5 Korean) fallback 실측 (Linux/Windows 환경) → **Phase 5 §5.5.2**
+> - 기존 §4.5.5 표준 분해 규칙 self-extending 4 단계 로드맵 → **Phase 5 §5.6** (2026-04-22 본 세션 진행 중인 §4.5.1.7.2 PMBOK 하드코딩이 §5.6 의 Stage 0 사전 검증이 됨)
+>
+> 상세는 `plan/phase-5-todo.md`. §5.6 의 철학 선언은 `wiki/analyses/self-extending-wiki.md` (wiki 본체 analysis) 에 정식 기록됨.
 
 ---
 

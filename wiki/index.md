@@ -21,4 +21,4 @@ updated: 2026-04-22
 
 ## 분석
 
-(없음)
+- [[self-extending-wiki]] — LLM Wiki 의 self-extending 지향 (철학 선언, Phase 5 §5.6 로드맵 포인터)

@@ -191,6 +191,14 @@ interface PromptArgs {
   schemaOverride?: SchemaOverride
 }
 
+/**
+ * §4.5.1.7.2 PMBOK 10 knowledge areas 결정화 (작업 규칙 #7) 는 **단일 표준 하드코딩** 이다
+ * (Phase 5 §5.6 Stage 0 사전 검증 성격). 실측으로 효과가 확증되면 이 블록은 self-extending
+ * 구조로 이행한다 — 실행 로드맵은 `plan/phase-5-todo.md §5.6`, 철학 선언은
+ * `wiki/analyses/self-extending-wiki.md`. 다음 표준 (ISO/ITIL/GDPR 등) 이 들어와도
+ * **여기에 블록을 더 추가하지 말고** §5.6 Stage 1 (schema.yaml 로더화) 먼저 착수.
+ * 누적 하드코딩 3 개 넘기 전에 이행.
+ */
 export function buildCanonicalizerPrompt(args: PromptArgs): string {
   const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint, schemaOverride } = args
 

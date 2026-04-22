@@ -1393,44 +1393,28 @@ SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `e
 - 산출물: `activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md` (원본 + 보정 분석).
 - 코드 state: 315 PASS, build 0 errors 유지.
 
-#### 4.5.1.7 variance 분해 + prompt-level 개선 + 측정 인프라 강화 (2026-04-22 신규, §4.5.1.7.2/7.3 코드 완료)
+#### 4.5.1.7 variance 분해 + prompt-level 개선 + 측정 인프라 강화 (2026-04-22, 본체는 §4.5.1.7.2/7.3 두 항목만)
 
-> Mirror: `plan/phase-4-todo.md §4.5.1.7`. §4.5.1.7.2 (Concepts prompt hint) 와 §4.5.1.7.3 (measure-determinism robustness) 는 2026-04-22 구현 완료 — 실측 검증만 후속 Obsidian CDP 세션 대기. §4.5.1.7.1/7.4/7.6/7.7 은 여전히 진행 전.
+> Mirror: `plan/phase-4-todo.md §4.5.1.7`. §4.5.1.7.2 (Concepts prompt hint) 와 §4.5.1.7.3 (measure-determinism robustness) 는 2026-04-22 구현 완료 — 실측 검증만 후속 Obsidian CDP 세션 대기. §4.5.1.7.1/7.4/7.6/7.7 은 2026-04-22 Phase 재편으로 **Phase 5 §5.4 로 이관** (diagnostic 성격, 본체 CV <10% 확보 후 선택적 측정). §4.5.1.7.5 (Lotus variance) 는 §4.1.3 으로 자동 해결.
 
-**왜 필요한가** (§4.5.1.6 종료 시점에 남은 gap 3 축):
+**왜 본체에서 남기는가** (§4.5.1.6 9.2% 이후 잔여 gap 중 본체 책임 2 건):
 
-§4.5.1.6 은 **determinism + SLUG_ALIASES + FORCED_CATEGORIES** 3 레버를 동시에 돌려 Total CV 24.3% → 9.2% 를 확보했다. 그러나 다음 3 축에서 잔여 작업이 남는다:
+1. **Concepts CV 27% 잔여** (Entities CV 11.1% 대비 2.4 배) — PMBOK 의 9 sub-area (`project-integration/scope/time/cost/quality/human-resource/communications/risk/procurement-management`) 가 일부 run 에선 분해, 다른 run 에선 `project-management-body-of-knowledge` 1 개로 묶임. **slug alias 범위 밖** — prompt-level 변경 (canonicalizer 에 "PMBOK 10 knowledge areas 는 개별 concept 로 추출" hint) 필요. → §4.5.1.7.2.
 
-1. **기여도 미분리 (attribution gap)** — 3 레버 중 어느 것이 variance 감소의 주역인지 실측 없음. 현재는 가설 추정 (det 50-60% / alias 20-30% / pin 15-25%) 만 존재. 이 분리가 없으면 다음 의사결정이 불가능:
-   - Ollama 환경 (seed 옵션 미지원) 에서 canon 만으로 <10% 가능한가?
-   - 추가 슬러그/pin 확장 필요성 판단 근거는?
-   - Concepts CV 개선을 위해 prompt 개선 (§4.5.1.7.2) 과 alias 추가 중 어느 쪽이 더 효과적인가?
-
-2. **Concepts CV 27% 잔여** (Entities CV 11.1% 대비 2.4 배) — 구체적 관찰: PMBOK 의 9 sub-area (`project-integration/scope/time/cost/quality/human-resource/communications/risk/procurement-management`) 가 일부 run 에선 분해, 다른 run 에선 `project-management-body-of-knowledge` 1 개로 묶임. **slug alias 범위 밖** — prompt-level 변경 (canonicalizer 에 "PMBOK 10 knowledge areas 는 개별 concept 로 추출" hint) 필요.
-
-3. **측정 인프라 취약성** — §4.5.1.6.6 에서 run 30 outlier (0/0/0 3s) 가 `restoreSourceFile()` edge case 로 발생. raw CV 21.1% 로 왜곡 (진값 9.2%). N≥30 대규모 측정 반복을 위해 `walk()` 강화 + `adapter.exists()` sentinel + `--strict` 필터링 필요.
+2. **측정 인프라 취약성** — §4.5.1.6.6 에서 run 30 outlier (0/0/0 3s) 가 `restoreSourceFile()` edge case 로 발생. raw CV 21.1% 로 왜곡 (진값 9.2%). N≥30 대규모 측정 반복을 위해 `walk()` 강화 + `adapter.exists()` sentinel + `--strict` 필터링 필요. → §4.5.1.7.3.
 
 **목표**:
-- A 축 (attribution): 4-points ablation (all-off / det-only / canon-only / all-on) 로 단일-레버 기여분 정량.
-- B 축 (Concepts): PMBOK 9 영역 결정화 prompt 개선 → Concepts CV 27% → <15%.
-- C 축 (infra): measure-determinism.sh edge case 해소 + per-run timeout 상향 + outlier 자동 제외.
+- Concepts: PMBOK 10 영역 결정화 prompt 개선 → Concepts CV 24.6% → <15%.
+- Infra: measure-determinism.sh edge case 해소 + per-run timeout 상향 + outlier 자동 제외.
 
-**부가 과제 (§4.5.1.7.4~.7)**:
-- Route SEGMENTED 10-run baseline (Ollama 환경 production 가이드)
-- Lotus-prefix 3-variant 분석 (Entities CV 11% 의 주 원인)
-- BOM 축 재분할 판단 (eBOM vs mBOM 구분 필요성)
-- `log_entry` axis 불일치 수정 (pin 적용 후 log 문구 재생성)
+**Phase 5 이관** (본체 완료 후 diagnostic):
+- §4.5.1.7.1 attribution ablation (4-points) → Phase 5 §5.4.1 (기여도 미분리는 본체 CV 달성 후 비용-효과 분석 자료).
+- §4.5.1.7.4 Route SEGMENTED 10-run (Ollama) → Phase 5 §5.4.2.
+- §4.5.1.7.5 Lotus-prefix variance — §4.1.3 으로 자동 해결 확인 (Entities CV 11.1% → 2.3%).
+- §4.5.1.7.6 BOM 재분할 판단 → Phase 5 §5.4.3.
+- §4.5.1.7.7 log_entry axis cosmetic → Phase 5 §5.4.4.
 
-**하위 과제** (번호는 `plan/phase-4-todo.md §4.5.1.7` mirror):
-
-##### 4.5.1.7.1 variance 분해 측정 — 4-points ablation (진행 전)
-
-- point A: all-off (baseline §4.5.1.5 24.3% 재확인 or 기록값 사용)
-- point B: determinism-only — `WIKEY_EXTRACTION_DETERMINISM=1`, SLUG_ALIASES/FORCED_CATEGORIES 는 §4.5.1.4 원본 (feature-flag runtime 제어 신규 필요)
-- point C: canon-only — alias + pin 최신, determinism=off (`-d` 미주입)
-- point D: all-on — §4.5.1.6 현재 = 9.2% (기록값 사용)
-- 각 point 10-run. 총 ~4 시간 (or A/D 기존값 재활용 시 2시간).
-- 구현 노트: canon off 를 위해 `WIKEY_CANON_V3_DISABLE=1` 같은 env 신규 + canonicalizer.ts 에서 v3 entry 만 bypass (v2 유지).
+**하위 과제** (번호는 `plan/phase-4-todo.md §4.5.1.7` mirror, 본체 유지 2 건만 상세 기록):
 
 ##### 4.5.1.7.2 Concepts prompt 개선 — PMBOK 10 영역 결정화 (구현 완료, 실측 대기)
 
@@ -1451,6 +1435,11 @@ SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `e
 
 **미완** (후속 Obsidian CDP 세션):
 - PMS 5-run 측정으로 Concepts CV 24.6% → <15% 달성 여부 확증. 목표 못 미치면 B안 보강 (9 영역 FORCED_CATEGORIES pin) 또는 prompt schema_hint 를 schema.ts description 레벨로 내리는 방향 재검토.
+
+**일반화 경로** (이번 단발 하드코딩의 존재 이유):
+- §4.5.1.7.2 는 자체가 목적이 아니라 **self-extending 표준 분해 구조의 사전 검증 (Stage 0)**. ISO 27001 / ITIL / GDPR / SAFe / OWASP Top 10 등 "표준 = N 하위 영역" 패턴이 연속 등장할 것이 확정되어 있어, 매번 canonicalizer prompt 에 블록을 추가하는 방식은 유지 불가. 매뉴얼 등록도 궁극의 답이 아님 — wiki 자체가 표준 분해 구조를 스스로 학습·확장하는 쪽으로 이행 필요.
+- 2026-04-22 Phase 재편으로 해당 로드맵은 **Phase 5 §5.6 (`plan/phase-5-todo.md`)** 에 단일 기록 (Stage 1 static yaml override → Stage 2 extraction graph suggestion → Stage 3 in-source self-declaration → Stage 4 cross-source convergence). §5.6 이 **실행 로드맵의 단일 소스 오브 트루스**이고, 철학/가치 선언의 단일 소스는 `wiki/analyses/self-extending-wiki.md` (wiki 본체 analysis 페이지). 본 §4.5.1.7.2 · `canonicalizer.ts` 주석 · `session-wrap-followups.md` · memory 는 모두 포인터로만 연결된다 (drift 방지).
+- 트리거: §4.5.1.7.2 실측에서 효과 확증되면 Phase 5 §5.6.1 Stage 1 진입 (두 번째 표준 corpus 등장 시 즉시). 누적 하드코딩 3 개 넘기 전에 Stage 1 이행.
 
 ##### 4.5.1.7.3 측정 인프라 robustness — `scripts/measure-determinism.sh` (구현 완료, 실측 대기)
 
@@ -1481,25 +1470,12 @@ SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `e
 - JS heredoc (async IIFE wrap 후) `node --check` → OK.
 - 실제 CDP 측정은 Obsidian 기동 + §4.5.1.7.2 Concepts 측정과 묶어서 후속 세션 수행.
 
-##### 4.5.1.7.4 Route SEGMENTED 10-run (진행 전)
+##### 4.5.1.7.4~.7 (Phase 5 이관)
 
-- Ollama qwen3:8b 환경. `WIKEY_BASIC_MODEL=ollama`. PMS 크기에서 자동 SEGMENTED.
-- determinism=on. 10-run CV 측정.
-- 가설: SEGMENTED CV > FULL CV (섹션별 호출 간 variance 누적). production 권장 configuration 결정 근거.
+2026-04-22 Phase 재편으로 다음 4 항목은 **Phase 5 §5.4 (variance 기여도 · diagnostic)** 로 이관. 본체 CV <10% 확보 후 선택적 측정. 상세는 `plan/phase-5-todo.md §5.4` + (향후 실행 시) `activity/phase-5-result.md`.
 
-##### 4.5.1.7.5 Lotus-prefix 3-variant 분석 (진행 전)
-
-- 29-run 관찰: `lotus-pms`/`lotus-scm`/`lotus-mes` 가 일부 run 에서만 동시 등장 → Entities total 28 vs 22 진동.
-- 해결 방향: (a) PROVIDER rule — "Lotus X" 형식 모두 entity, (b) prompt 에 product line hint, (c) canonicalizer 에 `lotus-*` 그룹 rule. 5-run 측정 후 선택.
-
-##### 4.5.1.7.6 BOM 축 재분할 판단 (진행 전)
-
-- §4.5.1.6.3 eBOM/mBOM/engineering-BOM 전부 `bill-of-materials` 로 collapse.
-- 실무: eBOM (Engineering, 설계) vs mBOM (Manufacturing, 제조) 은 다른 문서. wiki 가 BOM 참조하는 다른 소스 인제스트 시 구분되는지 monitor. 월 1 회 lint 에서 확인 후 재분할 결정.
-
-##### 4.5.1.7.7 `log_entry` axis 불일치 수정 (진행 전, cosmetic)
-
-- canonicalizer.ts `assembleCanonicalResult` 에서 `logEntry: raw.log_entry` 는 LLM 원본. FORCED_CATEGORIES 로 이동된 slug 는 파일 위치 ↔ log 문구 엇갈림.
-- 수정: pin 후 `pinned.entities` + `pinned.concepts` 로부터 결정적 log body 재생성.
-- TDD: pin 으로 axis 가 바뀐 slug 의 log 엔트리가 "엔티티 생성" → "개념 생성" 으로 올바르게 전환.
+- **§4.5.1.7.4** Route SEGMENTED 10-run (Ollama production guide) → **Phase 5 §5.4.2**
+- **§4.5.1.7.5** Lotus-prefix 3-variant 분석 → **§4.1.3 으로 자동 해결** (Entities CV 11.1% → 2.3%, text layer cleanup 으로 Lotus 진동 사라짐). 별도 작업 불필요.
+- **§4.5.1.7.6** BOM 축 재분할 판단 → **Phase 5 §5.4.3**
+- **§4.5.1.7.7** `log_entry` axis cosmetic → **Phase 5 §5.4.4**
 

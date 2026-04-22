@@ -105,3 +105,14 @@ updated: 2026-04-22
 - 덤: master에 존재하던 `hasRedundantEmbeddedImages(md, stripped, pdfPageCount)` arity 버그 (`bb09b79` 커밋이 `convert-quality.ts` 에만 4번째 `tierKey` 추가, `ingest-pipeline.ts:1194` 호출부 미갱신) 도 `tierKey` 인자 전달로 복구. 해당 커밋의 "343 tests PASS, tsc 0 errors" 주장은 실제로 성립하지 않고 있었음.
 - **실측 대기**: §4.5.1.7.2 효과 검증 (PMS 5-run 재측정, Concepts CV 24.6% → <15% 목표) 은 Obsidian CDP 세션에서 후속. §4.5.1.7.3 robustness 는 다음 측정 세션에서 자동 회귀.
 - 참조: `activity/phase-4-result.md §4.5.1.7.2 / §4.5.1.7.3` (구현 완료 + 실측 대기 로 전환), `plan/phase-4-todo.md §4.5.1.7.2 [~]` / `§4.5.1.7.3 [x]`, `plan/session-wrap-followups.md` 최상단 블록.
+
+## [2026-04-22] refactor | Phase 4/5/6 재편 — 본체 완성 정의 확정
+
+- **본체 정의**: 원본 → wiki ingest 프로세스가 완성되어 더 이상 wiki 를 초기화하거나 재생성할 일이 없는 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고 이후 내용은 축적되지만 구조는 변경되지 않는다.
+- **Phase 4 (본체)** 유지: §4.0/§4.1 완료 · §4.2 분류+URI · §4.3 인제스트 본체 (3-stage prompt override / Provenance tracking / stripBrokenWikilinks) · §4.5.1 결정성 (§4.5.1.7.2/7.3 실측 대기) · §4.5.2 본체 운영 안전 (삭제 안전장치 + 초기화).
+- **Phase 5 신규** (`plan/phase-5-todo.md`): 튜닝·고도화·개선·확장 스코프. §5.1 검색 재현율 / §5.2 지식 그래프·시각화 / §5.3 증분 업데이트 / §5.4 variance diagnostic / §5.5 성능·엔진 확장 / §5.6 표준 분해 self-extending (현재 §4.5.1.7.2 PMBOK 하드코딩이 §5.6 Stage 0 사전 검증) / §5.7 운영 인프라 포팅. `activity/phase-5-result.md` skeleton 신규.
+- **Phase 6** (`plan/phase-6-todo.md`, 기존 `phase-5-todo.md` 에서 rename): 웹 인터페이스 전체 이관. §6.1 프론트엔드 / §6.2 백엔드 API / §6.3 배포.
+- **판정 뒤집힌 1 항목**: §4.3.2 Provenance tracking 은 frontmatter 에 `provenance` 필드 신규 추가 = data model 변경 → Phase 5 로 미루면 wiki 재생성 유발 → **Phase 4 본체에 유지 확정**.
+- **wiki 에 철학 선언 정식 등재**: `wiki/analyses/self-extending-wiki.md` 신규 — "LLM Wiki 의 self-extending 지향" analysis 페이지. Stage 0~4 현 상태 + 경계 (무엇이 self-extension 이 아닌가) + 왜 wiki 에 기록하는가 명문화. `wiki/index.md` 분석 섹션에 등재.
+- **기록 책임 (drift 방지)**: 실행 로드맵 단일 소스 = `plan/phase-5-todo.md §5.6`. 철학 선언 단일 소스 = `wiki/analyses/self-extending-wiki.md`. `wikey-core/src/canonicalizer.ts` 주석 · `activity/phase-4-result.md §4.5.1.7.2` 일반화 단락 · `plan/session-wrap-followups.md` · memory 는 모두 포인터.
+- 참조: `plan/phase-4-todo.md` 상단 "Phase 5/6 이관 맵", `plan/phase-5-todo.md` 전문, `plan/phase-6-todo.md` 전문.
