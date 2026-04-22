@@ -1208,3 +1208,79 @@ SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `e
 - 산출물: `activity/phase-4-5-1-6-pms-30run-final-2026-04-22.md` (원본 + 보정 분석).
 - 코드 state: 315 PASS, build 0 errors 유지.
 
+#### 4.5.1.7 variance 분해 + prompt-level 개선 + 측정 인프라 강화 (2026-04-22 신규, 진행 전)
+
+> Mirror: `plan/phase-4-todo.md §4.5.1.7`. 이 섹션은 **진행 전 stub** — 다음 세션에서 실행 후 본문 상세화.
+
+**왜 필요한가** (§4.5.1.6 종료 시점에 남은 gap 3 축):
+
+§4.5.1.6 은 **determinism + SLUG_ALIASES + FORCED_CATEGORIES** 3 레버를 동시에 돌려 Total CV 24.3% → 9.2% 를 확보했다. 그러나 다음 3 축에서 잔여 작업이 남는다:
+
+1. **기여도 미분리 (attribution gap)** — 3 레버 중 어느 것이 variance 감소의 주역인지 실측 없음. 현재는 가설 추정 (det 50-60% / alias 20-30% / pin 15-25%) 만 존재. 이 분리가 없으면 다음 의사결정이 불가능:
+   - Ollama 환경 (seed 옵션 미지원) 에서 canon 만으로 <10% 가능한가?
+   - 추가 슬러그/pin 확장 필요성 판단 근거는?
+   - Concepts CV 개선을 위해 prompt 개선 (§4.5.1.7.2) 과 alias 추가 중 어느 쪽이 더 효과적인가?
+
+2. **Concepts CV 27% 잔여** (Entities CV 11.1% 대비 2.4 배) — 구체적 관찰: PMBOK 의 9 sub-area (`project-integration/scope/time/cost/quality/human-resource/communications/risk/procurement-management`) 가 일부 run 에선 분해, 다른 run 에선 `project-management-body-of-knowledge` 1 개로 묶임. **slug alias 범위 밖** — prompt-level 변경 (canonicalizer 에 "PMBOK 10 knowledge areas 는 개별 concept 로 추출" hint) 필요.
+
+3. **측정 인프라 취약성** — §4.5.1.6.6 에서 run 30 outlier (0/0/0 3s) 가 `restoreSourceFile()` edge case 로 발생. raw CV 21.1% 로 왜곡 (진값 9.2%). N≥30 대규모 측정 반복을 위해 `walk()` 강화 + `adapter.exists()` sentinel + `--strict` 필터링 필요.
+
+**목표**:
+- A 축 (attribution): 4-points ablation (all-off / det-only / canon-only / all-on) 로 단일-레버 기여분 정량.
+- B 축 (Concepts): PMBOK 9 영역 결정화 prompt 개선 → Concepts CV 27% → <15%.
+- C 축 (infra): measure-determinism.sh edge case 해소 + per-run timeout 상향 + outlier 자동 제외.
+
+**부가 과제 (§4.5.1.7.4~.7)**:
+- Route SEGMENTED 10-run baseline (Ollama 환경 production 가이드)
+- Lotus-prefix 3-variant 분석 (Entities CV 11% 의 주 원인)
+- BOM 축 재분할 판단 (eBOM vs mBOM 구분 필요성)
+- `log_entry` axis 불일치 수정 (pin 적용 후 log 문구 재생성)
+
+**하위 과제** (번호는 `plan/phase-4-todo.md §4.5.1.7` mirror):
+
+##### 4.5.1.7.1 variance 분해 측정 — 4-points ablation (진행 전)
+
+- point A: all-off (baseline §4.5.1.5 24.3% 재확인 or 기록값 사용)
+- point B: determinism-only — `WIKEY_EXTRACTION_DETERMINISM=1`, SLUG_ALIASES/FORCED_CATEGORIES 는 §4.5.1.4 원본 (feature-flag runtime 제어 신규 필요)
+- point C: canon-only — alias + pin 최신, determinism=off (`-d` 미주입)
+- point D: all-on — §4.5.1.6 현재 = 9.2% (기록값 사용)
+- 각 point 10-run. 총 ~4 시간 (or A/D 기존값 재활용 시 2시간).
+- 구현 노트: canon off 를 위해 `WIKEY_CANON_V3_DISABLE=1` 같은 env 신규 + canonicalizer.ts 에서 v3 entry 만 bypass (v2 유지).
+
+##### 4.5.1.7.2 Concepts prompt 개선 — PMBOK 9 영역 결정화 (진행 전)
+
+- 3 접근 중 선택:
+  - A안: canonicalizer prompt 에 "PMBOK 10 knowledge areas (integration/scope/time/cost/quality/HR/communications/risk/procurement/stakeholder management) 는 **개별 concept** 로 추출, 상위 `project-management-body-of-knowledge` 로 묶지 않음" 명시
+  - B안: FORCED_CATEGORIES 에 9 개 slug 를 모두 concept/methodology pin + prompt hint
+  - C안: anti-pattern 에 "-management" suffix 는 `project-management-body-of-knowledge` 로 흡수 (반대 방향)
+- 선택 기준: wiki 그래프 가치 + 검색 정확도 측면에서 분해 (A/B) 가 유리 예상. 5-run 측정 후 채택.
+- 목표: Concepts CV 27% → <15%.
+
+##### 4.5.1.7.3 측정 인프라 robustness (진행 전)
+
+- `restoreSourceFile()`: `walk(raw/)` 후 `adapter.exists(SOURCE_PATH)` 확인. absent → `results.push({run, error: 'source restore failed'})` + continue. outlier 를 raw 통계에 섞이지 않게.
+- per-run timeout 상향: 10분 → 15-20분 (§4.5.1.6.2 run10 timeout 원인 관찰 후 조정).
+- `--strict` CLI 옵션 추가: error/zero-output run 자동 제외 후 통계 출력.
+
+##### 4.5.1.7.4 Route SEGMENTED 10-run (진행 전)
+
+- Ollama qwen3:8b 환경. `WIKEY_BASIC_MODEL=ollama`. PMS 크기에서 자동 SEGMENTED.
+- determinism=on. 10-run CV 측정.
+- 가설: SEGMENTED CV > FULL CV (섹션별 호출 간 variance 누적). production 권장 configuration 결정 근거.
+
+##### 4.5.1.7.5 Lotus-prefix 3-variant 분석 (진행 전)
+
+- 29-run 관찰: `lotus-pms`/`lotus-scm`/`lotus-mes` 가 일부 run 에서만 동시 등장 → Entities total 28 vs 22 진동.
+- 해결 방향: (a) PROVIDER rule — "Lotus X" 형식 모두 entity, (b) prompt 에 product line hint, (c) canonicalizer 에 `lotus-*` 그룹 rule. 5-run 측정 후 선택.
+
+##### 4.5.1.7.6 BOM 축 재분할 판단 (진행 전)
+
+- §4.5.1.6.3 eBOM/mBOM/engineering-BOM 전부 `bill-of-materials` 로 collapse.
+- 실무: eBOM (Engineering, 설계) vs mBOM (Manufacturing, 제조) 은 다른 문서. wiki 가 BOM 참조하는 다른 소스 인제스트 시 구분되는지 monitor. 월 1 회 lint 에서 확인 후 재분할 결정.
+
+##### 4.5.1.7.7 `log_entry` axis 불일치 수정 (진행 전, cosmetic)
+
+- canonicalizer.ts `assembleCanonicalResult` 에서 `logEntry: raw.log_entry` 는 LLM 원본. FORCED_CATEGORIES 로 이동된 slug 는 파일 위치 ↔ log 문구 엇갈림.
+- 수정: pin 후 `pinned.entities` + `pinned.concepts` 로부터 결정적 log body 재생성.
+- TDD: pin 으로 axis 가 바뀐 slug 의 log 엔트리가 "엔티티 생성" → "개념 생성" 으로 올바르게 전환.
+

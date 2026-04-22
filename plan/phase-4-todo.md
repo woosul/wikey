@@ -416,6 +416,64 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - [~] **§4.5.1.6.5**: Route FULL vs SEGMENTED 10-run 비교 — FULL 에서 목표 <10% 조기 달성으로 **§4.5.1.7 이관** (diagnostic 가치 감소)
 - [x] **§4.5.1.6.6**: 개선 후 30-run 재측정 → 29-run valid Total CV **9.2%** (목표 <10% 달성, run 30 툴 edge case outlier). 누적 §4.5.1.5 baseline 24.3% → 9.2% (−62% 상대).
 
+#### 4.5.1.7 variance 분해 + prompt-level 개선 + 측정 인프라 강화 (2026-04-22 신규, 진행 전)
+
+> **배경**. §4.5.1.6 은 3 개 레버 (determinism, SLUG_ALIASES, FORCED_CATEGORIES) 를 **동시** 적용한 결과 Total CV 9.2% 를 확보했으나 **(a) 개별 기여도 미분리**, **(b) Concepts CV 27% 잔여 (Entities 11% 대비 2.4× 높음)**, **(c) 측정 툴 edge case (run 30)** 3 건이 남았다. §4.5.1.7 은 이 3 건을 분리·측정·해결해 **production 용 권장 설정** 과 **N≥30 측정 신뢰성** 을 확보한다.
+
+**필요성**:
+- 기여도 미분리 → "determinism 없이도 <10% 유지 가능한가?" 같은 비용-효과 의사결정 불가. Ollama 환경 (seed 미지원) 에선 alias + pin 만으로 충분한지 답 없음.
+- Concepts CV 27% → project-management 9 하위 영역 (integration/scope/time/cost/quality/HR/communications/risk/procurement) 이 일부 run 에선 분해, 다른 run 에선 1 개로 묶임. **slug alias 로 해결 불가 — prompt-level 변경 필요**.
+- run 30 outlier → raw CV 21.1% 로 왜곡 (29-run valid 9.2% 가 진값). N≥30 대규모 측정 반복 수행을 위해 측정 툴 robustness 필수.
+
+**하위 과제**:
+
+- [ ] **§4.5.1.7.1** variance 분해 측정 — 4 points ablation (10-run 각, 총 ~4시간)
+  - point A: all-off (baseline §4.5.1.5 24.3%)
+  - point B: determinism-only (WIKEY_EXTRACTION_DETERMINISM=1, SLUG_ALIASES/FORCED_CATEGORIES 는 §4.5.1.4 원본 복구)
+  - point C: canon-only (alias + pin 최신, determinism=off)
+  - point D: all-on (§4.5.1.6 현재 = 9.2%)
+  - 산출: A/B/C/D 4 CV 값 + 단일-레버 기여분 (B-A 차, C-A 차, D-B 차 등)
+  - 구현 노트: determinism off 는 측정 CLI 에서 `-d` 미주입, canon off 는 canonicalizer.ts 의 SLUG_ALIASES/FORCED_CATEGORIES 를 feature-flag 로 runtime 제어 필요 (새 env `WIKEY_CANON_V3_DISABLE=1`)
+
+- [ ] **§4.5.1.7.2** Concepts prompt-level 개선 — project-management sub-area 결정화
+  - 현 현상: `project-integration/scope/time/cost/quality/human-resource/communications/risk/procurement-management` 9 개가 run 별로 1 (묶음) ↔ 9 (분해) 진동. Concepts CV 27% 의 주 원인.
+  - 접근 (A안): canonicalizer prompt 에 "PMBOK 10 knowledge areas 는 **개별 concept** 로 추출, 상위 `project-management-body-of-knowledge` 로 묶지 않는다" 명시.
+  - 접근 (B안): FORCED_CATEGORIES 에 9 개 slug 를 모두 concept/methodology 로 pin 하되 prompt 에서도 hint.
+  - 접근 (C안): anti-pattern 에 "-management" suffix 는 최상위 `project-management-body-of-knowledge` 로 흡수 추가 (반대 방향 — 묶음 일원화).
+  - 선택 기준: entity 그래프 가치 + 검색 정확도 측면에서 분해 (A/B) 가 유리 예상. 단, 측정 필요.
+  - 5-run 검증 후 채택.
+
+- [ ] **§4.5.1.7.3** 측정 인프라 robustness — `scripts/measure-determinism.sh` edge case 해소
+  - `restoreSourceFile()` 가 `walk(raw/)` 실패 시 silent pass 로 다음 run 진입 → 0/0/0 3s outlier 생성. 수정 방향:
+    - `adapter.exists(SOURCE_PATH)` 로 복구 후 존재 확인. absent 이면 `results.push({run, error: 'source restore failed'})` + continue.
+    - `walk()` 범위에 `.obsidian/.trash/` 제외. `.md` sidecar 생성 시 같이 따라가는지 점검.
+  - per-run timeout 상향 검토 (현 10분 → 15-20분) — §4.5.1.6.2 run10 timeout 재현 관찰.
+  - 통계 계산 시 error/zero-output run 자동 제외 옵션 (`--strict`).
+
+- [ ] **§4.5.1.7.4** Route SEGMENTED 10-run baseline — Ollama qwen3:8b 환경의 variance 프로파일
+  - 전제: Ollama 설치 + qwen3:8b 모델 pull. `WIKEY_BASIC_MODEL=ollama` 설정.
+  - SEGMENTED Route 강제 (PMS 문서 크기에서 Ollama 32K context → 자동 SEGMENTED).
+  - determinism=on 조건 (seed 옵션은 Ollama 도 지원). 10-run CV 측정.
+  - 가설: SEGMENTED CV > FULL CV (섹션별 호출 간 variance 누적).
+  - 실측 후 production 권장 "Gemini + determinism + SEGMENTED (문서가 크면)" vs "Ollama + determinism" 비교.
+
+- [ ] **§4.5.1.7.5** Lotus-prefix 3-variant 분석 — Entities CV 11% 의 주 원인
+  - 29-run 관찰: `lotus-pms`/`lotus-scm`/`lotus-mes` 3 개가 일부 run 에서만 동시 등장 (Entities total 28 vs 22).
+  - 원인: PMS 문서 기술스택 섹션에 3 제품이 병렬 언급되는데 LLM 이 일관되게 추출 안 함.
+  - 해결 방향: (a) PROVIDER 규칙 — "Lotus X" 형식 모두 entity 로, (b) prompt 에 product line 인식 hint, (c) canonicalizer 에 `lotus-*` 그룹 rule.
+  - 5-run 측정 후 채택.
+
+- [ ] **§4.5.1.7.6** BOM 축 재분할 판단 — eBOM vs mBOM vs single canonical
+  - 현재 (§4.5.1.6.3): `e-bom`/`engineering-bill-of-materials`/`electronic-bill-of-materials`/`e-bill-of-materials` → `bill-of-materials` 일괄 collapse.
+  - 실무: eBOM (Engineering BOM, 설계 단계) vs mBOM (Manufacturing BOM, 제조 단계) 은 **다른 문서**. 프로젝트 규모 성장 시 구분 필요.
+  - 판단 기준: wiki 가 BOM 을 참조하는 다른 소스 인제스트 시 eBOM/mBOM 을 구별해서 언급하는지 모니터. 월 1 회 lint 에서 확인.
+  - 재분할 결정 시 canonical 3 개 (`bill-of-materials`, `engineering-bom`, `manufacturing-bom`) + alias 재구성.
+
+- [ ] **§4.5.1.7.7** `log_entry` axis 불일치 수정 (cosmetic)
+  - canonicalizer.ts `assembleCanonicalResult` 의 `logEntry: raw.log_entry` 는 LLM 원본. FORCED_CATEGORIES 로 이동된 slug 는 파일 위치 ↔ log 문구 엇갈림.
+  - 수정: pin 후 `pinned.entities` + `pinned.concepts` 로부터 결정적 log body 재생성. 기존 wiki-ops.ts `appendLog` 패턴 참조.
+  - TDD: pin 으로 axis 가 바뀐 slug 의 log 엔트리가 "엔티티 생성" → "개념 생성" 으로 올바르게 전환되는지.
+
 ### 4.5.2 운영 안정성 — 삭제·초기화·포팅
 
 - [ ] **원본/위키 삭제 안전장치** — dry-run 미리보기, 영향 범위 표시

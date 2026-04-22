@@ -31,7 +31,10 @@
 
 ### 🔴 다음 세션 최우선 후보 (하나 선택)
 
-1. **§4.5.1.7 variance 분해 측정** — determinism/alias/pin 3 요소의 기여분 분리. 현재는 3 개 동시 적용한 결과만 보유. 분해 방법: `off/on` 행렬의 4 points (all-off baseline=24.3%, det-only, canon-only, all-on=9.2%) 를 각 10-run 측정. 기여 추정치 (50-60% / 20-30% / 15-25%) 실측 검증.
+1. **§4.5.1.7 variance 분해 + prompt 개선 + 측정 인프라** — §4.5.1.6 종료 후 3 축 잔여 작업 (7 sub-task). 상세: `plan/phase-4-todo.md §4.5.1.7`. 핵심 필요성:
+   - (attribution) 3 레버 기여도 미분리 → Ollama (seed 미지원) 환경에서 canon 만으로 <10% 가능한지 답 없음
+   - (Concepts 27% 잔여) PMBOK 9 sub-area 결정화 필요 — prompt-level 변경
+   - (infra) run 30 outlier edge case 재발 방지 — N≥30 대규모 측정 신뢰성 확보
 2. **§4.2 URI 기반 안정 참조** — `.ingest-map.json` → `.wikey/source-registry.json` (hash 키). wiki/sources 프론트매터 `source_id` 필드 추가. `§4.1.1.9 vault rename/delete listener` 합동 구현. PARA 이동 내성 확보.
 3. **§4.3 인제스트 고도화** — 3-stage 프롬프트 override (`.wikey/stage1/stage2/stage3_*.md`), provenance tracking (EXTRACTED/INFERRED/AMBIGUOUS), 증분 업데이트.
 
