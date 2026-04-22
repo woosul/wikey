@@ -13,7 +13,9 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-RAW_DIRS = ["raw/0_inbox", "raw/1_projects", "raw/2_areas", "raw/3_resources", "raw/4_archive", "raw/_delayed"]
+# 인제스트 대상 폴더만 포함. `raw/_delayed` (보류) 와 `raw/9_assets` (이미지 첨부) 는
+# audit 목록·카운트 양쪽에서 제외 — 인제스트 대상 아닌 파일은 대시보드·audit 에 노출 X.
+RAW_DIRS = ["raw/0_inbox", "raw/1_projects", "raw/2_areas", "raw/3_resources", "raw/4_archive"]
 WIKI_SOURCES = ROOT / "wiki" / "sources"
 DOC_EXTS = {".md", ".txt", ".pdf"}
 

@@ -505,13 +505,9 @@ Click [[page name]] in answers to navigate to the wiki page.
       }
     }
 
-    const metaFolder = vault.getAbstractFileByPath('wiki')
-    let metaCount = 0
-    if (metaFolder && (metaFolder as any).children) {
-      metaCount = (metaFolder as any).children.filter((c: any) => c.extension === 'md').length
-    }
-
-    const totalWiki = Object.values(categories).reduce((a, b) => a + b, 0) + metaCount
+    // Meta skeleton (wiki/{index,log,overview}.md) 은 시스템 파일 — content 가 아니므로
+    // Total 및 stat card 에 포함하지 않음. reset 직후 Total=0 이 되도록.
+    const totalWiki = Object.values(categories).reduce((a, b) => a + b, 0)
 
     const wikiGrid = wikiSection.createDiv({ cls: 'wikey-dashboard-grid' })
     this.addStatCard(wikiGrid, String(totalWiki), 'Total')
@@ -519,7 +515,6 @@ Click [[page name]] in answers to navigate to the wiki page.
     this.addStatCard(wikiGrid, String(categories.concepts), 'Concepts')
     this.addStatCard(wikiGrid, String(categories.sources), 'Sources')
     this.addStatCard(wikiGrid, String(categories.analyses), 'Analyses')
-    this.addStatCard(wikiGrid, String(metaCount), 'Meta')
 
     // ── Raw Sources (audit 기반 단일 소스) ──
     const rawSection = el.createDiv({ cls: 'wikey-dashboard-section' })
@@ -618,14 +613,14 @@ Click [[page name]] in answers to navigate to the wiki page.
       this.addAccentStatCard(grid, String(data.ingested), 'Ingested')
       this.addStatCard(grid, String(data.missing), 'Missing')
 
-      // Row 2: PARA folders as "ingested/total"
+      // Row 2: PARA folders as "ingested/total".
+      // `_delayed` 는 보류 상태 — ingest 대상 아님. Dashboard 노출 금지.
       const paraMap: Array<{ key: string; label: string }> = [
         { key: '0_inbox', label: 'Inbox' },
         { key: '1_projects', label: 'Projects' },
         { key: '2_areas', label: 'Areas' },
         { key: '3_resources', label: 'Resources' },
         { key: '4_archive', label: 'Archive' },
-        { key: '_delayed', label: 'Delayed' },
       ]
       const paraGrid = container.createDiv({ cls: 'wikey-dashboard-grid' })
       paraGrid.style.marginTop = '6px'
