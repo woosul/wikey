@@ -202,4 +202,41 @@ describe('resolveProvider', () => {
     const result = resolveProvider('summarize', config)
     expect(result.provider).toBe('anthropic')
   })
+
+  // §4.2.3 Stage 3 S3-2: classify provider/model 키
+  describe('classify (§4.2.3 S3-2)', () => {
+    it('inherits from ingest when CLASSIFY_PROVIDER unset', () => {
+      const config = { ...baseConfig, INGEST_PROVIDER: 'gemini' }
+      const result = resolveProvider('classify', config)
+      expect(result.provider).toBe('gemini')
+    })
+
+    it('uses CLASSIFY_PROVIDER override when set', () => {
+      const config = { ...baseConfig, INGEST_PROVIDER: 'anthropic', CLASSIFY_PROVIDER: 'gemini' }
+      const result = resolveProvider('classify', config)
+      expect(result.provider).toBe('gemini')
+    })
+
+    it('CLASSIFY_MODEL overrides model while inheriting ingest provider', () => {
+      const config = {
+        ...baseConfig,
+        INGEST_PROVIDER: 'gemini',
+        CLASSIFY_MODEL: 'gemini-2.0-flash-lite',
+      }
+      const result = resolveProvider('classify', config)
+      expect(result.provider).toBe('gemini')
+      expect(result.model).toBe('gemini-2.0-flash-lite')
+    })
+
+    it('CLASSIFY_PROVIDER + CLASSIFY_MODEL 조합', () => {
+      const config = {
+        ...baseConfig,
+        CLASSIFY_PROVIDER: 'openai',
+        CLASSIFY_MODEL: 'gpt-4o-mini',
+      }
+      const result = resolveProvider('classify', config)
+      expect(result.provider).toBe('openai')
+      expect(result.model).toBe('gpt-4o-mini')
+    })
+  })
 })

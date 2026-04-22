@@ -198,4 +198,59 @@ describe('reconcile — startup scan', () => {
     // path_history got the new entry.
     expect(findById(reg, 'sha256:1')?.path_history.length).toBe(2)
   })
+
+  // §4.2.4 Stage 4 S4-3: reconcile 확장 — tombstone missing, restore reappearing.
+  it('missing record (not in walker) → tombstone', async () => {
+    const bytes = new TextEncoder().encode('content')
+    let reg: SourceRegistry = {
+      'sha256:gone': { ...makeRecord('raw/0_inbox/gone.pdf', computeFullHash(bytes)) },
+    }
+    const emptyWalker = async () => []
+    reg = await reconcile(reg, emptyWalker)
+    expect(findById(reg, 'sha256:gone')?.tombstone).toBe(true)
+  })
+
+  it('tombstoned record + bytes reappear → restore (tombstone=false) + recordMove if path differs', async () => {
+    const bytes = new TextEncoder().encode('z')
+    const fullHash = computeFullHash(bytes)
+    let reg: SourceRegistry = {
+      'sha256:back': {
+        ...makeRecord('raw/0_inbox/old.pdf', fullHash),
+        tombstone: true,
+      },
+    }
+    const walker = async () => [
+      { vault_path: 'raw/3_resources/30_manual/500_natural_science/back.pdf', bytes },
+    ]
+    reg = await reconcile(reg, walker)
+    const rec = findById(reg, 'sha256:back')!
+    expect(rec.tombstone).toBe(false)
+    expect(rec.vault_path).toBe('raw/3_resources/30_manual/500_natural_science/back.pdf')
+  })
+
+  it('tombstoned + still missing → unchanged', async () => {
+    const bytes = new TextEncoder().encode('gone-forever')
+    let reg: SourceRegistry = {
+      'sha256:dead': {
+        ...makeRecord('raw/4_archive/lost.pdf', computeFullHash(bytes)),
+        tombstone: true,
+      },
+    }
+    const prev = { ...reg['sha256:dead']! }
+    reg = await reconcile(reg, async () => [])
+    expect(findById(reg, 'sha256:dead')?.tombstone).toBe(true)
+    expect(findById(reg, 'sha256:dead')?.vault_path).toBe(prev.vault_path)
+  })
+
+  it('present + current path OK → no change (idempotent)', async () => {
+    const bytes = new TextEncoder().encode('stable')
+    const path = 'raw/3_resources/30_manual/stable.pdf'
+    let reg: SourceRegistry = {
+      'sha256:stable': makeRecord(path, computeFullHash(bytes)),
+    }
+    const historyLenBefore = reg['sha256:stable']!.path_history.length
+    reg = await reconcile(reg, async () => [{ vault_path: path, bytes }])
+    expect(findById(reg, 'sha256:stable')?.path_history.length).toBe(historyLenBefore)
+    expect(findById(reg, 'sha256:stable')?.tombstone).toBe(false)
+  })
 })

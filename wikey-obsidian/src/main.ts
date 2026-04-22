@@ -1,6 +1,16 @@
-import { Notice, Plugin, WorkspaceLeaf, requestUrl } from 'obsidian'
+import { Notice, Plugin, TFile, WorkspaceLeaf, requestUrl } from 'obsidian'
 import type { HttpClient, HttpRequestOptions, HttpResponse, WikiFS, WikeyConfig } from 'wikey-core'
-import { LLMClient, parseWikeyConf, CONTEXTUAL_DEFAULT_MODEL } from 'wikey-core'
+import {
+  LLMClient,
+  parseWikeyConf,
+  CONTEXTUAL_DEFAULT_MODEL,
+  RenameGuard,
+  reconcileExternalRename,
+  handleExternalDelete,
+  loadRegistry,
+  saveRegistry,
+  registryReconcile,
+} from 'wikey-core'
 import { WikeyChatView, WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { WikeySettingTab } from './settings-tab'
 import { WikeyStatusBar } from './status-bar'
@@ -116,6 +126,11 @@ export default class WikeyPlugin extends Plugin {
   skipIngestBriefsThisSession = false
   private statusBar!: WikeyStatusBar
   private chatSaveTimer: ReturnType<typeof setTimeout> | null = null
+  /**
+   * §4.2.4 S4-1: movePair 가 발행 예정 rename 을 pre-register 하고, vault listener 가
+   * 매칭되면 consume + skip — double-move 재귀 방지.
+   */
+  renameGuard: RenameGuard = new RenameGuard()
 
   async onload() {
     await this.loadSettings()
@@ -162,6 +177,43 @@ export default class WikeyPlugin extends Plugin {
       autoTimer = setTimeout(() => void this.flushAutoIngestQueue(autoQueue), delayMs)
     }
 
+    // §4.2.4 S4-1: vault.on('rename') — registry + frontmatter 동기화
+    //   movePair 가 발행한 self-rename 은 renameGuard.consume 으로 skip.
+    //   사용자 UI 이동은 reconcileExternalRename 로 처리 + sidecar 동행.
+    const renameDebouncers = new Map<string, ReturnType<typeof setTimeout>>()
+    this.registerEvent(
+      this.app.vault.on('rename', (file, oldPath) => {
+        if (!file.path.startsWith('raw/') && !oldPath.startsWith('raw/')) return
+        if (Date.now() - startTime < STARTUP_GRACE_MS) return
+        if (this.renameGuard.consume(file.path)) return
+
+        const pending = renameDebouncers.get(oldPath)
+        if (pending) clearTimeout(pending)
+        renameDebouncers.set(
+          oldPath,
+          setTimeout(() => {
+            renameDebouncers.delete(oldPath)
+            void this.handleVaultRename(oldPath, file.path)
+          }, 200),
+        )
+      }),
+    )
+
+    // §4.2.4 S4-2: vault.on('delete') — tombstone + source 페이지 banner
+    this.registerEvent(
+      this.app.vault.on('delete', (file) => {
+        if (!file.path.startsWith('raw/')) return
+        if (Date.now() - startTime < STARTUP_GRACE_MS) return
+        if (this.renameGuard.consume(file.path)) return
+        void this.handleVaultDelete(file.path)
+      }),
+    )
+
+    // §4.2.4 S4-3: onload reconcile — bash/Finder 외부 이동/삭제 누락 복구
+    void this.runStartupReconcile().catch((err) =>
+      console.warn('[Wikey] startup reconcile failed:', err),
+    )
+
     this.registerEvent(
       this.app.vault.on('create', (file) => {
         if (!file.path.startsWith('raw/')) return
@@ -196,6 +248,94 @@ export default class WikeyPlugin extends Plugin {
         }
       }),
     )
+  }
+
+  // §4.2.4 S4-1: external rename handler — registry + frontmatter + sidecar 자동 동행
+  private async handleVaultRename(oldPath: string, newPath: string): Promise<void> {
+    try {
+      const newSidecar = /\.md$/i.test(newPath) ? undefined : `${newPath}.md`
+
+      // Sidecar auto-follow: movePair 가 아니라 사용자가 UI 에서 원본만 이동한 경우,
+      // 동반 sidecar (<original>.md) 가 여전히 oldPath+'.md' 에 남아 있을 수 있다.
+      if (newSidecar) {
+        const oldSidecar = `${oldPath}.md`
+        const sidecarFile = this.app.vault.getAbstractFileByPath(oldSidecar)
+        if (sidecarFile && sidecarFile instanceof TFile) {
+          try {
+            this.renameGuard.register(newSidecar) // 재귀 이벤트 skip
+            await this.app.fileManager.renameFile(sidecarFile, newSidecar)
+          } catch (err) {
+            console.warn('[Wikey] sidecar follow-rename failed:', oldSidecar, err)
+          }
+        }
+      }
+
+      const result = await reconcileExternalRename({
+        wikiFS: this.wikiFS,
+        oldVaultPath: oldPath,
+        newVaultPath: newPath,
+        newSidecarVaultPath: newSidecar,
+      })
+      if (result.sourceId) {
+        console.info(
+          `[Wikey] vault rename reconciled: ${oldPath} → ${newPath} (id=${result.sourceId.slice(0, 20)}, pages=${result.rewrittenPages.length})`,
+        )
+      }
+    } catch (err) {
+      console.warn('[Wikey] handleVaultRename failed:', oldPath, err)
+    }
+  }
+
+  // §4.2.4 S4-2: external delete handler — tombstone + banner
+  private async handleVaultDelete(path: string): Promise<void> {
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      const result = await handleExternalDelete({
+        wikiFS: this.wikiFS,
+        deletedVaultPath: path,
+        at: today,
+      })
+      if (result.sourceId) {
+        console.info(
+          `[Wikey] vault delete tombstoned: ${path} (id=${result.sourceId.slice(0, 20)}, banners=${result.bannersAdded.length})`,
+        )
+      }
+    } catch (err) {
+      console.warn('[Wikey] handleVaultDelete failed:', path, err)
+    }
+  }
+
+  // §4.2.4 S4-3: startup reconcile — bash/Finder 외부 이동/삭제 복구.
+  //   대용량 볼트 보호: 50MB 초과 파일은 hash 재계산 skip.
+  private async runStartupReconcile(): Promise<void> {
+    const registry = await loadRegistry(this.wikiFS)
+    if (Object.keys(registry).length === 0) return
+
+    const MAX_BYTES = 50 * 1024 * 1024
+    const walker = async () => {
+      const out: Array<{ vault_path: string; bytes: Uint8Array }> = []
+      const files = this.app.vault.getFiles()
+      for (const f of files) {
+        if (!f.path.startsWith('raw/')) continue
+        if (f.stat && f.stat.size > MAX_BYTES) continue
+        try {
+          const buf = await this.app.vault.readBinary(f)
+          out.push({ vault_path: f.path, bytes: new Uint8Array(buf) })
+        } catch (err) {
+          console.warn('[Wikey] reconcile readBinary failed:', f.path, err)
+        }
+      }
+      return out
+    }
+    const updated = await registryReconcile(registry, walker)
+    if (updated !== registry) {
+      await saveRegistry(this.wikiFS, updated)
+      const before = Object.values(registry).filter((r) => !r.tombstone).length
+      const after = Object.values(updated).filter((r) => !r.tombstone).length
+      console.info(
+        `[Wikey] startup reconcile complete — active=${after} (was ${before}), ${Object.keys(updated).length} total`,
+      )
+    }
   }
 
   async flushAutoIngestQueue(queue: string[]): Promise<void> {

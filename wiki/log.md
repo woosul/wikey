@@ -5,6 +5,26 @@ created: 2026-04-10
 updated: 2026-04-23
 ---
 
+## [2026-04-23] feat | §4.2 Stage 3+4 — LLM 분류 정제 + vault listener + startup reconcile
+
+- **§4.2.8 Stage 3 (LLM 3/4차 분류 정제 · 모델 키 · UI · 피드백)** 완료
+  - `classifyWithLLM` 프롬프트 4차 slug 힌트 inject: `wikiFS.list` → `^\d{3}_[A-Za-z0-9가-힣_\-]+$` 정규식 + basename 정규화 (Obsidian full-path/mock bare-name 대응). "재사용 우선, 신규 시 reason 에 '신규:' 명시" 규칙. vitest 5.
+  - `CLASSIFY_PROVIDER` / `CLASSIFY_MODEL` 설정 키 — `resolveProvider('classify', cfg)` 추가. 미지정 시 ingest 승계, MODEL 만 override 가능. `wikey.conf` 주석 블록에 저가 모델 예시. vitest 4.
+  - Audit 패널 "Re-classify with LLM" 체크박스 — `hint.needsThirdLevel === true` row 에만 노출. `inboxReclassify: Map` 로컬 상태. Apply 플랜 루프 분기.
+  - CLASSIFY.md 피드백 로그 append (`wiki-ops.ts::appendClassifyFeedback`) — 파일/섹션 자동 생성 + 중복 dedupe. vitest 4.
+- **§4.2.9 Stage 4 (Vault listener + Startup reconcile)** 완료 — §4.1.1.9 자동 해소
+  - Pure helpers `wikey-core/src/vault-events.ts` 분리: `RenameGuard` (TTL 기반 double-move 방지), `reconcileExternalRename` (UI 이동 시 registry + frontmatter 동기화), `handleExternalDelete` (tombstone + banner). vitest 9.
+  - `source-registry.reconcile` 확장: missing → tombstone, 재등장 → restore + recordMove, idempotent. vitest +4.
+  - `wiki-ops.appendDeletedSourceBanner` — source 페이지 본문 최상단 `[!warning]` callout. frontmatter 보존 · idempotent. vitest 3.
+  - `classify.ts::movePair` 에 `renameGuard?` optional 파라미터 추가 — 원본·sidecar rename 직전 pre-register.
+  - `wikey-obsidian/src/main.ts` 이벤트 라우팅: `vault.on('rename')` 200ms debounce + sidecar 자동 동행 (fileManager.renameFile), `vault.on('delete')`, onload `runStartupReconcile` (`size ≤ 50MB` 필터).
+  - `commands.ts::saveIngestMap` 에 1회 deprecation warn (`.ingest-map.json path-based API` → Phase 5 §5.3).
+- **링크 안정성 회귀선** (사용자 2026-04-23 session 2 지적 2건 반영):
+  1. movePair 경로 + reconcile 경로 모두 entity/concept 페이지의 source 페이지 wikilink (테스트 내 source-stable · source-extmv 를 내부 링크로 참조) + 본문 bit-identical 유지 확증. `integration-pair-move.test.ts` +2.
+  2. Stage 4 real-disk 통합: `reconcileExternalRename` 실제 fs.renameSync 결합, `handleExternalDelete` 실제 unlinkSync 결합, multi-file 외부 이동·삭제·복원 + analyses 페이지 링크 불변, RenameGuard + movePair 실제 fs 통합. `integration-pair-move.test.ts` +4 real-disk.
+- 증거: wikey-core 399 → **434 PASS (+35, Stage 3 13 + Stage 4 18 + real-disk integ 4)** · `scripts/tests/pair-move.smoke.sh` 6/6 · `npm run build` 0 errors (tsc + esbuild).
+- 참조: `activity/phase-4-result.md §4.2.8 / §4.2.9 / §4.2.10`, `plan/phase-4-todo.md §4.2.3 / §4.2.4 (전량 [x])`, `plan/session-wrap-followups.md` top-block session 2.
+
 ## [2026-04-23] feat | §4.2 Stage 1+2 — URI/registry foundation + pair move + frontmatter rewrite
 
 - 계획: plan v1→v2→v3 진화 (codex rescue 2차 검증 FAIL gate 6 concern 전부 반영). URI 저장 폐기, `source_id` + `vault_path` 만 저장, URI 는 view-time derive. 번들 id 는 내부 relative path 기반. 64-bit prefix + full-hash verify. bash 가 node CLI 로 registry 즉시 갱신. 계획서: `plan/phase-4-2-plan.md`.

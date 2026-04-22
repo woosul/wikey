@@ -1,11 +1,63 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-23 (§4.2 Stage 1+2 완료 — URI/registry foundation + pair move + frontmatter rewrite)
+> 최신 갱신: 2026-04-23 session 2 (§4.2 Stage 1~4 전량 완료 — URI/registry foundation + pair move + LLM 분류 정제 + vault listener + startup reconcile)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-23 세션 마무리 — §4.2 Stage 1+2 완료
+## 2026-04-23 세션 2 마무리 — §4.2 본체 완결 (Stage 1~4 All Done)
+
+### ⭐ 다음 세션 최우선: §4.3 본체 인제스트 (3-stage 프롬프트 + Provenance Part A/B + stripBrokenWikilinks)
+
+Session 2 는 §4.2 Stage 3 (LLM 분류 정제) + Stage 4 (vault listener + startup reconcile) 를 같은 세션에 묶어 완료. §4.1.1.9 두 번째 체크박스도 자동 해소. **다음 세션 진입점은 §4.3 본체 인제스트** — 본체 완료 선언 직전 마지막 data model 변경 (frontmatter `provenance` + 쿼리 응답 원본 backlink 렌더링).
+
+**완료 내역** (detail: `activity/phase-4-result.md §4.2.8 / §4.2.9 / §4.2.10`):
+- **Stage 3 (S3-1~S3-4)**: `classifyWithLLM` 4차 slug 힌트 inject + `CLASSIFY_PROVIDER`/`MODEL` 키 + Audit Re-classify 체크박스 + CLASSIFY.md 피드백 로그.
+- **Stage 4 (S4-1~S4-4)**: `vault-events.ts` (RenameGuard · reconcileExternalRename · handleExternalDelete) + `source-registry.reconcile` 확장 (tombstone/restore) + main.ts 이벤트 라우팅 + onload reconcile + path API deprecation warn.
+- **링크 안정성 회귀선** (사용자 2026-04-23 지적 반영): `integration-pair-move.test.ts` +2 — entity/concept 페이지 `[[source-xxx]]` wikilink 가 파일 이동 후에도 bit-identical 유지됨을 명시적으로 회귀 방지.
+- 신규: `wikey-core/src/vault-events.ts`, `__tests__/vault-events.test.ts`.
+- 변경: `classify.ts` (listExistingSlugFolders · movePair renameGuard), `wiki-ops.ts` (+appendClassifyFeedback · appendDeletedSourceBanner), `source-registry.ts` (reconcile extended), `config.ts`/`types.ts` (CLASSIFY_*), `main.ts` (vault listener + onload reconcile), `commands.ts`/`sidebar-chat.ts` (renameGuard + Re-classify UI + feedback), `styles.css`, `wikey.conf`.
+- 증거: wikey-core 399→**430 PASS (+31)**. bash pair-move smoke 6/6. build 0 errors.
+
+### 🟢 Stage 3/4 실측 권장 (관찰 세션)
+
+Stage 4 는 단위/통합 테스트 전량 green 이지만 수동 UI smoke 는 관찰 세션에서 재확인이 안전:
+- Obsidian UI 에서 raw/ 파일을 PARA 폴더로 드래그 이동 → 0.2s 뒤 registry/frontmatter 자동 갱신 + sidecar 동행 확인.
+- `mv` 로 오프라인 이동 후 Obsidian 재기동 → console 에 `startup reconcile complete — active=N` 출력 + registry path 갱신.
+- raw/ 에서 원본 삭제 → source 페이지에 `[!warning] 원본 삭제됨` callout 1회 추가 + tombstone=true.
+- 삭제 후 같은 파일 복원 (같은 해시) → 다음 기동 reconcile 이 restoreTombstone + recordMove.
+
+### 📋 이관 대기 (§4.2 이후)
+
+- **§4.3 본체 인제스트** — 3-stage prompt override + **§4.3.2 Provenance tracking Part A (frontmatter data) / Part B (쿼리 응답 원본 backlink 렌더링)** + stripBrokenWikilinks. 본체 완료 선언 전 마지막 data model 변경.
+- **§4.5.2 운영 안전** — 삭제 안전장치 + 초기화.
+- 경로 기반 API 완전 제거 · Audit hash 판정 일반화 · LLM 피드백 few-shot 자동 재프롬프트 · registry 대용량 볼트 최적화 → Phase 5 §5.3/§5.6/§5.5.
+
+### 🎯 다음 세션 실행 체크리스트 (§4.3 본체 인제스트)
+
+```
+1. plan/phase-4-2-plan.md 패턴 따라 §4.3 계획 초안 작성 (codex rescue 2차 검증 사이클 권장)
+2. Part A (frontmatter provenance): entities/concepts/analyses 공통 스키마 확장 + wiki-ops helper + 기존 페이지 migration (fresh vault 이므로 no-op)
+3. Part B (원본 backlink 렌더링): query-pipeline citations 구조화 + source-resolver (source_id → current_path/uri/mime_type) + sidebar-chat 답변 렌더 (internal/external/tombstone 클릭 핸들러)
+4. §4.3.1 3-stage 프롬프트 override (Stage 1/2/3 각각 override 지원 — 현재 Stage 1 만 지원)
+5. stripBrokenWikilinks 구현 + ingest-pipeline 배선
+6. npm test 450+ 목표, build 0 errors
+7. 문서 동기화 (result/todo/followups/memory) + 단일 commit
+```
+
+### 📊 Phase 4.2 전체 진행 (2026-04-23 session 2 종료 시점)
+
+| Stage | 상태 | 테스트 수 | 비고 |
+|-------|------|----------|------|
+| Stage 1 (ID/registry) | ✅ 완료 (session 1) | uri 17 + registry 12 → 16 (Stage 4 확장) + wiki-ops +7 | |
+| Stage 2 (pair move + rewrite) | ✅ 완료 (session 1) | move-pair 8 + integration 3 → 5 (링크 안정성 +2) | |
+| Stage 3 (LLM 분류 정제 · UI) | ✅ 완료 (session 2) | classify +5 (20 → 24) + config +4 + wiki-ops +4 | UI 수동 smoke 권장 |
+| Stage 4 (listener · reconcile) | ✅ 완료 (session 2) | vault-events 9 + source-registry +4 + wiki-ops +3 | UI 수동 smoke 권장 |
+| 총 wikey-core tests | 352 → **430** (+78) | — | — |
+
+---
+
+## 2026-04-23 세션 1 마무리 — §4.2 Stage 1+2 완료
 
 ### ⭐ 다음 세션 최우선: §4.2 Stage 3 → Stage 4 → §4.3 (본체 인제스트)
 

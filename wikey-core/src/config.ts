@@ -100,6 +100,16 @@ export function resolveProvider(
     case 'summarize':
       resolved = config.SUMMARIZE_PROVIDER || basicModel
       break
+    case 'classify': {
+      // §4.2.3 S3-2: CLASSIFY_PROVIDER 설정 시 해당 provider 체인, 미설정 시 ingest 승계.
+      // CLASSIFY_MODEL 은 두 경로 모두에서 모델만 override.
+      if (config.CLASSIFY_PROVIDER) {
+        const mapped = mapToProvider(config.CLASSIFY_PROVIDER, config)
+        return { provider: mapped.provider, model: config.CLASSIFY_MODEL || mapped.model }
+      }
+      const inherited = resolveProvider('ingest', config)
+      return { provider: inherited.provider, model: config.CLASSIFY_MODEL || inherited.model }
+    }
     case 'cr':
       return {
         provider: 'ollama',

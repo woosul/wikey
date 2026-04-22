@@ -800,6 +800,31 @@
   color: var(--interactive-accent);
 }
 
+/* §4.2.3 Stage 3 S3-3: per-row Re-classify with LLM toggle */
+.wikey-audit-reclass-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.wikey-audit-reclass-cb {
+  margin: 0;
+  cursor: pointer;
+  transform: scale(0.8);
+}
+
+.wikey-audit-reclass-label {
+  font-size: 0.68em;
+  color: var(--text-faint);
+}
+
+.wikey-audit-reclass-line:hover .wikey-audit-reclass-label {
+  color: var(--interactive-accent);
+}
+
 .wikey-audit-time {
   font-size: 0.72em;
   color: var(--text-faint);

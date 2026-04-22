@@ -1,5 +1,75 @@
 import { describe, it, expect } from 'vitest'
-import { classifyFile } from '../classify.js'
+import { classifyFile, classifyWithLLM, clearClassifyRulesCache } from '../classify.js'
+import type { HttpClient, HttpRequestOptions, HttpResponse, WikeyConfig, WikiFS } from '../types.js'
+
+// ── LLM test helpers (reused for S3-1 / S3-4) ──
+
+function mockHttpOnce(body: string): {
+  client: HttpClient
+  lastPrompt(): string
+  calls: Array<{ url: string; opts: HttpRequestOptions }>
+} {
+  const calls: Array<{ url: string; opts: HttpRequestOptions }> = []
+  return {
+    client: {
+      async request(url: string, opts: HttpRequestOptions): Promise<HttpResponse> {
+        calls.push({ url, opts })
+        return { status: 200, body }
+      },
+    },
+    lastPrompt(): string {
+      const opts = calls[calls.length - 1]?.opts
+      if (!opts?.body) return ''
+      try {
+        const payload = JSON.parse(opts.body)
+        // Gemini payload shape
+        return payload?.contents?.[0]?.parts?.[0]?.text ?? ''
+      } catch {
+        return opts.body
+      }
+    },
+    calls,
+  }
+}
+
+function memFS(files: Record<string, string>, listMap: Record<string, string[]> = {}): WikiFS {
+  const store = new Map(Object.entries(files))
+  return {
+    async read(path: string): Promise<string> {
+      if (!store.has(path)) throw new Error(`ENOENT ${path}`)
+      return store.get(path)!
+    },
+    async write(path: string, content: string): Promise<void> {
+      store.set(path, content)
+    },
+    async exists(path: string): Promise<boolean> {
+      return store.has(path)
+    },
+    async list(dir: string): Promise<string[]> {
+      return listMap[dir] ?? []
+    },
+  }
+}
+
+const classifyBaseConfig: WikeyConfig = {
+  WIKEY_BASIC_MODEL: 'gemini',
+  WIKEY_SEARCH_BACKEND: 'basic',
+  WIKEY_MODEL: 'wikey',
+  WIKEY_QMD_TOP_N: 5,
+  GEMINI_API_KEY: 'k',
+  ANTHROPIC_API_KEY: '',
+  OPENAI_API_KEY: '',
+  OLLAMA_URL: 'http://localhost:11434',
+  INGEST_PROVIDER: 'gemini',
+  LINT_PROVIDER: '',
+  SUMMARIZE_PROVIDER: '',
+  CONTEXTUAL_MODEL: 'gemma4',
+  COST_LIMIT: 50,
+}
+
+function geminiBody(text: string): string {
+  return JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] })
+}
 
 describe('classifyFile — 2차 서브폴더 라우팅 (CLASSIFY.md 기준)', () => {
   it('.meta.yaml → empty destination (URI reference)', () => {
@@ -138,5 +208,130 @@ describe('classifyFile — 3차 Dewey Decimal (DDC 표준 10대분류)', () => {
   it('우선순위: sic 키워드 매칭 시 500_natural_science (반도체 물성)', () => {
     expect(classifyFile('sic-datasheet.pdf', false).destination)
       .toBe('raw/3_resources/30_manual/500_natural_science/')
+  })
+})
+
+// ── §4.2.3 Stage 3 S3-1: classifyWithLLM 4차 slug 힌트 ──
+
+describe('classifyWithLLM — 4차 제품 slug 힌트 주입 (§4.2.3 S3-1)', () => {
+  it('기존 NNN_topic 폴더가 있으면 prompt 에 재사용 우선 힌트로 inject', async () => {
+    clearClassifyRulesCache()
+    const http = mockHttpOnce(geminiBody(
+      'json\n' +
+      '```json\n{"destination":"raw/3_resources/30_manual/500_natural_science/300_pms/","reason":"기존 슬러그 재사용"}\n```',
+    ))
+    const wikiFS = memFS({}, {
+      'raw/3_resources/30_manual/500_natural_science/': [
+        '100_physics_intro',
+        '300_pms',
+        'not_a_slug.pdf', // 파일은 무시
+      ],
+    })
+
+    const result = await classifyWithLLM(
+      'PMS_Manual_v2.pdf',
+      false,
+      'raw/3_resources/30_manual/500_natural_science/',
+      { wikiFS, httpClient: http.client, config: classifyBaseConfig },
+    )
+
+    const prompt = http.lastPrompt()
+    expect(prompt).toContain('기존 NNN_topic')
+    expect(prompt).toContain('100_physics_intro')
+    expect(prompt).toContain('300_pms')
+    expect(prompt).not.toContain('not_a_slug.pdf')
+    expect(result.destination).toBe('raw/3_resources/30_manual/500_natural_science/300_pms/')
+  })
+
+  it('기존 슬러그 없으면 "신규 slug 생성 가이드" 안내', async () => {
+    clearClassifyRulesCache()
+    const http = mockHttpOnce(geminiBody(
+      '```json\n{"destination":"raw/3_resources/30_manual/600_technology/150_new_device/","reason":"신규 제품"}\n```',
+    ))
+    const wikiFS = memFS({}, {
+      'raw/3_resources/30_manual/600_technology/': [], // 비어있음
+    })
+
+    const result = await classifyWithLLM(
+      'BrandNew_Device.pdf',
+      false,
+      'raw/3_resources/30_manual/600_technology/',
+      { wikiFS, httpClient: http.client, config: classifyBaseConfig },
+    )
+
+    const prompt = http.lastPrompt()
+    expect(prompt).toContain('기존 NNN_topic')
+    expect(prompt).toMatch(/(없음|비어 있음|없\b|empty)/i)
+    expect(result.destination).toBe('raw/3_resources/30_manual/600_technology/150_new_device/')
+  })
+
+  it('JSON 파싱 실패 → 2차 힌트로 fallback', async () => {
+    clearClassifyRulesCache()
+    const http = mockHttpOnce(geminiBody('이건 JSON 이 아닙니다'))
+    const wikiFS = memFS({}, {})
+
+    const result = await classifyWithLLM(
+      'unknown.pdf',
+      false,
+      'raw/3_resources/30_manual/',
+      { wikiFS, httpClient: http.client, config: classifyBaseConfig },
+    )
+
+    expect(result.destination).toBe('raw/3_resources/30_manual/')
+    expect(result.reason).toContain('파싱 실패')
+  })
+
+  it('WikiFS.list 가 full path 반환해도 basename 정규화 후 slug 매칭', async () => {
+    clearClassifyRulesCache()
+    const http = mockHttpOnce(geminiBody(
+      '```json\n{"destination":"raw/3_resources/30_manual/500_natural_science/300_pms/","reason":"ok"}\n```',
+    ))
+    const parent = 'raw/3_resources/30_manual/500_natural_science/'
+    const wikiFS = memFS({}, {
+      [parent]: [
+        // Obsidian 반환 형태 — full vault path
+        `${parent}100_physics_intro`,
+        `${parent}300_pms`,
+        `${parent}readme.md`, // 파일은 무시
+      ],
+    })
+
+    await classifyWithLLM(
+      'PMS_v2.pdf',
+      false,
+      parent,
+      { wikiFS, httpClient: http.client, config: classifyBaseConfig },
+    )
+
+    const prompt = http.lastPrompt()
+    expect(prompt).toContain('100_physics_intro')
+    expect(prompt).toContain('300_pms')
+    expect(prompt).not.toContain('readme.md')
+  })
+
+  it('resolveProvider("classify") 를 사용한다 — CLASSIFY_PROVIDER override 가 적용됨', async () => {
+    clearClassifyRulesCache()
+    const http = mockHttpOnce(geminiBody(
+      '```json\n{"destination":"raw/3_resources/","reason":"ok"}\n```',
+    ))
+    const wikiFS = memFS({}, {})
+
+    // INGEST_PROVIDER 는 anthropic 이지만 CLASSIFY_PROVIDER=gemini 로 override
+    const config = {
+      ...classifyBaseConfig,
+      ANTHROPIC_API_KEY: 'k',
+      INGEST_PROVIDER: 'anthropic',
+      CLASSIFY_PROVIDER: 'gemini',
+    }
+
+    await classifyWithLLM(
+      'any.pdf',
+      false,
+      'raw/3_resources/',
+      { wikiFS, httpClient: http.client, config },
+    )
+
+    expect(http.calls).toHaveLength(1)
+    expect(http.calls[0].url).toContain('generativelanguage.googleapis.com')
   })
 })

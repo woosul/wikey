@@ -216,6 +216,7 @@ async function runIngestCore(
             sourceVaultPath: sourcePath,
             destDir: classifyResult.destination,
             wikiFS: plugin.wikiFS,
+            renameGuard: plugin.renameGuard,
           })
           const newSourcePath = join(classifyResult.destination, filename)
           finalSourcePath = newSourcePath
@@ -242,7 +243,17 @@ async function runIngestCore(
   }
 }
 
+// §4.2.4 S4-4: path-based API 는 Phase 5 §5.3 에서 완전 제거.
+// 현재 wikey-core 는 source-registry (hash 기반) 로 이관 완료, .ingest-map.json 은
+// 남아있는 legacy 호환 필드. 1회만 경고 후 조용히 유지.
+let _ingestMapWarnOnce = false
 function saveIngestMap(basePath: string, rawPath: string, sourceFilename: string): void {
+  if (!_ingestMapWarnOnce) {
+    console.warn(
+      '[Wikey deprecated] .ingest-map.json path-based API — use source-registry. Slated for removal in Phase 5 §5.3.',
+    )
+    _ingestMapWarnOnce = true
+  }
   const { join } = require('node:path') as typeof import('node:path')
   const { readFileSync, writeFileSync } = require('node:fs') as typeof import('node:fs')
   const mapPath = join(basePath, 'wiki/.ingest-map.json')

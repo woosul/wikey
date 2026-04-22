@@ -136,9 +136,12 @@ export interface WalkerEntry {
 
 /**
  * Startup reconciliation — compare registry vault_path against actual fs walker.
- * For each record, if its stored vault_path no longer exists but the walker
- * reports a file with the same full-hash, update vault_path + append history.
- * Missing (not found anywhere) records are left untouched — caller may tombstone.
+ *
+ * Behavior (Phase 4.2 Stage 4 S4-3):
+ *   1. record.vault_path matches a walker entry with same full-hash → no change.
+ *   2. hash matches a walker entry at a DIFFERENT path → recordMove (bash/Finder move).
+ *   3. record.hash absent from walker → tombstone (bash/Finder delete).
+ *   4. tombstoned record's hash appears in walker → restoreTombstone (+ recordMove if path differs).
  */
 export async function reconcile(
   reg: SourceRegistry,
@@ -150,15 +153,30 @@ export async function reconcile(
 
   let next: SourceRegistry = reg
   for (const [id, record] of Object.entries(reg)) {
-    if (record.tombstone) continue
     const matchedPath = hashMap.get(record.hash)
-    if (matchedPath && matchedPath !== record.vault_path) {
-      const newSidecar =
-        record.sidecar_vault_path && hashMap.has(record.hash)
-          ? `${matchedPath}.md`
-          : record.sidecar_vault_path
-      next = recordMove(next, id, matchedPath, newSidecar)
+
+    if (record.tombstone) {
+      if (matchedPath) {
+        // File reappeared on disk — resurrect the record.
+        next = restoreTombstone(next, id)
+        if (matchedPath !== record.vault_path) {
+          const newSidecar = record.sidecar_vault_path ? `${matchedPath}.md` : undefined
+          next = recordMove(next, id, matchedPath, newSidecar)
+        }
+      }
+      continue
     }
+
+    if (matchedPath) {
+      if (matchedPath !== record.vault_path) {
+        const newSidecar = record.sidecar_vault_path ? `${matchedPath}.md` : undefined
+        next = recordMove(next, id, matchedPath, newSidecar)
+      }
+      continue
+    }
+
+    // Not tombstoned and not present in walker → mark deleted.
+    next = recordDelete(next, id)
   }
   return next
 }

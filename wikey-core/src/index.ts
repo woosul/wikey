@@ -97,8 +97,24 @@ export {
   REGISTRY_PATH,
 } from './source-registry.js'
 export type { SourceRecord, SourceRegistry, PathHistoryEntry, WalkerEntry } from './source-registry.js'
-export { injectSourceFrontmatter, rewriteSourcePageMeta } from './wiki-ops.js'
-export type { SourceFrontmatter } from './wiki-ops.js'
+export {
+  injectSourceFrontmatter,
+  rewriteSourcePageMeta,
+  appendClassifyFeedback,
+  appendDeletedSourceBanner,
+} from './wiki-ops.js'
+export type { SourceFrontmatter, ClassifyFeedbackEntry } from './wiki-ops.js'
+export {
+  RenameGuard,
+  reconcileExternalRename,
+  handleExternalDelete,
+} from './vault-events.js'
+export type {
+  ReconcileRenameOptions,
+  ReconcileRenameResult,
+  HandleDeleteOptions,
+  HandleDeleteResult,
+} from './vault-events.js'
 export {
   validateWiki,
   checkPii,

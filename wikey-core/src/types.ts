@@ -41,6 +41,14 @@ export interface WikeyConfig {
   readonly SUMMARIZE_PROVIDER: string
   readonly CONTEXTUAL_MODEL: string
 
+  /**
+   * §4.2.3 Stage 3 S3-2: classify 는 파일명+경로만 보므로 저가 모델로 충분.
+   * 미지정 시 ingest 체인 그대로 승계. PROVIDER 만 지정하면 provider 기본 모델,
+   * MODEL 까지 지정하면 해당 모델로 override.
+   */
+  readonly CLASSIFY_PROVIDER?: string
+  readonly CLASSIFY_MODEL?: string
+
   readonly COST_LIMIT: number
 
   /**

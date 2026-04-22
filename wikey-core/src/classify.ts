@@ -261,6 +261,50 @@ export function clearClassifyRulesCache(): void {
   cachedRules = null
 }
 
+/**
+ * §4.2.3 S3-1: list existing NNN_topic (4차) folders under hint2nd.
+ *
+ * hint2nd 가 3차 Dewey 폴더까지 포함하면 그 아래 4차 slug 폴더들을 반환.
+ * hint2nd 가 2차까지만이면 3차 Dewey 하위의 4차 slug 를 전부 훑어오는 건
+ * 범위가 과해서 스킵 (LLM 이 3차까지 먼저 결정하게 유도).
+ * 반환값은 `NNN_` prefix 를 가진 디렉터리 이름만.
+ */
+const SLUG_FOLDER_RE = /^\d{3}_[A-Za-z0-9가-힣_\-]+$/
+
+async function listExistingSlugFolders(wikiFS: WikiFS, hint2nd: string): Promise<string[]> {
+  if (!hint2nd) return []
+  const dir = hint2nd.endsWith('/') ? hint2nd : hint2nd + '/'
+  let entries: string[]
+  try {
+    entries = await wikiFS.list(dir)
+  } catch {
+    return []
+  }
+  // WikiFS implementations vary: Obsidian returns full vault paths
+  // (`raw/.../100_pms`), mocks may return bare names (`100_pms`). Normalize
+  // to basename before matching the NNN_ slug regex.
+  return entries
+    .map((e) => {
+      const stripped = e.replace(/\/+$/, '')
+      const idx = stripped.lastIndexOf('/')
+      return idx === -1 ? stripped : stripped.slice(idx + 1)
+    })
+    .filter((e) => SLUG_FOLDER_RE.test(e))
+    .sort()
+}
+
+function formatSlugBlock(hint2nd: string, slugs: readonly string[]): string {
+  const header = `== 기존 NNN_topic (4차) 폴더 목록 — 재사용 우선 ==`
+  if (!hint2nd) {
+    return `${header}\n(2차 힌트 미정 — 목록 조회 생략)`
+  }
+  if (slugs.length === 0) {
+    return `${header}\n부모 경로 "${hint2nd}" 아래에 기존 NNN_topic 폴더 없음 — 비어 있음. 신규 slug 생성 가이드 준수.`
+  }
+  const list = slugs.map((s) => `- ${s}`).join('\n')
+  return `${header}\n부모 경로: ${hint2nd}\n${list}`
+}
+
 export interface ClassifyLLMDeps {
   readonly wikiFS: WikiFS
   readonly httpClient: HttpClient
@@ -274,8 +318,12 @@ export async function classifyWithLLM(
   deps: ClassifyLLMDeps,
 ): Promise<{ destination: string; reason: string }> {
   const rules = await loadClassifyRules(deps.wikiFS)
-  const { provider, model } = resolveProvider('ingest', deps.config)
+  const existingSlugs = await listExistingSlugFolders(deps.wikiFS, hint2nd)
+  // §4.2.3 S3-2: CLASSIFY_PROVIDER 미지정 시 ingest 승계, 저가 모델 override 가능.
+  const { provider, model } = resolveProvider('classify', deps.config)
   const llm = new LLMClient(deps.httpClient, deps.config)
+
+  const slugBlock = formatSlugBlock(hint2nd, existingSlugs)
 
   const prompt = `당신은 Wikey PARA/Dewey 분류 어시스턴트입니다. 아래 CLASSIFY.md 규칙을 따라 파일의 목적지 경로를 결정하세요.
 
@@ -286,6 +334,8 @@ ${rules || '(CLASSIFY.md 없음 — raw/3_resources/ 기본 구조 가정)'}
 - 파일명: ${filename}
 - 종류: ${isDir ? '폴더(번들)' : '파일'}
 - 하드코딩 2차 힌트: ${hint2nd || '(없음)'}
+
+${slugBlock}
 
 == 출력 요구 ==
 JSON만 반환하세요. 다른 텍스트 없이. 형식:
@@ -301,7 +351,7 @@ JSON만 반환하세요. 다른 텍스트 없이. 형식:
 - 1차 PARA: 기본 3_resources, 단기 작업은 1_projects, 지속 영역은 2_areas, 완료/폐기는 4_archive
 - 2차 유형(NN_): 10_article, 20_report, 30_manual, 40_cad, 50_firmware, 60_note 중 하나 또는 CLASSIFY.md 정의
 - 3차 주제(NNN_): Dewey 10대분류(000 general/computer_science, 100 philosophy, 200 religion, 300 social_sciences, 400 language, 500 natural_science, 600 technology, 700 arts_recreation, 800 literature, 900 history_geography) 중 하나
-- 기존 폴더가 있으면 재사용 우선. 신규 폴더가 필요하면 NNN_topic 네이밍 규칙 준수
+- 4차 제품 slug (NNN_topic): 위 "기존 NNN_topic 폴더" 목록에 매칭되는 slug 가 있으면 **재사용 우선**. 목록에 없는 slug 를 제안할 때는 reason 에 "신규: <근거>" 로 이유 명시. 신규 slug 네이밍: 영문 kebab 또는 한글, 3~20자, 숫자 prefix(NNN_) 포함.
 - 애매하면 3_resources/{2차 힌트}/ 까지만 반환 가능`
 
   const callOpts: LLMCallOptions = { provider: provider as any, model, timeout: 60000 }
@@ -387,6 +437,12 @@ export interface MovePairOptions {
   readonly sourceVaultPath: string
   readonly destDir: string
   readonly wikiFS: WikiFS
+  /**
+   * §4.2.4 S4-1: optional guard. When supplied, movePair pre-registers the
+   * destination vault paths so that the Obsidian rename listener can skip
+   * these self-induced events (double-move prevention).
+   */
+  readonly renameGuard?: { register(path: string, ttlMs?: number): void }
 }
 
 export async function movePair(opts: MovePairOptions): Promise<MovePairResult> {
@@ -414,9 +470,12 @@ export async function movePair(opts: MovePairOptions): Promise<MovePairResult> {
   const registry = await loadRegistry(opts.wikiFS)
   const lookup = registryFindByPath(registry, opts.sourceVaultPath)
 
+  // §4.2.4 S4-1: pre-register expected renames so the vault listener skips them.
+  const newOriginalVaultPath = destDir + name
+  if (opts.renameGuard) opts.renameGuard.register(newOriginalVaultPath)
+
   // Move original
   renameSync(sourceFullPath, destFullPath)
-  const newOriginalVaultPath = destDir + name
 
   let movedSidecar = false
   let sidecarSkipReason: MovePairResult['sidecarSkipReason'] | undefined
@@ -434,9 +493,11 @@ export async function movePair(opts: MovePairOptions): Promise<MovePairResult> {
     } else if (existsSync(sidecarDest)) {
       sidecarSkipReason = 'dest-conflict'
     } else {
+      const sidecarNewVaultPath = newOriginalVaultPath + '.md'
+      if (opts.renameGuard) opts.renameGuard.register(sidecarNewVaultPath)
       renameSync(sidecarSource, sidecarDest)
       movedSidecar = true
-      newSidecarVaultPath = newOriginalVaultPath + '.md'
+      newSidecarVaultPath = sidecarNewVaultPath
     }
   }
 
