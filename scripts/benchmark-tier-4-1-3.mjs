@@ -18,7 +18,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, basename } from 'node:path'
 import {
   scoreConvertOutput,
   isLikelyScanPdf,
@@ -44,6 +44,7 @@ const CORPORA = [
   ['RP1', 'docs/samples/rp1-peripherals.pdf'],
   ['PMS', 'raw/0_inbox/PMS_제품소개_R10_20220815.pdf'],
   ['GOODSTREAM', 'raw/0_inbox/사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf'],
+  ['CONTRACT', 'raw/0_inbox/C20260410_용역계약서_SK바이오텍전자구매시스템구축.pdf'],
 ]
 
 function buildArgs(pdf, outDir, mode) {
@@ -59,6 +60,36 @@ async function getPageCount(pdf) {
     const { stdout } = await execAsync('python3', ['-c', 'import fitz, sys; print(len(fitz.open(sys.argv[1])))', pdf], { timeout: 5000 })
     return parseInt(stdout.trim(), 10) || 0
   } catch { return 0 }
+}
+
+async function getSourcePdfStats(pdf) {
+  try {
+    const { stdout } = await execAsync('python3', ['-c', `import fitz, sys, json
+doc = fitz.open(sys.argv[1])
+pages = len(doc)
+scan_like = 0
+all_text = ''
+for page in doc:
+    all_text += page.get_text()
+    pa = page.rect.width * page.rect.height
+    if pa <= 0: continue
+    max_ratio = 0.0
+    for img_info in page.get_images(full=True):
+        try:
+            bbox = page.get_image_bbox(img_info)
+            ia = bbox.width * bbox.height
+            if ia / pa > max_ratio: max_ratio = ia / pa
+        except Exception: pass
+    if max_ratio > 0.7: scan_like += 1
+doc.close()
+korean = sum(1 for c in all_text if '가' <= c <= '힣')
+print(json.dumps({
+    "scanRatio": scan_like / pages if pages else 0,
+    "textLayerChars": len(all_text),
+    "textLayerKoreanChars": korean,
+}))`, pdf], { timeout: 10000 })
+    return JSON.parse(stdout.trim())
+  } catch { return { scanRatio: 0, textLayerChars: 0, textLayerKoreanChars: 0 } }
 }
 
 async function runDocling(pdf, mode) {
@@ -98,7 +129,14 @@ async function benchmark() {
   for (const [name, pdf] of CORPORA) {
     console.log(`\n=== ${name} (${pdf})`)
     const pageCount = await getPageCount(pdf)
-    console.log(`  pages: ${pageCount}`)
+    const stats = await getSourcePdfStats(pdf)
+    const isScanBySource = stats.scanRatio > 0.5
+    const filenameHasKorean = /[가-힣]/.test(basename(pdf))
+    const textLayerCorrupted =
+      filenameHasKorean &&
+      stats.textLayerChars > 500 &&
+      stats.textLayerKoreanChars < 50
+    console.log(`  pages: ${pageCount}, scan-by-source: ${isScanBySource} (${(stats.scanRatio * 100).toFixed(0)}%), textLayer chars=${stats.textLayerChars} ko=${stats.textLayerKoreanChars} corrupted=${textLayerCorrupted}`)
 
     console.log(`  tier 1 (default)…`)
     const t1 = await runDocling(pdf, 'default')
@@ -108,8 +146,11 @@ async function benchmark() {
       continue
     }
     const a1 = analyze(t1.md, pageCount)
-    console.log(`    dur=${t1.dur.toFixed(1)}s score=${a1.score.toFixed(2)} decision=${a1.decision} flags=[${a1.flags.join(',')}] isScan=${a1.isScan} koreanLong=${(a1.koreanLong * 100).toFixed(1)}% bodyChars=${a1.bodyChars} lines=${a1.lines} koreanChars=${a1.koreanChars}`)
+    console.log(`    dur=${t1.dur.toFixed(1)}s score=${a1.score.toFixed(2)} decision=${a1.decision} flags=[${a1.flags.join(',')}] isScanByMd=${a1.isScan} koreanLong=${(a1.koreanLong * 100).toFixed(1)}% bodyChars=${a1.bodyChars} lines=${a1.lines} koreanChars=${a1.koreanChars}`)
 
+    // §4.1.3: source-based scan + text layer corruption 통합 감지.
+    //   MD 기반 isLikelyScanPdf 가 놓친 케이스 커버 (GOODSTREAM / CONTRACT 같은 PDF 의 text layer 손상).
+    const isScan = a1.isScan || isScanBySource || textLayerCorrupted
     let finalTier = '1-docling'
     let finalMd = t1.md
     let finalRaw = t1.raw     // §4.1.3: sidecar 저장용 raw (이미지 포함)
@@ -119,8 +160,8 @@ async function benchmark() {
     let a1a = null
     let a1b = null
 
-    if (a1.decision === 'accept' && !a1.isScan) {
-      // final = tier 1
+    if (a1.decision === 'accept' && !isScan) {
+      // final = tier 1 (non-scan)
     } else if (a1.decision === 'retry-no-ocr') {
       console.log(`  tier 1a (no-ocr)…`)
       t1aRun = await runDocling(pdf, 'no-ocr')
@@ -138,8 +179,11 @@ async function benchmark() {
       } else {
         console.log(`    ERROR: ${t1aRun.err}`)
       }
-    } else if (a1.decision === 'retry' || a1.isScan) {
-      console.log(`  tier 1b (force-ocr)…`)
+    } else if (a1.decision === 'retry' || isScan) {
+      // §4.1.3: Tier 1 accept + scan 감지 (MD 또는 source) 이어도 Tier 1b force-ocr 진입.
+      // 사용자 원칙 "scan 판정 → OCR 적용" — CONTRACT 같은 계약서 스캔의 깨진 기본 OCR 을
+      // force-ocr 로 복원 시도.
+      console.log(`  tier 1b (force-ocr, reason=${isScan ? 'scan' : 'kloss'})…`)
       t1bRun = await runDocling(pdf, 'force-ocr')
       if (t1bRun.md) {
         const koRegress = hasKoreanRegression(t1.md, t1bRun.md)
@@ -148,9 +192,9 @@ async function benchmark() {
         console.log(`    dur=${t1bRun.dur.toFixed(1)}s score=${a1b.score.toFixed(2)} decision=${a1b.decision} flags=[${a1b.flags.join(',')}] koRegress=${koRegress} bodyRegress=${bodyRegress}`)
         if (koRegress || bodyRegress) {
           console.log(`    → regression — keeping tier 1`)
+          if (isScan) finalTier = '1-docling-scan'  // 롤백 시 scan 정보 유지 (sidecar strip)
         } else if (a1b.decision === 'accept') {
-          // §4.1.3: Tier 1b 원인에 따라 tierKey suffix 분기 (scan vs korean-loss).
-          finalTier = a1.isScan ? '1b-docling-force-ocr-scan' : '1b-docling-force-ocr-kloss'
+          finalTier = isScan ? '1b-docling-force-ocr-scan' : '1b-docling-force-ocr-kloss'
           finalMd = t1bRun.md
           finalRaw = t1bRun.raw
           finalA = a1b

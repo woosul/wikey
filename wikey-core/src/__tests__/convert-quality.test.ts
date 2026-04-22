@@ -541,12 +541,18 @@ describe('hasRedundantEmbeddedImages — §4.1.3 sidecar 이미지 strip 판정'
     expect(hasRedundantEmbeddedImages(raw, stripped, 30, '1-docling')).toBe(false)
   })
 
-  it("Tier 1 accept 소규모 문서 (GOODSTREAM 기존 OCR 저장본 스타일) → false", () => {
-    // 사용자 명시: 문서 규모는 판정 기준이 아님. Tier 1 accept 면 raw 유지.
-    // GOODSTREAM 같은 기존 OCR 저장본의 이미지 파편화는 별개 이슈.
-    const stripped = '사업자등록번호 상호 대표자 '.repeat(20)  // ~250 chars
+  it("Tier 1 accept (non-scan) + 이미지 → false (vector PDF 기본 경로)", () => {
+    const stripped = '일반 vector PDF 본문 '.repeat(20)
     const raw = Array(5).fill('![Image](data:image/png;base64,AAAA)').join('\n') + '\n' + stripped
-    expect(hasRedundantEmbeddedImages(raw, stripped, 1, '1-docling')).toBe(false)
+    expect(hasRedundantEmbeddedImages(raw, stripped, 5, '1-docling')).toBe(false)
+  })
+
+  it("tierKey `1-docling-scan` (Tier 1 accept 이지만 source 가 scan, GOODSTREAM 케이스) → true", () => {
+    // extractPdfText 가 source PDF 이미지 덮힘률로 scan 감지 → tierKey suffix 부여.
+    // MD 기반 `isLikelyScanPdf` 가 못 잡는 "기존 OCR 저장본 스캔" 을 tierKey 로 커버.
+    const stripped = '사업자등록번호 상호 대표자 '.repeat(20)
+    const raw = Array(5).fill('![Image](data:image/png;base64,AAAA)').join('\n') + '\n' + stripped
+    expect(hasRedundantEmbeddedImages(raw, stripped, 1, '1-docling-scan')).toBe(true)
   })
 
   it('이미지 없음 → false (strip 불필요)', () => {

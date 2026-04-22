@@ -44,20 +44,27 @@ updated: 2026-04-22
   - GOODSTREAM: 453 → **599,454 chars**
 - raw/ 하위 sidecar 는 `.gitignore` 의 `raw/` 규칙으로 자동 제외. docs/samples/ 하위 sidecar 만 git tracked.
 
-## [2026-04-22] fix | §4.1.3 sidecar — tier 기반 이미지 strip 분기 (scan/force-ocr 시 생략)
+## [2026-04-22] fix | §4.1.3 sidecar — tier 기반 이미지 strip 분기 + source PDF scan 감지
 
 - 사용자 명시: "스캔이미지로 판정되어 ocr 옵션이 들어가면 이미지가 필요없다" (30p 계약서 스캔 포함). "소규모 문서" 는 판정 기준 아님. 단 "한글 관련 문제는 다른 케이스" (ROHM 은 vector PDF diagram 유지 필요).
-- 신규 helper: `wikey-core/src/convert-quality.ts::hasRedundantEmbeddedImages(rawMd, strippedMd, pageCount, tierKey)`:
-  - `isLikelyScanPdf = true` → strip (scan PDF, 30p 계약서 포함)
+- `wikey-core/src/convert-quality.ts::hasRedundantEmbeddedImages(rawMd, strippedMd, pageCount, tierKey)`:
+  - `isLikelyScanPdf = true` → strip (MD 기반 fallback)
   - tierKey `1b-docling-force-ocr-scan` → strip (scan 원인 OCR)
+  - tierKey `1-docling-scan` → strip (Tier 1 accept 이지만 source PDF 가 scan, GOODSTREAM/CONTRACT)
   - tierKey `1b-docling-force-ocr-kloss` → **유지** (한글 공백 소실 원인, vector PDF diagram)
-  - tierKey `1a-docling-no-ocr` → 유지 (pollution escalation, vector PDF)
+  - tierKey `1a-docling-no-ocr` → 유지 (pollution escalation)
   - tierKey `1-docling` → 유지 (기본 vector PDF)
-- `extractPdfText` Tier 1b 채택 시 tierKey suffix 분기: `tier1bKey = isScan ? '...-scan' : '...-kloss'`. cache 키 및 sidecar 정책 모두에 반영.
-- `benchmark-tier-4-1-3.mjs` 도 동일 로직.
-- 테스트 340 → **342 PASS** (+2 신규 tier 분기 케이스).
-- 실측 매핑: PMS `1a-docling-no-ocr` raw / ROHM `1b-docling-force-ocr-kloss` **raw (diagram 유지)** / RP1 `1-docling` raw / GOODSTREAM `1-docling` raw.
-- 열린 질문: GOODSTREAM (기존 OCR 저장 스캔본) 은 `isLikelyScanPdf=false` 로 감지 안 되어 현 기준에서 raw 유지. 파편화 관찰은 별도 이슈.
+- `extractPdfText` Tier 1b 채택 시 tierKey suffix 분기: `tier1bKey = isScan ? '...-scan' : '...-kloss'`.
+- **Source PDF scan 감지** (근본 수정, 2026-04-22): MD 기반 `isLikelyScanPdf` 가 docling bitmap OCR 결과를 입력받아 GOODSTREAM 같은 "기존 OCR 저장 스캔본" 을 놓침. pymupdf 로 페이지 대비 **최대 이미지 면적 비율** 직접 측정. `scanRatioBySource > 0.5` → `isScanBySource=true`. Tier 1 accept + source scan 이면 `tierKey = '1-docling-scan'` 로 설정해 sidecar strip.
+- `benchmark-tier-4-1-3.mjs` 도 동일 로직 + `getScanRatioBySource()` helper.
+- 테스트 340 → **343 PASS** (+3: tier 분기 2 + `1-docling-scan` 1).
+- **실측 5 코퍼스 매핑**:
+  - PMS (scan 0%) → `1a-docling-no-ocr` raw
+  - ROHM (scan 0%) → `1b-docling-force-ocr-kloss` raw (diagram 유지)
+  - RP1 (scan 0%) → `1-docling` raw
+  - GOODSTREAM (scan **100%**, 1p 사업자등록증) → `1-docling-scan` **stripped 453 chars** ✓
+  - CONTRACT (scan **100%**, 6p 용역계약서, bodyChars 8114 — 소규모 아님) → `1-docling-scan` **stripped 8114 chars** ✓
+- bodyChars 임계 의존성 제거 — "소규모는 판정 기준 아님" 사용자 명시 충족.
 
 ## [2026-04-22] eval | §4.1.3.5 PMS 10-run determinism (clean MD baseline)
 

@@ -1194,14 +1194,57 @@ async function extractPdfText(
   // Page-aware threshold for OCR-style tiers (markitdown-ocr / Vision render).
   // Vector-only PDFs trick markitdown-ocr into emitting a few cover-image OCR chars
   // for many pages — we need to require chars-per-page above a floor.
+  // §4.1.3: source PDF 이미지 덮힘률로 scan 감지 병행.
+  //   MD 기반 `isLikelyScanPdf` 는 docling bitmap OCR 결과를 입력받아 GOODSTREAM 같은
+  //   "기존 OCR 저장 스캔본" 을 놓침. pymupdf 로 페이지 대비 이미지 면적 비율 직접 측정.
   let pdfPageCount = 0
+  let scanRatioBySource = 0
+  let textLayerChars = 0
+  let textLayerKoreanChars = 0
   try {
     const { stdout } = await execFileAsync('python3', [
       '-c',
-      `import fitz, sys; print(len(fitz.open(sys.argv[1])))`,
+      `import fitz, sys, json
+doc = fitz.open(sys.argv[1])
+pages = len(doc)
+scan_like = 0
+all_text = ''
+for page in doc:
+    all_text += page.get_text()
+    pa = page.rect.width * page.rect.height
+    if pa <= 0:
+        continue
+    max_ratio = 0.0
+    for img_info in page.get_images(full=True):
+        try:
+            bbox = page.get_image_bbox(img_info)
+            ia = bbox.width * bbox.height
+            if ia / pa > max_ratio:
+                max_ratio = ia / pa
+        except Exception:
+            pass
+    if max_ratio > 0.7:
+        scan_like += 1
+doc.close()
+ratio = scan_like / pages if pages else 0
+korean = sum(1 for c in all_text if '가' <= c <= '힣')
+print(json.dumps({
+    "pages": pages,
+    "scanRatio": ratio,
+    "textLayerChars": len(all_text),
+    "textLayerKoreanChars": korean,
+}))`,
       fullPath,
-    ], { timeout: 5000, env })
-    pdfPageCount = parseInt(stdout.trim(), 10) || 0
+    ], { timeout: 10000, env })
+    try {
+      const parsed = JSON.parse(stdout.trim())
+      pdfPageCount = parsed.pages || 0
+      scanRatioBySource = parsed.scanRatio || 0
+      textLayerChars = parsed.textLayerChars || 0
+      textLayerKoreanChars = parsed.textLayerKoreanChars || 0
+    } catch (_e) {
+      pdfPageCount = parseInt(stdout.trim(), 10) || 0
+    }
   } catch (_err) {
     pdfPageCount = 0
   }
@@ -1226,15 +1269,27 @@ async function extractPdfText(
       const md = readDoclingOutput(tmpDir, fullPath)
       const ok = accept('1 docling', md)
       if (ok) {
-        // 품질 평가 — 두 가지 자동 retry 조건:
-        //   (a) 한국어 공백 소실 > 30% (ROHM Wi-SUN 스타일 웹페이지 프린트 PDF)
-        //   (b) 스캔 PDF 감지 — text-layer 거의 없음 (페이지당 100자 미만 + 한글 50자 미만)
-        // 사용자 UI override 대신 프로그램 로직으로 자동 판정.
+        // 품질 평가 — 자동 retry 조건:
+        //   (a) 한국어 공백 소실 > 30% (ROHM Wi-SUN 스타일)
+        //   (b) 스캔 PDF 감지 — MD 기반 OR source 이미지 덮힘률 > 0.5
+        //   (c) text layer 손상 감지 — 파일명 한국어 + source text layer 한글 거의 없음
+        //       (CONTRACT 같은 비표준 폰트 매핑 PDF: text layer 에 `Etr8l E` 같은 깨진 문자만)
+        //   (d) §4.1.3.2 image-ocr-pollution (별도 Tier 1a 경로)
         const ratio = koreanLongTokenRatio(ok)
-        const isScan = isLikelyScanPdf(ok, pdfPageCount)
+        const isScanByMd = isLikelyScanPdf(ok, pdfPageCount)
+        const isScanBySource = scanRatioBySource > 0.5
+        const { basename } = require('node:path') as typeof import('node:path')
+        const filenameHasKorean = /[가-힣]/.test(basename(sourcePath))
+        const textLayerCorrupted =
+          filenameHasKorean &&
+          textLayerChars > 500 &&
+          textLayerKoreanChars < 50
+        const isScan = isScanByMd || isScanBySource || textLayerCorrupted
         const perPage = bodyCharsPerPage(ok, pdfPageCount)
         const quality = scoreConvertOutput(ok, { retryOnKoreanWhitespace: true })
-        log(`tier 1 docling quality — score=${quality.score.toFixed(2)}, decision=${quality.decision}, koreanLong=${(ratio * 100).toFixed(1)}%, perPage=${perPage.toFixed(0)}, isScan=${isScan}, flags=[${quality.flags.join(',')}]`)
+        log(`tier 1 docling quality — score=${quality.score.toFixed(2)}, decision=${quality.decision}, koreanLong=${(ratio * 100).toFixed(1)}%, perPage=${perPage.toFixed(0)}, isScanByMd=${isScanByMd}, isScanBySource=${isScanBySource}(${(scanRatioBySource * 100).toFixed(0)}%), textLayerCorrupted=${textLayerCorrupted}(chars=${textLayerChars},ko=${textLayerKoreanChars}), flags=[${quality.flags.join(',')}]`)
+        // Tier 1 accept + scan 미감지만 즉시 finalize. scan 감지(MD/source/corrupted) 이면
+        // 사용자 원칙 "scan 판정 → force-ocr 적용" 에 따라 Tier 1b 진입 (아래 shouldRetry 블록).
         if (quality.decision === 'accept' && !isScan) return finalize(ok, '1-docling')
 
         // Tier 1a (§4.1.3.3): image-ocr-pollution escalation — docling --no-ocr 로 재시도.
@@ -1290,15 +1345,17 @@ async function extractPdfText(
             if (retryOk) {
               // Regression guard — force-ocr 결과가 tier 1 대비 급감하면 tier 1 채택.
               // 한국어 regression (50% 미만) + 언어 무관 본문 regression (500자+ 중 50% 미만) 이중 체크.
+              // 롤백 시 source-scan 정보 유지 — Tier 1 유지하되 sidecar strip 트리거.
+              const rollbackKey = isScan ? '1-docling-scan' : '1-docling'
               if (hasKoreanRegression(ok, retryOk)) {
                 const baseKo = countKoreanChars(ok)
                 const retryKo = countKoreanChars(retryOk)
                 warn(`tier 1b korean regression — base=${baseKo} → force-ocr=${retryKo} (< 50%), falling back to tier 1`)
-                return finalize(ok, '1-docling')
+                return finalize(ok, rollbackKey)
               }
               if (hasBodyRegression(ok, retryOk)) {
                 warn(`tier 1b body regression — force-ocr total chars < 50% of tier 1, falling back to tier 1`)
-                return finalize(ok, '1-docling')
+                return finalize(ok, rollbackKey)
               }
               const retryQ = scoreConvertOutput(retryOk, { retryOnKoreanWhitespace: false })
               const retryRatio = koreanLongTokenRatio(retryOk)
@@ -1312,7 +1369,7 @@ async function extractPdfText(
               const baseQ = scoreConvertOutput(ok, { retryOnKoreanWhitespace: false })
               if (baseQ.score > retryQ.score) {
                 warn(`tier 1b worse than tier 1 (score ${retryQ.score.toFixed(2)} < ${baseQ.score.toFixed(2)}) — falling back to tier 1`)
-                return finalize(ok, '1-docling')
+                return finalize(ok, rollbackKey)
               }
               log('tier 1b still low quality — fall through to tier 2')
             }
@@ -1320,7 +1377,8 @@ async function extractPdfText(
             warn(`tier 1b docling --force-ocr error: ${errorMessage(err)}`)
             // tier 1 은 공백 소실이 있지만 적어도 텍스트는 있음 → fallback
             warn('tier 1b failed, falling back to tier 1 despite whitespace loss')
-            return finalize(ok, '1-docling')
+            const rollbackKeyOnErr = isScan ? '1-docling-scan' : '1-docling'
+            return finalize(ok, rollbackKeyOnErr)
           } finally {
             try { rmSync(retryDir, { recursive: true, force: true }) } catch { /* ignore */ }
           }

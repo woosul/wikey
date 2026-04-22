@@ -574,13 +574,22 @@ tier 1 docling 실행
 - `wikey-core/src/ingest-pipeline.ts::ingest` — 기존 sidecar 블록에 `ext !== 'pdf'` 조건 추가 (PDF 는 finalize 에서 이미 처리).
 - `scripts/benchmark-tier-4-1-3.mjs` — 동일 로직 반영.
 
-**실측 벤치마크 — 사용자 기준에 정확히 매핑**:
-- `raw/0_inbox/PMS_제품소개_R10_20220815.pdf.md` — **raw** (6,339,748 chars, 1a-docling-no-ocr) ← gitignored
-- `docs/samples/ROHM_Wi-SUN Juta통신모듈(BP35CO-J15).pdf.md` — **raw** (1,505,611 chars, 1b-docling-force-ocr-kloss) ✓ diagram 유지
-- `docs/samples/rp1-peripherals.pdf.md` — **raw** (1,897,465 chars, 1-docling)
-- `raw/0_inbox/사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf.md` — **raw** (599,454 chars, 1-docling) ← gitignored
+**Source PDF 기반 scan 감지 추가** (2026-04-22 재보강): MD 기반 `isLikelyScanPdf` 가 docling bitmap OCR 결과를 입력받아 GOODSTREAM/CONTRACT 같은 "기존 OCR 저장 스캔본" 을 놓침. 사용자 지적: "순수 이미지 스캔본 PDF 인데 isLikelyScanPdf=false 라는 판정이 잘못된 것. 후속 보정 말고 원본 판정에 집중." → pymupdf 로 **각 페이지 최대 이미지 면적 / 페이지 면적 비율** 직접 측정 (> 0.7 이면 scan-like page). scan-like 페이지가 전체의 50% 초과이면 `isScanBySource=true`.
 
-**열린 질문 (기준 밖)**: GOODSTREAM 은 "기존 OCR 저장본 스캔" 이라 `isLikelyScanPdf=false` 이고 `tierKey=1-docling`. 사용자 기준에 해당 안 되어 raw 유지. 이미지 파편화 관찰은 별도 이슈 (Tier 1 default 의 bitmap OCR 영향 가능성) — 후속 검토.
+- `extractPdfText` 초반 pymupdf subprocess 호출 → `scanRatioBySource` 획득.
+- Tier 1 accept + `isScanBySource=true` + `!isScanByMd` → `tierKey = '1-docling-scan'` (Tier 1 유지, sidecar strip 트리거).
+- `hasRedundantEmbeddedImages` 가 `tierKey === '1-docling-scan'` 도 strip 조건으로 인식.
+
+**실측 벤치마크 — 5 코퍼스 (사용자 기준 정확히 매핑)**:
+| 코퍼스 | pages | scan-by-source | tierKey | sidecar |
+|---|---:|---:|---|---|
+| ROHM | 5 | 0% | `1b-docling-force-ocr-kloss` | raw (diagram 유지) |
+| RP1 | 93 | 0% | `1-docling` | raw |
+| PMS | 31 | 0% | `1a-docling-no-ocr` | raw (UI 스크린샷 유지) |
+| **GOODSTREAM** | 1 | **100%** | **`1-docling-scan`** | **stripped 453 chars** ✓ |
+| **CONTRACT** | 6 | **100%** | **`1-docling-scan`** | **stripped 8114 chars** ✓ |
+
+사용자 "소규모는 판정 기준 아님" 명시 충족: CONTRACT (6p 계약서 스캔, bodyChars 8114 — 소규모 아님) 도 source 기반 scan 감지로 정확히 strip 대상. bodyChars 임계 의존성 제거.
 
 **기록**: `activity/phase-4-1-3-benchmark-2026-04-22.md` (요약 테이블 + Tier별 상세).
 
