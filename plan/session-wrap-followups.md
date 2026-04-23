@@ -1,7 +1,19 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-23 session 2 (§4.2 Stage 1~4 전량 완료 — URI/registry foundation + pair move + LLM 분류 정제 + vault listener + startup reconcile)
+> 최신 갱신: 2026-04-23 session 2 마무리 + docs mirror 정비 (§4.2 Stage 1~4 전량 완료 + result/todo/plan 1:1 mirror)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-23 세션 2 docs 동기화 후속 — result/todo/plan §4.2 1:1 mirror 정비
+
+Session 2 의 Stage 3+4 완료 직후 사용자 요청으로 `result-doc-writer` 스킬 규칙에 따라 문서 구조를 정비. 이전에 result `§4.2.3 = Stage 2` / todo `§4.2.3 = Stage 3` 로 번호가 어긋나 있던 문제를 해소:
+
+- `activity/phase-4-result.md §4.2` — 번호 mirror 로 재정렬: §4.2.1 Stage 1 / §4.2.2 Stage 2 (Integration + Session 1 evidence 흡수) / §4.2.3 Stage 3 / §4.2.4 Stage 4 (링크 안정성 회귀선 .7/.8 + Session 2 evidence .9 흡수) / §4.2.5 호환성 전략 / §4.2.6 범위 밖 — Phase 5 이관. 각 섹션에 `> tag: #...` 라인 추가, 구 §4.2.7 "Stage 3/4 잔여 작업 상세 설계" 는 실제 구현 완료로 흡수 제거.
+- `plan/phase-4-2-plan.md` — Stage 1/2/3/4 각 섹션에 "완료 확증" 블록 추가, §6 세션 실행 기록 리라이트, §8 검증 기준 표에 실제 증거 컬럼 추가 (테스트 434 / +82 / 실측 증거), §10 codex finding 표에 ✅ 컬럼, §11 "본 계획 완결 선언" 신규.
+- `plan/phase-4-todo.md` — 구조는 이미 올바름 (§4.2.1/2/3/4 전량 [x]). 상태 라인 일관성만 확인.
+
+다음 세션 진입점은 아래 블록 그대로 §4.3.
 
 ---
 
