@@ -24,7 +24,7 @@ Stage 1. ID & vault_path foundation        Stage 2. Pair move + frontmatter rewr
 ───────────────────────────────────        ──────────────────────────────────────          ────────────────────          ──────────────────────────────────
 source-id.ts (hash, bundle)  ─┐            movePair (registry 경유)                ──┐     classify 4차 prompt           vault.on('rename') + guard
                               ├─> source-registry.ts ─>│                             ├─>  classify 저가 모델 키          vault.on('delete') + tombstone
-frontmatter 스키마 (id+path) ─┘            rewriteSourcePageMeta (post-move)     ──┤      Audit "Re-classify" UI         startup reconciliation scan
+frontmatter 스키마 (id+path) ─┘            rewriteSourcePageMeta (post-move)     ──┤      Audit dropdown paraRoot       startup reconciliation scan
                                            bash --move + registry-update.mjs    ──┘      CLASSIFY.md 피드백             §4.1.1.9 [ ] 해소
                                            plugin 호출처 통합
 ```
@@ -200,12 +200,12 @@ URI/registry 와 독립. Stage 2 뒤 자연스러움.
 |---|------|------|-----------|-----------------------------------|
 | S3-1 | `classifyWithLLM` 프롬프트 — 4차 제품 slug 힌트 강화 ("기존 폴더 재사용 우선, 없으면 `NNN_topic` 규칙") | `classify.ts` | vitest 4 | **vitest 5 green** (재사용/신규/full-path/fallback/CLASSIFY_PROVIDER override) |
 | S3-2 | `CLASSIFY_PROVIDER` / `CLASSIFY_MODEL` — `resolveProvider('classify', cfg)` 추가. 미지정 시 `ingest` 승계 | `config.ts`, `types.ts`, `wikey.conf` | vitest 2 | **vitest 4 green** (inherit / provider override / model-only / provider+model) |
-| S3-3 | Audit 패널 "Re-classify with LLM" 토글 | `sidebar-chat.ts` | 수동 UI | `inboxReclassify: Map<string,boolean>` state + `.wikey-audit-reclass-line` DOM + purple accent CSS |
-| S3-4 | CLASSIFY.md 피드백 append — 사용자가 dropdown 변경 시 "## 피드백 로그" 섹션에 line append | `sidebar-chat.ts` + 헬퍼 | 로그 파일 변화 | **vitest 4 green** — `wiki-ops.ts::appendClassifyFeedback` (파일 생성 / 섹션 append / 중복 방지 / dedupe) |
+| S3-3 | ~~Audit 패널 "Re-classify with LLM" 토글~~ → **paraRoot 옵션** | `sidebar-chat.ts` + `classify.ts` | vitest 3 | session 4 재설계: 체크박스 철회, `classifyFileAsync(.., { paraRoot })` + `swapParaRoot` + prompt 제약 |
+| S3-4 | ~~CLASSIFY.md 피드백 append~~ **(session 4 철회)** | — | — | `appendClassifyFeedback` 함수/타입/테스트/export 전량 제거. 철회 사유: S3-3 UI 재설계로 사용자 선택 ≠ LLM 제안 비교 메커니즘 자체가 사라짐. Phase 5 §5.6 에서 다른 입력으로 재설계. |
 
-**Stage 3 완료 확증** (2026-04-23 session 2, commit `502c07a`): 결과 문서 `activity/phase-4-result.md §4.2.3`.
+**Stage 3 완료 확증**: Session 2 (commit `502c07a`) 에 4축 원안 구현, Session 4 (commit `54f05b9`) 에 S3-3/S3-4 재설계 (paraRoot 도입 + 피드백 로그 철회). 결과 문서 `activity/phase-4-result.md §4.2.3.3/§4.2.3.4`.
 
-커밋: `feat(phase-4.2): Stage 3+4 — LLM 분류 정제 + vault listener + startup reconcile` (`502c07a`, Stage 3 + Stage 4 한 커밋에 포함).
+커밋: `feat(phase-4.2): Stage 3+4 — LLM 분류 정제 + vault listener + startup reconcile` (`502c07a`, session 2) + `refactor(phase-4.2.3): Audit UI 재설계 — Re-classify 체크박스 철회 + paraRoot 옵션` (`54f05b9`, session 4).
 
 ---
 
@@ -235,6 +235,8 @@ URI/registry 와 독립. Stage 2 뒤 자연스러움.
 **Session 1** (2026-04-23 전반, commit `3381892`): Stage 1 S1-1 → S1-2 → S1-3 → S1-4 (TDD) + Stage 2 S2-1/S2-2 → S2-5 (registry CLI) → S2-6/S2-7 (bash pair + hint) → S2-3/S2-4 (plugin smoke) + `scripts/tests/pair-move.smoke.sh` 2 케이스 6 assertion green + 통합 smoke (벤치마크 코퍼스 재이동 안전 확인).
 
 **Session 2** (2026-04-23 후반, commit `502c07a`): Stage 3 S3-2 → S3-1 → S3-4 → S3-3 (config 키 먼저 → 프롬프트 배선 → 피드백 헬퍼 → UI 체크박스 순) + Stage 4 S4-3 (reconcile 확장) → S4-2 (banner) → S4-1 (pure helper + RenameGuard + main.ts 배선) → S4-4 (deprecation warn) + 링크 안정성 회귀선 2회차 (사용자 지적 반영) + real-disk 통합 4 케이스.
+
+**Session 4 재설계** (2026-04-23, commit `54f05b9`): 사용자 피드백 "UI 가 이상해졌어. auto 자동 / 수동 지정 2 모드로 명료함에 이중 선택 불필요 + 수동 지정은 PARA 만" 반영 — S3-3 Re-classify 체크박스 + 상태 + CSS 전량 철회, S3-4 피드백 로그 함수/타입/테스트/export 전량 제거. 대신 `classify.ts` 에 `ClassifyFileOptions.paraRoot` 옵션 + `swapParaRoot` + LLM prompt 필수 제약 블록 추가 (classify.test +3).
 
 **결과 문서 mirror** (후속 커밋 예정): `activity/phase-4-result.md §4.2` 를 본 계획과 todo 에 1:1 mirror 로 재정렬 + plan 문서 (본 파일) 갱신 + session-wrap-followups / log.md / memory 동기화.
 

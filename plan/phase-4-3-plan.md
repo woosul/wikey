@@ -204,7 +204,7 @@ export interface Citation {
    - **외부 앱 위임 필요 시** (대용량 PDF 를 내장 뷰어 대신 OS 기본 앱으로 열기): `app.openWithDefaultApp(vaultPath)` — Obsidian 1.5+ 에 존재, fallback 은 `window.open('file://'+absolutePath)` (Electron renderer 에서 허용).
    - **외부 URI** (`uri-hash:*` prefix): `window.open(uri, '_blank', 'noopener')`.
    - **tombstone**: `new Notice('원본 삭제됨 (registry tombstone)')`, 버튼은 disabled + opacity 0.4.
-3. **철학 가드 CSS**: 보조 링크 크기 `0.68em`, 투명도 `opacity: 0.7`, wikilink 보다 눈에 덜 띄게 (wikey-audit-reclass-line 패턴 재사용).
+3. **철학 가드 CSS**: 보조 링크 크기 `0.68em`, 투명도 `opacity: 0.7`, wikilink 보다 눈에 덜 띄게 (독립 클래스 `.wikey-citation-link`, session 4 구현).
 4. **접근성** (v2 추가): 보조 링크에 `aria-label="원본 파일 열기: <filename>"` + `title` 속성. 색약 사용자는 아이콘 + 텍스트 조합으로 구분 가능. 필요 시 Phase 5 §5.7 에서 사용자 설정 toggle 로 아이콘-only / 텍스트-only 선택 가능하게.
 
 ### 3.4 실제 공유: 답변 하단 "근거 소스" 패널 (옵션)
