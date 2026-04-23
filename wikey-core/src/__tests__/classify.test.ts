@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classifyFile, classifyWithLLM, clearClassifyRulesCache } from '../classify.js'
+import { classifyFile, classifyFileAsync, classifyWithLLM, clearClassifyRulesCache } from '../classify.js'
 import type { HttpClient, HttpRequestOptions, HttpResponse, WikeyConfig, WikiFS } from '../types.js'
 
 // ── LLM test helpers (reused for S3-1 / S3-4) ──
@@ -333,5 +333,59 @@ describe('classifyWithLLM — 4차 제품 slug 힌트 주입 (§4.2.3 S3-1)', ()
 
     expect(http.calls).toHaveLength(1)
     expect(http.calls[0].url).toContain('generativelanguage.googleapis.com')
+  })
+
+  it('paraRoot 제약 전달 시 prompt 에 "반드시 <paraRoot>/ 로 시작" constraint 주입', async () => {
+    clearClassifyRulesCache()
+    const http = mockHttpOnce(geminiBody(
+      '```json\n{"destination":"raw/1_projects/30_manual/600_technology/","reason":"scoped"}\n```',
+    ))
+    const wikiFS = memFS({}, {})
+    await classifyWithLLM(
+      'Mystery-Paper.pdf',
+      false,
+      'raw/3_resources/30_manual/',
+      { wikiFS, httpClient: http.client, config: classifyBaseConfig },
+      'raw/1_projects',
+    )
+    const prompt = http.lastPrompt()
+    expect(prompt).toContain('필수 제약')
+    expect(prompt).toContain('raw/1_projects/')
+  })
+})
+
+describe('classifyFileAsync — paraRoot 옵션 (수동 PARA 지정)', () => {
+  it('hardcoded rules 가 정상 결정 시 PARA prefix 를 지정값으로 swap', async () => {
+    // 여기선 LLM 호출 없음. needsThirdLevel=false 경로만 확인.
+    clearClassifyRulesCache()
+    const wikiFS = memFS({}, {})
+    const http = mockHttpOnce('') // 불릴 일 없음
+    const res = await classifyFile('AI_report_analysis.pdf', false)
+    // rules 는 raw/3_resources/20_report/000_computer_science/ 방향
+    expect(res.destination.startsWith('raw/3_resources/')).toBe(true)
+    const withPara = await classifyFileAsync(
+      'AI_report_analysis.pdf',
+      false,
+      { wikiFS, httpClient: http.client, config: classifyBaseConfig },
+      { paraRoot: 'raw/2_areas' },
+    )
+    expect(withPara.destination.startsWith('raw/2_areas/')).toBe(true)
+    expect(withPara.destination.endsWith(res.destination.replace(/^raw\/[1-4]_[a-z_]+/, ''))).toBe(true)
+  })
+
+  it('LLM fallback 결과의 PARA 를 지정값으로 강제 swap (LLM 오답 방어)', async () => {
+    clearClassifyRulesCache()
+    // LLM 이 raw/4_archive 로 잘못 돌려도 paraRoot=raw/1_projects 로 swap 되어야 함.
+    const http = mockHttpOnce(geminiBody(
+      '```json\n{"destination":"raw/4_archive/30_manual/600_technology/510_pms/","reason":"x"}\n```',
+    ))
+    const wikiFS = memFS({}, {})
+    const res = await classifyFileAsync(
+      'Unknown.pdf',
+      false,
+      { wikiFS, httpClient: http.client, config: classifyBaseConfig },
+      { paraRoot: 'raw/1_projects' },
+    )
+    expect(res.destination).toBe('raw/1_projects/30_manual/600_technology/510_pms/')
   })
 })

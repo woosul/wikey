@@ -2,7 +2,7 @@ import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
 import {
   query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair,
-  fetchModelList, appendClassifyFeedback,
+  fetchModelList,
   resolveSourceSync, loadRegistry,
 } from 'wikey-core'
 import type { Citation, ResolvedSource, SourceRegistry } from 'wikey-core'
@@ -1604,8 +1604,6 @@ Click [[page name]] in answers to navigate to the wiki page.
 
   private inboxSelections: Set<string> = new Set()
   private inboxRowMap: Map<string, HTMLElement> = new Map()
-  /** §4.2.3 S3-3: per-row "Re-classify with LLM" toggle (only for needsThirdLevel rows). */
-  private inboxReclassify: Map<string, boolean> = new Map()
   // Preserve fail state across re-renders. Cleared on manual retry or 10min TTL.
   private inboxFailState: Map<string, { error: string; timestamp: number }> = new Map()
 
@@ -1696,7 +1694,6 @@ Click [[page name]] in answers to navigate to the wiki page.
 
     this.inboxSelections = new Set()
     this.inboxRowMap = new Map()
-    this.inboxReclassify = new Map()
 
     const basePath = (this.app.vault.adapter as any).basePath ?? ''
     const { existsSync, statSync } = require('node:fs') as typeof import('node:fs')
@@ -1814,30 +1811,6 @@ Click [[page name]] in answers to navigate to the wiki page.
       pathLine.createEl('span', { text: hint.hint, cls: 'wikey-audit-path' })
       if (!isDir) pathLine.createEl('span', { text: recommend, cls: `wikey-audit-recommend wikey-audit-recommend-${recommend.toLowerCase()}` })
 
-      // §4.2.3 Stage 3 S3-3: Re-classify with LLM (needsThirdLevel rows only).
-      if (hint.needsThirdLevel) {
-        const reclassLine = info.createDiv({ cls: 'wikey-audit-reclass-line' })
-        const reclassCb = reclassLine.createEl('input', {
-          attr: { type: 'checkbox' },
-          cls: 'wikey-audit-reclass-cb',
-        })
-        reclassLine.createEl('span', {
-          text: 'Re-classify with LLM',
-          cls: 'wikey-audit-reclass-label',
-        })
-        reclassCb.addEventListener('change', (e) => {
-          e.stopPropagation()
-          this.inboxReclassify.set(f, (reclassCb as HTMLInputElement).checked)
-        })
-        reclassLine.addEventListener('click', (e) => {
-          // Let user click the label area to toggle, but don't bubble to row click.
-          if (e.target === reclassCb) return
-          e.stopPropagation()
-          ;(reclassCb as HTMLInputElement).checked = !(reclassCb as HTMLInputElement).checked
-          this.inboxReclassify.set(f, (reclassCb as HTMLInputElement).checked)
-        })
-      }
-
       // Preserve prior fail state across re-renders (TTL 10min, cleared on retry)
       const failInfo = this.inboxFailState.get(f)
       if (failInfo && Date.now() - failInfo.timestamp < 10 * 60 * 1000) {
@@ -1906,41 +1879,19 @@ Click [[page name]] in answers to navigate to the wiki page.
       delayBtn.setAttr('disabled', 'true')
 
       // Resolve PARA destination per file (but do NOT move yet).
-      // For "auto" mode, fall back to LLM classifier when hardcoded rules can't
-      // determine a destination (unknown PDF, 3차 Dewey 누락 등).
-      // §4.2.3 S3-3/S3-4: when user checks "Re-classify with LLM" on a needsThirdLevel
-      //   row, force classifyFileAsync even if global dest is specific; and if the
-      //   resulting LLM dest differs from the global dropdown pick, log feedback.
+      //   auto          → classifyFileAsync (rules + needsThirdLevel 시 LLM fallback)
+      //   수동 PARA     → classifyFileAsync(paraRoot=선택PARA) — sub-folder 는 동일 경로로 CLASSIFY.md/LLM 이 결정, PARA prefix 만 고정
       const plan: Array<{ name: string; dest: string }> = []
       for (const f of selected) {
         const fullPath = join(basePath, 'raw/0_inbox', f)
         const isDir = existsSync(fullPath) && statSync(fullPath).isDirectory()
-        const reclassifyForced = this.inboxReclassify.get(f) === true
-        let targetDest = dest
-        if (dest === 'auto' || reclassifyForced) {
-          const hint = await classifyFileAsync(f, isDir, {
-            wikiFS: this.plugin.wikiFS,
-            httpClient: this.plugin.httpClient,
-            config: this.plugin.buildConfig(),
-          })
-          const llmDest = hint.destination || ''
-          // §4.2.3 S3-4: log when user's global pick disagrees with LLM's suggestion
-          // (only meaningful when user had a specific dest in mind — not 'auto').
-          if (reclassifyForced && dest !== 'auto' && llmDest && llmDest !== dest) {
-            try {
-              await appendClassifyFeedback(this.plugin.wikiFS, {
-                filename: f,
-                userChoice: dest,
-                llmChoice: llmDest,
-                llmReason: hint.hint || '',
-                at: new Date().toISOString().slice(0, 10),
-              })
-            } catch (err) {
-              console.warn('[Wikey] appendClassifyFeedback failed:', f, err)
-            }
-          }
-          targetDest = llmDest
-        }
+        const paraRoot = dest === 'auto' ? undefined : dest
+        const hint = await classifyFileAsync(f, isDir, {
+          wikiFS: this.plugin.wikiFS,
+          httpClient: this.plugin.httpClient,
+          config: this.plugin.buildConfig(),
+        }, { paraRoot })
+        const targetDest = hint.destination || paraRoot || ''
         if (targetDest) plan.push({ name: f, dest: targetDest })
       }
 

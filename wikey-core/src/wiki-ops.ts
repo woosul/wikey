@@ -36,64 +36,6 @@ export function injectSourceFrontmatter(content: string, meta: SourceFrontmatter
  * Stage 2 S2-2 — update only vault_path / sidecar_vault_path on an existing page.
  * Other fields (source_id/hash/size/first_seen/preserved LLM fields) untouched.
  */
-/**
- * §4.2.3 Stage 3 S3-4 — CLASSIFY.md 피드백 로그 append.
- *
- * 사용자가 LLM 제안과 다른 목적지를 선택했을 때 호출된다.
- * - 파일 부재 시 새로 생성 (헤더 + 피드백 로그 섹션)
- * - `## 피드백 로그` 섹션 없으면 파일 말미에 추가
- * - 섹션 존재 시 해당 섹션에 한 줄 append
- * - 마지막 엔트리가 동일하면 중복 append 스킵 (false 반환)
- *
- * 반환: append 되었으면 true, 중복 스킵이면 false.
- */
-export interface ClassifyFeedbackEntry {
-  readonly filename: string
-  readonly userChoice: string
-  readonly llmChoice: string
-  readonly llmReason: string
-  readonly at: string // 'YYYY-MM-DD'
-}
-
-const CLASSIFY_MD_PATH = 'raw/CLASSIFY.md'
-const FEEDBACK_HEADER = '## 피드백 로그'
-
-export async function appendClassifyFeedback(
-  wikiFS: WikiFS,
-  entry: ClassifyFeedbackEntry,
-): Promise<boolean> {
-  const line = `- ${entry.at} ${entry.filename} → ${entry.userChoice} (LLM: ${entry.llmChoice}, 사유: ${entry.llmReason})`
-
-  const exists = await wikiFS.exists(CLASSIFY_MD_PATH)
-  if (!exists) {
-    const content = `# CLASSIFY\n\n${FEEDBACK_HEADER}\n${line}\n`
-    await wikiFS.write(CLASSIFY_MD_PATH, content)
-    return true
-  }
-
-  const content = await wikiFS.read(CLASSIFY_MD_PATH)
-  const headerIdx = content.indexOf(FEEDBACK_HEADER)
-
-  if (headerIdx === -1) {
-    const needsNl = content.endsWith('\n') ? '' : '\n'
-    const appended = `${content}${needsNl}\n${FEEDBACK_HEADER}\n${line}\n`
-    await wikiFS.write(CLASSIFY_MD_PATH, appended)
-    return true
-  }
-
-  const sectionStart = headerIdx + FEEDBACK_HEADER.length
-  const nextHeaderRelIdx = content.slice(sectionStart).search(/\n##\s/)
-  const sectionEnd = nextHeaderRelIdx === -1 ? content.length : sectionStart + nextHeaderRelIdx
-  const before = content.slice(0, sectionEnd)
-  const after = content.slice(sectionEnd)
-
-  if (isDuplicateLastEntry(before, entry)) return false
-
-  const trimmedBefore = before.replace(/\n*$/, '')
-  const merged = `${trimmedBefore}\n${line}\n${after.startsWith('\n') ? after : '\n' + after}`
-  await wikiFS.write(CLASSIFY_MD_PATH, merged)
-  return true
-}
 
 /**
  * §4.3.2 Part A — entity/concept/analyses 페이지 frontmatter 에 `provenance` 배열 주입.
@@ -272,24 +214,6 @@ export async function appendDeletedSourceBanner(
   const tail = content.slice(match[0].length).replace(/^\n+/, '')
   await wikiFS.write(pagePath, `${head}\n${callout}\n\n${tail}`)
   return true
-}
-
-function isDuplicateLastEntry(sectionText: string, entry: ClassifyFeedbackEntry): boolean {
-  // Walk backward from the end of the section, skipping blank lines, to find
-  // the most recent feedback line. If it matches filename+userChoice+llmChoice,
-  // it's a duplicate regardless of date.
-  const lines = sectionText.split('\n')
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const l = lines[i].trim()
-    if (l === '') continue
-    if (l.startsWith('##')) return false
-    if (!l.startsWith('- ')) return false
-    return (
-      l.includes(` ${entry.filename} → ${entry.userChoice} `) &&
-      l.includes(`LLM: ${entry.llmChoice},`)
-    )
-  }
-  return false
 }
 
 export function rewriteSourcePageMeta(

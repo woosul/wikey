@@ -5,7 +5,7 @@
 > **본체 정의 (2026-04-22 확정)**: 원본 → wiki ingest 프로세스가 완성되어 **더 이상 wiki 를 초기화하거나 재생성할 일이 없는** 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 계속 축적되지만 구조는 변경되지 않는다. 튜닝·고도화·개선·확장은 Phase 5, 웹 인터페이스는 Phase 6 로 이관.
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md` 와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.1/§5.2 로 이관)
-> 상태 (2026-04-23 session 4): §4.0/§4.1 완료, §4.5.1 완료, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 완료**, **§4.2 Stage 1~4 전량 완료**, **§4.3.2 Part A/B 모두 완료 + §4.3.1 3-stage override 완료 + §4.3.3 stripBrokenWikilinks 완료** (wikey-core 437→**463 tests**). 다음 = §4.3 통합 smoke (Obsidian UI 수동 확인) + §4.5.2 운영 안전 → 본체 완성 선언.
+> 상태 (2026-04-23 session 4): §4.0/§4.1 완료, §4.5.1 완료, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 완료**, **§4.2 Stage 1~4 전량 완료** (S3-3/S3-4 UI 재설계 — Re-classify 체크박스 철회 + paraRoot 옵션 도입), **§4.3.2 Part A/B 모두 완료 + §4.3.1 3-stage override 완료 + §4.3.3 stripBrokenWikilinks 완료** (wikey-core 437→**462 tests**). 다음 = §4.3 통합 smoke (Obsidian UI 수동 확인) + §4.5.2 운영 안전 → 본체 완성 선언.
 
 ---
 
@@ -271,14 +271,13 @@
   - `WikeyConfig` 두 optional 필드 추가 (`types.ts`).
   - `resolveProvider` case `'classify'` — PROVIDER 미지정 시 `ingest` 승계, MODEL 만 override 가능 (양 경로 모두).
   - `wikey.conf` 주석 블록에 `gemini-2.0-flash-lite` / `gpt-4o-mini` 저가 모델 예시 등재.
-- [x] **S3-3** Audit 패널 "Re-classify with LLM" 토글
-  - `sidebar-chat.ts` Audit row 에서 `hint.needsThirdLevel === true` 인 경우에만 `.wikey-audit-reclass-line` 체크박스 DOM 추가.
-  - `WikeyChatView.inboxReclassify: Map<string, boolean>` 상태 — 패널 재렌더 시 초기화.
-  - Apply 플랜 루프: `dest === 'auto' || reclassifyForced` 분기 → `classifyFileAsync` 호출해 dest override.
-  - styles.css 업데이트 — purple accent hover caption.
-- [x] **S3-4** CLASSIFY.md 피드백 append (vitest 4 green)
-  - `wiki-ops.ts::appendClassifyFeedback` — 파일 신규 생성 / 섹션 신설 / 섹션 내 append / 마지막 엔트리 동일 dedupe.
-  - sidebar-chat.ts: `reclassifyForced && dest !== 'auto' && llmDest !== dest` 일 때 호출. warn-only 실패 처리.
+- [x] **S3-3** Audit 패널 UI 단순화 (2026-04-23 session 4 revised)
+  - 당초 "Re-classify with LLM" per-row 체크박스 + `inboxReclassify` 상태 + `.wikey-audit-reclass-*` CSS 를 도입했으나 사용자 피드백으로 **철회** — 분류 로직이 이미 2 모드 (auto 자동 / 수동 PARA 지정) 로 명료해서 per-row 토글은 중복 UI.
+  - 최종 동작: dropdown 은 `auto` + 4 PARA root (`raw/1_projects` ~ `raw/4_archive`). Apply 시 `classifyFileAsync(..., { paraRoot })` 호출 — auto 면 paraRoot 미지정 (rules + LLM 이 PARA 도 결정), 수동 PARA 지정 시 rules + LLM 은 sub-folder 만 결정하고 PARA prefix 는 지정값으로 강제 swap.
+  - 체크박스 + 피드백 로그 + CSS + inboxReclassify 전부 제거. `wiki-ops.ts::appendClassifyFeedback` 와 `ClassifyFeedbackEntry` 도 orphan 정리.
+- [x] **S3-4** CLASSIFY.md 피드백 append — **철회 (2026-04-23 session 4)**
+  - 원안은 "사용자 수동 선택 ≠ LLM 제안" 일 때 CLASSIFY.md 에 한 줄 로그로 self-extending Stage 0 데이터 누적. 그러나 UI 단순화 후 "수동 지정" 은 PARA 만, sub-folder 는 모두 LLM 이 결정하므로 비교 대상이 없어짐 → append 호출처 삭제 + 함수/테스트/export 제거.
+  - 향후 Phase 5 §5.6 self-extending 에서 다른 경로로 feedback 수집 재설계 가능.
 
 ### 4.2.4 Stage 4 — Vault listener + startup reconciliation (§4.1.1.9 [ ] 해소 포함) — **완료 (2026-04-23 session 2)**
 

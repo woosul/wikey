@@ -91,7 +91,7 @@ export {
   moveFile,
   movePair,
 } from './classify.js'
-export type { ClassifyResult, ClassifyLLMDeps, MovePairResult, MovePairOptions } from './classify.js'
+export type { ClassifyResult, ClassifyLLMDeps, ClassifyFileOptions, MovePairResult, MovePairOptions } from './classify.js'
 export {
   computeFileId,
   computeBundleId,
@@ -122,11 +122,10 @@ export type { SourceRecord, SourceRegistry, PathHistoryEntry, WalkerEntry } from
 export {
   injectSourceFrontmatter,
   rewriteSourcePageMeta,
-  appendClassifyFeedback,
   appendDeletedSourceBanner,
   injectProvenance,
 } from './wiki-ops.js'
-export type { SourceFrontmatter, ClassifyFeedbackEntry } from './wiki-ops.js'
+export type { SourceFrontmatter } from './wiki-ops.js'
 export type { Citation, ProvenanceType, ProvenanceEntry } from './types.js'
 export {
   RenameGuard,

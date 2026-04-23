@@ -316,6 +316,7 @@ export async function classifyWithLLM(
   isDir: boolean,
   hint2nd: string,
   deps: ClassifyLLMDeps,
+  paraRoot?: string,
 ): Promise<{ destination: string; reason: string }> {
   const rules = await loadClassifyRules(deps.wikiFS)
   const existingSlugs = await listExistingSlugFolders(deps.wikiFS, hint2nd)
@@ -324,6 +325,9 @@ export async function classifyWithLLM(
   const llm = new LLMClient(deps.httpClient, deps.config)
 
   const slugBlock = formatSlugBlock(hint2nd, existingSlugs)
+  const paraConstraint = paraRoot
+    ? `\n== 필수 제약 ==\n- destination 은 반드시 \`${paraRoot.replace(/\/+$/, '')}/\` 로 시작한다. 다른 PARA 로 변경 금지. NN_type / NNN_topic 만 결정.\n`
+    : ''
 
   const prompt = `당신은 Wikey PARA/Dewey 분류 어시스턴트입니다. 아래 CLASSIFY.md 규칙을 따라 파일의 목적지 경로를 결정하세요.
 
@@ -334,7 +338,7 @@ ${rules || '(CLASSIFY.md 없음 — raw/3_resources/ 기본 구조 가정)'}
 - 파일명: ${filename}
 - 종류: ${isDir ? '폴더(번들)' : '파일'}
 - 하드코딩 2차 힌트: ${hint2nd || '(없음)'}
-
+${paraConstraint}
 ${slugBlock}
 
 == 출력 요구 ==
@@ -376,6 +380,24 @@ JSON만 반환하세요. 다른 텍스트 없이. 형식:
   return { destination: dest, reason: (parsed.reason ?? '').slice(0, 120) }
 }
 
+export interface ClassifyFileOptions {
+  /**
+   * Pin the PARA root (e.g. `'raw/1_projects'`). When set, both hardcoded rule
+   * results and LLM suggestions have their top-level PARA directory swapped to
+   * this value — only the sub-folder routing (NN_type / NNN_topic) is delegated
+   * to CLASSIFY.md rules + LLM. Used when the user manually picks a PARA in UI.
+   */
+  readonly paraRoot?: string
+}
+
+const PARA_ROOT_RE = /^raw\/[1-4]_[a-z_]+(?=\/)/
+
+function swapParaRoot(destination: string, paraRoot: string): string {
+  if (!destination) return destination
+  const normalized = paraRoot.replace(/\/+$/, '')
+  return destination.replace(PARA_ROOT_RE, normalized) || `${normalized}/`
+}
+
 /**
  * Async classify — runs hardcoded rules first, falls back to LLM when
  * destination is empty or 3rd-level folder is missing.
@@ -384,16 +406,21 @@ export async function classifyFileAsync(
   filename: string,
   isDir: boolean,
   deps: ClassifyLLMDeps,
+  options: ClassifyFileOptions = {},
 ): Promise<ClassifyResult> {
   const base = classifyFile(filename, isDir)
-  if (!base.needsThirdLevel && base.destination) return base
+  if (!base.needsThirdLevel && base.destination) {
+    const dest = options.paraRoot ? swapParaRoot(base.destination, options.paraRoot) : base.destination
+    return { ...base, destination: dest }
+  }
 
-  const llm = await classifyWithLLM(filename, isDir, base.destination, deps)
-  console.info(`[Wikey classify] LLM fallback: "${filename}" → ${llm.destination} (${llm.reason})`)
+  const llm = await classifyWithLLM(filename, isDir, base.destination, deps, options.paraRoot)
+  const finalDest = options.paraRoot ? swapParaRoot(llm.destination, options.paraRoot) : llm.destination
+  console.info(`[Wikey classify] LLM fallback: "${filename}" → ${finalDest} (${llm.reason})`)
   return {
     filename,
     hint: `${base.hint} → LLM: ${llm.reason}`,
-    destination: llm.destination,
+    destination: finalDest,
     llmDecided: true,
   }
 }

@@ -885,24 +885,42 @@ atomic write: `renameSync(tmp, REGISTRY_PATH)` 로 partial write 방지. id-or-p
 - `wikey.conf` 주석 블록 갱신 — `gemini-2.0-flash-lite`/`gpt-4o-mini` 저가 모델 예시.
 - 테스트 (`config.test.ts` +4): inherit / provider override / model-only override / provider+model 조합.
 
-#### 4.2.3.3 Audit "Re-classify with LLM" 토글 (S3-3)
+#### 4.2.3.3 Audit UI 재설계 — Re-classify 토글 철회 + paraRoot 옵션 도입 (S3-3, 2026-04-23 session 4 revised)
 
-- `sidebar-chat.ts` Audit row 렌더에서 `hint.needsThirdLevel === true` 인 row 에만 체크박스 DOM 추가 (`.wikey-audit-reclass-line` / `-cb` / `-label`).
-- 플러그인 클래스에 `private inboxReclassify: Map<string, boolean>` 추가, `renderAuditPanel` 진입 시 `new Map()` 으로 초기화.
-- 체크박스 이벤트 리스너 + 라벨 클릭 (둘 다 `stopPropagation` — row 전체 click 토글과 충돌 방지).
-- Apply 플랜 생성 루프 분기: `dest === 'auto' || reclassifyForced` → `classifyFileAsync` 호출해 LLM dest 계산.
-- 스타일 `styles.css` 추가 — purple accent hover, 0.68em small caption.
+원안 (session 2): `hint.needsThirdLevel === true` row 에 "Re-classify with LLM" 체크박스 + `inboxReclassify: Map<string, boolean>` 상태 + CSS `.wikey-audit-reclass-*` + Apply 루프의 `reclassifyForced` 분기.
 
-#### 4.2.3.4 CLASSIFY.md 피드백 로그 append (S3-4, vitest 4)
+**철회 사유 (사용자 피드백)**: 분류 UI 의 모드는 이미 2 가지로 명료 — (1) `auto` 면 rules + needsThirdLevel 시 LLM fallback 이 **자동**으로 동작. (2) 수동 지정 은 PARA root 만 고르면 그 **내부에서 rules + LLM 이 sub-folder 를 결정**. per-row 체크박스는 이 두 경로 어느 쪽과도 교차하지 않는 제3 모드라 "이중 선택" 혼란 유발.
 
-- `wiki-ops.ts::appendClassifyFeedback(wikiFS, entry)` 신규 헬퍼:
-  - CLASSIFY.md 부재 시 `# CLASSIFY\n\n## 피드백 로그\n<entry>` 로 새 파일 생성.
-  - 파일은 있는데 섹션 없으면 말미에 `## 피드백 로그` 블록 append.
-  - 섹션 있으면 그 안에 entry append (중복 섹션 생성 금지).
-  - 마지막 엔트리가 filename+userChoice+llmChoice 기준 동일이면 dedupe (`false` 반환).
-- `ClassifyFeedbackEntry` 타입 export + `wikey-core/src/index.ts` 재노출.
-- sidebar-chat.ts Apply 플랜 루프에서: `reclassifyForced && dest !== 'auto' && llmDest !== dest` 일 때 append 호출. 호출 실패는 warn 만, 이동 플로우는 blocking 하지 않음.
-- 테스트 (`wiki-ops.test.ts` +4): 파일 신규 생성 / 섹션 append / 섹션 존재 시 중복 생성 금지 / dedupe.
+**최종 동작 (session 4)**:
+- dropdown = `auto` + 4 PARA root (`raw/1_projects` / `raw/2_areas` / `raw/3_resources` / `raw/4_archive`).
+- Apply 루프: `paraRoot = dest === 'auto' ? undefined : dest` → `classifyFileAsync(f, isDir, deps, { paraRoot })`.
+- `auto` → 기존 흐름 그대로 (rules → LLM fallback, PARA + sub 모두 결정).
+- 수동 PARA → `classifyFileAsync` 내부에서 rules 결과의 PARA prefix 를 지정값으로 swap, needsThirdLevel 시 LLM 호출도 **"반드시 <paraRoot>/ 로 시작" 필수 제약**을 prompt 에 주입 후 최종 결과에 다시 한 번 prefix swap 으로 방어.
+- 체크박스 · 상태 · CSS · `appendClassifyFeedback` · `ClassifyFeedbackEntry` · `isDuplicateLastEntry` · 테스트 4건 · index export 2건 전부 제거.
+
+**라이브러리 변경**:
+- `classify.ts::ClassifyFileOptions` 신규 interface (`paraRoot?: string`).
+- `classifyFileAsync(.., options?)` 4번째 파라미터. 내부에서 `swapParaRoot(dest, paraRoot)` 로 rules + LLM 결과 모두 prefix 강제.
+- `classifyWithLLM(.., paraRoot?)` 5번째 파라미터. prompt 에 constraint 블록 injection.
+- `swapParaRoot` 는 `^raw\/[1-4]_[a-z_]+` 정규식 기반 — DDC sub-folder 경로는 유지하고 첫 세그먼트만 교체.
+- 신규 export: `ClassifyFileOptions` (index.ts 타입).
+
+**테스트** (`classify.test.ts` +3 = 24 → 27):
+1. `classifyWithLLM` paraRoot 전달 시 prompt 에 "필수 제약" + `raw/1_projects/` 명시 검증.
+2. `classifyFileAsync` hardcoded rules 성공 케이스에서 PARA prefix 만 swap 확증 (sub-path 보존).
+3. LLM 오답 (`raw/4_archive/...`) 돌아와도 paraRoot=`raw/1_projects` 로 최종 swap 되는 방어선.
+
+**테스트 제거** (`wiki-ops.test.ts`): `appendClassifyFeedback (§4.2.3 S3-4)` describe 블록 전체 (-4). 전체 wikey-core 463 → 462 (+3 신규, -4 제거, net -1).
+
+**빌드 증거**: `npm test` 462/462 · `npm run build` wikey-core tsc 0 + wikey-obsidian esbuild 0.
+
+#### 4.2.3.4 CLASSIFY.md 피드백 로그 append — **철회 (2026-04-23 session 4)**
+
+원안 (session 2): `appendClassifyFeedback` 로 사용자 수동 선택 ≠ LLM 제안 비교를 CLASSIFY.md 의 `## 피드백 로그` 섹션에 누적 (self-extending Stage 0 예비 데이터).
+
+**철회 사유**: S3-3 UI 단순화 후 "수동 지정" 은 PARA root 만 의미하고 sub-folder 는 전부 rules+LLM 이 결정한다. 사용자 선택과 LLM 제안을 같은 granularity 로 비교할 mechanism 자체가 사라졌다. feedback 로그 엔트리를 기록할 자연스러운 트리거가 없음.
+
+**복구 경로**: Phase 5 §5.6 self-extending 에서 (a) LLM 이 신규 slug 를 제안한 케이스만 로그 / (b) 사용자가 wiki 페이지 수동 이동 시 registry path_history 와 비교 / (c) 생성된 wiki 페이지의 실측 provenance 재분석 — 이 중 최소 하나를 재설계하면 됨. 본 session 은 dead code 를 남기지 않는 원칙 (Karpathy #3 surgical + #2 simplicity) 으로 단호히 제거.
 
 ### 4.2.4 Stage 4 — Vault listener + startup reconciliation (§4.1.1.9 [ ] 해소 포함)
 > tag: #ops, #integrity, #listener

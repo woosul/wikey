@@ -9,12 +9,11 @@ import {
   stripBrokenWikilinks,
   injectSourceFrontmatter,
   rewriteSourcePageMeta,
-  appendClassifyFeedback,
   appendDeletedSourceBanner,
   injectProvenance,
 } from '../wiki-ops.js'
 import type { WikiFS, WikiPage, ProvenanceEntry } from '../types.js'
-import type { WrittenPage, SourceFrontmatter, ClassifyFeedbackEntry } from '../wiki-ops.js'
+import type { WrittenPage, SourceFrontmatter } from '../wiki-ops.js'
 
 function createMockFS(files: Record<string, string> = {}): WikiFS {
   const store = new Map(Object.entries(files))
@@ -420,63 +419,6 @@ first_seen: 2026-04-23T00:00:00.000Z
     const once = rewriteSourcePageMeta(pageContent, patch)
     const twice = rewriteSourcePageMeta(once, patch)
     expect(twice).toBe(once)
-  })
-})
-
-// ── §4.2.3 Stage 3 S3-4: appendClassifyFeedback ──
-
-describe('appendClassifyFeedback (§4.2.3 S3-4)', () => {
-  const entry: ClassifyFeedbackEntry = {
-    filename: 'Mystery-Paper.pdf',
-    userChoice: 'raw/3_resources/20_report/100_philosophy_psychology/',
-    llmChoice: 'raw/3_resources/20_report/300_social_sciences/',
-    llmReason: 'business 키워드 매칭',
-    at: '2026-04-23',
-  }
-
-  it('CLASSIFY.md 부재 시 새 파일 + 피드백 로그 섹션 생성', async () => {
-    const fs = createMockFS()
-    const added = await appendClassifyFeedback(fs, entry)
-    expect(added).toBe(true)
-    const content = await fs.read('raw/CLASSIFY.md')
-    expect(content).toContain('## 피드백 로그')
-    expect(content).toContain('- 2026-04-23 Mystery-Paper.pdf')
-    expect(content).toContain('→ raw/3_resources/20_report/100_philosophy_psychology/')
-    expect(content).toContain('LLM: raw/3_resources/20_report/300_social_sciences/')
-    expect(content).toContain('business 키워드 매칭')
-  })
-
-  it('CLASSIFY.md 에 피드백 로그 섹션 없으면 append', async () => {
-    const fs = createMockFS({
-      'raw/CLASSIFY.md': '# CLASSIFY\n\n## 자동 규칙\n- .pdf → 30_manual\n',
-    })
-    await appendClassifyFeedback(fs, entry)
-    const content = await fs.read('raw/CLASSIFY.md')
-    expect(content).toContain('## 자동 규칙')
-    expect(content).toContain('## 피드백 로그')
-    expect(content.indexOf('## 자동 규칙')).toBeLessThan(content.indexOf('## 피드백 로그'))
-  })
-
-  it('피드백 로그 섹션 존재 시 해당 섹션에 append (중복 섹션 생성 안 함)', async () => {
-    const initial = '# CLASSIFY\n\n## 피드백 로그\n- 2026-04-20 old.pdf → raw/x/ (LLM: raw/y/, 사유: 기존)\n'
-    const fs = createMockFS({ 'raw/CLASSIFY.md': initial })
-    await appendClassifyFeedback(fs, entry)
-    const content = await fs.read('raw/CLASSIFY.md')
-    const matches = content.match(/## 피드백 로그/g) || []
-    expect(matches.length).toBe(1)
-    expect(content).toContain('2026-04-20 old.pdf')
-    expect(content).toContain('2026-04-23 Mystery-Paper.pdf')
-  })
-
-  it('동일 filename+userChoice+llmChoice 마지막 엔트리와 일치하면 중복 append 스킵', async () => {
-    const fs = createMockFS()
-    const first = await appendClassifyFeedback(fs, entry)
-    const second = await appendClassifyFeedback(fs, entry)
-    expect(first).toBe(true)
-    expect(second).toBe(false)
-    const content = await fs.read('raw/CLASSIFY.md')
-    const occurrences = content.match(/Mystery-Paper\.pdf/g) || []
-    expect(occurrences.length).toBe(1)
   })
 })
 

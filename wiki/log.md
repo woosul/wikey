@@ -5,6 +5,27 @@ created: 2026-04-10
 updated: 2026-04-23
 ---
 
+## [2026-04-23] refactor | §4.2.3 Audit UI 재설계 — Re-classify 체크박스 철회 + paraRoot 옵션
+
+- 사용자 피드백 "UI가 이상해졌어. 불필요해. 1) auto 는 자동 LLM fallback, 2) 수동 지정은 수동분류 — 이중 선택 불필요" + "수동 지정은 PARA 만, sub-folder 는 CLASSIFY.md + LLM" 반영.
+- **제거**:
+  - `sidebar-chat.ts` Re-classify checkbox DOM (per-row `.wikey-audit-reclass-line` + label)
+  - `inboxReclassify: Map<string, boolean>` 상태 및 reset
+  - `appendClassifyFeedback` 호출처 + import
+  - `styles.css` `.wikey-audit-reclass-*` 4 rules
+  - `wiki-ops.ts::appendClassifyFeedback` + `ClassifyFeedbackEntry` + `isDuplicateLastEntry`
+  - `index.ts` export 2건 (`appendClassifyFeedback` · `ClassifyFeedbackEntry`)
+  - `wiki-ops.test.ts` appendClassifyFeedback describe 블록 (-4 tests)
+- **추가 (수동 PARA 지정 경로)**:
+  - `classify.ts::ClassifyFileOptions = { paraRoot?: string }` + `swapParaRoot` 헬퍼 (정규식 `^raw\/[1-4]_[a-z_]+` 기반 PARA prefix 교체).
+  - `classifyFileAsync(filename, isDir, deps, options?)` — paraRoot 지정 시 rules + LLM 결과 양쪽의 PARA prefix 강제 swap.
+  - `classifyWithLLM(.., paraRoot?)` — prompt 에 "필수 제약 · destination 은 반드시 `<paraRoot>/` 로 시작" 블록 주입.
+  - `index.ts::ClassifyFileOptions` export.
+  - `classify.test.ts` +3 (prompt constraint / rules swap / LLM swap 방어) = 24 → 27.
+- **sidebar-chat Apply 로직 단순화**: 분기 `dest === 'auto' || reclassifyForced` 제거 → `classifyFileAsync(f, isDir, deps, { paraRoot: dest === 'auto' ? undefined : dest })` 한 줄.
+- 증거: wikey-core 463 → **462 PASS** (+3 신규 -4 제거) · `npm run build` 0 errors (tsc + esbuild). Karpathy #2 simplicity + #3 surgical — 본인 변경으로 생긴 orphan 은 제거.
+- 참조: `activity/phase-4-result.md §4.2.3.3/§4.2.3.4` (재설계 기록 + 철회 사유), `plan/phase-4-todo.md §4.2.3 S3-3/S3-4` (재설계 체크리스트), 이번 커밋.
+
 ## [2026-04-23] feat | §4.3 Part B (citations UI) + §4.3.1 3-stage prompt override + codex 2차 검증 착수
 
 - **§4.3 codex rescue 2차 검증** 진행 — 1차 `b2p8s3sgq` 가 analysis 턴 후반 timeout 했던 후속. 2차 `bsmflco7z` 가 Part A 완료 이후 실제 구현 + plan v2 동반 분석. 검증 결과는 plan v3 로 반영 예정.
