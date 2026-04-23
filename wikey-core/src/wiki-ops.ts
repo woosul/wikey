@@ -1,4 +1,4 @@
-import type { WikiFS, WikiPage } from './types.js'
+import type { WikiFS, WikiPage, ProvenanceEntry } from './types.js'
 
 const WIKI_PREFIX = 'wiki/'
 const WIKILINK_RE = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g
@@ -93,6 +93,148 @@ export async function appendClassifyFeedback(
   const merged = `${trimmedBefore}\n${line}\n${after.startsWith('\n') ? after : '\n' + after}`
   await wikiFS.write(CLASSIFY_MD_PATH, merged)
   return true
+}
+
+/**
+ * §4.3.2 Part A — entity/concept/analyses 페이지 frontmatter 에 `provenance` 배열 주입.
+ *
+ * 동작:
+ *   - 기존 frontmatter 없음 → 새 블록 생성 (`provenance` 만 포함, 본문 보존).
+ *   - 기존 frontmatter 있고 `provenance` 필드 없음 → 추가.
+ *   - 기존 `provenance` 있음 → dedupe (type + ref 기준) 후 append.
+ *
+ * YAML 형식 (2-space indent, flow style 사용 안 함 — 가독성 + Obsidian 호환):
+ *   provenance:
+ *     - type: extracted
+ *       ref: sources/sha256:...
+ *     - type: inferred
+ *       ref: sources/sha256:...
+ *       confidence: 0.7
+ */
+export function injectProvenance(content: string, newEntries: readonly ProvenanceEntry[]): string {
+  if (newEntries.length === 0) return content
+
+  const match = content.match(FRONTMATTER_BLOCK)
+  if (!match) {
+    const yaml = renderProvenanceYaml(newEntries)
+    const body = content.replace(/^\n+/, '')
+    return `---\n${yaml}\n---\n\n${body}`
+  }
+
+  const fmInner = match[1]
+  const body = content.slice(match[0].length)
+  const existing = parseProvenance(fmInner)
+  const merged = dedupeProvenance([...existing, ...newEntries])
+  const fmWithoutProvenance = stripProvenanceField(fmInner)
+  const provenanceYaml = renderProvenanceYaml(merged)
+  const newFm = fmWithoutProvenance
+    ? `${fmWithoutProvenance}\n${provenanceYaml}`
+    : provenanceYaml
+  return `---\n${newFm}\n---\n${body.startsWith('\n') ? body : '\n' + body}`
+}
+
+function renderProvenanceYaml(entries: readonly ProvenanceEntry[]): string {
+  const lines = ['provenance:']
+  for (const e of entries) {
+    lines.push(`  - type: ${e.type}`)
+    // ref 는 id-prefixed 문자열 (`sources/sha256:...`) 이라 콜론이 중간에 있지만
+    // YAML block scalar 에서는 bare 로 안전 — "colon-space" 패턴일 때만 따옴표.
+    lines.push(`    ref: ${provenanceYamlScalar(e.ref)}`)
+    if (e.confidence != null) lines.push(`    confidence: ${e.confidence}`)
+    if (e.reason) lines.push(`    reason: ${provenanceYamlScalar(e.reason)}`)
+  }
+  return lines.join('\n')
+}
+
+function provenanceYamlScalar(s: string): string {
+  // 따옴표 강제 조건: 콜론-공백 / # word-boundary / 선행·후행 공백 / 특수 시작 문자.
+  const needsQuote =
+    /: /.test(s) ||
+    /(^|\s)#/.test(s) ||
+    /^\s|\s$/.test(s) ||
+    /^[\[\{!&*|>]/.test(s) ||
+    /^["']/.test(s)
+  if (needsQuote) return JSON.stringify(s)
+  return s
+}
+
+function parseProvenance(yaml: string): ProvenanceEntry[] {
+  const lines = yaml.split('\n')
+  const out: ProvenanceEntry[] = []
+  let inProvenance = false
+  let current: Partial<ProvenanceEntry> | null = null
+
+  const flush = () => {
+    if (current && current.type && current.ref) {
+      out.push(current as ProvenanceEntry)
+    }
+    current = null
+  }
+
+  for (const raw of lines) {
+    if (/^provenance\s*:/.test(raw)) {
+      inProvenance = true
+      continue
+    }
+    if (inProvenance) {
+      // Top-level key (no indent) ends the provenance block
+      if (/^[A-Za-z0-9_]+\s*:/.test(raw)) {
+        inProvenance = false
+        flush()
+        continue
+      }
+      const listItem = raw.match(/^\s*-\s+type\s*:\s*(.+?)\s*$/)
+      if (listItem) {
+        flush()
+        current = { type: listItem[1].trim() as ProvenanceEntry['type'] }
+        continue
+      }
+      const field = raw.match(/^\s+([A-Za-z_]+)\s*:\s*(.+?)\s*$/)
+      if (field && current) {
+        const [, key, rawVal] = field
+        const val = rawVal.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1')
+        if (key === 'ref') current.ref = val
+        else if (key === 'confidence') current.confidence = Number(val)
+        else if (key === 'reason') current.reason = val
+        else if (key === 'type') current.type = val as ProvenanceEntry['type']
+      }
+    }
+  }
+  flush()
+  return out
+}
+
+function stripProvenanceField(yaml: string): string {
+  const lines = yaml.split('\n')
+  const kept: string[] = []
+  let inProvenance = false
+  for (const line of lines) {
+    if (/^provenance\s*:/.test(line)) {
+      inProvenance = true
+      continue
+    }
+    if (inProvenance) {
+      if (/^[A-Za-z0-9_]+\s*:/.test(line) && !/^\s/.test(line)) {
+        inProvenance = false
+        kept.push(line)
+      }
+      continue
+    }
+    kept.push(line)
+  }
+  return kept.join('\n').trim()
+}
+
+function dedupeProvenance(entries: readonly ProvenanceEntry[]): ProvenanceEntry[] {
+  const seen = new Set<string>()
+  const out: ProvenanceEntry[] = []
+  for (const e of entries) {
+    const key = `${e.type}\x00${e.ref}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(e)
+  }
+  return out
 }
 
 /**

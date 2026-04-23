@@ -102,8 +102,10 @@ export {
   rewriteSourcePageMeta,
   appendClassifyFeedback,
   appendDeletedSourceBanner,
+  injectProvenance,
 } from './wiki-ops.js'
 export type { SourceFrontmatter, ClassifyFeedbackEntry } from './wiki-ops.js'
+export type { ProvenanceType, ProvenanceEntry } from './types.js'
 export {
   RenameGuard,
   reconcileExternalRename,

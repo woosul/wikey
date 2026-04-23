@@ -18,6 +18,8 @@ import {
   appendLog,
   normalizeBase,
   injectSourceFrontmatter,
+  injectProvenance,
+  stripBrokenWikilinks,
   type WrittenPage,
   type SourceFrontmatter,
 } from './wiki-ops.js'
@@ -297,6 +299,17 @@ export async function ingest(
     throw new Error(`LLM returned invalid structure — missing source_page. Keys: ${Object.keys(parsed).join(', ')}`)
   }
 
+  // §4.3.3 — source 페이지 본문의 깨진 wikilink 를 canonical 페이지 기준으로 plain text 로 강등.
+  //   적용 시점: Preview 모달 호출 **이전** → Preview 와 저장본이 bit-identical 유지 (plan v2 §5.2).
+  //   keepBases: Stage 2/3 에서 canonical 된 entity/concept filename 의 normalized base Set.
+  {
+    const keepBases = new Set<string>()
+    for (const e of parsed.entities ?? []) keepBases.add(normalizeBase(e.filename))
+    for (const c of parsed.concepts ?? []) keepBases.add(normalizeBase(c.filename))
+    keepBases.add(normalizeBase(parsed.source_page.filename))
+    parsed.source_page.content = stripBrokenWikilinks(parsed.source_page.content, keepBases)
+  }
+
   // Stage 2 gate: show extraction plan before writing (llm-wiki.md "read summaries" + "check updates")
   if (opts?.onPlanReady) {
     onProgress?.({ step: 3, total: 4, message: 'Awaiting review...' })
@@ -345,15 +358,25 @@ export async function ingest(
     await saveRegistry(wikiFS, registryUpsert(reg, v3Meta.id, record))
   }
 
+  // §4.3.2 Part A: entity/concept 페이지에 provenance 주입.
+  //   MVP: canonicalize 된 모든 페이지에 {type: 'extracted', ref: 'sources/<source_id>'} 기본 적용.
+  //   source bytes 못 읽어 registry 미기록 (v3Meta.record=null) 인 경우 provenance 스킵.
+  //   inferred/ambiguous 구분은 Phase 5 §5.4 variance diagnostic 에서 canonicalize output 확장 때 추가.
+  const provenanceEntry = v3Meta.record
+    ? [{ type: 'extracted' as const, ref: `sources/${v3Meta.id}` }]
+    : null
+
   for (const entity of parsed.entities ?? []) {
-    const page: WikiPage = { filename: entity.filename, content: entity.content, category: 'entities' }
+    const content = provenanceEntry ? injectProvenance(entity.content, provenanceEntry) : entity.content
+    const page: WikiPage = { filename: entity.filename, content, category: 'entities' }
     const entityExists = await wikiFS.exists(`wiki/entities/${entity.filename}`)
     await createPage(wikiFS, page)
     ;(entityExists ? updatedPages : createdPages).push(entity.filename)
   }
 
   for (const concept of parsed.concepts ?? []) {
-    const page: WikiPage = { filename: concept.filename, content: concept.content, category: 'concepts' }
+    const content = provenanceEntry ? injectProvenance(concept.content, provenanceEntry) : concept.content
+    const page: WikiPage = { filename: concept.filename, content, category: 'concepts' }
     const conceptExists = await wikiFS.exists(`wiki/concepts/${concept.filename}`)
     await createPage(wikiFS, page)
     ;(conceptExists ? updatedPages : createdPages).push(concept.filename)

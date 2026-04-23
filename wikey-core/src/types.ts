@@ -74,6 +74,28 @@ export interface WikeyConfig {
   readonly DOCLING_DISABLE?: boolean            // true = tier 1 스킵 (디버깅/벤치마크용)
 }
 
+// ── Provenance (§4.3.2 Part A, Phase 4.3) ──
+
+/**
+ * wiki 페이지 관계의 출처 표시 (entity/concept/analyses 페이지 frontmatter `provenance` 배열).
+ * Phase 4.3 본체. Phase 5 §5.6 self-extending 이 'self-declared' variant 를 소비.
+ */
+export type ProvenanceType =
+  | 'extracted'      // 소스에서 직접 발견 (Stage 2 mention 추출 기본)
+  | 'inferred'       // LLM 이 추론 (Stage 3 canonicalize 가 mention 없이 합성)
+  | 'ambiguous'      // 리뷰 필요 (동명이인·축약어·경계 모호)
+  | 'self-declared'  // Phase 5 §5.6 예약 — 원본 안 in-source self-declaration 로 생성된 decomposition
+
+export interface ProvenanceEntry {
+  readonly type: ProvenanceType
+  /** `sources/<source_id>` 포맷. source-registry 조회로 해석. PARA 이동 불변. */
+  readonly ref: string
+  /** 'inferred' / 'self-declared' 에만 의미. 0.0~1.0. */
+  readonly confidence?: number
+  /** 'ambiguous' 에만 의미. 한 줄 근거. */
+  readonly reason?: string
+}
+
 // ── LLM ──
 
 export type LLMProvider = 'gemini' | 'anthropic' | 'openai' | 'ollama'

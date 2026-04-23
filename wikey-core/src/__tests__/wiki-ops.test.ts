@@ -11,8 +11,9 @@ import {
   rewriteSourcePageMeta,
   appendClassifyFeedback,
   appendDeletedSourceBanner,
+  injectProvenance,
 } from '../wiki-ops.js'
-import type { WikiFS, WikiPage } from '../types.js'
+import type { WikiFS, WikiPage, ProvenanceEntry } from '../types.js'
 import type { WrittenPage, SourceFrontmatter, ClassifyFeedbackEntry } from '../wiki-ops.js'
 
 function createMockFS(files: Record<string, string> = {}): WikiFS {
@@ -528,5 +529,58 @@ first_seen: 2026-04-20T00:00:00Z
     expect(calloutIdx).toBeGreaterThan(frontmatterEnd)
     // callout 은 본문 내용보다 앞에 위치
     expect(calloutIdx).toBeLessThan(content.indexOf('# source: foo'))
+  })
+})
+
+// ── §4.3.2 Part A: injectProvenance ──
+
+describe('injectProvenance (§4.3.2 Part A)', () => {
+  const baseEntity =
+    '---\ntitle: Alimtalk\ntype: entity\nentity_type: product\nsources: [source-pms.md]\n---\n\n# Alimtalk\n\n본문.\n'
+
+  it('provenance 필드가 없을 때 새로 주입 (배열, 순서 보존)', () => {
+    const entries: ProvenanceEntry[] = [
+      { type: 'extracted', ref: 'sources/sha256:a3f2' },
+      { type: 'inferred', ref: 'sources/sha256:b7c9', confidence: 0.7 },
+    ]
+    const result = injectProvenance(baseEntity, entries)
+    expect(result).toContain('provenance:')
+    expect(result).toContain('- type: extracted')
+    expect(result).toContain('ref: sources/sha256:a3f2')
+    expect(result).toContain('- type: inferred')
+    expect(result).toContain('confidence: 0.7')
+    // 기존 필드 보존
+    expect(result).toContain('title: Alimtalk')
+    expect(result).toContain('sources: [source-pms.md]')
+    // 본문 보존
+    expect(result).toContain('# Alimtalk')
+    expect(result).toContain('본문.')
+  })
+
+  it('기존 provenance 에 dedupe 후 merge (type + ref 기준)', () => {
+    const first: ProvenanceEntry[] = [{ type: 'extracted', ref: 'sources/sha256:a3f2' }]
+    const withOne = injectProvenance(baseEntity, first)
+
+    // 같은 {type, ref} 재주입 + 새 엔트리 추가
+    const second: ProvenanceEntry[] = [
+      { type: 'extracted', ref: 'sources/sha256:a3f2' }, // 중복
+      { type: 'ambiguous', ref: 'sources/sha256:c8e1', reason: '동명이인' },
+    ]
+    const result = injectProvenance(withOne, second)
+    // 중복 안 쌓임
+    const extractedCount = (result.match(/- type: extracted/g) || []).length
+    expect(extractedCount).toBe(1)
+    // 새 엔트리 추가됨
+    expect(result).toContain('- type: ambiguous')
+    expect(result).toContain('reason: 동명이인')
+  })
+
+  it('frontmatter 없는 페이지 — frontmatter 블록 신규 생성 + 본문 보존', () => {
+    const bodyOnly = '# 제목\n\n본문.\n'
+    const entries: ProvenanceEntry[] = [{ type: 'extracted', ref: 'sources/sha256:a3f2' }]
+    const result = injectProvenance(bodyOnly, entries)
+    expect(result).toMatch(/^---\nprovenance:\n  - type: extracted\n    ref: sources\/sha256:a3f2\n---\n/)
+    expect(result).toContain('# 제목')
+    expect(result).toContain('본문.')
   })
 })
