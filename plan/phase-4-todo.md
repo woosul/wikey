@@ -503,9 +503,9 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 **§8 문서 동기화**
 
 - [x] `activity/phase-4-result.md §4.5.1.5.11~.14` (measurement infra patch + 30-run 결과 + 최종 결론)
-- [ ] `wiki/log.md` 엔트리 (이번 turn)
-- [ ] `plan/session-wrap-followups.md` §4.5.1.5 측정 완료 선언 + §4.5.1.6 을 다음 과제로 지정 (이번 turn)
-- [ ] 단일 commit + push (이번 turn)
+- [x] `wiki/log.md` 엔트리
+- [x] `plan/session-wrap-followups.md` §4.5.1.5 측정 완료 선언 + §4.5.1.6 을 다음 과제로 지정
+- [x] 단일 commit + push (commit `46cc170`)
 
 #### 4.5.1.6 LLM 수준 variance + canonicalizer 3차 (2026-04-22, 완료)
 
@@ -574,11 +574,57 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 > 운영 안정성 subject 에서 본체 필수인 두 항목만 유지. bash→TS 포팅, qmd SDK import 는 Phase 5 §5.7 로 이관 (동작 유지 리팩토링).
 
 - [ ] **원본/위키 삭제 안전장치** — dry-run 미리보기, 영향 범위 표시
+  - 대상: raw/ 원본, wiki/sources/, wiki/entities/, wiki/concepts/, wiki/analyses/, `.wikey/source-registry.json`.
+  - UI: Obsidian 명령 팔레트 "Wikey: Delete source (dry-run)" · "Wikey: Delete wiki page (dry-run)" — 실행 전 modal 에 "영향 페이지 N 건 / registry 레코드 M 건 / backlink L 건" 표시.
+  - 실 삭제는 `movePair`/`recordDelete` 경로 재사용 (§4.2 Stage 2/4 에서 이미 구현). 백업은 raw/ 원본 미삭제, wiki 만 tombstone 방식.
 - [ ] **초기화 기능** — 선택적 리셋 (완전/인제스트/원본/인덱스/설정)
+  - 5 단계 옵션 drop-down: (a) wiki + registry 전체 (원본 raw/ 유지), (b) wiki 만 (registry 유지), (c) registry + source_id 만 (wiki 콘텐츠 유지, 재인제스트 시 새 id), (d) qmd index 만, (e) 설정 (data.json) 만.
+  - 각 옵션 별 dry-run 미리보기 + "입력해서 확인" 체크 (e.g. `RESET ALL` 타이핑).
+  - 구현 위치: `wikey-obsidian/src/commands.ts` 에 `registerResetCommand`, `wikey-core/src/reset.ts` 에 순수 로직 (vitest +N).
 
 **§4.5.2 에서 Phase 5 로 이관**:
 - 기존 bash→TS 완전 포팅 (validate-wiki / check-pii / cost-tracker / reindex) → **Phase 5 §5.7.1**
 - 기존 qmd SDK import (CLI exec → 직접 import) → **Phase 5 §5.7.2**
+
+---
+
+## Phase 4 본체 완성 체크리스트 (다음 세션 종료 플레이북)
+
+> 2026-04-23 session 4 종료 시점에 확정. 이 체크리스트의 3 항목이 모두 [x] 되면 `activity/phase-4-result.md` 마지막에 **"Phase 4 본체 완성 선언"** 블록을 쓰고 commit. 이후 Phase 5 착수.
+
+### A. §4.3 통합 smoke (Obsidian UI 수동) — 약 30 분
+
+체크리스트 (`plan/phase-4-3-plan.md §12.4` 와 동일):
+
+1. [ ] **Part B 보조 링크 렌더** — raw/0_inbox 에 임의 PDF 1건 투입 → Obsidian UI auto-ingest 또는 `/codex` 수동 ingest → 사이드바 Chat 에서 관련 질문 → 답변 wikilink 뒤 `📄` 아이콘 표시 확인. 클릭 시 원본 PDF 가 Obsidian 내장 뷰어에서 열림.
+2. [ ] **Part B external URI** (선택) — uri-hash 기반 source 가 있으면 확인. 없으면 skip.
+3. [ ] **Part B tombstone** — raw/ 원본을 `mv` 로 vault 밖 이동 → 플러그인 reconcile 후 기존 답변의 `📄` 클릭 → "원본 삭제됨" Notice + grayscale. (복원 후 `📄` 정상화 확인 옵션.)
+4. [ ] **§4.3.1 Stage 2/3 override UI** — 설정 탭 "Ingest Prompts" 섹션에서 Stage 2 Edit → `{{CHUNK_CONTENT}}` 앞에 주석 `# TEST-OVERRIDE` 추가 → Save. 다음 인제스트의 Stage 2 LLM 호출 prompt 에 "TEST-OVERRIDE" 포함됐는지 console 확인 (또는 Obsidian Developer Console 에서 `[Wikey ingest]` 로그). Reset 후 `.wikey/stage2_mention_prompt.md` 삭제 확인.
+5. [ ] **§4.3.3 source 페이지 본문 strip** — 위 1번에서 생성된 `wiki/sources/source-*.md` 본문에 `[[없는개념]]` 형태의 깨진 wikilink 잔존하지 않음 확인. canonical entity/concept 로 linked 된 것만 `[[...]]` 유지.
+
+smoke 결과는 `activity/phase-4-result.md §4.3.smoke` (신규) 에 기록. 문제 발견 시 `plan/phase-4-todo.md` 에 fix 항목 추가 + 재시도.
+
+### B. §4.5.2 삭제 안전장치 (TDD) — 약 2~3 시간
+
+1. [ ] `wikey-core/src/reset.ts` 신규 — `computeDeletionImpact(vaultPath, registry) → { pages: string[], backlinks: number, registryRecord?: SourceRecord }` 순수 함수. `wiki-ops.ts::extractWikilinks` 재사용.
+2. [ ] `wikey-core/src/__tests__/reset.test.ts` — vitest +6 (단일 파일 / 번들 / tombstone 된 것 / registry 에 없는 raw / wiki-only / backlink 0).
+3. [ ] `wikey-obsidian/src/commands.ts::registerDeleteCommand` — 명령 팔레트 엔트리 2 개 (raw/ source 삭제 · wiki 페이지 삭제). 각 Modal 에 `computeDeletionImpact` 결과 + "Confirm" 버튼. `DEL <source_id>` 타이핑 요구.
+4. [ ] 실제 삭제는 `fs.unlinkSync` + `registry.recordDelete` (이미 Stage 4 에 있음). 백업 없음 — dry-run 이 안전선.
+
+### C. §4.5.2 초기화 기능 (TDD) — 약 2~3 시간
+
+1. [ ] `wikey-core/src/reset.ts` 확장 — `ResetScope = 'wiki+registry' | 'wiki-only' | 'registry-only' | 'qmd-index' | 'settings'`. `previewReset(scope, vaultRoot) → { files: string[], bytes: number }` 순수.
+2. [ ] vitest +5 (각 scope 별 file list 검증).
+3. [ ] `wikey-obsidian/src/commands.ts::registerResetCommand` — Settings Tab 에 "Reset" 섹션 + 5-way radio. 각 선택 시 Modal 에 preview 표시 + `RESET <SCOPE>` 타이핑 요구.
+4. [ ] 실행은 scope 별 `fs.rmSync` / `registry = {}` / qmd `reindex --purge` / `data.json = DEFAULT_SETTINGS`.
+
+### D. 본체 완성 선언 (모든 A/B/C [x] 후)
+
+1. [ ] `activity/phase-4-result.md` 맨 아래 "Phase 4 본체 완성 선언 (2026-MM-DD)" 섹션 — 완성 정의 충족 증거 (data model 고정 / 3-stage pipeline 완비 / 분류+URI+listener / citation UX / 삭제·초기화 가드) + 테스트 총계 + Phase 5 착수점 지정.
+2. [ ] `plan/phase-4-todo.md` 상단 상태 라인을 "본체 완성 (2026-MM-DD). Phase 5 로 이관" 으로 업데이트.
+3. [ ] `plan/phase-5-todo.md` §5.6 Stage 1 (schema.yaml 로더화) 를 첫 착수점으로 고정 (현재 PMBOK 하드코딩이 Stage 0 검증).
+4. [ ] memory `project_phase4_status.md` description 을 "완료" 로 변경 + `MEMORY.md` 인덱스 갱신.
+5. [ ] 단일 commit `feat(phase-4): 본체 완성 선언 — §4.3 smoke + §4.5.2 가드 + Phase 5 착수점` + push.
 
 ## 4.5.3 / 4.5.4 / 4.5.5 (이관됨) — 성능·엔진 확장 및 self-extending
 

@@ -1,13 +1,28 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-23 session 4 (§4.3 Part B + §4.3.1 3-stage override 완료 + plan v3 + codex 2차 timeout 기록)
+> 최신 갱신: 2026-04-23 session 4 종료 (§4.3 Part B + §4.3.1 완료, Phase 4 종료 준비 확정)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-23 세션 4 마무리 — §4.3 Part B + §4.3.1 완료
+## 2026-04-23 session 4 종료 시점 — **다음 세션은 Phase 4 종료**
 
-### ⭐ 다음 세션 최우선: §4.3 통합 smoke (Obsidian UI 수동) + §4.5.2 운영 안전 → Phase 4 본체 완성 선언
+### ⭐ 다음 세션 플레이북 (한 세션 내 완결 목표)
+
+**진입점**: 이 세션은 **Phase 4 본체 완성 선언 세션**. `plan/phase-4-todo.md` 맨 아래 **"Phase 4 본체 완성 체크리스트"** 를 단일 소스로 따른다. 3 블록 (A/B/C) 모두 완료 후 D (완성 선언) 실행.
+
+| 블록 | 작업 | 예상 시간 |
+|------|------|----------|
+| **A** | §4.3 통합 smoke (Obsidian UI 수동) — 5 체크리스트 | ~30 분 |
+| **B** | §4.5.2 삭제 안전장치 (TDD, `reset.ts` + commands) | ~2~3 시간 |
+| **C** | §4.5.2 초기화 기능 (TDD, 5-way scope) | ~2~3 시간 |
+| **D** | 본체 완성 선언 (result/todo/plan/memory 동기화 + commit) | ~30 분 |
+
+**시작 체크**: Obsidian 1.12.7 구동 가능 여부 + `~/.codex/` 전역 세션 충돌 없음 (`bash ~/.claude/skills/codex/preflight.sh` exit 0 확인) + Gemini API 키 quota 잔량.
+
+**수동 UI smoke 가 A 의 유일한 리스크**: Obsidian 플러그인 리로드 필요 (`Cmd+R`), 인제스트 1 건 ~5 분 + citation 클릭 3경로 확인 ~10 분. 실패 시 `activity/phase-4-result.md §4.3.smoke` 에 재현 방법 기록 + `plan/phase-4-todo.md` fix 항목 추가 → 수정 후 재시도.
+
+### Session 4 완료 내역 요약 (detail: `activity/phase-4-result.md §4.3.1 / §4.3.2.3 / §4.3.codex-verify`)
 
 Session 4 에서 **§4.3.2 Part B (source-resolver + citations + sidebar 보조 링크)** + **§4.3.1 (3-stage prompt override)** 구현 완료. plan v3 가 완료 스냅샷 + codex 2차 timeout 기록 + v2 self-review 4건 ↔ 실구현 1:1 매핑 제공 (`plan/phase-4-3-plan.md §12`).
 
