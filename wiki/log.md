@@ -5,6 +5,27 @@ created: 2026-04-10
 updated: 2026-04-23
 ---
 
+## [2026-04-23] plan | Phase 4 통합 smoke 계획서 v6 — codex Panel Mode D APPROVE-WITH-CHANGES
+
+- v3 REJECT (P1 5건) → v4 REJECT (P1 5 중 4 부분해소) → v5 REJECT (P1 2 남음) → **v6 APPROVE-WITH-CHANGES** (P1 0건).
+- v6 핵심: IV.A 를 WARN 허용 관찰로 강등 (실행 중 shell mv 가 vault watcher 에 잡힌다는 코드상 보장 없음 수용) + IV.B 를 registry diff 1차 판정으로 주 검증축 격상 + §7.4 snippet 전부 복붙 실행 가능 (helper / boolean IIFE) + §7.6 실행 순서 mode 명시 (init/between-pass/final + Obsidian quit/launch cycle).
+- APPROVE 직후 P2 2건 (IV.B snippet jq 명령 삽입 + 4.A.teardown mode 명시) + P3 3건 (버전 표기 잔재) 반영.
+- 관련 동기화: plan/phase-4-todo.md A 블록 + plan/session-wrap-followups.md 진입점 + memory.
+
+## [2026-04-23] plan | Phase 4 통합 smoke 계획서 v3 — 2-pass + Claude CDP 자동 실행
+
+- 사용자 피드백으로 v2 → v3 대폭 재설계. 핵심 변경 3건:
+  - **실행 주체**: 사용자 수동 → **Claude 가 CDP (localhost:9222, `/tmp/wikey-cdp.py`) 로 UI event 순차 발행**. DOM/내부 API 우회 금지, 백그라운드·병렬 금지.
+  - **구조**: 단일 pass (Audit only) → **2-pass** (Pass A: Ingest 패널, 일반 사용자 경로, Ingest+Move 2-step / Pass B: Audit 패널, 운영자 감사 경로, 1-step 자동 이동). 양 pass 사이 `smoke-reset.sh` 로 완전 clean-slate (inbox backup/restore 포함).
+  - **Audit 만 돌리면 Ingest 패널의 일반 사용자 경로는 검증되지 않는다**는 사용자 지적 반영. 두 경로 모두 통과해야 본체 완성 선언.
+- §4 전면 재편: §4.Common (I Stage1 core / II Index-ready gate / III Stage2 / IV Stage3) 공용 절차 + §4.A Pass A + §4.B Pass B + §4.B.cross Pass A/B 교차 대조 + §4.C 덤 smoke.
+- **§7 신규 "Claude 실행 플로우"**: `scripts/smoke-cdp.sh` wrapper 설계 (click/type/key/wait/text/capture-logs/init-log) + UI selector 카탈로그 + Stage 별 CDP snippet (7.4.a~d) + 안전 레일 (파일당 15분 상한, 3 연속 FAIL 중단).
+- §5 리포트 2-pass 구조: pass-a-readme + pass-b-readme + cross-compare + 파일별 12개 (6×2).
+- §6 Acceptance 2-pass: Pass A 6/6 + Pass B 6/6 + tier 6/6 일치 + PII 0 + ERROR 0.
+- 소요 시간 2~3h → **4.5~7h**. 세션 분할 권장.
+- 관련 동기화: `plan/phase-4-todo.md` 본체 체크리스트 A 블록을 2-pass 6 체크박스로 재작성 · `plan/session-wrap-followups.md` 진입점 전면 갱신 · memory `project_phase4_status.md` description + `MEMORY.md` 인덱스.
+- codex Panel Mode D 재검증 실행 중 (v2 → v3 delta).
+
 ## [2026-04-23] plan | Phase 4 통합 smoke 테스트 계획서 수립 (v2, codex Panel Mode D APPROVE-WITH-CHANGES)
 
 - 신규: `plan/phase-4-integrated-test.md` (556 라인). Phase 1~4 본체 완성 직전의 통합 회귀 smoke. 6종 파일 (llm-wiki.md / 사업자등록증 PDF (PII) / SK바이오텍 계약서 PDF 6p / PMS 제품소개 PDF 31p / 스마트공장 HWP / Examples HWPX) 을 Stage 1 Ingest → Stage 2 Wiki 검색 → Stage 3 Pairmove + 재검색 의 3-stage 로 반복. Obsidian CDP 자동화 금지, 실제 사용자 클릭·입력만. 파일별 리포트 + 집계 README 필수.

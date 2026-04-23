@@ -607,24 +607,34 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 > 2026-04-23 session 4 종료 시점에 확정. 이 체크리스트의 3 항목이 모두 [x] 되면 `activity/phase-4-result.md` 마지막에 **"Phase 4 본체 완성 선언"** 블록을 쓰고 commit. 이후 Phase 5 착수.
 
-### A. Phase 1~4 통합 smoke (6종 파일 × 3-stage, Obsidian UI 수동) — 약 2~3 시간
+### A. Phase 1~4 통합 smoke (2-pass: Ingest 패널 + Audit 패널, 6종 × 3-stage) — 약 4.5~7 시간
 
-> **실행 단일 소스**: `plan/phase-4-integrated-test.md` (v2, codex Panel Mode D APPROVE-WITH-CHANGES).
-> 기존 단일 소스 5-항목 smoke 는 6종 × 3-stage 통합 회귀로 확장 (Phase 4.0/4.1/4.2/4.3/4.5.2 모두 포괄).
+> **실행 단일 소스**: `plan/phase-4-integrated-test.md` (v6, codex Panel Mode D **APPROVE-WITH-CHANGES**).
+> **실행 주체**: Claude (CDP `localhost:9222` + `/tmp/wikey-cdp.py` 로 UI event 순차 발행).
+> **사용자 개입**: 없음. 리포트는 세션 종료 후 리뷰.
 >
 > 6종 파일 (`raw/0_inbox/`): llm-wiki.md / 사업자등록증C_굿스트림.pdf (PII) / C20260410_용역계약서_SK바이오텍.pdf (6p) / PMS_제품소개_R10.pdf (31p) / 스마트공장 합동설명회.hwp / Examples.hwpx.
 >
-> 하기 5 항목은 `phase-4-integrated-test.md` 내에서 6 파일마다 반복되는 Stage 별 체크포인트의 서브셋 — 요약용.
+> 양 pass 시퀀스:
+>
+> **Pass A (Ingest 패널, 일반 사용자 경로)**: Ingest 버튼 click → Stage 1 core 완료 → Move 버튼 click → classify + movePair → Index-ready gate → Stage 2 → Stage 3. `autoMoveFromInbox=false` 이므로 2-step.
+>
+> **clean-slate**: `bash scripts/smoke-reset.sh` → wiki 비우기 + registry 초기화 + qmd purge + inbox 복원 (`/tmp/wikey-smoke-inbox-backup/` 에서).
+>
+> **Pass B (Audit 패널, 운영자 감사 경로)**: Ingest 버튼 click → Stage 1 core + 자동 이동 완료 → Index-ready gate → Stage 2 → Stage 3. `autoMoveFromInbox=true` 이므로 1-step.
+>
+> **§4.C 덤 smoke**: 팔레트 7 entries + Delete/Reset modal 노출 확인 (파괴 실행 skip).
 
-체크리스트 (`plan/phase-4-3-plan.md §12.4` 와 동일):
+체크리스트 (본체 완성 선언 필수 조건):
 
-1. [ ] **Part B 보조 링크 렌더** — raw/0_inbox 에 임의 PDF 1건 투입 → Obsidian UI auto-ingest 또는 `/codex` 수동 ingest → 사이드바 Chat 에서 관련 질문 → 답변 wikilink 뒤 `📄` 아이콘 표시 확인. 클릭 시 원본 PDF 가 Obsidian 내장 뷰어에서 열림.
-2. [ ] **Part B external URI** (선택) — uri-hash 기반 source 가 있으면 확인. 없으면 skip.
-3. [ ] **Part B tombstone** — raw/ 원본을 `mv` 로 vault 밖 이동 → 플러그인 reconcile 후 기존 답변의 `📄` 클릭 → "원본 삭제됨" Notice + grayscale. (복원 후 `📄` 정상화 확인 옵션.)
-4. [ ] **§4.3.1 Stage 2/3 override UI** — 설정 탭 "Ingest Prompts" 섹션에서 Stage 2 Edit → `{{CHUNK_CONTENT}}` 앞에 주석 `# TEST-OVERRIDE` 추가 → Save. 다음 인제스트의 Stage 2 LLM 호출 prompt 에 "TEST-OVERRIDE" 포함됐는지 console 확인 (또는 Obsidian Developer Console 에서 `[Wikey ingest]` 로그). Reset 후 `.wikey/stage2_mention_prompt.md` 삭제 확인.
-5. [ ] **§4.3.3 source 페이지 본문 strip** — 위 1번에서 생성된 `wiki/sources/source-*.md` 본문에 `[[없는개념]]` 형태의 깨진 wikilink 잔존하지 않음 확인. canonical entity/concept 로 linked 된 것만 `[[...]]` 유지.
+1. [ ] **Pass A 완료**: 6/6 파일 × (Stage 1 / Index gate / Stage 2 / Stage 3) ALL PASS. `activity/phase-4-smoke-<DATE>/pass-a-readme.md` + 6 파일 리포트.
+2. [ ] **clean-slate 검증**: Pass A 종료 후 `bash scripts/smoke-reset.sh` → inbox 6개 복원 + wiki 비어있음 + registry `{}` 확인.
+3. [ ] **Pass B 완료**: 6/6 파일 × (Stage 1 / Index gate / Stage 2 / Stage 3) ALL PASS. `pass-b-readme.md` + 6 파일 리포트.
+4. [ ] **교차 대조**: Pass A 와 B 의 tier-label 6/6 일치 (변환 캐시 hit), 분류 결과 유사, 답변 주요 wikilink ≥70% 공통. `cross-compare.md`.
+5. [ ] **PII 0건**: 파일 2 사업자등록증 Pass A/B 모두 답변·mentions·wiki 페이지에 PII 없음.
+6. [ ] **§4.C 덤 smoke**: 팔레트 7 + 모달 5 scope 노출 확인.
 
-smoke 결과는 `activity/phase-4-result.md §4.3.smoke` (신규) 에 기록. 문제 발견 시 `plan/phase-4-todo.md` 에 fix 항목 추가 + 재시도.
+smoke 결과는 `activity/phase-4-smoke-<DATE>/` 디렉터리. 문제 발견 시 `plan/phase-4-todo.md` 에 fix 항목 추가 + 해당 pass 재실행.
 
 ### B. §4.5.2 삭제 안전장치 (TDD) — 완료 (2026-04-23 session 5)
 
