@@ -5,6 +5,23 @@ created: 2026-04-10
 updated: 2026-04-23
 ---
 
+## [2026-04-23] feat | §4.5.2 운영 안전 — 삭제·초기화 안전장치 (Phase 4 본체 체크리스트 B + C)
+
+- **배경**: Phase 4 본체 완성 체크리스트의 B (삭제) + C (초기화) 항목. A 는 Obsidian UI 수동 smoke 라 본 세션에선 코드 루프만 처리.
+- **신규 파일**:
+  - `wikey-core/src/reset.ts` — `computeDeletionImpact` (source/wiki-page 영향 계산) + `previewReset` (5-way scope 파일·바이트 합산). 순수 함수, fs 부작용 없음.
+  - `wikey-core/src/__tests__/reset.test.ts` — vitest +12 (computeDeletionImpact 6 + previewReset 6). 462 → 474 tests.
+  - `wikey-obsidian/src/reset-modals.ts` — `DeleteImpactModal` + `ResetImpactModal`. impact 요약 ≤20~30건 표시 + `DEL <id>` / `RESET <SCOPE>` 타이핑 필수 + warning 버튼 2중 게이트.
+- **수정 파일**:
+  - `wikey-core/src/index.ts` — reset.ts 공개 API (`computeDeletionImpact`, `previewReset`, `QMD_INDEX_MARKER`, `SETTINGS_MARKER`, 타입 6개).
+  - `wikey-obsidian/src/commands.ts` — `registerDeleteCommand` (2 palette entries) + `registerResetCommand` (5 palette entries) + `executeReset` export (Settings Tab 재사용).
+  - `wikey-obsidian/src/settings-tab.ts` — `renderResetSection` (Settings 탭 Reset 섹션: scope dropdown + Preview & Reset 버튼).
+- **삭제 경로**: source → `ingested_pages[...]` + sidecar + raw 원본 `fs.unlinkSync` + `registryRecordDelete` tombstone. wiki-page → 해당 md 만 `fs.unlinkSync`, backlink 는 경고만.
+- **리셋 경로**: wiki/registry 스코프 → preview 파일 `fs.unlinkSync` (+ registry-only 는 빈 JSON 복원). qmd-index → `~/.cache/qmd/index.sqlite` 삭제 (lazy 재빌드). settings → `data.json` 삭제 (재시작 시 DEFAULT_SETTINGS 복원).
+- **검증**: `npm test` 22 files / **474 tests passed** + `npm run build` 0 errors.
+- **미완 (A)**: Obsidian UI 수동 smoke 5건 (Part B 보조 링크 렌더 · external URI · tombstone · Stage 2/3 override · source page strip). 사용자가 Obsidian 에서 수동 진행 후 본체 완성 선언 블록 추가.
+- 참조: `activity/phase-4-result.md §4.5.2` 신규 세부 기록 · `plan/phase-4-todo.md §4.5.2` [x] + 본체 체크리스트 B·C [x] · `plan/session-wrap-followups.md` 최상단 블록 갱신 · memory `project_phase4_status.md` description.
+
 ## [2026-04-23] refactor | §4.2.3 Audit UI 재설계 — Re-classify 체크박스 철회 + paraRoot 옵션
 
 - 사용자 피드백 "UI가 이상해졌어. 불필요해. 1) auto 는 자동 LLM fallback, 2) 수동 지정은 수동분류 — 이중 선택 불필요" + "수동 지정은 PARA 만, sub-folder 는 CLASSIFY.md + LLM" 반영.

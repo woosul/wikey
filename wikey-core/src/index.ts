@@ -139,6 +139,20 @@ export type {
   HandleDeleteResult,
 } from './vault-events.js'
 export {
+  computeDeletionImpact,
+  previewReset,
+  QMD_INDEX_MARKER,
+  SETTINGS_MARKER,
+} from './reset.js'
+export type {
+  DeletionTarget,
+  DeletionImpact,
+  ComputeDeletionImpactOptions,
+  ResetScope,
+  PreviewResetOptions,
+  ResetPreview,
+} from './reset.js'
+export {
   validateWiki,
   checkPii,
   reindex as reindexWiki,

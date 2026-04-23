@@ -1,8 +1,25 @@
 import { FuzzySuggestModal, Notice, TFile } from 'obsidian'
 import type WikeyPlugin from './main'
-import { generateBrief, ingest, PlanRejectedError, type IngestPlan, classifyFileAsync, movePair } from 'wikey-core'
+import {
+  generateBrief,
+  ingest,
+  PlanRejectedError,
+  type IngestPlan,
+  classifyFileAsync,
+  movePair,
+  loadRegistry,
+  saveRegistry,
+  registryRecordDelete,
+  computeDeletionImpact,
+  previewReset,
+  REGISTRY_PATH,
+  QMD_INDEX_MARKER,
+  SETTINGS_MARKER,
+  type ResetScope,
+} from 'wikey-core'
 import { WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { IngestFlowModal } from './ingest-modals'
+import { DeleteImpactModal, ResetImpactModal } from './reset-modals'
 
 export function registerCommands(plugin: WikeyPlugin): void {
   // Cmd+Shift+I: Ingest current note
@@ -52,6 +69,212 @@ export function registerCommands(plugin: WikeyPlugin): void {
       runIngest(plugin, params.ingest)
     }
   })
+
+  // ── §4.5.2 Delete safety ──
+  registerDeleteCommand(plugin)
+  registerResetCommand(plugin)
+}
+
+// ─────────────────────────────────────────────────────────────
+//  §4.5.2 — Delete source / wiki page (dry-run + typed-confirm)
+// ─────────────────────────────────────────────────────────────
+
+function registerDeleteCommand(plugin: WikeyPlugin): void {
+  plugin.addCommand({
+    id: 'delete-source',
+    name: 'Wikey: Delete source (dry-run)',
+    callback: () => {
+      new DeleteSourceSuggestModal(plugin).open()
+    },
+  })
+
+  plugin.addCommand({
+    id: 'delete-wiki-page',
+    name: 'Wikey: Delete wiki page (dry-run)',
+    checkCallback: (checking) => {
+      const file = plugin.app.workspace.getActiveFile()
+      if (!file || !file.path.startsWith('wiki/')) return false
+      if (checking) return true
+      void promptWikiPageDelete(plugin, file.path)
+      return true
+    },
+  })
+}
+
+async function promptSourceDelete(plugin: WikeyPlugin, sourcePath: string): Promise<void> {
+  const registry = await loadRegistry(plugin.wikiFS)
+  const impact = await computeDeletionImpact({
+    wikiFS: plugin.wikiFS,
+    registry,
+    target: { kind: 'source', vault_path: sourcePath },
+  })
+
+  const shortId = impact.registryRecord?.id.slice(0, 23) ?? 'unknown'
+  const confirmPhrase = `DEL ${shortId}`
+
+  new DeleteImpactModal(plugin.app, {
+    title: `Delete source: ${sourcePath}`,
+    confirmPhrase,
+    impact,
+    onConfirm: async () => {
+      const fs = require('node:fs') as typeof import('node:fs')
+      const path = require('node:path') as typeof import('node:path')
+      const basePath = getBasePath(plugin)
+
+      // 1) Delete wiki ingested pages.
+      for (const p of impact.pages) {
+        const abs = path.join(basePath, p)
+        try { fs.unlinkSync(abs) } catch (err: any) {
+          if (err?.code !== 'ENOENT') throw err
+        }
+      }
+      // 2) Delete sidecar + source file itself.
+      const sidecar = impact.registryRecord?.record.sidecar_vault_path
+      if (sidecar) {
+        try { fs.unlinkSync(path.join(basePath, sidecar)) } catch (err: any) {
+          if (err?.code !== 'ENOENT') throw err
+        }
+      }
+      try { fs.unlinkSync(path.join(basePath, sourcePath)) } catch (err: any) {
+        if (err?.code !== 'ENOENT') throw err
+      }
+      // 3) Tombstone the registry record.
+      if (impact.registryRecord) {
+        const next = registryRecordDelete(registry, impact.registryRecord.id)
+        await saveRegistry(plugin.wikiFS, next)
+      }
+    },
+  }).open()
+}
+
+async function promptWikiPageDelete(plugin: WikeyPlugin, pagePath: string): Promise<void> {
+  const registry = await loadRegistry(plugin.wikiFS)
+  const impact = await computeDeletionImpact({
+    wikiFS: plugin.wikiFS,
+    registry,
+    target: { kind: 'wiki-page', page_path: pagePath },
+  })
+
+  const basename = pagePath.split('/').pop()!.replace(/\.md$/, '')
+  const confirmPhrase = `DEL ${basename}`
+
+  new DeleteImpactModal(plugin.app, {
+    title: `Delete wiki page: ${pagePath}`,
+    confirmPhrase,
+    impact,
+    onConfirm: async () => {
+      const fs = require('node:fs') as typeof import('node:fs')
+      const path = require('node:path') as typeof import('node:path')
+      const abs = path.join(getBasePath(plugin), pagePath)
+      try { fs.unlinkSync(abs) } catch (err: any) {
+        if (err?.code !== 'ENOENT') throw err
+      }
+    },
+  }).open()
+}
+
+class DeleteSourceSuggestModal extends FuzzySuggestModal<TFile> {
+  constructor(private readonly plugin: WikeyPlugin) {
+    super(plugin.app)
+    this.setPlaceholder('삭제할 raw/ 소스를 선택하세요...')
+  }
+
+  getItems(): TFile[] {
+    return this.plugin.app.vault
+      .getFiles()
+      .filter((f) => f.path.startsWith('raw/') && !f.path.endsWith('.md'))
+  }
+
+  getItemText(f: TFile): string {
+    return f.path
+  }
+
+  onChooseItem(f: TFile): void {
+    void promptSourceDelete(this.plugin, f.path)
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  §4.5.2 — Reset (5-way scope)
+// ─────────────────────────────────────────────────────────────
+
+function registerResetCommand(plugin: WikeyPlugin): void {
+  const scopes: ReadonlyArray<{ id: string; name: string; scope: ResetScope }> = [
+    { id: 'reset-wiki-registry', name: 'Wikey: Reset wiki + registry', scope: 'wiki+registry' },
+    { id: 'reset-wiki-only', name: 'Wikey: Reset wiki only', scope: 'wiki-only' },
+    { id: 'reset-registry-only', name: 'Wikey: Reset registry only', scope: 'registry-only' },
+    { id: 'reset-qmd-index', name: 'Wikey: Reset qmd index', scope: 'qmd-index' },
+    { id: 'reset-settings', name: 'Wikey: Reset settings (data.json)', scope: 'settings' },
+  ]
+
+  for (const s of scopes) {
+    plugin.addCommand({
+      id: s.id,
+      name: s.name,
+      callback: () => {
+        void promptReset(plugin, s.scope)
+      },
+    })
+  }
+}
+
+async function promptReset(plugin: WikeyPlugin, scope: ResetScope): Promise<void> {
+  const preview = await previewReset({ wikiFS: plugin.wikiFS, scope })
+  new ResetImpactModal(plugin.app, {
+    scope,
+    preview,
+    onConfirm: async () => {
+      await executeReset(plugin, scope, preview.files)
+    },
+  }).open()
+}
+
+export async function executeReset(
+  plugin: WikeyPlugin,
+  scope: ResetScope,
+  files: readonly string[],
+): Promise<void> {
+  const fs = require('node:fs') as typeof import('node:fs')
+  const path = require('node:path') as typeof import('node:path')
+  const os = require('node:os') as typeof import('node:os')
+  const basePath = getBasePath(plugin)
+
+  switch (scope) {
+    case 'wiki+registry':
+    case 'wiki-only':
+    case 'registry-only': {
+      for (const p of files) {
+        const abs = path.join(basePath, p)
+        try { fs.unlinkSync(abs) } catch (err: any) {
+          if (err?.code !== 'ENOENT') throw err
+        }
+      }
+      if (scope === 'registry-only') {
+        await plugin.wikiFS.write(REGISTRY_PATH, '{}')
+      }
+      return
+    }
+    case 'qmd-index': {
+      const abs = path.join(os.homedir(), '.cache', 'qmd', 'index.sqlite')
+      try { fs.unlinkSync(abs) } catch (err: any) {
+        if (err?.code !== 'ENOENT') throw err
+      }
+      new Notice('qmd 인덱스 삭제됨. 다음 인제스트/쿼리 시 reindex 자동 실행됨.')
+      return
+    }
+    case 'settings': {
+      const abs = path.join(basePath, SETTINGS_MARKER)
+      try { fs.unlinkSync(abs) } catch (err: any) {
+        if (err?.code !== 'ENOENT') throw err
+      }
+      new Notice('설정 초기화됨. Obsidian 재시작 시 DEFAULT_SETTINGS 로 복원됨.')
+      return
+    }
+  }
+}
+
+function getBasePath(plugin: WikeyPlugin): string {
+  return (plugin.app.vault.adapter as any).basePath ?? ''
 }
 
 export interface IngestRunResult {

@@ -5,9 +5,12 @@ import {
   BUNDLED_INGEST_PROMPT, BUNDLED_STAGE2_MENTION_PROMPT,
   loadEffectiveIngestPrompt, loadEffectiveStage2Prompt, loadEffectiveStage3Prompt,
   loadSchemaOverride, fetchModelList, ANTHROPIC_PING_MODEL,
+  previewReset,
 } from 'wikey-core'
-import type { LLMProvider } from 'wikey-core'
+import type { LLMProvider, ResetScope } from 'wikey-core'
 import type WikeyPlugin from './main'
+import { ResetImpactModal } from './reset-modals'
+import { executeReset } from './commands'
 
 export class WikeySettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: WikeyPlugin) {
@@ -30,7 +33,48 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderSearchSection(containerEl)
     this.renderCostSection(containerEl)
     this.renderToolsSection(containerEl)
+    this.renderResetSection(containerEl)
     this.renderAdvancedSection(containerEl)
+  }
+
+  // ── Section: Reset (Phase 4.5.2) ──
+  private renderResetSection(containerEl: HTMLElement): void {
+    containerEl.createEl('h3', { text: 'Reset' })
+    containerEl.createEl('p', {
+      text: '선택한 scope 를 초기화. 실행 전 미리보기 + "RESET <SCOPE>" 타이핑 확인 필수.',
+      cls: 'wikey-settings-status-label',
+    })
+
+    let selectedScope: ResetScope = 'wiki+registry'
+
+    new Setting(containerEl)
+      .setName('Scope')
+      .setDesc('대상 범위를 선택하세요')
+      .addDropdown((dd) => {
+        dd.addOption('wiki+registry', 'wiki + registry (raw/ 유지)')
+        dd.addOption('wiki-only', 'wiki 만 (registry 유지)')
+        dd.addOption('registry-only', 'registry 만 (wiki 유지)')
+        dd.addOption('qmd-index', 'qmd 인덱스만')
+        dd.addOption('settings', '설정만 (data.json)')
+        dd.setValue(selectedScope)
+        dd.onChange((v) => {
+          selectedScope = v as ResetScope
+        })
+      })
+      .addButton((b) =>
+        b.setButtonText('Preview & Reset')
+          .setWarning()
+          .onClick(async () => {
+            const preview = await previewReset({ wikiFS: this.plugin.wikiFS, scope: selectedScope })
+            new ResetImpactModal(this.plugin.app, {
+              scope: selectedScope,
+              preview,
+              onConfirm: async () => {
+                await executeReset(this.plugin, selectedScope, preview.files)
+              },
+            }).open()
+          }),
+      )
   }
 
   // ── Section 1: Environment Status ──

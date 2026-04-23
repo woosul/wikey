@@ -568,18 +568,22 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 - [→ Phase 5 §5.4.4] **§4.5.1.7.7** `log_entry` axis cosmetic — 표시 cosmetic, wiki 재생성 없음. (상세는 `plan/phase-5-todo.md §5.4.4`)
 
-### 4.5.2 운영 안전 — 삭제·초기화 (본체 필수)
+### 4.5.2 운영 안전 — 삭제·초기화 (본체 필수) — **완료 (2026-04-23 session 5)**
 
 > 운영 안정성 subject 에서 본체 필수인 두 항목만 유지. bash→TS 포팅, qmd SDK import 는 Phase 5 §5.7 로 이관 (동작 유지 리팩토링).
 
-- [ ] **원본/위키 삭제 안전장치** — dry-run 미리보기, 영향 범위 표시
+- [x] **4.5.2.1 원본/위키 삭제 안전장치** — dry-run 미리보기, 영향 범위 표시
   - 대상: raw/ 원본, wiki/sources/, wiki/entities/, wiki/concepts/, wiki/analyses/, `.wikey/source-registry.json`.
-  - UI: Obsidian 명령 팔레트 "Wikey: Delete source (dry-run)" · "Wikey: Delete wiki page (dry-run)" — 실행 전 modal 에 "영향 페이지 N 건 / registry 레코드 M 건 / backlink L 건" 표시.
-  - 실 삭제는 `movePair`/`recordDelete` 경로 재사용 (§4.2 Stage 2/4 에서 이미 구현). 백업은 raw/ 원본 미삭제, wiki 만 tombstone 방식.
-- [ ] **초기화 기능** — 선택적 리셋 (완전/인제스트/원본/인덱스/설정)
-  - 5 단계 옵션 drop-down: (a) wiki + registry 전체 (원본 raw/ 유지), (b) wiki 만 (registry 유지), (c) registry + source_id 만 (wiki 콘텐츠 유지, 재인제스트 시 새 id), (d) qmd index 만, (e) 설정 (data.json) 만.
-  - 각 옵션 별 dry-run 미리보기 + "입력해서 확인" 체크 (e.g. `RESET ALL` 타이핑).
-  - 구현 위치: `wikey-obsidian/src/commands.ts` 에 `registerResetCommand`, `wikey-core/src/reset.ts` 에 순수 로직 (vitest +N).
+  - UI: Obsidian 명령 팔레트 "Wikey: Delete source (dry-run)" · "Wikey: Delete wiki page (dry-run)" — 실행 전 modal 에 "영향 페이지 N 건 / registry 레코드 M 건 / backlink L 건" 표시. `DEL <source_id[:23]>` / `DEL <basename>` 타이핑 확인.
+  - 실 삭제: `fs.unlinkSync(ingested_pages[...] + sidecar + raw)` + `registryRecordDelete` tombstone. 백업은 없음 — dry-run + 타이핑이 안전선.
+  - 구현: `wikey-core/src/reset.ts::computeDeletionImpact` (순수, vitest 6) · `wikey-obsidian/src/reset-modals.ts::DeleteImpactModal` · `commands.ts::registerDeleteCommand`.
+- [x] **4.5.2.2 초기화 기능** — 선택적 리셋 (5-way scope)
+  - 5 단계 옵션 drop-down: (a) wiki + registry 전체 (raw/ 유지), (b) wiki 만 (registry 유지), (c) registry 만 (wiki 유지), (d) qmd index 만, (e) 설정 (data.json) 만.
+  - 각 옵션 별 dry-run 미리보기 + `RESET <SCOPE>` 타이핑 확인.
+  - 구현: `wikey-core/src/reset.ts::previewReset` + `ResetScope` (순수, vitest 6) · `wikey-obsidian/src/reset-modals.ts::ResetImpactModal` · `commands.ts::registerResetCommand` (명령 팔레트 5개) · `settings-tab.ts::renderResetSection` (Settings 탭 scope dropdown + Preview & Reset 버튼).
+  - 실행: `wiki+registry`/`wiki-only`/`registry-only` 는 `fs.unlinkSync` + `wikiFS.write(REGISTRY_PATH, '{}')` (registry-only). `qmd-index` 는 `~/.cache/qmd/index.sqlite` 삭제 (다음 인제스트 시 lazy 재빌드). `settings` 는 `data.json` 삭제 (Obsidian 재시작 시 DEFAULT_SETTINGS 복원).
+
+**증거**: `npm test` 22 files / 474 tests passed (reset.test.ts +12) · `npm run build` 0 errors.
 
 **§4.5.2 에서 Phase 5 로 이관**:
 - 기존 bash→TS 완전 포팅 (validate-wiki / check-pii / cost-tracker / reindex) → **Phase 5 §5.7.1**
@@ -603,19 +607,19 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 smoke 결과는 `activity/phase-4-result.md §4.3.smoke` (신규) 에 기록. 문제 발견 시 `plan/phase-4-todo.md` 에 fix 항목 추가 + 재시도.
 
-### B. §4.5.2 삭제 안전장치 (TDD) — 약 2~3 시간
+### B. §4.5.2 삭제 안전장치 (TDD) — 완료 (2026-04-23 session 5)
 
-1. [ ] `wikey-core/src/reset.ts` 신규 — `computeDeletionImpact(vaultPath, registry) → { pages: string[], backlinks: number, registryRecord?: SourceRecord }` 순수 함수. `wiki-ops.ts::extractWikilinks` 재사용.
-2. [ ] `wikey-core/src/__tests__/reset.test.ts` — vitest +6 (단일 파일 / 번들 / tombstone 된 것 / registry 에 없는 raw / wiki-only / backlink 0).
-3. [ ] `wikey-obsidian/src/commands.ts::registerDeleteCommand` — 명령 팔레트 엔트리 2 개 (raw/ source 삭제 · wiki 페이지 삭제). 각 Modal 에 `computeDeletionImpact` 결과 + "Confirm" 버튼. `DEL <source_id>` 타이핑 요구.
-4. [ ] 실제 삭제는 `fs.unlinkSync` + `registry.recordDelete` (이미 Stage 4 에 있음). 백업 없음 — dry-run 이 안전선.
+1. [x] `wikey-core/src/reset.ts` 신규 — `computeDeletionImpact({ wikiFS, registry, target }) → { pages, backlinks, registryRecord? }` 순수 함수. `wiki-ops.ts::extractWikilinks` 재사용 (wiki-page kind 에서 distinct backlink 수 계산).
+2. [x] `wikey-core/src/__tests__/reset.test.ts` — vitest +6 (single source / bundled / tombstoned / registry 에 없는 raw / wiki-only backlinks≥1 / backlinks=0).
+3. [x] `wikey-obsidian/src/commands.ts::registerDeleteCommand` — 명령 팔레트 엔트리 2 개 (`Wikey: Delete source (dry-run)` 는 raw/ picker, `Wikey: Delete wiki page (dry-run)` 는 active file). 각 Modal(`DeleteImpactModal`) 에 impact 요약 + `DEL <id>` 타이핑 필수.
+4. [x] 실 삭제 — source: `fs.unlinkSync(ingested_pages... + sidecar + raw)` + `registryRecordDelete`. wiki-page: 해당 md 만 `fs.unlinkSync`.
 
-### C. §4.5.2 초기화 기능 (TDD) — 약 2~3 시간
+### C. §4.5.2 초기화 기능 (TDD) — 완료 (2026-04-23 session 5)
 
-1. [ ] `wikey-core/src/reset.ts` 확장 — `ResetScope = 'wiki+registry' | 'wiki-only' | 'registry-only' | 'qmd-index' | 'settings'`. `previewReset(scope, vaultRoot) → { files: string[], bytes: number }` 순수.
-2. [ ] vitest +5 (각 scope 별 file list 검증).
-3. [ ] `wikey-obsidian/src/commands.ts::registerResetCommand` — Settings Tab 에 "Reset" 섹션 + 5-way radio. 각 선택 시 Modal 에 preview 표시 + `RESET <SCOPE>` 타이핑 요구.
-4. [ ] 실행은 scope 별 `fs.rmSync` / `registry = {}` / qmd `reindex --purge` / `data.json = DEFAULT_SETTINGS`.
+1. [x] `wikey-core/src/reset.ts` 확장 — `ResetScope = 'wiki+registry' | 'wiki-only' | 'registry-only' | 'qmd-index' | 'settings'`. `previewReset({ wikiFS, scope }) → { files, bytes }` 순수. `QMD_INDEX_MARKER` / `SETTINGS_MARKER` 외부 경로 상수 export.
+2. [x] vitest +6 (5 scope 정상 + unknown scope 방어).
+3. [x] `wikey-obsidian/src/commands.ts::registerResetCommand` — 명령 팔레트 5 개 + `settings-tab.ts::renderResetSection` Settings Tab "Reset" 섹션 dropdown + `Preview & Reset` 버튼. 모달(`ResetImpactModal`) 에 preview + `RESET <SCOPE>` 타이핑 필수.
+4. [x] 실행: wiki/registry 는 `fs.unlinkSync` + `wikiFS.write(REGISTRY_PATH, '{}')` (registry-only). qmd-index 는 `~/.cache/qmd/index.sqlite` 삭제 (lazy 재빌드). settings 는 `data.json` 삭제 (재시작 시 DEFAULT_SETTINGS 복원).
 
 ### D. 본체 완성 선언 (모든 A/B/C [x] 후)
 

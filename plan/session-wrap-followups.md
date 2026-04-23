@@ -1,11 +1,40 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-23 session 4 종료 (§4.3 Part B + §4.3.1 완료, Phase 4 종료 준비 확정)
+> 최신 갱신: 2026-04-23 session 5 종료 (§4.5.2 B+C 완료 + A 는 Obsidian UI 수동 smoke 대기)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-23 session 4 종료 시점 — **다음 세션은 Phase 4 종료**
+## 2026-04-23 session 5 종료 시점 — **다음 세션은 A 수동 smoke + D 본체 완성 선언**
+
+### ⭐ 다음 세션 플레이북 (30~60 분 내 완결 목표)
+
+**진입점**: Phase 4 본체 완성 체크리스트의 **A (§4.3 통합 smoke)** 만 남음. 사용자가 Obsidian 을 기동해 5건 수동 확인 → 결과를 `activity/phase-4-result.md §4.3.smoke` 에 기록 → D (완성 선언) 실행.
+
+| 블록 | 상태 | 작업 |
+|------|------|------|
+| **A** | 🔴 대기 | §4.3 통합 smoke (Obsidian UI 수동) — 5 체크리스트 (Part B 보조 링크 · external URI · tombstone · Stage 2/3 override · source page strip) |
+| **B** | 🟢 완료 | §4.5.2 삭제 안전장치 — `reset.ts::computeDeletionImpact` + `DeleteImpactModal` + `registerDeleteCommand` 2 palette entries (462→474 tests) |
+| **C** | 🟢 완료 | §4.5.2 초기화 기능 — `reset.ts::previewReset` + `ResetImpactModal` + `registerResetCommand` 5 palette entries + `renderResetSection` Settings Tab |
+| **D** | 🔴 A 뒤 | 본체 완성 선언 — result 끝 "Phase 4 본체 완성 선언" 블록 + todo 상단 상태 라인 "본체 완성" 갱신 + `plan/phase-5-todo.md §5.6 Stage 1` 첫 착수점 고정 + memory + 단일 commit push |
+
+**Session 5 완료 내역** (detail: `activity/phase-4-result.md §4.5.2`):
+- **§4.5.2.1 삭제 안전장치** — `wikey-core/src/reset.ts::computeDeletionImpact` + 6 vitest. `wikey-obsidian/src/reset-modals.ts::DeleteImpactModal` + `commands.ts::registerDeleteCommand` (raw source picker + wiki-page active file). `DEL <id>` 타이핑 확인.
+- **§4.5.2.2 초기화 기능** — `reset.ts::previewReset` + `ResetScope` 5-way + 6 vitest (unknown scope 방어 포함). `ResetImpactModal` + `registerResetCommand` 5 palette entries + `settings-tab.ts::renderResetSection`. `RESET <SCOPE>` 타이핑 확인.
+- **검증**: `npm test` 22 files / 474 tests passed · `npm run build` 0 errors.
+
+### 🔴 A 수동 smoke 절차 (다음 세션 첫 단계)
+
+1. Obsidian 플러그인 리로드 (`Cmd+R`) + `Developer Console` 오픈.
+2. `raw/0_inbox/` 에 임의 PDF (기존 `사업자등록증C_...` 또는 `C20260410_용역계약서...` 재활용 가능) → Audit/Ingest 패널에서 인제스트 → Chat 에서 관련 질문 → wikilink 뒤 `📄` 확인, 클릭 시 내장 뷰어 오픈.
+3. `raw/` 원본을 vault 밖으로 `mv` → 플러그인 reconcile 로그 확인 → 기존 답변에서 `📄` 클릭 → "원본 삭제됨" Notice + grayscale 확인. (복원 후 `📄` 정상화 확인 옵션.)
+4. Settings → Ingest Prompts → Stage 2 Edit → `{{CHUNK_CONTENT}}` 앞 `# TEST-OVERRIDE` 주석 추가 → Save → 다음 인제스트 console 에서 "TEST-OVERRIDE" 포함 확인 → Reset 후 `.wikey/stage2_mention_prompt.md` 삭제 확인.
+5. 위 2에서 생성된 `wiki/sources/source-*.md` 본문에 `[[없는개념]]` 잔존 없음 + canonical link `[[...]]` 유지 확인.
+6. (덤) §4.5.2 수동 smoke — 명령 팔레트 `Wikey: Delete source (dry-run)` / `Wikey: Reset qmd index` 등 선택 → 미리보기·타이핑 확인 모달 표시 여부 검증 (파괴적 실행은 skip 가능).
+
+---
+
+## 2026-04-23 session 4 종료 시점 — **다음 세션은 Phase 4 종료** (아카이브)
 
 ### ⭐ 다음 세션 플레이북 (한 세션 내 완결 목표)
 
