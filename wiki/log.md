@@ -5,6 +5,17 @@ created: 2026-04-10
 updated: 2026-04-23
 ---
 
+## [2026-04-23] plan | Phase 4 통합 smoke 테스트 계획서 수립 (v2, codex Panel Mode D APPROVE-WITH-CHANGES)
+
+- 신규: `plan/phase-4-integrated-test.md` (556 라인). Phase 1~4 본체 완성 직전의 통합 회귀 smoke. 6종 파일 (llm-wiki.md / 사업자등록증 PDF (PII) / SK바이오텍 계약서 PDF 6p / PMS 제품소개 PDF 31p / 스마트공장 HWP / Examples HWPX) 을 Stage 1 Ingest → Stage 2 Wiki 검색 → Stage 3 Pairmove + 재검색 의 3-stage 로 반복. Obsidian CDP 자동화 금지, 실제 사용자 클릭·입력만. 파일별 리포트 + 집계 README 필수.
+- codex 검증 (Panel Mode D, gpt-5.4 xhigh, cmux surface:2 재사용) —
+  - 초기 VERDICT **REJECT** (4 P1 블로커): (A) 실행 경로 애매 (Ingest 패널·Cmd+Shift+I 는 autoMoveFromInbox=false), (B) clean-slate + settings baseline 미정의, (C) index-ready gate 부재 (qmd reindex 가 fire-and-forget), (D) 파일 2 PII redaction 규칙 부재.
+  - v2 반영 후 codex 명시 VERDICT **APPROVE-WITH-CHANGES**.
+  - P2 3건 수용: 파일별 프로파일 실측 보정 (계약서 6p / PMS 31p / `1b-docling-force-ocr-scan` 가능성 / `image-ocr-pollution → 1a-docling-no-ocr` retry 분기) · 분류 depth 기록 강화 · Phase 4.0 UI pre-smoke §4.0 신규.
+  - P3 3건 수용: Stage 4 삭제/초기화 modal sequence 재작성 · 체크리스트 13 → 14 항목 · tier 이름/로그 문자열 현행화.
+- `plan/phase-4-todo.md` Phase 4 본체 완성 체크리스트 A 블록을 "6종 × 3-stage 통합 회귀" 로 확장 + 단일 소스를 `plan/phase-4-integrated-test.md` 로 지정. 예상 소요 30분 → 2~3 시간.
+- 다음 세션 플레이북: A smoke (사용자 수동, 2~3h) → D 본체 완성 선언. 계획서 §2.1 clean-slate 실행 → §4.0 UI pre-smoke → §4.1~4.3 파일 루프 → §4.4 Stage 4 덤 smoke → §5 리포트.
+
 ## [2026-04-23] docs | §4.5.2 result/todo 상세 보강 (1:1 mirror, 세부 번호 6+6)
 
 - `activity/phase-4-result.md §4.5.2` 세분화: 4.5.2.1.1~1.6 (computeDeletionImpact 시그니처 · vitest 6 라벨 테이블 · DeleteImpactModal · 팔레트 2 엔트리 표 · source/wiki-page 실 삭제 경로) + 4.5.2.2.1~2.6 (previewReset 시그니처 · vitest 6 라벨 · ResetImpactModal · 팔레트 5 엔트리 표 · executeReset scope 디스패치 표 · renderResetSection 배치) + 4.5.2.3 검증 증거 + 4.5.2.4 범위 제한 메모 + 4.5.2.5 다음 단계.

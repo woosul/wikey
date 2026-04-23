@@ -607,7 +607,14 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 > 2026-04-23 session 4 종료 시점에 확정. 이 체크리스트의 3 항목이 모두 [x] 되면 `activity/phase-4-result.md` 마지막에 **"Phase 4 본체 완성 선언"** 블록을 쓰고 commit. 이후 Phase 5 착수.
 
-### A. §4.3 통합 smoke (Obsidian UI 수동) — 약 30 분
+### A. Phase 1~4 통합 smoke (6종 파일 × 3-stage, Obsidian UI 수동) — 약 2~3 시간
+
+> **실행 단일 소스**: `plan/phase-4-integrated-test.md` (v2, codex Panel Mode D APPROVE-WITH-CHANGES).
+> 기존 단일 소스 5-항목 smoke 는 6종 × 3-stage 통합 회귀로 확장 (Phase 4.0/4.1/4.2/4.3/4.5.2 모두 포괄).
+>
+> 6종 파일 (`raw/0_inbox/`): llm-wiki.md / 사업자등록증C_굿스트림.pdf (PII) / C20260410_용역계약서_SK바이오텍.pdf (6p) / PMS_제품소개_R10.pdf (31p) / 스마트공장 합동설명회.hwp / Examples.hwpx.
+>
+> 하기 5 항목은 `phase-4-integrated-test.md` 내에서 6 파일마다 반복되는 Stage 별 체크포인트의 서브셋 — 요약용.
 
 체크리스트 (`plan/phase-4-3-plan.md §12.4` 와 동일):
 

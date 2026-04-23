@@ -5,32 +5,36 @@
 
 ---
 
-## 2026-04-23 session 5 종료 시점 — **다음 세션은 A 수동 smoke + D 본체 완성 선언**
+## 2026-04-23 session 5 종료 시점 — **다음 세션은 A 통합 smoke + D 본체 완성 선언**
 
-### ⭐ 다음 세션 플레이북 (30~60 분 내 완결 목표)
+### ⭐ 다음 세션 플레이북 (2~3 시간 내 완결 목표)
 
-**진입점**: Phase 4 본체 완성 체크리스트의 **A (§4.3 통합 smoke)** 만 남음. 사용자가 Obsidian 을 기동해 5건 수동 확인 → 결과를 `activity/phase-4-result.md §4.3.smoke` 에 기록 → D (완성 선언) 실행.
+**진입점**: Phase 4 본체 완성 체크리스트의 **A (Phase 1~4 통합 smoke)** 만 남음. **단일 소스 = `plan/phase-4-integrated-test.md` (v2, codex Panel Mode D APPROVE-WITH-CHANGES)**. 6종 파일 × 3-stage 반복 + 파일별 리포트 → D (완성 선언) 실행.
 
 | 블록 | 상태 | 작업 |
 |------|------|------|
-| **A** | 🔴 대기 | §4.3 통합 smoke (Obsidian UI 수동) — 5 체크리스트 (Part B 보조 링크 · external URI · tombstone · Stage 2/3 override · source page strip) |
+| **A** | 🔴 대기 | Phase 1~4 통합 smoke (6종 × 3-stage, Obsidian UI 수동). 상세: `plan/phase-4-integrated-test.md` §2.1 clean-slate → §4.0 UI pre-smoke → §4.1~4.3 파일 루프 × 6 → §4.4 Stage 4 덤 smoke → §5 파일별 리포트 + README 집계. |
 | **B** | 🟢 완료 | §4.5.2 삭제 안전장치 — `reset.ts::computeDeletionImpact` + `DeleteImpactModal` + `registerDeleteCommand` 2 palette entries (462→474 tests) |
 | **C** | 🟢 완료 | §4.5.2 초기화 기능 — `reset.ts::previewReset` + `ResetImpactModal` + `registerResetCommand` 5 palette entries + `renderResetSection` Settings Tab |
 | **D** | 🔴 A 뒤 | 본체 완성 선언 — result 끝 "Phase 4 본체 완성 선언" 블록 + todo 상단 상태 라인 "본체 완성" 갱신 + `plan/phase-5-todo.md §5.6 Stage 1` 첫 착수점 고정 + memory + 단일 commit push |
 
-**Session 5 완료 내역** (detail: `activity/phase-4-result.md §4.5.2`):
+**Session 5 완료 내역** (detail: `activity/phase-4-result.md §4.5.2` + `plan/phase-4-integrated-test.md`):
 - **§4.5.2.1 삭제 안전장치** — `wikey-core/src/reset.ts::computeDeletionImpact` + 6 vitest. `wikey-obsidian/src/reset-modals.ts::DeleteImpactModal` + `commands.ts::registerDeleteCommand` (raw source picker + wiki-page active file). `DEL <id>` 타이핑 확인.
 - **§4.5.2.2 초기화 기능** — `reset.ts::previewReset` + `ResetScope` 5-way + 6 vitest (unknown scope 방어 포함). `ResetImpactModal` + `registerResetCommand` 5 palette entries + `settings-tab.ts::renderResetSection`. `RESET <SCOPE>` 타이핑 확인.
-- **검증**: `npm test` 22 files / 474 tests passed · `npm run build` 0 errors.
+- **통합 smoke 계획서 v2 수립** — `plan/phase-4-integrated-test.md` 556 라인. codex Panel Mode D 피어리뷰: 초기 REJECT 4 P1 → v2 반영 후 APPROVE-WITH-CHANGES. 6종 파일 (llm-wiki.md / 사업자등록증 PDF (PII) / SK바이오텍 계약서 6p / PMS 31p / HWP / HWPX) × 3-stage 반복.
+- **검증**: `npm test` 22 files / 474 tests passed · `npm run build` 0 errors · commits `188a507` + `9e9407b`.
 
-### 🔴 A 수동 smoke 절차 (다음 세션 첫 단계)
+### 🔴 A 통합 smoke 절차 (다음 세션 첫 단계)
 
-1. Obsidian 플러그인 리로드 (`Cmd+R`) + `Developer Console` 오픈.
-2. `raw/0_inbox/` 에 임의 PDF (기존 `사업자등록증C_...` 또는 `C20260410_용역계약서...` 재활용 가능) → Audit/Ingest 패널에서 인제스트 → Chat 에서 관련 질문 → wikilink 뒤 `📄` 확인, 클릭 시 내장 뷰어 오픈.
-3. `raw/` 원본을 vault 밖으로 `mv` → 플러그인 reconcile 로그 확인 → 기존 답변에서 `📄` 클릭 → "원본 삭제됨" Notice + grayscale 확인. (복원 후 `📄` 정상화 확인 옵션.)
-4. Settings → Ingest Prompts → Stage 2 Edit → `{{CHUNK_CONTENT}}` 앞 `# TEST-OVERRIDE` 주석 추가 → Save → 다음 인제스트 console 에서 "TEST-OVERRIDE" 포함 확인 → Reset 후 `.wikey/stage2_mention_prompt.md` 삭제 확인.
-5. 위 2에서 생성된 `wiki/sources/source-*.md` 본문에 `[[없는개념]]` 잔존 없음 + canonical link `[[...]]` 유지 확인.
-6. (덤) §4.5.2 수동 smoke — 명령 팔레트 `Wikey: Delete source (dry-run)` / `Wikey: Reset qmd index` 등 선택 → 미리보기·타이핑 확인 모달 표시 여부 검증 (파괴적 실행은 skip 가능).
+**실행 단일 소스**: `plan/phase-4-integrated-test.md`. 아래는 요약 — 상세는 반드시 계획서 참조.
+
+1. **Pre-flight (§2.1)**: wiki 콘텐츠 백업 → registry·qmd 초기화 (팔레트 "Reset" 활용) → Settings baseline 고정 (Ingest Briefs=Always, Verify=ON, Auto Ingest=OFF) → Cmd+R.
+2. **§4.0 UI pre-smoke (1회)**: Chat/Audit/Ingest 패널 · provider/model 편집 · DEFAULT 라벨 · 500px 폭 · `/clear` 동작.
+3. **§4.1~4.3 파일 루프 (6종)**: 각 파일마다 Stage 1 (Audit 패널 only → IngestFlowModal Brief→Processing→Preview) → Index-ready gate (`reindex.sh --check` stale=0) → Stage 2 (Chat 질의 + wikilink + 📄 보조 링크) → Stage 3 (Obsidian 파일 탐색기 드래그 이동 → pairmove + registry 갱신 + 재질의).
+4. **§4.4 Stage 4 덤 smoke (1회)**: 팔레트 7 entries 노출 + Delete/Reset modal sequence → typing gate 직전 Cancel.
+5. **§5 리포트**: `activity/phase-4-smoke-2026-04-<DD>/` 에 file-1~6-*.md + README.md (통과 매트릭스 + tier 분포 + 분류 depth + PII 노출 0 확인).
+6. **파일 2 PII 특별 주의**: §3.2 redaction 규칙 — 질문은 "업종·소재지(시/도)" 만. 대표자/주민번호/사업자번호/상세 번지 답변 포함 시 FAIL + rollback.
+7. **Acceptance** (§6): 6/6 파일 Stage 1/2/3 PASS + PII 노출 0 + Console ERROR 0 → D 실행 가능.
 
 ---
 
