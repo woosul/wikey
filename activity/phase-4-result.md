@@ -2045,63 +2045,204 @@ SLUG_ALIASES 가 먼저 `validateAndBuildPage` 에서 적용되므로, 입력 `e
 - **§4.5.1.7.6** BOM 축 재분할 판단 → **Phase 5 §5.4.3**
 - **§4.5.1.7.7** `log_entry` axis cosmetic → **Phase 5 §5.4.4**
 
-### 4.5.2 운영 안전 — 삭제·초기화 (2026-04-23 session 5, 완료)
+### 4.5.2 운영 안전 — 삭제·초기화 (2026-04-23 session 5, 완료, commit `188a507`)
 
-**이전 상태**: Phase 4.2 Stage 2 `movePair` 와 Stage 4 `registryRecordDelete` / `handleExternalDelete` 는 있지만, 사용자가 **명시적으로 원본이나 위키 페이지를 삭제**하거나 **선택 scope 로 vault 를 초기화**할 안전장치가 없음. `fs.unlinkSync` 를 Obsidian 파일 탐색기에서 직접 쓰면 영향 범위를 눈으로 확인할 수 없고, "전체 초기화" 같은 조작은 registry·qmd 인덱스·플러그인 설정 간 일관성을 쉽게 깨뜨림. Phase 4 본체 완성 체크리스트 B·C 로 지정.
+**이전 상태**: Phase 4.2 Stage 2 `movePair` 와 Stage 4 `registryRecordDelete` / `handleExternalDelete` 는 있지만, 사용자가 **명시적으로 원본이나 위키 페이지를 삭제**하거나 **선택 scope 로 vault 를 초기화**할 안전장치가 없음. Obsidian 파일 탐색기에서 직접 `Delete file` 하면 `ingested_pages` 와 registry tombstone 간 일관성은 `handleExternalDelete` 가 지켜주지만, 사용자가 "이 PDF 와 그로부터 파생된 wiki 페이지 전부" 를 한 번에 제거하려면 경로를 직접 외워서 여러 번 삭제해야 함. "전체 초기화" (wiki vs registry vs qmd-index vs 플러그인 설정) 은 더 심각 — 각 저장소가 독립적으로 움직이면 재인제스트 시 중복 source_id · 고아 벡터 인덱스 등 복구 어려운 상태가 만들어짐. Phase 4 본체 완성 체크리스트 B·C 로 지정.
 
-**작업 내용**: TDD (RED→GREEN) 로 순수 함수 `reset.ts` 를 wikey-core 에 추가하고, wikey-obsidian 에 확인 모달 + 명령 팔레트 엔트리 + Settings Tab "Reset" 섹션을 추가. 모든 파괴적 동작은 dry-run 미리보기 + 고정 문구 타이핑 확인 (`DEL <id>` / `RESET <SCOPE>`) 2중 게이트.
+**작업 원칙**: TDD (RED→GREEN). 순수 함수는 `wikey-core/src/reset.ts`, 부작용 (fs·Notice·Modal) 은 `wikey-obsidian/src/{commands,reset-modals,settings-tab}.ts`. 모든 파괴적 동작은 **(a) dry-run 미리보기 + (b) 고정 문구 타이핑 확인 + (c) `warning` 색상의 최종 버튼** 3 중 게이트. 백업은 구현 안 함 — plan `§4.5.2` 의 "실 삭제는 `fs.unlinkSync` + `recordDelete`. 백업은 없음 — dry-run 이 안전선" 원칙 준수.
 
-#### 4.5.2.1 삭제 안전장치 (B — dry-run 미리보기 + 타이핑 확인)
+#### 4.5.2.1 삭제 안전장치 (B)
 
-- **`wikey-core/src/reset.ts` 신규**:
-  - `computeDeletionImpact({ wikiFS, registry, target }) → { pages, backlinks, registryRecord? }` — 순수. `target.kind === 'source'` 이면 registry lookup 으로 `ingested_pages` 전체 반환. `target.kind === 'wiki-page'` 이면 `wiki-ops.ts::extractWikilinks` 재사용해 distinct backlink 수 계산 (같은 페이지 내 중복 `[[x]]` 는 1 로 집계).
-  - 타입 `DeletionTarget`, `DeletionImpact`, `ComputeDeletionImpactOptions` export.
-- **`wikey-core/src/__tests__/reset.test.ts` 신규 — computeDeletionImpact 6 tests (vitest)**:
-  - single source (1 페이지 / registry record / backlinks=0)
-  - bundled source (여러 ingested pages)
-  - tombstoned source (record.tombstone=true 도 반환)
-  - registry 에 없는 raw path (빈 impact)
-  - wiki-only backlinks ≥1 (report + strategy, 중복 wikilink dedupe 확인)
-  - wiki-only backlinks=0 (고아 페이지)
-- **`wikey-obsidian/src/reset-modals.ts` 신규** — `DeleteImpactModal` (영향 페이지 목록 ≤20 + "+N건 더" / 확인 문자열 입력 / `Confirm delete` warning 버튼).
-- **`wikey-obsidian/src/commands.ts::registerDeleteCommand`** — 명령 팔레트 2 개:
-  - `Wikey: Delete source (dry-run)` → `DeleteSourceSuggestModal` (raw/ 파일 picker) → `promptSourceDelete`
-  - `Wikey: Delete wiki page (dry-run)` → 활성 파일이 `wiki/` 아래면 `promptWikiPageDelete`
-- **실 삭제 경로**: `promptSourceDelete` 는 `ingested_pages` + sidecar + raw 원본 `fs.unlinkSync` → `registryRecordDelete` 로 tombstone; `promptWikiPageDelete` 는 해당 wiki/*.md 만 `fs.unlinkSync` (backlink 제거는 미수행 — backlink 수만 경고).
-- **확인 문자열**: source 는 `DEL <source_id[:23]>` (sha256:aabbccddeeff0011), wiki page 는 `DEL <basename>` (확장자 제외).
+##### 4.5.2.1.1 `computeDeletionImpact` — 순수 영향 계산
 
-#### 4.5.2.2 초기화 기능 (C — 5-way scope 선택 + preview + 타이핑 확인)
+**파일**: `wikey-core/src/reset.ts` (신규, 153 라인).
 
-- **`wikey-core/src/reset.ts::previewReset({ wikiFS, scope }) → { files, bytes }` 확장** — `ResetScope = 'wiki+registry' | 'wiki-only' | 'registry-only' | 'qmd-index' | 'settings'`. `wiki/**` 는 `WikiFS.list('wiki')` 재귀 결과를 필터, bytes 는 utf-8 바이트 합산. `qmd-index` 와 `settings` 는 WikiFS 로 접근 불가한 외부 경로이므로 marker 상수 (`QMD_INDEX_MARKER='~/.cache/qmd/index.sqlite'`, `SETTINGS_MARKER='.obsidian/plugins/wikey/data.json'`) 만 반환.
-- **vitest +6** (5 → 6 — 본체 plan "+5" 는 최소선, 여기선 unknown scope 방어 1 건 추가):
-  - `wiki+registry`: `wiki/**` + `REGISTRY_PATH` 포함, `raw/` 미포함, bytes > 0
-  - `wiki-only`: `wiki/**` 만
-  - `registry-only`: `REGISTRY_PATH` 단독
-  - `qmd-index`: `qmd` 포함 marker 1건
-  - `settings`: `data.json` 으로 끝나는 marker 1건
-  - unknown scope → `throw /unknown|scope/i`
-- **`wikey-obsidian/src/reset-modals.ts::ResetImpactModal`** — scope 한글 라벨 + 파일 목록 ≤30 + "+N건 더" + bytes formatBytes 표시 + `RESET <SCOPE>` 타이핑 확인 + `Confirm reset` warning 버튼.
-- **`wikey-obsidian/src/commands.ts::registerResetCommand`** — 명령 팔레트 5 개 (`wikey:reset-wiki-registry` 등) 각각 preview → Modal → `executeReset(plugin, scope, files)`. `executeReset` 는 export 되어 Settings Tab 에서도 재사용.
-- **`wikey-obsidian/src/settings-tab.ts::renderResetSection`** — Settings 탭에 "Reset" 섹션 추가 (`display()` 에서 `renderToolsSection` 다음). Scope dropdown + `Preview & Reset` warning 버튼 — 동일한 `previewReset + ResetImpactModal` 플로우.
-- **scope 별 실행**:
-  - `wiki+registry` / `wiki-only`: preview 가 반환한 파일 리스트 `fs.unlinkSync` 순차. `ENOENT` 는 throw 하지 않음 (이미 삭제된 파일).
-  - `registry-only`: `fs.unlinkSync(REGISTRY_PATH)` + `wikiFS.write(REGISTRY_PATH, '{}')` 로 빈 레지스트리 복원.
-  - `qmd-index`: `~/.cache/qmd/index.sqlite` 삭제 + Notice "다음 인제스트/쿼리 시 reindex 자동 실행".
-  - `settings`: `data.json` 삭제 + Notice "Obsidian 재시작 시 DEFAULT_SETTINGS 로 복원".
+**시그니처**:
+```ts
+type DeletionTarget =
+  | { readonly kind: 'source'; readonly vault_path: string }
+  | { readonly kind: 'wiki-page'; readonly page_path: string }
 
-**결과 (검증 증거)**:
+interface DeletionImpact {
+  readonly pages: readonly string[]
+  readonly backlinks: number
+  readonly registryRecord?: { readonly id: string; readonly record: SourceRecord }
+}
 
-- `npm test` (wikey-core) → **22 files / 474 tests passed** (이전 결과 462 → 474, reset.test.ts +12).
-- `npm run build` → wikey-core `tsc` 0 errors + wikey-obsidian `esbuild` 0 errors.
-- 수동 실행은 A smoke 와 묶어 본 세션 다음 단계에서 수행 (Obsidian UI). 단위 회귀선은 TDD 로 확보.
+async function computeDeletionImpact(opts: {
+  wikiFS: WikiFS
+  registry: SourceRegistry
+  target: DeletionTarget
+}): Promise<DeletionImpact>
+```
 
-**범위 제한 메모**:
+**source 분기**: `registryFindByPath(registry, target.vault_path)` → lookup 실패면 `{ pages: [], backlinks: 0 }`. 성공 시 `lookup.record.ingested_pages` 배열을 `pages` 로 spread + `registryRecord: { id, record }` 반환. `backlinks` 는 source 삭제 유스케이스에서 의미 없으므로 항상 0.
 
-- 백업 (쓰레기통 이동) 은 미구현 — plan `§4.5.2 - 실 삭제는 movePair/recordDelete 경로 재사용. 백업은 raw/ 원본 미삭제, wiki 만 tombstone 방식` 을 따름. dry-run 미리보기 + 타이핑 확인이 안전선. 추후 undo 요구 시 Phase 5 로.
-- `wiki-page` 삭제 시 backlink 가 남는 페이지들의 `[[x]]` 자동 strip 은 미수행 — 사용자에게 backlink 수만 경고. 일괄 strip 은 Phase 5 §5.4 lint 에서 처리.
-- qmd-index 삭제 후 자동 `reindex` 실행은 하지 않음 — 다음 쿼리·인제스트 시 lazy 재빌드. 즉시 재빌드 원할 시 Settings → Wiki Tools → Reindex 수동 실행.
+**wiki-page 분기**: `target.page_path` 에서 `basename`(예: `wiki/entities/acme.md` → `acme`) 을 추출 → `listWikiPages(fs)` 로 `wiki/**.md` 전체를 sort 된 리스트로 획득 → 대상 자신은 제외하고 각 페이지를 read → `extractWikilinks(content)` 로 wikilink 집합 뽑음 → 집합에 basename 이 포함되면 `backlinks += 1`. 같은 페이지 내 중복 `[[acme]]` 는 `extractWikilinks` 가 Set 기반 dedupe 하므로 1 로 집계.
 
-**다음 단계**:
+##### 4.5.2.1.2 `reset.test.ts` — computeDeletionImpact 6 vitest (RED→GREEN)
 
-A §4.3 통합 smoke (Obsidian UI 수동 5 항목 — `plan/phase-4-todo.md` Phase 4 본체 완성 체크리스트 A) 완료 후 별도 세션에서 **"Phase 4 본체 완성 선언"** 블록을 이 result 끝에 추가 + memory / plan / phase-5-todo §5.6 Stage 1 고정 + 단일 commit.
+**파일**: `wikey-core/src/__tests__/reset.test.ts` (신규).
+
+vitest `it(...)` 라벨 그대로:
+
+| # | group | label |
+|---|-------|-------|
+| 1 | raw/ source | `single source: returns ingested pages + registry record + 0 backlinks` |
+| 2 | raw/ source | `bundled: returns all ingested pages when source emitted multiple wiki pages` |
+| 3 | raw/ source | `tombstoned: still returns the record (caller decides policy)` |
+| 4 | raw/ source | `raw file not in registry: returns empty impact` |
+| 5 | wiki page | `wiki-only page with backlinks: counts distinct referencing pages` |
+| 6 | wiki page | `wiki page with zero backlinks: backlinks = 0` |
+
+RED 확증: 첫 실행은 `Cannot find module '../reset.js'` 로 실패 → `reset.ts` 작성 후 6/6 green.
+
+##### 4.5.2.1.3 `DeleteImpactModal` — 확인 모달
+
+**파일**: `wikey-obsidian/src/reset-modals.ts` (신규).
+
+- 헤더 `<h2>` 에 전달된 `title` (예: `Delete source: raw/1_projects/a/foo.pdf`).
+- 요약 line: `영향 페이지 N건 / registry 레코드 M건 / backlink L건`.
+- 페이지 목록 `<ul>` (첫 20건 + `+N건 더` 축약).
+- `Setting` 으로 확인 문자열 text input — `onChange` 에서 `typed !== opts.confirmPhrase` 이면 버튼 `disabled`.
+- `Confirm delete` 버튼 `.setWarning()` (Obsidian 빨강 강조) + 초기 `.setDisabled(true)`.
+- `onConfirm` 은 caller 가 주입한 async — 성공 시 `new Notice('삭제 완료')` + close, 실패 시 `new Notice('삭제 실패: ...')` + 버튼 re-enable.
+
+##### 4.5.2.1.4 `registerDeleteCommand` — 명령 팔레트 2 엔트리
+
+**파일**: `wikey-obsidian/src/commands.ts`.
+
+| id | name | invoke |
+|----|------|--------|
+| `wikey:delete-source` | `Wikey: Delete source (dry-run)` | `DeleteSourceSuggestModal` → `promptSourceDelete(plugin, sourcePath)` |
+| `wikey:delete-wiki-page` | `Wikey: Delete wiki page (dry-run)` | `checkCallback` → 활성 파일이 `wiki/` 하위일 때만 enable → `promptWikiPageDelete(plugin, pagePath)` |
+
+- `DeleteSourceSuggestModal extends FuzzySuggestModal<TFile>` — `app.vault.getFiles()` 에서 `f.path.startsWith('raw/') && !f.path.endsWith('.md')` 필터 (sidecar `.md` 제외, 바이너리·텍스트 원본만).
+- `promptSourceDelete`: `loadRegistry` → `computeDeletionImpact({ kind: 'source', vault_path })` → `shortId = impact.registryRecord?.id.slice(0, 23)` (예: `sha256:aabbccddeeff0011`) → `confirmPhrase = 'DEL ' + shortId`.
+- `promptWikiPageDelete`: 마찬가지로 `{ kind: 'wiki-page', page_path }` → `basename = pagePath.split('/').pop()!.replace(/\.md$/, '')` → `confirmPhrase = 'DEL ' + basename`.
+
+##### 4.5.2.1.5 실 삭제 경로 — source
+
+`onConfirm` 안에서 순서대로:
+
+1. `for (const p of impact.pages) fs.unlinkSync(join(basePath, p))` — `ingested_pages` 전체 제거. `err.code !== 'ENOENT'` 만 throw (idempotent).
+2. `if (sidecar_vault_path) fs.unlinkSync(...)` — sidecar `.md` 제거.
+3. `fs.unlinkSync(join(basePath, sourcePath))` — raw 원본 바이너리 제거.
+4. `next = registryRecordDelete(registry, id)` + `saveRegistry(fs, next)` — tombstone.
+
+`movePair` 로 이동된 source 도 `lookup.record.vault_path` 가 최신 경로를 반영하므로 `path_history` 추적 불필요.
+
+##### 4.5.2.1.6 실 삭제 경로 — wiki-page
+
+`wiki/**.md` 단일 파일만 `fs.unlinkSync`. backlink 가 있는 페이지의 `[[x]]` 링크는 자동 strip 하지 않음 — 사용자에게 modal 에서 backlink 수만 경고하고, 일괄 cleanup 은 Phase 5 §5.4 lint 로 이관 (복잡도 + 실수 시 복구 불가).
+
+#### 4.5.2.2 초기화 기능 (C)
+
+##### 4.5.2.2.1 `previewReset` — scope별 대상 계산
+
+**파일**: `wikey-core/src/reset.ts` (확장).
+
+```ts
+type ResetScope =
+  | 'wiki+registry' | 'wiki-only' | 'registry-only' | 'qmd-index' | 'settings'
+
+async function previewReset(opts: {
+  wikiFS: WikiFS
+  scope: ResetScope
+}): Promise<{ files: readonly string[]; bytes: number }>
+```
+
+- `wiki+registry`: `listWikiPages(fs) + (exists(REGISTRY_PATH) ? [REGISTRY_PATH] : [REGISTRY_PATH])` → `sumBytes` 로 utf-8 합산. `raw/` 는 포함 안 함 (원본 보존).
+- `wiki-only`: `wiki/**` 만. registry 유지.
+- `registry-only`: `[REGISTRY_PATH]` 단독. wiki 콘텐츠 유지.
+- `qmd-index`: `[QMD_INDEX_MARKER]` = `'~/.cache/qmd/index.sqlite'` (외부 경로 — WikiFS 접근 불가, marker 만). `bytes: 0`.
+- `settings`: `[SETTINGS_MARKER]` = `'.obsidian/plugins/wikey/data.json'`. `bytes: 0`.
+- unknown scope: `throw new Error('previewReset: unknown scope ' + scope)`.
+
+`listWikiPages(fs)` = `fs.list('wiki')` 결과를 `p.startsWith('wiki/') && p.endsWith('.md')` 필터 + `.sort()`.
+
+##### 4.5.2.2.2 `reset.test.ts` — previewReset 6 vitest
+
+| # | label |
+|---|-------|
+| 7 | `wiki+registry: lists all wiki/** files and registry JSON; excludes raw/` |
+| 8 | `wiki-only: includes wiki/** but excludes registry JSON` |
+| 9 | `registry-only: lists only registry JSON` |
+| 10 | `qmd-index: lists the qmd cache marker (caller resolves abs path)` |
+| 11 | `settings: lists plugin data.json path marker` |
+| 12 | `rejects unknown scope` |
+
+plan 본 체크리스트는 "+5 — scope별 file list 검증" 이었으나, unknown scope 방어 1건을 추가해 실 +6 green.
+
+##### 4.5.2.2.3 `ResetImpactModal`
+
+**파일**: `wikey-obsidian/src/reset-modals.ts`.
+
+- 헤더 `Reset: {SCOPE_LABELS[scope]}` 한글 라벨 (`wiki + registry (raw/ 유지)` / `wiki 만 (registry 유지)` / `registry + source_id 만 (wiki 콘텐츠 유지)` / `qmd 인덱스만 (reindex 재빌드)` / `설정만 (data.json → DEFAULT_SETTINGS)`).
+- 파일 N건 + bytes (`formatBytes(n)` — `< 1024 B` / `< 1024 KB` / `MB`).
+- 파일 목록 `<ul>` 첫 30건 + `+N건 더`.
+- `confirmPhraseForScope(scope) = 'RESET ' + scope.toUpperCase()` (예: `RESET WIKI+REGISTRY`).
+- `Confirm reset` warning 버튼 + text input onChange gate.
+
+##### 4.5.2.2.4 `registerResetCommand` — 명령 팔레트 5 엔트리
+
+**파일**: `wikey-obsidian/src/commands.ts`.
+
+| id | name | scope |
+|----|------|-------|
+| `wikey:reset-wiki-registry` | `Wikey: Reset wiki + registry` | `wiki+registry` |
+| `wikey:reset-wiki-only` | `Wikey: Reset wiki only` | `wiki-only` |
+| `wikey:reset-registry-only` | `Wikey: Reset registry only` | `registry-only` |
+| `wikey:reset-qmd-index` | `Wikey: Reset qmd index` | `qmd-index` |
+| `wikey:reset-settings` | `Wikey: Reset settings (data.json)` | `settings` |
+
+각 callback 은 `promptReset(plugin, scope)` → `previewReset` → `ResetImpactModal({ onConfirm: () => executeReset(plugin, scope, preview.files) })`.
+
+##### 4.5.2.2.5 `executeReset` — scope별 실행
+
+**파일**: `wikey-obsidian/src/commands.ts` (export 되어 Settings Tab 재사용).
+
+| scope | 동작 |
+|-------|------|
+| `wiki+registry` | 모든 preview 파일 `fs.unlinkSync` (`wiki/**` + `REGISTRY_PATH`). ENOENT idempotent. |
+| `wiki-only` | preview 파일 `fs.unlinkSync` (`wiki/**` 만). |
+| `registry-only` | preview 파일 `fs.unlinkSync` (`REGISTRY_PATH`) + `wikiFS.write(REGISTRY_PATH, '{}')` 로 빈 레지스트리 즉시 복원 (후속 startup reconcile 이 비어있는 상태를 자연스럽게 재생성). |
+| `qmd-index` | `~/.cache/qmd/index.sqlite` 삭제 + `new Notice('qmd 인덱스 삭제됨. 다음 인제스트/쿼리 시 reindex 자동 실행됨.')`. |
+| `settings` | `.obsidian/plugins/wikey/data.json` 삭제 + `new Notice('설정 초기화됨. Obsidian 재시작 시 DEFAULT_SETTINGS 로 복원됨.')`. |
+
+##### 4.5.2.2.6 `renderResetSection` — Settings Tab 진입점
+
+**파일**: `wikey-obsidian/src/settings-tab.ts` — `display()` 배치 순서상 `renderToolsSection` 다음 · `renderAdvancedSection` 앞에 삽입.
+
+- 헤더 `<h3>Reset</h3>` + 설명문 ("선택한 scope 를 초기화. 실행 전 미리보기 + `RESET <SCOPE>` 타이핑 확인 필수.").
+- `Setting` 하나에 dropdown + `Preview & Reset` warning 버튼. dropdown 은 5 scope 한글 라벨. 초기값 `'wiki+registry'`.
+- 버튼 click → `previewReset({ wikiFS: plugin.wikiFS, scope: selectedScope })` → `new ResetImpactModal({ onConfirm: () => executeReset(plugin, selectedScope, preview.files) })`.
+
+명령 팔레트와 Settings Tab 두 경로 모두 동일 `previewReset → ResetImpactModal → executeReset` 파이프라인을 타므로 유지보수 대상 단일.
+
+#### 4.5.2.3 검증 증거 (Evidence-Based Completion)
+
+- **`npm test`** (wikey-core):
+  ```
+  Test Files  22 passed (22)
+  Tests  474 passed (474)
+  Duration  ~650ms
+  ```
+  (이전 463 → 474, `reset.test.ts` +12). RED 확증도 실제 실행 — 첫 `vitest run src/__tests__/reset.test.ts` 는 `Cannot find module '../reset.js'` 로 suite 수준 실패, 그 후 `reset.ts` 작성 → 12/12 green.
+- **`npm run build`**: wikey-core `tsc` 0 errors + wikey-obsidian `esbuild` 0 errors.
+- **Git**: commit `188a507 feat(phase-4.5.2): 삭제·초기화 안전장치 — 체크리스트 B+C 완료` pushed to `origin/master` (30362b5..188a507). 10 files changed, 1044 insertions, 22 deletions.
+
+#### 4.5.2.4 범위 제한 메모
+
+- **백업·쓰레기통**: 미구현. `fs.unlinkSync` 는 OS trash 가 아닌 영구 삭제. dry-run + 타이핑 확인 2중 게이트가 안전선. undo 요구 시 Phase 5 로.
+- **wiki-page 삭제 시 backlink 자동 strip**: 미수행. modal 에서 backlink 수만 경고. 일괄 cleanup 은 Phase 5 §5.4 lint 에서 처리.
+- **qmd-index 즉시 재빌드**: 하지 않음 — 다음 쿼리·인제스트 시 lazy 재빌드. 즉시 재빌드 원할 시 Settings → Wiki Tools → Reindex 수동 호출.
+- **`settings` scope 인플레이스 복원**: `data.json` 삭제만 수행. Obsidian 재시작 또는 플러그인 reload 시 `loadData()` 가 null → `DEFAULT_SETTINGS` spread → 복원. 실행 중 복원이 필요하면 `saveSettings()` 추가 호출이 필요하나, 팔레트 플로우의 단순성을 위해 생략.
+
+#### 4.5.2.5 다음 단계 (A + D)
+
+이 result 맨 끝에 **"Phase 4 본체 완성 선언"** 블록은 아직 없음. 다음 세션 플레이북:
+
+1. **A §4.3 통합 smoke** (Obsidian UI 수동) — `plan/session-wrap-followups.md` 최상단 5 + 덤 1 항목. 결과를 `activity/phase-4-result.md §4.3.smoke` (신규) 에 기록.
+2. **D 본체 완성 선언** — result 맨 끝에 "Phase 4 본체 완성 선언 (2026-MM-DD)" 섹션 (완성 정의 충족 증거 + 테스트 총계 + Phase 5 착수점 지정) + `plan/phase-4-todo.md` 상단 상태 라인 갱신 + `plan/phase-5-todo.md §5.6 Stage 1` (schema.yaml 로더화) 첫 착수점 고정 + memory `project_phase4_status.md` description "완료" + `MEMORY.md` 인덱스 갱신 + 단일 commit `feat(phase-4): 본체 완성 선언` + push.
 

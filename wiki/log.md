@@ -5,7 +5,13 @@ created: 2026-04-10
 updated: 2026-04-23
 ---
 
-## [2026-04-23] feat | §4.5.2 운영 안전 — 삭제·초기화 안전장치 (Phase 4 본체 체크리스트 B + C)
+## [2026-04-23] docs | §4.5.2 result/todo 상세 보강 (1:1 mirror, 세부 번호 6+6)
+
+- `activity/phase-4-result.md §4.5.2` 세분화: 4.5.2.1.1~1.6 (computeDeletionImpact 시그니처 · vitest 6 라벨 테이블 · DeleteImpactModal · 팔레트 2 엔트리 표 · source/wiki-page 실 삭제 경로) + 4.5.2.2.1~2.6 (previewReset 시그니처 · vitest 6 라벨 · ResetImpactModal · 팔레트 5 엔트리 표 · executeReset scope 디스패치 표 · renderResetSection 배치) + 4.5.2.3 검증 증거 + 4.5.2.4 범위 제한 메모 + 4.5.2.5 다음 단계.
+- `plan/phase-4-todo.md §4.5.2` 체크박스를 4.5.2.1.1~1.6 / 4.5.2.2.1~2.6 하위 번호 체계로 재구성 (result 와 1:1 mirror). "§4.5.2 에서 Phase 5 이관" 에 wiki-page backlink strip (§5.4) + 삭제 undo 항목 명시적 추가.
+- 본 commit 은 코드 변경 없음 — docs-only sync. commit `188a507` 의 코드 deliverable 이 불변.
+
+## [2026-04-23] feat | §4.5.2 운영 안전 — 삭제·초기화 안전장치 (Phase 4 본체 체크리스트 B + C) — commit `188a507`
 
 - **배경**: Phase 4 본체 완성 체크리스트의 B (삭제) + C (초기화) 항목. A 는 Obsidian UI 수동 smoke 라 본 세션에선 코드 루프만 처리.
 - **신규 파일**:
