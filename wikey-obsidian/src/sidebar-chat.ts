@@ -1,6 +1,11 @@
 import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
-import { query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair, fetchModelList, appendClassifyFeedback } from 'wikey-core'
+import {
+  query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair,
+  fetchModelList, appendClassifyFeedback,
+  resolveSourceSync, loadRegistry,
+} from 'wikey-core'
+import type { Citation, ResolvedSource, SourceRegistry } from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
 import type { IngestRunResult } from './commands'
 
@@ -9,6 +14,8 @@ export const WIKEY_CHAT_VIEW = 'wikey-chat'
 interface ChatMessage {
   readonly role: 'user' | 'assistant' | 'error'
   readonly content: string
+  /** §4.3.2 Part B: assistant 메시지에 첨부된 page→sourceIds 매핑. */
+  readonly citations?: readonly Citation[]
 }
 
 // Bootstrap SVG icons (inline, 16x16)
@@ -58,6 +65,27 @@ const PROVIDER_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
  * between 5% and 80% so long documents show smooth progress instead of being
  * stuck at the step-2 flat weight.
  */
+/**
+ * §4.3.2 Part B — citation 보조 링크 버튼 factory.
+ * CSS (`.wikey-citation-link`) 가 크기·투명도·간격을 제어. UI 레이어 분리.
+ */
+function buildCitationButton(resolved: ResolvedSource): HTMLElement {
+  const btn = document.createElement('a') as HTMLAnchorElement
+  btn.className = 'wikey-citation-link'
+  btn.textContent = '📄'
+  const filename = resolved.displayLabel.split('/').pop() ?? resolved.displayLabel
+  if (resolved.tombstoned) {
+    btn.classList.add('wikey-citation-tombstone')
+    btn.setAttribute('aria-label', `원본 삭제됨: ${filename}`)
+    btn.setAttribute('title', `${filename} (registry tombstone)`)
+  } else {
+    btn.setAttribute('aria-label', `원본 파일 열기: ${filename}`)
+    btn.setAttribute('title', filename)
+  }
+  if (resolved.openUri) btn.setAttribute('data-href', resolved.openUri)
+  return btn
+}
+
 function computeRowPct(step: number, subStep?: number, subTotal?: number): number {
   const weights = [0, 5, 80, 90, 100]
   if (step === 2 && subStep != null && subTotal && subTotal > 0) {
@@ -330,7 +358,11 @@ export class WikeyChatView extends ItemView {
         nodePath: this.plugin.settings.detectedNodePath,
       })
       loadingEl.remove()
-      const assistantMsg: ChatMessage = { role: 'assistant', content: result.answer }
+      const assistantMsg: ChatMessage = {
+        role: 'assistant',
+        content: result.answer,
+        citations: result.citations,
+      }
       this.plugin.chatHistory.push(assistantMsg)
       this.plugin.scheduleChatSave()
       this.renderMessage(assistantMsg)
@@ -373,10 +405,94 @@ export class WikeyChatView extends ItemView {
     } else {
       const contentEl = msgEl.createDiv({ cls: 'wikey-chat-content' })
       this.renderMarkdown(msg.content, contentEl)
+      if (msg.citations && msg.citations.length > 0) {
+        // Schedule after render so wikilinks are in DOM before citation attach.
+        void this.attachCitationBacklinks(contentEl, msg.citations).catch((err) =>
+          console.warn('[Wikey] citation attach failed:', err),
+        )
+      }
       this.addMessageActions(msgEl, msg.content)
     }
 
     this.scrollToBottom()
+  }
+
+  /**
+   * §4.3.2 Part B — 각 wikilink 뒤에 원본 파일 보조 링크 (`📄`) 를 attach.
+   * citation 없는 링크는 건드리지 않음. 한 페이지가 여러 source 에서 왔으면
+   * 각 source 별 아이콘을 나란히 배치 (대부분 1개).
+   */
+  private async attachCitationBacklinks(
+    container: HTMLElement,
+    citations: readonly Citation[],
+  ): Promise<void> {
+    const byBase = new Map<string, Citation>()
+    for (const c of citations) {
+      const base = c.wikiPagePath.split('/').pop()?.replace(/\.md$/i, '').toLowerCase() ?? ''
+      if (base) byBase.set(base, c)
+    }
+    if (byBase.size === 0) return
+
+    const wikilinks = Array.from(container.querySelectorAll<HTMLAnchorElement>('a.internal-link'))
+    if (wikilinks.length === 0) return
+
+    let registry: SourceRegistry
+    try {
+      registry = await loadRegistry(this.plugin.wikiFS)
+    } catch (err) {
+      console.warn('[Wikey] loadRegistry failed for citations:', err)
+      return
+    }
+    const vaultName = this.app.vault.getName()
+    const basePath = (this.app.vault.adapter as any).basePath ?? undefined
+
+    for (const link of wikilinks) {
+      if (link.classList.contains('wikey-citation-attached')) continue
+      const href = link.getAttribute('data-href') ?? link.textContent ?? ''
+      const base = (href.split('/').pop() ?? '').replace(/\.md$/i, '').toLowerCase()
+      const citation = byBase.get(base)
+      if (!citation) continue
+
+      for (const sourceId of citation.sourceIds) {
+        const resolved = resolveSourceSync(sourceId, registry, { vaultName, absoluteBasePath: basePath })
+        if (!resolved) continue
+        const btn = buildCitationButton(resolved)
+        btn.addEventListener('click', (e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          this.openResolvedSource(resolved)
+        })
+        link.insertAdjacentElement('afterend', btn)
+        link.classList.add('wikey-citation-attached')
+      }
+    }
+  }
+
+  private openResolvedSource(resolved: ResolvedSource) {
+    if (resolved.tombstoned) {
+      new Notice(`원본 삭제됨 — ${resolved.displayLabel} (registry tombstone)`)
+      return
+    }
+    if (!resolved.openUri) {
+      new Notice('원본 경로를 확인할 수 없습니다 (registry 미등록)')
+      return
+    }
+    try {
+      if (resolved.kind === 'external') {
+        // uri-hash:* ⇒ external URI (http(s)/file:/mailto:). window.open + noopener.
+        window.open(resolved.openUri, '_blank', 'noopener')
+        return
+      }
+      // Internal vault file: currentPath is vault-relative — Obsidian handles the routing.
+      if (resolved.currentPath) {
+        this.app.workspace.openLinkText(resolved.currentPath, '')
+      } else {
+        window.open(resolved.openUri, '_blank', 'noopener')
+      }
+    } catch (err) {
+      console.error('[Wikey] openResolvedSource failed:', err)
+      new Notice(`원본 열기 실패 — ${(err as Error).message}`)
+    }
   }
 
   private addMessageActions(msgEl: HTMLElement, content: string) {

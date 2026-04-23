@@ -1,6 +1,6 @@
 import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
-import type { HttpClient, QueryResult, SearchResult, WikiFS, WikeyConfig } from './types.js'
+import type { Citation, HttpClient, QueryResult, SearchResult, WikiFS, WikeyConfig } from './types.js'
 import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
 import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
@@ -76,10 +76,103 @@ export async function query(
   try {
     const prompt = buildSynthesisPrompt(context, question)
     const answer = await llm.call(prompt, { provider, model })
-    return { answer, sources: searchResults }
+    const citations = opts?.wikiFS
+      ? await collectCitationsWithWikiFS(searchResults, opts.wikiFS)
+      : collectCitationsFromFS(searchResults, basePath)
+    return { answer, sources: searchResults, citations }
   } catch (err: any) {
     throw new Error(`[Step 4/4 LLM 합성] provider=${provider} model=${model}\n${err?.message ?? err}`)
   }
+}
+
+/**
+ * §4.3.2 Part B — page frontmatter 에서 provenance refs 를 추출하여 Citation 배열 생성.
+ * 결과 순서는 searchResults 와 동일 (score desc). provenance 없는 페이지는 skip.
+ * public export — bash CLI / tests / 다른 pipeline 에서도 재사용.
+ */
+export async function collectCitationsWithWikiFS(
+  results: readonly SearchResult[],
+  wikiFS: WikiFS,
+): Promise<readonly Citation[]> {
+  const out: Citation[] = []
+  for (const r of results) {
+    try {
+      const content = await wikiFS.read(r.path)
+      const citation = buildCitationFromContent(r, content)
+      if (citation) out.push(citation)
+    } catch {
+      // Missing page — skip citation entry; `sources` array already includes the hit.
+    }
+  }
+  return out
+}
+
+export function collectCitationsFromFS(
+  results: readonly SearchResult[],
+  basePath: string,
+): readonly Citation[] {
+  const { readFileSync } = require('node:fs') as typeof import('node:fs')
+  const { join } = require('node:path') as typeof import('node:path')
+  const out: Citation[] = []
+  for (const r of results) {
+    try {
+      const content = readFileSync(join(basePath, r.path), 'utf-8') as string
+      const citation = buildCitationFromContent(r, content)
+      if (citation) out.push(citation)
+    } catch {
+      // skip
+    }
+  }
+  return out
+}
+
+/** Extract provenance refs from a single page's frontmatter. Public for unit testing. */
+export function buildCitationFromContent(result: SearchResult, content: string): Citation | null {
+  const refs = extractProvenanceRefs(content)
+  if (refs.length === 0) return null
+  const sourceIds: string[] = []
+  const seen = new Set<string>()
+  for (const ref of refs) {
+    const id = ref.startsWith('sources/') ? ref.slice('sources/'.length) : ref
+    if (!id) continue
+    if (seen.has(id)) continue
+    seen.add(id)
+    sourceIds.push(id)
+  }
+  if (sourceIds.length === 0) return null
+  return {
+    wikiPagePath: result.path,
+    sourceIds,
+    excerpt: result.snippet || undefined,
+  }
+}
+
+/**
+ * Regex-driven provenance extractor. Covers the block scalar form emitted by
+ * wiki-ops::injectProvenance (`provenance:` → list of `- type:` items with
+ * indented `ref:` fields). Ignores unrelated frontmatter keys.
+ *
+ * Accepts both standard (`ref: sources/...`) and quoted (`ref: "sources/..."`) forms.
+ */
+function extractProvenanceRefs(content: string): readonly string[] {
+  const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n?/)
+  if (!fmMatch) return []
+  const yaml = fmMatch[1]
+  const lines = yaml.split('\n')
+  const out: string[] = []
+  let inProvenance = false
+  for (const raw of lines) {
+    if (/^provenance\s*:/.test(raw)) { inProvenance = true; continue }
+    if (!inProvenance) continue
+    // Top-level key breaks out of the block
+    if (/^[A-Za-z0-9_]+\s*:/.test(raw)) { inProvenance = false; continue }
+    const refMatch = raw.match(/^\s+ref\s*:\s*(.+?)\s*$/)
+    if (refMatch) {
+      const rawVal = refMatch[1].replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1')
+      if (rawVal) out.push(rawVal)
+    }
+  }
+  return out
 }
 
 async function execQmdSearch(

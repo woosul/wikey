@@ -5,7 +5,7 @@
 > **본체 정의 (2026-04-22 확정)**: 원본 → wiki ingest 프로세스가 완성되어 **더 이상 wiki 를 초기화하거나 재생성할 일이 없는** 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 계속 축적되지만 구조는 변경되지 않는다. 튜닝·고도화·개선·확장은 Phase 5, 웹 인터페이스는 Phase 6 로 이관.
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md` 와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.1/§5.2 로 이관)
-> 상태 (2026-04-23 session 3): §4.0/§4.1 완료, §4.5.1 완료, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 완료**, **§4.2 Stage 1~4 전량 완료**, **§4.3.2 Part A Provenance data model 완료 + §4.3.3 stripBrokenWikilinks 완료** (wikey-core 352→**437 tests**). 다음 = §4.3.2 Part B (쿼리 응답 원본 backlink) + §4.3.1 (3-stage prompt override) + 통합 smoke → §4.5.2 운영 안전 → 본체 완성 선언.
+> 상태 (2026-04-23 session 4): §4.0/§4.1 완료, §4.5.1 완료, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 완료**, **§4.2 Stage 1~4 전량 완료**, **§4.3.2 Part A/B 모두 완료 + §4.3.1 3-stage override 완료 + §4.3.3 stripBrokenWikilinks 완료** (wikey-core 437→**463 tests**). 다음 = §4.3 통합 smoke (Obsidian UI 수동 확인) + §4.5.2 운영 안전 → 본체 완성 선언.
 
 ---
 
@@ -320,16 +320,16 @@
 ## 4.3 인제스트 (LLM 추출 · 품질 관리)
 > tag: #core, #engine, #workflow
 
-### 4.3.1 인제스트 프롬프트 시스템 (3-stage 전부 override) — **다음 세션 착수**
+### 4.3.1 인제스트 프롬프트 시스템 (3-stage 전부 override) — **완료 (2026-04-23 session 4)**
 
-현재 v7-5까지: `.wikey/ingest_prompt.md` (Stage 1 summary) + `.wikey/schema.yaml` (schema 타입) override 지원. Stage 2/3 미지원.
+현재 v7-5까지: `.wikey/ingest_prompt.md` (Stage 1 summary) + `.wikey/schema.yaml` (schema 타입) override 지원. Stage 2/3 미지원 상태였음.
 
 상세 설계: `plan/phase-4-3-plan.md §4 + §4.5`.
 
-- [ ] **3-stage 프롬프트 완전 분리** (계획 확정, 구현 다음 세션)
-  - `.wikey/stage1_summary_prompt.md` (source_page 요약) — 기존 `ingest_prompt.md` 에서 rename (심볼릭 링크 호환 유지)
-  - `.wikey/stage2_mention_prompt.md` (chunk → Mention 추출)
-  - `.wikey/stage3_canonicalize_prompt.md` (canonicalizer schema 결정)
+- [x] **3-stage 프롬프트 완전 분리**
+  - `.wikey/stage1_summary_prompt.md` (source_page 요약) — 기존 `.wikey/ingest_prompt.md` 가 legacy fallback 으로 자동 인식 (canonical 우선)
+  - `.wikey/stage2_mention_prompt.md` (chunk → Mention 추출) — 기존 하드코딩 prompt 를 `BUNDLED_STAGE2_MENTION_PROMPT` 로 외부화
+  - `.wikey/stage3_canonicalize_prompt.md` (canonicalizer schema 결정) — `buildCanonicalizerPrompt` 가 override 있으면 bundled body 를 대체 + template 변수 (SOURCE_FILENAME / GUIDE_BLOCK / SCHEMA_BLOCK / EXISTING_BLOCK / MENTIONS_BLOCK / MENTIONS_COUNT) 치환
 - [→ Phase 5 §5.6] **도메인별 프리셋** — 기술문서 / 논문 / 매뉴얼 / 회의록 / 제품 스펙. self-extending 자동 프리셋 선택과 중복 → Phase 5 이관.
 - [→ Phase 5 §5.4] **추출 기준 명확화** — 모델 간 결과 일관성 baseline. variance diagnostic 과 함께 측정 → Phase 5 이관.
   - entity: "고유명사 단위 1개 = 1페이지" (제품명, 기관명, 규격명)
@@ -337,8 +337,8 @@
   - granularity: Qwen3(27E) vs Gemini(46E) 수준 차이 방지 가이드라인
   - 프롬프트에 예시 entity/concept 목록 포함 (few-shot)
   - 모델별 결과 품질 baseline 정의 + 검증 테스트
-- [ ] 설정 탭 Ingest Prompt 섹션 확장 — 3개 prompt 모두 Edit/Reset 버튼 + "적용 여부" 상태 표시
-- [ ] `wikey-core/src/canonicalizer.ts:buildCanonicalizerPrompt` 시그니처 확장 — **optional 파라미터** `overridePrompt?: string` (backward compat). `ingest-pipeline.ts` Stage 2 mention extractor 에도 override 주입.
+- [x] 설정 탭 Ingest Prompts 섹션 확장 — 3개 prompt 모두 Edit/Reset 버튼 + "적용 여부" 상태 표시 + inline 경고 (Stage 1 의 "wikilink 직접 생성 금지" · Stage 2 의 "출력 스키마 유지" · Stage 3 의 "SCHEMA_BLOCK 제거 금지", plan v2 §4.5)
+- [x] `wikey-core/src/canonicalizer.ts:buildCanonicalizerPrompt` 시그니처 확장 — **optional 파라미터** `overridePrompt?: string` (backward compat). `ingest-pipeline.ts` Stage 2 mention extractor 에도 override 주입 (`extractMentions(..., promptTemplate?)`). 빈/공백 override 는 bundled fallback.
 
 ### 4.3.2 Provenance tracking — frontmatter + 쿼리 응답 원본 backlink 렌더링 (본체 필수)
 
@@ -357,17 +357,16 @@
 - [x] **§4.2.2 URI 참조 연계** — `ref` 값은 `sources/<source_id>` (hash 기반, PARA 이동 불변). ingest-pipeline.ts 가 자동 주입.
 - [x] **Phase 5 §5.6.3 Stage 3 (in-source self-declaration) 전제** — `ProvenanceType` union 에 `'self-declared'` 포함 (Phase 5 에서 optional 필드만 추가하면 됨, breaking change 없음).
 
-**Part B — 쿼리 응답 원본 backlink 렌더링** (Part A + §4.2.2 source-registry 완료 이후) — **다음 세션 착수**:
+**Part B — 쿼리 응답 원본 backlink 렌더링** (Part A + §4.2.2 source-registry 완료 이후) — **완료 (2026-04-23 session 4)**:
 
-- [ ] **`wikey-core/src/source-resolver.ts` 신규** — `resolveSource(wikiFS, vaultName, absoluteBasePath, sourceIdOrRef) → ResolvedSource | null`. 내부에서 `loadRegistry` → `findById` (prefix 관용 + full-hash verify) → tombstone 체크 → URI derive. vitest 4 목표 (존재/미등록/tombstone/PARA 이동 후 해석).
-- [ ] **`wikey-core/src/query-pipeline.ts` 응답 구조화** — `QueryResult` 에 optional `citations?: Citation[]` 추가. searchResults 각 페이지의 frontmatter parse → `provenance[].ref` → source_id dedupe → Citation 1건. 기존 `sources` 필드 유지 (backward compat). vitest +2.
-- [ ] **`wikey-obsidian/src/sidebar-chat.ts` 응답 렌더링** — 답변 렌더링 시 wikilink 는 **주 링크** (기존 유지), 원본 파일은 **보조 링크** (📄 아이콘 + 괄호 안 파일명 같은 약한 affordance) 로 배치. 클릭 핸들러 (plan v2 §3.3 — Electron renderer 호환 API):
-  - 내부 vault 파일: `app.workspace.openLinkText(vaultPath, '')` — Obsidian 이 라우팅 (PDF/MD/IMG 내장 뷰어, 기타 기본 앱 위임)
-  - 외부 앱 위임 필요: `app.openWithDefaultApp(vaultPath)` (Obsidian 1.5+), fallback `window.open('file://'+absolutePath)`
+- [x] **`wikey-core/src/source-resolver.ts` 신규** — `resolveSource(wikiFS, idOrRef, { vaultName, absoluteBasePath?, registry? }) → Promise<ResolvedSource | null>` + `resolveSourceSync(idOrRef, registry, opts)` 배치 용도. `sources/sha256:...` / bare / `uri-hash:...` 모두 수용. tombstone 은 openUri=null 로 마커. vitest **11 목표 (+3 초과)**.
+- [x] **`wikey-core/src/query-pipeline.ts` 응답 구조화** — `QueryResult` 에 `citations?: readonly Citation[]` optional 추가. `collectCitationsWithWikiFS` / `collectCitationsFromFS` 공용 API. `buildCitationFromContent` 순수 함수 export 로 단위 테스트 가능. vitest +6 (buildCitationFromContent 4, collectCitationsWithWikiFS 2).
+- [x] **`wikey-obsidian/src/sidebar-chat.ts` 응답 렌더링** — wikilink 는 **주 링크**, 원본 파일은 **보조 링크** (📄). 클릭 핸들러 (plan v2 §3.3 — Electron renderer 호환 API):
+  - 내부 vault 파일: `app.workspace.openLinkText(currentPath, '')`
   - 외부 URI (`uri-hash:*`): `window.open(uri, '_blank', 'noopener')`
-  - tombstone: `Notice('원본 삭제됨 (registry tombstone)')`, 버튼 disabled + opacity 0.4
-- [ ] **철학 가드 — wiki 계층 우회 방지** — 보조 링크 `0.68em` + `opacity: 0.7` + `aria-label="원본 파일 열기: <filename>"`. 색약 사용자는 아이콘 + 텍스트 조합. wikilink 보다 덜 강조. `wiki/analyses/self-extending-wiki.md` 의 "경계" 궤와 동일 — 원본은 "검증용" 포지션.
-- [ ] **통합 smoke** — 실제 PMS PDF 인제스트 1회 → 쿼리 실행 → 답변 wikilink 뒤 📄 표시 + 클릭 시 원본 PDF 열림 확인.
+  - tombstone: `Notice('원본 삭제됨 — <label> (registry tombstone)')`, 버튼 disabled + opacity 0.4
+- [x] **철학 가드 — wiki 계층 우회 방지** — `.wikey-citation-link` CSS `0.68em` + `opacity: 0.7` + hover 시 1 + `aria-label="원본 파일 열기: <filename>"`. 색약 사용자는 아이콘 + 텍스트 조합. wikilink 보다 덜 강조. `wiki/analyses/self-extending-wiki.md` 의 "경계" 궤와 동일 — 원본은 "검증용" 포지션.
+- [ ] **통합 smoke** — 실제 PMS PDF 인제스트 1회 → 쿼리 실행 → 답변 wikilink 뒤 📄 표시 + 클릭 시 원본 PDF 열림 확인. **(Obsidian UI 수동 확인 대기)**
 
 ### 4.3.3 stripBrokenWikilinks 자동 적용 (source_page 본문) — **완료 (2026-04-23 session 3)**
 

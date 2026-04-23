@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
-import { extractJsonBlock, buildIngestPrompt, loadEffectiveIngestPrompt, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, formatLocalDate, assertNotWikiPath, callLLMWithRetry, buildDoclingArgs, defaultOcrLangForEngine, defaultOcrEngine } from '../ingest-pipeline.js'
+import {
+  extractJsonBlock, buildIngestPrompt,
+  loadEffectiveIngestPrompt,
+  loadEffectiveStage1Prompt, loadEffectiveStage2Prompt, loadEffectiveStage3Prompt,
+  INGEST_PROMPT_PATH, STAGE1_SUMMARY_PROMPT_PATH, STAGE2_MENTION_PROMPT_PATH, STAGE3_CANONICALIZE_PROMPT_PATH,
+  BUNDLED_INGEST_PROMPT, BUNDLED_STAGE2_MENTION_PROMPT,
+  formatLocalDate, assertNotWikiPath, callLLMWithRetry,
+  buildDoclingArgs, defaultOcrLangForEngine, defaultOcrEngine,
+} from '../ingest-pipeline.js'
 import type { WikiFS } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
 
@@ -139,6 +147,109 @@ describe('loadEffectiveIngestPrompt', () => {
     }
     const result = await loadEffectiveIngestPrompt(fs)
     expect(result).toBe(BUNDLED_INGEST_PROMPT)
+  })
+})
+
+// ── §4.3.1 3-stage prompt override ──
+
+describe('loadEffectiveStage1Prompt', () => {
+  function makeFS(files: Record<string, string>): WikiFS {
+    return {
+      read: async (path: string) => {
+        if (!(path in files)) throw new Error(`ENOENT: ${path}`)
+        return files[path]
+      },
+      write: async () => {},
+      exists: async (path: string) => path in files,
+      list: async () => [],
+    }
+  }
+
+  it('prefers canonical stage1 path when both canonical and legacy exist', async () => {
+    const canonical = '# stage1 canonical'
+    const legacy = '# legacy ingest_prompt'
+    const fs = makeFS({
+      [STAGE1_SUMMARY_PROMPT_PATH]: canonical,
+      [INGEST_PROMPT_PATH]: legacy,
+    })
+    const res = await loadEffectiveStage1Prompt(fs)
+    expect(res.overridden).toBe(true)
+    expect(res.source).toBe('stage1')
+    expect(res.prompt).toBe(canonical)
+  })
+
+  it('falls back to legacy path when canonical is absent', async () => {
+    const legacy = '# legacy only'
+    const fs = makeFS({ [INGEST_PROMPT_PATH]: legacy })
+    const res = await loadEffectiveStage1Prompt(fs)
+    expect(res.source).toBe('legacy-ingest')
+    expect(res.prompt).toBe(legacy)
+  })
+
+  it('returns bundled when neither override present', async () => {
+    const res = await loadEffectiveStage1Prompt(makeFS({}))
+    expect(res.overridden).toBe(false)
+    expect(res.source).toBe('bundled')
+    expect(res.prompt).toBe(BUNDLED_INGEST_PROMPT)
+  })
+})
+
+describe('loadEffectiveStage2Prompt', () => {
+  function makeFS(files: Record<string, string>): WikiFS {
+    return {
+      read: async (path: string) => {
+        if (!(path in files)) throw new Error(`ENOENT: ${path}`)
+        return files[path]
+      },
+      write: async () => {},
+      exists: async (path: string) => path in files,
+      list: async () => [],
+    }
+  }
+
+  it('returns bundled stage2 template when no override', async () => {
+    const res = await loadEffectiveStage2Prompt(makeFS({}))
+    expect(res.overridden).toBe(false)
+    expect(res.prompt).toBe(BUNDLED_STAGE2_MENTION_PROMPT)
+    expect(res.prompt).toContain('{{CHUNK_CONTENT}}')
+  })
+
+  it('returns override content when file exists', async () => {
+    const content = '나만의 mention prompt — {{SOURCE_FILENAME}} / {{CHUNK_CONTENT}}'
+    const fs = makeFS({ [STAGE2_MENTION_PROMPT_PATH]: content })
+    const res = await loadEffectiveStage2Prompt(fs)
+    expect(res.overridden).toBe(true)
+    expect(res.source).toBe('stage2')
+    expect(res.prompt).toBe(content)
+  })
+})
+
+describe('loadEffectiveStage3Prompt', () => {
+  function makeFS(files: Record<string, string>): WikiFS {
+    return {
+      read: async (path: string) => {
+        if (!(path in files)) throw new Error(`ENOENT: ${path}`)
+        return files[path]
+      },
+      write: async () => {},
+      exists: async (path: string) => path in files,
+      list: async () => [],
+    }
+  }
+
+  it('returns empty prompt + overridden=false when no file (bundled 생성은 canonicalizer 내부)', async () => {
+    const res = await loadEffectiveStage3Prompt(makeFS({}))
+    expect(res.overridden).toBe(false)
+    expect(res.prompt).toBe('')
+  })
+
+  it('returns override content when present', async () => {
+    const content = '전용 canonicalizer — mentions {{MENTIONS_COUNT}}'
+    const fs = makeFS({ [STAGE3_CANONICALIZE_PROMPT_PATH]: content })
+    const res = await loadEffectiveStage3Prompt(fs)
+    expect(res.overridden).toBe(true)
+    expect(res.source).toBe('stage3')
+    expect(res.prompt).toBe(content)
   })
 })
 

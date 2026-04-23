@@ -1,5 +1,29 @@
 import { describe, it, expect } from 'vitest'
-import { parseQmdOutput, buildSynthesisPrompt } from '../query-pipeline.js'
+import {
+  parseQmdOutput,
+  buildSynthesisPrompt,
+  buildCitationFromContent,
+  collectCitationsWithWikiFS,
+} from '../query-pipeline.js'
+import type { SearchResult, WikiFS } from '../types.js'
+
+class MemoryFS implements WikiFS {
+  files = new Map<string, string>()
+  async read(path: string): Promise<string> {
+    const v = this.files.get(path)
+    if (v == null) throw new Error(`ENOENT ${path}`)
+    return v
+  }
+  async write(path: string, content: string): Promise<void> {
+    this.files.set(path, content)
+  }
+  async exists(path: string): Promise<boolean> {
+    return this.files.has(path)
+  }
+  async list(_dir: string): Promise<string[]> {
+    return [...this.files.keys()]
+  }
+}
 
 describe('parseQmdOutput', () => {
   it('parses JSON array of search results and adds wiki/ prefix', () => {
@@ -51,5 +75,99 @@ describe('buildSynthesisPrompt', () => {
     const prompt = buildSynthesisPrompt('context', 'test question')
     const questionIdx = prompt.indexOf('test question')
     expect(questionIdx).toBeGreaterThan(0)
+  })
+})
+
+// ── §4.3.2 Part B: citations 구조화 ──
+
+const RESULT_ESC: SearchResult = { path: 'wiki/entities/esc.md', score: 0.9, snippet: 'ESC is...' }
+
+describe('buildCitationFromContent', () => {
+  it('extracts provenance refs (bare sha256 and quoted) and dedupes across types', () => {
+    const content = `---
+title: ESC
+type: entity
+provenance:
+  - type: extracted
+    ref: sources/sha256:aaaaaaaaaaaaaaaa
+  - type: extracted
+    ref: "sources/sha256:bbbbbbbbbbbbbbbb"
+  - type: inferred
+    ref: sources/sha256:aaaaaaaaaaaaaaaa
+    confidence: 0.7
+tags: []
+---
+
+# ESC
+`
+    const citation = buildCitationFromContent(RESULT_ESC, content)
+    expect(citation).not.toBeNull()
+    expect(citation!.wikiPagePath).toBe('wiki/entities/esc.md')
+    // Deduplicated by source_id regardless of provenance type.
+    expect(citation!.sourceIds).toEqual([
+      'sha256:aaaaaaaaaaaaaaaa',
+      'sha256:bbbbbbbbbbbbbbbb',
+    ])
+    expect(citation!.excerpt).toBe('ESC is...')
+  })
+
+  it('returns null when no frontmatter at all', () => {
+    const content = '# ESC\n\n본문만 있는 페이지.'
+    expect(buildCitationFromContent(RESULT_ESC, content)).toBeNull()
+  })
+
+  it('returns null when frontmatter has no provenance field', () => {
+    const content = `---
+title: ESC
+type: entity
+sources: [source-x.md]
+---
+
+# ESC
+`
+    expect(buildCitationFromContent(RESULT_ESC, content)).toBeNull()
+  })
+
+  it('strips `sources/` prefix but keeps raw uri-hash refs intact', () => {
+    const content = `---
+title: X
+provenance:
+  - type: extracted
+    ref: sources/uri-hash:cccccccccccccccc
+---
+
+# X
+`
+    const citation = buildCitationFromContent(RESULT_ESC, content)
+    expect(citation!.sourceIds).toEqual(['uri-hash:cccccccccccccccc'])
+  })
+})
+
+describe('collectCitationsWithWikiFS', () => {
+  it('skips pages the reader cannot open, preserves order of those it can', async () => {
+    const fs = new MemoryFS()
+    await fs.write('wiki/entities/a.md', `---\nprovenance:\n  - type: extracted\n    ref: sources/sha256:aaaaaaaaaaaaaaaa\n---\n\nA`)
+    // b.md missing → read throws → skipped.
+    await fs.write('wiki/concepts/c.md', `---\nprovenance:\n  - type: inferred\n    ref: sources/sha256:cccccccccccccccc\n    confidence: 0.5\n---\n\nC`)
+    const results: SearchResult[] = [
+      { path: 'wiki/entities/a.md', score: 0.9, snippet: 'a' },
+      { path: 'wiki/entities/b.md', score: 0.8, snippet: 'b' }, // missing
+      { path: 'wiki/concepts/c.md', score: 0.7, snippet: 'c' },
+    ]
+    const citations = await collectCitationsWithWikiFS(results, fs)
+    expect(citations.map((c) => c.wikiPagePath)).toEqual([
+      'wiki/entities/a.md',
+      'wiki/concepts/c.md',
+    ])
+  })
+
+  it('returns empty array when no result pages carry provenance', async () => {
+    const fs = new MemoryFS()
+    await fs.write('wiki/entities/legacy.md', `---\ntitle: Legacy\nsources: [legacy-source.md]\n---\n\n# Legacy`)
+    const citations = await collectCitationsWithWikiFS(
+      [{ path: 'wiki/entities/legacy.md', score: 0.5, snippet: 'legacy' }],
+      fs,
+    )
+    expect(citations).toEqual([])
   })
 })

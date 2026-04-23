@@ -154,6 +154,15 @@ export interface CanonicalizeArgs {
    * Mirrors the flag plumbed through ingest-pipeline extraction calls.
    */
   readonly deterministic?: boolean
+  /**
+   * §4.3.1: optional Stage 3 prompt override. If present, replaces the entire
+   * bundled canonicalizer prompt. Substituted variables:
+   *   {{SOURCE_FILENAME}} {{GUIDE_BLOCK}} {{SCHEMA_BLOCK}}
+   *   {{EXISTING_BLOCK}} {{MENTIONS_BLOCK}} {{MENTIONS_COUNT}}
+   * User responsibility: keep the JSON output schema section — canonicalizer assumes
+   * `entities/concepts/index_additions/log_entry` top-level keys.
+   */
+  readonly overridePrompt?: string
 }
 
 interface RawCanonical {
@@ -165,7 +174,7 @@ interface RawCanonical {
 
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
-          sourceFilename, today, guideHint, provider, model, schemaOverride, deterministic } = args
+          sourceFilename, today, guideHint, provider, model, schemaOverride, deterministic, overridePrompt } = args
 
   if (mentions.length === 0) {
     return { entities: [], concepts: [], dropped: [] }
@@ -173,7 +182,7 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
 
   const prompt = buildCanonicalizerPrompt({
     mentions, existingEntityBases, existingConceptBases,
-    sourceFilename, guideHint, schemaOverride,
+    sourceFilename, guideHint, schemaOverride, overridePrompt,
   })
 
   const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
@@ -189,6 +198,8 @@ interface PromptArgs {
   sourceFilename: string
   guideHint?: string
   schemaOverride?: SchemaOverride
+  /** §4.3.1: optional Stage 3 full prompt override. Variables substituted as documented above. */
+  overridePrompt?: string
 }
 
 /**
@@ -200,7 +211,7 @@ interface PromptArgs {
  * 누적 하드코딩 3 개 넘기 전에 이행.
  */
 export function buildCanonicalizerPrompt(args: PromptArgs): string {
-  const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint, schemaOverride } = args
+  const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint, schemaOverride, overridePrompt } = args
 
   const guideBlock = guideHint?.trim()
     ? `\n## 사용자 강조 지시 (우선 준수)\n\n> ${guideHint.trim()}\n`
@@ -218,11 +229,23 @@ export function buildCanonicalizerPrompt(args: PromptArgs): string {
     return `${i + 1}. \`${m.name}\` (hint: ${m.type_hint ?? 'unknown'}) — ${evidence}`
   }).join('\n')
 
+  const schemaBlock = buildSchemaPromptBlock(schemaOverride)
+
+  if (overridePrompt && overridePrompt.trim()) {
+    return overridePrompt
+      .replaceAll('{{SOURCE_FILENAME}}', sourceFilename)
+      .replaceAll('{{GUIDE_BLOCK}}', guideBlock)
+      .replaceAll('{{SCHEMA_BLOCK}}', schemaBlock)
+      .replaceAll('{{EXISTING_BLOCK}}', existingBlock)
+      .replaceAll('{{MENTIONS_BLOCK}}', mentionsBlock)
+      .replaceAll('{{MENTIONS_COUNT}}', String(mentions.length))
+  }
+
   return `당신은 wikey LLM Wiki의 canonicalizer입니다. chunk LLM이 추출한 mention 리스트를 받아 schema에 맞춰 분류하고 canonical filename으로 통합합니다.
 
 Source: ${sourceFilename}
 ${guideBlock}
-${buildSchemaPromptBlock(schemaOverride)}
+${schemaBlock}
 
 ## 작업 규칙
 

@@ -2124,3 +2124,27 @@
   padding: 6px 14px;
 }
 
+
+/* ── §4.3.2 Part B: citation 보조 링크 ── */
+/* wikilink 뒤 원본 파일 backlink — 약한 affordance (wikilink 주 강조 유지). */
+.wikey-citation-link {
+  display: inline-block;
+  margin-left: 2px;
+  font-size: 0.68em;
+  opacity: 0.7;
+  text-decoration: none !important;
+  vertical-align: baseline;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  line-height: 1;
+}
+
+.wikey-citation-link:hover {
+  opacity: 1;
+}
+
+.wikey-citation-link.wikey-citation-tombstone {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}

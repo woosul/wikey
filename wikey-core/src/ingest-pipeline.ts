@@ -169,6 +169,11 @@ export async function ingest(
   const indexContent = await wikiFS.read('wiki/index.md').catch(() => '')
   const basePromptTemplate = await loadEffectiveIngestPrompt(wikiFS)
   const promptTemplate = opts?.guideHint ? injectGuideHint(basePromptTemplate, opts.guideHint) : basePromptTemplate
+  // §4.3.1 Stage 2/3 overrides — loaded once per ingest (file I/O outside hot loop).
+  const stage2Res = await loadEffectiveStage2Prompt(wikiFS)
+  const stage3Res = await loadEffectiveStage3Prompt(wikiFS)
+  const stage2Template = stage2Res.prompt
+  const stage3OverridePrompt = stage3Res.overridden ? stage3Res.prompt : undefined
   const { provider, model } = resolveProvider('ingest', config)
   const llm = new LLMClient(httpClient, config)
   const isLocal = provider === 'ollama'
@@ -213,14 +218,14 @@ export async function ingest(
     const summaryParsed = await callLLMForSummary(llm, content, sourceFilename, indexContent, provider, model, promptTemplate, deterministic)
 
     onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model}) [FULL]` })
-    const mentions = await extractMentions(llm, content, sourceFilename, provider, model, undefined, deterministic)
+    const mentions = await extractMentions(llm, content, sourceFilename, provider, model, undefined, deterministic, stage2Template)
     log(`route=FULL — mentions=${mentions.length}`)
 
     onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride, deterministic,
+      schemaOverride, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
 
@@ -260,7 +265,7 @@ export async function ingest(
       const peer = formatPeerContext(sectionIndex, section.idx, 300)
       const content = buildSectionWithPeer(peer, section, isLocal)
       try {
-        const mentions = await extractMentions(llm, content, sourceFilename, provider, model, section.idx, deterministic)
+        const mentions = await extractMentions(llm, content, sourceFilename, provider, model, section.idx, deterministic, stage2Template)
         allMentions.push(...mentions)
         sectionOk++
       } catch (err) {
@@ -278,7 +283,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
       sourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride, deterministic,
+      schemaOverride, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     if (canon.dropped.length > 0) {
@@ -458,14 +463,36 @@ async function callLLMForSummary(
 /**
  * v6 Stage 1b: Mention extractor — chunk LLM emits raw mentions only, no classification.
  * Returns Mention[] (not IngestRawResult). Stage 2 canonicalizer handles classification + dedup.
+ *
+ * §4.3.1: template override via `.wikey/stage2_mention_prompt.md`. Substituted variables:
+ *   - {{SOURCE_FILENAME}}, {{CHUNK_CONTENT}}
  */
 async function extractMentions(
   llm: LLMClient, chunkContent: string, sourceFilename: string,
   provider: string, model: string, chunkIdx?: number, deterministic?: boolean,
+  promptTemplate?: string,
 ): Promise<Mention[]> {
-  const prompt = `이 문서 청크에서 잠재적으로 wiki 페이지가 될 만한 **mention(언급)**을 추출하세요.
+  const template = promptTemplate ?? BUNDLED_STAGE2_MENTION_PROMPT
+  const prompt = template
+    .replaceAll('{{SOURCE_FILENAME}}', sourceFilename)
+    .replaceAll('{{CHUNK_CONTENT}}', chunkContent)
 
-Source: ${sourceFilename}
+  const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
+  const mentions = ((raw as any).mentions ?? []) as Array<{ name?: string; type_hint?: string; evidence?: string }>
+  return mentions
+    .filter((m) => m.name && m.name.trim().length > 0)
+    .map((m) => ({
+      name: m.name!.trim(),
+      type_hint: (m.type_hint as Mention['type_hint']) ?? 'unknown',
+      evidence: (m.evidence ?? '').trim(),
+      source_section_idx: chunkIdx,
+    }))
+}
+
+/** §4.3.1 bundled default for Stage 2 (chunk → Mention). Kept intact when no override exists. */
+export const BUNDLED_STAGE2_MENTION_PROMPT = `이 문서 청크에서 잠재적으로 wiki 페이지가 될 만한 **mention(언급)**을 추출하세요.
+
+Source: {{SOURCE_FILENAME}}
 
 ## 작업 정의
 
@@ -507,19 +534,7 @@ Source: ${sourceFilename}
 
 ## 청크 본문
 
-${chunkContent}`
-
-  const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
-  const mentions = ((raw as any).mentions ?? []) as Array<{ name?: string; type_hint?: string; evidence?: string }>
-  return mentions
-    .filter((m) => m.name && m.name.trim().length > 0)
-    .map((m) => ({
-      name: m.name!.trim(),
-      type_hint: (m.type_hint as Mention['type_hint']) ?? 'unknown',
-      evidence: (m.evidence ?? '').trim(),
-      source_section_idx: chunkIdx,
-    }))
-}
+{{CHUNK_CONTENT}}`
 
 // Legacy v5 extractor (kept for fallback / reference, NOT called in v6 flow)
 async function callLLMForExtraction(
@@ -832,23 +847,76 @@ async function buildPlan(
   }
 }
 
-/** Path to the user-editable ingest prompt override (vault-relative). */
+// ── §4.3.1 Stage 1/2/3 프롬프트 override ──
+//
+//   Stage 1 summary:    `.wikey/stage1_summary_prompt.md`   (legacy fallback: `.wikey/ingest_prompt.md`)
+//   Stage 2 mentions:   `.wikey/stage2_mention_prompt.md`
+//   Stage 3 canonical:  `.wikey/stage3_canonicalize_prompt.md`
+//
+// 각 override 는 bundled 기본을 **완전 대체**하되 `{{...}}` 템플릿 변수는 같은 이름으로
+// 계산된다. 예컨대 Stage 3 override 에서 `{{MENTIONS_BLOCK}}` 치환자를 제거하면
+// canonicalizer 는 mention 을 못 본 채 작동해 결과가 깨진다 — 사용자 책임.
+// settings-tab UI 에 inline 경고 + bundled 템플릿 주석으로 완화.
+
+/** Stage 1 override canonical path. */
+export const STAGE1_SUMMARY_PROMPT_PATH = '.wikey/stage1_summary_prompt.md'
+/** Legacy alias — still honored as a fallback when the canonical name is absent. */
 export const INGEST_PROMPT_PATH = '.wikey/ingest_prompt.md'
+/** Stage 2 override canonical path. */
+export const STAGE2_MENTION_PROMPT_PATH = '.wikey/stage2_mention_prompt.md'
+/** Stage 3 override canonical path. */
+export const STAGE3_CANONICALIZE_PROMPT_PATH = '.wikey/stage3_canonicalize_prompt.md'
+
+export interface PromptLoadResult {
+  readonly prompt: string
+  readonly overridden: boolean
+  readonly source: 'bundled' | 'stage1' | 'legacy-ingest' | 'stage2' | 'stage3'
+}
 
 /**
- * Load the effective ingest prompt template.
- * - If `.wikey/ingest_prompt.md` exists, return its content (full override).
+ * Load the effective Stage 1 prompt template.
+ * - If `.wikey/stage1_summary_prompt.md` exists, return its content (full override).
+ * - Else-if `.wikey/ingest_prompt.md` exists (legacy), return it.
  * - Else, return the bundled default.
  */
 export async function loadEffectiveIngestPrompt(wikiFS: WikiFS): Promise<string> {
+  const res = await loadEffectiveStage1Prompt(wikiFS)
+  return res.prompt
+}
+
+/** Structured variant for settings UI (shows whether override is active). */
+export async function loadEffectiveStage1Prompt(wikiFS: WikiFS): Promise<PromptLoadResult> {
+  try {
+    if (await wikiFS.exists(STAGE1_SUMMARY_PROMPT_PATH)) {
+      return { prompt: await wikiFS.read(STAGE1_SUMMARY_PROMPT_PATH), overridden: true, source: 'stage1' }
+    }
+  } catch { /* fall through */ }
   try {
     if (await wikiFS.exists(INGEST_PROMPT_PATH)) {
-      return await wikiFS.read(INGEST_PROMPT_PATH)
+      return { prompt: await wikiFS.read(INGEST_PROMPT_PATH), overridden: true, source: 'legacy-ingest' }
     }
-  } catch {
-    // fall through to bundled default
-  }
-  return BUNDLED_INGEST_PROMPT
+  } catch { /* fall through */ }
+  return { prompt: BUNDLED_INGEST_PROMPT, overridden: false, source: 'bundled' }
+}
+
+export async function loadEffectiveStage2Prompt(wikiFS: WikiFS): Promise<PromptLoadResult> {
+  try {
+    if (await wikiFS.exists(STAGE2_MENTION_PROMPT_PATH)) {
+      return { prompt: await wikiFS.read(STAGE2_MENTION_PROMPT_PATH), overridden: true, source: 'stage2' }
+    }
+  } catch { /* fall through */ }
+  return { prompt: BUNDLED_STAGE2_MENTION_PROMPT, overridden: false, source: 'bundled' }
+}
+
+export async function loadEffectiveStage3Prompt(wikiFS: WikiFS): Promise<PromptLoadResult> {
+  try {
+    if (await wikiFS.exists(STAGE3_CANONICALIZE_PROMPT_PATH)) {
+      return { prompt: await wikiFS.read(STAGE3_CANONICALIZE_PROMPT_PATH), overridden: true, source: 'stage3' }
+    }
+  } catch { /* fall through */ }
+  return { prompt: '', overridden: false, source: 'bundled' }
+  // bundled 본체는 canonicalizer.ts::buildCanonicalizerPrompt 가 생성한다 (변수 치환 다수).
+  // overridden=true 일 때만 이 prompt 가 Stage 3 에 주입되며, 없으면 bundled 로직 그대로.
 }
 
 /** Bundled default ingest prompt template (used when no user override exists). */

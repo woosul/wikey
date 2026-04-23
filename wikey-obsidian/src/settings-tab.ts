@@ -1,5 +1,11 @@
 import { App, Modal, Notice, PluginSettingTab, Setting, TFile, requestUrl } from 'obsidian'
-import { costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck, INGEST_PROMPT_PATH, BUNDLED_INGEST_PROMPT, loadEffectiveIngestPrompt, loadSchemaOverride, fetchModelList, ANTHROPIC_PING_MODEL } from 'wikey-core'
+import {
+  costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck,
+  INGEST_PROMPT_PATH, STAGE1_SUMMARY_PROMPT_PATH, STAGE2_MENTION_PROMPT_PATH, STAGE3_CANONICALIZE_PROMPT_PATH,
+  BUNDLED_INGEST_PROMPT, BUNDLED_STAGE2_MENTION_PROMPT,
+  loadEffectiveIngestPrompt, loadEffectiveStage2Prompt, loadEffectiveStage3Prompt,
+  loadSchemaOverride, fetchModelList, ANTHROPIC_PING_MODEL,
+} from 'wikey-core'
 import type { LLMProvider } from 'wikey-core'
 import type WikeyPlugin from './main'
 
@@ -337,37 +343,95 @@ export class WikeySettingTab extends PluginSettingTab {
     )
   }
 
-  // ── Section: Ingest Prompt (single-prompt model) ──
+  // ── Section: Ingest Prompts (§4.3.1 3-stage override) ──
   // Note: `.wikey/` is a hidden folder (dot-prefixed), so vault metadata
   // (getAbstractFileByPath, getFiles) does not track files inside it.
   // Use vault.adapter.* for all existence checks and writes.
   private renderIngestPromptSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Ingest Prompt' })
-
-    const { vault } = this.plugin.app
-    const descEl = containerEl.createDiv({ cls: 'wikey-settings-status-desc' })
-    const statusSpan = descEl.createSpan({
-      text: 'System prompt sent to the LLM during ingest. Edit to tune for your data; Reset to revert. Status: …',
+    containerEl.createEl('h3', { text: 'Ingest Prompts' })
+    const intro = containerEl.createDiv({ cls: 'wikey-settings-status-desc' })
+    intro.createSpan({
+      text: '인제스트 파이프라인은 3단계 — Stage 1 summary → Stage 2 mention → Stage 3 canonicalize. 각 단계 프롬프트를 독립적으로 override 가능.',
     })
+
+    this.renderPromptRow(containerEl, {
+      title: 'Stage 1 — Source summary',
+      description: '소스 → source_page 페이지 요약. {{TODAY}}, {{INDEX_CONTENT}}, {{SOURCE_FILENAME}}, {{SOURCE_CONTENT}} 치환.',
+      canonicalPath: STAGE1_SUMMARY_PROMPT_PATH,
+      legacyPath: INGEST_PROMPT_PATH,
+      loader: async (wikiFS) => loadEffectiveIngestPrompt(wikiFS),
+      bundled: BUNDLED_INGEST_PROMPT,
+      inlineHint: 'source_page 본문에 `[[wikilink]]` 를 직접 쓰지 마세요 — Stage 2/3 에서 canonical 된 페이지만 유지되고 나머지는 plain text 로 강등됩니다 (§4.3.3).',
+    })
+
+    this.renderPromptRow(containerEl, {
+      title: 'Stage 2 — Mention extraction',
+      description: 'chunk → Mention JSON. {{SOURCE_FILENAME}}, {{CHUNK_CONTENT}} 치환.',
+      canonicalPath: STAGE2_MENTION_PROMPT_PATH,
+      loader: async (wikiFS) => {
+        const res = await loadEffectiveStage2Prompt(wikiFS)
+        return res.prompt
+      },
+      bundled: BUNDLED_STAGE2_MENTION_PROMPT,
+      inlineHint: '출력 스키마 (`{"mentions": [...]}`) 를 유지하세요 — 다른 구조로 응답하면 pipeline 이 0 mention 으로 처리합니다.',
+    })
+
+    this.renderPromptRow(containerEl, {
+      title: 'Stage 3 — Canonicalizer',
+      description: 'mention → canonical entity/concept. {{SOURCE_FILENAME}}, {{GUIDE_BLOCK}}, {{SCHEMA_BLOCK}}, {{EXISTING_BLOCK}}, {{MENTIONS_BLOCK}}, {{MENTIONS_COUNT}} 치환.',
+      canonicalPath: STAGE3_CANONICALIZE_PROMPT_PATH,
+      loader: async (wikiFS) => {
+        const res = await loadEffectiveStage3Prompt(wikiFS)
+        return res.overridden ? res.prompt : ''
+      },
+      bundled: '', // bundled body 는 canonicalizer.ts 가 생성 — editor 는 override 만 편집.
+      inlineHint: '`entities/concepts/index_additions/log_entry` JSON 출력을 유지하세요. SCHEMA_BLOCK 을 제거하면 canonicalizer 가 허용 타입을 모릅니다.',
+    })
+  }
+
+  /**
+   * §4.3.1 helper — single Stage prompt row (Edit + Reset + status).
+   * canonicalPath 가 override 대상; legacyPath 가 있으면 legacy 존재도 "Custom override" 로 표시.
+   */
+  private renderPromptRow(
+    containerEl: HTMLElement,
+    opts: {
+      title: string
+      description: string
+      canonicalPath: string
+      legacyPath?: string
+      loader: (wikiFS: import('wikey-core').WikiFS) => Promise<string>
+      bundled: string
+      inlineHint?: string
+    },
+  ): void {
+    const { vault } = this.plugin.app
+    containerEl.createEl('h4', { text: opts.title })
+    if (opts.inlineHint) {
+      containerEl.createDiv({ cls: 'wikey-settings-status-desc', text: opts.inlineHint })
+    }
+    const descEl = containerEl.createDiv({ cls: 'wikey-settings-status-desc' })
+    const statusSpan = descEl.createSpan({ text: `${opts.description} Status: …` })
 
     let resetButton: HTMLButtonElement | null = null
     new Setting(containerEl)
       .setName('Edit prompt')
-      .setDesc('Open the current ingest system prompt in a popup editor. Save writes a vault override; Reset removes it.')
+      .setDesc(`Open the current ${opts.title.toLowerCase()} prompt in a popup editor. Save writes ${opts.canonicalPath}; Reset removes it.`)
       .addButton((btn) =>
         btn.setButtonText('Edit').onClick(async () => {
           try {
             const wikiFS = this.plugin.wikiFS
-            const current = await loadEffectiveIngestPrompt(wikiFS)
-            new IngestPromptEditModal(this.plugin.app, current, async (next) => {
-              const parent = INGEST_PROMPT_PATH.split('/').slice(0, -1).join('/')
+            const current = await opts.loader(wikiFS)
+            const initial = current || opts.bundled
+            new IngestPromptEditModal(this.plugin.app, initial, async (next) => {
+              const parent = opts.canonicalPath.split('/').slice(0, -1).join('/')
               if (parent && !(await vault.adapter.exists(parent))) {
                 await vault.createFolder(parent)
               }
-              await vault.adapter.write(INGEST_PROMPT_PATH, next)
-              new Notice('Ingest prompt saved.')
+              await vault.adapter.write(opts.canonicalPath, next)
+              new Notice(`${opts.title} prompt saved.`)
               this.display()
-            }).open()
+            }, opts.title).open()
           } catch (err) {
             new Notice(`Failed to open prompt editor: ${(err as Error).message}`)
           }
@@ -376,23 +440,30 @@ export class WikeySettingTab extends PluginSettingTab {
       .addButton((btn) => {
         resetButton = btn.buttonEl
         btn.setButtonText('Reset').setDisabled(true).onClick(async () => {
-          if (!(await vault.adapter.exists(INGEST_PROMPT_PATH))) {
+          const hasCanonical = await vault.adapter.exists(opts.canonicalPath)
+          const hasLegacy = opts.legacyPath ? await vault.adapter.exists(opts.legacyPath) : false
+          if (!hasCanonical && !hasLegacy) {
             new Notice('Already using bundled default.')
             return
           }
-          if (!confirm(`Reset ingest prompt to bundled default? This deletes ${INGEST_PROMPT_PATH}.`)) return
-          await vault.adapter.remove(INGEST_PROMPT_PATH)
-          new Notice('Ingest prompt reset to default.')
+          const targets = [hasCanonical ? opts.canonicalPath : null, hasLegacy ? opts.legacyPath! : null].filter(Boolean)
+          if (!confirm(`Reset ${opts.title} to bundled default? This deletes ${targets.join(' + ')}.`)) return
+          for (const t of targets) await vault.adapter.remove(t as string)
+          new Notice(`${opts.title} reset to default.`)
           this.display()
         })
       })
 
-    // Async update of status text + Reset button enable (disk truth)
     void (async () => {
-      const isCustom = await vault.adapter.exists(INGEST_PROMPT_PATH)
-      statusSpan.setText(
-        `System prompt sent to the LLM during ingest. Edit to tune for your data; Reset to revert. Status: ${isCustom ? 'Custom override' : 'Bundled default'}.`,
-      )
+      const hasCanonical = await vault.adapter.exists(opts.canonicalPath)
+      const hasLegacy = opts.legacyPath ? await vault.adapter.exists(opts.legacyPath) : false
+      const isCustom = hasCanonical || hasLegacy
+      const label = isCustom
+        ? hasCanonical
+          ? `Custom override at ${opts.canonicalPath}`
+          : `Legacy override at ${opts.legacyPath}`
+        : 'Bundled default'
+      statusSpan.setText(`${opts.description} Status: ${label}.`)
       if (resetButton) resetButton.disabled = !isCustom
     })()
   }
@@ -882,6 +953,7 @@ class IngestPromptEditModal extends Modal {
     app: App,
     private readonly initialContent: string,
     private readonly onSave: (next: string) => Promise<void>,
+    private readonly title: string = 'Ingest Prompt',
   ) {
     super(app)
   }
@@ -889,9 +961,9 @@ class IngestPromptEditModal extends Modal {
   onOpen(): void {
     const { contentEl, modalEl } = this
     modalEl.addClass('wikey-ingest-prompt-modal')
-    contentEl.createEl('h2', { text: 'Edit Ingest Prompt' })
+    contentEl.createEl('h2', { text: `Edit ${this.title}` })
     contentEl.createEl('p', {
-      text: 'Edit the system prompt sent to the LLM during ingest. Keep the {{TODAY}}, {{INDEX_CONTENT}}, {{SOURCE_FILENAME}}, {{SOURCE_CONTENT}} placeholders or the pipeline will not receive the source.',
+      text: 'Template 변수 (`{{...}}`) 를 제거하거나 JSON 출력 스키마를 바꾸면 pipeline 이 깨집니다. bundled 를 기준으로 최소한으로 수정하세요.',
       cls: 'wikey-ingest-prompt-help',
     })
     this.textarea = contentEl.createEl('textarea', {

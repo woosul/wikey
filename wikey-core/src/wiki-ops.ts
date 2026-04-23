@@ -159,14 +159,21 @@ function provenanceYamlScalar(s: string): string {
 }
 
 function parseProvenance(yaml: string): ProvenanceEntry[] {
+  type Builder = { type?: ProvenanceEntry['type']; ref?: string; confidence?: number; reason?: string }
   const lines = yaml.split('\n')
   const out: ProvenanceEntry[] = []
   let inProvenance = false
-  let current: Partial<ProvenanceEntry> | null = null
+  let current: Builder | null = null
 
   const flush = () => {
     if (current && current.type && current.ref) {
-      out.push(current as ProvenanceEntry)
+      const finalized: ProvenanceEntry = {
+        type: current.type,
+        ref: current.ref,
+        ...(current.confidence != null ? { confidence: current.confidence } : {}),
+        ...(current.reason != null ? { reason: current.reason } : {}),
+      }
+      out.push(finalized)
     }
     current = null
   }

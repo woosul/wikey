@@ -246,6 +246,51 @@ describe('buildCanonicalizerPrompt', () => {
     expect(prompt).toContain('Entity 타입 (5개)')  // 4 built-in + 1 custom
     expect(prompt).toContain('Concept 타입 (4개)')
   })
+
+  // §4.3.1: Stage 3 overridePrompt replaces bundled prompt entirely,
+  // substituting the documented template variables.
+  it('overridePrompt fully replaces bundled template with variable substitution', () => {
+    const override = `TEST-OVERRIDE
+Source: {{SOURCE_FILENAME}}
+Guide:{{GUIDE_BLOCK}}
+Schema:{{SCHEMA_BLOCK}}
+Existing:{{EXISTING_BLOCK}}
+Mentions ({{MENTIONS_COUNT}}):
+{{MENTIONS_BLOCK}}
+`
+    const prompt = buildCanonicalizerPrompt({
+      mentions: [
+        { name: 'pmbok', type_hint: 'standard', evidence: 'appears twice' },
+        { name: 'mes', type_hint: 'tool', evidence: 'manufacturing execution' },
+      ],
+      existingEntityBases: ['goodstream-co-ltd'],
+      existingConceptBases: ['pmbok'],
+      sourceFilename: 'pms.pdf',
+      guideHint: '정밀 추출',
+      overridePrompt: override,
+    })
+    // Override body is present, bundled wording is NOT leaked.
+    expect(prompt.startsWith('TEST-OVERRIDE\n')).toBe(true)
+    expect(prompt).not.toContain('당신은 wikey LLM Wiki의 canonicalizer')
+    // Variable substitution landed.
+    expect(prompt).toContain('Source: pms.pdf')
+    expect(prompt).toContain('Mentions (2):')
+    expect(prompt).toContain('`pmbok` (hint: standard)')
+    expect(prompt).toContain('`mes` (hint: tool)')
+    expect(prompt).toContain('정밀 추출') // guide block inline
+    expect(prompt).toContain('goodstream-co-ltd') // existing block rendered
+  })
+
+  it('empty overridePrompt (all whitespace) is ignored — bundled default wins', () => {
+    const prompt = buildCanonicalizerPrompt({
+      mentions: [{ name: 'x', evidence: 'y' }],
+      existingEntityBases: [],
+      existingConceptBases: [],
+      sourceFilename: 'test.pdf',
+      overridePrompt: '   \n  \t  ',
+    })
+    expect(prompt).toContain('당신은 wikey LLM Wiki의 canonicalizer')
+  })
 })
 
 describe('canonicalize — schema override (v7-5)', () => {

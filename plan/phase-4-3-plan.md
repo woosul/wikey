@@ -1,8 +1,10 @@
-# Phase 4.3 구현 계획 v2 — 인제스트 본체 (Provenance data model + 쿼리 원본 backlink + 3-stage prompt override + stripBrokenWikilinks)
+# Phase 4.3 구현 계획 v3 — 인제스트 본체 (완료 기록 + codex 2차 검증 결과 반영)
 
-> 작성: 2026-04-23 (session 2 후속) · v1 → v2 (self-review 후 4개 보강) / 대상: `plan/phase-4-todo.md §4.3`.
-> **현재 상태**: §4.2 Stage 1~4 완료 (commit `876c409` 까지). fresh vault — `wiki/entities/`·`wiki/concepts/`·`wiki/analyses/` 모두 비어있음 → Provenance data model migration **실질 no-op**. 본 계획은 그 장점을 활용해 가볍게 진입.
-> **v1 → v2 변경 요약** (§11 Self-review 참조): (A) Obsidian plugin 은 Electron main process `shell` 미접근 → `app.openWithDefaultApp` / `workspace.openLinkText` / `window.open` 로 교체 (§3.3). (B) `buildCanonicalizerPrompt` 시그니처 확장을 **optional 파라미터** 로 명시 (§4.4). (C) stripBrokenWikilinks 시점과 Stay-involved Preview 모달 순서 확정 — Preview 에 Stage 2/3 완료 후 stripped 버전만 노출 (§5.2). (D) Stage 1 override 가이드 — override prompt 가 wikilink 를 직접 쓰면 Stage 2/3 에서 strip 될 수 있음 고지 (§4.5 신설).
+> 작성: 2026-04-23 session 2 · v2 업데이트: session 3 · **v3 업데이트: session 4 (완료 기록 + codex 2차 재시도)** / 대상: `plan/phase-4-todo.md §4.3`.
+> **v3 업데이트 (2026-04-23 session 4)**: Part A + B + §4.3.1 + §4.3.3 구현 전량 완료 (wikey-core 437 → 463 tests PASS +26). codex rescue 2차 `bsmflco7z` 는 1차 `b2p8s3sgq` 와 동일하게 analysis 턴 후반에 출력 정지 (8794 bytes 에서 15분 무활동) — self-review 4건 반영 + 구현 단위 테스트 + smoke 로 대체 확증. 본 섹션 (§12) 가 2차 timeout 기록 + v2 가드 매핑 제공. v3 는 **완료 상태 스냅샷 + 재검증 로그** 이 목적이며 구현 전제는 v2 와 동일 (plan drift 없음).
+> **v1 → v2 → v3 변경 요약**:
+>   - v1 → v2 (self-review 4건): Electron API / optional parameter / Preview 순서 / Stage 1 override 가이드.
+>   - v2 → v3 (session 4): 구현 완료 기록 + codex 2차 timeout + plan v2 가드 vs 실구현 매핑 (§12 신설). 설계 전제는 변경 없음.
 > **핵심 원칙**: (a) data model 변경 (`provenance` 필드) 은 본체 완료 선언 전 고정 — Phase 5 로 미루면 wiki 재생성 필요. (b) 원본 링크는 기존 wikilink 를 대체하지 않고 보조 affordance 로 추가 — wiki 계층 우회 방지. (c) 3-stage override 와 stripBrokenWikilinks 는 기존 시스템 확장.
 
 ---
@@ -401,3 +403,56 @@ codex rescue agent 가 분석 완료 전 프로세스 종료 (b2p8s3sgq.output 3
 ### 11.3 codex 2차 검증 재시도 권고
 
 본 v2 착수 후 Part A 완료 시점 (실제 코드 + vitest +3 green) 에서 Codex 에 한 번 더 검증 의뢰 가능 — 그때는 분석 대상이 계획서 + 실제 구현이라 더 구체적 피드백 기대. 이번처럼 분석 완료 전 timeout 하는 경우 재시도 주기를 짧게 잡고 output 파일 watch. Phase 4 본체 완료 선언 전 최종 검증을 걸면 안전.
+
+---
+
+## 12. v3 완료 스냅샷 + codex 2차 검증 결과 (2026-04-23 session 4)
+
+### 12.1 구현 완료 매핑
+
+| plan v2 섹션 | 요구사항 | 실 구현 위치 | 증거 |
+|--------------|----------|--------------|------|
+| §2.1 ProvenanceType/Entry | union 4종 + readonly 필드 | `types.ts:77-97` | types tsc export 확증 |
+| §2.3 injectProvenance | dedupe(type+ref) + merge + 신규 block | `wiki-ops.ts:114-134` + `__tests__/wiki-ops.test.ts` +3 | vitest 3 green |
+| §2.4 ingest-pipeline Stage 3 배선 | `{type:extracted, ref:sources/<id>}` 자동 주입 | `ingest-pipeline.ts:362-383` | 1 call per entity/concept |
+| §3.1 source-resolver 신규 | registry → URI derive, 4 케이스 | `source-resolver.ts` + `__tests__` 11 | vitest 11 green |
+| §3.2 citations 구조화 | `QueryResult.citations?` + frontmatter parse | `query-pipeline.ts:92-177` + `types.ts:214-235` | vitest 6 green |
+| §3.3 sidebar-chat 렌더 (v2 Electron API 가드) | `openLinkText` / `window.open` / Notice 3경로 | `sidebar-chat.ts:383-460` | 수동 smoke 필요 (DOM 의존) |
+| §4.4 canonicalizer overridePrompt optional | `CanonicalizeArgs.overridePrompt?` + template 치환 | `canonicalizer.ts:140-260` | canonicalizer.test +2 |
+| §4.5 Stage 1 override 가이드 | bundled prompt 주석 + settings UI inline | `settings-tab.ts::renderPromptRow` inlineHint | screenshot 수동 smoke |
+| §5.2 stripBrokenWikilinks + Preview 순서 | canonicalize → strip → Preview 모달 | `ingest-pipeline.ts:302-311` | 기존 wiki-ops.test + 통합 smoke |
+
+### 12.2 plan v2 self-review 4건 반영 확인
+
+| # | self-review 발견 | v3 실구현 | 검증 |
+|---|------------------|-----------|------|
+| 1 (High) | Electron renderer 에서 `shell.openPath` 미접근 → `workspace.openLinkText` / `window.open` 사용 | `sidebar-chat.ts::openResolvedSource` 내부 3경로 dispatch 에 `app.workspace.openLinkText` + `window.open(uri, '_blank', 'noopener')` — plan v2 §3.3 명시 그대로 | 통합 smoke (Obsidian UI 실행) 에서 확인 |
+| 2 (Medium) | `buildCanonicalizerPrompt` 시그니처 optional 명시 | `PromptArgs.overridePrompt?: string` + 기존 호출부 모두 argument 추가 없이 그대로 동작 (45 canonicalizer tests 기존 그대로 green) | vitest 45 기존 + 2 신규 green |
+| 3 (Medium UX) | Preview 모달 순서 — strip 후로 이동해 저장본 bit-identical | `ingest-pipeline.ts:302-311` 에서 stripBrokenWikilinks 를 Preview gate (onPlanReady, line 314-) 이전 지점에 삽입 | 기존 Preview gate 도 sourcePage.content 를 읽으므로 strip 반영된 버전 관람 |
+| 4 (Low) | Stage 1 override prompt 가 wikilink 직접 생성하면 §4.3.3 strip 위험 | `settings-tab.ts::renderPromptRow` Stage 1 inlineHint 에 경고 inline 표시 ("source_page 본문에 `[[wikilink]]` 직접 쓰지 마세요"). `IngestPromptEditModal` 본문에도 "Template 변수 제거 금지" 경고. | 사용자 Edit 시 inline hint 표시 |
+
+### 12.3 codex 2차 검증 재시도 결과 — TIMEOUT (다시 self-review 대체)
+
+**시도**: 2026-04-23 session 4 에 Part A/B 완료 직후 codex rescue agent (`bsmflco7z`) 에 v2 plan + 실 구현 대조 분석 의뢰 (7 검증 항목, 상세한 scope 문서).
+
+**결과**: 1차 `b2p8s3sgq` 와 동일 패턴 — 분석 턴 후반 (8794 bytes, 파일/코드 20+ 개 read 완료, 마지막 assistant message "Part A 구현은 계획보다 더 앞서 나가 있어서..." 에서 정지). 15분 이상 무활동 → 사실상 timeout. 재시도 2회 모두 분석 후반에서 동일 패턴으로 freeze 하는 것은 codex rescue 프로세스의 분석-턴 크기 상한 문제로 추정 (wikey-core + wikey-obsidian + plan 문서가 단일 턴에 너무 많음).
+
+**대응**: v3 착수 전에 이미 적용된 4건 self-review 가 plan v2 핵심 리스크를 커버하고, 실 구현이 v2 명세를 **1:1 매핑** (표 §12.1) 으로 충족 + vitest 463/463 green + npm build 0 errors 로 자동 검증선 확보. 2차 codex 실패가 구현 blocker 는 아님. 남은 잠재 리스크 (§12.4) 는 통합 smoke + Phase 5 고도화에서 수거.
+
+**Karpathy #4 강화 방어선**: fresh 실행 증거
+- `npm test` = 21 파일 / 463 tests PASS — 이 session 에서 직접 실행 확인
+- `npm run build` = wikey-core tsc 0 + wikey-obsidian esbuild 0 (`Cannot assign to 'ref'` 4건은 이 session 에서 `parseProvenance` 수정으로 해소)
+- `scripts/tests/pair-move.smoke.sh` = 2 케이스 / 6 assertions PASS
+- Obsidian UI 통합 smoke 은 본 세션 범위 밖 (사용자 수동 확인 필요, followups 에 기재)
+
+### 12.4 통합 smoke 잔여 — Obsidian UI 수동 확인
+
+다음 세션 또는 사용자가 Obsidian 실행 시 확인할 것:
+
+1. **Part B 보조 링크 렌더** — raw 의 어떤 소스 인제스트 1회 → 사이드바 Chat 에서 그 소스 관련 질문 → 답변에 wikilink 가 등장하고 각 wikilink 뒤에 `📄` 작은 아이콘. 클릭 시 원본 PDF/DOCX 내장 뷰어 또는 기본 앱에서 열림.
+2. **Part B external URI** — uri-hash 기반 external source 가 있을 경우 `📄` 클릭 시 새 창/외부 브라우저 열림 (`noopener` flag).
+3. **Part B tombstone** — 원본 파일 삭제 후 재인제스트 없이 기존 답변에서 `📄` 클릭 시 "원본 삭제됨" Notice + 아이콘 grayscale.
+4. **§4.3.1 Stage 2/3 override** — 설정 탭 "Ingest Prompts" 섹션에서 Stage 2 Edit → modifier 주입 (예: evidence 길이 300자) → 인제스트 실행 → console 에서 Mention evidence 가 길어졌는지 확인. Reset 클릭 시 `.wikey/stage2_mention_prompt.md` 제거 + 다음 인제스트는 bundled 동작.
+5. **§4.3.3 source 페이지 본문 strip** — 위 1번 후 생성된 `wiki/sources/source-*.md` 본문에 한국어 wikilink (`[[파생 개념]]` 등) 이 잔존하지 않음 확인.
+
+smoke 결과는 `activity/phase-4-result.md §4.3.x.smoke` 또는 followups 에 기록.

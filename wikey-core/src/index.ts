@@ -47,19 +47,41 @@ export {
 export type { CacheKeyInput, CacheIndexEntry } from './convert-cache.js'
 export { LLMClient, fetchModelList } from './llm-client.js'
 export { createPage, updateIndex, appendLog, extractWikilinks } from './wiki-ops.js'
-export { query } from './query-pipeline.js'
+export {
+  query,
+  buildCitationFromContent,
+  collectCitationsWithWikiFS,
+  collectCitationsFromFS,
+} from './query-pipeline.js'
 export type { QueryOptions } from './query-pipeline.js'
+export {
+  resolveSource,
+  resolveSourceSync,
+  resolvedAbsoluteFileUri,
+} from './source-resolver.js'
+export type {
+  ResolvedSource,
+  ResolveSourceOptions,
+  SourceIdKind,
+} from './source-resolver.js'
 export {
   ingest,
   generateBrief,
   injectGuideHint,
   loadEffectiveIngestPrompt,
+  loadEffectiveStage1Prompt,
+  loadEffectiveStage2Prompt,
+  loadEffectiveStage3Prompt,
   INGEST_PROMPT_PATH,
+  STAGE1_SUMMARY_PROMPT_PATH,
+  STAGE2_MENTION_PROMPT_PATH,
+  STAGE3_CANONICALIZE_PROMPT_PATH,
   BUNDLED_INGEST_PROMPT,
+  BUNDLED_STAGE2_MENTION_PROMPT,
   PlanRejectedError,
   assertNotWikiPath,
 } from './ingest-pipeline.js'
-export type { IngestOptions } from './ingest-pipeline.js'
+export type { IngestOptions, PromptLoadResult } from './ingest-pipeline.js'
 export {
   classifyFile,
   classifyFileAsync,
@@ -105,7 +127,7 @@ export {
   injectProvenance,
 } from './wiki-ops.js'
 export type { SourceFrontmatter, ClassifyFeedbackEntry } from './wiki-ops.js'
-export type { ProvenanceType, ProvenanceEntry } from './types.js'
+export type { Citation, ProvenanceType, ProvenanceEntry } from './types.js'
 export {
   RenameGuard,
   reconcileExternalRename,

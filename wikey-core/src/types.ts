@@ -215,10 +215,26 @@ export interface QueryResult {
   readonly answer: string
   readonly sources: readonly SearchResult[]
   readonly tokensUsed?: number
+  /** §4.3.2 Part B: per-page provenance citations (optional, UI 층이 보조 링크 렌더). */
+  readonly citations?: readonly Citation[]
 }
 
 export interface SearchResult {
   readonly path: string
   readonly score: number
   readonly snippet: string
+}
+
+/**
+ * §4.3.2 Part B — 쿼리 응답에 첨부되는 citation 엔트리.
+ * 답변 본문의 wikilink 가 `wiki/entities/x.md` 를 가리키면, 해당 엔트리의
+ * sourceIds 를 resolve 하여 원본 파일 보조 링크를 생성한다.
+ */
+export interface Citation {
+  /** `wiki/{category}/{filename}.md` (qmd output 그대로). */
+  readonly wikiPagePath: string
+  /** 해당 페이지 frontmatter provenance 에서 수집한 고유 source_id 목록 (prefix 포함 — `sha256:` / `uri-hash:`). */
+  readonly sourceIds: readonly string[]
+  /** 검색 결과 snippet 재사용 (UI 툴팁용). */
+  readonly excerpt?: string
 }

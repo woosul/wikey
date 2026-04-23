@@ -5,6 +5,29 @@ created: 2026-04-10
 updated: 2026-04-23
 ---
 
+## [2026-04-23] feat | §4.3 Part B (citations UI) + §4.3.1 3-stage prompt override + codex 2차 검증 착수
+
+- **§4.3 codex rescue 2차 검증** 진행 — 1차 `b2p8s3sgq` 가 analysis 턴 후반 timeout 했던 후속. 2차 `bsmflco7z` 가 Part A 완료 이후 실제 구현 + plan v2 동반 분석. 검증 결과는 plan v3 로 반영 예정.
+- **§4.3.2 Part B — 쿼리 응답 원본 backlink** 완료
+  - `wikey-core/src/source-resolver.ts` 신규 (~165 라인) — `resolveSource(wikiFS, idOrRef, { vaultName, absoluteBasePath?, registry? })` + `resolveSourceSync` 배치 variant. registry 조회 → `obsidian://open?vault=&file=` / external URI / tombstone 분기. `sources/sha256:...` / bare / `uri-hash:...` 4 형태 input 수용. vitest 11 green.
+  - `wikey-core/src/query-pipeline.ts` citations 구조화 — `QueryResult.citations?: Citation[]` optional 필드. `buildCitationFromContent` (순수) + `collectCitationsWithWikiFS` / `collectCitationsFromFS` 공용. provenance 없는 페이지는 skip. vitest +6.
+  - `wikey-obsidian/src/sidebar-chat.ts` 답변 렌더 — 각 wikilink 뒤 `📄` 보조 버튼 attach. `attachCitationBacklinks` 가 registry 1회 load 후 `resolveSourceSync` 재사용. 클릭 dispatch 3 경로 (tombstone Notice / external window.open / internal `app.workspace.openLinkText`, plan v2 §3.3 Obsidian API 호환).
+  - CSS `.wikey-citation-link` — `0.68em` + `opacity: 0.7` 철학 가드 (wiki 계층 주 강조 유지), hover 시 1, tombstone `grayscale(1)` + cursor not-allowed.
+  - `index.ts` 신규 export: `resolveSource` / `resolveSourceSync` / `resolvedAbsoluteFileUri` / `ResolvedSource` / `ResolveSourceOptions` / `SourceIdKind` / `buildCitationFromContent` / `collectCitationsWithWikiFS` / `collectCitationsFromFS` / `Citation` type.
+- **§4.3.1 — 3-stage 프롬프트 override** 완료
+  - 경로 상수 `STAGE1_SUMMARY_PROMPT_PATH` / `STAGE2_MENTION_PROMPT_PATH` / `STAGE3_CANONICALIZE_PROMPT_PATH` + 기존 `INGEST_PROMPT_PATH` 는 Stage 1 legacy fallback.
+  - `loadEffectiveStage1Prompt` / `loadEffectiveStage2Prompt` / `loadEffectiveStage3Prompt` — `PromptLoadResult = { prompt, overridden, source }`. `loadEffectiveIngestPrompt` 는 Stage 1 shim.
+  - `BUNDLED_STAGE2_MENTION_PROMPT` 신설 — 기존 하드코딩 prompt 를 외부화. 템플릿 변수 `{{SOURCE_FILENAME}}` / `{{CHUNK_CONTENT}}`.
+  - `canonicalizer.ts::buildCanonicalizerPrompt` 에 **optional** `overridePrompt?: string` (plan v2 §4.4 self-review #2) — 빈/공백은 bundled fallback, 본문 있으면 6 template 변수 (`SOURCE_FILENAME / GUIDE_BLOCK / SCHEMA_BLOCK / EXISTING_BLOCK / MENTIONS_BLOCK / MENTIONS_COUNT`) 치환.
+  - `ingest-pipeline.ts` Route FULL / SEGMENTED 양 경로 모두 `extractMentions(..., stage2Template)` + `canonicalize({ ..., overridePrompt: stage3OverridePrompt })` 전달. route 진입 전 1회 로드.
+  - `settings-tab.ts::renderIngestPromptSection` 3-stage 리팩토링 — 공통 `renderPromptRow` 헬퍼가 Edit/Reset/Status/inline 경고 (plan v2 §4.5). Reset 이 canonical + legacy 동시 검사 → 양쪽 삭제 confirmation.
+  - `IngestPromptEditModal` 에 `title?` 파라미터 — 모달 헤더가 stage 별 달라짐.
+  - vitest +9 (Stage 1 3, Stage 2 2, Stage 3 2, 기타) + canonicalizer +2 (full replacement + whitespace-only ignore).
+- **Part A tsc readonly 회귀 수정** (ancillary) — commit `4588ea2` 의 `parseProvenance` 가 `Partial<ProvenanceEntry>` 에 readonly 필드 할당 → 4 errors on master HEAD. 같은 파일 편집 기회에 local builder 타입 + `flush()` 에서 ProvenanceEntry 구성 + spread 로 수정. tsc 4 → 0 errors.
+- 증거: wikey-core 437 → **463 PASS (+26)** · `npm run build` wikey-core tsc 0 + wikey-obsidian esbuild 0 · `scripts/tests/pair-move.smoke.sh` 6/6 · wikey-obsidian settings-tab 3건 tsc warn 은 session 3 이전부터 있던 pre-existing.
+- 참조: `activity/phase-4-result.md §4.3.1 / §4.3.2 Part B`, `plan/phase-4-todo.md §4.3.1 + §4.3.2 Part B (전량 [x])`, `plan/phase-4-3-plan.md` (v3 는 codex 2차 결과 후 작성).
+- 남은 항목: 통합 smoke (Obsidian UI 수동 확인 — 인제스트 1회 → citations 📄 rendering + 원본 열림) → §4.5.2 운영 안전 (삭제/초기화 가드) → Phase 4 본체 완성 선언.
+
 ## [2026-04-23] feat | §4.3 plan v2 + Part A Provenance data model + §4.3.3 stripBrokenWikilinks
 
 - **§4.3 계획 v2 수립** (`plan/phase-4-3-plan.md`, 11 개 섹션, 약 250 라인)
