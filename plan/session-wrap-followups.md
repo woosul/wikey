@@ -1,7 +1,98 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-23 session 2 마무리 + docs mirror 정비 (§4.2 Stage 1~4 전량 완료 + result/todo/plan 1:1 mirror)
+> 최신 갱신: 2026-04-23 session 3 (§4.3 plan v2 + Part A Provenance data model + §4.3.3 stripBrokenWikilinks 완료)
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-23 세션 3 마무리 — §4.3 plan v2 + Part A + §4.3.3 완료
+
+### ⭐ 다음 세션 최우선: §4.3.2 Part B (쿼리 응답 원본 backlink) + §4.3.1 (3-stage prompt override)
+
+Session 3 는 `plan/phase-4-3-plan.md` v2 확정 (codex rescue 가 analysis 턴에서 최종 응답 캡처 실패 → self-review 4건 보강) + **Part A (Provenance data model)** + **§4.3.3 (stripBrokenWikilinks source 페이지 재후처리)** 완료. **다음 세션 진입점은 §4.3.2 Part B (source-resolver + citations + sidebar 렌더) + §4.3.1 (Stage 2/3 prompt override + settings UI)** — Phase 4 본체 완성 직전 마지막 단계.
+
+**Session 3 완료 내역** (detail: `activity/phase-4-result.md §4.3`):
+- **plan v2 수립**: Part A / Part B / §4.3.1 / §4.3.3 설계. self-review 4건 (Obsidian Electron API / canonicalizer 시그니처 optional / Preview 모달 순서 / Stage 1 override 가이드) + open question 5건 decision.
+- **Part A** (§4.3.2): `types.ts ProvenanceType union + ProvenanceEntry` + `wiki-ops.ts::injectProvenance` (dedupe + frontmatter 보존, vitest +3) + `ingest-pipeline.ts` Stage 2/3 배선 (canonicalize 모든 페이지에 `{type:extracted, ref:sources/<id>}` 자동 주입) + `index.ts` export.
+- **§4.3.3**: ingest-pipeline 에서 canonicalize 완료 후 + Preview 모달 호출 이전 `stripBrokenWikilinks(source_page.content, keepBases)` 배선. Preview/저장본 bit-identical 보장.
+- 증거: wikey-core 434 → **437 PASS (+3)**, build 0 errors.
+- 커밋: `4588ea2` (Part A + §4.3.3 feat), 이번 세션 마무리 커밋 (docs 동기화).
+
+### 🔴 Part B — 쿼리 응답 원본 backlink 렌더링 (다음 세션 착수)
+
+상세 설계: `plan/phase-4-3-plan.md §3`. 의존성: Part A + §4.2 source-registry — 둘 다 완료.
+
+```
+1. wikey-core/src/source-resolver.ts 신규
+   - resolveSource(wikiFS, vaultName, absoluteBasePath, sourceIdOrRef) → ResolvedSource | null
+   - 내부: loadRegistry → findById (prefix 관용 + full-hash verify) → tombstone 체크 → URI derive
+   - vitest 4 (존재 / 미등록 / tombstone / PARA 이동 후 해석)
+2. query-pipeline.ts citations 구조화
+   - QueryResult 에 optional citations?: Citation[] 추가
+   - searchResults 각 페이지 frontmatter parse → provenance[].ref → source_id dedupe → Citation
+   - 기존 sources 필드 유지 (backward compat)
+   - vitest +2
+3. sidebar-chat.ts 답변 렌더 (Electron renderer API)
+   - 답변 wikilink 뒤 📄 보조 버튼 attach
+   - 클릭 3 경로: app.workspace.openLinkText / app.openWithDefaultApp / window.open / tombstone Notice
+   - CSS: 0.68em + opacity 0.7 + aria-label (철학 가드 — wiki 계층 우회 방지)
+   - 수동 UI smoke
+4. 통합 smoke: 실제 PMS PDF 인제스트 → 쿼리 실행 → 📄 클릭 → 원본 PDF 열림
+```
+
+### 🔴 §4.3.1 — Stage 2/3 prompt override (다음 세션 Part B 뒤)
+
+상세 설계: `plan/phase-4-3-plan.md §4 + §4.5`. Part A/§4.3.3 와 독립 — 순서 유연.
+
+```
+1. loadEffectiveStage2Prompt / loadEffectiveStage3Prompt 헬퍼 (wiki-ops 또는 ingest-pipeline)
+   - 패턴: loadEffectiveIngestPrompt 재사용
+   - 반환: { prompt: string; overridden: boolean }
+2. canonicalizer.ts::buildCanonicalizerPrompt 시그니처 확장 (optional 파라미터)
+   - overridePrompt?: string — 있으면 bundled 대체, 없으면 기존 동작 (backward compat)
+3. ingest-pipeline.ts Stage 2 mention extractor 에 override 주입
+4. settings-tab.ts Ingest Prompt 섹션에 3개 prompt 탭 (Edit/Reset/상태 표시)
+5. vitest +3 (override 미존재 / 존재 / canonicalize override)
+6. 수동 UI smoke (settings 탭에서 Stage 2 prompt 편집 → 다음 인제스트 반영 확인)
+```
+
+**§4.3.1 에서 Phase 5 이관 확정**:
+- 도메인별 프리셋 (기술문서 / 논문 / 매뉴얼 / 회의록 / 제품 스펙) → Phase 5 §5.6 self-extending (자동 프리셋 선택과 중복)
+- 모델별 품질 baseline 측정 → Phase 5 §5.4 variance diagnostic
+
+### 🎯 다음 세션 실행 체크리스트
+
+```
+1. plan/phase-4-3-plan.md 재확인 (§3 Part B + §4 §4.3.1 상세)
+2. source-resolver.ts TDD (vitest 4, RED → GREEN)
+3. query-pipeline citations (vitest +2)
+4. sidebar-chat 답변 렌더 + CSS (수동 smoke)
+5. §4.3.1 loadEffectiveStage2/3Prompt + canonicalizer signature (vitest +3)
+6. settings-tab UI (수동 smoke)
+7. 통합 smoke (실제 PMS PDF 인제스트 + 쿼리)
+8. npm test 445+ 목표, npm run build 0 errors
+9. 문서 동기화 (result/todo/plan/followups/memory)
+10. 단일 commit + push
+```
+
+**시간 예상**: Part B 2~3h + §4.3.1 1~1.5h + 통합 smoke 0.5h + 문서 동기화 0.5h ≈ **4~5.5h**. 긴 세션 이므로 시작 전 codex rescue 2차 검증 재시도 고려 (이번 세션의 timeout 패턴 회피 위해 timeout 연장).
+
+### 📋 이관 대기 (§4.3 이후)
+
+- **§4.5.2 운영 안전** — 삭제 안전장치 + 초기화. Phase 4 본체 완성 선언 직전 마지막 체크포인트.
+- **Phase 4 본체 완성 선언** — §4.3 + §4.5.2 완료 후 commit 메시지에 "Phase 4 본체 완성" 명시.
+- Phase 5 착수 — §5.4 variance diagnostic (AMBIGUOUS 리뷰 UI 확장 포함) / §5.6 self-extending (도메인 프리셋) / 그 외.
+
+### 📊 Phase 4.3 전체 진행 (2026-04-23 session 3 종료 시점)
+
+| 항목 | 상태 | 테스트 / 증거 | 비고 |
+|------|------|---------------|------|
+| 계획 v2 (`plan/phase-4-3-plan.md`) | ✅ 확정 | 11개 섹션, self-review 4건, open question 5건 decision | codex rescue 는 session 3 시점 미작동 (timeout) |
+| §4.3.2 Part A (Provenance data model) | ✅ 완료 (session 3) | wiki-ops +3 green (types + inject + dedupe + YAML scalar) | MVP — 모든 페이지 `extracted` type 자동. `inferred`/`ambiguous` 구분은 Phase 5 §5.4 |
+| §4.3.3 stripBrokenWikilinks | ✅ 완료 (session 3) | 기존 unit tests 재사용 + ingest-pipeline 배선 | Preview/저장본 bit-identical |
+| §4.3.2 Part B (쿼리 backlink) | ⏳ 다음 세션 | source-resolver 4 + query-pipeline +2 + sidebar 수동 | Part A/§4.2 모두 완료 — 바로 착수 가능 |
+| §4.3.1 (3-stage override) | ⏳ 다음 세션 | canonicalizer +1 + ingest-pipeline +2 + settings UI 수동 | Part A 와 독립 |
+| 총 wikey-core tests | 430 → **437** (+7, 최종 목표 **445+**) | — | — |
 
 ---
 

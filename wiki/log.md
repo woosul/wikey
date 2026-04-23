@@ -5,6 +5,26 @@ created: 2026-04-10
 updated: 2026-04-23
 ---
 
+## [2026-04-23] feat | §4.3 plan v2 + Part A Provenance data model + §4.3.3 stripBrokenWikilinks
+
+- **§4.3 계획 v2 수립** (`plan/phase-4-3-plan.md`, 11 개 섹션, 약 250 라인)
+  - v1 → v2 진화: codex rescue 1차 검증 시도 중 analysis 턴 후반 (3013 bytes) 에서 프로세스 종료 + 최종 응답 캡처 실패 → self-review 4건 보강으로 v2 확정.
+  - Self-review 4건: (High) Obsidian plugin 은 Electron renderer 라 `shell.openPath` 미접근 → `app.openWithDefaultApp` / `workspace.openLinkText` / `window.open` 로 교체 · (Medium) `buildCanonicalizerPrompt` 시그니처 optional 명시 (backward compat) · (Medium) Stay-involved Preview 를 stripBrokenWikilinks 이후로 이동 (Preview/저장본 bit-identical) · (Low) Stage 1 override 가이드 신설.
+  - Open question 5건 모두 decision 명시 — flat 배열 provenance / 인라인 citation MVP / 도메인 프리셋 Phase 5 이관 / Preview 시점 확정 / AMBIGUOUS Badge-only.
+- **§4.3.2 Part A — Frontmatter `provenance` data model** 완료
+  - `wikey-core/src/types.ts`: `ProvenanceType` union (extracted / inferred / ambiguous / self-declared — 마지막은 Phase 5 §5.6 예약) + `ProvenanceEntry` interface (type, ref, confidence?, reason?).
+  - `wiki-ops.ts::injectProvenance`: entity/concept/analyses frontmatter 에 provenance 배열 주입 — dedupe (type+ref 기준) + 기존 필드 보존 + frontmatter 없는 페이지에 블록 신규 생성. vitest +3 green.
+  - `provenanceYamlScalar` 헬퍼 — ref 가 `sources/sha256:abc` 형태일 때 콜론 전면 quote 규칙 완화 ("콜론-공백" 만 quote). 테스트 케이스의 bare format 유지.
+  - `ingest-pipeline.ts`: Stage 2/3 canonicalize 된 모든 entity/concept 에 `{type:'extracted', ref:'sources/<source_id>'}` 자동 주입. v3Meta.record=null (bytes 못 읽음) 이면 skip. MVP — inferred/ambiguous 는 Phase 5 §5.4 canonicalize output 확장과 함께.
+  - `index.ts`: injectProvenance + ProvenanceType + ProvenanceEntry export.
+- **§4.3.3 stripBrokenWikilinks source 페이지 본문 재후처리** 완료
+  - Phase 3 §14.5 OMRON 261건 한국어 wikilink 수동 cleanup 회귀선.
+  - `ingest-pipeline.ts`: canonicalize 완료 후 + Stay-involved Preview 모달 호출 이전 지점에 `stripBrokenWikilinks(parsed.source_page.content, keepBases)` 삽입. keepBases = entity/concept/source 페이지 filename normalized base Set. canonical 페이지에 없는 wikilink 는 plain text 로 강등.
+  - Preview/저장본 bit-identical 보장 (plan v2 §5.2 self-review #3 결과).
+- 증거: wikey-core 434 → **437 PASS (+3)** · `npm run build` 0 errors (tsc + esbuild) · `validate-wiki.sh` + `check-pii.sh` PASS.
+- 참조: `activity/phase-4-result.md §4.3`, `plan/phase-4-todo.md §4.3.2 Part A + §4.3.3 (전량 [x])`, `plan/session-wrap-followups.md` top-block session 3, `plan/phase-4-3-plan.md` v2 전체.
+- 다음 세션 진입점: Part B (source-resolver + query-pipeline citations + sidebar-chat 답변 렌더) + §4.3.1 (Stage 2/3 prompt override + settings UI) + 통합 smoke → Phase 4 본체 완성 선언.
+
 ## [2026-04-23] feat | §4.2 Stage 3+4 — LLM 분류 정제 + vault listener + startup reconcile
 
 - **§4.2.8 Stage 3 (LLM 3/4차 분류 정제 · 모델 키 · UI · 피드백)** 완료
