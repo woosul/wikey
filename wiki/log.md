@@ -2,8 +2,18 @@
 title: 활동 로그
 type: log
 created: 2026-04-10
-updated: 2026-04-24
+updated: 2026-04-25
 ---
+
+## [2026-04-25] impl | Phase 5 §5.1 구조적 PII 탐지 착륙 (P0 긴급)
+
+- **범위**: 계획서 `plan/phase-5-todox-5.1-structural-pii.md` v4 §5.1.1.1~10. Context window heuristic (안 C) + multi-value capture + valueExcludePrefixes (YAML 선언).
+- **코드**: `wikey-core/src/pii-patterns.ts` (discriminated union `PiiPattern = SingleLinePiiPattern | StructuralPiiPattern`, `patternType` discriminator, loader/compiler union-aware, ESM 전환) + `wikey-core/src/pii-redact.ts` (`collectStructuralMatches()` 신규, non-empty 줄 windowLines, prefix exclude same-line 1~2 token, `sanitizeForLlmPrompt({structuralAllowed?: boolean})` default false filename skip).
+- **설정**: `wikey-core/src/defaults/pii-patterns.default.yaml` (신규, 6 패턴: single-line 4 + structural CEO/BRN). `package.json` build 스크립트에 `dist/defaults/` 복사 훅 추가. 신규 런타임 의존성 0.
+- **테스트**: `__tests__/pii-structural.test.ts` (신규 12 tests, RED → GREEN, fresh). fixture 7종 (synthetic `주식회사 테스트벤치` · `홍 길 동` 등) + FP baseline 30종 (synthetic PII-free 한국어 테크 문서) → structural match 0/30 확증.
+- **결과**: `npm test` **537 passed / 26 files** (525 → +12). `npm run build` 0 errors. 기존 pii-redact 21 tests GREEN 회귀 없음.
+- **§12 상태**: E4~E10 PASS. E1/E2.b/E3 (live smoke 재실행 기반) 은 tester 에이전트 후속 — Obsidian CDP 경유.
+- **관련 동기화**: `activity/phase-5-result.md §5.1.1` (신규 타임라인), `plan/phase-5-todo.md §5.1` (체크박스 갱신 예정).
 
 ## [2026-04-24] milestone | Phase 4 본체 완성 선언 (session 8, 단일 세션)
 

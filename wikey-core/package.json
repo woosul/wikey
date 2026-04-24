@@ -9,7 +9,7 @@
     "src/prompts"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('node:fs').cpSync('src/defaults','dist/defaults',{recursive:true})\"",
     "test": "vitest run",
     "test:watch": "vitest"
   },

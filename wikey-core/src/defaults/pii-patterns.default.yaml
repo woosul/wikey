@@ -1,0 +1,65 @@
+# wikey-core — bundled default PII patterns (Phase 5 §5.1, 2026-04-25).
+#
+# 로더 우선순위: bundled (이 파일) → ~/.config/wikey/pii-patterns.yaml → <basePath>/.wikey/pii-patterns.yaml.
+# 이 파일의 값은 선언적 기본값이며, 사용자 YAML 에서 동일 id 로 override 가능.
+#
+# **하드코딩 금지 (2026-04-24)**: 실재 회사명/성명은 이 파일에도 포함 금지.
+# valueExcludePrefixes 에는 generic 접두어만 (주식회사/(주)/㈜/유한회사/재단법인/사단법인/유한책임회사).
+
+patterns:
+  # ── Single-line patterns (Phase 4 §4.1.1 + Phase 5 §5.8.2) ──
+  - id: brn-hyphen
+    patternType: single-line
+    kind: brn
+    regex: '(?<!\d)\d{3}-\d{2}-\d{5}(?!\d)'
+    mask: digits
+    description: '사업자등록번호 3-2-5 하이픈 (filename 포함 — 앞뒤 digit 차단)'
+
+  - id: brn-contiguous
+    patternType: single-line
+    kind: brn
+    regex: '(?<=사업자(?:등록)?번호[\s:：]*)\d{10}(?!\d)'
+    mask: digits
+    description: '사업자등록번호 라벨 뒤 10자리 연속'
+
+  - id: corp-rn
+    patternType: single-line
+    kind: corp-rn
+    regex: '(?<=법인(?:등록)?번호[\s:：]*)\d{6}-?\d{7}\b'
+    mask: digits
+    description: '법인등록번호 라벨 뒤 6-7 또는 13자리'
+
+  - id: ceo-label
+    patternType: single-line
+    kind: ceo-labeled
+    regex: '(?:대표이사|대표자|CEO)\s*[:：]\s*([가-힣](?:[ \t]*[가-힣]){1,3})'
+    captureGroup: 1
+    mask: full
+    description: '대표이사·대표자·CEO 라벨 뒤 한글 이름 (공백 변형 포함, 단일 라인)'
+
+  # ── Structural patterns (Phase 5 §5.1, 2026-04-25) ──
+  - id: ceo-multiline-form
+    patternType: structural
+    kind: ceo-structural
+    labelPattern: '대\s*표\s*(?:자|이\s*사)|CEO|사\s*장'
+    valuePattern: '[가-힣](?:[ \t]*[가-힣]){1,3}'
+    windowLines: 5
+    valueExcludePrefixes:
+      - '주식회사'
+      - '(주)'
+      - '㈜'
+      - '유한회사'
+      - '재단법인'
+      - '사단법인'
+      - '유한책임회사'
+    mask: full
+    description: '스캔 PDF 폼의 대표자 라벨과 CEO value 사이에 회사명 등이 끼는 경우. non-empty 줄 5개 window 내 모든 value 후보를 마스킹하되 접두어 일치 후보는 배제'
+
+  - id: brn-multiline-form
+    patternType: structural
+    kind: brn-structural
+    labelPattern: '사\s*업\s*자\s*(?:등\s*록\s*)?번\s*호|법\s*인\s*(?:등\s*록\s*)?번\s*호'
+    valuePattern: '\d{3}-?\d{2}-?\d{5}|\d{10,13}'
+    windowLines: 5
+    mask: digits
+    description: 'BRN/법인번호 라벨이 value 와 줄 단위 분리된 스캔 폼'

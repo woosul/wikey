@@ -687,7 +687,7 @@ Gemma 4 합성 → 최종 답변
 | Phase 4 (계획) | 웹 인터페이스 | 누구나 |
 | Phase 5+ (계획) | 기업용 패키지 | 기업/팀 |
 
-> Phase 3 계획: `prompt_plan.md`, 체크리스트: `plan/phase-3-todo.md`, 결과: `activity/phase-3-result.md`
+> Phase 3 계획: `plan/phase-3-full.md`, 체크리스트: `plan/phase-3-todo.md`, 결과: `activity/phase-3-result.md`
 
 ---
 

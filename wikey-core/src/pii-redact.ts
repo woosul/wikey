@@ -24,6 +24,7 @@ import {
   compileDefaults,
   loadPiiPatterns,
   type CompiledPiiPattern,
+  type CompiledStructuralPiiPattern,
   type PiiKind as PatternPiiKind,
 } from './pii-patterns.js'
 
@@ -111,6 +112,11 @@ function detectPiiInternal(
   const matches: PiiMatchInternal[] = []
 
   for (const p of effective) {
+    if (p.patternType === 'structural') {
+      collectStructuralMatches(markdown, p, matches)
+      continue
+    }
+    // single-line (patternType === 'single-line' 또는 undefined — 하위 호환)
     p.regex.lastIndex = 0
     let m: RegExpExecArray | null
     while ((m = p.regex.exec(markdown)) !== null) {
@@ -148,6 +154,114 @@ function detectPiiInternal(
     deduped.push(m)
   }
   return deduped
+}
+
+/**
+ * Structural 패턴 매처 (§5.1.1.7).
+ *
+ * 1. labelRegex 로 문서 전체 scan — 각 label 매치마다 forward window 열기.
+ * 2. window = label 끝부터 non-empty 줄 `windowLines` 개 (또는 `windowChars`) 까지.
+ * 3. window 내 valueRegex 모든 매치 수집 (first-match 가 아님 — multi-value capture).
+ * 4. 각 후보에 대해 `valueExcludePrefixes` 검사:
+ *    - candidate 가 접두어로 시작 OR
+ *    - 같은 줄 내 valueMatch 직전 1~2 token 이 접두어로 시작
+ *    이면 skip.
+ * 5. 통과한 후보만 matches 에 push.
+ */
+function collectStructuralMatches(
+  markdown: string,
+  p: CompiledStructuralPiiPattern,
+  matches: PiiMatchInternal[],
+): void {
+  p.labelRegex.lastIndex = 0
+  let labelMatch: RegExpExecArray | null
+  while ((labelMatch = p.labelRegex.exec(markdown)) !== null) {
+    const labelEnd = labelMatch.index + labelMatch[0].length
+    const windowEnd = computeWindowEnd(markdown, labelEnd, p.windowLines, p.windowChars)
+    const windowText = markdown.slice(labelEnd, windowEnd)
+
+    p.valueRegex.lastIndex = 0
+    let valueMatch: RegExpExecArray | null
+    while ((valueMatch = p.valueRegex.exec(windowText)) !== null) {
+      const candidate = valueMatch[0]
+      if (isCandidateExcluded(windowText, valueMatch.index, candidate, p.valueExcludePrefixes)) {
+        if (valueMatch.index === p.valueRegex.lastIndex) p.valueRegex.lastIndex++
+        continue
+      }
+      const absStart = labelEnd + valueMatch.index
+      const absEnd = absStart + candidate.length
+      matches.push({
+        kind: p.kind as PatternPiiKind,
+        value: candidate,
+        start: absStart,
+        end: absEnd,
+        mask: p.mask,
+      })
+      if (valueMatch.index === p.valueRegex.lastIndex) p.valueRegex.lastIndex++
+    }
+    // label Zero-width regex 방어
+    if (labelMatch.index === p.labelRegex.lastIndex) p.labelRegex.lastIndex++
+  }
+}
+
+/**
+ * label 끝 `startOffset` 부터 non-empty 줄 `windowLines` 개까지의 end offset 반환.
+ * - 빈 줄 (whitespace-only) 은 count 에서 제외.
+ * - `windowChars` 가 지정되면 char 반경 제한도 동시 적용 (더 짧은 쪽).
+ */
+function computeWindowEnd(
+  text: string,
+  startOffset: number,
+  windowLines: number,
+  windowChars?: number,
+): number {
+  const hardCap = windowChars != null ? Math.min(text.length, startOffset + windowChars) : text.length
+  let nonEmptyCount = 0
+  let i = startOffset
+  while (i < hardCap) {
+    // 현재 줄의 끝 찾기
+    let lineEnd = text.indexOf('\n', i)
+    if (lineEnd === -1 || lineEnd > hardCap) lineEnd = hardCap
+    const line = text.slice(i, lineEnd)
+    const isEmpty = /^\s*$/.test(line)
+    if (!isEmpty) {
+      nonEmptyCount++
+      if (nonEmptyCount >= windowLines) {
+        return lineEnd
+      }
+    }
+    if (lineEnd >= hardCap) return hardCap
+    i = lineEnd + 1
+  }
+  return hardCap
+}
+
+/**
+ * valueExcludePrefixes 검사 (§5.1 설계).
+ * - candidate 자체가 접두어로 시작 → exclude
+ * - contextBeforeValue (같은 줄 내 valueMatch 직전 whitespace-split 토큰 1~2개) 가 접두어로 시작 → exclude
+ * - 다른 줄의 내용은 포함 금지 (회사명 뒤 CEO 오탐 skip 방지).
+ */
+function isCandidateExcluded(
+  windowText: string,
+  valueIndexInWindow: number,
+  candidate: string,
+  excludePrefixes: readonly string[] | undefined,
+): boolean {
+  if (!excludePrefixes || excludePrefixes.length === 0) return false
+  for (const prefix of excludePrefixes) {
+    if (candidate.startsWith(prefix)) return true
+  }
+  // 같은 줄 prefix 토큰 검사
+  const lineStart = windowText.lastIndexOf('\n', valueIndexInWindow - 1) + 1
+  const sameLinePrefix = windowText.slice(lineStart, valueIndexInWindow)
+  const prefixTokens = sameLinePrefix.trim().split(/\s+/).filter(Boolean)
+  if (prefixTokens.length === 0) return false
+  const lastTokens = prefixTokens.slice(-2).join(' ')
+  for (const prefix of excludePrefixes) {
+    if (lastTokens.startsWith(prefix)) return true
+  }
+  return false
 }
 
 /**
@@ -358,14 +472,22 @@ export function applyPiiGate(
  * 기본 동작:
  *   - guardEnabled=false → 원문 그대로 (호출자가 ingest gate 와 일관 유지).
  *   - guardEnabled=true → detectPii → mask 치환.
+ *
+ * §5.1 (2026-04-25): `structuralAllowed` 옵션 추가. default `false` — filename·LLM prompt
+ * 경로는 single-line 매칭만 허용. body (`applyPiiGate`) 경로는 호출자가 `true` 명시.
+ * 근거: 파일명 `대표자 홍길동.pdf` 같은 same-line 문자열에서도 structural 매칭이 발동할 수
+ * 있어 자동 skip 에 의존할 수 없음 (계획서 §5 P2-v2-b).
  */
 export function sanitizeForLlmPrompt(
   input: string,
-  opts: { readonly guardEnabled: boolean },
+  opts: { readonly guardEnabled: boolean; readonly structuralAllowed?: boolean },
   patterns?: readonly CompiledPiiPattern[],
 ): string {
   if (!opts.guardEnabled) return input
-  const matches = detectPiiInternal(input, patterns)
+  const effective = opts.structuralAllowed === true
+    ? patterns
+    : patterns?.filter((p) => p.patternType !== 'structural')
+  const matches = detectPiiInternal(input, effective)
   if (matches.length === 0) return input
   return applyMask(input, matches)
 }

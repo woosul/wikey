@@ -36,23 +36,22 @@
 
 ### 5.1.1 Multi-line 폼 label↔name 상관 해결
 
-- [ ] 문제 재현 케이스 (fixture 확보):
-  ```
-  대 표 자
-  
-  주식회사 굿스트림
-  
-  김 명 호
-  ```
-  여기서 `김 명 호` 는 CEO name 이지만 regex 로는 단순히 한글 이름으로만 보여서 **non-labeled 상태로 통과**.
-- [ ] 해결 방향 (우선순위 조사 대상):
-  1. **Table-aware parser**: Docling 이 이미 표 구조 인식 → 정식 table row/column → label-value pair 추출 후 label 이 PII-trigger 이면 value sanitize. 구조화된 문서에 강점. 자유형 multi-column 에는 약점.
-  2. **Lightweight NER**: 한국어 named entity 모델 (spaCy KoNLPy, KoELECTRA, Kiwipiepy 기반 PoS) → person 엔티티 식별 → PII-trigger label 근처에 있으면 sanitize. 추가 의존성·모델 파일 필요.
-  3. **Context window heuristic**: label 키워드 (`대표자`, `CEO`, `주민번호` 등) 발견 시 ±N 줄 내의 한글 이름/숫자 패턴을 sanitize — false positive 수락. 가장 간단, 의존성 없음, 오탐 관리 필요.
-- [ ] 선행 의존성: §5.8 완료 summary 의 pattern 엔진 (`wikey-core/src/pii-patterns.ts`) 위에서 확장. 새 pattern `kind: "structural"` 타입 도입 — regex 대신 label-range 를 선언적으로 정의.
-- [ ] 위험: label↔value 자동 연결은 오탐·미탐 둘 다 발생 가능 — `piiRedactionMode` 에 `structural-mask` 같은 별도 강도 도입 고려.
-- [ ] 테스트: 실제 사업자등록증 PDF / 계약서 PDF 의 폼 구조 fixture (raw/ 는 gitignore, 별도 `wikey-core/src/__tests__/fixtures/pii-structural/` 에 redacted 복제본).
-- [ ] **wiki 재생성 없음 확증**: 기존 ingest 경로에 추가 필터 1단 삽입. wiki/ 에 생성된 이전 PII-leaked 페이지는 사용자가 `Reset wiki` 명령으로 수동 제거 (본체 이미 구현).
+> **상태 (2026-04-25, developer 세션)**: 본체 구현 착륙. 안 C (Context window heuristic) + multi-value capture + valueExcludePrefixes (YAML 선언). 상세: `plan/phase-5-todox-5.1-structural-pii.md` v4 + `activity/phase-5-result.md §5.1.1`.
+
+- [x] **§5.1.1.1** fixture 7종 확보 (`wikey-core/src/__tests__/fixtures/pii-structural/`). synthetic 이름 풀 (`주식회사 테스트벤치` · `홍 길 동` 등).
+- [x] **§5.1.1.2** RED 테스트 작성 — `pii-structural.test.ts` 12 tests 구현 전 8 failed 확증 (2026-04-25 02:45).
+- [x] **§5.1.1.3** `PiiPattern` discriminated union (`SingleLinePiiPattern | StructuralPiiPattern`, `patternType` discriminator). `CompiledPiiPattern` 도 union.
+- [x] **§5.1.1.3.5** loader ESM 전환 — `require('node:fs|path|os')` → top-level `import`.
+- [x] **§5.1.1.4** `loadPiiPatternsFromYaml` union-aware — `patternType: structural` 파싱 + list `valueExcludePrefixes` + legacy (patternType 누락) → single-line fallback.
+- [x] **§5.1.1.5** `compilePattern` union-aware — structural 분기에서 `labelRegex`/`valueRegex` 2 regex 컴파일.
+- [x] **§5.1.1.6** bundled default YAML — `wikey-core/src/defaults/pii-patterns.default.yaml` (6 패턴). `package.json` build 훅에 `dist/defaults/` 복사 추가.
+- [x] **§5.1.1.7** `detectPiiInternal` 에 `collectStructuralMatches()` 분기 + non-empty 줄 `computeWindowEnd()` + prefix exclude `isCandidateExcluded()` (candidate 접두어 + 같은 줄 직전 1~2 token). `sanitizeForLlmPrompt({structuralAllowed?: boolean})` default false filename 차단.
+- [x] **§5.1.1.8** GREEN 확증 — `npm test` 537 passed (525 → +12) / `npm run build` 0 errors (2026-04-25 02:53, fresh).
+- [x] **§5.1.1.9** FP baseline — `fixtures/pii-structural-baseline/` N=30 synthetic PII-free 한국어 테크 문서 → structural match 0/30 확증 (`pii-structural.test.ts §5.1.1.9`).
+- [x] **§5.1.1.10** 문서 동기화 — 본 todo + `activity/phase-5-result.md §5.1.1` + `wiki/log.md` 엔트리.
+- [ ] **§5.1.1.11** (selective) `scripts/check-pii.sh --structural-only` flag — live wiki baseline (§12 E7(b)) 사용 시에만 필요. fixture baseline 0/30 이 mandatory 라 생략 가능. tester 단계에서 결정.
+- [ ] **§12 E1/E2.b/E3** live smoke 재실행 (Obsidian CDP 경유) → tester 에이전트 위임.
+- [ ] **wiki 재생성 없음 확증**: 기존 ingest 경로 `applyPiiGate` 내부 필터 1단만 추가. 과거 PII-leaked 위키 페이지는 사용자가 `Reset wiki` 로 수동 제거.
 
 ---
 

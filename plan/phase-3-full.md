@@ -1,5 +1,7 @@
 # Phase 3 구현 계획 — Wikey Obsidian 플러그인
 
+> **범위**: 이 문서는 Phase 3 (Obsidian 플러그인 `wikey-core` + `wikey-obsidian`) 전용 구현 설계서다 (2026-04-12 원본, 2026-04-24 session 8 Phase 3 완료). 프로젝트 전체 로드맵은 [`plan/plan-full.md`](./plan-full.md) 참조.
+
 > 작성일: 2026-04-12
 > 상태: **구현 진행 중** — Step 0~6 완료, 잔여 작업 있음
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)

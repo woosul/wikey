@@ -1,7 +1,42 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-24 session 8 종료 — Phase 4 본체 완성 선언 완료**. 다음 = Phase 5 착수.
+> 최신 갱신: **2026-04-25 session 9 종료 — Phase 5 §5.1 구조적 PII 탐지 구현 + 인프라 스킬 정비**. 다음 = §5.1 live smoke (Obsidian CDP) 또는 §5.2/§5.3 P1 진입.
 > 생성일: 2026-04-10
+
+---
+
+## 2026-04-25 session 9 종료 시점 — **Phase 5 §5.1 (P0 긴급) 구현 완료 + 스킬·agent 인프라 정비**
+
+**상태**: `plan/phase-5-todo.md §5.1.1.1~10` 전부 `[x]`. 537/537 tests pass · build ok · FP baseline 0/30 · 하드코딩 0 hits. E1 live smoke 만 Obsidian CDP 미구동으로 deferred.
+
+**세션 9 성과**:
+
+1. **계획 v1→v4 (codex 4 cycle)**: §5.1 계획서 codex (gpt-5.5 xhigh, Mode D Panel) 가 v1 (8 findings) → v2 (9) → v3 (6) → **v4 PASS**. 핵심 결정: 안 C (Context window heuristic) + multi-value capture + valueExcludePrefixes (YAML 선언) + windowLines 5 non-empty + structuralAllowed=false explicit + bundled YAML default + loader ESM.
+2. **Master 1차 sanity check 원칙 정립** (사용자 피드백 "analyst 위임해도 1차 검증 필수"): codex 송부 전 master 가 grep/diff 로 (a) 용어 일관성 (b) 하드코딩 0 (c) changelog vs 본문 (d) line drift (e) 요구사항 반영 5축 점검. v4 PASS 1회 확보 — v1~v3 재작업 사이클 효과 입증.
+3. **developer (claude-panel)**: §5.1.1.1~10 + §5.1.1.3.5 (loader ESM 전환 신규) 11 단계. discriminated union (`PiiPattern = SingleLinePiiPattern | StructuralPiiPattern`, `patternType` discriminator), `collectStructuralMatches` (multi-value + same-line prefix exclude + non-empty windowLines), bundled YAML (`new URL('./defaults/...', import.meta.url)` + build hook copy).
+4. **tester (claude-panel)**: 9/11 E# PASS · 회귀 0 · 신규 이슈 0. E1/E2b/E3 만 Obsidian CDP 미가용으로 skip.
+5. **인프라 스킬 정비** (사용자 피드백 다수):
+   - **`cmux-control` 스킬 신설**: panel/surface/tab 명령 카탈로그 + 6 함정 (stdout/stderr 혼합 · classify scrollback 한계 · wait false positive · Monitor regex · kill-pane 미지원 · focus 부작용) + 가상 격자 좌표 `(col, row)` = `(가로, 세로)` + 생성순서 규칙 `(1,0)→(2,0)→(2,1)→(1,1)→(3,0)→(3,1)→...`.
+   - **codex/claude-panel/gemini-panel SKILL.md**: "완료 자동 알림 패턴" (run_in_background + task-notification 자동 수신, Monitor polling 금지) · "패널 이름 필수 지정" · "master 1차 검증 필수" 섹션 추가. crosslink to cmux-control.
+   - **claude-panel/panel-dispatch.sh**: role-based permission-mode 자동 분기 (developer/tester/ui-designer/refactor-cleaner/doc-updater/build-error-resolver → acceptEdits, 그 외 plan), output-format default `text` (이전 stream-json 의 JSON raw 가독성 문제 해결).
+   - **agent 정의 (analyst/reviewer/developer/tester/ui-designer)**: master 1차 sanity 의무 + run_in_background 호출 의무 명시.
+6. **plan/plan-full.md 분리**: 기존 `prompt_plan.md` (Phase 3 Obsidian 플러그인 설계서) → `plan/phase-3-full.md` 로 이전. `plan/plan-full.md` 신규 (전체 6-Phase 로드맵 + Agents 운영 체제 + 문서 조직 규칙).
+
+**다음 세션 진입점**:
+
+- **§5.1 live smoke (E1/E2/E3)** — ✅ **2026-04-25 master 직접 수행 완료**. Obsidian CDP 기동 + dist runtime 에서 fixture 7종/baseline 30종 end-to-end 실행, PII 누출 차단 7/7 + FP 0/30 확증. wiki pre-check BRN/CEO 0 hit.
+- **§5.1 quality follow-up (신규 subject)** — ceo-structural over-masking 이슈 (라벨 단어 `주소`·`등기일`·`서울시 어`·`딘가` 오인 매치 4건, fixture CDP smoke 에서 발견). 누출은 차단되지만 sanitize 초과 → 본문 damage. 수정 방향: (a) `valueExcludePrefixes` 에 common field label 추가 (YAML 선언) (b) `valuePattern` 을 "공백 포함 한글 이름" 으로 엄격화 `[가-힣][ \t]+[가-힣](?:[ \t]*[가-힣]){0,2}` (c) 이름 vs label 구별용 heuristic (label 뒤 colon 이면 label 로 간주). 다음 세션에서 선택.
+- **§5.2 검색 재현율 + §5.3 인제스트 증분 (P1 핵심)** — Anthropic contextual chunk / hash 기반 증분.
+- **§5.4.1 Stage 1 schema.yaml 로더화 (P2 비전 gate)** — PMBOK 하드코딩 외재화.
+- **인프라 follow-up**:
+  - cmux pane border color 가 ghostty `split-divider-color` 와 동기화 안 됨 (cmux 자체 settings.json `workspaceColors` 조사 필요).
+  - claude-panel text 모드는 완료 시 일괄 출력 — 실시간 가독성 원하면 stream-json + jq/python pretty-print wrapper 추가.
+  - `panel-dispatch.sh pick` 의 `--direction right` 고정이 grid 규칙 위반 → master 가 매번 재배치. 자동화 검토.
+  - **자동 세션 핸드오프 (PreCompact hook)** — 다음 세션에서 update-config 스킬로 settings.json 에 hook 추가.
+- **읽기 권장**:
+  - `plan/phase-5-todox-5.1-structural-pii.md` v4 (계획서 단일 소스, codex PASS)
+  - `activity/phase-5-result.md §5.1` (구현 결과 타임라인)
+  - `~/.claude/skills/cmux-control/SKILL.md` (panel 운영 공통 레퍼런스)
 
 ---
 
@@ -1238,7 +1273,7 @@ CLAUDE.md(30KB, 모놀리식)를 분리:
 
 ## 현재 프로젝트 상태 요약
 
-- 파일: CLAUDE.md, llm-wiki.md, llm-wiki-kor.md, idea-comment.md, prompt_plan.md, plan/
+- 파일: CLAUDE.md, llm-wiki.md, llm-wiki-kor.md, idea-comment.md, plan/phase-3-full.md, plan/
 - 미생성: wikey.schema.md, AGENTS.md, local-llm/, scripts/, .gitignore, Git
 - wiki/, raw/: 빈 디렉토리 (콘텐츠 없음)
 - 도구: Obsidian 1.12.7 + CLI 활성화, kepano/obsidian-skills 설치, Ollama 설치, Codex CLI 설치
