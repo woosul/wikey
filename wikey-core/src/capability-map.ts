@@ -88,15 +88,19 @@ export function defaultCapabilityCachePath(): string {
 /**
  * capabilityMap 을 JSON 파일로 덤프. Dir 없으면 생성.
  * IO 실패는 throw — 호출자가 try/catch 로 감쌀 것.
+ *
+ * **node built-in 접근 방식 주의**: Obsidian Electron renderer 는 `await import('node:fs/...')`
+ * 같은 dynamic ESM import 를 browser loader 로 해석해 실패한다 (`Failed to fetch dynamically
+ * imported module`). CommonJS `require('node:fs')` 를 통해야 bundled plugin 에서도 동작.
  */
 export async function dumpCapabilityMap(
   map: SupportedExtensionMap,
   cachePath: string,
 ): Promise<void> {
-  const { mkdir, writeFile } = await import('node:fs/promises')
+  const fs = require('node:fs') as typeof import('node:fs')
   const path = require('node:path') as typeof import('node:path')
   const dir = path.dirname(cachePath)
-  await mkdir(dir, { recursive: true })
+  await fs.promises.mkdir(dir, { recursive: true })
   const payload = JSON.stringify({
     supported: map.supported,
     unsupported: map.unsupported,
@@ -104,5 +108,5 @@ export async function dumpCapabilityMap(
     unhwpInstalled: map.unhwpInstalled,
     generatedAt: map.generatedAt,
   }, null, 2)
-  await writeFile(cachePath, payload, 'utf-8')
+  await fs.promises.writeFile(cachePath, payload, 'utf-8')
 }
