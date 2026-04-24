@@ -88,88 +88,7 @@ git diff --name-only HEAD~5 -- wiki/
 
 ## 세션 실행 체크리스트
 
-### 인제스트 세션
-
-```
-1. wikey.schema.md 읽기
-2. raw/ 소스 읽기
-3. 핵심 시사점을 사용자와 논의
-4. wiki/sources/source-{name}.md 생성 또는 업데이트 (멱등)
-5. wiki/entities/, wiki/concepts/ 페이지 생성 또는 업데이트
-6. wiki/index.md 갱신 (새 페이지 등재, 기존 요약 수정)
-7. wiki/log.md에 항목 추가 (날짜, 타입, 영향 페이지, 토큰)
-8. wiki/overview.md 갱신 (필요시)
-9. scripts/check-pii.sh 실행 → 통과 확인
-10. scripts/reindex.sh 실행 → 전체 인덱싱 (qmd update + embed + CR + 한국어 + validate)
-11. Git 커밋
-```
-
-### 쿼리 세션
-
-```
-1. wikey.schema.md 읽기
-2. wiki/index.md 읽기 → 관련 페이지 식별
-3. 해당 페이지 읽기 (entities/, concepts/, sources/)
-4. 인용과 함께 답변 종합
-5. 가치 있는 답변 → wiki/analyses/에 저장 → index.md, log.md 갱신
-```
-
-### 린트 세션
-
-```
-1. wikey.schema.md 읽기
-2. 증분 린트: git diff로 최근 변경 페이지 식별
-   전체 린트: wiki/ 전체 스캔
-3. 점검: 모순, 고아, 깨진 링크, 인덱스 누락, 삭제된 소스 의존
-4. 발견 사항을 사용자에게 보고
-5. 사용자 승인 후 수정 실행
-6. log.md에 lint 항목 추가
-7. validate-wiki.sh → Git 커밋
-```
-
-### 소스 삭제 세션
-
-```
-1. wikey.schema.md 읽기
-2. 삭제된 소스의 wiki/sources/source-{name}.md 확인
-3. Grep으로 해당 소스를 인용하는 모든 페이지 검색
-4. 각 페이지에서 인용 제거 또는 "근거 삭제됨" 표시
-5. wiki/sources/source-{name}.md 삭제 또는 아카이브
-6. index.md, log.md 갱신
-7. validate-wiki.sh → Git 커밋
-```
-
-### 분류 세션
-
-```
-1. wikey.schema.md 읽기
-2. raw/CLASSIFY.md 읽기
-3. `scripts/watch-inbox.sh --status` 또는 `scripts/classify-inbox.sh --dry-run` 실행 → 자동 분류 힌트 확인
-4. 각 항목에 대해:
-   a. CLASSIFY.md 자동 규칙 매칭 시도
-   b. 매칭 실패 시 LLM 판단 가이드 참조
-   c. 분류 결과를 사용자에게 제안
-5. 사용자 승인 후 `scripts/classify-inbox.sh --move <src> <dst>` 실행
-6. CLASSIFY.md 하위폴더 정의에 새 폴더 추가 시 문서 업데이트
-7. 이동 완료 후 인제스트 세션 시작 (필요시)
-```
-
-## 대용량 소스 처리
-
-20페이지+ PDF, 2시간+ 회의록 등은 `wikey.schema.md`의 **2단계 인제스트** 절차를 따른다:
-
-```
-Phase A: Read 도구로 20p씩 순차 읽기 → 섹션 인덱스 생성
-Phase B: 핵심 섹션만 상세 읽기 → 위키 페이지 생성
-Phase C: 쿼리 시 섹션 인덱스 참조 → 해당 페이지만 온디맨드 읽기
-```
-
-Claude Code에서의 구체적 실행:
-1. `scripts/summarize-large-source.sh <pdf> --dry-run` 으로 페이지 수 확인
-2. 20p+ 이면 `scripts/summarize-large-source.sh <pdf>` 실행 (Gemini 자동 요약)
-3. Gemini 미사용 시: `Read` 도구 + `pages` 파라미터로 20p씩 분할
-4. source 페이지에 섹션 인덱스 테이블 포함
-5. 핵심 섹션을 재읽기하여 위키 페이지 생성
+5개 세션 유형 (인제스트·쿼리·린트·소스 삭제·분류) + 대용량 소스 2단계 처리 절차는 **[`rules/session-checklists.md`](./rules/session-checklists.md)** 에 정리. 각 유형의 순차 단계·scripts 호출 순서를 필요 시 참조.
 
 ## 설정 체계
 
@@ -194,96 +113,23 @@ Claude Code에서의 구체적 실행:
 - 소스에 PII가 있을 경우 위키 페이지에 전파하지 않도록 주의
 - PII가 위키에 이미 전파된 경우, 사용자 지시에 따라 제거
 
-## Obsidian 플러그인 (Phase 3)
+## Obsidian 플러그인 (Phase 3 산출물)
 
-### 구조
-
-```
-wikey-core/                    ← 핵심 로직 (프로바이더 독립)
-  src/config.ts                ← wikey.conf 파싱, resolveProvider
-  src/llm-client.ts            ← 4 프로바이더 (Gemini/Anthropic/OpenAI/Ollama)
-  src/provider-defaults.ts     ← 4 프로바이더 기본 모델 단일 소스 (UI/core 공유)
-  src/wiki-ops.ts              ← 페이지 CRUD, index/log 관리
-  src/query-pipeline.ts        ← qmd 검색 + LLM 합성
-  src/ingest-pipeline.ts       ← 소스→위키 변환 (PDF + chunk v2 프롬프트)
-  src/classify.ts              ← inbox 분류 규칙 엔진 + LLM fallback (DEWEY 10개)
-  src/scripts-runner.ts        ← validate/pii/reindex/cost exec 래퍼
-  src/types.ts                 ← 공유 타입
-  src/prompts/                 ← 외부화된 프롬프트 (ingest_prompt_basic.md)
-  src/__tests__/               ← vitest (97 tests)
-
-wikey-obsidian/                ← Obsidian 플러그인
-  src/main.ts                  ← WikeyPlugin, WikiFS/HttpClient 어댑터
-  src/sidebar-chat.ts          ← 채팅 UI, Audit/Ingest 패널
-  src/ingest-modals.ts         ← Stay-involved Brief→Processing→Preview 모달 (Drag/Resize)
-  src/setup-para.ts            ← PARA 폴더 구조 자동 생성 (0_inbox~4_archives + DDC 3차)
-  src/settings-tab.ts          ← 설정 (환경 탐지, 일반 토글, API 키, 고급 LLM)
-  src/commands.ts              ← Cmd+Shift+I, URI 프로토콜
-  src/status-bar.ts            ← 페이지 수, 통계 모달
-  src/env-detect.ts            ← 로그인 셸 PATH + ABI 호환 node 탐지 (kiwipiepy/markitdown/markitdown-ocr 옵셔널 감지 포함)
-  styles.css                   ← Purple accent 테마
-```
-
-### 개발 명령어
-
-```bash
-npm run build          # 전체 빌드 (wikey-core + wikey-obsidian)
-npm run build:core     # wikey-core만
-npm run build:obsidian # wikey-obsidian만
-npm test               # wikey-core vitest
-npm run dev            # wikey-obsidian watch 모드
-```
-
-### 플러그인 개발 세션
-
-```
-1. npm run dev (watch 모드)
-2. Obsidian Cmd+R로 리로드
-3. 코드 수정 → 자동 빌드 → Cmd+R로 확인
-4. npm test → 0 failures 확인
-5. npm run build → 0 errors 확인
-6. Git 커밋
-```
+wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`rules/obsidian-plugin.md`](./rules/obsidian-plugin.md)** 참조. npm 스크립트: `npm run build`, `npm test`, `npm run dev`.
 
 ## 활동 기록 문서 규칙
 
 `activity/phase-*-result.md` 작성·재구성 규칙은 **`result-doc-writer` 스킬**에 정의되어 있다. 해당 문서를 수정하거나 세션 결과를 기록할 때 그 스킬이 자동 트리거된다. (이전에 이 CLAUDE.md에 직접 기록하던 3원칙·번호체계·`#tag` 규칙은 2026-04-20에 스킬로 이관, 전역 토큰 절약.)
 
-## 문서 명명규칙·조직화 (필수, 2026-04-24 고정)
+## 문서 명명규칙·조직화 (필수)
 
-`activity/`·`plan/` 디렉터리는 **Phase 별 중심 문서 2개 + 그 주위에 보조 문서** 구조로 정리된다. 중심 문서가 alphabetical listing 에서 **항상 먼저** 등장하도록 명명규칙이 엄격히 고정돼 있다.
+상세 규칙은 **[`rules/docs-organization.md`](./rules/docs-organization.md)** 에 정리. 핵심만 요약:
 
-### 파일 종류
-
-| 종류 | 경로 | 예시 |
-|------|------|------|
-| 중심 plan | `plan/phase-N-todo.md` | `plan/phase-4-todo.md` |
-| 중심 result | `activity/phase-N-result.md` | `activity/phase-4-result.md` |
-| 보조 plan | `plan/phase-N-todox-<section>-<topic>.md` | `plan/phase-4-todox-4.6-critical-fix-plan.md` |
-| 보조 result | `activity/phase-N-resultx-<section>-<topic>-<date>.md` | `activity/phase-4-resultx-4.6-smoke-2026-04-23/` |
-
-- `N` = Phase 번호 (1, 2, 3, ...).
-- `todox` / `resultx` — "x" 는 extension (보조) 을 뜻한다. 핵심 규칙: `phase-N-todo` 와 `phase-N-result` 뒤에 **알파벳 한 글자** 를 붙인 형태여야 한다. `_` (언더스코어) 나 `-` (하이픈) 은 로케일 정렬에서 중심 문서보다 앞에 와버려 금지. 테스트로 `ls`·`LC_ALL=C ls` 양쪽에서 중심 문서가 맨 앞에 오는지 확인.
-- `<section>` = result·todo 내부 section 번호 그대로 (`4.1`, `4.1.3`, `4.5.1.5`, `4.6`, `3.B`, `2.Step3-0` 등). 같은 section 의 여러 문서는 하나의 `<section>` 을 공유한다.
-- `<topic>` = kebab-case 간단 주제 식별자 (`critical-fix-plan`, `bitmap-ocr-fix`, `determinism-pms-auto`).
-- `<date>` = `YYYY-MM-DD` — 측정·리포트 계열만 (계획서는 date 생략).
-
-### 중심 문서 의무
-
-1. 각 중심 문서 **최상단 meta 블록 바로 아래에 `## 관련 문서` 섹션**을 유지.
-2. 해당 Phase 의 모든 보조 문서를 **section 번호 오름차순** 으로 나열.
-3. 프로젝트 공통 문서 (`plan/decisions.md`·`plan/plan_wikey-enterprise-kb.md`·`plan/session-wrap-followups.md`) 는 별도 항목으로 분리.
-4. 새 보조 문서 추가 시 중심 문서의 `관련 문서` 섹션을 즉시 갱신.
-
-### 보조 문서 의무
-
-- 각 보조 문서 **타이틀 바로 아래 `> **상위 문서**: ...` 역참조 블록**을 유지. 상위 result · todo 링크 + `§<section> (<topic>)` + 본 명명규칙 참조.
-- Todo 체크박스 (`- [ ]` / `- [x]`) 는 오직 `plan/phase-N-todo.md` 에만. 보조 계획서는 범위·의미 정의만 표현 (참고: `sync` 스킬 Phase 0-4.6).
-
-### 이관 시점
-
-- 한 Phase 가 진행되는 동안 새 보조 문서가 필요하면 위 명명규칙으로 즉시 생성. Ad-hoc 이름으로 만들고 나중에 이관하지 말 것.
-- 기존 잘못 명명된 파일이 있다면 `git mv` + sed 로 참조 일괄 갱신 후 단일 commit (예: 2026-04-24 session 에서 일괄 이관).
+- 중심: `plan/phase-N-todo.md` · `activity/phase-N-result.md`
+- 보조: `plan/phase-N-todox-<section>-<topic>.md` · `activity/phase-N-resultx-<section>-<topic>-<date>.md` (`x` 접미사가 alphabet-sort 에서 중심을 맨 앞에 오게 보장 — `_`·`-` 금지)
+- 중심 문서 의무: meta 블록 직후 `## 관련 문서` 섹션 + 보조 문서 section 번호 순 나열.
+- 보조 문서 의무: 타이틀 아래 `> **상위 문서**:` 역참조 블록 + todo 체크박스 금지 (phase-N-todo 단일 소스).
+- `/sync` 스킬 Phase 0-4.7 이 무결성 자동 검증.
 
 ## 문서 동기화 플로우 (필수)
 
