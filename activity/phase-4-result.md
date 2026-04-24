@@ -2246,3 +2246,138 @@ plan 본 체크리스트는 "+5 — scope별 file list 검증" 이었으나, unk
 1. **A §4.3 통합 smoke** (Obsidian UI 수동) — `plan/session-wrap-followups.md` 최상단 5 + 덤 1 항목. 결과를 `activity/phase-4-result.md §4.3.smoke` (신규) 에 기록.
 2. **D 본체 완성 선언** — result 맨 끝에 "Phase 4 본체 완성 선언 (2026-MM-DD)" 섹션 (완성 정의 충족 증거 + 테스트 총계 + Phase 5 착수점 지정) + `plan/phase-4-todo.md` 상단 상태 라인 갱신 + `plan/phase-5-todo.md §5.6 Stage 1` (schema.yaml 로더화) 첫 착수점 고정 + memory `project_phase4_status.md` description "완료" + `MEMORY.md` 인덱스 갱신 + 단일 commit `feat(phase-4): 본체 완성 선언` + push.
 
+
+---
+
+## 4.6 통합 smoke (2-pass CDP 자동 실행) + D.0 Critical Fix Plan 수립 (세션 6, 2026-04-23 ~ 2026-04-24)
+> tag: #workflow, #core, #ops
+
+### 4.6.1 Pass A / Pass B 2-pass CDP smoke 실행 (2026-04-23 23:49 ~ 2026-04-24 00:48)
+
+**진입점**: `plan/phase-4-integrated-test.md v6` (codex Panel Mode D **APPROVE-WITH-CHANGES**, git HEAD `b24502a`). 실행 주체 = Claude Code (CDP `localhost:9222` + `scripts/wikey-cdp-wrap.sh` → `/tmp/wikey-cdp.py` → `.venv-smoke/bin/python` 격리 venv + websocket-client 1.9.0). 사용자 개입 없음 — 세션 종료 후 리뷰.
+
+**인프라 구성 (세션 초입에 신규 도입)**:
+- `scripts/wikey-cdp-wrap.sh` — /tmp/wikey-cdp.py 를 `.venv-smoke/bin/python` (uv 로 생성) 로 실행하는 wrapper. Electron 환경의 websocket-client 의존성을 메인 python 오염 없이 격리.
+- `scripts/smoke-cdp.sh` — CDP 고수준 helper (`clickPanelButton`, `clickRowByName`, `waitForModalPhase`, `waitForNoticeText`, `waitForLog`).
+- `scripts/smoke-reset.sh` — 3 mode clean-slate helper (`init` / `between-pass` / `final`). Pass A/B 간에 wiki 비우기 + registry 초기화 + `.ingest-map.json` 제거 + qmd purge + `raw/0_inbox/` 복원 (`/tmp/wikey-smoke-inbox-backup/` 에서).
+- `.venv-smoke/` — `/Users/denny/Project/wikey/.venv-smoke` (uv 생성, websocket-client 1.9.0).
+
+**Pass A × Pass B 최종 매트릭스 (files × stages)**:
+
+| # | 파일 | Pass A Stage 1 | Pass A Stage 2 | Pass B Stage 1 | Pass B Stage 2 | 종합 |
+|---|------|-----------|-----------|-----------|-----------|-------|
+| 1 | llm-wiki.md | ✓ | ✓ (wl=2, cite=1) | ✓ | ✓ (wl=3, cite=1) | **PASS** |
+| 2 | 사업자등록증C_굿스트림.pdf | **BLOCKED** (harness PII layer) | — | BLOCKED (예상) | — | **BLOCKED** |
+| 3 | C20260410_용역계약서_SK바이오텍.pdf (6p) | ✓ | ✓ (wl=1, cite=0) | ✓ | ✓-**PII** (wl=10, cite=3) | **PASS-with-PII** |
+| 4 | PMS_제품소개_R10.pdf (31p) | ✓ | ✓ (wl=13, cite=0) | ✓ | ✓ (wl=5, cite=4) | **PASS** |
+| 5 | 스마트공장 합동설명회.hwp | ✓ | ✓ (wl=1, cite=0) | N/A (미지원) | N/A | **PASS (A only)** |
+| 6 | Examples.hwpx | ✓ | ✓ (wl=2, cite=0) | N/A (미지원) | N/A | **PASS (A only)** |
+
+Stage 3 IV.B (registry diff 기준): Pass A PMS 1건, Pass B Examples.hwpx 1건 — 각각 **PASS**. 단, 자동 onload reconcile 은 **race 로 미작동** (수동 `plugin.runStartupReconcile()` trigger 로 복구해야 통과).
+
+**리포트 산출물** (`activity/phase-4-smoke-2026-04-23/`): `README.md` (집계), `pass-a-readme.md`, `pass-b-readme.md`, `cross-compare.md`, `stage4-dump-smoke.md`. `dump/` 은 비어있음 — CDP capture-logs 를 파일로 저장하진 않음.
+
+**plan §6.1 Critical 기준 대비**:
+
+| 기준 | 결과 |
+|------|------|
+| Pass A 6/6 PASS | **FAIL** (5/6, file 2 BLOCKED) |
+| Pass B 6/6 PASS | **FAIL** (3/4, file 2 BLOCKED + HWP/HWPX N/A) |
+| 교차 tier-label 6/6 일치 | **PARTIAL** (3/3 비교 가능 파일 일치) |
+| PII 노출 0건 | **FAIL** (file 3 Pass B 에서 BRN 119-81-95926, 301-86-19385 + CEO 이희림, 김명호 노출) |
+| Console ERROR 0건 | **FAIL** (SK query 중 transient `ERR_CONNECTION_CLOSED` 1건) |
+| §4.C 팔레트 7 + 모달 ALL | **PARTIAL** (7 entries 있지만 1 미스매치, `Wikey: Delete wiki page` 단건 삭제 미구현) |
+
+**D 블록 판정 = 보류**. plan §6.1 Critical 기준 다수 미통과. 그러나 **핵심 기능 자체는 정상 동작** — Ingest 패널과 Audit 패널 모두 1-click 으로 Stage 1/2/3 + Chat 질의 + pairmove + IV.B 복구 통과됨. 5 Critical 은 모두 **기능 결함이 아니라 safety/coverage 사각지대** 이며 plan 업데이트 또는 작은 코드 수정으로 해결 가능.
+
+### 4.6.2 5 Critical (C1~C5) + C6 UX 정리 (README.md §3)
+
+`activity/phase-4-smoke-2026-04-23/README.md §3 Critical Findings` 에 C1~C5 + C6 6 항목 구조화 + 각 항목 하단 `>` 라인으로 **사용자 결정** 기록.
+
+| ID | 내용 | 사용자 결정문 (README `>` 라인) |
+|---|---|---|
+| C1 | file 2 사업자등록증.pdf → Claude Code harness PII safety layer 가 ingest 액션을 차단. 사용자 일반 승인 (`이후 승인없이 진행`) 과 별개로 harness level 거부. **plan §6.1 "6/6" 기준이 구조적으로 성립 불가**. | plugin 환경설정에 **개인정보가 포함된 문서의 ingest 실행여부 ON/OFF** |
+| C2 | file 3 SK 계약서 → sources body + entity/concept + Chat 답변에 BRN (`119-81-95926`, `301-86-19385`) + CEO 성명 (`이희림`, `김명호`) 그대로 노출. plan §3.2 가 file 2 만 scope 했기 때문에 detection 누락. 확산 경로 = `canonicalizer.ts:227 mentionsBlock evidence` + `:450 buildPageContent description` | 개인정보문서가 ingest 되는 경우 PII 를 **1) Display On, 2) Replace '*', 3) Display Off 옵션 선택** |
+| C3 | `scripts/audit-ingest.py::DOC_EXTS = {".md",".txt",".pdf"}` (line 20) — HWP/HWPX 가 Audit 패널 Missing 리스트에 안 보임. Pass B 는 구조적으로 6 파일 커버 불가. | **docling 및 unhwp 가 컨버팅 가능한 모든 파일의 확장자는 통과**. 포함되지 않은 확장자는 **빨간색** 표현 + ingest 하지 않음. 아예 보이지 않는것은 오류. |
+| C4 | `main.ts:213 void this.runStartupReconcile()` 가 onload 직후 실행되나 `app.vault.getFiles()` 가 빈 결과 → hash 매칭 실패 → registry 갱신 누락. 10~15초 후에도 자동 재실행 없음. | 에러 확인 및 수정 |
+| C5 | Stage 1 완료 직후 Stage 2 쿼리 시 "위키에 관련 내용이 없어요" 반환. `ingest-pipeline.ts:427 triggerReindex()` 의 fire-and-forget 이 완료 전이라 새 wiki 페이지가 아직 검색 가능 상태 아님. `reindex.sh` 수동 실행 후 재질의 → 정상. | reindex 자동화 (ingest 완료 후) |
+| C6 | CDP 테스트 중 사용자 모니터링 결과 5 UX 이슈 (C6.1 wiki 이동시 잘못된 inbox 경고 / C6.2 답변에 원본 링크 누락 / C6.3 Processing modal 파일명 표시 / C6.4 progressbar 위치 / C6.5 Pass B HWP/HWPX 누락 — C3 와 연동) | (README 에 5 sub-item 으로 구체화) |
+
+### 4.6.3 사용자 누적 결정 (세션 6, 2026-04-24 전반)
+
+세션 중반부 Claude 제안 → 사용자 피드백 → Plan 진화의 맥락. 모두 **명시적으로 고정**.
+
+1. **mask 가 default** — `piiRedactionMode` 3 모드 중 `mask` 가 기본. display (원문 노출) 는 내부 저장소 leak 위험, hide (문장 제거) 는 구조 파괴 위험. 중간값인 자릿수 보존 `***` 치환이 기본.
+2. **변환 후 redact → harness 검증 순서** — "harness 가 변환 전에 차단하는 게 아니라 **변환 과정 중 PII 감지** 로 block 된다. 그러므로 순서를 변환 → redact → harness 로 바꾸는 게 맞다." (사용자 원문). pre-gate 모델 (v1) 기각, 중앙 wrapper 가 `sourceContent` 확정 직후 redact 적용.
+3. **md 원본도 동일 프로세스** — "원본이 md 인 파일도 PII 체크해서 변환한 다음 PII harness 확인하게되면 동일한 프로세스" (사용자 원문). 모든 ingest 경로 (hwp/hwpx/pdf/docx/.../md/txt) 가 동일 wrapper 통과.
+4. **C 안 2-layer** — `allowPiiIngest` (basic, default OFF = block on detect / ON = redact) + `piiGuardEnabled` (advanced, default ON = 정상 동작 / **OFF = detect 자체 skip, 공시용 문서용**). "PII 체크 안하겠다는 건 사용자의 의도, 공시용 문서 ingest 용 — 노출을 감안하고 ingest" (사용자 원문). A (strict block) / B (skip) 를 결합.
+
+이 4 건은 `plan/phase-4-critical-fix-plan.md` **§1 결정 요약 테이블** 에 그대로 반영됐고, §4.1.1~§4.1.6 구현 섹션의 모든 분기·default·UI 문구가 이 결정으로부터 도출됨.
+
+### 4.6.4 plan v1~v6 codex Panel Mode D 피어리뷰 히스토리
+
+codex (`gpt-5.4 xhigh reasoning`, Panel Mode D = cmux pane 격리, `~/.codex/` shared-state freeze 회피) 로 4회 피어리뷰 진행. 판정 진화:
+
+| 버전 | 판정 | 핵심 지적 | 소요 시간 |
+|------|------|----------|----------|
+| **v1** | **REJECT** | [P1] C1 pre-gate 위치 오판 — harness 는 변환 중 block 이라 변환 전 gate 는 무효. [P2] C2 canonicalizer leak (`canonicalizer.ts:227, 450`) 미고려. [P3] C5 `reindexCheck()` 는 `--check` status 만, rebuild 없음. GAPS: static 테이블, C2 default 모순, `wiki-ops.ts::writePage` 는 실제 경로 아님 (`ingest-pipeline.ts:348, 378, 386 createPage` 가 실제). | 4m 10s |
+| **v2** | **skip** | 사용자 추가 결정 (mask default) 으로 v3 승계 | — |
+| **v3** | **REJECT** | [P1] **PDF sidecar leak** — `extractPdfText::finalize()` (ingest-pipeline.ts:1302, 1325) 가 중앙 wrapper 전에 `${fullPath}.md` 를 저장 → file 2/3 은 sourceContent redact 해도 sidecar 에 원문 잔존. [P2] `waitUntilFresh` 가 쓰는 `--stale=0` / `stale: N` contract 가 `scripts/reindex.sh` 에 미존재. [P3] `audit-ingest.py` 는 여전히 static. GAPS: `main.ts:223` 의 `/\.(md\|txt\|pdf)$/` 도 HWP/HWPX 포함 필요. RenameGuard 는 이미 5s TTL (v3 의 2000→3000ms 제안은 오인). rawVaultPath current path priority. hide 3-단 fallback 필요. | 3m 01s |
+| **v4** | **APPROVE-WITH-CHANGES** (4 CHANGES) | C4/C6.1/C6.3/C6.4 = OK. 2-layer 분기 순서 적정 (Karpathy #2 통과). CHANGES: (1) C5 `stale <= 0` 이 `status:"never"` 를 fresh 로 오인 — `status === 'fresh' && stale === 0` 만 허용 + `reindexQuick` success=false 시 throw 승격 (2) `extractPdfText` 반환형 승격 시 `generateBrief()` (ingest-pipeline.ts:781) 도 caller — 누락 시 타입 불일치 (3) C6.2 `record.current_path` 는 존재 없는 필드 — 실제는 `source-registry.ts:18 vault_path` (4) DOC_EXT_RE 에 htm/tif/csv 누락. | 4m 25s |
+| **v5** | **APPROVE-WITH-CHANGES / CRITICAL: None** (2 문서 일관성) | v4 4건 전부 반영. 잔여 2건: §4.1.3 `extractPdfText` 시그니처가 "stripped 만 반환" / "{ stripped, sidecarCandidate } 반환" 2 문구 공존 → 단일화. §4.4.2 가 `ScriptResult`/`runScript` helper 확장을 암시적으로만 언급 → prerequisite 섹션 + status enum membership 검증 필요. | 1m 42s |
+| **v6** | **구현 착수 승인** | v5 2건 정리 완료. prerequisite 섹션 (scripts-runner.ts:13 ScriptResult + :19 runScript 확장) 명시. JSON schema 검증에 `validStatuses = new Set(['fresh','stale','never'])` membership check 추가. `extractPdfText` 시그니처 `{ stripped, sidecarCandidate }` 단일 명시. codex 재검증 skip (v5 CRITICAL=None 확정, v6 는 문구 일관성만 보정). | — |
+
+**Key insight** — "codex 는 코딩은 떨어져도 검증은 잘한다" (사용자 관찰). 이유: (a) 검증은 existing code 와 spec mismatch 의 grep 작업 — gpt-5.4 의 xhigh reasoning 이 잘 맞음. (b) 코딩은 context-laden — Claude 가 우위. (c) codex 의 실제 출력은 라인 단위 반박 (`ingest-pipeline.ts:1302, 1325`, `vault-events.ts:44`, `source-registry.ts:18`) 으로 매우 구체. 현재 운영 패턴 (Claude 작성 → codex REJECT/APPROVE 판정) 이 강점 결합 구조.
+
+### 4.6.5 Plan v6 구현 계획 요약 — `plan/phase-4-critical-fix-plan.md`
+
+**690+ 라인**. 9 섹션. 핵심 구현 지점:
+
+- **§4.1 C1+C2 중앙 redaction wrapper** (`wikey-core/src/pii-redact.ts` 신규) — `detectPii(markdown) → readonly PiiMatch[]` + `redactPii(markdown, mode) → string` + `PiiIngestBlockedError` class. `ingest-pipeline.ts:150` 이후에 2-layer gate 배치. Regex: BRN hyphenated `/\b\d{3}-\d{2}-\d{5}\b/g` + BRN label-conditioned contiguous `/(?<=사업자(?:등록)?번호[\s:：]*)\d{10}(?!\d)/g` + 법인번호 label `/(?<=법인(?:등록)?번호[\s:：]*)\d{6}-?\d{7}\b/g` + CEO `/(?:대표이사|대표자|CEO)\s*[:：]\s*([가-힣]{2,4})/g`. Unlabeled \d{13} 미감지 (FP 회피). hide 모드 3-단 fallback: sentence split → line replacement → window replacement.
+
+- **§4.1.3 PDF sidecar 재설계** — `extractPdfText()` 의 반환형을 `Promise<string>` → `Promise<{ stripped; sidecarCandidate }>` 로 승격. caller 2개 (`ingest()` + `generateBrief()` line 781) 동시 업데이트. `finalize()` (line 1302) 에서 직접 sidecar write 제거 → caller 가 중앙 wrapper 적용 후 저장.
+
+- **§4.2 C3 runtime capability map** — `wikey-core/src/env-detect.ts` 에 `buildCapabilityMap(basePath, execEnv) → { supported, unsupported, doclingInstalled, unhwpInstalled, generatedAt }` 추가. 플러그인 onLayoutReady 후 `~/.cache/wikey/capabilities.json` 에 dump. `audit-ingest.py` 가 같은 파일 read (fallback 기본값 유지). `main.ts` 공유 상수 `DOC_EXT_RE = /\.(md|txt|pdf|hwp|hwpx|docx|pptx|xlsx|csv|html|htm|png|jpg|jpeg|tiff|tif)$/i` (core DOCLING_DOC_FORMATS 와 lockstep).
+
+- **§4.3 C4 onLayoutReady + delayed fallback** — `main.ts:213` 을 `this.app.workspace.onLayoutReady(() => { void this.runStartupReconcile(); setTimeout(() => { if getFiles().length > 0 void runStartupReconcile() }, 1500) })` 로 교체. `runStartupReconcile` 에 `startupReconcileDone` idempotent flag.
+
+- **§4.4 C5 reindex + freshness polling** — `scripts/reindex.sh` 에 `--check --json` 신규 플래그 (`{"stale":N,"status":"fresh|stale|never"}`). `scripts-runner.ts` 확장: `ScriptResult` 에 `success`/`exitCode`/`stderr` 노출 + `runScript` opts 에 `timeoutMs?`. 새 helper `reindexQuick` (throw on success=false), `reindexCheckJson` (shape + enum membership validation), `waitUntilFresh` (`status==='fresh' && stale===0` 만 성공). `ingest-pipeline.ts:427` 교체 — `await reindexWithTimeout + waitUntilFresh`. `WIKEY_REINDEX_TIMEOUT_MS` default 60000, max 300000.
+
+- **§4.5 C6 UX** — C6.1 bypassBatch `renameGuard.consume(file.path)` 호출 (TTL 는 이미 5s default). C6.2 `query-pipeline.ts::appendOriginalLinks(answer, citations, wikiFS)` 신규 — `source-resolver::resolveSource` 로 `rawVaultPath` 해석 (current `vault_path` 우선, fallback = `path_history` 마지막 유효 entry), fail closed. `ResolvedSource` 에 `rawVaultPath` 필드 additive. C6.3 modal file label (`originalFilename | convertedMdFilename` accent color). C6.4 modal DOM 재정렬 (fileLabel → spinner → progress-bar → button, `margin-top: auto`).
+
+**테스트 계획**: `pii-redact.test.ts` +21, `env-detect.test.ts` +5, `scripts-runner.test.ts` +4, `query-pipeline.test.ts` +4. 총 **+34 tests**. 462 → 496+.
+
+**실행 순서** (§6): 15 단계, 실구현 ~10~14h + smoke 재실행 ~1.5h. Scrollback 으로 각 단계별 소요 시간·의존성 정리.
+
+### 4.6.6 병행 개선 — `/sync` skill v7 → v8 + result-doc-writer 상세성 강조
+
+세션 중반부 사용자 요청 "문서 동기화 시 result/todo 반복 commit 을 없애도록 스킬을 짜임새 있게 변경" 반영. 위치 = **글로벌 스킬** (`~/.claude/skills/sync/SKILL.md`), wikey repo 와 독립. 변경:
+
+- **Phase 0 신규** — 프로젝트 CLAUDE.md 에서 "문서 동기화 플로우" 섹션 자동 감지 (keywords: `문서 동기화 플로우`, `문서 동기화 순서`, `doc-sync workflow`, `sync workflow`, `동기화 플로우`). 매칭 시 순서 리스트를 따라 스킬 invoke / 파일 Edit. 스킬 누락 시 설명 기반 fallback.
+- **Phase 3 신규** — Phase 0 + Phase 2 결과를 **단일 commit** 으로 묶어 push. 메시지: `docs(sync): <작업> + 관련 문서 동기화`. `--no-commit` 으로 v7 동작 복원.
+- **원칙** — "두 번 commit 하지 않는다" (v8 title rule). 사용자가 수동으로 재커밋하던 반복 제거.
+- **다른 프로젝트 영향 없음** — CLAUDE.md 에 플로우 섹션 없으면 Phase 0 skip.
+
+병행 개선 2 — **`.claude/skills/result-doc-writer/SKILL.md`** (wikey project 내부 스킬) 에 "⚠️ 최우선 원칙 — result 는 항상 상세하게 (2026-04-24 사용자 재강조)" 섹션 추가. 판정 기준: "6개월 뒤 다른 사람이 이 result 만 읽고 당시 작업을 재현·역추적할 수 있는가?" 원칙 #2 (상세 타임라인) 을 **최우선** 으로 승격 + 필수 증거 목록 확장 (수치·커밋·파일:라인·함수명·에러 원문·의사결정 근거·실패 경로·시점). 요약 금지 조항 구체화 ("…" 생략 금지 / "기타"·"등" 남용 금지 / short summary 는 상세 본문 **이후**).
+
+### 4.6.7 검증 증거 (Evidence-Based Completion)
+
+- **plan/phase-4-critical-fix-plan.md**: 690+ lines, v6 구현 착수 승인 상태. codex Panel Mode D 판정 = APPROVE-WITH-CHANGES / CRITICAL: None.
+- **codex Panel Mode D 실행 증거**: cmux `surface:3` 에서 4회 라운드트립. 총 소요 ≈ 13m 18s (4m 10s + 3m 01s + 4m 25s + 1m 42s). 모델 `gpt-5.4 xhigh`. 각 round 의 stdout 은 `/tmp/codex-review-full.txt`, `/tmp/codex-v3-review.txt`, `/tmp/codex-v4-review.txt`, `/tmp/codex-v5-review.txt`.
+- **smoke reports**: `activity/phase-4-smoke-2026-04-23/README.md` (155 lines), `pass-a-readme.md`, `pass-b-readme.md`, `cross-compare.md`, `stage4-dump-smoke.md`.
+- **git state (commit 전)**: `.claude/skills/result-doc-writer/SKILL.md` (M, 상세성 강조 +33 lines), `activity/phase-4-smoke-2026-04-23/README.md` (M, 사용자의 C3 문구 보완 — unhwp 명시적 포함), `plan/phase-4-critical-fix-plan.md` (??, 신규 v6 690+ lines), `activity/phase-4-result.md` (이 §4.6 append).
+- **아직 구현 착수 없음**: 본 세션은 plan 수립 + codex peer review 완료까지. 실제 코드 수정 (pii-redact.ts 신규 / ingest-pipeline 수정 / audit-ingest.py 수정 / reindex.sh 확장 / UI 변경) 은 다음 세션 이후.
+
+### 4.6.8 다음 단계 갱신
+
+**직전 §4.5.2.5 "다음 단계 (A + D)" 는 이 §4.6 으로 대체·확장됨**. A (2-pass smoke) 완료했고, D 선언은 **D.0 (Critical Fix) 구현 → smoke 재실행 → D (선언)** 3단계로 확장.
+
+다음 세션 진입점:
+1. **D.0-a 단위 테스트 TDD** — `pii-redact.test.ts` 먼저 작성 (21 tests, detect/redact/gate 3 블록). RED 확증 후 `pii-redact.ts` 구현.
+2. **D.0-b PDF sidecar 재설계** — `extractPdfText` 반환형 승격 + caller 2개 (`ingest()`, `generateBrief()`) 동시 수정. 회귀 테스트 확인.
+3. **D.0-c 중앙 wrapper 배치** — `ingest-pipeline.ts:150` 이후 2-layer gate + Settings 전달 (`allowPiiIngest`, `piiRedactionMode`, `piiGuardEnabled`).
+4. **D.0-d 나머지** — C3 capability map + audit-ingest.py bridge, C4 onLayoutReady, C5 reindex.sh --json + helpers, C6.1~C6.4.
+5. **smoke 재실행** — Pass A 6/6 + Pass B 6/6 (file 2/3 에 `allowPiiIngest=ON` 설정) + 보조 2b (Guard OFF) + 3b (Allow OFF = block).
+6. **D 블록 선언** — result 끝 "Phase 4 본체 완성 선언" + todo 상태 갱신 + Phase 5 착수점 + memory + 단일 commit.
+
+세션 분할 권장: D.0-a/b/c 가 1 세션 (~6h), D.0-d + smoke 재실행 + D 선언이 또 다른 1 세션 (~6h).

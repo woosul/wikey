@@ -2,8 +2,17 @@
 title: 활동 로그
 type: log
 created: 2026-04-10
-updated: 2026-04-23
+updated: 2026-04-24
 ---
+
+## [2026-04-24] plan | Phase 4 D.0 Critical Fix Plan v6 수립 — codex Panel Mode D APPROVE / CRITICAL:None
+
+- **배경**: 2026-04-23 통합 smoke 2-pass (Pass A 5/6, Pass B 3/4) → 5 Critical (C1 harness block / C2 BRN·CEO 노출 / C3 audit 확장자 / C4 reconcile race / C5 qmd staleness) + C6 UX 5건 → D 선언 보류.
+- **사용자 결정 4건 (누적)**: (1) mask default (2) 변환 후 redact → harness 순서 (3) md 원본도 동일 프로세스 (4) C안 2-layer — basic `allowPiiIngest` (OFF=block / ON=redact) + advanced `piiGuardEnabled` (OFF=detect 자체 skip, 공시용).
+- **codex Panel Mode D 4 라운드**: v1 REJECT (P1 4건) → v3 REJECT (P1 3건: PDF sidecar leak / reindex contract 부재 / audit-ingest.py static) → v4 APPROVE-WITH-CHANGES (4 CHANGES) → v5 APPROVE-WITH-CHANGES / **CRITICAL: None** (2 문서 일관성) → v6 구현 착수 승인.
+- **산출물**: `plan/phase-4-critical-fix-plan.md` 690+ lines. 구현 범위 = `pii-redact.ts` 신규 + 중앙 wrapper (ingest-pipeline.ts:150) + PDF sidecar 재설계 (extractPdfText caller 2개) + `scripts/reindex.sh --check --json` contract + `env-detect.ts` capability map + `~/.cache/wikey/capabilities.json` bridge + C4 onLayoutReady + C6.1~C6.4 UI.
+- **병행 개선**: `~/.claude/skills/sync/SKILL.md` v7→v8.1 — Phase 0 (프로젝트 특화 pre-sync) + Phase 0-4.5 (plan/todo 정합성 체크) + Phase 3 (단일 commit/push). `.claude/skills/result-doc-writer/SKILL.md` 에 "⚠️ result 상세하게" 최우선 원칙 추가.
+- **관련 동기화**: `activity/phase-4-result.md §4.6` (신규 상세 subject), `plan/phase-4-todo.md` §4.6 mirror + 본체 완성 체크리스트에 **D.0 블록** 신설, `plan/session-wrap-followups.md` 다음 세션 = D.0 구현.
 
 ## [2026-04-23] plan | Phase 4 통합 smoke 계획서 v6 — codex Panel Mode D APPROVE-WITH-CHANGES
 

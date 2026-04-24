@@ -65,7 +65,7 @@ plan §3.2 가 파일 2 만 scope 했기 때문에 detection 을 안 한 것. **
 - audit-ingest.py DOC_EXTS 확장 (`.hwp`, `.hwpx` 추가)
 - 또는 plan 의 Pass B 기준을 "PDF+MD 중심 경로" 로 재정의
 
->  C3 : docling이 컨버팅 가능한 모든 파일의 확장자는 통과되어야 하며, 포함되지 않은 확장자를 가진 파일은 빨간색으로 표현하고 ingest하지 않음. 아예 보이지 않는것은 오류로 보임
+> C3 : docling 및 unhwp가 컨버팅 가능한 모든 파일의 확장자는 통과되어야 하며, 포함되지 않은 확장자를 가진 파일은 빨간색으로 표현하고 ingest하지 않음. 아예 보이지 않는것은 오류로 보임
 
 ### C4 — startup reconcile race (Pass A, B 양쪽 재현)
 

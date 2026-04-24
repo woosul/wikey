@@ -5,7 +5,7 @@
 > **본체 정의 (2026-04-22 확정)**: 원본 → wiki ingest 프로세스가 완성되어 **더 이상 wiki 를 초기화하거나 재생성할 일이 없는** 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 계속 축적되지만 구조는 변경되지 않는다. 튜닝·고도화·개선·확장은 Phase 5, 웹 인터페이스는 Phase 6 로 이관.
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md` 와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.1/§5.2 로 이관)
-> 상태 (2026-04-23 session 4): §4.0/§4.1 완료, §4.5.1 완료, §4.5.1.5 완료 (24.3%), §4.5.1.6 완료 (29-run Total CV **9.2%**, baseline 24.3% 대비 −62% 상대, 목표 <10% 달성), **§4.5.1.7.2/7.3 완료**, **§4.2 Stage 1~4 전량 완료** (S3-3/S3-4 UI 재설계 — Re-classify 체크박스 철회 + paraRoot 옵션 도입), **§4.3.2 Part A/B 모두 완료 + §4.3.1 3-stage override 완료 + §4.3.3 stripBrokenWikilinks 완료** (wikey-core 437→**462 tests**). 다음 = §4.3 통합 smoke (Obsidian UI 수동 확인) + §4.5.2 운영 안전 → 본체 완성 선언.
+> 상태 (2026-04-24 session 6): §4.0/§4.1 완료, §4.5.1/§4.5.2 B+C 완료, §4.2/§4.3 완료 (462→474 tests). **§4.6 통합 smoke 2-pass 실행 (2026-04-23) → D 보류** (Pass A 5/6, Pass B 3/4, file 2 harness BLOCKED, file 3 PII 노출). **§4.6 D.0 Critical Fix Plan v6 수립 완료** (codex Panel Mode D 4회 review → **APPROVE-WITH-CHANGES / CRITICAL: None**, 구현 착수 승인). 다음 = **D.0 구현 (10~14h) → smoke 재실행 → D 선언**.
 
 ---
 
@@ -603,9 +603,100 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 ---
 
+## 4.6 통합 smoke 2-pass 실행 + D.0 Critical Fix Plan 수립 (세션 6, 2026-04-23~24)
+> tag: #workflow, #core, #ops
+
+> mirror 대상: `activity/phase-4-result.md §4.6`. 상세 기록·증거·codex 라운드트립 히스토리는 result 참조.
+
+### 4.6.1 2-pass CDP smoke 실행 — Pass A 5/6, Pass B 3/4, D 선언 보류
+
+- [x] 4.6.1.1 CDP 인프라 구축 (`scripts/wikey-cdp-wrap.sh` + `scripts/smoke-cdp.sh` + `scripts/smoke-reset.sh` + `.venv-smoke/`)
+- [x] 4.6.1.2 Pass A (Ingest 패널, 6 파일 × 3-stage) — file 2 harness BLOCKED 외 5/6 PASS
+- [x] 4.6.1.3 clean-slate (Pass A→B 간 `smoke-reset.sh between-pass`)
+- [x] 4.6.1.4 Pass B (Audit 패널, 4 파일 × 3-stage) — 3/4 PASS (file 2 BLOCKED, file 5/6 N/A by C3)
+- [x] 4.6.1.5 교차 대조 cross-compare.md 작성 (tier-label 3/3 일치)
+- [x] 4.6.1.6 §4.C 덤 smoke (팔레트 7 entries 중 1 미스매치 — `Wikey: Delete wiki page` 단건 삭제 미구현)
+- [x] 4.6.1.7 리포트 집계 `activity/phase-4-smoke-2026-04-23/README.md`
+
+### 4.6.2 5 Critical (C1~C5) + C6 UX 정리
+
+- [x] 4.6.2.1 README.md §3 에 C1~C6 구조화 + 각 하단 `>` 라인으로 사용자 결정문 기록
+- [x] 4.6.2.2 C1 (file 2 harness block) → 사용자 결정: plugin Settings ON/OFF 토글
+- [x] 4.6.2.3 C2 (file 3 BRN/CEO 노출) → 사용자 결정: display/mask/hide 3-mode
+- [x] 4.6.2.4 C3 (audit-ingest.py 확장자 제한) → 사용자 결정: docling+unhwp 기준 빨간색 차단
+- [x] 4.6.2.5 C4 (startup reconcile race) → 사용자 결정: 에러 수정
+- [x] 4.6.2.6 C5 (qmd staleness) → 사용자 결정: reindex 자동화
+- [x] 4.6.2.7 C6.1~C6.5 (UI 5 이슈) → 사용자 모니터링 기록
+
+### 4.6.3 사용자 누적 결정 4건 (세션 중반 누적)
+
+- [x] 4.6.3.1 mask 가 default 확정
+- [x] 4.6.3.2 변환 후 redact → harness 검증 순서 확정
+- [x] 4.6.3.3 md 원본도 동일 프로세스 확정
+- [x] 4.6.3.4 C 안 2-layer (basic `allowPiiIngest` + advanced `piiGuardEnabled`) 확정
+
+### 4.6.4 plan v1~v6 codex Panel Mode D 피어리뷰 (4 라운드)
+
+- [x] 4.6.4.1 v1 → REJECT (P1 4건: pre-gate 위치 / canonicalizer leak / reindexCheck rebuild X / wiki-ops writePage 오판)
+- [x] 4.6.4.2 v2 → skip (사용자 추가 결정으로 v3 승계)
+- [x] 4.6.4.3 v3 → REJECT (P1 3건: PDF sidecar leak / reindex contract 부재 / audit-ingest.py static 지속)
+- [x] 4.6.4.4 v4 → APPROVE-WITH-CHANGES (4 CHANGES: fresh 조건 / extractPdfText caller / current_path→vault_path / DOC_EXT_RE 확장자)
+- [x] 4.6.4.5 v5 → APPROVE-WITH-CHANGES / **CRITICAL: None** (2 문서 일관성)
+- [x] 4.6.4.6 v6 → 구현 착수 승인 (v5 2건 정리 완료)
+
+### 4.6.5 plan 문서 생성
+
+- [x] 4.6.5.1 `plan/phase-4-critical-fix-plan.md` 690+ lines 작성 (v6, 구현 착수 승인)
+
+### 4.6.6 병행 개선 — 스킬 인프라
+
+- [x] 4.6.6.1 `~/.claude/skills/sync/SKILL.md` v7→v8 (Phase 0 프로젝트 특화 pre-sync + Phase 3 단일 commit/push)
+- [x] 4.6.6.2 `.claude/skills/result-doc-writer/SKILL.md` 에 "⚠️ 최우선 원칙 — result 상세하게" 섹션 추가
+
+### 4.6.7 D.0 구현 착수 (다음 세션)
+
+> D.0 세부는 `Phase 4 본체 완성 체크리스트 > D.0` 블록에 중복 없이 단일 관리.
+
+- [ ] 4.6.7 D.0 전체 — `plan/phase-4-critical-fix-plan.md §4.1~§4.5` 구현 + vitest 496+ + codex 최종 APPROVE + smoke 재실행 6/6 + 보조 2b/3b PASS → D 블록 진입
+
+---
+
 ## Phase 4 본체 완성 체크리스트 (다음 세션 종료 플레이북)
 
-> 2026-04-23 session 4 종료 시점에 확정. 이 체크리스트의 3 항목이 모두 [x] 되면 `activity/phase-4-result.md` 마지막에 **"Phase 4 본체 완성 선언"** 블록을 쓰고 commit. 이후 Phase 5 착수.
+> 2026-04-24 session 6 갱신. A (smoke 실행) 완료 → D 보류 → **D.0 Critical Fix 블록 신설**. D.0 → D 순서로 진행. D.0 통과 후 `activity/phase-4-result.md` 마지막에 **"Phase 4 본체 완성 선언"** 블록을 쓰고 commit. 이후 Phase 5 착수.
+
+### D.0 Critical Fix Plan v6 구현 (A smoke 결과 5 Critical + C6 UX)
+
+> **실행 단일 소스**: `plan/phase-4-critical-fix-plan.md` v6 (codex Panel Mode D **APPROVE-WITH-CHANGES / CRITICAL: None**, 2026-04-24).
+> **예상 소요**: 실구현 ~10~14h + smoke 재실행 ~1.5h. 세션 분할 권장 (D.0-a/b/c 1 세션, D.0-d + smoke + D 선언 1 세션).
+
+체크리스트 (D 진입 필수 조건):
+
+1. [ ] **D.0.a** TDD: `wikey-core/src/__tests__/pii-redact.test.ts` +21 tests 먼저 (RED) → `pii-redact.ts` 구현 (GREEN). detect / redact 3 모드 / 2-layer gate integration.
+2. [ ] **D.0.b** PDF sidecar 재설계: `extractPdfText()` 반환형 `Promise<{ stripped, sidecarCandidate }>` 승격 + caller 2개 (`ingest-pipeline.ts:173 ingest()`, `:781 generateBrief()`) 동시 수정. `finalize()` (line 1302) 에서 직접 sidecar write 제거.
+3. [ ] **D.0.c** 중앙 wrapper 배치: `ingest-pipeline.ts:150` 이후 2-layer gate (guardEnabled → detect → allowIngest → redact/throw). Settings 3 필드 전달 (`allowPiiIngest`, `piiRedactionMode`, `piiGuardEnabled`). `sidebar-chat.ts::runIngest` + Audit 경로 모두.
+4. [ ] **D.0.d** C3 runtime capability: `env-detect.ts::buildCapabilityMap` + `dumpCapabilityMap` → `~/.cache/wikey/capabilities.json`. `audit-ingest.py` runtime bridge (fallback 기본값 유지). `main.ts` 공유 상수 `DOC_EXT_RE` (md/txt/pdf/hwp/hwpx/docx/pptx/xlsx/csv/html/htm/png/jpg/jpeg/tiff/tif) + UI 빨간 행.
+5. [ ] **D.0.e** C4 onLayoutReady: `main.ts:213` 교체 + 1500ms delayed fallback + `startupReconcileDone` idempotent flag.
+6. [ ] **D.0.f** C5 reindex: `scripts/reindex.sh --check --json` 신규 contract. `scripts-runner.ts` 확장 (`ScriptResult.success/exitCode/stderr` + `runScript` timeoutMs). `reindexQuick` (throw on fail) + `reindexCheckJson` (shape+enum 검증) + `waitUntilFresh` (`status==='fresh' && stale===0` 만). `ingest-pipeline.ts:427` 교체.
+7. [ ] **D.0.g** C6.1 `bypassBatch` guard: `main.ts:235~247` create listener 에 `renameGuard.consume(file.path)` 추가 (TTL 는 이미 5s default, 변경 없음).
+8. [ ] **D.0.h** C6.2 원본 링크: `query-pipeline.ts::appendOriginalLinks` 신규 + `source-resolver.ts::ResolvedSource.rawVaultPath` 필드 (current `vault_path` 우선, fallback = path_history 마지막 유효 entry, fail closed).
+9. [ ] **D.0.i** C6.3/C6.4 Processing modal: fileLabel (`original.ext | converted.md` accent) + DOM 재정렬 (fileLabel→spinner→progress-bar→button, `margin-top: auto`).
+10. [ ] **D.0.j** 테스트: vitest 496+ green (pii-redact +21 · env-detect +5 · scripts-runner +4 · query-pipeline +4). esbuild 0 errors.
+11. [ ] **D.0.k** codex Panel Mode D 최종 검증 (구현 complete 기준) — APPROVE / APPROVE-WITH-CHANGES (critical 0) 확보.
+12. [ ] **D.0.l** 통합 smoke 재실행: Pass A 6/6 (file 2/3 은 `allowPiiIngest=ON` 설정) + Pass B 6/6 + 보조 2b (Guard OFF) + 보조 3b (Allow OFF = block Notice).
+13. [ ] **D.0.m** PDF sidecar redact 검증 (file 2/3 `*.pdf.md` 에 `***` grep).
+14. [ ] **D.0.n** capabilities.json + `reindex.sh --check --json` 3 status 수동 확인.
+15. [ ] **D.0.o** `activity/phase-4-smoke-<DATE>-v2/README.md` 작성, §4 판정 = **승인**.
+
+---
+
+### A. Phase 1~4 통합 smoke (2-pass: Ingest 패널 + Audit 패널, 6종 × 3-stage) — **완료 (2026-04-23 session 6)**
+
+> **실행 단일 소스**: `plan/phase-4-integrated-test.md` (v6, codex Panel Mode D **APPROVE-WITH-CHANGES**).
+> **실행 결과**: `activity/phase-4-smoke-2026-04-23/README.md` — Pass A 5/6 / Pass B 3/4, D 보류. 다음 = D.0 구현 후 재실행.
+> **상세 mirror**: `activity/phase-4-result.md §4.6.1`.
+
+**※ 아래 체크리스트는 2026-04-23 1차 실행 기록. 실제 판정은 D.0 완료 후 재실행 결과 기준**:
 
 ### A. Phase 1~4 통합 smoke (2-pass: Ingest 패널 + Audit 패널, 6종 × 3-stage) — 약 4.5~7 시간
 

@@ -1,11 +1,55 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-23 session 5 종료 (§4.5.2 B+C 완료 + A 는 Obsidian UI 수동 smoke 대기)
+> 최신 갱신: 2026-04-24 session 6 종료 (A smoke 실행 완료 → D 보류 → D.0 Critical Fix Plan v6 수립 완료)
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-23 session 5 종료 시점 — **다음 세션은 A 통합 smoke 2-pass (Claude 자동 실행) + D 본체 완성 선언**
+## 2026-04-24 session 6 종료 시점 — **다음 세션은 D.0 구현 (10~14h) → smoke 재실행 → D 선언**
+
+### ⭐ 진입점 (우선 순위대로)
+
+**단일 소스**: `plan/phase-4-critical-fix-plan.md` v6 (codex Panel Mode D **APPROVE-WITH-CHANGES / CRITICAL: None**, 2026-04-24).
+
+| 단계 | 상태 | 예상 |
+|------|------|------|
+| **D.0.a TDD pii-redact** | 🔴 대기 | `pii-redact.test.ts` +21 (RED) → `pii-redact.ts` 구현. detect 4 + redact 6 (display/mask/hide) + gate integration 5 + PDF sidecar 2. ~3h |
+| **D.0.b PDF sidecar 재설계** | 🔴 대기 | `extractPdfText()` 반환형 `Promise<{stripped, sidecarCandidate}>` 승격 + caller 2개 (`ingest()` + `generateBrief()` line 781) 동시 수정 + `finalize()` (line 1302) 의 직접 sidecar write 제거. ~1.5h |
+| **D.0.c 중앙 wrapper 배치** | 🔴 대기 | `ingest-pipeline.ts:150` 이후 2-layer gate. Settings 3 필드 전달 (`allowPiiIngest`, `piiRedactionMode`, `piiGuardEnabled`). sidebar-chat + Audit 경로 모두. ~1h |
+| **D.0.d C3 capability map** | 🔴 대기 | `env-detect.ts::buildCapabilityMap` + `dumpCapabilityMap` → `~/.cache/wikey/capabilities.json`. `audit-ingest.py` runtime bridge. `main.ts` 공유 `DOC_EXT_RE`. ~2h |
+| **D.0.e C4 onLayoutReady** | 🔴 대기 | `main.ts:213` 교체 + 1500ms delayed fallback + idempotent flag. ~30min |
+| **D.0.f C5 reindex** | 🔴 대기 | `scripts/reindex.sh --check --json` 신규 + scripts-runner helper 확장 + reindexQuick/reindexCheckJson/waitUntilFresh. `ingest-pipeline.ts:427` 교체. ~2h |
+| **D.0.g C6.1 bypassBatch** | 🔴 대기 | `renameGuard.consume(file.path)` 추가. ~20min |
+| **D.0.h C6.2 원본 링크** | 🔴 대기 | `appendOriginalLinks` + `rawVaultPath` 필드. fail closed. ~1h |
+| **D.0.i C6.3/C6.4 modal UI** | 🔴 대기 | fileLabel + DOM 재정렬. ~1h |
+| **D.0.j/k 검증** | 🔴 대기 | vitest 496+ · esbuild 0 errors · codex Panel Mode D 최종 APPROVE. ~50min |
+| **D.0.l smoke 재실행** | 🔴 대기 | Pass A/B 6/6 + 보조 2b (Guard OFF) + 3b (Allow OFF=block). ~1.5h |
+| **D.0.m~o 검증·리포트** | 🔴 대기 | PDF sidecar redact grep, capabilities.json, reindex.sh 3 status, smoke v2 README. ~30min |
+| **D 선언** | 🔴 대기 | result 끝 "Phase 4 본체 완성 선언" + todo 상태 갱신 + Phase 5 착수점 + memory + 단일 commit push. ~30min |
+
+### 🔁 D.0 완료 후 A smoke 재실행 시나리오
+
+| 파일 | Guard | Allow | RedactMode | 기대 결과 |
+|------|-------|-------|-----------|----------|
+| 1. llm-wiki.md | ON | OFF | mask | 정상 (PII 없음) |
+| 2. 사업자등록증.pdf | ON | **ON** | mask | redact 후 ingest (BRN `***`) |
+| 3. SK 계약서.pdf | ON | **ON** | mask | redact 후 ingest (BRN/CEO `***`) |
+| 4. PMS.pdf | ON | OFF | mask | 정상 |
+| 5. 스마트공장.hwp | ON | OFF | mask | 정상 |
+| 6. Examples.hwpx | ON | OFF | mask | 정상 |
+| 보조 2b | **OFF** | — | — | 원문 그대로 (advanced skip 확인) |
+| 보조 3b | ON | **OFF** | — | **block Notice** (strict 확인) |
+
+### 📋 다음 세션 시작 시 체크
+
+1. `git pull` → `plan/phase-4-critical-fix-plan.md` 최신 확인
+2. `npm test` → 462/462 (변경 없음 확인)
+3. `npm run build` → 0 errors
+4. D.0.a TDD 부터 순서대로. **세션 분할 권장**: D.0-a/b/c 가 1 세션 (~6h), D.0-d/e/f/g/h/i + 검증 + smoke + D 선언이 또 다른 1 세션 (~6~8h)
+
+---
+
+## 2026-04-23 session 5 종료 시점 — ~~A 통합 smoke + D 본체 완성~~ (완료 → §4.6 D.0 으로 전환됨)
 
 ### ⭐ 다음 세션 플레이북 (4.5~7 시간, 세션 분할 권장)
 
