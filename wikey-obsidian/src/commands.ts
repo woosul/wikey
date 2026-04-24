@@ -338,7 +338,12 @@ export async function runIngest(
     plugin.wikiFS,
     plugin.buildConfig(),
     plugin.httpClient,
-    { basePath, execEnv: plugin.getExecEnv() },
+    {
+      basePath,
+      execEnv: plugin.getExecEnv(),
+      // Phase 5 §5.8: brief 도 ingest 와 동일 PII 정책.
+      piiGuardEnabled: plugin.settings.piiGuardEnabled,
+    },
   )
     .then((b) => modal.setBrief(b))
     .catch((err) => modal.setBrief(`(brief 생성 실패: ${err?.message ?? err})`))

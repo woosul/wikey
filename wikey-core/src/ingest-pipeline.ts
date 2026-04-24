@@ -54,7 +54,7 @@ import {
   buildSectionIndex, computeHeuristicPriority, formatPeerContext, formatSourceTOC,
   type Section, type SectionIndex,
 } from './section-index.js'
-import { applyPiiGate } from './pii-redact.js'
+import { applyPiiGate, sanitizeForLlmPrompt, loadPiiPatterns } from './pii-redact.js'
 import { reindexQuick, waitUntilFresh } from './scripts-runner.js'
 
 const execFileAsync = promisify(execFile)
@@ -167,25 +167,34 @@ export async function ingest(
     sourceContent = stripEmbeddedImages(raw)
   }
 
-  // ── Phase 4 D.0.c (v6 §4.1.2): 중앙 PII 2-layer gate ──
+  // ── Phase 4 D.0.c (v6 §4.1.2) + Phase 5 §5.8 (2026-04-24): PII 2-layer gate + 패턴 엔진 ──
   // 변환 후 (PDF/HWP/... 모두 markdown 으로 통일된 뒤) 에 한 번만 실행.
-  // 모든 ingest 경로 (md/pdf/hwp/docx/html/image...) 가 이 지점을 통과.
-  // sidecarCandidate (PDF 만 해당) 도 동일 규칙으로 한 번 더 처리 — sidecar leak 방지.
+  // 패턴은 `loadPiiPatterns(basePath)` 로 로드 — `<basePath>/.wikey/pii-patterns.yaml` /
+  // `~/.config/wikey/pii-patterns.yaml` 존재 시 사용자 override 반영. 없으면 DEFAULT_PATTERNS.
+  // sidecarCandidate (PDF 만 해당) + LLM 프롬프트 filename 도 동일 패턴 재사용 — sanitize 경로 일관.
   const piiGuardEnabled = opts?.piiGuardEnabled ?? true
   const piiAllowIngest = opts?.allowPiiIngest ?? false
   const piiMode = opts?.piiRedactionMode ?? 'mask'
+  const piiPatterns = loadPiiPatterns(opts?.basePath)
   {
     const gateRes = applyPiiGate(sourceContent, {
       guardEnabled: piiGuardEnabled,
       allowIngest: piiAllowIngest,
       mode: piiMode,
-    })
+    }, piiPatterns)
     if (gateRes.redacted) {
       log(`PII redacted — ${gateRes.matches.length} match, mode=${piiMode}`)
       sourceContent = gateRes.content
     } else if (!piiGuardEnabled) {
       log('PII guard disabled — skipping detect/redact (user-trust boundary, not a technical safety boundary)')
     }
+  }
+  // Phase 5 §5.8.1 (C-A1): filename 에 PII 가 있으면 LLM prompt metadata 경로로 새어나가
+  // body 에 재구성될 수 있다 → mask 로 치환한 별도 변수 사용. 원본 filename 은 fs 경로·
+  // registry·movePair 용으로 보존.
+  const llmSourceFilename = sanitizeForLlmPrompt(sourceFilename, { guardEnabled: piiGuardEnabled }, piiPatterns)
+  if (llmSourceFilename !== sourceFilename) {
+    log(`filename sanitized for LLM prompt: ${sourceFilename} → ${llmSourceFilename}`)
   }
   if (pdfSidecarCandidate) {
     const sidecarGate = applyPiiGate(pdfSidecarCandidate, {
@@ -195,7 +204,7 @@ export async function ingest(
       // 앞서 allowIngest=true 로 사용자가 redact 선택한 경우뿐.
       allowIngest: true,
       mode: piiMode,
-    })
+    }, piiPatterns)
     if (sidecarGate.redacted) {
       log(`PII redacted (sidecar) — ${sidecarGate.matches.length} match, mode=${piiMode}`)
       pdfSidecarCandidate = sidecarGate.content
@@ -267,16 +276,17 @@ export async function ingest(
   if (route === 'FULL') {
     const content = isLocal ? truncateSource(sourceContent) : sourceContent
     onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: 3, message: `Summary (${model}) [FULL]` })
-    const summaryParsed = await callLLMForSummary(llm, content, sourceFilename, indexContent, provider, model, promptTemplate, deterministic)
+    // Phase 5 §5.8.1: LLM prompt 로 전달되는 filename 은 sanitize 된 버전 사용.
+    const summaryParsed = await callLLMForSummary(llm, content, llmSourceFilename, indexContent, provider, model, promptTemplate, deterministic)
 
     onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model}) [FULL]` })
-    const mentions = await extractMentions(llm, content, sourceFilename, provider, model, undefined, deterministic, stage2Template)
+    const mentions = await extractMentions(llm, content, llmSourceFilename, provider, model, undefined, deterministic, stage2Template)
     log(`route=FULL — mentions=${mentions.length}`)
 
     onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
-      sourceFilename, today, guideHint: opts?.guideHint, provider, model,
+      sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
       schemaOverride, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
@@ -302,7 +312,8 @@ export async function ingest(
 
     onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: totalSteps, message: `Summary (${model}) [SEGMENTED 1/${totalSteps}]` })
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
-    const summaryParsed = await callLLMForSummary(llm, summaryContent, sourceFilename, indexContent, provider, model, promptTemplate, deterministic)
+    // Phase 5 §5.8.1: LLM prompt 로 전달되는 filename 은 sanitize 된 버전 사용.
+    const summaryParsed = await callLLMForSummary(llm, summaryContent, llmSourceFilename, indexContent, provider, model, promptTemplate, deterministic)
     log(`summary done — index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
 
     const allMentions: Mention[] = []
@@ -317,7 +328,7 @@ export async function ingest(
       const peer = formatPeerContext(sectionIndex, section.idx, 300)
       const content = buildSectionWithPeer(peer, section, isLocal)
       try {
-        const mentions = await extractMentions(llm, content, sourceFilename, provider, model, section.idx, deterministic, stage2Template)
+        const mentions = await extractMentions(llm, content, llmSourceFilename, provider, model, section.idx, deterministic, stage2Template)
         allMentions.push(...mentions)
         sectionOk++
       } catch (err) {
@@ -334,7 +345,7 @@ export async function ingest(
     })
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
-      sourceFilename, today, guideHint: opts?.guideHint, provider, model,
+      sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
       schemaOverride, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
@@ -840,7 +851,12 @@ export async function generateBrief(
   wikiFS: WikiFS,
   config: WikeyConfig,
   httpClient: HttpClient,
-  opts?: { basePath?: string; execEnv?: Record<string, string> },
+  opts?: {
+    basePath?: string
+    execEnv?: Record<string, string>
+    // Phase 5 §5.8: brief 생성도 LLM 호출이므로 ingest 와 동일한 PII 정책을 따른다.
+    piiGuardEnabled?: boolean
+  },
 ): Promise<string> {
   assertNotWikiPath(sourcePath, 'generateBrief')
   const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
@@ -855,15 +871,22 @@ export async function generateBrief(
     content = await wikiFS.read(sourcePath)
   }
 
+  // Phase 5 §5.8: brief 의 LLM 입력 (filename + content sample) 에도 동일 PII 패턴 적용.
+  // brief 결과는 사용자에게 시각적으로 노출되므로 mask 기본. guardEnabled=false 면 bypass.
+  const guard = opts?.piiGuardEnabled ?? true
+  const piiPatterns = loadPiiPatterns(opts?.basePath)
   const sample = content.slice(0, 6000)
+  const llmSample = guard ? sanitizeForLlmPrompt(sample, { guardEnabled: true }, piiPatterns) : sample
+  const llmFilename = sanitizeForLlmPrompt(sourceFilename, { guardEnabled: guard }, piiPatterns)
+
   const { provider, model } = resolveProvider('ingest', config)
   const llm = new LLMClient(httpClient, config)
 
   const prompt = `다음 문서의 핵심 포인트를 2~4문장(총 150~300자)으로 요약하세요. 존댓말(해요체). 목록·제목·마크다운 없이 평문.
 
-문서: ${sourceFilename}
+문서: ${llmFilename}
 
-${sample}`
+${llmSample}`
 
   console.info(`[Wikey brief] start: provider=${provider} model=${model} file=${sourceFilename}`)
   try {

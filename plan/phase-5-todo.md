@@ -257,3 +257,66 @@
 - [ ] 현재 vendored CLI 구조라 난이도 높음
 - [ ] 후속 전환 경로: qmd JS/TS 바인딩 확보 또는 RPC 게이트웨이
 - [ ] **wiki 재생성 없음 확증**: 인덱스 소비 방식만 변경, 데이터 그대로
+
+---
+
+## 5.8 Phase 4 D.0.l 이관 과제 (PII · classify · reindex)
+> tag: #pii, #classify, #reindex, #phase4-handover
+
+> **배경**. 2026-04-24 session 8 D.0.l smoke 재실행에서 파이프라인·운영 안전 확증 / wiki body PII 전파 2건 발견. 본 섹션은 smoke README `activity/phase-4-resultx-4.6-smoke-2026-04-24-v2/README.md` §이관 과제 테이블을 단일 소스화. 사용자 방침: **"PII 관련 하드코딩은 안된다"** (2026-04-24).
+>
+> **세션 8 처리 완료 (§5.8.1, §5.8.2 inline)**: PII 패턴 엔진 (`wikey-core/src/pii-patterns.ts`) 도입 — YAML 설정 로더 + `sanitizeForLlmPrompt` 단일 진입점 + default 패턴 업데이트 (filename BRN look-around · CEO 단일라인 공백 변형). 관련 §4.8.2 참조.
+>
+> **본 섹션 잔여 범위**: 구조적 PII (multi-line 폼 label↔name 상관), dedup, classify variance, reindex WARN — 아직 미해결.
+
+### 5.8.1 C-A1 filename PII sanitize 경로 — **완료 (2026-04-24 session 8)**
+> tag: #pii, #filename, #done
+
+- [x] 문제: `사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf` 같은 파일명의 BRN 이 `sourceFilename` 메타데이터로 LLM prompt 에 전달 → LLM 이 body 에 재구성.
+- [x] 해결: `sanitizeForLlmPrompt(text, { guardEnabled }, patterns)` 단일 진입점 신규. `ingest-pipeline.ts::ingest()` + `generateBrief()` 모두 LLM 호출 전 filename sanitize 적용. `brn-hyphen` 패턴도 `\b` → `(?<!\d)...(?!\d)` 로 `_` word-boundary 케이스 커버. 유닛 테스트 4종.
+
+### 5.8.2 C-A2 CEO 이름 공백 변형 — **부분 완료 (2026-04-24 session 8)** + §5.8.6 후속
+> tag: #pii, #ocr, #partial
+
+- [x] 문제 (단일 라인 공백 변형): `대표자: 김 명 호` / `CEO: 이 희림` 같은 OCR 공백 삽입.
+- [x] 해결: default `ceo-label` 패턴 capture 그룹을 `[가-힣](?:[ \t]*[가-힣]){1,3}` 로 확장 (줄바꿈은 금지 — cross-line 오탐 방지).
+- [ ] **잔여 범위 (§5.8.6 으로 분리)**: multi-line 폼 (`대 표 자` label 이 blank line 으로 name `김 명 호` 과 분리된 스캔 PDF) 은 regex 범위 밖.
+
+### 5.8.3 W-A3 동명이인 romanization dedup (Med)
+> tag: #pii, #dedup
+
+- [ ] 문제: 같은 이름이 romanize 단계에서 variance 로 중복 entity 생성 (`kim-myeong-ho.md` vs `kim-myung-ho.md`).
+- [ ] 해결 방향: canonicalizer dedup 로직 강화 — 한국어 원본 이름 기준으로 canonical key 생성, romanization variance 허용. PII 룰 엔진과 별개이나 같은 ingest path 에 위치.
+
+### 5.8.4 W-B1 file 6 classify 2차 분류 variance (Low)
+> tag: #classify, #variance
+
+- [ ] 문제: Pass A 는 `20_report/000_general`, Pass B 는 `60_note/000_general` — LLM reasoning 수준의 non-determinism.
+- [ ] 해결 방향: CLASSIFY.md 가이드 강화 (기준 명확화), 혹은 LLM prompt stability 개선. tier/분류 1차 depth 6/6 일치는 이미 PASS 이므로 우선순위 낮음.
+
+### 5.8.5 W-C1 reindex --quick non-fatal exit=1 (Low)
+> tag: #reindex
+
+- [ ] 문제: 양 pass 에서 `runReindexAndWait` 가 `reindex --quick failed (non-fatal)` 12회 emit. stderr 비어있으나 exit=1.
+- [ ] 해결 방향: `scripts/reindex.sh --quick` 내부 원인 조사 (qmd CLI 의 stale 상태 처리 exit code). stale 은 정상 경로라면 exit 0 이어야.
+- [ ] 현재는 warn 로 다운그레이드 + `onFreshnessIssue` Notice 표시 → 사용자 UX 영향 없음. 원인 해소 후 가드 일관성 확보.
+
+### 5.8.6 구조적 PII 탐지 — multi-line 폼 label↔name 상관 (High, 신규 2026-04-24 session 8)
+> tag: #pii, #structure, #ner
+
+- [ ] 문제: 스캔 PDF 폼에서 label 과 value 가 blank line 또는 다른 table cell 로 분리되는 경우 regex 기반 single-line 매칭 불가. 예:
+  ```
+  대 표 자
+  
+  주식회사 굿스트림
+  
+  김 명 호
+  ```
+  여기서 `김 명 호` 는 CEO name 이지만 regex 로는 단순히 한글 이름으로만 보여서 **non-labeled 상태로 통과**.
+- [ ] 해결 방향 (여러 옵션, 우선순위 조사):
+  1. **Table-aware parser**: Docling 이 표 구조 인식하므로 정식 table row/column → label-value pair 추출 후 label 이 PII-trigger 이면 value sanitize.
+  2. **Lightweight NER**: 한국어 named entity 모델 (spaCy KoNLPy, KoELECTRA) → person 엔티티 식별 → PII-trigger label 근처에 있으면 sanitize.
+  3. **Context window heuristic**: label 키워드 (`대표자`, `CEO`, `주민번호` 등) 발견 시 ±N 줄 내의 한글 이름/숫자 패턴을 sanitize — false positive 수락.
+- [ ] 선행 의존성: §5.8.1/§5.8.2 완료된 패턴 엔진 위에서 확장 (새 pattern kind = `structural`).
+- [ ] 위험: label↔value 자동 연결은 오탐·미탐 둘 다 발생 가능 — `piiRedactionMode` 에 `structural-mask` 같은 별도 강도 도입 고려.
+- [ ] 테스트: 실제 사업자등록증 PDF / 계약서 PDF 의 폼 구조 fixture.

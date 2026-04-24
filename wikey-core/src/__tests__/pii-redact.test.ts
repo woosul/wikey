@@ -16,10 +16,19 @@ import {
   detectPii,
   redactPii,
   applyPiiGate,
+  sanitizeForLlmPrompt,
   PiiIngestBlockedError,
   type PiiMatch,
   type PiiRedactionMode,
 } from '../pii-redact.js'
+import {
+  DEFAULT_PATTERNS,
+  compilePattern,
+  compileDefaults,
+  loadPiiPatternsFromYaml,
+  mergePatterns,
+  type PiiPattern,
+} from '../pii-patterns.js'
 
 describe('detectPii — positive matches', () => {
   it('detects hyphenated BRN (사업자등록번호 형식 123-45-67890)', () => {
@@ -258,5 +267,144 @@ describe('applyPiiGate — PDF sidecar redact 경로', () => {
     })
     expect(res.content).toContain('123-45-67890')
     expect(res.redacted).toBe(false)
+  })
+})
+
+// ── Phase 5 §5.8 (2026-04-24 session 8): Pattern engine + OCR CEO spacing + filename sanitize ──
+
+describe('DEFAULT_PATTERNS + CEO OCR spacing variant (Phase 5 §5.8.2)', () => {
+  it('detects CEO name with inner whitespace (OCR 공백 변형 — 김 명 호, 홍 길 동, 이 희림)', () => {
+    // D.0.l smoke C-A2: OCR 이 글자 사이 공백 삽입한 스캔 PDF → 기존 regex unmatch.
+    const md = '대표자 : 김 명 호\n대표이사: 홍 길 동\nCEO: 이 희림\n'
+    const matches = detectPii(md)
+    const names = matches.filter((m) => m.kind === 'ceo-labeled').map((m) => m.value)
+    expect(names).toContain('김 명 호')
+    expect(names).toContain('홍 길 동')
+    expect(names).toContain('이 희림')
+  })
+
+  it('mask mode CEO name with whitespace — `김 명 호` → `*****` (문자수 보존)', () => {
+    const md = '대표자 : 김 명 호\n대표이사: 홍 길 동'
+    const out = redactPii(md, 'mask')
+    expect(out).not.toContain('김 명 호')
+    expect(out).not.toContain('홍 길 동')
+    expect(out).toContain('대표자 : *****')
+    expect(out).toContain('대표이사: *****')
+  })
+
+  it('CEO 공백 regex 는 줄바꿈을 넘지 않는다 (\\n 이후는 별도 항목으로 취급)', () => {
+    // 오탐 방지: `홍길동\n주소: 서울` 에서 `홍길동\n주` 같은 cross-line 매칭 금지.
+    const md = '대표이사: 홍길동\n주소: 서울시 어딘가'
+    const out = redactPii(md, 'mask')
+    expect(out).toContain('주소: 서울시 어딘가') // 다른 라인 보존
+    expect(out).toContain('대표이사: ***')
+  })
+})
+
+describe('pii-patterns 엔진 — DEFAULT + user override', () => {
+  it('DEFAULT_PATTERNS 는 4개 (brn-hyphen, brn-contig, corp-rn, ceo-label) 이상 포함', () => {
+    const ids = DEFAULT_PATTERNS.map((p) => p.id)
+    expect(ids).toContain('brn-hyphen')
+    expect(ids).toContain('brn-contiguous')
+    expect(ids).toContain('corp-rn')
+    expect(ids).toContain('ceo-label')
+  })
+
+  it('compileDefaults 는 잘못된 regex 없이 전부 컴파일된다', () => {
+    const compiled = compileDefaults()
+    expect(compiled.length).toBe(DEFAULT_PATTERNS.length)
+  })
+
+  it('compilePattern 이 잘못된 regex 에 대해 null 반환 (throw 하지 않음)', () => {
+    const bad: PiiPattern = { id: 'broken', kind: 'brn', regex: '[[[[unclosed', mask: 'digits' }
+    expect(compilePattern(bad)).toBeNull()
+  })
+
+  it('loadPiiPatternsFromYaml 는 간단한 yaml 을 파싱한다', () => {
+    const yaml = [
+      'patterns:',
+      '  - id: passport-kr',
+      '    kind: passport',
+      "    regex: '[MRS]\\d{8}'",
+      '    mask: digits',
+      '    description: 한국 여권번호',
+    ].join('\n')
+    const parsed = loadPiiPatternsFromYaml(yaml)
+    expect(parsed).not.toBeNull()
+    expect(parsed!.length).toBe(1)
+    expect(parsed![0].id).toBe('passport-kr')
+    expect(parsed![0].kind).toBe('passport')
+    expect(parsed![0].regex).toBe('[MRS]\\d{8}')
+    expect(parsed![0].mask).toBe('digits')
+  })
+
+  it('loadPiiPatternsFromYaml 은 잘못된 yaml 에 대해 null 반환', () => {
+    const bad = '---\nnot-valid-yaml\n::::\n'
+    // 빈 result (패턴 없음) 은 null 반환
+    expect(loadPiiPatternsFromYaml(bad)).toBeNull()
+  })
+
+  it('mergePatterns 는 사용자 override 를 default 위에 덮는다', () => {
+    const userOverride: PiiPattern = {
+      id: 'ceo-label', // default 와 동일 id
+      kind: 'ceo-labeled',
+      regex: '(?:대표)\\s*[:：]\\s*([가-힣]{2,4})', // 단순화한 사용자 override
+      captureGroup: 1,
+      mask: 'full',
+    }
+    const newOnly: PiiPattern = {
+      id: 'phone-kr',
+      kind: 'phone',
+      regex: '01\\d-\\d{4}-\\d{4}',
+      mask: 'digits',
+    }
+    const merged = mergePatterns(DEFAULT_PATTERNS, [userOverride, newOnly])
+    const ids = merged.map((p) => p.id)
+    expect(ids).toContain('ceo-label')
+    expect(ids).toContain('phone-kr')
+    // override 적용 확인 — ceo-label regex 가 사용자 값으로 교체
+    const ceo = merged.find((p) => p.id === 'ceo-label')!
+    expect(ceo.regex).toBe('(?:대표)\\s*[:：]\\s*([가-힣]{2,4})')
+  })
+
+  it('detectPii 에 사용자 패턴 주입 시 default 를 대체한다', () => {
+    const customOnly = compileDefaults().slice(0, 1) // brn-hyphen 만
+    const md = '사업자번호: 123-45-67890 / 대표이사: 홍길동'
+    const matches = detectPii(md, customOnly)
+    const kinds = matches.map((m) => m.kind)
+    expect(kinds).toContain('brn')
+    expect(kinds).not.toContain('ceo-labeled') // ceo pattern 없으므로 감지 X
+  })
+})
+
+describe('sanitizeForLlmPrompt — filename / metadata sanitize (Phase 5 §5.8.1)', () => {
+  it('filename 에 포함된 BRN 을 mask 로 치환 (사업자등록증C_...301-86-19385(2015).pdf)', () => {
+    // D.0.l smoke C-A1: filename 이 LLM prompt 로 전달돼 LLM 이 body 에 재구성한 케이스.
+    const filename = '사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf'
+    const out = sanitizeForLlmPrompt(filename, { guardEnabled: true })
+    expect(out).not.toContain('301-86-19385')
+    expect(out).toContain('***-**-*****')
+    // 비-digit 문자는 보존
+    expect(out).toContain('사업자등록증C_(주)굿스트림_')
+    expect(out).toContain('(2015).pdf')
+  })
+
+  it('guardEnabled=false 시 원문 반환 (일관성)', () => {
+    const filename = '301-86-19385.pdf'
+    const out = sanitizeForLlmPrompt(filename, { guardEnabled: false })
+    expect(out).toBe(filename)
+  })
+
+  it('PII 없는 filename 은 원문 그대로', () => {
+    const filename = 'llm-wiki.md'
+    const out = sanitizeForLlmPrompt(filename, { guardEnabled: true })
+    expect(out).toBe(filename)
+  })
+
+  it('filename 에 CEO 라벨이 있으면 치환 (드문 케이스 — 파일명에 "대표이사: 홍길동")', () => {
+    const metadata = '대표이사: 홍길동 요약.pdf'
+    const out = sanitizeForLlmPrompt(metadata, { guardEnabled: true })
+    expect(out).not.toContain('홍길동')
+    expect(out).toContain('대표이사: ***')
   })
 })

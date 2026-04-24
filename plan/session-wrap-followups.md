@@ -1,11 +1,33 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: 2026-04-24 session 7 종료 (D.0.a~j 구현 완료, 단일 세션)
+> 최신 갱신: **2026-04-24 session 8 종료 — Phase 4 본체 완성 선언 완료**. 다음 = Phase 5 착수.
 > 생성일: 2026-04-10
 
 ---
 
-## 2026-04-24 session 7 종료 시점 — **다음 1 세션에서 Phase 4 본체 완성 선언까지**
+## 2026-04-24 session 8 종료 시점 — **Phase 4 본체 완성 + PII 엔진 도입**. 다음 = Phase 5
+
+**상태**: `plan/phase-4-todo.md` D.0.a~o 전부 `[x]`, D.1~D.5 본체 완성 선언 블록 완료. `activity/phase-4-result.md §4.8` 블록 append. 525 tests / 0 build errors.
+
+**세션 8 성과**:
+1. D.0.k codex Panel Mode D 재검증: 1차 REJECT / CRITICAL: 1 → 3건 수정 (commit `c2f4165`) → 재검증 APPROVE / CRITICAL: 0.
+2. D.0.l Agent 위임 smoke (~2h 10m): Pass A/B 6/6 pipeline PASS + 보조 2b/3b PASS + §4.C PASS + D.0.m sidecar grep PASS. wiki body PII 전파 2건 (C-A1 filename + C-A2 CEO 공백) 발견.
+3. D.0.n capabilities.json runtime bug fix (`node:fs/promises` → `require`, commit `e362d3c`) + reindex 3-status 수동 유도 확증.
+4. **PII 패턴 엔진 도입** (사용자 지시 "하드코딩 안됨"): `pii-patterns.ts` 신규 (YAML loader + DEFAULT_PATTERNS + user override) + `sanitizeForLlmPrompt` 단일 진입점. `brn-hyphen` look-around (`_` 경계) + `ceo-label` 단일라인 공백 변형. C-A1 완전 해결 / C-A2 단일라인 해결 / multi-line 구조 폼은 Phase 5 §5.8.6 신규.
+5. Audit row error Notice UI info-column 이동 — filename 공간 보존 (사용자 피드백).
+
+**다음 세션 진입점 — Phase 5**:
+- **첫 착수점**: `plan/phase-5-todo.md §5.6.1 Stage 1 — static `.wikey/schema.yaml` override` (PMBOK 하드코딩이 Stage 0 검증).
+- **병행 고려**: §5.8.6 구조적 PII (NER / table parser) — D.0.l 에서 발견된 multi-line 폼 label↔name 상관 해결. 우선순위 High, 의존성은 §5.8.1/§5.8.2 패턴 엔진 (완료) 위에서 확장.
+- **읽기 권장**:
+  - `plan/phase-5-todo.md` §5.6 / §5.8
+  - `activity/phase-4-result.md §4.8` (완성 선언 증거)
+  - `activity/phase-4-resultx-4.6-smoke-2026-04-24-v2/README.md` (smoke PARTIAL ACCEPT 상세)
+  - memory `feedback_pii_no_hardcoding.md` (PII 코딩 원칙)
+
+---
+
+## 2026-04-24 session 7 종료 시점 — (완료 → session 8 으로 계승)
 
 **Todo 단일 소스 = `plan/phase-4-todo.md` D.0 블록 (D.0.a~o) + D 본체 완성 선언 블록.** 여기에는 세션별 진입 맥락 · 명령어 hint · 변경 snapshot 만 기록.
 

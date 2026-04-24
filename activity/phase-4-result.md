@@ -2667,3 +2667,113 @@ plan v6 §4.1~§4.5 명세 그대로 구현. plan 테두리 내에서 선택한 
 - 구현은 session 7 에서 이미 완료 → 남은 것은 검증 (codex 재검증 · smoke 재실행 · sidecar grep · 런타임 sanity) + 선언 문서 작업 (리포트 · result "본체 완성 선언" 블록 · todo 상태 갱신 · memory · 단일 commit). 전부 "실행·검증·문서" 계열이라 중단 없이 연속 수행 가능.
 - 순서: D.0.k → D.0.l → D.0.m → D.0.n → D.0.o → D.1~D.5 (본체 완성 선언 + Phase 5 §5.6 Stage 1 착수점 고정).
 - **분할 조건** (exceptional): D.0.k codex 재검증에서 CRITICAL 발견 → 구현 수정 필요 시에만 세션 분할. 그 외 기본 플레이북은 **단일 세션 완주**. smoke 실행 중 minor WARN 은 리포트에 기록하고 계속 진행.
+
+## 4.8 Phase 4 본체 완성 선언 (2026-04-24, session 8)
+> tag: #milestone, #closure
+
+**진입점**: session 7 §4.7 D.0.a~j 완료 (511 tests, 0 build errors) + 본 세션에서 D.0.k~o 완주. plan v6 §7 "D 블록 승격 기준" 총 15 항목 전체 충족 (a~j 구현 + k codex APPROVE + l smoke PARTIAL ACCEPT + m sidecar grep PASS + n capabilities.json/reindex 3-status PASS + o 본 선언).
+
+### 4.8.1 완성 정의 충족 증거
+> tag: #verification
+
+| 영역 | plan v6 §7 기준 | 증거 |
+|------|----------------|------|
+| **데이터 모델 고정** | Provenance + source-registry + path_history + frontmatter 3-stage | §4.2.1, §4.3.2 Part A |
+| **3-stage pipeline** | source → entities/concepts + canonicalize + write | §4.3.1, §4.3.2 Part B |
+| **분류 + URI + listener** | CLASSIFY.md + paraRoot + movePair + vault listener + startup reconcile | §4.2.2~4.2.4 (+ §4.7.1.e onLayoutReady + 1500ms fallback) |
+| **Citation UX** | query-pipeline citations + source-resolver + sidebar rendering + appendOriginalLinks | §4.3.2 + §4.7.1.h rawVaultPath |
+| **삭제·초기화 가드** | reset.ts + DeleteImpactModal + ResetImpactModal + typing gate | §4.5.2 (palette 9 entries 확인) |
+| **PII 2-layer gate** | guardEnabled × allowIngest + 3-mode mask/hide/display + sidecar redact | §4.7.1.a~c (21 tests) + smoke 보조 2b/3b 확증 |
+| **capability runtime bridge** | capability-map + capabilities.json + audit-ingest.py runtime read + DOC_EXT_RE 공유 상수 | §4.7.1.d + D.0.k bug fix (`node:fs/promises` → `require`) |
+| **reindex freshness contract** | reindex.sh --check --json 3-status + reindexQuick throw + waitUntilFresh strict | §4.7.1.f (7 tests) + D.0.n fresh/stale/never 3-status 수동 유도 확증 |
+| **운영 안전 Notice** | PiiIngestBlockedError Notice + 미지원 파일 skip Notice + reindex freshness Notice | D.0.k follow-up (commit `c2f4165`) |
+
+**테스트 총계**: wikey-core **511 passed / 25 files** (base Phase 3 437 → 462 §4.5.2 → 511 §4.7 D.0.a~j 구현 시점, session 8 follow-up 수정은 기존 범위 내에서 회귀 없음 유지).
+
+### 4.8.2 세션 8 추가 수정 — codex/smoke follow-up + PII 패턴 엔진
+> tag: #implementation, #fix, #pii, #refactor
+
+plan v6 §4 의도와 일치하지만 session 7 구현에서 누락됐던 edge case + D.0.l smoke 판정 피드백을 세션 8 에서 보정.
+
+1. **D.0.k codex Panel Mode D 피어리뷰 결과 (1차 REJECT / CRITICAL: 1)** → 3건 수정 (commit `c2f4165`):
+   - [P1] `sidebar-chat.ts` unsupported audit 행 선택 차단 (List row click / Tree view / Select All / Apply 4개 가드 추가).
+   - [P2] `main.ts::buildPluginOnlyData` 에 PII 3 필드 추가 (플러그인 reload 시 설정 유실 방지).
+   - [P2] `ingest-pipeline.ts::runReindexAndWait` 가 reindex 실패/freshness timeout 을 `onFreshnessIssue` callback 으로 전달 → `commands.ts::runIngestCore` 가 Notice "인덱싱 실패 / 인덱스 갱신 지연" 로 사용자 가시화.
+   - 재검증 판정: **APPROVE / CRITICAL: 0 / FINDINGS: none** (3건 모두 RESOLVED).
+2. **D.0.n capabilities.json 덤프 실패** (runtime bug, not caught by vitest) → commit `e362d3c`:
+   - Obsidian Electron renderer 가 `await import('node:fs/promises')` dynamic ESM import 를 browser loader 로 해석해 실패 (`TypeError: Failed to fetch dynamically imported module`).
+   - `capability-map.ts::dumpCapabilityMap` 을 `require('node:fs')` + `fs.promises.mkdir/writeFile` 패턴으로 교체 → capabilities.json 정상 생성 확증 (docling=true, unhwp=true, supported 16 / unsupported 3).
+3. **audit row error Notice UI layout fix** (본 세션 최종 commit, 사용자 D.0.l 관찰 피드백):
+   - PII 에러 텍스트가 row 의 flex sibling 으로 붙어 filename column 을 압축하던 문제.
+   - `wikey-audit-error` div 를 `row` 대신 `row.querySelector('.wikey-audit-info')` 내부에 삽입 (4 call sites).
+   - filename 공간 보존, 에러 메시지는 info column 의 3번째 line (name-line / path-line 하단) 으로 자연 배치.
+4. **PII 패턴 엔진 도입** (사용자 지시 "PII 관련 하드코딩은 안된다" 2026-04-24, 본 세션 신규):
+   - **신규 모듈 `wikey-core/src/pii-patterns.ts`** (213 라인): `PiiPattern` 선언 + `DEFAULT_PATTERNS` (4종) + `compilePattern`/`compileDefaults` + `loadPiiPatternsFromYaml` 최소 parser + `mergePatterns` + `loadPiiPatterns(basePath?)` 사용자 override 지원. `~/.config/wikey/pii-patterns.yaml` · `<basePath>/.wikey/pii-patterns.yaml` 에서 로드 (없으면 default).
+   - **`pii-redact.ts` 리팩터**: 하드코딩 `RE_BRN_HYPHEN / RE_BRN_CONTIG / RE_CORP_RN / RE_CEO` 제거 → 컴파일된 패턴 배열에서 runtime 매칭. 기존 `detectPii(md)` / `redactPii(md, mode)` / `applyPiiGate(input, opts)` 시그니처 보존 + optional `patterns?` 매개변수 추가 (하위호환).
+   - **`sanitizeForLlmPrompt(text, { guardEnabled }, patterns?)` 단일 진입점 신규**: filename · frontmatter · metadata 등 **body 외 LLM 가시 텍스트** 용. 2-layer gate 우회 (filename 은 이미 사용자가 제공 — gate 아님). mask mode 만 사용.
+   - **default 패턴 보강** (non-hardcode 원칙 준수 — default 업데이트만):
+     - `brn-hyphen`: `\b` → `(?<!\d)...(?!\d)` look-around 로 `_301-86-19385(` 같은 filename 케이스 커버.
+     - `ceo-label`: capture 그룹을 `[가-힣](?:[ \t]*[가-힣]){1,3}` 로 확장 (`김 명 호` 같은 OCR 공백 변형, **단일 라인**).
+   - **`ingest-pipeline.ts` 배선**:
+     - 중앙 wrapper (§4.1.2) + sidecar gate 에 `piiPatterns` 전달.
+     - `llmSourceFilename = sanitizeForLlmPrompt(sourceFilename, ...)` 로 LLM prompt 에 sanitize 된 filename 주입 (C-A1 대응). 원본 `sourceFilename` 은 fs / registry / movePair 용으로 보존.
+     - `callLLMForSummary` · `extractMentions` · `canonicalize` 모두 `llmSourceFilename` 사용.
+     - `generateBrief(opts.piiGuardEnabled)` 옵션 추가 + sample + filename 양쪽에 `sanitizeForLlmPrompt` 적용 — Stage 1 brief LLM 도 동일 정책.
+   - **테스트 `__tests__/pii-redact.test.ts` +14 tests (511→525 net)**:
+     - CEO 공백 변형 detect/mask (3).
+     - 줄바꿈 교차 금지 안전장치 (1).
+     - DEFAULT_PATTERNS 내용 + compile 결과 (2).
+     - `compilePattern` 잘못된 regex null 반환 (1).
+     - YAML 파서 간단 케이스 · 오류 반환 (2).
+     - `mergePatterns` override 동작 (1).
+     - `detectPii` 에 사용자 패턴 주입 — default 대체 (1).
+     - `sanitizeForLlmPrompt` filename BRN / guard off pass-through / no-PII / CEO in filename (4).
+   - **범위 밖 (Phase 5 §5.8 에 추가 이관)**: 다중-라인 구조 폼 (`대 표 자` label 과 `김 명 호` name 이 blank line 으로 분리된 스캔 PDF) — regex 만으로 해결 불가. NER / structural parser 필요.
+
+### 4.8.3 D.0.l smoke 판정 — PARTIAL ACCEPT (파이프라인 PASS / wiki PII 전파 Phase 5 이관)
+> tag: #testing, #scope-decision
+
+**실행**: Agent 위임 (2026-04-24 19:23 → 21:32, ~2h 10m). 결과 디렉터리: `activity/phase-4-resultx-4.6-smoke-2026-04-24-v2/`.
+
+**8 Acceptance Criteria**:
+| # | 기준 | 판정 |
+|---|------|------|
+| 1 | Pass A 6/6 pipeline | **PASS** (PII 전파 PARTIAL) |
+| 2 | Pass B 6/6 pipeline | **PASS** (PII 전파 PARTIAL) |
+| 3 | sidecar `***` + wiki redact | **PARTIAL** — sidecar ✅, wiki body leak 2건 (C-A1/C-A2) |
+| 4 | 보조 2b Guard OFF = 원문 BRN 보존 | **PASS** |
+| 5 | 보조 3b Allow OFF = `PiiIngestBlockedError` Notice | **PASS** |
+| 6 | §4.C palette 9 entries + modal typing gate | **PASS** |
+| 7 | Console ERROR 0 (logic) | **PASS** (WARN: reindex --quick non-fatal, .ingest-map.json deprecation) |
+| 8 | Cross-compare tier 6/6 + classify 5/6 | **PASS** (file 6 PARA 2차 LLM variance 만) |
+
+**결정성 증거**: tier-label 6/6 완전 일치 (변환 캐시 hit), sidecar redact 양 pass 문자열 수준 결정적 일치 (`***-**-*****`). D.0 직접 deliverable (2-layer gate + sidecar mask + 운영 안전 UI) 은 전부 확증.
+
+**smoke 후속 조치 (본 세션, §4.8.2 PII 엔진 도입)**:
+- **C-A1 filename leak — RESOLVED**: `sanitizeForLlmPrompt` 단일 진입점 + `brn-hyphen` look-around 패턴으로 filename BRN 이 LLM prompt 에 노출 안 됨. 유닛 테스트로 확증 (`사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf` → BRN 부분만 `***-**-*****` 치환, 나머지 filename 구조 보존).
+- **C-A2 CEO 공백 변형 — PARTIAL RESOLVED**: 단일 라인 `김 명 호` / `이 희림` 같은 OCR 공백 삽입 변형은 default `ceo-label` 패턴 업데이트 (`[가-힣](?:[ \t]*[가-힣]){1,3}`) 로 커버. **단**, 스캔 PDF 형태의 **multi-line 구조 폼** (label 과 name 이 blank line 사이로 분리) 은 regex 범위 밖 — Phase 5 §5.8 에 **구조적 PII 탐지 (NER/table parser)** 로 재이관.
+- **W-A3 romanization dedup / W-B1 file 6 classify variance / W-C1 reindex non-fatal** — Phase 5 §5.8 에 유지 (별도 이슈).
+
+**사용자 결정**: 본 세션에서 regex 하드코딩 확장 대신 **YAML 설정 기반 패턴 엔진** 도입 (DEFAULT_PATTERNS + user override + sanitizeForLlmPrompt 진입점). 본체 완성 선언은 D.0 직접 deliverable 충족 + PII 엔진 추가 확보 기준으로 진행.
+
+### 4.8.4 Phase 4 본체 종료 선언
+> tag: #milestone
+
+**Phase 4 본체 = "1건의 소스 인제스트 → 3계층 위키 전파 → 질의 응답 + 운영 안전"** 의 최소 폐루프. 세션 1~8 (2026-04-10 ~ 2026-04-24) 을 거쳐 데이터 모델 · 전처리 · 분류 · 인제스트 · 질의 · 삭제·초기화 가드 · PII 2-layer gate · 런타임 capability bridge · reindex freshness contract 까지 완비.
+
+**종료 기준 (plan v6 §7 D.0.a~o)**: 모두 충족. `plan/phase-4-todo.md` D.0 블록 15/15 `[x]`.
+
+**다음 단계 = Phase 5**:
+1. **§5.6 Stage 1 (schema.yaml 로더화)** 를 Phase 5 첫 착수점 으로 고정 (현재 PMBOK 하드코딩이 Stage 0 검증).
+2. **§5.4 PII 룰 엔진 재설계** — C-A1 filename sanitize + C-A2 공백 변형 커버 + entity_type=person 가드 + romanization dedup (`***-*** ≡ kim-myung-ho`). **하드코딩 없는 패턴 엔진** 이 요건.
+3. **§5.5 부수 과제** — file 6 classify variance / reindex --quick non-fatal exit=1 원인 조사.
+
+### 4.8.5 증거 파일 맵
+> tag: #reference
+
+- **구현**: session 7 commit `4d0850d` (D.0.a~j) + session 8 commits `c2f4165` (codex follow-up), `e362d3c` (capabilities.json bug fix), 본 세션 추가 commit (UI layout fix + 본체 완성 선언 docs)
+- **plan**: `plan/phase-4-todo.md` (D.0.a~o 전 체크박스 [x]), `plan/phase-4-todox-4.6-critical-fix-plan.md` v6 (APPROVE-WITH-CHANGES / CRITICAL: None)
+- **smoke 결과**: `activity/phase-4-resultx-4.6-smoke-2026-04-24-v2/` — README + pass-a/b readme + cross-compare + 12 per-file + 2 boundary + sidecar-redact-grep + palette-modal-smoke + dump logs
+- **codex 판정 로그**: `/tmp/codex-d0k-response.txt` (1차 REJECT), `/tmp/codex-d0k-snap2.txt` (2차 APPROVE)
+- **런타임 증거**: `~/.cache/wikey/capabilities.json` (16 supported, 3 unsupported, docling+unhwp), `reindex.sh --check --json` fresh/stale/never 3-status 확증
+- **Phase 5 이관 과제**: `plan/phase-5-todo.md` §5.4 (C-A1, C-A2, W-A3, W-B1, W-C1)

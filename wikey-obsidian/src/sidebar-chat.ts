@@ -1346,7 +1346,10 @@ Click [[page name]] in answers to navigate to the wiki page.
           } else {
             row.addClass('wikey-audit-row-fail')
             if (result.error) {
-              const errEl = row.createDiv({ cls: 'wikey-audit-error' })
+              // 에러 메시지는 info column 내부 (path-line 하단) 에 삽입해
+              // filename 공간을 침범하지 않고 하단 메시지 공간만 사용한다.
+              const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
+              const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
               errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
             }
           }
@@ -1702,7 +1705,8 @@ Click [[page name]] in answers to navigate to the wiki page.
         row.style.removeProperty('--progress')
 
         if (!result.success && result.error) {
-          const errEl = row.createDiv({ cls: 'wikey-audit-error' })
+          const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
+          const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
           errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
         }
       }
@@ -1868,7 +1872,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       const failInfo = this.inboxFailState.get(f)
       if (failInfo && Date.now() - failInfo.timestamp < 10 * 60 * 1000) {
         row.addClass('wikey-audit-row-fail')
-        const errEl = row.createDiv({ cls: 'wikey-audit-error' })
+        const errEl = info.createDiv({ cls: 'wikey-audit-error' })
         errEl.setText(failInfo.error.length > 100 ? failInfo.error.slice(0, 100) + '...' : failInfo.error)
       } else if (failInfo) {
         this.inboxFailState.delete(f)
@@ -2025,7 +2029,8 @@ Click [[page name]] in answers to navigate to the wiki page.
           row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
           row.style.removeProperty('--progress')
           if (!result.success && result.error) {
-            const errEl = row.createDiv({ cls: 'wikey-audit-error' })
+            const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
+            const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
             errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
           }
         }

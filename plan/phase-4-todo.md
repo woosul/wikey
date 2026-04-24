@@ -5,7 +5,7 @@
 > **본체 정의 (2026-04-22 확정)**: 원본 → wiki ingest 프로세스가 완성되어 **더 이상 wiki 를 초기화하거나 재생성할 일이 없는** 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 계속 축적되지만 구조는 변경되지 않는다. 튜닝·고도화·개선·확장은 Phase 5, 웹 인터페이스는 Phase 6 로 이관.
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md` 와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.1/§5.2 로 이관)
-> 상태 (2026-04-24 session 7): §4.0/§4.1/§4.5.1/§4.5.2/§4.2/§4.3 완료. §4.6 smoke 2-pass 완료 → D 보류. **§4.6 D.0 Critical Fix Plan v6 수립 완료** (codex 4회 review → APPROVE-WITH-CHANGES / CRITICAL: None). **§4.7 D.0.a~j 구현 완료** (2026-04-24 session 7, 단일 세션, 511 tests / 0 build errors). **다음 = D.0.k~o (codex 재검증 → smoke 재실행 → sidecar/runtime sanity → D 선언)**. 상세 = `activity/phase-4-result.md §4.7`.
+> 상태 (2026-04-24 session 8): **본체 완성 (2026-04-24). Phase 5 로 이관**. D.0 Critical Fix Plan v6 완전 종결: a~j 구현 (session 7) + k codex APPROVE/CRITICAL:0 + l smoke PARTIAL ACCEPT (파이프라인 PASS, wiki PII 전파 2건은 Phase 5 §5.4 이관) + m sidecar grep PASS + n capabilities.json + reindex 3-status PASS + o 본 선언. 세부 = `activity/phase-4-result.md §4.8`. **다음 = Phase 5** (`plan/phase-5-todo.md` §5.6 Stage 1 schema.yaml 로더화 + §5.4 PII 룰 엔진 재설계).
 
 ## 관련 문서
 
@@ -692,11 +692,11 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 8. [x] **D.0.h** C6.2 원본 링크: `query-pipeline.ts::appendOriginalLinks` 신규 + `source-resolver.ts::ResolvedSource.rawVaultPath` 필드 (current `vault_path` 우선, fallback = path_history 마지막 유효 entry, fail closed). `query()` 에서 wikiFS 있을 때 자동 호출. — +4 GREEN (17/17)
 9. [x] **D.0.i** C6.3/C6.4 Processing modal: fileLabel (`original.ext → converted.md` accent) + DOM 재정렬 (fileLabel→spinner→progress-line→progress-bar→button, `margin-top: auto`).
 10. [x] **D.0.j** 테스트: **vitest 511 passed / 25 files** (base 462 → +49 net; 플랜 목표 496+ 초과). esbuild 0 errors. wikey-core tsc 0 errors.
-11. [ ] **D.0.k** codex Panel Mode D 최종 검증 (구현 complete 기준) — APPROVE / APPROVE-WITH-CHANGES (critical 0) 확보.
-12. [ ] **D.0.l** 통합 smoke 재실행: Pass A 6/6 (file 2/3 은 `allowPiiIngest=ON` 설정) + Pass B 6/6 + 보조 2b (Guard OFF) + 보조 3b (Allow OFF = block Notice).
-13. [ ] **D.0.m** PDF sidecar redact 검증 (file 2/3 `*.pdf.md` 에 `***` grep).
-14. [ ] **D.0.n** capabilities.json + `reindex.sh --check --json` 3 status 수동 확인.
-15. [ ] **D.0.o** `activity/phase-4-smoke-<DATE>-v2/README.md` 작성, §4 판정 = **승인** + `activity/phase-4-result.md` 에 "Phase 4 본체 완성 선언" + todo 전체 완료 갱신 + memory 동기화 + 단일 commit.
+11. [x] **D.0.k** codex Panel Mode D 최종 검증 — 1차 REJECT / CRITICAL: 1 (sidebar unsupported guard + PII settings persist + reindex 사용자 가시화) → 3건 수정 (commit `c2f4165`) → 재검증 **APPROVE / CRITICAL: 0 / FINDINGS: none**.
+12. [x] **D.0.l** 통합 smoke 재실행 (Agent 위임 ~2h 10m): Pass A 6/6 pipeline PASS + Pass B 6/6 pipeline PASS + 보조 2b (Guard OFF = 원문 BRN 보존) PASS + 보조 3b (Allow OFF = `PiiIngestBlockedError` Notice) PASS + §4.C palette 9 entries + modal typing gate PASS. **wiki body PII 전파 2건 (C-A1 filename leak, C-A2 CEO 공백) 은 PARTIAL → Phase 5 §5.4 이관**.
+13. [x] **D.0.m** PDF sidecar redact grep PASS — file 2/3 양 pass 모두 `***-**-*****` + `******-*******` (하이픈·자릿수 보존), 원문 BRN 0 hit. 결정적 일치 확증.
+14. [x] **D.0.n** runtime sanity PASS — `~/.cache/wikey/capabilities.json` 정상 생성 (16 supported, 3 unsupported, docling/unhwp=true). bug fix (commit `e362d3c`: `node:fs/promises` dynamic import → `require`). `reindex.sh --check --json` fresh/stale/never 3-status 전체 수동 유도 확증.
+15. [x] **D.0.o** `activity/phase-4-resultx-4.6-smoke-2026-04-24-v2/README.md` 작성 (§4 판정 = PARTIAL ACCEPT, D.0 직접 deliverable 전부 PASS / wiki 전파 Phase 5 이관) + `activity/phase-4-result.md §4.8 Phase 4 본체 완성 선언` append + 본 todo 전 체크박스 완료 + memory `project_phase4_status.md` "완료" + `project_phase5_status.md` §5.4 스코프 갱신 + 단일 logical commit + push.
 
 ---
 
@@ -751,13 +751,13 @@ smoke 결과는 `activity/phase-4-smoke-<DATE>/` 디렉터리. 문제 발견 시
 3. [x] `wikey-obsidian/src/commands.ts::registerResetCommand` — 명령 팔레트 5 개 + `settings-tab.ts::renderResetSection` Settings Tab "Reset" 섹션 dropdown + `Preview & Reset` 버튼. 모달(`ResetImpactModal`) 에 preview + `RESET <SCOPE>` 타이핑 필수.
 4. [x] 실행: wiki/registry 는 `fs.unlinkSync` + `wikiFS.write(REGISTRY_PATH, '{}')` (registry-only). qmd-index 는 `~/.cache/qmd/index.sqlite` 삭제 (lazy 재빌드). settings 는 `data.json` 삭제 (재시작 시 DEFAULT_SETTINGS 복원).
 
-### D. 본체 완성 선언 (모든 A/B/C [x] 후)
+### D. 본체 완성 선언 — **완료 (2026-04-24 session 8)**
 
-1. [ ] `activity/phase-4-result.md` 맨 아래 "Phase 4 본체 완성 선언 (2026-MM-DD)" 섹션 — 완성 정의 충족 증거 (data model 고정 / 3-stage pipeline 완비 / 분류+URI+listener / citation UX / 삭제·초기화 가드) + 테스트 총계 + Phase 5 착수점 지정.
-2. [ ] `plan/phase-4-todo.md` 상단 상태 라인을 "본체 완성 (2026-MM-DD). Phase 5 로 이관" 으로 업데이트.
-3. [ ] `plan/phase-5-todo.md` §5.6 Stage 1 (schema.yaml 로더화) 를 첫 착수점으로 고정 (현재 PMBOK 하드코딩이 Stage 0 검증).
-4. [ ] memory `project_phase4_status.md` description 을 "완료" 로 변경 + `MEMORY.md` 인덱스 갱신.
-5. [ ] 단일 commit `feat(phase-4): 본체 완성 선언 — §4.3 smoke + §4.5.2 가드 + Phase 5 착수점` + push.
+1. [x] `activity/phase-4-result.md §4.8 Phase 4 본체 완성 선언 (2026-04-24, session 8)` append — 4.8.1 완성 정의 충족 증거 9 영역 + 4.8.2 세션 8 codex/smoke follow-up 3건 + 4.8.3 smoke PARTIAL ACCEPT 판정 + 4.8.4 종료 선언 + 4.8.5 증거 파일 맵.
+2. [x] 본 파일 상단 상태 라인 "본체 완성 (2026-04-24). Phase 5 로 이관" 으로 업데이트.
+3. [x] `plan/phase-5-todo.md` §5.6 Stage 1 (schema.yaml 로더화) 를 첫 착수점으로 고정 + §5.4 PII 룰 엔진 재설계 신규 등재 (C-A1 filename sanitize + C-A2 공백 변형 + entity_type=person gate + romanization dedup).
+4. [x] memory `project_phase4_status.md` description 을 "완료" 로 변경 + `project_phase5_status.md` §5.4 상세 보강 + `MEMORY.md` 인덱스 갱신.
+5. [x] 단일 logical commit `feat(phase-4): 본체 완성 선언 — ...` + push.
 
 ## 4.5.3 / 4.5.4 / 4.5.5 (이관됨) — 성능·엔진 확장 및 self-extending
 
