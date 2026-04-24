@@ -7,6 +7,14 @@
 > 번호: `N / N.M` 계층. 주제 그룹은 `activity/phase-3-result.md`와 1:1 미러.
 > 상세 결과: `activity/phase-3-result.md`
 
+## 관련 문서
+
+- **Result mirror**: [`activity/phase-3-result.md`](../activity/phase-3-result.md)
+- **Phase 3 보조 문서** (섹션 번호 순):
+  - §3.B Obsidian E2E 플랜/결과: [`plan/phase-3-todox-3.B-obsidian-test.md`](./phase-3-todox-3.B-obsidian-test.md) · [`activity/phase-3-resultx-3.B-test-results.md`](../activity/phase-3-resultx-3.B-test-results.md)
+  - §3.C 인제스트 v6 재설계: [`plan/phase-3-todox-3.C-ingest-core-rebuild.md`](./phase-3-todox-3.C-ingest-core-rebuild.md) · [`activity/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md`](../activity/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md) · [`activity/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md`](../activity/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md) · [`activity/phase-3-resultx-3.C-ingest-comparison/`](../activity/phase-3-resultx-3.C-ingest-comparison/)
+- **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
+
 ---
 
 ## 3.1 개요 및 타임라인
@@ -144,4 +152,4 @@
 - [X] 15.6 measure-determinism.sh 안정성 보강 + 재측정 → §4-11
 - [X] 15.7 Phase 3 종료 선언 (2026-04-20)
 - [X] 15.8 todo 및 result문서 작성 스킬 완료
-- [X] 15.9 결정성 테스트 완료 (2026-04-21) — 수동 CDP 드라이브 5/5 성공, Concepts CV 33.4→21.2% (-37%), Total CV 16.9→7.9% (-53%), `activity/determinism-pms-post-v7-2026-04-21.md`
+- [X] 15.9 결정성 테스트 완료 (2026-04-21) — 수동 CDP 드라이브 5/5 성공, Concepts CV 33.4→21.2% (-37%), Total CV 16.9→7.9% (-53%), `activity/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md`

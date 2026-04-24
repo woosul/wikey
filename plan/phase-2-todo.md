@@ -7,6 +7,14 @@
 > 번호: `N / N.M` 계층. 주제 그룹은 `activity/phase-2-result.md`와 1:1 미러.
 > 상세 결과: `activity/phase-2-result.md`
 
+## 관련 문서
+
+- **Result mirror**: [`activity/phase-2-result.md`](../activity/phase-2-result.md)
+- **Phase 2 보조 문서** (섹션 번호 순):
+  - §2.Step3-0 한국어 사전조사: [`plan/phase-2-todox-2.Step3-0-research-report.md`](./phase-2-todox-2.Step3-0-research-report.md)
+  - §2.Step5 비용 분석: [`activity/phase-2-resultx-2.Step5-cost-analysis.md`](../activity/phase-2-resultx-2.Step5-cost-analysis.md) · [`activity/phase-2-resultx-2.Step5-cost-log.md`](../activity/phase-2-resultx-2.Step5-cost-log.md)
+- **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
+
 ---
 
 ## 2.1 개요 및 타임라인
@@ -94,8 +102,8 @@
 - [x] 10.2 대용량 소스 — 파워디바이스 37p Gemini 2.5 Flash 요약 $0.01 → source-power-device-basics 통합
 - [x] 10.3 독립 린트 — Codex CLI 0.118.0 + GPT-4.1 71K토큰 $0.17, validate/pii PASS
 - [x] 10.4 오프라인 쿼리 — Gemma 4 로컬 5건 평균 44s 정상 응답
-- [x] 10.5 비용 추적 CLI `scripts/cost-tracker.sh` + `activity/cost-log.md` (11건 기록, $21.13/50 = 42.3%)
-- [x] 10.6 비용 효율 분석 `activity/cost-analysis.md` — 검색/임베딩/쿼리 100% 로컬, 월간 시뮬레이션 $14.73 (29.5%)
+- [x] 10.5 비용 추적 CLI `scripts/cost-tracker.sh` + `activity/phase-2-resultx-2.Step5-cost-log.md` (11건 기록, $21.13/50 = 42.3%)
+- [x] 10.6 비용 효율 분석 `activity/phase-2-resultx-2.Step5-cost-analysis.md` — 검색/임베딩/쿼리 100% 로컬, 월간 시뮬레이션 $14.73 (29.5%)
 
 ## 2.11 볼트 템플릿 + LLM 스킬 패키지
 > tag: #main-feature, #docs

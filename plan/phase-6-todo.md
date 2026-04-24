@@ -6,6 +6,12 @@
 > 이력: 2026-04-22 Phase 재편으로 기존 Phase 5 → Phase 6 으로 이동 (기존 Phase 5 자리를 본체 완성 후 튜닝·고도화 스코프가 차지).
 > 구성 원칙: 번호·제목·태그는 `activity/phase-6-result.md` 와 1:1 mirror (현재 result 는 착수 후 생성).
 
+## 관련 문서
+
+- **Result mirror**: `activity/phase-6-result.md` (착수 시 생성).
+- **보조 문서**: 착수 시 `phase-6-todox-<section>-<topic>.md` · `phase-6-resultx-<section>-<topic>-<date>.md` 형식으로 추가.
+- **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
+
 ---
 
 ## 6.1 웹 프론트엔드

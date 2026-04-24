@@ -5,6 +5,12 @@
 > 번호: `N / N.M` 계층. 주제 그룹은 `activity/phase-1-result.md`와 1:1 미러.
 > 상세 결과: `activity/phase-1-result.md`
 
+## 관련 문서
+
+- **Result mirror**: [`activity/phase-1-result.md`](../activity/phase-1-result.md) — 상세 타임라인·수치·커밋.
+- **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
+- **보조 문서**: 없음.
+
 ---
 
 ## 1.1 개요 및 타임라인

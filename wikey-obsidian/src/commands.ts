@@ -4,6 +4,7 @@ import {
   generateBrief,
   ingest,
   PlanRejectedError,
+  PiiIngestBlockedError,
   type IngestPlan,
   classifyFileAsync,
   movePair,
@@ -407,6 +408,10 @@ async function runIngestCore(
         execEnv: plugin.getExecEnv(),
         guideHint: ctx.guideHint,
         onPlanReady: ctx.planGate,
+        // Phase 4 D.0.c — PII 2-layer gate (settings 에서 제어).
+        piiGuardEnabled: plugin.settings.piiGuardEnabled,
+        allowPiiIngest: plugin.settings.allowPiiIngest,
+        piiRedactionMode: plugin.settings.piiRedactionMode,
       },
     )
 
@@ -459,6 +464,14 @@ async function runIngestCore(
     if (err instanceof PlanRejectedError) {
       console.info(`[Wikey ingest] cancelled at preview: ${sourcePath}`)
       return { success: false, sourcePath, createdPages: [], cancelled: true }
+    }
+    if (err instanceof PiiIngestBlockedError) {
+      // Phase 4 D.0.c — PII 감지 + allowPiiIngest=false 조합. 사용자가 설정에서 허용해야 진행.
+      const kinds = Array.from(new Set(err.matches.map((m) => m.kind))).join(', ')
+      const msg = `PII 감지 — ${err.matches.length}건 (${kinds}). 설정에서 "PII 감지 시 인제스트 진행" 을 켜거나 원본을 정리해 주세요.`
+      console.warn(`[Wikey ingest] blocked by PII gate: ${sourcePath} — ${err.matches.length} matches`)
+      new Notice(msg, 8000)
+      return { success: false, sourcePath, createdPages: [], error: msg }
     }
     const msg = err?.message ?? String(err)
     console.error(`[Wikey ingest] failed for ${sourcePath}:`, msg, err?.stack ?? '')

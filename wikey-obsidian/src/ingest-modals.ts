@@ -394,6 +394,21 @@ export class IngestFlowModal extends Modal {
 
   private renderProcessingPhase() {
     const wrap = this.bodyEl.createDiv({ cls: 'wikey-modal-processing' })
+
+    // Phase 4 D.0.i (v6 §4.5.3 + §4.5.4): fileLabel (original.ext | converted.md).
+    // DOM 순서: fileLabel → spinner → progress-line → progress-bar → (guide-echo) → button.
+    // 하단 button 은 `margin-top: auto` 로 모달 바닥에 붙도록 styles.css 에서 처리.
+    const fileName = this.sourcePath.split('/').pop() ?? this.sourcePath
+    const ext = fileName.includes('.') ? fileName.split('.').pop()!.toLowerCase() : ''
+    const fileLabel = wrap.createDiv({ cls: 'wikey-modal-file-label' })
+    fileLabel.createEl('span', { cls: 'wikey-modal-file-original', text: fileName })
+    if (ext && ext !== 'md' && ext !== 'txt') {
+      // 변환 대상 (pdf/hwp/docx/...) 은 converted.md 보조 표기.
+      const convertedName = `${fileName}.md`
+      fileLabel.createEl('span', { cls: 'wikey-modal-file-sep', text: '→' })
+      fileLabel.createEl('span', { cls: 'wikey-modal-file-converted', text: convertedName })
+    }
+
     wrap.createDiv({ cls: 'wikey-modal-spinner' })
 
     const pct = this.computeFractionPct()
@@ -415,7 +430,7 @@ export class IngestFlowModal extends Modal {
       const box = guideEcho.createDiv({ cls: 'wikey-modal-brief' })
       box.setText(this.guideHint.trim())
     }
-    const btnRow = this.bodyEl.createDiv({ cls: 'wikey-modal-button-row' })
+    const btnRow = this.bodyEl.createDiv({ cls: 'wikey-modal-button-row wikey-modal-button-row-bottom' })
     const backBtn = btnRow.createEl('button', { text: 'Back' })
     backBtn.addEventListener('click', () => {
       // Return to Brief phase; runIngest loop detects backRequested and restarts.

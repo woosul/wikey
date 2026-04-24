@@ -666,6 +666,36 @@ export class WikeySettingTab extends PluginSettingTab {
           }),
       )
 
+    // ── Phase 4 D.0.c (v6 §4.1.4): PII 2-layer gate — Basic ──
+    new Setting(containerEl)
+      .setName('PII 감지 시 인제스트 진행')
+      .setDesc('OFF (기본): PII 감지 시 인제스트 차단. ON: 감지 + 아래 치환 모드로 자동 마스킹 후 진행.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.allowPiiIngest)
+          .onChange(async (value) => {
+            this.plugin.settings.allowPiiIngest = value
+            await this.plugin.saveSettings()
+          }),
+      )
+
+    this.renderStandardDropdown(
+      containerEl,
+      'PII 치환 모드',
+      'mask (기본): 자릿수 보존 *** 치환. display: 원문 그대로 (PII 포함). hide: 민감 문장/라인 전체를 [PII 제거] 로 대체.',
+      [
+        { value: 'mask', label: 'mask — 자릿수 보존 (기본)' },
+        { value: 'display', label: 'display — 원문 유지' },
+        { value: 'hide', label: 'hide — 문장 전체 제거' },
+      ],
+      this.plugin.settings.piiRedactionMode,
+      async (value) => {
+        const v = value === 'display' || value === 'mask' || value === 'hide' ? value : 'mask'
+        this.plugin.settings.piiRedactionMode = v
+        await this.plugin.saveSettings()
+      },
+    )
+
     // OCR fallback (markitdown-ocr) — 미설정 시 basicModel 사용
     const ocrDesc = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
     ocrDesc.createEl('span', {
@@ -943,6 +973,23 @@ export class WikeySettingTab extends PluginSettingTab {
   // ── Section: Advanced ──
   private renderAdvancedSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: 'Advanced' })
+
+    // ── Phase 4 D.0.c (v6 §4.1.4): PII 2-layer gate — Advanced ──
+    new Setting(containerEl)
+      .setName('PII 검사 활성화')
+      .setDesc(
+        'ON (기본): 모든 인제스트에서 BRN·법인등록번호·대표이사 이름을 검사. ' +
+        'OFF: 검사 자체를 수행하지 않습니다. 공시 가능 문서(법인공시, IR, 보도자료 등)만 끄세요. ' +
+        '이것은 사용자 신뢰 설정이며 기술적 안전 장치가 아닙니다.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.piiGuardEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.piiGuardEnabled = value
+            await this.plugin.saveSettings()
+          }),
+      )
 
     new Setting(containerEl)
       .setName('Per-task LLM Override')

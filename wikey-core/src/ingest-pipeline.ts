@@ -54,6 +54,8 @@ import {
   buildSectionIndex, computeHeuristicPriority, formatPeerContext, formatSourceTOC,
   type Section, type SectionIndex,
 } from './section-index.js'
+import { applyPiiGate } from './pii-redact.js'
+import { reindexQuick, waitUntilFresh } from './scripts-runner.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -90,6 +92,12 @@ export interface IngestOptions {
   // - converter 자동 판정: 한국어 공백 소실 > 30% OR 스캔 PDF 감지 → docling --force-ocr 재시도
   // - regression 방어: force-ocr 이 한국어 50% 미만으로 떨어지면 tier 1 롤백
   // - 캐시: 옵션 + sourceBytes 동일하면 자동 히트. 완전 재변환 필요 시 ~/.cache/wikey/convert/ 삭제.
+  // ── Phase 4 D.0.c (v6 §4.1.2): PII 2-layer gate ──
+  // 미지정 시 안전 기본값: guardEnabled=true, allowPiiIngest=false, piiRedactionMode='mask'.
+  // allowPiiIngest=false + PII 감지 → PiiIngestBlockedError. guardEnabled=false → 검사 전체 skip.
+  readonly piiGuardEnabled?: boolean
+  readonly allowPiiIngest?: boolean
+  readonly piiRedactionMode?: 'display' | 'mask' | 'hide'
 }
 
 /**
@@ -125,6 +133,10 @@ export async function ingest(
   const ext = (sourceFilename.toLowerCase().split('.').pop() ?? '')
 
   let sourceContent: string
+  // §4.1.3 (D.0.b): PDF 는 LLM 투입용 `stripped` 과 sidecar 저장용 `sidecarCandidate` 를 분리한다.
+  //   sidecarCandidate 는 중앙 PII wrapper (§4.1.2) 통과 후 파일시스템에 저장된다. PDF 외 포맷은
+  //   sourceContent 자체가 sidecar 본문이므로 이 변수는 null 유지.
+  let pdfSidecarCandidate: string | null = null
   if (ext === 'hwp' || ext === 'hwpx') {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (unhwp)...' })
     sourceContent = await extractHwpText(sourcePath, opts?.basePath, opts?.execEnv)
@@ -133,7 +145,9 @@ export async function ingest(
     }
   } else if (ext === 'pdf') {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (Docling)...' })
-    sourceContent = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
+    const pdfResult = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
+    sourceContent = pdfResult.stripped
+    pdfSidecarCandidate = pdfResult.sidecarCandidate
     if (!sourceContent || sourceContent.trim().length < 50) {
       throw new Error(`PDF text extraction failed: ${sourceFilename} — install docling (uv tool install docling) or markitdown (pip install markitdown[pdf])`)
     }
@@ -149,18 +163,52 @@ export async function ingest(
     sourceContent = stripEmbeddedImages(raw)
   }
 
-  // §4.1.1.9 — md 사본 저장: 변환이 필요했던 포맷 (hwp/hwpx/docx/...)은 원본 옆에
+  // ── Phase 4 D.0.c (v6 §4.1.2): 중앙 PII 2-layer gate ──
+  // 변환 후 (PDF/HWP/... 모두 markdown 으로 통일된 뒤) 에 한 번만 실행.
+  // 모든 ingest 경로 (md/pdf/hwp/docx/html/image...) 가 이 지점을 통과.
+  // sidecarCandidate (PDF 만 해당) 도 동일 규칙으로 한 번 더 처리 — sidecar leak 방지.
+  const piiGuardEnabled = opts?.piiGuardEnabled ?? true
+  const piiAllowIngest = opts?.allowPiiIngest ?? false
+  const piiMode = opts?.piiRedactionMode ?? 'mask'
+  {
+    const gateRes = applyPiiGate(sourceContent, {
+      guardEnabled: piiGuardEnabled,
+      allowIngest: piiAllowIngest,
+      mode: piiMode,
+    })
+    if (gateRes.redacted) {
+      log(`PII redacted — ${gateRes.matches.length} match, mode=${piiMode}`)
+      sourceContent = gateRes.content
+    } else if (!piiGuardEnabled) {
+      log('PII guard disabled — skipping detect/redact (user-trust boundary, not a technical safety boundary)')
+    }
+  }
+  if (pdfSidecarCandidate) {
+    const sidecarGate = applyPiiGate(pdfSidecarCandidate, {
+      guardEnabled: piiGuardEnabled,
+      // sidecar 경로는 이미 sourceContent gate 를 통과했으므로 allow=true (throw 재발생 방지).
+      // guard=false 면 어차피 pass-through, guard=true + PII 없으면 no-op. PII 있고 여기 도달은
+      // 앞서 allowIngest=true 로 사용자가 redact 선택한 경우뿐.
+      allowIngest: true,
+      mode: piiMode,
+    })
+    if (sidecarGate.redacted) {
+      log(`PII redacted (sidecar) — ${sidecarGate.matches.length} match, mode=${piiMode}`)
+      pdfSidecarCandidate = sidecarGate.content
+    }
+  }
+
+  // §4.1.1.9 — md 사본 저장: 변환이 필요했던 포맷 (hwp/hwpx/docx/.../pdf) 은 원본 옆에
   // `<source>.md` 로 저장하여 사용자가 변환 결과를 직접 확인 가능. 원본이 이미 md 면 생략.
-  // §4.1.3 — PDF 는 `extractPdfText::finalize` 에서 이미지 포함 raw MD 를 sidecar 로 저장하므로
-  // 여기서 skip. (이 블록의 `sourceContent` 는 stripped LLM 투입용이라 덮어쓰면 원본 손실.)
-  if (ext && ext !== 'md' && ext !== 'txt' && ext !== 'pdf') {
+  // §4.1.3 (D.0.b) — PDF 는 `extractPdfText` 가 반환한 sidecarCandidate (raw 또는 stripped)
+  // 를 우선 사용. 다른 포맷은 sourceContent 자체가 sidecar 본문.
+  // 중앙 PII wrapper (§4.1.2) 통과 후 저장하므로 sidecar 도 자동 redact 대상.
+  if (ext && ext !== 'md' && ext !== 'txt') {
     const sidecarPath = `${sourcePath}.md`
+    const sidecarBody = ext === 'pdf' ? (pdfSidecarCandidate ?? sourceContent) : sourceContent
     try {
-      const exists = await wikiFS.exists(sidecarPath).catch(() => false)
-      if (!exists) {
-        await wikiFS.write(sidecarPath, sourceContent)
-        log(`sidecar .md saved → ${sidecarPath}`)
-      }
+      await wikiFS.write(sidecarPath, sidecarBody)
+      log(`sidecar .md saved → ${sidecarPath} (${sidecarBody.length} chars)`)
     } catch (err) {
       log(`sidecar .md save skipped: ${err}`)
     }
@@ -422,9 +470,13 @@ export async function ingest(
   await appendLog(wikiFS, entry, writtenPages)
   log(`log.md prepended`)
 
-  // Step 4: Reindex
+  // Step 4: Reindex (Phase 4 D.0.f / v6 §4.4)
+  //   - `reindexQuick` 동기 실행 (throw on failure)
+  //   - `waitUntilFresh` polling 으로 `status==='fresh' && stale===0` 확보 후 return.
+  //   - 실패/타임아웃 은 warn 로 다운그레이드 — ingest 본체는 이미 성공했으므로 throw 대신
+  //     사용자에게 Notice. query 는 stale 에서도 fallback 가능.
   onProgress?.({ step: 4, total: 4, message: 'Indexing...' })
-  triggerReindex(opts?.basePath)
+  await runReindexAndWait(opts?.basePath, opts?.execEnv, log)
   log(`done: ${sourcePath}`)
 
   return {
@@ -791,7 +843,9 @@ export async function generateBrief(
 
   let content: string
   if (isPdf) {
-    content = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
+    // Brief 는 stripped 만 필요. sidecarCandidate 는 사용 안 함 (ingest() 가 저장 책임).
+    const { stripped } = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
+    content = stripped
   } else {
     content = await wikiFS.read(sourcePath)
   }
@@ -1279,12 +1333,23 @@ function readDoclingOutput(outputDir: string, sourcePath: string): string {
   }
 }
 
+/**
+ * PDF 추출 결과. Phase 4 D.0.b (v6 §4.1.3) 에서 `string` → object 로 승격.
+ *   - `stripped`: LLM 투입용 (이미지 base64 제거된 본문). 항상 존재.
+ *   - `sidecarCandidate`: 파일시스템 sidecar 후보 — vector PDF 면 raw (이미지 포함),
+ *     scan/small-doc 이면 stripped 와 동일. caller 가 중앙 PII wrapper 통과 후 저장.
+ */
+export interface PdfExtractResult {
+  readonly stripped: string
+  readonly sidecarCandidate: string
+}
+
 async function extractPdfText(
   sourcePath: string,
   basePath?: string,
   execEnv?: Record<string, string>,
   config?: WikeyConfig,
-): Promise<string> {
+): Promise<PdfExtractResult> {
   const { join } = require('node:path') as typeof import('node:path')
   const cwd = basePath ?? process.cwd()
   const fullPath = join(cwd, sourcePath)
@@ -1299,7 +1364,11 @@ async function extractPdfText(
     log(`tier ${tier} rejected — ${text.length} chars below threshold (${minChars})`)
     return null
   }
-  const finalize = (md: string, tierKey: string): string => {
+  // §4.1.3 (D.0.b): sidecar 저장 권한은 caller 에게 위임. finalize 는 raw vs stripped 판단만 수행.
+  //   - 스캔 PDF / 기존 OCR 저장 소규모 폼 (사업자등록증 등): 이미지가 이미 텍스트에
+  //     들어가 있어 base64 embedded 가 중복 → sidecarCandidate = stripped.
+  //   - vector PDF (diagram/chart 의미 있는 경우): sidecarCandidate = raw.
+  const finalize = (md: string, tierKey: string): PdfExtractResult => {
     const counts = countEmbeddedImages(md)
     const stripped = stripEmbeddedImages(md)
     if (counts.dataUri || counts.externalUrl) {
@@ -1313,21 +1382,10 @@ async function extractPdfText(
       })
       setCached(cacheKey, stripped, { source: sourcePath, converter: `pdf:${tierKey}` })
     }
-    // §4.1.3 파일 생성 루틴: 파일시스템에 남는 sidecar 는 "원본.md".
-    //   - 스캔 PDF / 기존 OCR 저장 소규모 폼 (사업자등록증 등): 이미지 내용이 이미 텍스트에
-    //     들어가 있어 base64 embedded 가 중복 + 파일 어지러움 → stripped 저장.
-    //   - vector PDF (diagram/chart/screenshot 이 의미 있는 경우): raw (이미지 포함) 저장.
-    // LLM 투입용 stripped 는 항상 caller 반환 (wiki 생성 후 사라짐).
-    try {
-      const { writeFileSync: wf } = require('node:fs') as typeof import('node:fs')
-      const useStripped = hasRedundantEmbeddedImages(md, stripped, pdfPageCount, tierKey)
-      const sidecarContent = useStripped ? stripped : md
-      wf(`${fullPath}.md`, sidecarContent, 'utf-8')
-      log(`sidecar .md saved (${useStripped ? 'stripped — scan/small-doc images redundant' : 'raw — vector PDF, images kept'}) → ${sourcePath}.md (${sidecarContent.length} chars, tier=${tierKey})`)
-    } catch (err) {
-      warn(`sidecar .md save failed: ${errorMessage(err)}`)
-    }
-    return stripped
+    const useStripped = hasRedundantEmbeddedImages(md, stripped, pdfPageCount, tierKey)
+    const sidecarCandidate = useStripped ? stripped : md
+    log(`sidecar candidate ready (${useStripped ? 'stripped — scan/small-doc images redundant' : 'raw — vector PDF, images kept'}) — ${sidecarCandidate.length} chars, tier=${tierKey}`)
+    return { stripped, sidecarCandidate }
   }
 
   // PATH 보강 (Electron 환경에서 homebrew 등 누락 방지)
@@ -1348,7 +1406,8 @@ async function extractPdfText(
     const cached = getCached(doclingKey)
     if (cached != null && !config?.DOCLING_DISABLE) {
       log(`cache hit — pdf:1-docling (${cached.length} chars)`)
-      return cached
+      // Cache stores stripped text only — raw markdown 은 재계산 불가. 두 필드 모두 stripped 로.
+      return { stripped: cached, sidecarCandidate: cached }
     }
   } catch (err) {
     warn(`read source for cache failed: ${errorMessage(err)}`)
@@ -1650,7 +1709,7 @@ except ImportError:
   if (!ocr.apiKey) {
     warn(`tier 6 skipped — no apiKey for provider=${ocr.providerLabel}`)
     warn(`all 6 tiers failed for ${sourcePath}`)
-    return ''
+    return { stripped: '', sidecarCandidate: '' }
   }
   const dpi = String(config?.OCR_DPI ?? 180)
   const parallel = String(config?.OCR_PARALLEL ?? 4)
@@ -1721,7 +1780,7 @@ print('\\n\\n'.join(f'## Page {i+1}\\n\\n{results[i]}' for i in range(total)))
   }
 
   warn(`all 6 tiers failed for ${sourcePath}`)
-  return ''
+  return { stripped: '', sidecarCandidate: '' }
 }
 
 /**
@@ -1820,20 +1879,44 @@ function truncateSource(text: string): string {
   return `${head}\n\n[... ${skipped} chars truncated ...]\n\n${tail}`
 }
 
-function triggerReindex(basePath?: string): void {
-  const { join } = require('node:path') as typeof import('node:path')
-  const cwd = basePath ?? process.cwd()
-  const script = join(cwd, 'scripts/reindex.sh')
+const REINDEX_WAIT_DEFAULT_MS = 60_000
+const REINDEX_WAIT_MAX_MS = 300_000
 
-  // Fire-and-forget background reindex
-  try {
-    const env = { ...process.env } as Record<string, string>
-    const extraPaths = ['/usr/local/bin', '/opt/homebrew/bin', `${process.env.HOME}/.nvm/versions/node/v22.17.0/bin`]
+/**
+ * Phase 4 D.0.f (v6 §4.4.3): 인제스트 직후 `reindex.sh --quick` 을 동기 실행하고
+ * `waitUntilFresh` polling 으로 index 가 실제로 신선해졌는지 확인 후 반환.
+ *
+ * - basePath 미지정 시 process.cwd 사용.
+ * - execEnv 미지정 시 process.env + 기본 추가 경로 병합 (Electron homebrew 누락 방어).
+ * - 타임아웃: `WIKEY_REINDEX_TIMEOUT_MS` env (ms, 300000 cap), 미지정 시 60s.
+ * - 실패는 warn 레벨로 downgrade — ingest 본체 성공 후에 index lag 은 치명적이지 않음.
+ */
+async function runReindexAndWait(
+  basePath: string | undefined,
+  execEnv: Record<string, string> | undefined,
+  log: (msg: string, ...rest: unknown[]) => void,
+): Promise<void> {
+  const cwd = basePath ?? process.cwd()
+  const env = execEnv ? { ...execEnv } : { ...process.env } as Record<string, string>
+  if (!execEnv) {
+    const extraPaths = ['/usr/local/bin', '/opt/homebrew/bin']
     env.PATH = [...extraPaths, env.PATH ?? ''].join(':')
-    execFile(script, ['--quick'], { cwd, env }, () => {
-      // Reindex failure is non-fatal
-    })
-  } catch {
-    // reindex.sh not found — non-fatal
+  }
+
+  const rawTimeout = Number(env.WIKEY_REINDEX_TIMEOUT_MS) || REINDEX_WAIT_DEFAULT_MS
+  const timeoutMs = Math.min(Math.max(rawTimeout, 1_000), REINDEX_WAIT_MAX_MS)
+
+  try {
+    await reindexQuick(cwd, env, timeoutMs)
+    log(`reindex --quick OK, waiting for freshness (timeout=${timeoutMs}ms)`)
+  } catch (err) {
+    console.warn(`[Wikey ingest] reindex --quick failed (non-fatal): ${errorMessage(err)}`)
+    return
+  }
+  try {
+    await waitUntilFresh(cwd, env, timeoutMs)
+    log(`index is fresh`)
+  } catch (err) {
+    console.warn(`[Wikey ingest] freshness wait timed out (non-fatal): ${errorMessage(err)}`)
   }
 }

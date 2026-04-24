@@ -780,7 +780,17 @@ Click [[page name]] in answers to navigate to the wiki page.
     const basePath = (this.app.vault.adapter as any).basePath ?? ''
     const env = this.plugin.getExecEnv()
 
-    let auditData: { total_documents: number; ingested: number; missing: number; files: string[]; ingested_files: string[] }
+    // Phase 4 D.0.d — audit-ingest.py 신규 필드: unsupported_files / capabilities / entries
+    let auditData: {
+      total_documents: number
+      ingested: number
+      missing: number
+      unsupported?: number
+      files: string[]
+      ingested_files: string[]
+      unsupported_files?: string[]
+      capabilities?: { doclingInstalled: boolean; unhwpInstalled: boolean; generatedAt: string; source: string }
+    }
     try {
       const script = join(basePath, 'scripts/audit-ingest.py')
       const stdout = execFileSync('python3', [script, '--json'], {
@@ -791,6 +801,17 @@ Click [[page name]] in answers to navigate to the wiki page.
       container.createEl('span', { text: 'Audit script failed', cls: 'wikey-dashboard-empty' })
       return
     }
+
+    // Phase 4 D.0.d — converter 미설치 시 상단 경고 배너.
+    const caps = auditData.capabilities
+    if (caps && (!caps.doclingInstalled || !caps.unhwpInstalled)) {
+      const banner = container.createDiv({ cls: 'wikey-audit-banner-warn' })
+      const parts: string[] = []
+      if (!caps.doclingInstalled) parts.push('Docling (PDF/DOCX/PPTX/XLSX/HTML/image) — `uv tool install docling`')
+      if (!caps.unhwpInstalled) parts.push('unhwp (HWP/HWPX) — `pip install unhwp`')
+      banner.setText(`⚠ 일부 포맷 변환기가 설치되지 않았습니다. 아래 빨간 행은 인제스트 불가: ${parts.join(' / ')}`)
+    }
+    const unsupportedSet = new Set(auditData.unsupported_files ?? [])
 
     // ── Audit UI state (filter/view/search) ──
     type AuditMode = 'all' | 'missing' | 'ingested'
@@ -850,9 +871,10 @@ Click [[page name]] in answers to navigate to the wiki page.
 
     const activeFiles = (): string[] => {
       const ingested = auditData.ingested_files ?? []
-      if (auditMode === 'missing') return auditData.files
+      const unsupported = auditData.unsupported_files ?? []
+      if (auditMode === 'missing') return [...auditData.files, ...unsupported]
       if (auditMode === 'ingested') return ingested
-      return [...auditData.files, ...ingested]
+      return [...auditData.files, ...unsupported, ...ingested]
     }
 
     const rebuildFolderOptions = () => {
@@ -992,11 +1014,18 @@ Click [[page name]] in answers to navigate to the wiki page.
       for (const filePath of filtered) {
         const name = filePath.split('/').pop() ?? filePath
         const parentDir = filePath.split('/').slice(0, -1).join('/')
-        const row = listEl.createDiv({ cls: 'wikey-audit-row' })
+        const isUnsupported = unsupportedSet.has(filePath)
+        const row = listEl.createDiv({
+          cls: isUnsupported ? 'wikey-audit-row wikey-audit-row-unsupported' : 'wikey-audit-row',
+        })
+        if (isUnsupported) {
+          row.setAttr('title', '이 파일 형식을 변환할 converter 가 설치되지 않았습니다. 상단 경고 참조.')
+        }
         rowMap.set(filePath, row)
 
         const cb = row.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
-        ;(cb as HTMLInputElement).checked = this.auditSelections.has(filePath)
+        if (isUnsupported) cb.setAttr('disabled', 'true')
+        ;(cb as HTMLInputElement).checked = !isUnsupported && this.auditSelections.has(filePath)
 
         const info = row.createDiv({ cls: 'wikey-audit-info' })
 

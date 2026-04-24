@@ -4,8 +4,10 @@ import {
   buildSynthesisPrompt,
   buildCitationFromContent,
   collectCitationsWithWikiFS,
+  appendOriginalLinks,
 } from '../query-pipeline.js'
-import type { SearchResult, WikiFS } from '../types.js'
+import { REGISTRY_PATH, type SourceRecord, type SourceRegistry } from '../source-registry.js'
+import type { Citation, SearchResult, WikiFS } from '../types.js'
 
 class MemoryFS implements WikiFS {
   files = new Map<string, string>()
@@ -169,5 +171,74 @@ describe('collectCitationsWithWikiFS', () => {
       fs,
     )
     expect(citations).toEqual([])
+  })
+})
+
+describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
+  const ID_FOO = 'sha256:aaaaaaaaaaaaaaaa'
+  const ID_ARCHIVED = 'sha256:bbbbbbbbbbbbbbbb'
+  const ID_TOMBSTONED = 'sha256:cccccccccccccccc'
+
+  function mkRecord(opts: Partial<SourceRecord>): SourceRecord {
+    return {
+      vault_path: '',
+      hash: 'x'.repeat(64),
+      size: 100,
+      first_seen: '2026-04-23T00:00:00Z',
+      ingested_pages: [],
+      path_history: [],
+      tombstone: false,
+      ...opts,
+    } as SourceRecord
+  }
+  const citation = (sourceIds: string[]): Citation => ({
+    wikiPagePath: 'wiki/entities/foo.md',
+    sourceIds,
+  })
+
+  it('current vault_path 있음 — raw 링크 append', async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({
+        vault_path: 'raw/2_areas/foo.pdf',
+        path_history: [{ vault_path: 'raw/0_inbox/foo.pdf', at: '2026-04-10T00:00:00Z' }],
+      }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('답변 본문', [citation([ID_FOO])], { wikiFS: fs })
+    expect(out).toContain('원본: [[raw/2_areas/foo.pdf]]')
+    expect(out).toContain('답변 본문')
+  })
+
+  it('current vault_path 비어 있고 path_history 존재 — 마지막 유효 entry fallback', async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_ARCHIVED]: mkRecord({
+        vault_path: '', // empty
+        path_history: [
+          { vault_path: 'raw/0_inbox/old.pdf', at: '2026-04-01T00:00:00Z' },
+          { vault_path: 'raw/4_archive/old.pdf', at: '2026-04-20T00:00:00Z' },
+        ],
+      }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('본문', [citation([ID_ARCHIVED])], { wikiFS: fs })
+    // 마지막 유효 entry 가 우선
+    expect(out).toContain('원본: [[raw/4_archive/old.pdf]]')
+    expect(out).not.toContain('raw/0_inbox/old.pdf')
+  })
+
+  it('citation 있지만 resolve 전부 실패 (record 없음) — WARN 문구', async () => {
+    const fs = new MemoryFS()
+    await fs.write(REGISTRY_PATH, '{}') // empty registry
+    const out = await appendOriginalLinks('본문', [citation(['sha256:dddddddddddddddd'])], { wikiFS: fs })
+    expect(out).toContain('원본: (해석 실패')
+    expect(out).toContain('registry 점검')
+  })
+
+  it('citation 0개 — fail closed 문구', async () => {
+    const fs = new MemoryFS()
+    const out = await appendOriginalLinks('본문만', [], { wikiFS: fs })
+    expect(out).toContain('원본: (없음 — 외부 근거 없음)')
   })
 })

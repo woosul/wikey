@@ -6,6 +6,12 @@
 > 구성 원칙: 번호·제목·태그는 `activity/phase-5-result.md` 와 1:1 mirror. §5.N 상세 번호 체계 (§5.N.M / §5.N.M.K).
 > 이력: 2026-04-22 Phase 재편으로 신규 생성 — 본체 완성 정의 ("구조 변경 없음") 기준으로 Phase 4 에서 이관된 7 subject + §5.6 현재 진행 중 (PMBOK 사전 검증 후 self-extending 로드맵).
 
+## 관련 문서
+
+- **Result mirror**: [`activity/phase-5-result.md`](../activity/phase-5-result.md)
+- **보조 문서**: 착수 시 `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식으로 추가.
+- **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
+
 ---
 
 ## 5.1 검색 재현율 고도화

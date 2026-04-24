@@ -7,6 +7,19 @@ description: Write or update phase/session result documents (activity/phase-*-re
 
 wikey 프로젝트에서 작업 결과를 `activity/phase-N-result.md`에 기록하거나 재구성할 때 따를 원칙. 이 규칙은 사용자가 2026-04-20에 영구 고정한 것이며, CLAUDE.md 대신 이 스킬에서 관리한다.
 
+## ⚠️ 전제 — 파일 명명규칙·조직화는 `CLAUDE.md §문서 명명규칙·조직화` 에서 관리 (2026-04-24)
+
+본 스킬은 result **내용 작성 규칙** 만 담당. 보조 문서 파일명·디렉터리 배치·역참조 block·중심 문서 `관련 문서` 섹션 규칙은 프로젝트 rule (`CLAUDE.md`) 에 있다. 요약:
+
+- 중심: `activity/phase-N-result.md` · `plan/phase-N-todo.md`
+- 보조 result: `activity/phase-N-resultx-<section>-<topic>-<date>.md`
+- 보조 plan: `plan/phase-N-todox-<section>-<topic>.md`
+- `x` 접미사는 alphabet-sort 에서 중심 문서가 맨 앞에 오도록 하기 위함. `_` / `-` 금지.
+- 모든 보조 문서는 타이틀 아래에 `> **상위 문서**: ...` 역참조 블록 유지.
+- 중심 문서는 meta 블록 직후 `## 관련 문서` 섹션으로 보조 문서 전체를 section 번호 순 나열.
+
+새 result 세션을 추가할 때 보조 측정·리포트를 분리 파일로 만들 가능성이 있다면 **파일명은 위 규칙 그대로** 생성해야 한다.
+
 ## ⚠️ 최우선 원칙 — **result 는 항상 상세하게** (2026-04-24 사용자 재강조)
 
 > **"요약하지 않는다. 압축하지 않는다. 생략하지 않는다."**

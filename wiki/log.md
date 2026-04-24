@@ -5,12 +5,23 @@ created: 2026-04-10
 updated: 2026-04-24
 ---
 
+## [2026-04-24] impl | Phase 4 D.0.a~j 구현 완료 (session 7, 단일 세션)
+
+- **범위**: `plan/phase-4-todox-4.6-critical-fix-plan.md` v6 §4.1~§4.5 중 D.0.a (TDD pii-redact) 부터 D.0.j (빌드+테스트) 까지 10개 태스크 순차 완료. D.0.k~o (codex 재검증/smoke/D 선언) 은 차기 세션.
+- **신규 파일**: `wikey-core/src/pii-redact.ts` (2-layer gate + 3-mode redact + hide 3-단 fallback), `wikey-core/src/capability-map.ts` (pure function + dumpCapabilityMap), `wikey-core/src/__tests__/pii-redact.test.ts` +21, `__tests__/capability-map.test.ts` +5, `__tests__/scripts-runner.test.ts` +7.
+- **수정 파일**: `ingest-pipeline.ts` (extractPdfText 반환형 `{stripped, sidecarCandidate}` 승격 + 중앙 PII wrapper line 150 + awaitable `runReindexAndWait`), `scripts-runner.ts` (ScriptResult.exitCode + runScript timeoutMs + reindexQuick/reindexCheckJson/waitUntilFresh), `source-resolver.ts` (ResolvedSource.rawVaultPath), `query-pipeline.ts` (appendOriginalLinks + query() 자동 호출), `scripts/audit-ingest.py` (capabilities.json runtime bridge + entries/unsupported_files/capabilities JSON schema), `scripts/reindex.sh` (`--check --json` contract), `main.ts` (onLayoutReady + renameGuard.consume + dumpCapabilityMap + DOC_EXT_RE), `settings-tab.ts` (PII 3 필드 UI), `commands.ts` (PiiIngestBlockedError Notice), `ingest-modals.ts` (fileLabel + DOM 재정렬), `sidebar-chat.ts` (auditData 확장), `styles.css` (row-unsupported / banner-warn / file-label).
+- **테스트 합계**: 511 passed (25 files, base 462 → +49 net; pii-redact +21 / capability-map +5 / scripts-runner +7 / query-pipeline +4). 플랜 목표 496+ 초과.
+- **빌드**: `npm run build --workspaces` 0 errors (wikey-core tsc + wikey-obsidian esbuild). `main.js` 247KB / `styles.css` 46KB.
+- **런타임 sanity**: `bash scripts/reindex.sh --check --json` → `{"stale":1,"status":"stale"}` / `python3 scripts/audit-ingest.py --summary` → 신규 "미지원" 라인 + fallback capability 확인.
+- **범위 내 결정 3건**: (1) extractPdfText cache hit 시 sidecarCandidate=cached (2) Audit UI missing 뷰에 unsupported 통합 (3) runReindexAndWait 실패 warn downgrade.
+- **관련 동기화**: `activity/phase-4-result.md §4.7` (신규 상세 subject, tags #implementation #core #workflow #eval), `plan/phase-4-todo.md` D.0.a~j `[x]` + 상단 상태 헤더, `plan/session-wrap-followups.md` 진입점, memory `project_phase4_status.md` + `MEMORY.md`.
+
 ## [2026-04-24] plan | Phase 4 D.0 Critical Fix Plan v6 수립 — codex Panel Mode D APPROVE / CRITICAL:None
 
 - **배경**: 2026-04-23 통합 smoke 2-pass (Pass A 5/6, Pass B 3/4) → 5 Critical (C1 harness block / C2 BRN·CEO 노출 / C3 audit 확장자 / C4 reconcile race / C5 qmd staleness) + C6 UX 5건 → D 선언 보류.
 - **사용자 결정 4건 (누적)**: (1) mask default (2) 변환 후 redact → harness 순서 (3) md 원본도 동일 프로세스 (4) C안 2-layer — basic `allowPiiIngest` (OFF=block / ON=redact) + advanced `piiGuardEnabled` (OFF=detect 자체 skip, 공시용).
 - **codex Panel Mode D 4 라운드**: v1 REJECT (P1 4건) → v3 REJECT (P1 3건: PDF sidecar leak / reindex contract 부재 / audit-ingest.py static) → v4 APPROVE-WITH-CHANGES (4 CHANGES) → v5 APPROVE-WITH-CHANGES / **CRITICAL: None** (2 문서 일관성) → v6 구현 착수 승인.
-- **산출물**: `plan/phase-4-critical-fix-plan.md` 690+ lines. 구현 범위 = `pii-redact.ts` 신규 + 중앙 wrapper (ingest-pipeline.ts:150) + PDF sidecar 재설계 (extractPdfText caller 2개) + `scripts/reindex.sh --check --json` contract + `env-detect.ts` capability map + `~/.cache/wikey/capabilities.json` bridge + C4 onLayoutReady + C6.1~C6.4 UI.
+- **산출물**: `plan/phase-4-todox-4.6-critical-fix-plan.md` 690+ lines. 구현 범위 = `pii-redact.ts` 신규 + 중앙 wrapper (ingest-pipeline.ts:150) + PDF sidecar 재설계 (extractPdfText caller 2개) + `scripts/reindex.sh --check --json` contract + `env-detect.ts` capability map + `~/.cache/wikey/capabilities.json` bridge + C4 onLayoutReady + C6.1~C6.4 UI.
 - **병행 개선**: `~/.claude/skills/sync/SKILL.md` v7→v8.1 — Phase 0 (프로젝트 특화 pre-sync) + Phase 0-4.5 (plan/todo 정합성 체크) + Phase 3 (단일 commit/push). `.claude/skills/result-doc-writer/SKILL.md` 에 "⚠️ result 상세하게" 최우선 원칙 추가.
 - **관련 동기화**: `activity/phase-4-result.md §4.6` (신규 상세 subject), `plan/phase-4-todo.md` §4.6 mirror + 본체 완성 체크리스트에 **D.0 블록** 신설, `plan/session-wrap-followups.md` 다음 세션 = D.0 구현.
 
@@ -37,13 +48,13 @@ updated: 2026-04-24
 
 ## [2026-04-23] plan | Phase 4 통합 smoke 테스트 계획서 수립 (v2, codex Panel Mode D APPROVE-WITH-CHANGES)
 
-- 신규: `plan/phase-4-integrated-test.md` (556 라인). Phase 1~4 본체 완성 직전의 통합 회귀 smoke. 6종 파일 (llm-wiki.md / 사업자등록증 PDF (PII) / SK바이오텍 계약서 PDF 6p / PMS 제품소개 PDF 31p / 스마트공장 HWP / Examples HWPX) 을 Stage 1 Ingest → Stage 2 Wiki 검색 → Stage 3 Pairmove + 재검색 의 3-stage 로 반복. Obsidian CDP 자동화 금지, 실제 사용자 클릭·입력만. 파일별 리포트 + 집계 README 필수.
+- 신규: `plan/phase-4-todox-4.6-integrated-test.md` (556 라인). Phase 1~4 본체 완성 직전의 통합 회귀 smoke. 6종 파일 (llm-wiki.md / 사업자등록증 PDF (PII) / SK바이오텍 계약서 PDF 6p / PMS 제품소개 PDF 31p / 스마트공장 HWP / Examples HWPX) 을 Stage 1 Ingest → Stage 2 Wiki 검색 → Stage 3 Pairmove + 재검색 의 3-stage 로 반복. Obsidian CDP 자동화 금지, 실제 사용자 클릭·입력만. 파일별 리포트 + 집계 README 필수.
 - codex 검증 (Panel Mode D, gpt-5.4 xhigh, cmux surface:2 재사용) —
   - 초기 VERDICT **REJECT** (4 P1 블로커): (A) 실행 경로 애매 (Ingest 패널·Cmd+Shift+I 는 autoMoveFromInbox=false), (B) clean-slate + settings baseline 미정의, (C) index-ready gate 부재 (qmd reindex 가 fire-and-forget), (D) 파일 2 PII redaction 규칙 부재.
   - v2 반영 후 codex 명시 VERDICT **APPROVE-WITH-CHANGES**.
   - P2 3건 수용: 파일별 프로파일 실측 보정 (계약서 6p / PMS 31p / `1b-docling-force-ocr-scan` 가능성 / `image-ocr-pollution → 1a-docling-no-ocr` retry 분기) · 분류 depth 기록 강화 · Phase 4.0 UI pre-smoke §4.0 신규.
   - P3 3건 수용: Stage 4 삭제/초기화 modal sequence 재작성 · 체크리스트 13 → 14 항목 · tier 이름/로그 문자열 현행화.
-- `plan/phase-4-todo.md` Phase 4 본체 완성 체크리스트 A 블록을 "6종 × 3-stage 통합 회귀" 로 확장 + 단일 소스를 `plan/phase-4-integrated-test.md` 로 지정. 예상 소요 30분 → 2~3 시간.
+- `plan/phase-4-todo.md` Phase 4 본체 완성 체크리스트 A 블록을 "6종 × 3-stage 통합 회귀" 로 확장 + 단일 소스를 `plan/phase-4-todox-4.6-integrated-test.md` 로 지정. 예상 소요 30분 → 2~3 시간.
 - 다음 세션 플레이북: A smoke (사용자 수동, 2~3h) → D 본체 완성 선언. 계획서 §2.1 clean-slate 실행 → §4.0 UI pre-smoke → §4.1~4.3 파일 루프 → §4.4 Stage 4 덤 smoke → §5 리포트.
 
 ## [2026-04-23] docs | §4.5.2 result/todo 상세 보강 (1:1 mirror, 세부 번호 6+6)
@@ -110,12 +121,12 @@ updated: 2026-04-24
   - vitest +9 (Stage 1 3, Stage 2 2, Stage 3 2, 기타) + canonicalizer +2 (full replacement + whitespace-only ignore).
 - **Part A tsc readonly 회귀 수정** (ancillary) — commit `4588ea2` 의 `parseProvenance` 가 `Partial<ProvenanceEntry>` 에 readonly 필드 할당 → 4 errors on master HEAD. 같은 파일 편집 기회에 local builder 타입 + `flush()` 에서 ProvenanceEntry 구성 + spread 로 수정. tsc 4 → 0 errors.
 - 증거: wikey-core 437 → **463 PASS (+26)** · `npm run build` wikey-core tsc 0 + wikey-obsidian esbuild 0 · `scripts/tests/pair-move.smoke.sh` 6/6 · wikey-obsidian settings-tab 3건 tsc warn 은 session 3 이전부터 있던 pre-existing.
-- 참조: `activity/phase-4-result.md §4.3.1 / §4.3.2 Part B`, `plan/phase-4-todo.md §4.3.1 + §4.3.2 Part B (전량 [x])`, `plan/phase-4-3-plan.md` (v3 는 codex 2차 결과 후 작성).
+- 참조: `activity/phase-4-result.md §4.3.1 / §4.3.2 Part B`, `plan/phase-4-todo.md §4.3.1 + §4.3.2 Part B (전량 [x])`, `plan/phase-4-todox-4.3-plan.md` (v3 는 codex 2차 결과 후 작성).
 - 남은 항목: 통합 smoke (Obsidian UI 수동 확인 — 인제스트 1회 → citations 📄 rendering + 원본 열림) → §4.5.2 운영 안전 (삭제/초기화 가드) → Phase 4 본체 완성 선언.
 
 ## [2026-04-23] feat | §4.3 plan v2 + Part A Provenance data model + §4.3.3 stripBrokenWikilinks
 
-- **§4.3 계획 v2 수립** (`plan/phase-4-3-plan.md`, 11 개 섹션, 약 250 라인)
+- **§4.3 계획 v2 수립** (`plan/phase-4-todox-4.3-plan.md`, 11 개 섹션, 약 250 라인)
   - v1 → v2 진화: codex rescue 1차 검증 시도 중 analysis 턴 후반 (3013 bytes) 에서 프로세스 종료 + 최종 응답 캡처 실패 → self-review 4건 보강으로 v2 확정.
   - Self-review 4건: (High) Obsidian plugin 은 Electron renderer 라 `shell.openPath` 미접근 → `app.openWithDefaultApp` / `workspace.openLinkText` / `window.open` 로 교체 · (Medium) `buildCanonicalizerPrompt` 시그니처 optional 명시 (backward compat) · (Medium) Stay-involved Preview 를 stripBrokenWikilinks 이후로 이동 (Preview/저장본 bit-identical) · (Low) Stage 1 override 가이드 신설.
   - Open question 5건 모두 decision 명시 — flat 배열 provenance / 인라인 citation MVP / 도메인 프리셋 Phase 5 이관 / Preview 시점 확정 / AMBIGUOUS Badge-only.
@@ -130,7 +141,7 @@ updated: 2026-04-24
   - `ingest-pipeline.ts`: canonicalize 완료 후 + Stay-involved Preview 모달 호출 이전 지점에 `stripBrokenWikilinks(parsed.source_page.content, keepBases)` 삽입. keepBases = entity/concept/source 페이지 filename normalized base Set. canonical 페이지에 없는 wikilink 는 plain text 로 강등.
   - Preview/저장본 bit-identical 보장 (plan v2 §5.2 self-review #3 결과).
 - 증거: wikey-core 434 → **437 PASS (+3)** · `npm run build` 0 errors (tsc + esbuild) · `validate-wiki.sh` + `check-pii.sh` PASS.
-- 참조: `activity/phase-4-result.md §4.3`, `plan/phase-4-todo.md §4.3.2 Part A + §4.3.3 (전량 [x])`, `plan/session-wrap-followups.md` top-block session 3, `plan/phase-4-3-plan.md` v2 전체.
+- 참조: `activity/phase-4-result.md §4.3`, `plan/phase-4-todo.md §4.3.2 Part A + §4.3.3 (전량 [x])`, `plan/session-wrap-followups.md` top-block session 3, `plan/phase-4-todox-4.3-plan.md` v2 전체.
 - 다음 세션 진입점: Part B (source-resolver + query-pipeline citations + sidebar-chat 답변 렌더) + §4.3.1 (Stage 2/3 prompt override + settings UI) + 통합 smoke → Phase 4 본체 완성 선언.
 
 ## [2026-04-23] feat | §4.2 Stage 3+4 — LLM 분류 정제 + vault listener + startup reconcile
@@ -155,7 +166,7 @@ updated: 2026-04-24
 
 ## [2026-04-23] feat | §4.2 Stage 1+2 — URI/registry foundation + pair move + frontmatter rewrite
 
-- 계획: plan v1→v2→v3 진화 (codex rescue 2차 검증 FAIL gate 6 concern 전부 반영). URI 저장 폐기, `source_id` + `vault_path` 만 저장, URI 는 view-time derive. 번들 id 는 내부 relative path 기반. 64-bit prefix + full-hash verify. bash 가 node CLI 로 registry 즉시 갱신. 계획서: `plan/phase-4-2-plan.md`.
+- 계획: plan v1→v2→v3 진화 (codex rescue 2차 검증 FAIL gate 6 concern 전부 반영). URI 저장 폐기, `source_id` + `vault_path` 만 저장, URI 는 view-time derive. 번들 id 는 내부 relative path 기반. 64-bit prefix + full-hash verify. bash 가 node CLI 로 registry 즉시 갱신. 계획서: `plan/phase-4-todox-4.2-plan.md`.
 - 신규 모듈: `wikey-core/src/uri.ts` (computeFileId/BundleId/ExternalId, buildObsidian/FileUri, verifyFullHash, sidecarVaultPath), `source-registry.ts` (CRUD + findByIdPrefix full-hash verify + reconcile walker).
 - frontmatter: `wiki-ops.ts` 에 `injectSourceFrontmatter` (비관리 키 보존) + `rewriteSourcePageMeta` (post-move patch). `ingest-pipeline.ts` 가 `buildV3SourceMeta` 헬퍼로 bytes 에서 id/hash 계산 → frontmatter 주입 + registry upsert.
 - 이동: `classify.ts::movePair` (registry 경유 + post-move frontmatter rewrite, 6 케이스 + 원자성). plugin `commands.ts` autoMoveFromInbox · `sidebar-chat.ts` Audit Apply 둘 다 `movePair` 전환.
@@ -169,7 +180,7 @@ updated: 2026-04-24
 - raw/: PMS_제품소개_R10_20220815.pdf 만 raw/0_inbox/ 에 남김, 나머지 PARA 하위 모두 raw/_delayed/ 로 이동
 - wiki/: entities/concepts/sources/analyses 모두 삭제, index.md / log.md / overview.md 초기 템플릿으로 리셋, .ingest-map.json 삭제
 - 캐시: ~/.cache/wikey/convert/ 무효화
-- 목적: §4.1.3 (Bitmap OCR 본문 오염 차단 + 검증 모듈 설계 확장) 실험의 깨끗한 baseline 확보. `plan/phase-4-1-3-bitmap-ocr-fix.md` 참조.
+- 목적: §4.1.3 (Bitmap OCR 본문 오염 차단 + 검증 모듈 설계 확장) 실험의 깨끗한 baseline 확보. `plan/phase-4-todox-4.1.3-bitmap-ocr-fix.md` 참조.
 
 ## [2026-04-22] fix | §4.1.3.1~3 Bitmap OCR 본문 오염 차단 (TDD)
 
@@ -182,7 +193,7 @@ updated: 2026-04-24
 
 - 스크립트: `scripts/benchmark-tier-4-1-3.mjs` (신규). `wikey-core/dist/convert-quality.js` 재활용.
 - 대상: PMS / ROHM / RP1 / GOODSTREAM 4 코퍼스 (OMRON/TWHB 는 실행 시간 이유로 제외).
-- 결과 (`activity/phase-4-1-3-benchmark-2026-04-22.md`):
+- 결과 (`activity/phase-4-resultx-4.1.3-benchmark-2026-04-22.md`):
   - PMS: Tier 1 retry-no-ocr → Tier 1a `1a-docling-no-ocr` accept — lines **1922 → 532 (−72%)**, score 0.53 → 0.91. koreanChars 18,654 → 15,549 (OCR 파편 3,105자 제거).
   - ROHM: Tier 1 retry (koreanLoss) → Tier 1b force-ocr accept (기존 경로 유지).
   - RP1, GOODSTREAM: Tier 1 accept.
@@ -243,7 +254,7 @@ updated: 2026-04-24
 
 ## [2026-04-22] eval | §4.1.3.5 PMS 10-run determinism (clean MD baseline)
 
-- 실행: `./scripts/measure-determinism.sh raw/0_inbox/PMS_제품소개_R10_20220815.pdf -n 10 -d -o activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`
+- 실행: `./scripts/measure-determinism.sh raw/0_inbox/PMS_제품소개_R10_20220815.pdf -n 10 -d -o activity/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`
 - 10/10 success, 평균 252.6s/run, 총 약 42분.
 - **Total CV 10.3%** (mean 42.20, range 36–46, 분포 {36, 44, 46} 3 값으로 양자화)
 - **Entities CV 2.3%** (mean 22.60, range 22–23) — 거의 결정적. 29-run 11.1% 대비 대폭 개선.
@@ -253,7 +264,7 @@ updated: 2026-04-24
   - 깨끗한 MD 에서도 §4.5.1.6 29-run 9.2% (오염) 와 거의 동일 (10.3%) → **canonicalizer 3차 확장이 실제 legitimate variance 를 잡았음** 확증 (OCR 파편 흡수가 주효과였다면 clean MD 에서 CV 가 훨씬 더 낮아야).
   - 잔여 variance 는 **Concepts PMBOK 9 영역 추출 진동** 이 주원인 (Entities 는 2.3% 거의 결정적).
 - 판정: CV 10.3% 는 §4.5.1.7 gate "5–10%" 와 ">10%" 경계. **§4.5.1.7.2 (Concepts prompt, PMBOK 9 영역 강제 나열)** 은 필수. §4.5.1.7.1 (attribution), §4.5.1.7.5 (Lotus variance) 등은 재평가 (Entities CV 2.3% 면 Lotus 진동 자동 해결 가능성 높음).
-- 산출물: `activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`.
+- 산출물: `activity/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`.
 
 ## [2026-04-22] feat | §4.5.1.7.2 + §4.5.1.7.3 코드 구현 완료 — 실측 대기
 

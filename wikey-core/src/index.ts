@@ -52,8 +52,9 @@ export {
   buildCitationFromContent,
   collectCitationsWithWikiFS,
   collectCitationsFromFS,
+  appendOriginalLinks,
 } from './query-pipeline.js'
-export type { QueryOptions } from './query-pipeline.js'
+export type { QueryOptions, AppendOriginalLinksOptions } from './query-pipeline.js'
 export {
   resolveSource,
   resolveSourceSync,
@@ -168,3 +169,25 @@ export {
   DEFAULT_BASIC_PROVIDER,
   ANTHROPIC_PING_MODEL,
 } from './provider-defaults.js'
+export {
+  detectPii,
+  redactPii,
+  applyPiiGate,
+  PiiIngestBlockedError,
+} from './pii-redact.js'
+export type {
+  PiiKind,
+  PiiMatch,
+  PiiRedactionMode,
+  PiiGateOptions,
+  PiiGateResult,
+} from './pii-redact.js'
+export {
+  buildCapabilityMap,
+  dumpCapabilityMap,
+  defaultCapabilityCachePath,
+} from './capability-map.js'
+export type {
+  SupportedExtensionMap,
+  BuildCapabilityInput,
+} from './capability-map.js'

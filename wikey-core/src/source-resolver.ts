@@ -26,6 +26,14 @@ export interface ResolvedSource {
   readonly kind: SourceIdKind
   /** Registry-current vault-relative path (PARA 이동 후 최신). null for external-only entries. */
   readonly currentPath: string | null
+  /**
+   * Phase 4 D.0.h (v6 §4.5.2): wikilink 렌더용 raw vault path.
+   *   - 우선: record.vault_path (current) — PARA 이동 후 최신
+   *   - fallback: record.path_history 의 **마지막 유효 항목** (index 0 아님 — 최초 항목은 의미 반대)
+   *   - 둘 다 없으면 null (fail closed)
+   * tombstone 이어도 path_history 에 남아 있으면 채움 (UI 가 "삭제됨" 표시 가능).
+   */
+  readonly rawVaultPath: string | null
   /** Sidecar `.md` path if file + ingested (non-md source). */
   readonly sidecarPath: string | null
   /** Display form — "filename (dir)" 스타일 텍스트. UI 툴팁/레이블. */
@@ -114,6 +122,15 @@ function buildResolved(
   opts: Omit<ResolveSourceOptions, 'registry'>,
 ): ResolvedSource {
   const currentPath = record.vault_path || null
+  // Phase 4 D.0.h (v6 §4.5.2): raw vault path — current 우선, path_history 마지막 유효 fallback.
+  // `path_history[0]` 은 최초 항목 (의미 반대) 이므로 뒤에서부터 첫 비어있지 않은 entry 탐색.
+  let rawVaultPath = currentPath
+  if (!rawVaultPath && record.path_history.length > 0) {
+    for (let i = record.path_history.length - 1; i >= 0; i--) {
+      const entry = record.path_history[i]
+      if (entry?.vault_path) { rawVaultPath = entry.vault_path; break }
+    }
+  }
   const sidecarPath = record.sidecar_vault_path || null
   const extension = extractExtension(currentPath)
   const displayLabel = currentPath
@@ -140,6 +157,7 @@ function buildResolved(
     sourceId,
     kind,
     currentPath,
+    rawVaultPath,
     sidecarPath,
     displayLabel,
     extension,

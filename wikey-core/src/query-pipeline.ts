@@ -4,6 +4,8 @@ import type { Citation, HttpClient, QueryResult, SearchResult, WikiFS, WikeyConf
 import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
 import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
+import { resolveSource } from './source-resolver.js'
+import { loadRegistry } from './source-registry.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -75,10 +77,15 @@ export async function query(
   // Step 4: LLM synthesis
   try {
     const prompt = buildSynthesisPrompt(context, question)
-    const answer = await llm.call(prompt, { provider, model })
+    const rawAnswer = await llm.call(prompt, { provider, model })
     const citations = opts?.wikiFS
       ? await collectCitationsWithWikiFS(searchResults, opts.wikiFS)
       : collectCitationsFromFS(searchResults, basePath)
+    // Phase 4 D.0.h (v6 §4.5.2): citation 기반 원본 링크 자동 append.
+    // wikiFS 없으면 LLM prompt 가 이미 출처 지시하므로 answer 그대로 반환.
+    const answer = opts?.wikiFS
+      ? await appendOriginalLinks(rawAnswer, citations, { wikiFS: opts.wikiFS })
+      : rawAnswer
     return { answer, sources: searchResults, citations }
   } catch (err: any) {
     throw new Error(`[Step 4/4 LLM 합성] provider=${provider} model=${model}\n${err?.message ?? err}`)
@@ -124,6 +131,57 @@ export function collectCitationsFromFS(
     }
   }
   return out
+}
+
+// ── Phase 4 D.0.h (v6 §4.5.2) — citation 기반 원본 링크 자동 append ──
+
+export interface AppendOriginalLinksOptions {
+  readonly wikiFS: WikiFS
+  readonly vaultName?: string
+}
+
+/**
+ * LLM 답변 (`answer`) 끝에 citation 에서 해석한 원본 파일 wikilink 를 추가한다.
+ *
+ * - citation 0개: `원본: (없음 — 외부 근거 없음)` (fail closed)
+ * - citation 있지만 resolve 전부 실패: `원본: (해석 실패 — registry 점검 필요)`
+ * - 일부 resolve 성공: `원본: [[raw/.../file.pdf]], [[...]]`
+ *
+ * rawVaultPath 는 current vault_path 우선, fallback 으로 path_history 마지막 유효 entry.
+ * 둘 다 없으면 resolve 실패로 간주.
+ */
+export async function appendOriginalLinks(
+  answer: string,
+  citations: readonly Citation[],
+  opts: AppendOriginalLinksOptions,
+): Promise<string> {
+  const trimmed = answer.trimEnd()
+  if (citations.length === 0) {
+    return `${trimmed}\n\n원본: (없음 — 외부 근거 없음)`
+  }
+  const registry = await loadRegistry(opts.wikiFS).catch(() => ({}))
+  const links: string[] = []
+  const seen = new Set<string>()
+  for (const citation of citations) {
+    for (const sourceId of citation.sourceIds) {
+      try {
+        const resolved = await resolveSource(opts.wikiFS, sourceId, {
+          vaultName: opts.vaultName ?? '',
+          registry,
+        })
+        if (!resolved || !resolved.rawVaultPath) continue
+        if (seen.has(resolved.rawVaultPath)) continue
+        seen.add(resolved.rawVaultPath)
+        links.push(`[[${resolved.rawVaultPath}]]`)
+      } catch {
+        // single citation resolve 실패는 건너뜀 — 전체가 실패해야 WARN 처리.
+      }
+    }
+  }
+  if (links.length === 0) {
+    return `${trimmed}\n\n원본: (해석 실패 — registry 점검 필요)`
+  }
+  return `${trimmed}\n\n원본: ${links.join(', ')}`
 }
 
 /** Extract provenance refs from a single page's frontmatter. Public for unit testing. */

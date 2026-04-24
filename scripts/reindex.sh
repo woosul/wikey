@@ -93,6 +93,32 @@ cmd_check() {
   echo -e "  CR 캐시: ~/.cache/qmd/contextual-prefixes.json"
 }
 
+# --- --check --json 모드 (Phase 4 D.0.f / v6 §4.4.1) ---
+# 플러그인 `waitUntilFresh` 가 파싱하는 구조화 output. stdout 에 단 한 줄 JSON 만 찍고 exit 0.
+# Schema: { "stale": number, "status": "fresh" | "stale" | "never" }
+#   - fresh: stale = 0
+#   - stale: stale = 변경된 파일 수 (>0)
+#   - never: stale = -1 (인덱싱 한번도 안 됨)
+cmd_check_json() {
+  local result
+  result=$(check_stale)
+  local status
+  status=$(echo "$result" | head -1)
+  case "$status" in
+    never) echo '{"stale":-1,"status":"never"}' ;;
+    fresh) echo '{"stale":0,"status":"fresh"}' ;;
+    stale)
+      local count
+      count=$(echo "$result" | tail -n +2 | wc -l | tr -d ' ')
+      echo "{\"stale\":${count},\"status\":\"stale\"}"
+      ;;
+    *)
+      # 예상 외 상태 — contract 준수를 위해 never 로 fallback
+      echo '{"stale":-1,"status":"never"}'
+      ;;
+  esac
+}
+
 # --- 전체/quick 인덱싱 ---
 cmd_reindex() {
   local mode="${1:-full}"
@@ -186,13 +212,21 @@ cmd_reindex() {
 
 # --- 메인 ---
 case "${1:-}" in
-  --check|-c)  cmd_check ;;
+  --check|-c)
+    # Phase 4 D.0.f: 2번째 인자 --json 이면 구조화 output 으로 분기.
+    if [ "${2:-}" = "--json" ]; then
+      cmd_check_json
+    else
+      cmd_check
+    fi
+    ;;
   --quick|-q)  cmd_reindex quick ;;
   --help|-h)
     echo "사용법:"
-    echo "  reindex.sh           전체 인덱싱 (qmd + embed + CR + 한국어)"
-    echo "  reindex.sh --quick   qmd update + embed만"
-    echo "  reindex.sh --check   stale 여부 확인"
+    echo "  reindex.sh                 전체 인덱싱 (qmd + embed + CR + 한국어)"
+    echo "  reindex.sh --quick         qmd update + embed만"
+    echo "  reindex.sh --check         stale 여부 확인 (human-readable)"
+    echo "  reindex.sh --check --json  stale 상태 JSON (플러그인 freshness gate)"
     ;;
   *)           cmd_reindex full ;;
 esac

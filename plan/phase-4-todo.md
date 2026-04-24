@@ -5,7 +5,16 @@
 > **본체 정의 (2026-04-22 확정)**: 원본 → wiki ingest 프로세스가 완성되어 **더 이상 wiki 를 초기화하거나 재생성할 일이 없는** 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 계속 축적되지만 구조는 변경되지 않는다. 튜닝·고도화·개선·확장은 Phase 5, 웹 인터페이스는 Phase 6 로 이관.
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md` 와 1:1 mirror
 > 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.1/§5.2 로 이관)
-> 상태 (2026-04-24 session 6): §4.0/§4.1 완료, §4.5.1/§4.5.2 B+C 완료, §4.2/§4.3 완료 (462→474 tests). **§4.6 통합 smoke 2-pass 실행 (2026-04-23) → D 보류** (Pass A 5/6, Pass B 3/4, file 2 harness BLOCKED, file 3 PII 노출). **§4.6 D.0 Critical Fix Plan v6 수립 완료** (codex Panel Mode D 4회 review → **APPROVE-WITH-CHANGES / CRITICAL: None**, 구현 착수 승인). 다음 = **D.0 구현 (10~14h) → smoke 재실행 → D 선언**.
+> 상태 (2026-04-24 session 7): §4.0/§4.1/§4.5.1/§4.5.2/§4.2/§4.3 완료. §4.6 smoke 2-pass 완료 → D 보류. **§4.6 D.0 Critical Fix Plan v6 수립 완료** (codex 4회 review → APPROVE-WITH-CHANGES / CRITICAL: None). **§4.7 D.0.a~j 구현 완료** (2026-04-24 session 7, 단일 세션, 511 tests / 0 build errors). **다음 = D.0.k~o (codex 재검증 → smoke 재실행 → sidecar/runtime sanity → D 선언)**. 상세 = `activity/phase-4-result.md §4.7`.
+
+## 관련 문서
+
+- **Result mirror**: [`activity/phase-4-result.md`](../activity/phase-4-result.md) — 관련 보조 문서 전체 목록은 여기 `## 관련 문서` 섹션 참조 (중복 기재 회피).
+- **직접 링크**:
+  - §4.6 D.0 Critical Fix 계획서: [`plan/phase-4-todox-4.6-critical-fix-plan.md`](./phase-4-todox-4.6-critical-fix-plan.md)
+  - §4.6 통합 smoke 계획서: [`plan/phase-4-todox-4.6-integrated-test.md`](./phase-4-todox-4.6-integrated-test.md) · 실행 리포트: [`activity/phase-4-resultx-4.6-smoke-2026-04-23/`](../activity/phase-4-resultx-4.6-smoke-2026-04-23/)
+  - §4.1 / §4.1.3 / §4.2 / §4.3 / §4.5.1.5 플랜·리포트: result 의 관련 문서 섹션 참조.
+- **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md) · [`plan/session-wrap-followups.md`](./session-wrap-followups.md).
 
 ---
 
@@ -54,13 +63,13 @@
 ## 4.1 문서 전처리 파이프라인 (source → Markdown) — **완료 (2026-04-21)**
 > tag: #core, #workflow
 > 최종 상태: Docling 메인화 + unhwp + MarkItDown fallback 강등 + 자동 force-ocr 감지 + 5개 코퍼스 실증. 251 tests PASS.
-> 상세: `activity/phase-4-result.md §4.1` + `activity/phase-4-converter-benchmark.md`
+> 상세: `activity/phase-4-result.md §4.1` + `activity/phase-4-resultx-4.1-converter-benchmark.md`
 
 ### 4.1.1 Docling + unhwp 메인화, MarkItDown은 fallback으로 강등
 
 **결정 (2026-04-20)**: 현재 tier 1인 MarkItDown은 한국어 OCR 정확도·테이블 보존·HWP 미지원 등의 갭이 누적되어 품질 상한이 낮음. IBM Docling(TableFormer + layout model + ocrmac/RapidOCR/Tesseract)을 PDF/DOCX/PPTX/XLSX/HTML/이미지/TXT의 **메인 컨버터**로 승격하고, HWP/HWPX는 **unhwp**로 위임한다. MarkItDown 체인은 docling 미설치 환경 또는 경량 경로의 **fallback**으로 유지.
 
-**구현 계획 (2026-04-21)**: `plan/phase-4-4-1-agile-crystal.md` — 사용자 승인 완료. 이미지 처리는 embedded 출력 + 공통 `stripEmbeddedImages()` 로 LLM 투입 직전 placeholder化(alt text 보존). Obsidian Web Clipper의 외부 이미지 URL(`![alt](https://...svg)`)도 같은 함수가 처리.
+**구현 계획 (2026-04-21)**: `plan/phase-4-todox-4.1-agile-crystal.md` — 사용자 승인 완료. 이미지 처리는 embedded 출력 + 공통 `stripEmbeddedImages()` 로 LLM 투입 직전 placeholder化(alt text 보존). Obsidian Web Clipper의 외부 이미지 URL(`![alt](https://...svg)`)도 같은 함수가 처리.
 
 **실행 순서 (의존성 그래프)**:
 
@@ -135,8 +144,8 @@
 #### 4.1.1.7 성능 비교 테스트 (정량 baseline)
 
 - [x] `scripts/benchmark-converters.sh` — 확장자별 변환기 매트릭스 (unhwp/docling/docling-force-ocr/markitdown/pdftotext/pymupdf) × bytes·time·korean_loss 측정. docling은 `--output <dir>` 방식으로 처리 (stdout 미지원).
-- [x] 1차 실측 완료 — `activity/phase-4-converter-benchmark.md` (PMS_제품소개_R10 PDF). **핵심 발견**: docling-force-ocr는 벡터 PDF에서 한국어 0자 (ocrmac 벡터 래스터화 열화). 자동 재시도는 임계 기반이라 안전.
-- [x] 추가 코퍼스 실측 완료 (2026-04-21) — **TWHB 파워디바이스 / OMRON HEM-7600T / 사업자등록증** 3건 추가 벤치마크. OMRON 결정적 케이스(vector-only PDF, MarkItDown 1 byte 실패 vs Docling --force-ocr 9.2KB) 로 `isLikelyScanPdf` 자동 감지 정당성 실증. `activity/phase-4-converter-benchmark.md` 5개 코퍼스 종합 리포트로 확장.
+- [x] 1차 실측 완료 — `activity/phase-4-resultx-4.1-converter-benchmark.md` (PMS_제품소개_R10 PDF). **핵심 발견**: docling-force-ocr는 벡터 PDF에서 한국어 0자 (ocrmac 벡터 래스터화 열화). 자동 재시도는 임계 기반이라 안전.
+- [x] 추가 코퍼스 실측 완료 (2026-04-21) — **TWHB 파워디바이스 / OMRON HEM-7600T / 사업자등록증** 3건 추가 벤치마크. OMRON 결정적 케이스(vector-only PDF, MarkItDown 1 byte 실패 vs Docling --force-ocr 9.2KB) 로 `isLikelyScanPdf` 자동 감지 정당성 실증. `activity/phase-4-resultx-4.1-converter-benchmark.md` 5개 코퍼스 종합 리포트로 확장.
 
 #### 4.1.1.8 변환 결과 캐시 (§4.1.1.4와 통합 구현)
 
@@ -152,7 +161,7 @@
 ---
 
 **Phase 4.1.1 세션 결산 (2026-04-21)**:
-- 신규 파일: `wikey-core/src/rag-preprocess.ts`, `convert-cache.ts`, `convert-quality.ts` + 각 테스트 3개, `scripts/vendored/unhwp-convert.py`, `scripts/benchmark-converters.sh`, `plan/phase-4-4-1-agile-crystal.md`
+- 신규 파일: `wikey-core/src/rag-preprocess.ts`, `convert-cache.ts`, `convert-quality.ts` + 각 테스트 3개, `scripts/vendored/unhwp-convert.py`, `scripts/benchmark-converters.sh`, `plan/phase-4-todox-4.1-agile-crystal.md`
 - 변경 파일: `ingest-pipeline.ts` (tier 체인 전면 재구성 + 3개 extract helper), `types.ts` / `config.ts` (DOCLING_* 키), `env-detect.ts` (docling/unhwp 감지), `settings-tab.ts` (Environment 섹션 + 설치 버튼), `wikey.conf` (주석 블록), `index.ts` (export)
 - 테스트: 197 → **233 PASS** (+36 : rag-preprocess 15 / convert-cache 11 / convert-quality 10)
 - 빌드: wikey-core tsc + wikey-obsidian esbuild 모두 0 errors
@@ -200,7 +209,7 @@
 - [x] **§4.1.3.4** Tier chain 회귀 벤치마크 (4 코퍼스 — docs/samples 2 + raw 2)
   - 스크립트: `scripts/benchmark-tier-4-1-3.mjs` (신규). Tier 1 → decision 분기 → Tier 1a/1b 자동 실행 → 최종 채택 MD 를 원본 옆 sidecar `.md` 에 저장.
   - 대상: PMS (pollution), ROHM (koreanLoss), RP1 (영문 vector), GOODSTREAM (단순). OMRON/TWHB 는 실행 시간 이유로 본 라운드 제외.
-  - 결과 (`activity/phase-4-1-3-benchmark-2026-04-22.md`):
+  - 결과 (`activity/phase-4-resultx-4.1.3-benchmark-2026-04-22.md`):
     - PMS: Tier 1 `retry-no-ocr` → **Tier 1a `1a-docling-no-ocr` accept**, lines 1922 → **532 (−72%)**, score 0.53 → 0.91.
     - ROHM: Tier 1 `retry` → Tier 1b `1b-docling-force-ocr` accept, score 0.56 → 0.94.
     - RP1: Tier 1 `accept`, score 0.93.
@@ -213,7 +222,7 @@
   - Entities CV 11.1% → 2.3% 로 대폭 개선 — OCR 파편 제거 효과가 entity 경계 안정화에 직결.
   - Concepts CV 27.0% → 24.6% 로 소폭 — PMBOK 9 영역 진동이 legitimate LLM variance (깨끗한 MD 로도 남음).
   - §4.5.1.7 gate 판정: §4.5.1.7.2 (Concepts prompt, PMBOK 9 영역 강제 나열) **필수**. §4.5.1.7.5 (Lotus variance) **불필요** (Entities 이미 해결). §4.5.1.7.1 (attribution) 재평가.
-  - 산출물: `activity/phase-4-1-3-5-pms-10run-clean-2026-04-22.md`, `activity/phase-4-result.md §4.1.3.5` 전체 매트릭스.
+  - 산출물: `activity/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`, `activity/phase-4-result.md §4.1.3.5` 전체 매트릭스.
 
 - [x] **§4.1.3.6** 세션 마감 — 문서 동기화 + commit/push
   - `activity/phase-4-result.md §4.1.3` 상세화 ✓
@@ -233,7 +242,7 @@
 
 ## 4.2 분류 및 파일 관리 (inbox → PARA, pair 이동·registry·listener)
 > tag: #workflow, #core
-> 상세 계획: `plan/phase-4-2-plan.md` (v3, 2026-04-22 codex 검증 반영).
+> 상세 계획: `plan/phase-4-todox-4.2-plan.md` (v3, 2026-04-22 codex 검증 반영).
 > **v3 핵심 변경**: URI 저장 폐기 → `source_id` + `vault_path` 만 저장. URI 는 view-time derive (`obsidian://open?...` / `file://...`). 번들 id 는 내부 relative path 기반으로 이동 무관 불변.
 
 #### 사용자 제약 (2026-04-22)
@@ -323,7 +332,7 @@
 
 현재 v7-5까지: `.wikey/ingest_prompt.md` (Stage 1 summary) + `.wikey/schema.yaml` (schema 타입) override 지원. Stage 2/3 미지원 상태였음.
 
-상세 설계: `plan/phase-4-3-plan.md §4 + §4.5`.
+상세 설계: `plan/phase-4-todox-4.3-plan.md §4 + §4.5`.
 
 - [x] **3-stage 프롬프트 완전 분리**
   - `.wikey/stage1_summary_prompt.md` (source_page 요약) — 기존 `.wikey/ingest_prompt.md` 가 legacy fallback 으로 자동 인식 (canonical 우선)
@@ -415,7 +424,7 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 #### 4.5.1.3 측정 재실행 (선택)
 
-- [x] selector 수정 후 5-run smoke로 자동 스크립트 동작 검증 (수동 드라이브 대체 가능성 확인) — PMS PDF 5/5 성공, Total CV 5.7% (수동 7.9%와 동일 분포). `activity/determinism-pms-auto-2026-04-21.md` 참고.
+- [x] selector 수정 후 5-run smoke로 자동 스크립트 동작 검증 (수동 드라이브 대체 가능성 확인) — PMS PDF 5/5 성공, Total CV 5.7% (수동 7.9%와 동일 분포). `activity/phase-4-resultx-4.5.1-determinism-pms-auto-2026-04-21.md` 참고.
 - [x] 측정 대상 제약 — 최소 15KB 이상 (chunk ≥ 3 예상) 가드 추가. 미만 시 exit 2, `-f/--force` 로 우회 가능.
 
 #### 4.5.1.4 canonicalizer 확장 (v7 잔여 variance 대응)
@@ -433,7 +442,7 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 #### 4.5.1.5 LLM Wiki Phase A/B/C (v2) — 결정적 Phase A + 2-route + ablation 선행 + TDD
 
-> **설계 문서**: `plan/phase-4-change-phase-abc.md` (v2, 2026-04-21). v1 Codex 적대적 검증 NEEDS-REVISION → v2: Phase A 완전 결정적, Route 2분기, token-budget, 결정적 fallback, ablation 선행, N=30, 모든 verification TDD.
+> **설계 문서**: `plan/phase-4-todox-4.5.1.5-change-phase-abc.md` (v2, 2026-04-21). v1 Codex 적대적 검증 NEEDS-REVISION → v2: Phase A 완전 결정적, Route 2분기, token-budget, 결정적 fallback, ablation 선행, N=30, 모든 verification TDD.
 >
 > **왜 재정의되었는가**: 원안(§4.5.1.5 v1)은 "chunk 분할 결정성 확인 + 10-run baseline + temperature/seed 재검증 + slug 변이" 였음. 그러나 §4.1 Docling 메인화 완료 직후 철학 재검토에서 **RAG chunk 패턴 자체가 schema §19·§21 배격 대상** 임이 드러나, 과제 범위를 "variance 측정" → "Phase A/B/C 이행 + 사후 variance 재측정" 으로 확장. Codex 교차 검증을 통해 v1(LLM Phase A 분류기) 의 stochastic 증설 위험 지적 수용 → v2(결정적 Phase A) 로 재설계.
 
@@ -616,7 +625,7 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 - [x] 4.6.1.4 Pass B (Audit 패널, 4 파일 × 3-stage) — 3/4 PASS (file 2 BLOCKED, file 5/6 N/A by C3)
 - [x] 4.6.1.5 교차 대조 cross-compare.md 작성 (tier-label 3/3 일치)
 - [x] 4.6.1.6 §4.C 덤 smoke (팔레트 7 entries 중 1 미스매치 — `Wikey: Delete wiki page` 단건 삭제 미구현)
-- [x] 4.6.1.7 리포트 집계 `activity/phase-4-smoke-2026-04-23/README.md`
+- [x] 4.6.1.7 리포트 집계 `activity/phase-4-resultx-4.6-smoke-2026-04-23/README.md`
 
 ### 4.6.2 5 Critical (C1~C5) + C6 UX 정리
 
@@ -646,7 +655,7 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 ### 4.6.5 plan 문서 생성
 
-- [x] 4.6.5.1 `plan/phase-4-critical-fix-plan.md` 690+ lines 작성 (v6, 구현 착수 승인)
+- [x] 4.6.5.1 `plan/phase-4-todox-4.6-critical-fix-plan.md` 690+ lines 작성 (v6, 구현 착수 승인)
 
 ### 4.6.6 병행 개선 — 스킬 인프라
 
@@ -657,50 +666,51 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 > D.0 세부는 `Phase 4 본체 완성 체크리스트 > D.0` 블록에 중복 없이 단일 관리.
 
-- [ ] 4.6.7 D.0 전체 — `plan/phase-4-critical-fix-plan.md §4.1~§4.5` 구현 + vitest 496+ + codex 최종 APPROVE + smoke 재실행 6/6 + 보조 2b/3b PASS → D 블록 진입
+- [ ] 4.6.7 D.0 전체 — `plan/phase-4-todox-4.6-critical-fix-plan.md §4.1~§4.5` 구현 + vitest 496+ + codex 최종 APPROVE + smoke 재실행 6/6 + 보조 2b/3b PASS → D 블록 진입
 
 ---
 
 ## Phase 4 본체 완성 체크리스트 (다음 세션 종료 플레이북)
 
-> 2026-04-24 session 6 갱신. A (smoke 실행) 완료 → D 보류 → **D.0 Critical Fix 블록 신설**. D.0 → D 순서로 진행. D.0 통과 후 `activity/phase-4-result.md` 마지막에 **"Phase 4 본체 완성 선언"** 블록을 쓰고 commit. 이후 Phase 5 착수.
+> 2026-04-24 session 7 갱신. A (smoke 실행) 완료 → D.0 Critical Fix 구현 **a~j 완료** (511 tests, 0 build errors) → **k~o 남음** (codex 재검증 + smoke 재실행 + D 선언). 구현 세부는 `activity/phase-4-result.md §4.7` (세션 7 결과) 참조.
 
 ### D.0 Critical Fix Plan v6 구현 (A smoke 결과 5 Critical + C6 UX)
 
-> **실행 단일 소스**: `plan/phase-4-critical-fix-plan.md` v6 (codex Panel Mode D **APPROVE-WITH-CHANGES / CRITICAL: None**, 2026-04-24).
-> **예상 소요**: 실구현 ~10~14h + smoke 재실행 ~1.5h. 세션 분할 권장 (D.0-a/b/c 1 세션, D.0-d + smoke + D 선언 1 세션).
+> **실행 단일 소스**: `plan/phase-4-todox-4.6-critical-fix-plan.md` v6 (codex Panel Mode D **APPROVE-WITH-CHANGES / CRITICAL: None**, 2026-04-24).
+> **예상 소요**: 실구현 ~10~14h + smoke 재실행 ~1.5h.
+> **실구현 진행 (2026-04-24 session 7)**: a~j 완료 (단일 세션). 결과 = `activity/phase-4-result.md §4.7`.
 
 체크리스트 (D 진입 필수 조건):
 
-1. [ ] **D.0.a** TDD: `wikey-core/src/__tests__/pii-redact.test.ts` +21 tests 먼저 (RED) → `pii-redact.ts` 구현 (GREEN). detect / redact 3 모드 / 2-layer gate integration.
-2. [ ] **D.0.b** PDF sidecar 재설계: `extractPdfText()` 반환형 `Promise<{ stripped, sidecarCandidate }>` 승격 + caller 2개 (`ingest-pipeline.ts:173 ingest()`, `:781 generateBrief()`) 동시 수정. `finalize()` (line 1302) 에서 직접 sidecar write 제거.
-3. [ ] **D.0.c** 중앙 wrapper 배치: `ingest-pipeline.ts:150` 이후 2-layer gate (guardEnabled → detect → allowIngest → redact/throw). Settings 3 필드 전달 (`allowPiiIngest`, `piiRedactionMode`, `piiGuardEnabled`). `sidebar-chat.ts::runIngest` + Audit 경로 모두.
-4. [ ] **D.0.d** C3 runtime capability: `env-detect.ts::buildCapabilityMap` + `dumpCapabilityMap` → `~/.cache/wikey/capabilities.json`. `audit-ingest.py` runtime bridge (fallback 기본값 유지). `main.ts` 공유 상수 `DOC_EXT_RE` (md/txt/pdf/hwp/hwpx/docx/pptx/xlsx/csv/html/htm/png/jpg/jpeg/tiff/tif) + UI 빨간 행.
-5. [ ] **D.0.e** C4 onLayoutReady: `main.ts:213` 교체 + 1500ms delayed fallback + `startupReconcileDone` idempotent flag.
-6. [ ] **D.0.f** C5 reindex: `scripts/reindex.sh --check --json` 신규 contract. `scripts-runner.ts` 확장 (`ScriptResult.success/exitCode/stderr` + `runScript` timeoutMs). `reindexQuick` (throw on fail) + `reindexCheckJson` (shape+enum 검증) + `waitUntilFresh` (`status==='fresh' && stale===0` 만). `ingest-pipeline.ts:427` 교체.
-7. [ ] **D.0.g** C6.1 `bypassBatch` guard: `main.ts:235~247` create listener 에 `renameGuard.consume(file.path)` 추가 (TTL 는 이미 5s default, 변경 없음).
-8. [ ] **D.0.h** C6.2 원본 링크: `query-pipeline.ts::appendOriginalLinks` 신규 + `source-resolver.ts::ResolvedSource.rawVaultPath` 필드 (current `vault_path` 우선, fallback = path_history 마지막 유효 entry, fail closed).
-9. [ ] **D.0.i** C6.3/C6.4 Processing modal: fileLabel (`original.ext | converted.md` accent) + DOM 재정렬 (fileLabel→spinner→progress-bar→button, `margin-top: auto`).
-10. [ ] **D.0.j** 테스트: vitest 496+ green (pii-redact +21 · env-detect +5 · scripts-runner +4 · query-pipeline +4). esbuild 0 errors.
+1. [x] **D.0.a** TDD: `wikey-core/src/__tests__/pii-redact.test.ts` +21 tests 먼저 (RED) → `pii-redact.ts` 구현 (GREEN). detect / redact 3 모드 / 2-layer gate integration. — 21/21 GREEN
+2. [x] **D.0.b** PDF sidecar 재설계: `extractPdfText()` 반환형 `Promise<{ stripped, sidecarCandidate }>` 승격 + caller 2개 (`ingest-pipeline.ts:136 ingest()`, `:794 generateBrief()`) 동시 수정. `finalize()` (line 1302) 에서 직접 sidecar write 제거.
+3. [x] **D.0.c** 중앙 wrapper 배치: `ingest-pipeline.ts:150` 이후 2-layer gate (guardEnabled → detect → allowIngest → redact/throw). Settings 3 필드 전달 (`allowPiiIngest`, `piiRedactionMode`, `piiGuardEnabled`). `commands.ts::runIngestCore` + `PiiIngestBlockedError` Notice 처리.
+4. [x] **D.0.d** C3 runtime capability: 신규 `wikey-core/src/capability-map.ts` (pure function) + `__tests__/capability-map.test.ts` 5 tests + `runEnvDetection` 끝에 `dumpCapabilityMap` 호출 → `~/.cache/wikey/capabilities.json`. `audit-ingest.py` runtime bridge (fallback 기본값 유지). `main.ts` 공유 상수 `DOC_EXT_RE` (md/txt/pdf/hwp/hwpx/docx/pptx/xlsx/csv/html/htm/png/jpg/jpeg/tiff/tif) + sidebar UI 빨간 행 + docling/unhwp 미설치 배너. — 5/5 GREEN
+5. [x] **D.0.e** C4 onLayoutReady: `main.ts:234` 교체 + 1500ms delayed fallback + `startupReconcileDone` idempotent flag.
+6. [x] **D.0.f** C5 reindex: `scripts/reindex.sh --check --json` 신규 contract (fresh/stale/never 3-status). `scripts-runner.ts` 확장 (`ScriptResult.exitCode` + `runScript` timeoutMs). `reindexQuick` (throw on fail) + `reindexCheckJson` (shape+enum 검증) + `waitUntilFresh` (`status==='fresh' && stale===0` 만). `ingest-pipeline.ts:472` `triggerReindex` → `runReindexAndWait` 교체 (awaitable). — 7/7 GREEN (플랜 +4 초과)
+7. [x] **D.0.g** C6.1 `bypassBatch` guard: `main.ts:254` create listener 에 `renameGuard.consume(file.path)` 추가 (TTL 는 이미 5s default, 변경 없음).
+8. [x] **D.0.h** C6.2 원본 링크: `query-pipeline.ts::appendOriginalLinks` 신규 + `source-resolver.ts::ResolvedSource.rawVaultPath` 필드 (current `vault_path` 우선, fallback = path_history 마지막 유효 entry, fail closed). `query()` 에서 wikiFS 있을 때 자동 호출. — +4 GREEN (17/17)
+9. [x] **D.0.i** C6.3/C6.4 Processing modal: fileLabel (`original.ext → converted.md` accent) + DOM 재정렬 (fileLabel→spinner→progress-line→progress-bar→button, `margin-top: auto`).
+10. [x] **D.0.j** 테스트: **vitest 511 passed / 25 files** (base 462 → +49 net; 플랜 목표 496+ 초과). esbuild 0 errors. wikey-core tsc 0 errors.
 11. [ ] **D.0.k** codex Panel Mode D 최종 검증 (구현 complete 기준) — APPROVE / APPROVE-WITH-CHANGES (critical 0) 확보.
 12. [ ] **D.0.l** 통합 smoke 재실행: Pass A 6/6 (file 2/3 은 `allowPiiIngest=ON` 설정) + Pass B 6/6 + 보조 2b (Guard OFF) + 보조 3b (Allow OFF = block Notice).
 13. [ ] **D.0.m** PDF sidecar redact 검증 (file 2/3 `*.pdf.md` 에 `***` grep).
 14. [ ] **D.0.n** capabilities.json + `reindex.sh --check --json` 3 status 수동 확인.
-15. [ ] **D.0.o** `activity/phase-4-smoke-<DATE>-v2/README.md` 작성, §4 판정 = **승인**.
+15. [ ] **D.0.o** `activity/phase-4-smoke-<DATE>-v2/README.md` 작성, §4 판정 = **승인** + `activity/phase-4-result.md` 에 "Phase 4 본체 완성 선언" + todo 전체 완료 갱신 + memory 동기화 + 단일 commit.
 
 ---
 
 ### A. Phase 1~4 통합 smoke (2-pass: Ingest 패널 + Audit 패널, 6종 × 3-stage) — **완료 (2026-04-23 session 6)**
 
-> **실행 단일 소스**: `plan/phase-4-integrated-test.md` (v6, codex Panel Mode D **APPROVE-WITH-CHANGES**).
-> **실행 결과**: `activity/phase-4-smoke-2026-04-23/README.md` — Pass A 5/6 / Pass B 3/4, D 보류. 다음 = D.0 구현 후 재실행.
+> **실행 단일 소스**: `plan/phase-4-todox-4.6-integrated-test.md` (v6, codex Panel Mode D **APPROVE-WITH-CHANGES**).
+> **실행 결과**: `activity/phase-4-resultx-4.6-smoke-2026-04-23/README.md` — Pass A 5/6 / Pass B 3/4, D 보류. 다음 = D.0 구현 후 재실행.
 > **상세 mirror**: `activity/phase-4-result.md §4.6.1`.
 
 **※ 아래 체크리스트는 2026-04-23 1차 실행 기록. 실제 판정은 D.0 완료 후 재실행 결과 기준**:
 
 ### A. Phase 1~4 통합 smoke (2-pass: Ingest 패널 + Audit 패널, 6종 × 3-stage) — 약 4.5~7 시간
 
-> **실행 단일 소스**: `plan/phase-4-integrated-test.md` (v6, codex Panel Mode D **APPROVE-WITH-CHANGES**).
+> **실행 단일 소스**: `plan/phase-4-todox-4.6-integrated-test.md` (v6, codex Panel Mode D **APPROVE-WITH-CHANGES**).
 > **실행 주체**: Claude (CDP `localhost:9222` + `/tmp/wikey-cdp.py` 로 UI event 순차 발행).
 > **사용자 개입**: 없음. 리포트는 세션 종료 후 리뷰.
 >

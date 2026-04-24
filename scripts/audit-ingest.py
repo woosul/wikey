@@ -17,7 +17,41 @@ ROOT = Path(__file__).resolve().parent.parent
 # audit 목록·카운트 양쪽에서 제외 — 인제스트 대상 아닌 파일은 대시보드·audit 에 노출 X.
 RAW_DIRS = ["raw/0_inbox", "raw/1_projects", "raw/2_areas", "raw/3_resources", "raw/4_archive"]
 WIKI_SOURCES = ROOT / "wiki" / "sources"
-DOC_EXTS = {".md", ".txt", ".pdf"}
+
+# ── Phase 4 D.0.d (v6 §4.2): runtime capability bridge ──
+# 플러그인이 onLayoutReady 에서 덤프한 ~/.cache/wikey/capabilities.json 을 읽어 동일한
+# 소스로 SUPPORTED/UNSUPPORTED 확장자 판정. 파일 없거나 깨지면 기본값 fallback.
+CAPABILITIES_CACHE = Path.home() / ".cache" / "wikey" / "capabilities.json"
+
+
+def load_capability_map() -> tuple[set[str], set[str], dict]:
+    """Returns (supported, unsupported, capabilities_meta).
+    Fallback: 플러그인 미실행 환경에서도 기본 동작 (md/txt/pdf 만 supported).
+    """
+    if CAPABILITIES_CACHE.exists():
+        try:
+            data = json.loads(CAPABILITIES_CACHE.read_text(encoding="utf-8"))
+            supported = {e.lower() for e in data.get("supported", [])}
+            unsupported = {e.lower() for e in data.get("unsupported", [])}
+            meta = {
+                "doclingInstalled": bool(data.get("doclingInstalled", False)),
+                "unhwpInstalled": bool(data.get("unhwpInstalled", False)),
+                "generatedAt": data.get("generatedAt", ""),
+                "source": "cache",
+            }
+            return supported, unsupported, meta
+        except (json.JSONDecodeError, OSError):
+            pass
+    # Fallback — 캐시 없음/깨짐. docling/unhwp 미설치 가정으로 보수적.
+    return (
+        {".md", ".txt", ".pdf"},
+        {".doc", ".ppt", ".xls"},
+        {"doclingInstalled": False, "unhwpInstalled": False, "generatedAt": "", "source": "fallback"},
+    )
+
+
+SUPPORTED_EXTS, UNSUPPORTED_EXTS, CAPABILITIES_META = load_capability_map()
+DOC_EXTS = SUPPORTED_EXTS | UNSUPPORTED_EXTS  # 스캔 대상 총집합
 
 
 def normalize(name: str) -> str:
@@ -89,7 +123,8 @@ def main():
     ingest_map = load_ingest_map()
     all_docs = scan_raw_docs()
 
-    missing = []
+    missing: list[Path] = []
+    unsupported_docs: list[Path] = []
     ingested_files: list[Path] = []
     # per-folder counters
     folder_total: dict[str, int] = {}
@@ -101,6 +136,13 @@ def main():
         parts = rel.split("/")
         folder_key = parts[1] if len(parts) >= 2 else "other"
         folder_total[folder_key] = folder_total.get(folder_key, 0) + 1
+        ext = doc.suffix.lower()
+
+        # Phase 4 D.0.d — unsupported extension 우선 분기. ingest-map/wiki 매칭 전에 처리.
+        # (unsupported 가 이미 wiki 에 들어가 있을 일은 거의 없음.)
+        if ext in UNSUPPORTED_EXTS and ext not in SUPPORTED_EXTS:
+            unsupported_docs.append(doc)
+            continue
 
         # 1순위: ingest-map.json에 기록된 경로
         if rel in ingest_map:
@@ -119,6 +161,7 @@ def main():
 
     total = len(all_docs)
     missing_count = len(missing)
+    unsupported_count = len(unsupported_docs)
 
     # build per-folder summary
     folders = {}
@@ -127,31 +170,58 @@ def main():
         fi = folder_ingested.get(key, 0)
         folders[key] = {"total": ft, "ingested": fi, "missing": ft - fi}
 
+    def entry(doc: Path, status: str) -> dict:
+        return {
+            "path": str(doc.relative_to(ROOT)),
+            "name": doc.name,
+            "normalized": normalize(doc.stem),
+            "status": status,
+        }
+
+    entries = [entry(d, "missing") for d in missing] + [entry(d, "unsupported") for d in unsupported_docs]
+
     if mode == "json":
         print(json.dumps({
             "total_documents": total,
             "ingested": ingested,
             "missing": missing_count,
+            "unsupported": unsupported_count,
             "folders": folders,
+            # backward compat: 기존 UI 는 `files` 를 missing path string[] 로 소비
             "files": [str(f.relative_to(ROOT)) for f in missing],
             "ingested_files": [str(f.relative_to(ROOT)) for f in ingested_files],
+            # 신규: unsupported 행 렌더용
+            "unsupported_files": [str(f.relative_to(ROOT)) for f in unsupported_docs],
+            "entries": entries,
+            "capabilities": CAPABILITIES_META,
         }, ensure_ascii=False, indent=2))
     elif mode == "summary":
-        print(f"문서 총: {total}개 | 인제스트됨: {ingested}개 | 미인제스트: {missing_count}개")
+        print(f"문서 총: {total}개 | 인제스트됨: {ingested}개 | 미인제스트: {missing_count}개 | 미지원: {unsupported_count}개")
     else:
         print("=== 미인제스트 문서 감지 ===")
-        print(f"문서 총: {total}개 | 인제스트됨: {ingested}개 | 미인제스트: {missing_count}개")
+        print(f"문서 총: {total}개 | 인제스트됨: {ingested}개 | 미인제스트: {missing_count}개 | 미지원: {unsupported_count}개")
         print()
-        if missing_count == 0:
+        if missing_count == 0 and unsupported_count == 0:
             print("모든 문서가 인제스트되어 있습니다.")
         else:
-            print("--- 미인제스트 파일 목록 ---")
-            for f in missing:
-                size_kb = f.stat().st_size // 1024
-                rel = f.relative_to(ROOT)
-                print(f"  {rel} ({size_kb}KB)")
-            print()
-            print("인제스트하려면: Wikey [+] 버튼 또는 Cmd+Shift+I")
+            if missing_count:
+                print("--- 미인제스트 파일 목록 ---")
+                for f in missing:
+                    size_kb = f.stat().st_size // 1024
+                    rel = f.relative_to(ROOT)
+                    print(f"  {rel} ({size_kb}KB)")
+                print()
+                print("인제스트하려면: Wikey [+] 버튼 또는 Cmd+Shift+I")
+            if unsupported_count:
+                print()
+                print("--- 미지원 파일 목록 (converter 없음) ---")
+                for f in unsupported_docs:
+                    rel = f.relative_to(ROOT)
+                    print(f"  {rel}")
+                if not CAPABILITIES_META.get("doclingInstalled"):
+                    print("  ▶ Docling 설치: uv tool install docling")
+                if not CAPABILITIES_META.get("unhwpInstalled"):
+                    print("  ▶ unhwp 설치: pip install unhwp")
 
 
 if __name__ == "__main__":

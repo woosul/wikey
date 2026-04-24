@@ -1,0 +1,47 @@
+# Ablation 측정 — PMS_제품소개_R10_20220815.pdf
+
+> **상위 문서**: [`activity/phase-4-result.md`](./phase-4-result.md) · [`plan/phase-4-todo.md`](../plan/phase-4-todo.md) — 본 문서는 §4.5 (Ablation 비교 (PMS)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+
+
+> 일시: 2026-04-22
+> Source: `raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf`
+> Runs per experiment: 10
+> 스크립트: `scripts/ablation-ingest.sh`
+
+## 실험 1: Frozen markdown + 전체 ingest × N
+
+Docling 변환본은 cache 히트로 고정. 매 run 마다 `extractMentions` → `canonicalize` 만 반복.
+전처리 variance 가 제거된 상태의 순수 LLM variance 측정.
+
+결과: `activity/phase-4-resultx-4.5-ablation-exp1-pms-2026-04-22.md` 참조 (measure-determinism.sh 출력).
+
+## 실험 2: Extraction-only (미구현)
+
+**필요 작업**: frozen section 하나를 고정 → `extractMentions` 만 N 회 직접 호출 (canonicalize 제외).
+
+구현 보류 이유: ingest-pipeline 내부 함수가 직접 export 되지 않음. 별도 Node helper 스크립트 필요.
+
+## 실험 3: Canonicalizer-only (미구현)
+
+**필요 작업**: frozen mention set 을 입력으로 `canonicalize` 만 N 회 호출.
+
+구현 보류 이유: mention set 직렬화/역직렬화 포맷 미정. v2.1 후속 과제.
+
+## 실험 4: Seed + temperature=0 (미구현 — llm-client.ts 옵션 추가 필요)
+
+**필요 작업**: Gemini `generationConfig.seed=42 temperature=0` 으로 measure-determinism.sh 재실행.
+
+현재 llm-client.ts 는 temperature 기본값 0.1 (실측), seed 미설정. 옵션 플래그 추가 후 실행.
+
+## Gate 판정 (실험 1 결과 기준)
+
+- Total CV ≤ §4.5.1.4 baseline (32.5%) 의 50% → 섹션 경계 기여 **> 50%** (주범) → 30-run PMS main 진행
+- 50% < CV ≤ 80% → **20-50%** 기여 → 30-run + 개선폭 재산정
+- CV > 80% → **< 20%** 기여 → smoke 만 + `§4.5.1.6` 신규 (LLM 수준 variance 분석)
+
+## 재현
+
+```bash
+# 실험 1 만 수행 (실험 2-4 는 후속 infra 필요)
+./scripts/ablation-ingest.sh raw/3_resources/30_manual/PMS_제품소개_R10_20220815.pdf -n 10
+```

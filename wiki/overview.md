@@ -16,7 +16,7 @@ updated: 2026-04-22
 - **개념**: 0개
 - **분석**: 0개
 
-> 2026-04-22 초기화 — §4.1.3 Bitmap OCR 본문 오염 차단 실험의 깨끗한 baseline 확보를 위해 reset. `plan/phase-4-1-3-bitmap-ocr-fix.md` 참조.
+> 2026-04-22 초기화 — §4.1.3 Bitmap OCR 본문 오염 차단 실험의 깨끗한 baseline 확보를 위해 reset. `plan/phase-4-todox-4.1.3-bitmap-ocr-fix.md` 참조.
 
 ## 다음 단계
 

@@ -6,6 +6,19 @@
 > 전제: Phase 2 완료 (필수 7/7, 중요 6/6)
 > 인프라: Ollama 0.20.5 + Qwen3 8B + Qwen3.6:35b-a3b + Gemma4 26B, qmd 2.1.0 (vendored), Node.js 22.17.0
 
+## 관련 문서
+
+- **Todo mirror**: [`plan/phase-3-todo.md`](../plan/phase-3-todo.md)
+- **Phase 3 보조 문서** (섹션 번호 순):
+  - §3.B Obsidian E2E 테스트 플랜: [`plan/phase-3-todox-3.B-obsidian-test.md`](../plan/phase-3-todox-3.B-obsidian-test.md)
+  - §3.B Obsidian E2E 테스트 결과: [`activity/phase-3-resultx-3.B-test-results.md`](./phase-3-resultx-3.B-test-results.md)
+  - §3.C 인제스트 파이프라인 v6 재설계 플랜: [`plan/phase-3-todox-3.C-ingest-core-rebuild.md`](../plan/phase-3-todox-3.C-ingest-core-rebuild.md)
+  - §3.C 결정성 측정 (v6 Greendale): [`activity/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md`](./phase-3-resultx-3.C-determinism-greendale-2026-04-20.md)
+  - §3.C 결정성 측정 (v7 PMS post-v7): [`activity/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md`](./phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md)
+  - §3.C 인제스트 v1/v2/v3 비교: [`activity/phase-3-resultx-3.C-ingest-comparison/README.md`](./phase-3-resultx-3.C-ingest-comparison/README.md)
+  - Phase 3 기간 중 분석 (2026-04-14): [`activity/graphify-analysis.md`](./graphify-analysis.md)
+- **프로젝트 공통**: [`plan/decisions.md`](../plan/decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](../plan/plan_wikey-enterprise-kb.md).
+
 ---
 
 ---
@@ -104,9 +117,9 @@ Phase 3 B-1 #2(인제스트 품질 검증) 수행 → Ingest 패널 CDP E2E 중 
 
 ### 3.1.5 v6 인제스트 코어 재설계 (2026-04-19 저녁 세션)
 
-> **참조**: 정량 비교 데이터·v1~v6 진동·결정성 통계·6회 실행 결과 → [`activity/ingest-comparison/README.md`](./ingest-comparison/README.md)
+> **참조**: 정량 비교 데이터·v1~v6 진동·결정성 통계·6회 실행 결과 → [`activity/phase-3-resultx-3.C-ingest-comparison/README.md`](./phase-3-resultx-3.C-ingest-comparison/README.md)
 
-> **참조**: Plan 본체·Phase 분해·위험 분석·검증 기준 → [`plan/plan-ingest-core-rebuild.md`](../plan/plan-ingest-core-rebuild.md)
+> **참조**: Plan 본체·Phase 분해·위험 분석·검증 기준 → [`plan/phase-3-todox-3.C-ingest-core-rebuild.md`](../plan/phase-3-todox-3.C-ingest-core-rebuild.md)
 
 ### 3.1.6 배경
 
@@ -717,7 +730,7 @@ export function assertNotWikiPath(sourcePath: string, caller: string): void {
 → 작은 입력일수록 안정적 (chunk 분할 변동 없음).
 → Concepts 변동은 **v7-1 schema decision tree로 개선 후보** (이번 세션에 구현 — 14.10).
 
-상세: `activity/determinism-greendale-2026-04-20.md`
+상세: `activity/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md`
 
 ### 3.6.2 v7-4 자동 결정성 측정 스크립트 (commit `b95b2aa`)
 
@@ -849,7 +862,7 @@ concept_types:
 
 ### 3.6.6 v7-1 + v7-2 + v7-5 통합 결정성 재측정 — PMS v6 baseline 대비 (2026-04-21 완료)
 
-- 결과 파일: `activity/determinism-pms-post-v7-2026-04-21.md`
+- 결과 파일: `activity/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md`
 - Baseline (PMS v6, 2026-04-19): Total CV **16.9%**, Entities **14.7%**, Concepts **33.4%**
 - 목표: Concepts CV 33.4% → ≤25% (v7-1 decision tree + v7-2 anti-pattern 효과 확인)
 
@@ -1500,7 +1513,7 @@ E2E 테스트로 생성된 페이지를 자동 정리 후 커밋 (`79a458e`):
 
 ### 3.11.1 E2E 자동 실행 (9 시나리오)
 
-`plan/phase-3-obsidian-test.md` 5 시나리오 + 사용자 요청으로 3-1, 4-1 (Gemini 변형) 추가.
+`plan/phase-3-todox-3.B-obsidian-test.md` 5 시나리오 + 사용자 요청으로 3-1, 4-1 (Gemini 변형) 추가.
 
 **자동화 도구**:
 
@@ -1522,7 +1535,7 @@ E2E 테스트로 생성된 페이지를 자동 정리 후 커밋 (`79a458e`):
 | 5b. 잘못된 모델명              | fakemodel:7b     | PARTIAL ("JSON parse failed" 모호)    | 40s  |
 | 5c. raw/ 외부 파일             | qwen3:8b         | PASS (가드 없음, 19페이지 생성)       | 108s |
 
-상세 결과: `activity/phase-3-test-results.md` (291줄).
+상세 결과: `activity/phase-3-resultx-3.B-test-results.md` (291줄).
 
 ### 3.11.2 Obsidian CDP E2E 패턴 도입
 
@@ -1731,7 +1744,7 @@ await app.plugins.enablePlugin('wikey')
 | 커밋        | 내용                                                                                |
 | ----------- | ----------------------------------------------------------------------------------- |
 | `92c9637` | fix(ingest): OCR fallback + 4 race/UX 이슈 수정                                     |
-| `7809d8f` | docs: Phase 3 Obsidian E2E 테스트 결과 (`activity/phase-3-test-results.md` 291줄) |
+| `7809d8f` | docs: Phase 3 Obsidian E2E 테스트 결과 (`activity/phase-3-resultx-3.B-test-results.md` 291줄) |
 | `0421d7c` | config(wikey): default 모델 (basic=gemini, ollama=qwen3.6:35b-a3b)                  |
 | `79a458e` | wiki: E2E 인제스트 아티팩트 + 자동 정리                                             |
 | `ef63156` | refactor(ingest-prompt): 단일 프롬프트 모델 + 모달 편집 UI                          |

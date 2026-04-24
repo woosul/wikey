@@ -10,7 +10,16 @@ import {
   loadRegistry,
   saveRegistry,
   registryReconcile,
+  buildCapabilityMap,
+  dumpCapabilityMap,
+  defaultCapabilityCachePath,
 } from 'wikey-core'
+
+// ── Phase 4 D.0.d (v6 §4.2.5) ──
+// create listener + inbox 우회 감지 + audit 스캔이 공통 기준으로 쓸 문서 확장자 정규식.
+// core `DOCLING_DOC_FORMATS` + pdf + hwp/hwpx + md/txt 의 union. 런타임 capability map
+// 이 특정 ext 를 unsupported 로 표시해도 여기선 scan 후보까지는 포함 (UI 가 빨간 행으로 표시).
+export const DOC_EXT_RE = /\.(md|txt|pdf|hwp|hwpx|docx|pptx|xlsx|csv|html|htm|png|jpg|jpeg|tiff|tif)$/i
 import { WikeyChatView, WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { WikeySettingTab } from './settings-tab'
 import { WikeyStatusBar } from './status-bar'
@@ -55,6 +64,12 @@ interface WikeySettings {
   // injects temperature=0 + seed=42 into all LLM calls. Primarily used by
   // measure-determinism.sh; can also be enabled via wikey.conf for prod runs.
   extractionDeterminism: boolean
+  // ── Phase 4 D.0.c (v6 §4.1.2): PII 2-layer gate ──
+  // Basic: allowPiiIngest (default false → block) + piiRedactionMode (default 'mask').
+  // Advanced: piiGuardEnabled (default true → detect). false = 검사 skip (공시용 문서).
+  allowPiiIngest: boolean
+  piiRedactionMode: 'display' | 'mask' | 'hide'
+  piiGuardEnabled: boolean
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -85,6 +100,9 @@ const DEFAULT_SETTINGS: WikeySettings = {
   savedChatHistory: [],
   initialSidebarWidthApplied: false,
   extractionDeterminism: false,
+  allowPiiIngest: false,
+  piiRedactionMode: 'mask',
+  piiGuardEnabled: true,
 }
 
 export type { WikeySettings }
@@ -131,6 +149,10 @@ export default class WikeyPlugin extends Plugin {
    * 매칭되면 consume + skip — double-move 재귀 방지.
    */
   renameGuard: RenameGuard = new RenameGuard()
+
+  // Phase 4 D.0.e (v6 §4.3) — idempotent flag. onLayoutReady 가 한 번 이상 호출될 수 있고,
+  // 1500ms fallback 이 실제 layout-ready 보다 먼저 돌 수 있어 재진입 방어 필요.
+  private startupReconcileDone = false
 
   async onload() {
     await this.loadSettings()
@@ -209,18 +231,32 @@ export default class WikeyPlugin extends Plugin {
       }),
     )
 
-    // §4.2.4 S4-3: onload reconcile — bash/Finder 외부 이동/삭제 누락 복구
-    void this.runStartupReconcile().catch((err) =>
-      console.warn('[Wikey] startup reconcile failed:', err),
-    )
+    // §4.2.4 S4-3: onload reconcile — bash/Finder 외부 이동/삭제 누락 복구.
+    // Phase 4 D.0.e (v6 §4.3): onLayoutReady 로 이관 — vault metadata cache 가 준비된 뒤
+    // 실행해야 TFile 조회가 안정적. 1500ms fallback 은 onLayoutReady 가 이상 이벤트로 누락된
+    // 케이스 (Obsidian 재설치 직후 등) 방어. idempotent flag 로 이중 실행 차단.
+    const triggerReconcile = (origin: string): void => {
+      if (this.startupReconcileDone) return
+      this.startupReconcileDone = true
+      console.info(`[Wikey] startup reconcile triggered by ${origin}`)
+      void this.runStartupReconcile().catch((err) =>
+        console.warn('[Wikey] startup reconcile failed:', err),
+      )
+    }
+    this.app.workspace.onLayoutReady(() => triggerReconcile('onLayoutReady'))
+    setTimeout(() => triggerReconcile('delayed-fallback-1500ms'), 1500)
 
     this.registerEvent(
       this.app.vault.on('create', (file) => {
         if (!file.path.startsWith('raw/')) return
         if (Date.now() - startTime < STARTUP_GRACE_MS) return
+        // Phase 4 D.0.g (v6 §4.5.1): movePair 가 pre-register 한 예정 create 를 consume.
+        // rename 의 역방향 — 원본과 sidecar 를 함께 이동할 때 destination 의 create 이벤트가
+        // "우회 감지" 로 오탐되는 현상 (C6.1) 방지. renameGuard TTL 5s default 유지.
+        if (this.renameGuard.consume(file.path)) return
 
         const name = file.path.split('/').pop() ?? file.path
-        const isDoc = /\.(md|txt|pdf)$/i.test(file.path)
+        const isDoc = DOC_EXT_RE.test(file.path)
 
         if (file.path.startsWith('raw/0_inbox/')) {
           if (!isDoc) return
@@ -399,6 +435,20 @@ export default class WikeyPlugin extends Plugin {
 
     if (this.envStatus.issues.length > 0) {
       new Notice(`Wikey: ${this.envStatus.issues[0]}`)
+    }
+
+    // Phase 4 D.0.d (v6 §4.2.2): runtime capability map 을 ~/.cache/wikey/capabilities.json
+    // 에 덤프. audit-ingest.py 가 동일 경로 read — TS/UI/Python 이 한 소스로 동기화.
+    try {
+      const map = buildCapabilityMap({
+        hasDocling: this.envStatus.hasDocling,
+        hasUnhwp: this.envStatus.hasUnhwp,
+      })
+      const cachePath = defaultCapabilityCachePath()
+      await dumpCapabilityMap(map, cachePath)
+      console.log(`[Wikey] capability map dumped → ${cachePath} (docling=${map.doclingInstalled}, unhwp=${map.unhwpInstalled})`)
+    } catch (err) {
+      console.warn('[Wikey] capability map dump failed:', err)
     }
   }
 

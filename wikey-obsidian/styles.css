@@ -734,6 +734,32 @@
   opacity: 0.5;
 }
 
+/* Phase 4 D.0.d — unsupported 확장자: 빨간 배경 + disabled 체크박스. */
+.wikey-audit-row-unsupported {
+  background: color-mix(in srgb, var(--text-error) 8%, transparent);
+  opacity: 0.72;
+  cursor: not-allowed;
+}
+.wikey-audit-row-unsupported .wikey-audit-name {
+  color: var(--text-error);
+  text-decoration: line-through;
+}
+.wikey-audit-row-unsupported .wikey-audit-cb[disabled] {
+  cursor: not-allowed;
+}
+
+/* Phase 4 D.0.d — docling/unhwp 미설치 배너. */
+.wikey-audit-banner-warn {
+  padding: 8px 12px;
+  margin: 0 0 10px 0;
+  background: color-mix(in srgb, var(--text-warning, #d29922) 14%, transparent);
+  border-left: 3px solid var(--text-warning, #d29922);
+  border-radius: 4px;
+  font-size: 0.82em;
+  color: var(--text-normal);
+  line-height: 1.5;
+}
+
 .wikey-audit-info {
   flex: 1;
   min-width: 0;
@@ -1994,6 +2020,38 @@
   align-items: center;
   gap: 14px;
   padding: 24px 0 16px;
+}
+
+/* Phase 4 D.0.i (v6 §4.5.3): 처리 중 파일 라벨 (original.ext → converted.md). */
+.wikey-modal-file-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  font-size: 0.88em;
+  max-width: 100%;
+  padding: 0 12px;
+  text-align: center;
+}
+.wikey-modal-file-original {
+  color: var(--interactive-accent);
+  font-weight: 600;
+  word-break: break-all;
+}
+.wikey-modal-file-sep {
+  color: var(--text-faint);
+}
+.wikey-modal-file-converted {
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: 0.9em;
+  word-break: break-all;
+}
+
+/* Phase 4 D.0.i (v6 §4.5.4): processing phase 의 button row 를 모달 바닥으로 push. */
+.wikey-ingest-flow-modal .wikey-modal-body > .wikey-modal-button-row-bottom {
+  margin-top: auto;
 }
 
 .wikey-modal-spinner {

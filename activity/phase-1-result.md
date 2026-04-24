@@ -4,6 +4,12 @@
 > 목표: Zero-Setup 개인 위키 + BYOAI 검증
 > 결과: **완료** (필수 12/12, 중요 5/5, 선택 3/4)
 
+## 관련 문서
+
+- **Todo mirror**: [`plan/phase-1-todo.md`](../plan/phase-1-todo.md) — 이 결과와 번호·제목 1:1 대응.
+- **프로젝트 공통** (Phase 중립): [`plan/decisions.md`](../plan/decisions.md) 전체 ADR · [`plan/plan_wikey-enterprise-kb.md`](../plan/plan_wikey-enterprise-kb.md) 초기 로드맵 v2.
+- **보조 문서**: 없음 (Phase 1 은 단일 중심 문서로 완결).
+
 ---
 
 ---
