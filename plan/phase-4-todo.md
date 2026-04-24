@@ -672,7 +672,7 @@ Phase 3 종반 4회 실패의 근본 원인은 React state propagation이 아니
 
 ## Phase 4 본체 완성 체크리스트 (다음 세션 종료 플레이북)
 
-> 2026-04-24 session 7 갱신. A (smoke 실행) 완료 → D.0 Critical Fix 구현 **a~j 완료** (511 tests, 0 build errors) → **k~o 남음** (codex 재검증 + smoke 재실행 + D 선언). 구현 세부는 `activity/phase-4-result.md §4.7` (세션 7 결과) 참조.
+> 2026-04-24 session 7 갱신. A (smoke 실행) 완료 → D.0 Critical Fix 구현 **a~j 완료** (511 tests, 0 build errors) → **k~o + D.1~D.5 는 다음 1 세션에서 Phase 4 본체 완성 선언까지 완주 목표** (~3~4h, 분할 없음 — 단 codex 재검증 CRITICAL 발견 시에만 분할). 구현 세부는 `activity/phase-4-result.md §4.7` (세션 7 결과) 참조.
 
 ### D.0 Critical Fix Plan v6 구현 (A smoke 결과 5 Critical + C6 UX)
 

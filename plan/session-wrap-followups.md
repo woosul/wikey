@@ -5,24 +5,36 @@
 
 ---
 
-## 2026-04-24 session 7 종료 시점 — **다음 세션은 D.0.k~o (codex 재검증 + smoke 재실행 + D 선언)**
+## 2026-04-24 session 7 종료 시점 — **다음 1 세션에서 Phase 4 본체 완성 선언까지**
 
-**Todo 단일 소스 = `plan/phase-4-todo.md` D.0 블록 (D.0.a~o).** 여기에는 세션별 진입 맥락 · 명령어 hint · 변경 snapshot 만 기록.
+**Todo 단일 소스 = `plan/phase-4-todo.md` D.0 블록 (D.0.a~o) + D 본체 완성 선언 블록.** 여기에는 세션별 진입 맥락 · 명령어 hint · 변경 snapshot 만 기록.
 
 ### 진입 맥락
 
 - 구현 상세: `activity/phase-4-result.md §4.7`.
 - 구현 계획·경계: `plan/phase-4-todox-4.6-critical-fix-plan.md` v6 (구현 완료된 diff 기준으로 codex 재검증 필요).
-- 체크박스 상태: `plan/phase-4-todo.md` — a~j `[x]` / k~o `[ ]` (2026-04-24 session 7).
+- 체크박스 상태: `plan/phase-4-todo.md` — a~j `[x]` / k~o `[ ]` / D.1~5 (본체 완성 선언) `[ ]` (2026-04-24 session 7).
+
+### 다음 세션 목표 — **단일 세션에서 Phase 4 본체 완성 선언**
+
+구현은 완료 (session 7) 되었고 남은 것은 검증 + 선언 문서 작업이므로 **분할 없이 1 세션에서 완주**. 예상 ~3~4h. 순서:
+
+1. D.0.k — codex Panel Mode D 재검증 (구현 diff 기반, cmux panel, ~30min)
+2. D.0.l — 통합 smoke 재실행 (Pass A 6/6 + Pass B 6/6 + 보조 2b/3b, CDP 자동, ~1.5h)
+3. D.0.m — PDF sidecar redact grep (`***` 확인, ~10min)
+4. D.0.n — 런타임 sanity (`capabilities.json` 생성 + `reindex.sh --check --json` 3-status 수동 유도, ~15min)
+5. D.0.o — `activity/phase-4-resultx-4.6-smoke-<DATE>-v2/README.md` 작성 (~30min)
+6. D.1~D.5 — `activity/phase-4-result.md` 맨 아래 "Phase 4 본체 완성 선언" 블록 + todo 상단 "본체 완성" 상태 + Phase 5 §5.6 Stage 1 착수점 고정 + memory "완료" + 단일 commit `feat(phase-4): 본체 완성 선언 ...` + push (~45min)
+
+**분할 조건**: D.0.k 에서 codex 가 CRITICAL 발견 → 구현 수정 필요 → 그 시점에만 세션 분할. 그 외 경우는 **연속 완주가 기본**.
 
 ### 다음 세션 시작 시 체크
 
-1. `git pull` → session 7 commit 최신 확인
+1. `git pull` → 최근 commit (`684455b` rules 분리) 확인
 2. `cd wikey-core && npx vitest run` → **511 passed / 25 files** 확인 (회귀 없음)
 3. `npm run build --workspaces` → 0 errors (wikey-core tsc + wikey-obsidian esbuild)
 4. Obsidian Cmd+R → 플러그인 reload → `ls -la ~/.cache/wikey/capabilities.json` 생성 확인 (D.0.n 선행)
-5. cmux panel 준비 → codex Panel Mode D (D.0.k)
-6. **세션 분할 권장**: D.0.k+l+m+n 이 1 세션 (~2h), D.0.o 는 같은 세션 끝 또는 별도 세션 (~30min~1h)
+5. cmux panel 준비 → codex Panel Mode D (D.0.k 로 착수)
 
 ### smoke 재실행 시나리오 (D.0.l 의 보조 자료)
 
