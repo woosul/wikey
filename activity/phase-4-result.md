@@ -2728,7 +2728,7 @@ plan v6 §4 의도와 일치하지만 session 7 구현에서 누락됐던 edge c
      - `mergePatterns` override 동작 (1).
      - `detectPii` 에 사용자 패턴 주입 — default 대체 (1).
      - `sanitizeForLlmPrompt` filename BRN / guard off pass-through / no-PII / CEO in filename (4).
-   - **범위 밖 (Phase 5 §5.8 에 추가 이관)**: 다중-라인 구조 폼 (`대 표 자` label 과 `김 명 호` name 이 blank line 으로 분리된 스캔 PDF) — regex 만으로 해결 불가. NER / structural parser 필요.
+   - **범위 밖 (Phase 5 §5.1 로 승격, session 8 말미 우선순위 재조정)**: 다중-라인 구조 폼 (`대 표 자` label 과 `김 명 호` name 이 blank line 으로 분리된 스캔 PDF) — regex 만으로 해결 불가. NER / structural parser 필요. P0 긴급도로 승격.
 
 ### 4.8.3 D.0.l smoke 판정 — PARTIAL ACCEPT (파이프라인 PASS / wiki PII 전파 Phase 5 이관)
 > tag: #testing, #scope-decision
@@ -2751,8 +2751,8 @@ plan v6 §4 의도와 일치하지만 session 7 구현에서 누락됐던 edge c
 
 **smoke 후속 조치 (본 세션, §4.8.2 PII 엔진 도입)**:
 - **C-A1 filename leak — RESOLVED**: `sanitizeForLlmPrompt` 단일 진입점 + `brn-hyphen` look-around 패턴으로 filename BRN 이 LLM prompt 에 노출 안 됨. 유닛 테스트로 확증 (`사업자등록증C_(주)굿스트림_301-86-19385(2015).pdf` → BRN 부분만 `***-**-*****` 치환, 나머지 filename 구조 보존).
-- **C-A2 CEO 공백 변형 — PARTIAL RESOLVED**: 단일 라인 `김 명 호` / `이 희림` 같은 OCR 공백 삽입 변형은 default `ceo-label` 패턴 업데이트 (`[가-힣](?:[ \t]*[가-힣]){1,3}`) 로 커버. **단**, 스캔 PDF 형태의 **multi-line 구조 폼** (label 과 name 이 blank line 사이로 분리) 은 regex 범위 밖 — Phase 5 §5.8 에 **구조적 PII 탐지 (NER/table parser)** 로 재이관.
-- **W-A3 romanization dedup / W-B1 file 6 classify variance / W-C1 reindex non-fatal** — Phase 5 §5.8 에 유지 (별도 이슈).
+- **C-A2 CEO 공백 변형 — PARTIAL RESOLVED**: 단일 라인 `김 명 호` / `이 희림` 같은 OCR 공백 삽입 변형은 default `ceo-label` 패턴 업데이트 (`[가-힣](?:[ \t]*[가-힣]){1,3}`) 로 커버. **단**, 스캔 PDF 형태의 **multi-line 구조 폼** (label 과 name 이 blank line 사이로 분리) 은 regex 범위 밖 — Phase 5 §5.1 (P0 긴급) 로 승격된 **구조적 PII 탐지 (NER/table parser)** 로 재이관.
+- **W-A3 romanization dedup / W-B1 file 6 classify variance / W-C1 reindex non-fatal** — Phase 5 §5.8 에 유지 (별도 이슈, P4 잔여).
 
 **사용자 결정**: 본 세션에서 regex 하드코딩 확장 대신 **YAML 설정 기반 패턴 엔진** 도입 (DEFAULT_PATTERNS + user override + sanitizeForLlmPrompt 진입점). 본체 완성 선언은 D.0 직접 deliverable 충족 + PII 엔진 추가 확보 기준으로 진행.
 
@@ -2763,10 +2763,12 @@ plan v6 §4 의도와 일치하지만 session 7 구현에서 누락됐던 edge c
 
 **종료 기준 (plan v6 §7 D.0.a~o)**: 모두 충족. `plan/phase-4-todo.md` D.0 블록 15/15 `[x]`.
 
-**다음 단계 = Phase 5**:
-1. **§5.6 Stage 1 (schema.yaml 로더화)** 를 Phase 5 첫 착수점 으로 고정 (현재 PMBOK 하드코딩이 Stage 0 검증).
-2. **§5.4 PII 룰 엔진 재설계** — C-A1 filename sanitize + C-A2 공백 변형 커버 + entity_type=person 가드 + romanization dedup (`***-*** ≡ kim-myung-ho`). **하드코딩 없는 패턴 엔진** 이 요건.
-3. **§5.5 부수 과제** — file 6 classify variance / reindex --quick non-fatal exit=1 원인 조사.
+**다음 단계 = Phase 5** (2026-04-24 우선순위 재조정 반영):
+1. **§5.1 구조적 PII (P0 긴급)** — multi-line 폼 label↔value 상관. Phase 4 smoke 실누출 대응. NER/table parser.
+2. **§5.2 검색 재현율 + §5.3 인제스트 증분 (P1 핵심)** — 질의·축적 경로 품질·확장성.
+3. **§5.4.1 Stage 1 schema.yaml 로더화 (P2 비전 gate)** — 현재 PMBOK 하드코딩이 Stage 0 검증. self-extending 로드맵 시작점.
+4. **§5.5/§5.6 (P3 개선)** — 지식 그래프·시각화 / 성능·엔진 확장.
+5. **§5.7/§5.8/§5.9 (P4 잔여)** — 운영 포팅 / D.0.l 잔여 (W-A3/B1/C1) / Variance diagnostic.
 
 ### 4.8.5 증거 파일 맵
 > tag: #reference
@@ -2776,4 +2778,4 @@ plan v6 §4 의도와 일치하지만 session 7 구현에서 누락됐던 edge c
 - **smoke 결과**: `activity/phase-4-resultx-4.6-smoke-2026-04-24-v2/` — README + pass-a/b readme + cross-compare + 12 per-file + 2 boundary + sidecar-redact-grep + palette-modal-smoke + dump logs
 - **codex 판정 로그**: `/tmp/codex-d0k-response.txt` (1차 REJECT), `/tmp/codex-d0k-snap2.txt` (2차 APPROVE)
 - **런타임 증거**: `~/.cache/wikey/capabilities.json` (16 supported, 3 unsupported, docling+unhwp), `reindex.sh --check --json` fresh/stale/never 3-status 확증
-- **Phase 5 이관 과제**: `plan/phase-5-todo.md` §5.4 (C-A1, C-A2, W-A3, W-B1, W-C1)
+- **Phase 5 이관 과제**: `plan/phase-5-todo.md` — §5.1 구조적 PII (P0, 이전 §5.8.6) · §5.8.0 완료 요약 (C-A1/C-A2 단일라인 완료) · §5.8.1~3 (W-A3/B1/C1 잔여, P4)

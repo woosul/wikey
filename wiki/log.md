@@ -7,14 +7,15 @@ updated: 2026-04-24
 
 ## [2026-04-24] milestone | Phase 4 본체 완성 선언 (session 8, 단일 세션)
 
-- **결과**: D.0 Critical Fix Plan v6 15 항목 (a~o) 전체 충족. `activity/phase-4-result.md §4.8` append + `plan/phase-4-todo.md` 본체 완성 헤더 전환 + `plan/phase-5-todo.md §5.8` 이관 정리 + memory `project_phase4_status.md` "완료" + `feedback_pii_no_hardcoding.md` 신규.
+- **결과**: D.0 Critical Fix Plan v6 15 항목 (a~o) 전체 충족. `activity/phase-4-result.md §4.8` append + `plan/phase-4-todo.md` 본체 완성 헤더 전환 + `plan/phase-5-todo.md` 우선순위 재조정 (P0~P4 전면 재번호) + memory `project_phase4_status.md` "완료" + `feedback_pii_no_hardcoding.md` 신규.
 - **D.0.k codex Panel Mode D 재검증**: 1차 REJECT / CRITICAL: 1 (sidebar unsupported guard + PII settings persist + reindex 사용자 Notice) → 3건 수정 (commit `c2f4165`) → 재검증 APPROVE / CRITICAL: 0 / FINDINGS: none.
 - **D.0.l Agent 위임 smoke** (~2h 10m): Pass A/B 6/6 pipeline PASS + 보조 2b/3b PASS + §4.C palette 9 entries + typing gate PASS + cross-compare tier 6/6 / classify 5/6. wiki body PII 전파 2건 (C-A1 filename BRN + C-A2 CEO 공백) 발견.
 - **D.0.m PDF sidecar redact grep**: 양 pass 결정적 일치 `***-**-*****` + `******-*******`, 원문 BRN 0 hit.
 - **D.0.n runtime sanity**: capabilities.json 생성 (bug fix `node:fs/promises` → `require`, commit `e362d3c`) + `reindex.sh --check --json` fresh/stale/never 3-status 수동 유도 확증.
-- **PII 패턴 엔진 도입** (사용자 지시 "하드코딩 안됨"): `wikey-core/src/pii-patterns.ts` 신규 (YAML loader + DEFAULT_PATTERNS 4종 + user override 병합) + `sanitizeForLlmPrompt` 단일 진입점 + `brn-hyphen` look-around (`_301-86-19385(` 같은 filename 케이스) + `ceo-label` 단일라인 공백 변형 (`김 명 호`). 525 vitest passed (511 → +14). C-A1 filename leak 완전 해결 / C-A2 단일라인 해결 / multi-line 구조 폼 (blank line 분리 label↔name) 은 Phase 5 §5.8.6 로 재이관.
+- **PII 패턴 엔진 도입** (사용자 지시 "하드코딩 안됨"): `wikey-core/src/pii-patterns.ts` 신규 (YAML loader + DEFAULT_PATTERNS 4종 + user override 병합) + `sanitizeForLlmPrompt` 단일 진입점 + `brn-hyphen` look-around (`_301-86-19385(` 같은 filename 케이스) + `ceo-label` 단일라인 공백 변형 (`김 명 호`). 525 vitest passed (511 → +14). C-A1 filename leak 완전 해결 / C-A2 단일라인 해결 / multi-line 구조 폼 (blank line 분리 label↔name) 은 Phase 5 §5.1 (P0 긴급) 로 승격.
 - **UI**: audit row 에러 Notice 위치 info-column 내부로 이동 (filename 공간 보존, 사용자 피드백).
-- **다음**: Phase 5 착수. 첫 진입점 = `plan/phase-5-todo.md §5.6.1` (schema.yaml 로더화).
+- **Phase 5 재구성**: 기존 §5.1~§5.8 번호가 역사적·주제별이라 실행 순서 반영 안됨 → 사용자 요청으로 P0~P4 긴급도 기반 전면 재번호. §5.1 구조적 PII (P0, was §5.8.6), §5.2 검색 (was §5.1), §5.3 증분 (번호 유지), §5.4 self-extending (was §5.6), §5.5 그래프 (was §5.2), §5.6 엔진 (was §5.5), §5.7 운영 포팅, §5.8 D.0.l 잔여 (P4), §5.9 Variance (was §5.4). `plan/phase-5-todo.md § 우선순위 가이드` 참조.
+- **다음**: Phase 5 착수. 첫 진입점 = §5.1 (P0) 또는 §5.4.1 (P2 gate) — 사용자 판단.
 
 ## [2026-04-24] impl | Phase 4 D.0.a~j 구현 완료 (session 7, 단일 세션)
 

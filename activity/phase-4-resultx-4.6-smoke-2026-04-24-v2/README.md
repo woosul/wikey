@@ -46,17 +46,17 @@
 - Sidecar redact 결정적으로 작동 (양 pass `PII redacted — 2 match, mode=mask` 일치).
 - wiki body/entity 전파는 별도 fix 필요 — **D.0 범위 밖**.
 
-### 이관 과제 (Phase 5 §5.4)
+### 이관 과제 — Phase 5 (2026-04-24 session 8 반영 + 우선순위 재조정)
 
-| ID | 심각도 | 이슈 | Phase 5 위임 |
+| ID | 심각도 | 이슈 | Phase 5 위임 (재번호 반영) |
 |----|-------|------|--------------|
-| C-A1 | High | Pass A file 2 wiki source body 에 raw BRN × 3 (filename 에서 LLM hallucination) | filename path BRN sanitize (LLM prompt metadata 에 filename 전달 전 마스킹) |
-| C-A2 | High | CEO 성명이 entity 페이지로 양 pass 생성 (`kim-myeong-ho`, `kim-myung-ho`, `lee-hee-rim`) | canonicalizer `PII-name` drop reason + entity_type=person + PII-high source 일 때 가드 |
-| W-A3 | Med | 동명이인 canonical name mismatch (`kim-myeong-ho` ≡ `kim-myung-ho`) | canonicalizer dedup 로직 강화 |
-| W-B1 | Low | Pass A/B 간 분류 variance (file 6: `20_report/000_general` vs `60_note/000_general`) | CLASSIFY.md 가이드 강화 또는 LLM prompt stability |
-| W-C1 | Low | `reindex --quick failed (non-fatal)` 양 pass 12회 발생 | 원인 조사 (exit=1, 로그 stderr 비어있음) |
+| C-A1 | High → **RESOLVED session 8** | Pass A file 2 wiki source body 에 raw BRN × 3 (filename 에서 LLM hallucination) | ✅ session 8: `sanitizeForLlmPrompt` + `brn-hyphen` look-around 로 해결. 기록 = `plan/phase-5-todo.md §5.8.0` (완료 요약) |
+| C-A2 | High → **PARTIAL session 8** | CEO 성명이 entity 페이지로 양 pass 생성 (`kim-myeong-ho`, `kim-myung-ho`, `lee-hee-rim`) | ✅ 단일라인: session 8 default `ceo-label` regex 확장. **multi-line 폼은 §5.1 (P0 긴급, was §5.8.6) 로 승격** — NER / table parser 조사 선행 |
+| W-A3 | Med | 동명이인 canonical name mismatch (`kim-myeong-ho` ≡ `kim-myung-ho`) | `plan/phase-5-todo.md §5.8.1` (P4 잔여, was §5.8.3) — canonicalizer dedup 강화 |
+| W-B1 | Low | Pass A/B 간 분류 variance (file 6: `20_report/000_general` vs `60_note/000_general`) | `plan/phase-5-todo.md §5.8.2` (P4 잔여, was §5.8.4) |
+| W-C1 | Low | `reindex --quick failed (non-fatal)` 양 pass 12회 발생 | `plan/phase-5-todo.md §5.8.3` (P4 잔여, was §5.8.5) |
 
-모두 D.0 범위 밖이며 Phase 5 §5.4 (PII / 변환 / 분류 고도화) 로 자연 흐름.
+모두 D.0 범위 밖. **session 8 에서 C-A1/C-A2 단일라인은 hardcode-free PII 패턴 엔진 도입으로 해결됨** — 자세한 내용은 `activity/phase-4-result.md §4.8.2`. 잔여는 Phase 5 우선순위별 (§5.1 P0 / §5.8.1~3 P4).
 
 ## 실행 요약
 
@@ -86,6 +86,6 @@
 
 ## 결론
 
-**D.0.l 판정: PARTIAL ACCEPT** — D.0 Critical Fix v6 의 직접 deliverable (sidecar redact + 2-layer gate + UI 운영 안전장치 + 변환 tier cleanup) 은 양 pass 모두 결정적으로 확증됨. PII wiki 전파 잔여 2건 (filename BRN + CEO entity) 은 **D.0 범위 밖 Phase 5 §5.4 과제**로 자연 이관. 본체 완성 선언의 **파이프라인 결정성 + 운영 안전** 기준은 완전 달성.
+**D.0.l 판정: PARTIAL ACCEPT** — D.0 Critical Fix v6 의 직접 deliverable (sidecar redact + 2-layer gate + UI 운영 안전장치 + 변환 tier cleanup) 은 양 pass 모두 결정적으로 확증됨. PII wiki 전파 잔여 2건 (filename BRN + CEO entity) 은 **D.0 범위 밖** — session 8 에서 **PII 패턴 엔진 도입** 으로 C-A1/C-A2 단일라인 해결, multi-line 구조 폼은 **Phase 5 §5.1 (P0)** 로 승격. 본체 완성 선언의 **파이프라인 결정성 + 운영 안전** 기준은 완전 달성.
 
-**D.0.o Phase 4 본체 완성 선언으로 진행 가능**. 단 선언 시 Phase 5 §5.4 의 PII 강화 후속 과제 명시.
+**D.0.o Phase 4 본체 완성 선언 완료** (session 8, commit `866d6ae`). Phase 5 후속 = §5.1 구조적 PII (P0) · §5.8 잔여 (P4).

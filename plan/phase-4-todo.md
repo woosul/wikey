@@ -4,8 +4,8 @@
 > 전제: Phase 3 (Obsidian 플러그인 + 인제스트 파이프라인 v6) 완료
 > **본체 정의 (2026-04-22 확정)**: 원본 → wiki ingest 프로세스가 완성되어 **더 이상 wiki 를 초기화하거나 재생성할 일이 없는** 상태. frontmatter/데이터 모델/워크플로우 구조가 고정되고, 이후 내용은 계속 축적되지만 구조는 변경되지 않는다. 튜닝·고도화·개선·확장은 Phase 5, 웹 인터페이스는 Phase 6 로 이관.
 > 구성 원칙: **wiki 시스템 워크플로우 순서대로 정리** — 번호·제목·태그는 `activity/phase-4-result.md` 와 1:1 mirror
-> 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.1/§5.2 로 이관)
-> 상태 (2026-04-24 session 8): **본체 완성 (2026-04-24). Phase 5 로 이관**. D.0 Critical Fix Plan v6 완전 종결: a~j 구현 (session 7) + k codex APPROVE/CRITICAL:0 + l smoke PARTIAL ACCEPT (파이프라인 PASS, wiki PII 전파 2건은 Phase 5 §5.4 이관) + m sidecar grep PASS + n capabilities.json + reindex 3-status PASS + o 본 선언. 세부 = `activity/phase-4-result.md §4.8`. **다음 = Phase 5** (`plan/phase-5-todo.md` §5.6 Stage 1 schema.yaml 로더화 + §5.4 PII 룰 엔진 재설계).
+> 워크플로우: 소스 감지 → **1. 문서 전처리** → **2. 분류·참조** → **3. 인제스트 (LLM 추출)** → **5. 운영·안정성** (§4.4 검색·그래프는 Phase 5 §5.2/§5.5 로 이관 — 2026-04-24 재번호)
+> 상태 (2026-04-24 session 8): **본체 완성 (2026-04-24). Phase 5 로 이관**. D.0 Critical Fix Plan v6 완전 종결: a~j 구현 (session 7) + k codex APPROVE/CRITICAL:0 + l smoke PARTIAL ACCEPT (파이프라인 PASS, wiki PII 전파 2건은 Phase 5 §5.1 P0 / §5.8 P4 로 이관) + m sidecar grep PASS + n capabilities.json + reindex 3-status PASS + o 본 선언. 세부 = `activity/phase-4-result.md §4.8`. **다음 = Phase 5** (`plan/phase-5-todo.md` 우선순위 가이드 참조 — §5.1 구조적 PII (P0), §5.2+§5.3 (P1), §5.4.1 Stage 1 schema.yaml 로더화 (P2 gate)).
 
 ## 관련 문서
 
@@ -22,20 +22,23 @@
 
 이전에 Phase 4 하위였던 다음 항목들은 본체 완성 정의 ("wiki 재생성 유발하지 않음") 에 해당하므로 **Phase 5 (튜닝·고도화·개선·확장)** 또는 **Phase 6 (웹)** 로 이동. 상세는 해당 파일 참조.
 
-| 이관 전 § (Phase 4) | 이관 후 | 제목 / 사유 |
+> **2026-04-24 session 8 주의**: Phase 5 가 우선순위 기반으로 전면 재번호됐습니다 (`plan/phase-5-todo.md §우선순위 가이드` 참조). 아래 "이관 후" 열은 재번호 반영 완료. 원래 번호는 `plan/phase-5-todo.md` 각 섹션의 `이전 번호: was §5.N` 주석으로 추적 가능.
+
+| 이관 전 § (Phase 4) | 이관 후 (2026-04-24 재번호 반영) | 제목 / 사유 |
 |---|---|---|
-| §4.3.3 증분 업데이트 | → Phase 5 §5.3.1 | source-registry hash 기반 재인제스트 로직. §4.2.2 data model 이 본체에 완비되어 로직만 후속 추가 가능. wiki 재생성 없음. |
-| §4.4.1 contextual chunk 재작성 | → Phase 5 §5.1.1 | qmd 인덱스만 재빌드, wiki/ 무관. |
-| §4.4.2 지식 그래프 (NetworkX) | → Phase 5 §5.2.1 | 신규 산출물, wiki/ 읽기 전용 소비. |
-| §4.4.3 AST 기반 코드 파싱 | → Phase 5 §5.2.2 | 신규 소스 타입, 기존 wiki 무관. |
-| §4.5.1.7.1 attribution ablation | → Phase 5 §5.4.1 | diagnostic 측정, 본체 variance 해소 (§4.5.1.7.2/7.3) 이후 선택적. |
-| §4.5.1.7.4 Route SEGMENTED | → Phase 5 §5.4.2 | Ollama production guide. |
-| §4.5.1.7.6 BOM 재분할 판단 | → Phase 5 §5.4.3 | 월 1 회 모니터 성격. |
-| §4.5.1.7.7 log_entry axis cosmetic | → Phase 5 §5.4.4 | 표시 cosmetic, wiki 재생성 없음. |
-| §4.5.2 bash→TS 포팅 · qmd SDK import | → Phase 5 §5.7.1/§5.7.2 | 리팩토링, 동작 유지. (§4.5.2 의 삭제 안전장치 + 초기화는 본체 유지) |
-| §4.5.3 llama.cpp PoC | → Phase 5 §5.5.1 | provider 추가, 기존 wiki 무관. |
-| §4.5.4 rapidocr Linux 실측 | → Phase 5 §5.5.2 | platform 확장, 기존 wiki 무관. |
-| §4.5.5 표준 분해 self-extending (4 단계) | → Phase 5 §5.6 | 신규 인제스트만 영향, 기존 wiki 보존. (2026-04-22 본 세션 진행 중인 §4.5.1.7.2 PMBOK 하드코딩이 §5.6 의 Stage 0 사전 검증) |
+| §4.3.3 증분 업데이트 | → Phase 5 **§5.3.1** (번호 유지) | source-registry hash 기반 재인제스트 로직. §4.2.2 data model 이 본체에 완비되어 로직만 후속 추가 가능. wiki 재생성 없음. |
+| §4.4.1 contextual chunk 재작성 | → Phase 5 **§5.2.1** (was §5.1.1) | qmd 인덱스만 재빌드, wiki/ 무관. |
+| §4.4.2 지식 그래프 (NetworkX) | → Phase 5 **§5.5.1** (was §5.2.1) | 신규 산출물, wiki/ 읽기 전용 소비. |
+| §4.4.3 AST 기반 코드 파싱 | → Phase 5 **§5.5.2** (was §5.2.2) | 신규 소스 타입, 기존 wiki 무관. |
+| §4.5.1.7.1 attribution ablation | → Phase 5 **§5.9.1** (was §5.4.1) | diagnostic 측정, 본체 variance 해소 (§4.5.1.7.2/7.3) 이후 선택적. |
+| §4.5.1.7.4 Route SEGMENTED | → Phase 5 **§5.9.2** (was §5.4.2) | Ollama production guide. |
+| §4.5.1.7.6 BOM 재분할 판단 | → Phase 5 **§5.9.3** (was §5.4.3) | 월 1 회 모니터 성격. |
+| §4.5.1.7.7 log_entry axis cosmetic | → Phase 5 **§5.9.4** (was §5.4.4) | 표시 cosmetic, wiki 재생성 없음. |
+| §4.5.2 bash→TS 포팅 · qmd SDK import | → Phase 5 **§5.7.1/§5.7.2** (번호 유지) | 리팩토링, 동작 유지. (§4.5.2 의 삭제 안전장치 + 초기화는 본체 유지) |
+| §4.5.3 llama.cpp PoC | → Phase 5 **§5.6.1** (was §5.5.1) | provider 추가, 기존 wiki 무관. |
+| §4.5.4 rapidocr Linux 실측 | → Phase 5 **§5.6.2** (was §5.5.2) | platform 확장, 기존 wiki 무관. |
+| §4.5.5 표준 분해 self-extending (4 단계) | → Phase 5 **§5.4** (was §5.6) | 신규 인제스트만 영향, 기존 wiki 보존. PMBOK 하드코딩이 §5.4 의 Stage 0 사전 검증. |
+| §4.6 D.0.l 잔여 (PII/classify/reindex) | → Phase 5 **§5.1** (P0, was §5.8.6) · **§5.8.1~3** (P4 잔여) | session 8 smoke 에서 발견. 구조적 PII 는 P0 긴급. |
 | 기존 Phase 5 (웹 환경) 전량 | → **Phase 6** (`plan/phase-6-todo.md`) | 웹 인터페이스는 본체·고도화 완료 후. |
 
 **본체 복귀 1 항목**: 이전 분류안에서 잠깐 Phase 5 후보였던 **§4.3.2 Provenance tracking** 은 frontmatter 에 `provenance` 필드 신규 추가 = data model 변경 → wiki 재생성 유발 → Phase 4 본체에 유지 확정.
@@ -286,7 +289,7 @@
   - 체크박스 + 피드백 로그 + CSS + inboxReclassify 전부 제거. `wiki-ops.ts::appendClassifyFeedback` 와 `ClassifyFeedbackEntry` 도 orphan 정리.
 - [x] **S3-4** CLASSIFY.md 피드백 append — **철회 (2026-04-23 session 4)**
   - 원안은 "사용자 수동 선택 ≠ LLM 제안" 일 때 CLASSIFY.md 에 한 줄 로그로 self-extending Stage 0 데이터 누적. 그러나 UI 단순화 후 "수동 지정" 은 PARA 만, sub-folder 는 모두 LLM 이 결정하므로 비교 대상이 없어짐 → append 호출처 삭제 + 함수/테스트/export 제거.
-  - 향후 Phase 5 §5.6 self-extending 에서 다른 경로로 feedback 수집 재설계 가능.
+  - 향후 Phase 5 §5.4 self-extending (2026-04-24 재번호, was §5.6) 에서 다른 경로로 feedback 수집 재설계 가능.
 
 ### 4.2.4 Stage 4 — Vault listener + startup reconciliation (§4.1.1.9 [ ] 해소 포함) — **완료 (2026-04-23 session 2)**
 
@@ -755,7 +758,7 @@ smoke 결과는 `activity/phase-4-smoke-<DATE>/` 디렉터리. 문제 발견 시
 
 1. [x] `activity/phase-4-result.md §4.8 Phase 4 본체 완성 선언 (2026-04-24, session 8)` append — 4.8.1 완성 정의 충족 증거 9 영역 + 4.8.2 세션 8 codex/smoke follow-up 3건 + 4.8.3 smoke PARTIAL ACCEPT 판정 + 4.8.4 종료 선언 + 4.8.5 증거 파일 맵.
 2. [x] 본 파일 상단 상태 라인 "본체 완성 (2026-04-24). Phase 5 로 이관" 으로 업데이트.
-3. [x] `plan/phase-5-todo.md` §5.6 Stage 1 (schema.yaml 로더화) 를 첫 착수점으로 고정 + §5.4 PII 룰 엔진 재설계 신규 등재 (C-A1 filename sanitize + C-A2 공백 변형 + entity_type=person gate + romanization dedup).
+3. [x] `plan/phase-5-todo.md` 재구성 (2026-04-24 session 8 우선순위 재조정): §5.1 구조적 PII (P0, was §5.8.6) + §5.4.1 Stage 1 schema.yaml 로더화 (was §5.6.1, P2 gate) + §5.8 Phase 4 D.0.l 잔여 (P4, 완료/진행 명시). PII 패턴 엔진은 session 8 에서 hardcode-free 로 본체 반영 완료.
 4. [x] memory `project_phase4_status.md` description 을 "완료" 로 변경 + `project_phase5_status.md` §5.4 상세 보강 + `MEMORY.md` 인덱스 갱신.
 5. [x] 단일 logical commit `feat(phase-4): 본체 완성 선언 — ...` + push.
 

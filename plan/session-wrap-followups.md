@@ -13,14 +13,16 @@
 1. D.0.k codex Panel Mode D 재검증: 1차 REJECT / CRITICAL: 1 → 3건 수정 (commit `c2f4165`) → 재검증 APPROVE / CRITICAL: 0.
 2. D.0.l Agent 위임 smoke (~2h 10m): Pass A/B 6/6 pipeline PASS + 보조 2b/3b PASS + §4.C PASS + D.0.m sidecar grep PASS. wiki body PII 전파 2건 (C-A1 filename + C-A2 CEO 공백) 발견.
 3. D.0.n capabilities.json runtime bug fix (`node:fs/promises` → `require`, commit `e362d3c`) + reindex 3-status 수동 유도 확증.
-4. **PII 패턴 엔진 도입** (사용자 지시 "하드코딩 안됨"): `pii-patterns.ts` 신규 (YAML loader + DEFAULT_PATTERNS + user override) + `sanitizeForLlmPrompt` 단일 진입점. `brn-hyphen` look-around (`_` 경계) + `ceo-label` 단일라인 공백 변형. C-A1 완전 해결 / C-A2 단일라인 해결 / multi-line 구조 폼은 Phase 5 §5.8.6 신규.
+4. **PII 패턴 엔진 도입** (사용자 지시 "하드코딩 안됨"): `pii-patterns.ts` 신규 (YAML loader + DEFAULT_PATTERNS + user override) + `sanitizeForLlmPrompt` 단일 진입점. `brn-hyphen` look-around (`_` 경계) + `ceo-label` 단일라인 공백 변형. C-A1 완전 해결 / C-A2 단일라인 해결 / multi-line 구조 폼은 Phase 5 §5.1 (P0, 우선순위 재조정) 신규.
 5. Audit row error Notice UI info-column 이동 — filename 공간 보존 (사용자 피드백).
+6. **Phase 5 우선순위 기반 전면 재번호** (session 8 말미, 사용자 요청): §5.1~§5.9 를 긴급도·성능영향·의존성 3축으로 재배치. §우선순위 가이드 섹션 신설. 이전 번호는 각 섹션의 `이전 번호: was §5.N` 주석으로 추적.
 
-**다음 세션 진입점 — Phase 5**:
-- **첫 착수점**: `plan/phase-5-todo.md §5.6.1 Stage 1 — static `.wikey/schema.yaml` override` (PMBOK 하드코딩이 Stage 0 검증).
-- **병행 고려**: §5.8.6 구조적 PII (NER / table parser) — D.0.l 에서 발견된 multi-line 폼 label↔name 상관 해결. 우선순위 High, 의존성은 §5.8.1/§5.8.2 패턴 엔진 (완료) 위에서 확장.
+**다음 세션 진입점 — Phase 5** (재번호 반영):
+- **§5.1 구조적 PII (P0 긴급)** — multi-line 폼 label↔name 상관 해결. NER / table parser / context-window heuristic 중 선택 조사. D.0.l 에서 발견된 실누출 케이스 대응.
+- **§5.2 검색 재현율 + §5.3 인제스트 증분 (P1 핵심)** — Anthropic contextual chunk / hash 기반 증분 재인제스트.
+- **§5.4.1 Stage 1 schema.yaml 로더화 (P2 비전 gate)** — PMBOK 하드코딩 외재화. self-extending 로드맵의 첫 실 구현 단계.
 - **읽기 권장**:
-  - `plan/phase-5-todo.md` §5.6 / §5.8
+  - `plan/phase-5-todo.md` § 우선순위 가이드 + §5.1 + §5.4 + §5.8
   - `activity/phase-4-result.md §4.8` (완성 선언 증거)
   - `activity/phase-4-resultx-4.6-smoke-2026-04-24-v2/README.md` (smoke PARTIAL ACCEPT 상세)
   - memory `feedback_pii_no_hardcoding.md` (PII 코딩 원칙)
