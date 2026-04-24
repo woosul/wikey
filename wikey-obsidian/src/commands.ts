@@ -412,6 +412,12 @@ async function runIngestCore(
         piiGuardEnabled: plugin.settings.piiGuardEnabled,
         allowPiiIngest: plugin.settings.allowPiiIngest,
         piiRedactionMode: plugin.settings.piiRedactionMode,
+        // Phase 4 D.0.f follow-up (codex P2): user-visible Notice on reindex/freshness issue
+        // (plan v6 §4.4.6 — 사용자가 stale 상태를 인지해야 한다).
+        onFreshnessIssue: (reason, message) => {
+          const label = reason === 'reindex-failed' ? '인덱싱 실패' : '인덱스 갱신 지연'
+          new Notice(`${label} — 잠시 후 검색 가능 (${message.slice(0, 80)})`, 6000)
+        },
       },
     )
 

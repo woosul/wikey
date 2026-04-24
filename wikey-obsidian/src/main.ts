@@ -569,6 +569,10 @@ export default class WikeyPlugin extends Plugin {
       detectedNodePath: this.settings.detectedNodePath,
       detectedPythonPath: this.settings.detectedPythonPath,
       qmdPath: this.settings.qmdPath,
+      // D.0.c PII gate (user trust setting) — must persist across reloads.
+      allowPiiIngest: this.settings.allowPiiIngest,
+      piiRedactionMode: this.settings.piiRedactionMode,
+      piiGuardEnabled: this.settings.piiGuardEnabled,
     }
   }
 

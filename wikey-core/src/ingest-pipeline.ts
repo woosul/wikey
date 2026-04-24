@@ -98,6 +98,10 @@ export interface IngestOptions {
   readonly piiGuardEnabled?: boolean
   readonly allowPiiIngest?: boolean
   readonly piiRedactionMode?: 'display' | 'mask' | 'hide'
+  // ── Phase 4 D.0.f follow-up (codex P2): freshness issue surfacing ──
+  // reindexQuick 실패 또는 waitUntilFresh timeout 시 호출. UI 레이어 (Obsidian Notice)
+  // 에서 사용자 가시화 — wikey-core 는 throw 대신 callback 으로 이벤트 전달만 담당.
+  readonly onFreshnessIssue?: (reason: 'reindex-failed' | 'freshness-timeout', message: string) => void
 }
 
 /**
@@ -473,10 +477,11 @@ export async function ingest(
   // Step 4: Reindex (Phase 4 D.0.f / v6 §4.4)
   //   - `reindexQuick` 동기 실행 (throw on failure)
   //   - `waitUntilFresh` polling 으로 `status==='fresh' && stale===0` 확보 후 return.
-  //   - 실패/타임아웃 은 warn 로 다운그레이드 — ingest 본체는 이미 성공했으므로 throw 대신
-  //     사용자에게 Notice. query 는 stale 에서도 fallback 가능.
+  //   - 실패/타임아웃 은 warn + `onFreshnessIssue` 콜백으로 UI 레이어에 전달 — ingest 본체는
+  //     이미 성공했으므로 throw 하지 않되, 사용자는 Notice 로 stale 상태를 인지해야 한다
+  //     (plan v6 §4.4.6 "지연 — 잠시 후 검색 가능").
   onProgress?.({ step: 4, total: 4, message: 'Indexing...' })
-  await runReindexAndWait(opts?.basePath, opts?.execEnv, log)
+  await runReindexAndWait(opts?.basePath, opts?.execEnv, log, opts?.onFreshnessIssue)
   log(`done: ${sourcePath}`)
 
   return {
@@ -1895,6 +1900,7 @@ async function runReindexAndWait(
   basePath: string | undefined,
   execEnv: Record<string, string> | undefined,
   log: (msg: string, ...rest: unknown[]) => void,
+  onIssue?: (reason: 'reindex-failed' | 'freshness-timeout', message: string) => void,
 ): Promise<void> {
   const cwd = basePath ?? process.cwd()
   const env = execEnv ? { ...execEnv } : { ...process.env } as Record<string, string>
@@ -1910,13 +1916,17 @@ async function runReindexAndWait(
     await reindexQuick(cwd, env, timeoutMs)
     log(`reindex --quick OK, waiting for freshness (timeout=${timeoutMs}ms)`)
   } catch (err) {
-    console.warn(`[Wikey ingest] reindex --quick failed (non-fatal): ${errorMessage(err)}`)
+    const msg = errorMessage(err)
+    console.warn(`[Wikey ingest] reindex --quick failed (non-fatal): ${msg}`)
+    onIssue?.('reindex-failed', msg)
     return
   }
   try {
     await waitUntilFresh(cwd, env, timeoutMs)
     log(`index is fresh`)
   } catch (err) {
-    console.warn(`[Wikey ingest] freshness wait timed out (non-fatal): ${errorMessage(err)}`)
+    const msg = errorMessage(err)
+    console.warn(`[Wikey ingest] freshness wait timed out (non-fatal): ${msg}`)
+    onIssue?.('freshness-timeout', msg)
   }
 }

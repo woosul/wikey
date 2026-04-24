@@ -1058,9 +1058,12 @@ Click [[page name]] in answers to navigate to the wiki page.
 
         cb.addEventListener('change', toggleCb)
 
-        // 행 클릭 시 체크박스 토글 (체크박스 자체 클릭은 제외)
+        // 행 클릭 시 체크박스 토글 (체크박스 자체 클릭은 제외).
+        // Unsupported 파일은 checkbox disabled 뿐 아니라 row 전체 클릭도 무효화한다
+        // — 그렇지 않으면 행 hit-target 을 통해 auditSelections 에 진입할 수 있다 (C3 위반).
         row.addEventListener('click', (e) => {
           if (e.target === cb) return
+          if (isUnsupported) return
           ;(cb as HTMLInputElement).checked = !(cb as HTMLInputElement).checked
           toggleCb()
         })
@@ -1109,10 +1112,17 @@ Click [[page name]] in answers to navigate to the wiki page.
         }
         for (const fileName of node.files.sort()) {
           const fullRel = node.fullPath ? `${node.fullPath}/${fileName}` : fileName
-          const row = parent.createDiv({ cls: 'wikey-audit-tree-file' })
+          const isUnsupported = unsupportedSet.has(fullRel)
+          const row = parent.createDiv({
+            cls: isUnsupported ? 'wikey-audit-tree-file wikey-audit-row-unsupported' : 'wikey-audit-tree-file',
+          })
+          if (isUnsupported) {
+            row.setAttr('title', '이 파일 형식을 변환할 converter 가 설치되지 않았습니다. 상단 경고 참조.')
+          }
           row.style.paddingLeft = `${depth * 14 + 14}px`
           const cb = row.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
-          ;(cb as HTMLInputElement).checked = this.auditSelections.has(fullRel)
+          if (isUnsupported) cb.setAttr('disabled', 'true')
+          ;(cb as HTMLInputElement).checked = !isUnsupported && this.auditSelections.has(fullRel)
           row.createEl('span', { cls: 'wikey-audit-tree-file-name', text: fileName })
           rowMap.set(fullRel, row)
           const toggle = () => {
@@ -1123,6 +1133,7 @@ Click [[page name]] in answers to navigate to the wiki page.
           cb.addEventListener('change', toggle)
           row.addEventListener('click', (e) => {
             if (e.target === cb) return
+            if (isUnsupported) return
             ;(cb as HTMLInputElement).checked = !(cb as HTMLInputElement).checked
             toggle()
           })
@@ -1191,7 +1202,9 @@ Click [[page name]] in answers to navigate to the wiki page.
     })
 
     selectAllCb.addEventListener('change', () => {
-      const filtered = getFiltered()
+      // C3 guard: Select All 은 unsupported 파일을 선택 범위에서 배제한다. 그렇지 않으면
+      // UI 가 체크박스 disabled 상태여도 auditSelections 에 추가돼 Ingest 버튼이 처리 시도한다.
+      const filtered = getFiltered().filter((f) => !unsupportedSet.has(f))
       const checked = (selectAllCb as HTMLInputElement).checked
       for (const f of filtered) {
         if (checked) this.auditSelections.add(f)
@@ -1212,7 +1225,18 @@ Click [[page name]] in answers to navigate to the wiki page.
         return
       }
 
-      const selected = [...this.auditSelections]
+      // C3 defensive gate: auditSelections 에 stale 하게 남은 unsupported 항목은 여기서 마지막
+      // 으로 필터. Select All / row-click guard 가 있지만 data 변경 (capabilities.json 재생성
+      // 등) 이후 UI 재-render 이전의 race 를 방어한다. 수가 줄면 Notice 로 알린다.
+      const rawSelected = [...this.auditSelections]
+      const selected = rawSelected.filter((f) => !unsupportedSet.has(f))
+      const skipped = rawSelected.length - selected.length
+      if (skipped > 0) {
+        new Notice(`미지원 파일 ${skipped}개 건너뜀 — docling/unhwp 설치 후 재시도`, 5000)
+        for (const f of rawSelected) {
+          if (unsupportedSet.has(f)) this.auditSelections.delete(f)
+        }
+      }
       if (selected.length === 0) return
 
       // Switch to Cancel mode
