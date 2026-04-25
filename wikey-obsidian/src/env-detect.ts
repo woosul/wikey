@@ -115,6 +115,18 @@ async function findCompatibleNode(
     candidates.push(brewNode)
   }
 
+  // 4. §5.2.9 — 명시 fallback 경로 (login shell PATH order 가 nvm 을 우선 picking
+  // 하면 homebrew/system node 가 후보에서 누락되는 문제 방지). better-sqlite3 ABI
+  // 가 어느 node 와 맞는지는 .node 파일이 결정 — 모든 후보를 시도해야 호환 node 발견.
+  const explicitFallbacks = [
+    '/opt/homebrew/bin/node',
+    '/usr/local/bin/node',
+    '/usr/bin/node',
+  ]
+  for (const p of explicitFallbacks) {
+    if (!candidates.includes(p)) candidates.push(p)
+  }
+
   // qmd better-sqlite3 경로
   const nativeModule = join(basePath, 'tools/qmd/node_modules/better-sqlite3/build/Release/better_sqlite3.node')
   const { existsSync } = require('node:fs') as typeof import('node:fs')
