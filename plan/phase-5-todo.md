@@ -56,26 +56,90 @@
 
 ---
 
-## 5.2 검색 재현율 고도화 (P1)
-> tag: #eval, #engine
+## 5.2 검색 재현율 + 답변 품질 (P1) ★ 현 진입점
+> tag: #eval, #engine, #philosophy
 > **이전 번호**: `was §5.1`.
+> **2026-04-25 재정의**: 기존 "Anthropic-style chunk 재작성" 단일 항목 → cycle smoke (commit `3f1fa6d`) 에서 발견된 검색·답변 품질 follow-up 5건 통합. wikey 철학 (`wikey.schema.md:157` "페이지 단위 검색", `wiki/analyses/self-extending-wiki.md`) 반영.
 
-> **배경**. 현재 qmd 하이브리드 검색 (BM25 + Qwen3-Embedding + Gemma4 contextual prefix) 는 Phase 2/3 에서 Top-1 60% 수준 확증. 검색 chunk 자체에 문서 맥락을 주입하는 Anthropic contextual retrieval 기법은 재현율 추가 개선 여지가 있으나 인덱스 재빌드 비용이 크므로 본체 완료 후 실험.
+> **wikey 검색·인제스트 단위 (philosophy)**. wikey 는 RAG chunk 패턴을 사용하지 **않는다**. Phase 4 §4.5.1.5 v2 (`plan/phase-4-todo.md:446-494`) 에서 결정·구현 완료:
+> - **§4.5.1.5 §0~4**: 결정적 H2 section 분할 (`section-index.ts parseSections`) + token-budget 기반 Route 판정 (FULL / SEGMENTED) + SEGMENTED 경로 = "**섹션별** extractMentions + canonicalize"
+> - **§4.5.1.5 §5**: `splitIntoChunks` 삭제, `source_chunk_id` → `source_section_idx` rename, `MAX_SOURCE_CHARS` → `TRUNCATE_LIMIT` rename — chunk 개념 코드 레벨 제거 (273 tests PASS)
+> - **§4.5.1.5 v2 재정의 이유**: "RAG chunk 패턴 자체가 schema §19·§21 배격 대상" (`phase-4-todo.md:450`)
+>
+> 즉 ingest 단위 = **H2 섹션** (`## ...`), 검색 단위 = **분해된 작은 페이지** (entity / concept / source / analysis 카테고리, 1 소스 → 5~15 페이지). qmd 임베딩 + BM25 가 페이지 단위로 인덱싱·검색 (`wikey.schema.md:157`). 따라서 §5.2 의 모든 fix 는 (a) 페이지 본문의 cross-link 풍부화 + (b) 검색·답변 prompt 가 페이지 + 1-hop wikilink target 까지 활용하도록 강화 — chunk 재작성 같은 RAG-style infra 추가 X.
 >
 > **이관 전 위치**: Phase 4 §4.4.1.
+>
+> **Cycle smoke 실측 (2026-04-25, NanoVNA 1 파일)**:
+> - ingest 후 5 entities + 9 concepts + 1 source 생성. 그러나 entity 본문 = 1줄 + `## 출처` 1개 wikilink만. concept 으로의 cross-ref 자동 생성 안 됨.
+> - query 답변 184 chars, citation 2건 (entity + source). 같이 ingest 된 9 concepts 미인용.
+> - reindex 자동 호출 silent fail — 검색 freshness 자체 깨짐.
+> - 사용자 평가: "최소한 답변은 wikilink 참조 link에 있던 내용들은 나와야 하는데, 답변생성을 위한 재조합의 문제인가?" → **재조합 문제 아님, 인제스트 단계에서 cross-link 가 안 만들어진 것이 root cause.**
+>
+> **검색·답변 품질이 본체 동작 (검색·답변 UX) 의 결정적 영향이라 Phase 5 의 P0 다음 진입점**.
 
-### 5.2.1 Anthropic-style contextual chunk 재작성 (v7-3 재검토)
+### 5.2.1 Entity ↔ Concept cross-link 자동 생성 (★ 답변 풍부도 결정적 fix)
 
-- [ ] chunk 를 재작성해 embedding/BM25 **인덱스에 반영** (retrieval 전처리)
-  - Anthropic 의도: 저장된 chunk 자체에 문서 맥락이 주입된 상태로 인덱스 구축
-  - 기대 효과: 하이브리드 검색에서 짧은 chunk 의 문맥 손실 감소 → 재현율 개선
-  - 참조: https://www.anthropic.com/engineering/contextual-retrieval
-- [ ] PoC 범위
-  - qmd 인덱스 재빌드 파이프라인에 "contextual rewrite" 스테이지 추가
-  - 동일 코퍼스로 baseline vs rewrite 재현율 측정 (MRR, Recall@10)
-  - 비용: chunk 수 × 추가 LLM 호출 — 대형 코퍼스에서 부담될 수 있어 로컬 Gemma4 기본
-- [ ] 결정 기준: 재현율 개선 ≥ 15% 시 파이프라인에 상설 통합, 미만이면 기각 기록
-- [ ] **wiki 재생성 없음 확증**: `~/.cache/qmd/index.sqlite` 만 재빌드, wiki/ 는 읽기 전용 소비
+- [ ] canonicalizer Stage 3 (`wikey-core/src/canonicalizer.ts`) 가 **같은 ingest 사이클의 entity ↔ concept** 사이 wikilink 를 본문에 자동 삽입
+  - 현재: `index_additions` 만 wiki/index.md 에 추가. entity/concept 본문은 LLM JSON 의 `description` 만 (1~2 문장).
+  - 목표: entity 본문 끝에 `## 관련` H2 섹션 + 같이 만들어진 concept 들의 `[[wikilink]]` list. concept 본문 끝에도 entity 와의 양방향 link.
+  - LLM prompt 에 "entity-concept 관계 추출" 단계 추가 또는 같은 source 기반이라 자동 cross-ref 정책 ("같은 source 의 entity 와 concept 은 서로 link") 으로 결정적 생성
+  - 측정: NanoVNA fixture 재실행 시 nanovna-v2.md 본문에 smith-chart, swr, s11/s21 등 wikilink 등장 확인
+- [ ] **wiki 재생성 없음 확증**: 신규 ingest 부터 적용. 기존 wiki entity/concept 본문은 손대지 않음 (사용자가 reset 후 재인제스트 선택).
+
+### 5.2.2 답변 prompt 강화 — 검색 hit 의 wikilink 1-hop 활용
+
+- [ ] `query-pipeline.ts buildSynthesisPrompt` 에 다음 지시 추가:
+  - "검색된 페이지 본문에 `[[wikilink]]` 로 언급된 다른 wiki 페이지가 있으면, 그 페이지의 정보도 가능한 활용해 답변에 포함"
+  - "답변에 등장한 모든 entity/concept 은 첫 등장 시 `[[페이지명]]` 으로 링크"
+  - "답변 끝 `참고:` 블록에는 직접 인용 페이지 + 1-hop link target 페이지를 모두 나열"
+- [ ] 측정: NanoVNA 동일 질문 재실행 시 답변 길이 + citation 수 + 인용된 concept 수 비교
+- [ ] **wiki 재생성 없음 확증**: prompt 변경만, 인덱스/wiki 무관
+
+### 5.2.3 검색 graph expansion — 1-hop wikilink target 자동 fetch
+
+- [ ] `query-pipeline.ts` 의 `buildContextFromFS` / `buildContextWithWikiFS` 가 검색 top-N 페이지의 본문 wikilink 를 parse → target 페이지 추가 fetch (1-hop only, depth=1 cap)
+  - 예: nanovna-v2.md 가 `[[smith-chart]]`, `[[swr]]` 인용 → smith-chart.md, swr.md 본문도 LLM context 에 추가 (TOP_N=5 검색 → context 페이지 = 5 + 1-hop expansion ≤ N)
+  - cap: expansion 으로 추가되는 페이지 수 ≤ 5 (token budget). 우선순위 = 검색 score + wikilink 빈도
+  - Phase 5 §5.5 (지식 그래프) 의 일부 구현 (cross-ref). 본 항목은 query 시점 expansion 만, §5.5 는 사전 인덱스화.
+- [ ] **wiki 재생성 없음 확증**: query 시 fetch 만, 인덱스/wiki 무관
+
+### 5.2.4 TOP_N 상향 + 측정 (단기 quick win)
+
+- [ ] `WIKEY_QMD_TOP_N` default 5 → 7~10 (`wikey.conf` + `wikey-core/src/config.ts`)
+- [ ] 비용 영향 측정: prompt token 증가, LLM cost 증가
+- [ ] §5.2.2/§5.2.3 적용 전 baseline 측정 → 적용 후 개선 폭 비교
+
+### 5.2.5 자동 reindex silent fail 진단·수정 (검색 freshness 직결)
+
+- [ ] **재현·진단** (cycle smoke 2026-04-25 실측, `activity/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md §9.1` 4 후보):
+  - (a) `reindex.sh --quick` race — `appendLog` 직후 호출 시 wiki 파일 fsync 전 가능성
+  - (b) plugin execEnv PATH 누락으로 `qmd` binary ENOENT (silent)
+  - (c) `--quick` 가 timestamp metadata 미갱신 → `--check` 가 stale 판정
+  - (d) `WIKEY_REINDEX_TIMEOUT_MS` default 60s 부족 → silent timeout
+- [ ] **routine**:
+  1. NanoVNA fixture 재실행, `init-log` 후 끝까지 console capture (중간 `capture-logs` 금지)
+  2. log 에서 `reindex --quick OK` / `freshness wait timed out` / `reindex --quick failed` 어느 메시지인지 확인
+  3. 동시에 `bash ./scripts/reindex.sh --quick` 단독 실행 → exit code + stderr + 후속 `--check` timestamp 변화
+  4. 후보 매치 → fix (race → debounce / PATH → execEnv 보강 / timestamp → quick metadata 갱신 / timeout → setting up)
+- [ ] fix 적용 후 cycle smoke 재실행 → reindex 자동 OK + Notice 정상 발동 확증
+
+### 5.2.6 페이지 내부 H2 섹션 의미 활용 (탐구)
+
+- [ ] wikey 페이지의 표준 H2 섹션 (`## 출처`, `## 관련`, `## 분류` 등) 이 검색·답변에 의미적으로 활용되는지 확인
+  - 현재: qmd 인덱스는 페이지 본문 전체를 통째로 임베딩 + BM25. H2 메타데이터 미사용.
+  - 탐구: H2 섹션별 임베딩 + 답변 시 "출처 섹션" 우선 인용 같은 의미적 routing 가치 측정.
+  - 결정 기준: §5.2.1~3 적용 후에도 정확도/풍부도 부족하면 진입.
+
+### 5.2.7 (archived) Anthropic-style contextual chunk 재작성 — wikey 철학 위배
+
+> **2026-04-25 archive 결정**: Phase 4 §4.5.1.5 v2 가 RAG chunk 패턴 자체를 schema §19·§21 배격 대상으로 결정·코드 제거 완료 (`source_chunk_id` 삭제, `splitIntoChunks` 삭제). chunk-level contextual retrieval 적용은 그 결정과 충돌. **본 항목 archive**, 재현율 추가 개선이 필요하면 페이지 단위 contextual prefix (Phase 2 Step 3-2 Gemma4 contextual prefix 로 이미 구현 — 페이지 임베딩 시 문서 맥락 prefix 주입) 강화 방향으로 재검토.
+
+### 5.2.8 검증
+
+- [ ] cycle smoke 재실행 (NanoVNA 1 파일 + PII-heavy 1 파일) — entity/concept cross-link + 답변 풍부도 + reindex 자동성 + citation 수 모두 측정
+- [ ] 측정 항목 baseline (cycle smoke 2026-04-25): citation 2건 / 답변 184 chars / cross-link 0건 / reindex stale (silent fail)
+- [ ] 목표: citation ≥ 5건 / 답변 ≥ 500 chars / cross-link ≥ 3건 (entity 당) / reindex auto fresh
 
 ---
 
@@ -89,7 +153,7 @@
 
 - [ ] `.wikey/source-registry.json` hash 필드로 소스 변경 감지 → 해당 wiki 페이지만 재생성
 - [ ] 삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리
-- [ ] 부분 재인제스트 — chunk diff 기반 증분 (chunk hash 매칭)
+- [ ] 부분 재인제스트 — section diff 기반 증분 (`section-index.ts parseSections` H2 단위 hash 매칭. Phase 4 §4.5.1.5 §5 의 chunk → section 전환에 정합)
 - [ ] **wiki 재생성 없음 확증**: source-registry 스키마는 Phase 4 §4.2.2 에서 선결정. 본 항목은 로직만 추가, 기존 wiki 는 hash 변경된 소스만 재인제스트로 갱신.
 
 ---
@@ -208,9 +272,9 @@
 
 - [ ] **Ollama vs llama.cpp 실측 gap 측정** — M4 Pro 48GB 환경에서 동일 Qwen3.6:35b-a3b GGUF 로 비교
   - Ollama 0.20.5 (MLX 백엔드) vs `brew install llama.cpp` + `llama-server`
-  - 동일 chunk · 프롬프트로 latency/토큰/메모리 실측
+  - 동일 section · 프롬프트로 latency/토큰/메모리 실측 (wikey 의 SEGMENTED Route 가 section 단위 LLM 호출이므로 측정도 section 기준)
   - 커뮤니티 측정치: 단일 요청 10~30% overhead (Go 런타임 + HTTP 직렬화)
-  - wikey 는 단일 사용자 + 순차 chunk → 동시요청 3x gap 해당 없음
+  - wikey 는 단일 사용자 + 순차 section 호출 → 동시요청 3x gap 해당 없음
   - **판정 기준**: 실측 gap ≥15% 면 전환, 미만이면 Ollama 유지
 - [ ] **전환 시 통합 경로**
   - `llama-server` 는 OpenAI-compat API 제공 → `wikey-core/llm-client.ts` 에 `llamacpp` provider 추가

@@ -5,6 +5,19 @@ created: 2026-04-10
 updated: 2026-04-25
 ---
 
+## [2026-04-25] phase-5 | §5.1 over-mask fix + P2 분리 + cycle smoke (master 직접)
+
+- **§5.1.2 Phase A** (commit `5e32ec4`) — `ceo-multiline-form.valueExcludePrefixes` 13 라벨 추가 + `isCandidateExcluded` same-line 전체 토큰 검사. master CDP smoke 발견 over-mask 4건 (`등기일`/`주소`/`서울시 어`/`딘가`) 차단. 회귀 테스트 `pii-over-mask-prevention.test.ts` 2건 신규. 539/539 pass.
+- **§5.1.2 Phase B** (commit `3f1fa6d`) — codex Mode D Panel review (gpt-5.5 xhigh) FAIL → 분리 fix:
+  - P2: `valueExcludePrefixes` (회사명, candidate startsWith) vs `contextLabelPrefixes` (라벨 신규 필드, candidate `===` 정확 일치 + same-line startsWith) 2-list 분리. 한국 이름 false-negative 방지 (`'주소영'` 같이 라벨 첫 음절과 겹치는 실재 이름).
+  - P3: `canonicalizer.test.ts` fixture placeholder constants 사용 + `canonicalizer.ts` 본문 hardcoded 회사명 example placeholder 모듈로 통합 (`example-placeholders.ts` 신규 + 5 파일 7 ref import 교체). production 0 hits.
+  - 540/540 pass.
+- **§5.1.3 Master Obsidian CDP UI 1-cycle smoke** (NanoVNA 1 파일, `raw/_delayed/nanovna-v2-notes.md`) — `wikey:ingest-current-note` → Brief modal Proceed → Processing 1분 25초 (Gemini 2.5 Flash) → Preview Approve & Write → wiki write 18 file (5 entities + 9 concepts + 1 source + log/index/.ingest-map). reindex 수동 (12초) 후 query 답변 184 chars + citation 4건 (`nanovna-v2` entity + `wikey-citation-link 📄` 보조 + `source-nanovna-v2-notes` source + 원본 `raw/_delayed/nanovna-v2-notes.md`). 사용자 지시로 산출물 reset + `nanovna-v2-notes.md` → `raw/0_inbox/` 이동.
+- **발견된 follow-up (모두 §5.2 통합)**: 자동 reindex silent fail (4 후보 좁힘) / 답변 짧음 — entity↔concept cross-link 누락 root cause / TOP_N 5 / movePair 미발동 (의도된 가드: `commands.ts:442`).
+- **§5.2 재정의** (todo) — chunk 기반 → wikey 철학 (chunk 배제, H2 section 단위, 페이지 단위 검색, Phase 4 §4.5.1.5 v2 결정 정합) 으로 전면 재작성. cycle smoke 발견 5건 통합. §5.2.1 entity↔concept cross-link, §5.2.2 답변 prompt 강화, §5.2.3 graph expansion, §5.2.4 TOP_N 상향, §5.2.5 reindex 진단, §5.2.6 H2 의미 활용, §5.2.7 Anthropic chunk 재작성 archive.
+- **인프라 정비**: `~/.claude/skills/obsidian-cdp/SKILL.md` 신설 (full cycle + Query 검증 + 모달 셀렉터 + 함정 카탈로그). `~/.claude/agents/tester.md` 갱신 (CDP UI 1차 책임). 메모리 4건 신설 (`feedback_no_circled_numbers`, `feedback_no_defer_to_next_session`, `feedback_obsidian_modal_proceed`, `feedback_reuse_prior_artifacts`).
+- 참조: `activity/phase-5-result.md §5.1.2 / §5.1.3`, `activity/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md`, `plan/phase-5-todo.md §5.1.1.12 / §5.2.1~5`.
+
 ## [2026-04-25] impl | Phase 5 §5.1 구조적 PII 탐지 착륙 (P0 긴급)
 
 - **범위**: 계획서 `plan/phase-5-todox-5.1-structural-pii.md` v4 §5.1.1.1~10. Context window heuristic (안 C) + multi-value capture + valueExcludePrefixes (YAML 선언).

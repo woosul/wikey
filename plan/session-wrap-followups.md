@@ -1,7 +1,31 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-25 session 9 post-compact 처리 완료 — §5.1 over-masking fix + memory/todo 동기화**. 다음 = §5.2 검색 (P1) / §5.3 증분 (P1) / §5.4.1 schema.yaml 외부화 (P2 비전 gate) 중 선택.
+> 최신 갱신: **2026-04-25 session 10 — §5.1.2 over-mask + P2 분리 + example-placeholders 모듈 (commit 3f1fa6d) + §5.1.3 Obsidian CDP cycle smoke (NanoVNA 1 파일, master 직접) 완료**. **다음 진입점 = §5.2 (검색 재현율 + 답변 품질)** — `phase-5-todo.md §5.2.1~5` 단일 소스 (cycle smoke 발견 follow-up 5건 통합).
 > 생성일: 2026-04-10
+
+---
+
+## 🎯 다음 세션 첫 액션 (2026-04-25 session 10 종료 시점)
+
+1. `cat plan/phase-5-todo.md` §5.2 — 진입점·작업 단위 확인. `★ 현 진입점` 섹션. 단일 소스.
+2. **(권장) §5.2.1 entity↔concept cross-link 자동 생성** — 답변 풍부도 결정적 fix. canonicalizer Stage 3 (`wikey-core/src/canonicalizer.ts`) 가 같은 ingest 사이클 entity↔concept 사이 wikilink 를 본문 `## 관련` H2 섹션에 자동 삽입. 측정: NanoVNA fixture 재실행 시 `nanovna-v2.md` 본문에 `[[smith-chart]]` 등 등장 확증.
+3. **§5.2.5 자동 reindex silent fail 진단** — `ingest-pipeline.ts:498 runReindexAndWait` 코드 wiring 정상인데 실측 stale. 4 후보 (race / PATH / quick metadata / timeout) 좁혀둠. routine: NanoVNA 재실행 + console log capture (`init-log` 후 끝까지 보존, 중간 capture-logs 금지) + `bash ./scripts/reindex.sh --quick` 단독 실행 + exit code/stderr/timestamp 측정.
+4. **§5.2 작업은 tester 1차 + master fallback** — 사용자 정책 (2026-04-25 update). Obsidian CDP UI smoke 가 tester 책임 (`~/.claude/skills/obsidian-cdp/SKILL.md §1` + `~/.claude/agents/tester.md` "CDP·E2E 검증 1차 책임").
+5. **샘플 위치 = `raw/0_inbox/`** — `commands.ts:442` 가드 (`autoMoveFromInbox && raw/0_inbox/`) 로 movePair 발동 조건. 본 세션 cycle smoke 는 `_delayed/` 라 IV.A 검증 누락 — skill `obsidian-cdp §6.0` 에 명시.
+
+---
+
+## ✅ Session 10 종료 (2026-04-25, commit `3f1fa6d`) — 처리 완료 요약
+
+| # | 작업 | commit | 결과 |
+|---|------|--------|------|
+| 1 | §5.1.2 Phase A — over-mask 4건 fix (bundled YAML 13 라벨 + same-line 전체 토큰) + 회귀 테스트 2건 | `5e32ec4` | 539/539 pass |
+| 2 | §5.1.2 Phase B — codex P2 (candidate vs context-label 분리) + P3 (canonicalizer.test.ts placeholder) | `3f1fa6d` | 540/540 pass |
+| 3 | example-placeholders.ts 신규 모듈 + 5 파일 7 ref import 교체 (canonicalizer/schema/ingest-pipeline) | `3f1fa6d` | production goodstream/굿스트림/lotus-pms/kim-myung-ho 0 hits |
+| 4 | §5.1.3 Master 직접 Obsidian CDP UI 1-cycle smoke (NanoVNA 1 파일) | (master 직접 실행, commit 무관) | 5 entities + 9 concepts + 1 source + citation 4건 + 원본 backlink |
+| 5 | obsidian-cdp 신규 스킬 (`~/.claude/skills/obsidian-cdp/SKILL.md`) — full cycle 절차 + Brief Proceed / Preview Approve & Write 모달 셀렉터 + Query 검증 + 6-파일 통합 smoke 참조 | (home scope) | 시스템 인식 (skill list) |
+| 6 | tester.md 업데이트 — CDP UI smoke 1차 책임 (다음 세션부터) | (home scope) | — |
+| 7 | 메모리 4건 신설 — circled-numbers 금지 / no-defer / modal-proceed / reuse-prior-artifacts | (home scope) | MEMORY.md 인덱스 update |
 
 ---
 

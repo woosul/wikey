@@ -11,7 +11,10 @@
 ## 관련 문서
 
 - **Todo mirror**: [`plan/phase-5-todo.md`](../plan/phase-5-todo.md)
-- **보조 문서**: 착수 시 `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식으로 추가 (`CLAUDE.md §문서 명명규칙·조직화` 참조).
+- **§5.1 보조 문서**:
+  - [`plan/phase-5-todox-5.1-structural-pii.md`](../plan/phase-5-todox-5.1-structural-pii.md) — 구조적 PII 탐지 계획 (v4 codex APPROVE)
+  - [`activity/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md`](./phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md) — Obsidian CDP UI 1-cycle smoke 실측 (NanoVNA 1 파일, master 직접)
+- **추후 보조 문서**: `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식 (`CLAUDE.md §문서 명명규칙·조직화` 참조).
 - **프로젝트 공통**: [`plan/decisions.md`](../plan/decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](../plan/plan_wikey-enterprise-kb.md).
 
 ---
@@ -61,15 +64,144 @@
 - **결과**: PII 누출 차단 7/7 (`홍 길 동`·`이 영 희`·`김 철 수` + BRN `123-45-67890` 전부 매치), baseline FP 0/30, wiki pre-check BRN/CEO 0 hit.
 - **발견된 quality issue (follow-up subject)**: ceo-structural `valuePattern='[가-힣](?:[ \t]*[가-힣]){1,3}'` 가 한글 2~4자 label 단어 (`주소`·`등기일`·`서울시 어`·`딘가`) 를 over-mask. 누출 아닌 과차단. `valueExcludePrefixes` 에 common field label 추가 or valuePattern 엄격화 (공백 포함 이름만) — `plan/session-wrap-followups.md` 에 §5.1 quality follow-up 으로 기록.
 
-**다음 단계**: tester 에이전트가 §12 E1/E2.b/E3 — Obsidian CDP 경유 live smoke 재실행 + entity 페이지 scan — 을 담당.
+**다음 단계**: tester 에이전트가 §12 E1/E2.b/E3 — Obsidian CDP 경유 live smoke 재실행 + entity 페이지 scan — 을 담당. (이후 §5.1.2 / §5.1.3 에서 master 가 직접 진행 + over-mask quality follow-up 처리.)
+
+### 5.1.2 Over-mask 4건 fix + isCandidateExcluded 분리 + example placeholder 모듈 (2026-04-25 post-compact + cycle smoke)
+
+**배경**: §5.1.1 본체 commit `2da88cb` 의 master CDP smoke 에서 PII 누출 차단은 7/7 통과했으나 ceo-structural valuePattern (`[가-힣](?:[ \t]*[가-힣]){1,3}`) 가 한글 2~4자 form label 단어를 over-mask 하는 quality issue 발견 (`ceo-blank-line.md` → `['홍 길 동', '등기일']`, `ceo-table-cell.md` → `['이 영 희', '주소', '서울시 어', '딘가']`). 누출 아닌 과차단이지만 사용자 본문 손상 가능성. session-wrap-followups.md 에 §5.1 quality follow-up 으로 기록 후 post-compact 처리.
+
+**Phase A — Over-mask fix (commit `5e32ec4`, 2026-04-25)**:
+- `wikey-core/src/defaults/pii-patterns.default.yaml` — `ceo-multiline-form.valueExcludePrefixes` 에 일반 폼 라벨 13종 추가: 주소/전화/휴대/담당/접수/등기/등록/이메일/팩스/우편/사업/본점/소재.
+- `wikey-core/src/pii-redact.ts:isCandidateExcluded` — same-line check 를 last-2 토큰만 → **모든** prefix 토큰 검사로 확장. 테이블 셀 `| 주소 | 서울시 어딘가 |` 처럼 라벨이 multi-token 떨어진 케이스 차단.
+- `wikey-core/src/__tests__/pii-over-mask-prevention.test.ts` (신규 2 tests) — bundled YAML default 로 `ceo-blank-line.md` → `['홍 길 동']` / `ceo-table-cell.md` → `['이 영 희']` 정확 1건 회귀 방지.
+- 검증: `npm test` **539/539 passed** (537 + 신규 over-mask 2). `npm run build` 0 errors.
+- Reproduction (dist runtime, fix 후): `ceo-blank-line.md: ['홍 길 동']` / `ceo-table-cell.md: ['이 영 희']`.
+
+**Phase B — codex Mode D Panel review P2/P3 + isCandidateExcluded 분리 (commit `3f1fa6d`, 2026-04-25)**:
+
+codex review (cmux Panel surface:3, gpt-5.5 xhigh) verdict FAIL — 2 findings:
+- [P2] Phase A 의 13개 form label 이 candidate 자체에도 `startsWith` 적용. `'주소영'` 같은 실재 한국 이름 (성씨 '주') false-negative 위험. **Split candidate-prefix exclusions from same-line context-label exclusions**.
+- [P3] `canonicalizer.test.ts` L43-58, L270/285 의 `goodstream-co-ltd` hardcoded fixture 가 placeholder constants 사용 안 함.
+
+**P2 fix — discriminated 2-list 도입**:
+- `wikey-core/src/pii-patterns.ts` — `StructuralPiiPattern` / `CompiledStructuralPiiPattern` 인터페이스에 `contextLabelPrefixes?: readonly string[]` 필드 추가. loader (`buildPatternFromYamlEntry`) + compiler (`compilePattern`) 양쪽 처리.
+- `wikey-core/src/pii-redact.ts:isCandidateExcluded` — 2 list 분리 검사:
+  - `valueExcludePrefixes` (회사명): candidate `startsWith` + same-line tokens `startsWith` (둘 다)
+  - `contextLabelPrefixes` (라벨): candidate `===` (정확 일치만) + same-line tokens `startsWith`
+  - 분리 이유: 라벨 단어 ('주소', '등기' 등) 가 한국 이름의 첫 음절과 겹칠 수 있어 startsWith 적용 시 false-negative. `===` 는 라벨 단어 단독 candidate (`'주소'`) 만 차단하고 `'주소영'` 은 매치.
+- `wikey-core/src/defaults/pii-patterns.default.yaml` — Phase A 의 13 prefix 를 `valueExcludePrefixes` (회사명만 7종 유지) → `contextLabelPrefixes` (라벨 13종 + 변형 `등기일`/`등기부` 명시) 로 이전.
+- `wikey-core/src/__tests__/pii-over-mask-prevention.test.ts` — `'주 소 영'` 매치 확증 회귀 테스트 추가 (총 3 tests).
+
+**Phase B 부수 작업 — example placeholder constants module**:
+- `wikey-core/src/example-placeholders.ts` (신규) — LLM few-shot prompt 의 hardcoded 회사명/제품명/인명을 export 상수로 통합:
+  - `EXAMPLE_ORG_BASE='example-corp-ltd'` / `EXAMPLE_ORG_ALIAS='example-corp'` / `EXAMPLE_ORG_KO='주식회사 예제'` / `EXAMPLE_ORG_DESC_KO`
+  - `EXAMPLE_PERSON_BASE='example-person'` / `EXAMPLE_PRODUCT_BASE='example-product'`
+  - `EXAMPLE_CONCEPT_BASE='project-management-body-of-knowledge'` / `EXAMPLE_CONCEPT_ALIAS='pmbok'`
+- 5 파일 7 ref import 교체:
+  - `canonicalizer.ts:254` (existing-entity 설명) — `EXAMPLE_ORG_BASE` / `EXAMPLE_ORG_ALIAS`
+  - `canonicalizer.ts:270/276/278` (entities/concepts/index/log few-shot) — 4개 placeholder 모두 import 사용
+  - `schema.ts:19-21` (entity type description 의 `goodstream-co-ltd`/`kim-myung-ho`/`lotus-pms`) — `EXAMPLE_ORG_BASE`/`PERSON_BASE`/`PRODUCT_BASE`
+  - `ingest-pipeline.ts:570` (Stage 2 mention prompt 의 description 가이드) — `EXAMPLE_CONCEPT_ALIAS`/`EXAMPLE_ORG_BASE`
+  - `ingest-pipeline.ts:596` (Stage 2 mention few-shot) — 3개 placeholder
+- `wikey-core/src/__tests__/canonicalizer.test.ts` (P3 fix) — L41-58 + L266/281 fixture 도 `EXAMPLE_ORG_BASE` import 사용. existing pages block 검증 테스트 (기존 'goodstream-co-ltd' 입력으로 우연 매치되던 false signal) 정정 — bundled prompt 의 `${existingBlock}` 변수 미사용을 발견·문서화 (사전 버그, P3 범위 밖).
+- 테스트 fixture 파일 (`pii-redact.test.ts`, `wiki-ops.test.ts` 등) 의 동일 문자열은 PII test 의도 데이터로 보존 (production code 만 cleanup, 0 hits 확증).
+
+**검증 (Phase B 후)**:
+- `npm test`: **540/540 passed** (539 + over-mask self-검증 1).
+- `npm run build`: 0 errors.
+- `grep -rn 'goodstream\|굿스트림\|lotus-pms\|kim-myung-ho' wikey-core/src/` (production only, test 제외): 0 hits.
+- Reproduction 유지: `ceo-blank-line.md: ['홍 길 동']` / `ceo-table-cell.md: ['이 영 희']` (over-mask 0).
+- 신규 회귀: `'주 소 영'` 검출됨 (P2 false-negative 방지 확증).
+
+**관련 문서**: `plan/phase-5-todo.md §5.1.1.12` (over-mask fix mark) + `plan/phase-5-todo.md §5.2.1` (entity↔concept cross-link 신규 진입점, cycle smoke 후 발견 follow-up).
+
+### 5.1.3 Master 직접 Obsidian CDP UI 1-cycle smoke (2026-04-25, NanoVNA 1 파일)
+
+**배경**: Phase B (commit `3f1fa6d`) 통합 후, 사용자 정책 "tester 1차 / master fallback" 적용 — 단 "다음 세션부터 tester" 명시이므로 본 세션은 master 직접. 목표: §5.1 over-mask fix + example placeholder 변경이 plugin 경로 (Ingest 패널 → Brief modal Proceed → Processing → Preview Approve → wiki write → reindex → query → citation) 전체에서 회귀 없이 동작하는지 1 파일로 확증.
+
+**환경**:
+- Obsidian 1.12.7 — `osascript -e 'quit app "Obsidian"'; /Applications/Obsidian.app/Contents/MacOS/Obsidian --remote-debugging-port=9222 '--remote-allow-origins=*'`
+- Plugin build (cjs, esbuild) 1 warning: `import.meta.url` cjs 환경에서 빈 값 — bundled YAML loader fallback 동작 (잠재 issue, follow-up 등록).
+- Plugin path: `vault/.obsidian/plugins/wikey/main.js` (symlink → `wikey-obsidian/main.js`).
+- LLM Provider: Gemini 2.5 Flash (Brief / Mention / Canonicalize 동일).
+
+**샘플**: `raw/_delayed/nanovna-v2-notes.md` (35 lines, ~1.7 KB, technical RF/안테나 노트, PII 0 hits — BRN/CEO/주소 0).
+
+**Timeline (timing)**:
+| 단계 | 시각 | 시간 | 비고 |
+|------|------|------|------|
+| Plugin reload | — | — | `app.plugins.disable+enable('wikey')` |
+| `wikey:ingest-current-note` | — | — | Brief modal 등장 |
+| Brief → **Proceed** | — | 즉시 | 모달 [Proceed] 클릭 — **이 클릭 누락이 첫 시도 brief stage 5분+ hang 원인** |
+| Processing | 12:01:05 | 1분 25초 | Stage 1 brief + Stage 2 mention + Stage 3 canonicalize, Gemini 2.5 Flash |
+| Preview modal | 12:02:30 | — | Approve & Write 버튼 등장 확증 |
+| **Approve & Write** | — | 즉시 | wiki write |
+| Wiki write | 12:02:30 | ~5초 | 18 file write |
+| Query 1 (reindex 전) | — | ~30초 | 답변 OK + 사실 인용, **citation 0** ("Wikey 위키에서 직접적 검색 결과 없음") |
+| `./scripts/reindex.sh` (master 수동) | — | 12초 | 16 new + 2 updated indexed, 53 chunks embedded |
+| Query 2 (reindex 후) | — | ~20초 | citation 4건 — `[[nanovna-v2]] 📄` + `[[source-nanovna-v2-notes]]` + 원본 backlink |
+
+**wiki 산출물 (ingest 직후)**: 5 entities (nanovna-v2 / nanovna-qt / nanovna-v2-plus4 / dji-o3-air-unit / vector-network-analyzer) + 9 concepts (s11-parameter / s21-parameter / s-parameter / standing-wave-ratio / smith-chart / sma-connector / mmcx-connector / first-person-view / fpv-digital-transmission) + 1 source (`source-nanovna-v2-notes.md`) + log/index/.ingest-map.json 갱신 = 총 18 file write.
+
+**Query 답변 비교 (reindex 전 → 후)**:
+
+Query 1 (reindex 전, 1186 chars, citation 0):
+```
+"죄송합니다. Wikey 위키에서 'NanoVNA V2'에 대한 직접적인 검색 결과나 관련 페이지를
+찾을 수 없었습니다. 하지만 일반적인 정보에 기반하여 ... 50 kHz ~ 3 GHz ... S11/S21/...
+관련 위키 페이지: 현재 Wikey 위키에는 'NanoVNA V2'에 대한 전용 페이지가 없지만 ..."
+```
+
+원인: `./scripts/reindex.sh --check` → "마지막 인덱싱 2026-04-24 21:09 / 변경된 파일 17 stale". qmd 인덱스에 새 페이지 미등록.
+
+Query 2 (reindex 후, 184 chars, citation 4):
+```
+"NanoVNA V2는 50kHz부터 3GHz까지의 주파수 대역을 측정해요.
+이 장비는 S11(반사), S21(전송), 임피던스, 스미스 차트, 정재파비(SWR)를 측정할 수 있어요.
+참고: nanovna-v2📄, source-nanovna-v2-notes
+원본: raw/_delayed/nanovna-v2-notes.md"
+
+links:
+- internal-link wikey-citation-attached → nanovna-v2
+- wikey-citation-link → 📄 (보조 backlink)
+- internal-link → source-nanovna-v2-notes
+- internal-link → raw/_delayed/nanovna-v2-notes.md
+```
+
+검증 통과:
+- 사실 정확성: 50kHz~3GHz / S11/S21/임피던스/스미스 차트/SWR 모두 fixture 본문과 일치 (hallucination 0).
+- Wiki citation: `[[nanovna-v2]]` entity + `📄` wikey-citation-link (Phase 4 §4.3.2 Part A — provenance frontmatter).
+- Source citation: `[[source-nanovna-v2-notes]]`.
+- **원본 backlink** (Phase 4 §4.3.2 Part B): `raw/_delayed/nanovna-v2-notes.md` 1-hop.
+- PII 누출 0 (NanoVNA fixture PII free 라 자연 OK).
+
+**판정**: Ingest cycle PASS (ingest → wiki write → Query 답변 + citation + 원본 backlink 모두 확증). §5.1 over-mask fix + example placeholder 변경 회귀 영향 0 (PII free 샘플로 검증, PII-heavy 샘플은 follow-up).
+
+**발견된 follow-up (모두 `phase-5-todo.md §5.2` 로 통합 등록, 2026-04-25)**:
+1. **자동 reindex silent fail** — `ingest-pipeline.ts:498` `runReindexAndWait` 가 `reindex.sh --quick` 호출 + `waitUntilFresh` polling. 코드 wiring 정상 (`commands.ts:422-425` plugin onFreshnessIssue callback 등록) 인데 stale 17 파일. 4 후보 (race / PATH / quick metadata / timeout). → `§5.2.5` 진단 routine 명시.
+2. **답변 짧음 (184 chars) + 연관 wiki 미인용** — `nanovna-v2.md` entity 본문 = 1줄 + `## 출처` 1개 wikilink만. concept (smith-chart, swr 등 9건) 으로의 cross-link 자동 생성 안 됨. 즉 재조합 (synthesis) 문제 아님 — **인제스트 단계에서 entity↔concept cross-link 가 안 만들어진 것** 이 root cause. → `§5.2.1` (canonicalizer Stage 3 fix, ★ 답변 풍부도 결정적).
+3. **답변 prompt 강화 + graph expansion + TOP_N** — `query-pipeline.ts:246` `WIKEY_QMD_TOP_N=5`, `buildSynthesisPrompt` 에 "관련 모든 wiki + 1-hop wikilink target 인용" 지시 부재. → `§5.2.2/§5.2.3/§5.2.4`.
+4. **movePair 미발동** — `commands.ts:442` `if (ctx.autoMoveFromInbox && sourcePath.startsWith('raw/0_inbox/'))` 가드. 본 cycle 샘플이 `raw/_delayed/` 라 정상적으로 발동 안 함 (의도된 동작). → 결함 아님, skill `obsidian-cdp` §6.0 에 "샘플 위치 = raw/0_inbox/" 명시 추가.
+5. **cjs `import.meta.url` 경고** — bundled YAML loader (esbuild cjs 출력) 에서 빈 값. structural PII 가 plugin 안에서 동작하는지 확증 follow-up.
+6. **ingest 진행 중 Notice 미표시** — UX 개선.
+
+**부수 산출물 (이번 세션 인프라 정비)**:
+- 신설: `~/.claude/skills/obsidian-cdp/SKILL.md` — Obsidian CDP UI 자동화 책임 매트릭스 (tester 1차 / master fallback) + `scripts/smoke-cdp.sh` 헬퍼 카탈로그 + Brief Proceed / Preview Approve & Write 모달 셀렉터 + Query 검증 단계 (§6.7) + 6-파일 통합 smoke (§7) + PII smoke (§8) + 함정 (§10).
+- 갱신: `~/.claude/agents/tester.md` — "CDP·E2E 검증 1차 책임 (2026-04-25 update)" — Obsidian CDP UI smoke 가 tester 기본 책임으로 격상, master 는 fallback.
+- 신규 메모리 4건: `feedback_no_circled_numbers.md`, `feedback_no_defer_to_next_session.md`, `feedback_obsidian_modal_proceed.md`, `feedback_reuse_prior_artifacts.md`.
+- 정리: `plan/post-compact-handoff.md` 삭제 (post-compact 처리 완료 후 archive).
+
+**상세 활동 문서**: [`activity/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md`](./phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md) — timing 표, query 결과 비교, 9.x follow-up 진단 (현 세션에서 좁혀진 4 후보 + fix 방향).
 
 ---
 
-## 5.2 검색 재현율 고도화 (P1)
-> tag: #eval, #engine
-> **이전 번호**: `was §5.1`.
+## 5.2 검색 재현율 + 답변 품질 (P1) ★ 현 진입점
+> tag: #eval, #engine, #philosophy
+> **이전 번호**: `was §5.1`. 2026-04-25 §5.1.3 cycle smoke 후 검색·답변 품질 follow-up 5건 통합으로 재정의.
 
-(착수 전 — 2026-04-22 Phase 4 §4.4.1 에서 이관. Phase 4 §4.5.1.7.3 실측 완료 + 재현율 개선 실험 착수 시 타임라인 시작. Anthropic contextual retrieval 스타일 chunk 재작성 PoC 범위: qmd 인덱스 재빌드 파이프라인에 "contextual rewrite" 스테이지 추가 → baseline vs rewrite 재현율 측정 (MRR, Recall@10). 결정 기준: 재현율 개선 ≥ 15% 시 상설 통합.)
+**진입 조건 충족** (2026-04-25): §5.1.3 Obsidian CDP cycle smoke 가 검색·답변 단계의 결정적 결함 (entity↔concept cross-link 누락 + 자동 reindex silent fail + 답변 짧음) 을 정량 측정. wikey 철학 (RAG chunk 배제, H2 section 단위, 페이지 단위 검색 — Phase 4 §4.5.1.7.2 v2 결정) 정합 작업.
+
+(착수 전 — todo `plan/phase-5-todo.md §5.2` 단일 소스. 본 result §5.2 는 진입 시 timeline 시작.)
 
 ---
 
