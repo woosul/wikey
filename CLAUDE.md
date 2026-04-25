@@ -164,5 +164,5 @@ wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`
 - bash 1-3 command 즉답
 - 사용자가 "직접 처리" 명시
 
-**참조**: `plan/phase-a-session-maintenance.md §3.D`, `feedback_no_defer_to_next_session.md`, `feedback_reuse_prior_artifacts.md`.
+**참조**: `plan/phase-a-session-maintenance.md §3.D`, `feedback_no_defer_to_next_session.md`, `feedback_reuse_prior_artifacts.md`, [`rules/subagent-visibility.md`](./rules/subagent-visibility.md) (가시성 3 패턴, 2026-04-25), [`rules/master-pre-validation.md`](./rules/master-pre-validation.md) (subagent 산출물 → codex 직송 금지, master 1차 검증 의무, 2026-04-25).
 

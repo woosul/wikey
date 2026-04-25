@@ -5,14 +5,29 @@ Usage:
   ./scripts/audit-ingest.sh              # 미인제스트 목록 출력
   ./scripts/audit-ingest.sh --summary    # 요약만 출력
   ./scripts/audit-ingest.sh --json       # JSON 출력 (플러그인 연동용)
+
+§5.3.1/§5.3.2 (plan v11) — JSON 출력 5 신규 array (additive only — 기존 키 보존):
+  • orphan_sidecars                : sidecar `.md` 만 있고 원본 부재 (시나리오 C)
+  • source_modified_since_ingest   : registry.hash != disk raw bytes hash
+  • sidecar_modified_since_ingest  : registry.sidecar_hash != disk sidecar NFC hash
+  • duplicate_hash                 : 같은 hash 다른 path (registry.duplicate_locations 포함)
+  • pending_protections            : registry.pending_protections snapshot
+
+NFC 정규화 (P2-7): sidecar `.md` 본문은 unicodedata.normalize('NFC', content) 후
+utf-8 encode → sha256. TS computeSidecarHash 와 동등.
 """
+import hashlib
 import os
 import sys
 import json
 import re
+import unicodedata
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+# §5.3.1/§5.3.2 (plan v11) — fixture smoke 지원: WIKEY_AUDIT_ROOT env 로 ROOT override 가능.
+# 미지정 시 기본 = repo root (이 파일의 부모의 부모).
+_env_root = os.environ.get("WIKEY_AUDIT_ROOT")
+ROOT = Path(_env_root).resolve() if _env_root else Path(__file__).resolve().parent.parent
 # 인제스트 대상 폴더만 포함. `raw/_delayed` (보류) 와 `raw/9_assets` (이미지 첨부) 는
 # audit 목록·카운트 양쪽에서 제외 — 인제스트 대상 아닌 파일은 대시보드·audit 에 노출 X.
 RAW_DIRS = ["raw/0_inbox", "raw/1_projects", "raw/2_areas", "raw/3_resources", "raw/4_archive"]
@@ -73,6 +88,44 @@ def load_ingest_map() -> set[str]:
         return set()
 
 
+# ── §5.3.1/§5.3.2 (plan v11) — registry-driven hash diff helpers ──
+
+REGISTRY_PATH = ".wikey/source-registry.json"
+
+
+def load_registry() -> dict:
+    """Load .wikey/source-registry.json. Returns {} on missing/corrupt."""
+    p = ROOT / REGISTRY_PATH
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def file_hash(p: Path) -> str | None:
+    """sha256 hex of raw file bytes. Returns None if read fails."""
+    try:
+        h = hashlib.sha256()
+        with p.open("rb") as f:
+            while chunk := f.read(8192):
+                h.update(chunk)
+        return h.hexdigest()
+    except OSError:
+        return None
+
+
+def sidecar_hash_nfc(p: Path) -> str | None:
+    """sha256 of NFC-normalized utf-8 sidecar body (matches TS computeSidecarHash)."""
+    try:
+        content = p.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    nfc = unicodedata.normalize("NFC", content)
+    return hashlib.sha256(nfc.encode("utf-8")).hexdigest()
+
+
 def load_wiki_sources() -> set[str]:
     keys = set()
     if not WIKI_SOURCES.is_dir():
@@ -122,6 +175,7 @@ def main():
     wiki_keys = load_wiki_sources()
     ingest_map = load_ingest_map()
     all_docs = scan_raw_docs()
+    registry = load_registry()
 
     missing: list[Path] = []
     unsupported_docs: list[Path] = []
@@ -180,6 +234,81 @@ def main():
 
     entries = [entry(d, "missing") for d in missing] + [entry(d, "unsupported") for d in unsupported_docs]
 
+    # ── §5.3.1/§5.3.2 (plan v11) — 5 신규 array (additive only) ──
+    orphan_sidecars: list[str] = []
+    source_modified_since_ingest: list[str] = []
+    sidecar_modified_since_ingest: list[str] = []
+    pending_protections: list[dict] = []
+    duplicate_hash_groups: dict[str, list[str]] = {}
+
+    # Walk registry: per-record hash diff + duplicates + pending.
+    for sid, record in registry.items():
+        if not isinstance(record, dict):
+            continue
+        if record.get("tombstone"):
+            continue
+        vault_path = record.get("vault_path")
+        sidecar_vault = record.get("sidecar_vault_path")
+        registry_hash = record.get("hash")
+        registry_sidecar_hash = record.get("sidecar_hash")
+
+        # source_modified_since_ingest
+        if vault_path and registry_hash:
+            disk = ROOT / vault_path
+            if disk.is_file():
+                disk_hash = file_hash(disk)
+                if disk_hash and disk_hash != registry_hash:
+                    source_modified_since_ingest.append(vault_path)
+
+        # sidecar_modified_since_ingest
+        if sidecar_vault and registry_sidecar_hash:
+            disk = ROOT / sidecar_vault
+            if disk.is_file():
+                computed = sidecar_hash_nfc(disk)
+                if computed and computed != registry_sidecar_hash:
+                    sidecar_modified_since_ingest.append(sidecar_vault)
+
+        # duplicate_hash: canonical + duplicate_locations grouped by hash
+        if registry_hash:
+            canonical_paths = [vault_path] if vault_path else []
+            dup_paths = list(record.get("duplicate_locations") or [])
+            all_paths = canonical_paths + dup_paths
+            if len(all_paths) >= 2:
+                duplicate_hash_groups[registry_hash] = sorted(set(all_paths))
+
+        # pending_protections snapshot
+        for pp in record.get("pending_protections") or []:
+            if isinstance(pp, dict):
+                pending_protections.append(pp)
+
+    # orphan_sidecars: sidecar .md 가 disk 에 있고 paired 원본이 부재 + ingest-map 에 등록도 안 됨.
+    # raw/* 트리 walk 에서 .md 파일 중 sibling 이 동일한 base name 의 다른 ext 가 부재한 것.
+    sidecar_candidates: list[Path] = []
+    for d in RAW_DIRS:
+        full = ROOT / d
+        if not full.is_dir():
+            continue
+        for root, dirs, files in os.walk(full):
+            dirs[:] = [x for x in dirs if not x.startswith("_")]
+            for fname in files:
+                if fname.lower().endswith(".md"):
+                    sidecar_candidates.append(Path(root) / fname)
+    for sc in sidecar_candidates:
+        # sidecar pattern: <base>.<ext>.md (e.g. x.pdf.md). Strip .md → must contain another ext.
+        stem = sc.name[:-3]  # strip .md
+        if "." not in stem:
+            continue  # plain markdown (e.g. note.md), not a sidecar
+        original = sc.parent / stem
+        if not original.exists():
+            rel = str(sc.relative_to(ROOT))
+            # also miss in ingest-map (defensive)
+            if rel not in ingest_map:
+                orphan_sidecars.append(rel)
+
+    duplicate_hash = [
+        {"hash": h, "paths": paths} for h, paths in sorted(duplicate_hash_groups.items())
+    ]
+
     if mode == "json":
         print(json.dumps({
             "total_documents": total,
@@ -194,6 +323,12 @@ def main():
             "unsupported_files": [str(f.relative_to(ROOT)) for f in unsupported_docs],
             "entries": entries,
             "capabilities": CAPABILITIES_META,
+            # ── §5.3.1/§5.3.2 (plan v11) 신규 array — additive only ──
+            "orphan_sidecars": sorted(orphan_sidecars),
+            "source_modified_since_ingest": sorted(source_modified_since_ingest),
+            "sidecar_modified_since_ingest": sorted(sidecar_modified_since_ingest),
+            "duplicate_hash": duplicate_hash,
+            "pending_protections": pending_protections,
         }, ensure_ascii=False, indent=2))
     elif mode == "summary":
         print(f"문서 총: {total}개 | 인제스트됨: {ingested}개 | 미인제스트: {missing_count}개 | 미지원: {unsupported_count}개")

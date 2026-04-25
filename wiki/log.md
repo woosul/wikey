@@ -5,6 +5,47 @@ created: 2026-04-10
 updated: 2026-04-25
 ---
 
+## [2026-04-25] phase-5 | §5.3 hash 기반 증분 재인제스트 + sidecar/wiki 사용자 수정 보호 (plan v11 6-step TDD 종결)
+
+- **§5.3.1 + §5.3.2 결합 종결** — `plan/phase-5-todox-5.3.1-incremental-reingest.md` v11 (codex Mode D APPROVE_WITH_CHANGES, 11 cycle 수렴 P1 0건). 6-step TDD 모두 GREEN.
+- **Step 1 source-registry**: 5 신규 optional 필드 (`sidecar_hash` / `reingested_at` / `last_action` / `pending_protections` / `duplicate_locations`) + 4 helper (`appendPendingProtection` / `clearPendingProtection` / `appendDuplicateLocation` / `recordMoveWithSidecar` discriminated option) + reconcile() duplicate-aware (Map<hash, paths[]>). 11 신규 test PASS.
+- **Step 2 incremental-reingest** (신규 290 lines): `decideReingest` 단일 helper (5 action `skip`/`skip-with-seed`/`force`/`protect`/`prompt`) + raw bytes invariant + Phase A conflicts collect-then-decide + USER_MARKER_HEADERS / extractUserMarkers 멱등 / mergeUserMarkers / protectSidecarTargetPath (.1~.9 + .10 throw) / computeSidecarHash NFC. 24 신규 test PASS.
+- **Step 3 ingest-pipeline 통합**: Step 0 (rawDiskBytes) + Step 0.5 (decideReingest) + Step 0.6 분기 (skip → SkippedIngestResult, skip-with-seed → registry seed, force/protect → 본 흐름) + Hook 1 (sidecar `.md.new` protect, P1-2 단일 규칙) + Hook 2 (source page user marker preserve, P1-5 source 한정) + Hook 3 (registry merge with isCanonicalSidecarWritten 조건, P1-2 + v9/v10/v11 정정) + buildV3SourceMeta(rawDiskBytes, preservedSourceId?) + IngestResult / SkippedIngestResult union. 5 신규 integration test (skip 분기 testable subset) PASS.
+- **Step 4 movePair**: sidecar pre-resolve (원본 이동 전) + onSidecarConflict='skip'|'rename' + dest-conflict-exhausted (.1~.9 모두 충돌 → 원본 이동 안 함) + recordMoveWithSidecar atomic + skip 분기 frontmatter sidecar_vault_path preserve. 6 신규 test PASS.
+- **Step 5 audit-ingest.py**: JSON 5 신규 array (orphan_sidecars / source_modified_since_ingest / sidecar_modified_since_ingest / duplicate_hash / pending_protections, additive only) + Python NFC 정규화 (TS 와 일관) + WIKEY_AUDIT_ROOT env (fixture smoke 지원). 6 fixture shell smoke PASS exit 0.
+- **Step 6 plugin entry + ConflictModal** (신규 95 lines): `IngestOptions.forceReingest` (caller-only override) + `onConflict` callback + plugin runIngestCore default ConflictModal injection (silent auto-protect 차단) + SkippedIngestResult `'skipped' in result` type guard + IngestCancelledByUserError handling.
+- **Cycle smoke 5/5 PASS** (master CDP 직접): synthetic md sample 로 first ingest (force=new-source) → 같은 ingest (skip=hash-match, **LLM 0회**) → duplicate copy (skip=duplicate-hash-other-path, registry.duplicate_locations append) → raw bytes append (force, **source_id 보존 = preservedSourceId 작동**) → source page `## 사용자 메모` + raw 변경 (protect, **ConflictModal 자동 등장 → preserve 클릭 → Hook 2 user marker preserve 작동**).
+- **PMS 실 ingest** — `raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf` (3.6MB, paired sidecar 6.4MB) 사용자 직접 ingest. wiki 19 페이지 신규 + registry record `sha256:dcbe5dd3f5325d4b` + sidecar_hash 정상 채워짐. **★ 사용자 paired sidecar disk 보존** (mtime 22:17 / hash d66c44b0... 변화 없음). GAP 발견: R==null + paired sidecar 미보호 (후속 follow-up #10).
+- **후속 follow-up 4건 추가 구현** (사용자 발견·통찰 기반):
+  - **Approve & Write UX**: button click 시 `disabled=true` + `Writing… (please wait)` 라벨 + spinner CSS (`wikey-modal-btn-busy::before` + cursor: progress). 다중 클릭 차단.
+  - **Original-link footer mode** (`OriginalLinkMode = 'raw' | 'sidecar' | 'hidden'`): `appendOriginalLinks` mode 분기 + `deriveSidecarPath(vaultPath)` (`.md`/`.txt` 자체 / 그 외 `<vaultPath>.md`) + alias `[​[<full path>|<basename without ext>]​]` (디렉토리/확장자 숨김, rollover 시 full path tooltip). 6 신규 test PASS.
+  - **Plugin settings UI**: `originalLinkMode` setting + dropdown UI (PII 모드 다음 위치). default 'raw'.
+  - **Settings i18n**: settings-tab.ts 35 한글 라인 → 0 (전부 영문, 일관된 Sentence case + 짧은 dropdown 라벨 + description 에 자세한 설명).
+- **잔재 정리**: cycle-smoke-5-3 의 raw / wiki (1 source + 5 entities + 9 concepts EXCLUSIVE) / registry record / .ingest-map.json / wiki/index.md 14 라인 / wiki/log.md ingest H2 block 모두 정리. PMS / NanoVNA 무결성 영향 없음. /tmp 백업·smoke 산출물 모두 삭제.
+- **회귀**: 584 → **640 PASS** (+56 신규), build 0 errors (core + obsidian, 1 import.meta warning 기존). audit fixture smoke 6/6 PASS exit 0.
+- **Wiki 재생성 없음 확증**: §5.3 변경 = ingest 진입 분기 + Hook 3곳 + helper 신규 + audit 컬럼 5개 + plugin Modal 신규. 기존 Phase 4 데이터 (registry/wiki/qmd) 모두 backwards compat read 가능. legacy record 는 skip-with-seed 자동 마이그레이션.
+- 참조: `activity/phase-5-result.md §5.3`, `plan/phase-5-todox-5.3.1-incremental-reingest.md`, `plan/phase-5-todo.md §5.3`.
+
+## [2026-04-25] ingest | PMS_제품소개_R10_20220815.pdf
+
+- 엔티티 생성: [[lotus-pms]]
+- 엔티티 생성: [[good-stream]]
+- 엔티티 생성: [[lotus-scm]]
+- 엔티티 생성: [[mobile-app]]
+- 엔티티 생성: [[project-management-institute]]
+- 엔티티 생성: [[enterprise-resource-planning]]
+- 엔티티 생성: [[manufacturing-execution-system]]
+- 엔티티 생성: [[product-lifecycle-management]]
+- 엔티티 생성: [[lotus-mes]]
+- 개념 생성: [[project-management-body-of-knowledge]]
+- 개념 생성: [[work-breakdown-structure]]
+- 개념 생성: [[bill-of-materials]]
+- 개념 생성: [[gantt-chart]]
+- 개념 생성: [[functional-specification]]
+- 추가 개념: [[supply-chain-management]]
+- 추가 소스: [[source-lotus-pms-product-intro]]
+
+
 ## [2026-04-25] ingest | nanovna-v2-notes.md
 
 - 엔티티 생성: [[nanovna-v2]]
@@ -20,7 +61,6 @@ updated: 2026-04-25
 - 개념 생성: [[mmcx-connector]]
 - 개념 생성: [[open-short-load-calibration]]
 - 추가 소스: [[source-nanovna-v2-notes]]
-
 
 ## [2026-04-25] ingest | nanovna-v2-notes.md
 
@@ -39,7 +79,6 @@ updated: 2026-04-25
 - 개념 생성: [[open-short-load-calibration]]
 - 추가 소스: [[source-nanovna-v2-notes]]
 
-
 ## [2026-04-25] ingest | nanovna-v2-notes.md
 
 - 엔티티 생성: [[nanovna-v2]]
@@ -53,7 +92,6 @@ updated: 2026-04-25
 - 개념 생성: [[sma]]
 - 개념 생성: [[mmcx]]
 - 추가 소스: [[source-nanovna-v2-notes]]
-
 
 ## [2026-04-25] phase-5 | §5.2.0~5 검색·답변 품질 6건 통합 (commit f108e0c)
 

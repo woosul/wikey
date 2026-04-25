@@ -29,10 +29,23 @@ import {
   saveRegistry,
   upsert as registryUpsert,
   findById as registryFindById,
+  appendPendingProtection,
+  appendDuplicateLocation,
   REGISTRY_PATH,
   type SourceRecord,
   type SourceRegistry,
+  type ReingestAction,
 } from './source-registry.js'
+import {
+  decideReingest,
+  protectSidecarTargetPath,
+  computeSidecarHash,
+  extractUserMarkers,
+  mergeUserMarkers,
+  IngestProtectionPathExhaustedError,
+  type ReingestDecision,
+  type ConflictInfo,
+} from './incremental-reingest.js'
 import { canonicalize } from './canonicalizer.js'
 import { loadSchemaOverride } from './schema.js'
 import {
@@ -108,6 +121,80 @@ export interface IngestOptions {
   // §5.2.5: success path also surfaced so silent fail (no Notice at all) is impossible —
   // user always sees either "OK (Xs)" Notice or "실패/지연" Notice.
   readonly onFreshnessOk?: (durationMs: number) => void
+  // ── §5.3.1 + §5.3.2 (plan v11): incremental reingest options ──
+  /**
+   * If true, decideReingest result of `'skip'` or `'skip-with-seed'` is overridden to
+   * `'force'` (caller-only override; helper signature does not include this flag).
+   * Conflict-based protect/prompt branches are NOT bypassed by this flag.
+   */
+  readonly forceReingest?: boolean
+  /**
+   * Optional UI hook for conflict resolution. When provided AND conflicts are detected,
+   * decideReingest returns action='prompt' and ingest() awaits this callback to choose
+   * 'overwrite' (force), 'preserve' (protect), or 'cancel' (throw IngestCancelledByUserError).
+   */
+  readonly onConflict?: (info: ConflictInfo) => Promise<'overwrite' | 'preserve' | 'cancel'>
+}
+
+/**
+ * §5.3.1/§5.3.2 — return type for ingest() when the source was skipped.
+ * Plugin / caller distinguishes via the `'skipped' in result` type guard.
+ */
+export interface SkippedIngestResult {
+  readonly sourceId: string
+  readonly skipped: true
+  readonly skipReason:
+    | 'hash-match'
+    | 'hash-match-sidecar-seed'
+    | 'hash-match-sidecar-edit-noted'
+    | 'duplicate-hash-other-path'
+  readonly ingestedPages: readonly string[]
+  readonly seededSidecarHash?: boolean
+  readonly duplicateOfId?: string
+}
+
+/** Thrown when the user explicitly cancels via onConflict. */
+export class IngestCancelledByUserError extends Error {
+  constructor(message = 'ingest cancelled by user via onConflict') {
+    super(message)
+    this.name = 'IngestCancelledByUserError'
+  }
+}
+
+/** Thrown when protect target path could not be written (best-effort failure). */
+export class IngestProtectionFailedError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'IngestProtectionFailedError'
+  }
+}
+
+/**
+ * §5.3.1 — Read raw disk bytes for a source. Tries basePath + sourcePath via fs.readFileSync,
+ * falls back to wikiFS.read → TextEncoder.encode (vault-only environments).
+ * Mirrors buildV3SourceMeta logic so the same bytes can be reused (TOCTOU-safe).
+ */
+async function readRawDiskBytes(
+  wikiFS: WikiFS,
+  sourcePath: string,
+  basePath: string | undefined,
+): Promise<Uint8Array> {
+  if (basePath) {
+    try {
+      const { readFileSync } = require('node:fs') as typeof import('node:fs')
+      const { join } = require('node:path') as typeof import('node:path')
+      return readFileSync(join(basePath, sourcePath))
+    } catch {
+      // fall through to wikiFS read
+    }
+  }
+  try {
+    const text = await wikiFS.read(sourcePath)
+    return new TextEncoder().encode(text)
+  } catch {
+    // last resort: hash the path itself (mirrors buildV3SourceMeta fallback)
+    return new TextEncoder().encode(sourcePath)
+  }
 }
 
 /**
@@ -132,10 +219,115 @@ export async function ingest(
   httpClient: HttpClient,
   onProgress?: IngestProgressCallback,
   opts?: IngestOptions,
-): Promise<IngestResult> {
+): Promise<IngestResult | SkippedIngestResult> {
   assertNotWikiPath(sourcePath, 'ingest')
   const log = (msg: string, ...rest: unknown[]) => console.info(`[Wikey ingest] ${msg}`, ...rest)
   log(`start: ${sourcePath}`)
+
+  // ── §5.3.1 + §5.3.2 Step 0: read raw disk bytes BEFORE any conversion. ──
+  // (★ plan v11 P1-1 invariant: registry.hash 는 raw bytes 기준이므로 비교도 raw bytes 로.)
+  // basePath 우선 fs.readFileSync, 없으면 wikiFS.read → TextEncoder.encode 폴백.
+  const rawDiskBytes = await readRawDiskBytes(wikiFS, sourcePath, opts?.basePath)
+
+  // Step 0.5: decideReingest (registry diff + conflicts collect-then-decide).
+  let decision: ReingestDecision = await decideReingest({
+    sourcePath,
+    sourceBytes: rawDiskBytes,
+    wikiFS,
+    basePath: opts?.basePath,
+    onConflict: opts?.onConflict,
+  })
+
+  // Step 0.6: action branching.
+  // — caller-side 'force' override: forceReingest flag (helper-side never receives this).
+  if (
+    opts?.forceReingest === true &&
+    (decision.action === 'skip' || decision.action === 'skip-with-seed')
+  ) {
+    decision = { ...decision, action: 'force', reason: 'hash-changed-clean' }
+    log(`forceReingest=true override: skip→force`)
+  }
+
+  // 'prompt' branch: await user choice (overwrite=force / preserve=protect / cancel=throw).
+  if (decision.action === 'prompt') {
+    const choice = await opts!.onConflict!({ decision })
+    if (choice === 'cancel') {
+      throw new IngestCancelledByUserError()
+    }
+    decision = {
+      ...decision,
+      action: choice === 'overwrite' ? 'force' : 'protect',
+    }
+    log(`prompt → ${choice} → action=${decision.action}`)
+  }
+
+  // 'skip' branch: build SkippedIngestResult, possibly append duplicate location, return.
+  if (decision.action === 'skip') {
+    log(
+      `skip (reason=${decision.reason}, conflicts=[${decision.conflicts.join(',')}]) — no LLM/page write`,
+    )
+    let regForSkip = await loadRegistry(wikiFS)
+    if (decision.duplicateOfId && decision.duplicatePathToAppend) {
+      regForSkip = appendDuplicateLocation(
+        regForSkip,
+        decision.duplicateOfId,
+        decision.duplicatePathToAppend,
+      )
+      await saveRegistry(wikiFS, regForSkip)
+    }
+    const targetId =
+      decision.preservedSourceId ?? decision.duplicateOfId ?? ''
+    const targetRecord = targetId ? registryFindById(regForSkip, targetId) : null
+    const skipReason = decision.reason as SkippedIngestResult['skipReason']
+    return {
+      sourceId: targetId,
+      skipped: true,
+      skipReason,
+      ingestedPages: targetRecord?.ingested_pages ?? [],
+      ...(decision.duplicateOfId ? { duplicateOfId: decision.duplicateOfId } : {}),
+    }
+  }
+
+  // 'skip-with-seed' branch: legacy registry first hash-match — seed sidecar_hash only,
+  // skip LLM/page write/reindex (★ plan v11 P1-3).
+  if (decision.action === 'skip-with-seed') {
+    log(
+      `skip-with-seed — legacy record sidecar_hash 채움 (LLM/page write 0)`,
+    )
+    let regSeed = await loadRegistry(wikiFS)
+    const id = decision.preservedSourceId
+    if (id) {
+      const existing = registryFindById(regSeed, id)
+      if (existing && decision.diskSidecarHash) {
+        const today = new Date().toISOString()
+        const merged: SourceRecord = {
+          ...existing,
+          sidecar_hash: decision.diskSidecarHash,
+          last_action: 'skip-with-seed',
+          reingested_at: [...(existing.reingested_at ?? []), today],
+        }
+        regSeed = registryUpsert(regSeed, id, merged)
+        await saveRegistry(wikiFS, regSeed)
+      }
+    }
+    return {
+      sourceId: id ?? '',
+      skipped: true,
+      skipReason: 'hash-match-sidecar-seed',
+      ingestedPages: id ? registryFindById(regSeed, id)?.ingested_pages ?? [] : [],
+      seededSidecarHash: true,
+    }
+  }
+
+  // 'force' or 'protect' branch: continue full pipeline.
+  // conflicts list informs Hook 1 (sidecar protect) and Hook 2 (source page user-marker preserve).
+  const protectMode = decision.action === 'protect'
+  const isSidecarProtect =
+    protectMode &&
+    (decision.conflicts.includes('sidecar-user-edit') ||
+      decision.conflicts.includes('legacy-no-sidecar-hash'))
+  const isSourcePageProtect =
+    protectMode && decision.conflicts.includes('source-page-user-edit')
 
   // Step 1: Read source
   onProgress?.({ step: 1, total: 4, message: 'Reading source...' })
@@ -222,14 +414,40 @@ export async function ingest(
   // §4.1.3 (D.0.b) — PDF 는 `extractPdfText` 가 반환한 sidecarCandidate (raw 또는 stripped)
   // 를 우선 사용. 다른 포맷은 sourceContent 자체가 sidecar 본문.
   // 중앙 PII wrapper (§4.1.2) 통과 후 저장하므로 sidecar 도 자동 redact 대상.
+  // ── §5.3.1 + §5.3.2 Hook 1: sidecar write protect (plan v11 P1-2 단일 규칙) ──
+  // Default: canonical `<sourcePath>.md` overwrite. Protect: write to `<sourcePath>.md.new[.N]`
+  // and leave canonical untouched. registry.sidecar_hash is only refreshed on canonical write
+  // (the merged record below uses isSidecarProtect to decide).
+  let canonicalSidecarPath: string | null = null
+  let protectedSidecarPath: string | null = null
   if (ext && ext !== 'md' && ext !== 'txt') {
-    const sidecarPath = `${sourcePath}.md`
+    const defaultSidecarPath = `${sourcePath}.md`
     const sidecarBody = ext === 'pdf' ? (pdfSidecarCandidate ?? sourceContent) : sourceContent
-    try {
-      await wikiFS.write(sidecarPath, sidecarBody)
-      log(`sidecar .md saved → ${sidecarPath} (${sidecarBody.length} chars)`)
-    } catch (err) {
-      log(`sidecar .md save skipped: ${err}`)
+    if (isSidecarProtect) {
+      // protect mode — pick a non-conflicting `.md.new[.1~.9]` target.
+      try {
+        const target = await protectSidecarTargetPath(sourcePath, wikiFS)
+        await wikiFS.write(target, sidecarBody)
+        protectedSidecarPath = target
+        log(`sidecar protect → ${target} (canonical ${defaultSidecarPath} preserved)`)
+      } catch (err) {
+        if (err instanceof IngestProtectionPathExhaustedError) {
+          throw new IngestProtectionFailedError(
+            `sidecar protect target exhausted: ${err.message}`,
+          )
+        }
+        throw new IngestProtectionFailedError(
+          `sidecar protect write failed: ${(err as Error).message}`,
+        )
+      }
+    } else {
+      try {
+        await wikiFS.write(defaultSidecarPath, sidecarBody)
+        canonicalSidecarPath = defaultSidecarPath
+        log(`sidecar .md saved → ${defaultSidecarPath} (${sidecarBody.length} chars)`)
+      } catch (err) {
+        log(`sidecar .md save skipped: ${err}`)
+      }
     }
   }
 
@@ -403,33 +621,112 @@ export async function ingest(
   const updatedPages: string[] = []
 
   // §4.2 Stage 1 S1-3: v3 frontmatter + registry upsert.
-  const v3Meta = await buildV3SourceMeta(wikiFS, sourcePath, opts?.basePath, ext, `wiki/sources/${parsed.source_page.filename}`)
+  // §5.3.1 plan v11 결정 10: source_id stable per path — preservedSourceId (decision.preservedSourceId)
+  // 가 truthy 면 R != null 분기였다는 뜻이므로 raw bytes 기반 신규 id 대신 기존 id 보존.
+  const v3Meta = await buildV3SourceMeta(
+    wikiFS,
+    sourcePath,
+    rawDiskBytes,
+    ext,
+    `wiki/sources/${parsed.source_page.filename}`,
+    decision.preservedSourceId,
+  )
+
+  // ── §5.3.2 Hook 2: source page user-marker preserve (plan v11 P1-5 source 한정) ──
+  // Reads existing wiki/sources/<filename>.md (if any), extracts ## 사용자 메모 block,
+  // and merges into the LLM-generated body before frontmatter injection.
+  // entity/concept pages are NOT covered (post-follow-up #4 — LLM determinism risk).
+  const sourcePagePath = `wiki/sources/${parsed.source_page.filename}`
+  let preservedMarkers = ''
+  if (isSourcePageProtect) {
+    try {
+      const existingBody = await wikiFS.read(sourcePagePath)
+      preservedMarkers = extractUserMarkers(existingBody)
+      if (preservedMarkers) log(`source page user marker preserved (${preservedMarkers.length} chars)`)
+    } catch {
+      // page missing — nothing to preserve
+    }
+  }
+  const llmSourceBody = appendSectionTOCToSource(parsed.source_page.content, sectionIndex)
+  const sourceBodyWithMarkers = preservedMarkers
+    ? mergeUserMarkers(llmSourceBody, preservedMarkers)
+    : llmSourceBody
+
   const sourcePage: WikiPage = {
     filename: parsed.source_page.filename,
     // §4.5.1.5.6 Phase C: 섹션 TOC append (결정적 메타, LLM 호출 없음)
-    content: injectSourceFrontmatter(
-      appendSectionTOCToSource(parsed.source_page.content, sectionIndex),
-      v3Meta.frontmatter,
-    ),
+    content: injectSourceFrontmatter(sourceBodyWithMarkers, v3Meta.frontmatter),
     category: 'sources',
   }
-  const exists = await wikiFS.exists(`wiki/sources/${sourcePage.filename}`)
+  const exists = await wikiFS.exists(sourcePagePath)
   await createPage(wikiFS, sourcePage)
   ;(exists ? updatedPages : createdPages).push(sourcePage.filename)
 
-  // Registry upsert — record source + associate with this ingested page.
+  // ── §5.3.1 + §5.3.2 Hook 3: registry upsert with sidecar_hash invariant (plan v11) ──
+  // canonical sidecar 가 실제로 (re)write 된 경우만 sidecar_vault_path / sidecar_hash 갱신.
+  // protect 분기 (canonicalSidecarPath==null, protectedSidecarPath!=null) 에서는
+  // 기존 sidecar_hash / sidecar_vault_path 보존 + pending_protections 에 entry append.
   if (v3Meta.record) {
-    const reg = await loadRegistry(wikiFS)
+    let reg = await loadRegistry(wikiFS)
     const existing = registryFindById(reg, v3Meta.id)
-    const record: SourceRecord = existing
+    const today = new Date().toISOString()
+
+    const ingestedPages = existing
+      ? existing.ingested_pages.includes(sourcePagePath)
+        ? existing.ingested_pages
+        : [...existing.ingested_pages, sourcePagePath]
+      : v3Meta.record.ingested_pages
+
+    const isCanonicalSidecarWritten = canonicalSidecarPath != null
+
+    // Compute new sidecar_hash if canonical was written.
+    let newSidecarHash: string | undefined = existing?.sidecar_hash
+    if (isCanonicalSidecarWritten && canonicalSidecarPath) {
+      const computed = await computeSidecarHash(wikiFS, canonicalSidecarPath)
+      if (computed) newSidecarHash = computed
+    }
+
+    const merged: SourceRecord = existing
       ? {
           ...existing,
-          ingested_pages: existing.ingested_pages.includes(`wiki/sources/${sourcePage.filename}`)
-            ? existing.ingested_pages
-            : [...existing.ingested_pages, `wiki/sources/${sourcePage.filename}`],
+          // raw bytes hash + size 갱신 (force/protect 분기는 새 raw bytes)
+          hash: v3Meta.record.hash,
+          size: v3Meta.record.size,
+          last_action: decision.action as ReingestAction,
+          reingested_at: [...(existing.reingested_at ?? []), today],
+          ingested_pages: ingestedPages,
+          ...(isCanonicalSidecarWritten
+            ? {
+                sidecar_vault_path: canonicalSidecarPath ?? existing.sidecar_vault_path,
+                sidecar_hash: newSidecarHash,
+              }
+            : {}),
         }
-      : v3Meta.record
-    await saveRegistry(wikiFS, registryUpsert(reg, v3Meta.id, record))
+      : {
+          ...v3Meta.record,
+          ingested_pages: ingestedPages,
+          last_action: decision.action as ReingestAction,
+          ...(isCanonicalSidecarWritten && newSidecarHash
+            ? { sidecar_hash: newSidecarHash }
+            : {}),
+        }
+
+    reg = registryUpsert(reg, v3Meta.id, merged)
+
+    // protect 분기: pending_protections append (canonical 미변경 표식)
+    if (protectedSidecarPath) {
+      const conflict = decision.conflicts.includes('sidecar-user-edit')
+        ? 'sidecar-user-edit'
+        : 'legacy-no-sidecar-hash'
+      reg = appendPendingProtection(reg, v3Meta.id, {
+        kind: 'sidecar-md-new',
+        path: protectedSidecarPath,
+        created_at: today,
+        conflict,
+      })
+    }
+
+    await saveRegistry(wikiFS, reg)
   }
 
   // §4.3.2 Part A: entity/concept 페이지에 provenance 주입.
@@ -1827,36 +2124,22 @@ print('\\n\\n'.join(f'## Page {i+1}\\n\\n{results[i]}' for i in range(total)))
 async function buildV3SourceMeta(
   wikiFS: WikiFS,
   sourcePath: string,
-  basePath: string | undefined,
+  rawDiskBytes: Uint8Array,
   ext: string,
   ingestedPagePath: string,
+  preservedSourceId?: string,
 ): Promise<{ id: string; frontmatter: SourceFrontmatter; record: SourceRecord | null }> {
-  let bytes: Uint8Array | null = null
-  let size = 0
-  if (basePath) {
-    try {
-      const { readFileSync, statSync } = require('node:fs') as typeof import('node:fs')
-      const { join } = require('node:path') as typeof import('node:path')
-      const fullPath = join(basePath, sourcePath)
-      bytes = readFileSync(fullPath)
-      size = statSync(fullPath).size
-    } catch {
-      // Fall back to reading through wikiFS as text — last resort.
-      try {
-        const raw = await wikiFS.read(sourcePath)
-        bytes = new TextEncoder().encode(raw)
-        size = bytes.length
-      } catch {
-        bytes = null
-      }
-    }
-  }
+  // §5.3.1 (plan v11): rawDiskBytes is now caller-supplied (Step 0 read) so we don't
+  // double-read the disk. preservedSourceId, when supplied, keeps source_id stable across
+  // raw bytes changes (decision 10 — wikilink/provenance영향 0).
+  const bytes = rawDiskBytes
+  const size = bytes.byteLength
 
-  if (!bytes) {
-    // No bytes available — synthesize id from sourcePath so frontmatter still exists.
+  if (size === 0) {
+    // Caller failed to read bytes — fall back to path-derived synthetic id.
     const fallback = new TextEncoder().encode(sourcePath)
     const fm: SourceFrontmatter = {
-      source_id: computeFileId(fallback),
+      source_id: preservedSourceId ?? computeFileId(fallback),
       vault_path: sourcePath,
       hash: computeFullHash(fallback),
       size: 0,
@@ -1865,7 +2148,7 @@ async function buildV3SourceMeta(
     return { id: fm.source_id, frontmatter: fm, record: null }
   }
 
-  const source_id = computeFileId(bytes)
+  const source_id = preservedSourceId ?? computeFileId(bytes)
   const hash = computeFullHash(bytes)
   const first_seen = new Date().toISOString()
 

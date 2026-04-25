@@ -290,7 +290,7 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     sourceIds,
   })
 
-  it('current vault_path 있음 — raw 링크 append', async () => {
+  it('current vault_path 있음 — raw 링크 append (alias 형식, display 는 basename without ext)', async () => {
     const fs = new MemoryFS()
     const registry: SourceRegistry = {
       [ID_FOO]: mkRecord({
@@ -300,7 +300,8 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     }
     await fs.write(REGISTRY_PATH, JSON.stringify(registry))
     const out = await appendOriginalLinks('답변 본문', [citation([ID_FOO])], { wikiFS: fs })
-    expect(out).toContain('원본: [[raw/2_areas/foo.pdf]]')
+    // alias: link target = full vault path, display = basename without ext
+    expect(out).toContain('원본: [[raw/2_areas/foo.pdf|foo]]')
     expect(out).toContain('답변 본문')
   })
 
@@ -318,7 +319,7 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     await fs.write(REGISTRY_PATH, JSON.stringify(registry))
     const out = await appendOriginalLinks('본문', [citation([ID_ARCHIVED])], { wikiFS: fs })
     // 마지막 유효 entry 가 우선
-    expect(out).toContain('원본: [[raw/4_archive/old.pdf]]')
+    expect(out).toContain('원본: [[raw/4_archive/old.pdf|old]]')
     expect(out).not.toContain('raw/0_inbox/old.pdf')
   })
 
@@ -334,5 +335,92 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     const fs = new MemoryFS()
     const out = await appendOriginalLinks('본문만', [], { wikiFS: fs })
     expect(out).toContain('원본: (없음 — 외부 근거 없음)')
+  })
+
+  // §5.3 follow-up — originalLinkMode 옵션 (raw / sidecar / hidden) + alias display
+  it("mode='sidecar' — paired pdf 는 <vault_path>.md derive, display 는 raw basename (alias)", async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({ vault_path: 'raw/2_areas/foo.pdf' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('본문', [citation([ID_FOO])], {
+      wikiFS: fs,
+      mode: 'sidecar',
+    })
+    // link target = sidecar md, display = raw basename without ext
+    expect(out).toContain('원본: [[raw/2_areas/foo.pdf.md|foo]]')
+  })
+
+  it("mode='sidecar' — 단독 md 는 vault_path 자체 (자체가 sidecar 대용, display 는 ext 제거)", async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({ vault_path: 'raw/3_resources/note.md' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('본문', [citation([ID_FOO])], {
+      wikiFS: fs,
+      mode: 'sidecar',
+    })
+    expect(out).toContain('원본: [[raw/3_resources/note.md|note]]')
+    // 단독 md 는 .md.md 가 되지 않아야 함
+    expect(out).not.toContain('note.md.md')
+  })
+
+  it("mode='sidecar' — txt 도 자체 (sidecar 미생성 정책 정합)", async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({ vault_path: 'raw/2_areas/plain.txt' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('본문', [citation([ID_FOO])], {
+      wikiFS: fs,
+      mode: 'sidecar',
+    })
+    expect(out).toContain('원본: [[raw/2_areas/plain.txt|plain]]')
+    expect(out).not.toContain('plain.txt.md')
+  })
+
+  it("mode='hidden' — '원본:' footer 자체 미출력", async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({ vault_path: 'raw/2_areas/foo.pdf' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('답변 본문', [citation([ID_FOO])], {
+      wikiFS: fs,
+      mode: 'hidden',
+    })
+    expect(out).toBe('답변 본문')
+    expect(out).not.toContain('원본:')
+  })
+
+  it("mode='raw' (default) — alias 형식 [[<full path>|<basename>]] (디렉토리/확장자 숨김)", async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({ vault_path: 'raw/2_areas/foo.pdf' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('본문', [citation([ID_FOO])], {
+      wikiFS: fs,
+      mode: 'raw',
+    })
+    expect(out).toContain('원본: [[raw/2_areas/foo.pdf|foo]]')
+  })
+
+  it('display 에 디렉토리 경로가 포함되지 않음 (basename only)', async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({
+        vault_path: 'raw/3_resources/30_manual/500_natural_science/deep/nested/file.pdf',
+      }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('본문', [citation([ID_FOO])], { wikiFS: fs })
+    // alias display (| 뒤) 안에 슬래시가 없어야 함
+    const m = out.match(/\[\[[^\]]+\|([^\]]+)\]\]/)
+    expect(m).not.toBeNull()
+    expect(m![1]).toBe('file')
+    expect(m![1]).not.toContain('/')
   })
 })

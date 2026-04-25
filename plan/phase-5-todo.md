@@ -14,6 +14,7 @@
 - **보조 문서**:
   - [`plan/phase-5-todox-5.1-structural-pii.md`](./phase-5-todox-5.1-structural-pii.md) — §5.1 PII 보조 (완료)
   - [`plan/phase-5-todox-5.2.1-crosslink.md`](./phase-5-todox-5.2.1-crosslink.md) — §5.2.1 entity↔concept cross-link 설계 (analyst v2 + codex APPROVE_WITH_CHANGES)
+  - [`plan/phase-5-todox-5.3.1-incremental-reingest.md`](./phase-5-todox-5.3.1-incremental-reingest.md) — §5.3.1 + §5.3.2 결합 설계 (★ 2026-04-25 master v11 + codex Mode D **APPROVE_WITH_CHANGES**, 11 cycle 수렴 P1 0건)
 - **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
 
 ## 우선순위 가이드 (2026-04-24 재조정)
@@ -195,18 +196,35 @@
 
 ---
 
-## 5.3 인제스트 증분 업데이트 (P1)
-> tag: #workflow, #engine
+## 5.3 인제스트 증분 업데이트 + sidecar/wiki 사용자 수정 보호 (P1, **종결 2026-04-25 session 12**)
+> tag: #workflow, #engine, #architecture
 > **이전 번호**: `was §5.3` (번호 유지).
 
-> **배경**. Phase 4 §4.2.2 URI 참조 + source-registry `hash` 필드가 구축된 위에서 hash diff 기반 증분 재인제스트 로직만 추가. Phase 4 §4.3.3 에서 이관. **Provenance 는 본체에 남아 §4.3.2 로 처리됨** (frontmatter data model 변경이라 구조 변경 없음 조건 위반).
+> **상태 (2026-04-25 session 12 종결)**: plan v11 (codex APPROVE_WITH_CHANGES, P1 0건, 11 cycle 수렴) 6-step TDD 모두 GREEN. 회귀 584 → **640 PASS** (+56 신규). build 0 errors. cycle smoke 5/5 PASS (master CDP 직접). PMS_제품소개_R10_20220815.pdf 실 ingest + 사용자 paired sidecar 보존. 후속 follow-up 4건 (ConflictModal default / Approve&Write UX / Original-link footer mode / Settings i18n) 추가 구현. 상세: `activity/phase-5-result.md §5.3`.
 
 ### 5.3.1 hash 기반 증분 재인제스트
 
-- [ ] `.wikey/source-registry.json` hash 필드로 소스 변경 감지 → 해당 wiki 페이지만 재생성
-- [ ] 삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리
-- [ ] 부분 재인제스트 — section diff 기반 증분 (`section-index.ts parseSections` H2 단위 hash 매칭. Phase 4 §4.5.1.5 §5 의 chunk → section 전환에 정합)
-- [ ] **wiki 재생성 없음 확증**: source-registry 스키마는 Phase 4 §4.2.2 에서 선결정. 본 항목은 로직만 추가, 기존 wiki 는 hash 변경된 소스만 재인제스트로 갱신.
+> **★ 2026-04-25 결합 결정**: §5.3.1 + §5.3.2 한 번에 진행. 보조 plan [`phase-5-todox-5.3.1-incremental-reingest.md`](./phase-5-todox-5.3.1-incremental-reingest.md) v11 (codex APPROVE_WITH_CHANGES, P1 0건) 가 단일 entry point. 6 step TDD 구조 (Step 1 registry / Step 2 helper / Step 3 ingest-pipeline / Step 4 movePair / Step 5 audit / Step 6 plugin), 회귀 baseline 584 → **640 (+56 신규)**.
+
+- [x] **Step 1 — registry 스키마 확장** (`source-registry.ts`): `sidecar_hash / reingested_at / last_action / pending_protections / duplicate_locations` 5 신규 optional 필드 + helper 4 (`appendPendingProtection / clearPendingProtection / appendDuplicateLocation / recordMoveWithSidecar`) + reconcile() duplicate-aware 변경 (Map<hash, paths[]>) + 11 신규 test PASS (584 → 599)
+- [x] **Step 2 — `incremental-reingest.ts` 신규** (~290 lines, 24 unit test): `decideReingest` 단일 helper (5 action: skip / skip-with-seed / force / protect / prompt) + raw bytes invariant + conflicts collect-then-decide + extractUserMarkers / mergeUserMarkers / protectSidecarTargetPath / computeSidecarHash 헬퍼 (599 → 623)
+- [x] **Step 3 — `ingest-pipeline.ts` 통합** (Step 0/0.5/0.6 진입점 + Hook 1/2/3, 5 integration test skip 분기 testable): raw disk bytes Step 0 + decideReingest Step 0.5 + 분기 Step 0.6 + Hook 1 sidecar protect (`<base>.md.new`) + Hook 2 source page user marker preserve (★ source 한정) + Hook 3 명시 merge `{...existing, hash, size, last_action, reingested_at}` + isCanonicalSidecarWritten 조건 + upsert immutable 반환값 + buildV3SourceMeta(rawDiskBytes, preservedSourceId?) (623 → 628). force/protect 분기는 cycle smoke 위임
+- [x] **Step 4 — `classify.ts movePair` rename + atomic** (6 test): sidecar pre-resolve → exhausted return (원본 미이동) → recordMoveWithSidecar discriminated option `{ kind: 'preserve' | 'clear' | 'set' }` + skip frontmatter sidecar_vault_path 보존 (628 → 634)
+- [x] **Step 5 — `audit-ingest.py` JSON 컬럼 5 신규** (6 fixture shell smoke PASS exit 0): `orphan_sidecars / source_modified_since_ingest / sidecar_modified_since_ingest / duplicate_hash / pending_protections` (additive only, 기존 키 보존) + Python NFC 정규화 + WIKEY_AUDIT_ROOT env
+- [x] **Step 6 — plugin entry + ConflictModal default** (`commands.ts:runIngestCore` + `wikey-obsidian/src/conflict-modal.ts`, 95 lines + cycle smoke 5-step 위임): `IngestOptions.forceReingest` + `onConflict` 추가 (forceReingest 는 caller-only override) + ConflictModal 신규 component + IngestResult / SkippedIngestResult union 타입 분리 (`'skipped' in result` type guard) + IngestCancelledByUserError handling
+- [x] **acceptance**: 회귀 584 → **640 PASS** (+56 신규) / build 0 errors (core + obsidian, 1 import.meta warning 기존) / cycle smoke 5-step (첫 ingest → skip → duplicate → force → protect ConflictModal) **모두 PASS** master CDP 환경 reproduce / audit fixture 6/6 PASS exit 0 / PMS 실 ingest paired sidecar 보존 확증
+- [x] **source_id stable per path** (decision 10): raw bytes 변경 시 record.id 보존 (preservedSourceId), wikilink/provenance 영향 0. cycle smoke step 4 에서 sha256:43db30bf3d8756c5 보존 실증
+- [x] **★ 후속 follow-up 추가 구현**:
+  - **Approve & Write UX** — button click 시 disabled + "Writing… (please wait)" + spinner CSS (다중 클릭 차단)
+  - **Original-link footer mode** (`OriginalLinkMode = 'raw' | 'sidecar' | 'hidden'`) — `appendOriginalLinks` mode 분기 + `deriveSidecarPath` (`<vaultPath>.md` derive, `.md`/`.txt` 자체) + alias `[[<full path>|<basename without ext>]]` (디렉토리/확장자 숨김, rollover 시 full path tooltip). 6 신규 test PASS (634 → 640)
+  - **Plugin settings UI** — originalLinkMode dropdown (PII 모드 다음 위치). default 'raw'
+  - **Settings i18n** — settings-tab.ts 35 한글 라인 → 0 (전부 영문, Sentence case + 짧은 dropdown 라벨 + description 자세한 설명). OCR Model inputbox → renderModelDropdown
+- [ ] **잔여 follow-up (out-of-scope, 다음 세션)**:
+  - `.md.new` 자동 cleanup / dashboard·audit panel UI 시각화 (5 신규 컬럼 배지) / user_marker_headers config 노출 / entity·concept page user marker 보호 / hash perf (mtime 1차 필터) / CLI `--force` `--diff-only` 플래그 / section-level diff / tombstone restore + sidecar_hash / Python ↔ TS NFC cross-language 자동 검증
+  - **★ #10 R==null + paired sidecar 미보호 GAP fix** (본 session PMS ingest 분석 도출) — `decideReingest` 의 conflict 검사가 R != null 조건이라 첫 ingest 의 사용자 paired sidecar 가 force 분기에서 덮어써질 위험. 'unmanaged-paired-sidecar' conflict 신규
+  - **★ #11 entity/concept `## 출처` wikilink broken link fix** — paired pdf/hwp 등에서 `[[<basename>]]` (확장자 없음) 이 sidecar 형식 (`<base>.<ext>.md`) 과 매칭 안 됨 → unresolved. `[[source-<slug>]]` 표준화 또는 alias 형식. 단독 md 는 정상이므로 영향 없음
+- [ ] **삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리** (★ 본 결합 plan 범위 밖 — Phase 4 §4.2.2 source-registry 의 tombstone 처리 + §5.5 그래프 영역. §5.3 종결 후 별도 평가)
+- [x] **wiki 재생성 없음 확증**: source-registry 스키마는 Phase 4 §4.2.2 에서 선결정. 본 항목은 로직만 추가, 기존 wiki 는 hash 변경된 소스만 재인제스트로 갱신. legacy record 는 skip-with-seed 자동 마이그레이션. 기존 NanoVNA / PMS 데이터 backwards compat read OK
 
 ### 5.3.2 sidecar + ingest 불일치 예외 처리 (★ 2026-04-25 §5.2.9 사용자 발견 — §5.3 으로 분리)
 
@@ -227,22 +245,22 @@
 >
 > **핵심 위험**: A/F (sidecar 수정 LOST) + D (wiki page 메모 LOST). 사용자가 ingest 결과를 직접 수정하는 정상 워크플로우가 다음 ingest 로 파괴됨.
 
-- [ ] **시나리오 A/F fix — sidecar 수정 보호**:
-  - 시작 전 sidecar.md hash 비교: 이전 ingest 의 sidecar hash (registry record 신규 필드 `sidecar_hash`) vs 현재 disk hash
-  - 다르면 → 사용자 수정 감지 → 충돌 prompt (덮어쓰기 / 사용자 수정 유지 / cancel) 또는 user-section marker (예: `## 사용자 메모` H2 이후 보존)
-  - 또는 새 sidecar 를 `<base>.md.new` 로 저장 + diff modal 노출
-- [ ] **시나리오 D fix — wiki page 사용자 메모 보호**:
-  - source/entity/concept page 도 동일 보호 패턴
-  - canonicalizer 가 page write 전 기존 page 의 사용자 marker (`## 사용자 메모` 등) 추출 후 새 본문에 prepend/append
-- [ ] **시나리오 B fix — movePair destination 충돌**:
-  - movePair (`classify.ts`) 가 destination 에 같은 이름 sidecar 있으면 detect → 사용자 prompt 또는 rename suffix (`<base>.<ext>.md.1`)
-- [ ] **시나리오 C fix — orphan sidecar 처리**:
-  - audit 가 .md standalone 표시 + 추가 hint ("이전 ingest 결과 sidecar 가능성") 노출
-  - 사용자가 ingest 시도 시 confirm prompt ("orphan sidecar — 새 source 로 등록할까요?")
-- [ ] **시나리오 E fix — duplicate hash 추적**:
-  - registry 가 같은 hash 의 다중 path 추적 (`record.locations: string[]`) — 또는 reconcile policy 명문화 (가장 최근 mtime 우선 등)
-- [ ] **wiki 재생성 정책**: 본 fix 들은 신규 ingest 경로에만 영향. 기존 wiki/sidecar 데이터 무관.
-- [ ] **acceptance**: A/F 시나리오 수동 reproduce → 사용자 수정 보존 확증 / 단위 테스트 신규 (sidecar hash diff detect, wiki page user marker 보존) / cycle smoke 재실행
+- [x] **시나리오 A/F fix — sidecar 수정 보호** (Hook 1 + decideReingest sidecar-user-edit conflict):
+  - registry record 의 `sidecar_hash` 필드 vs disk hash (NFC normalize 후 sha256). decideReingest 에서 `sidecar-user-edit` conflict push.
+  - protect 분기: 새 sidecar 를 `<base>.md.new` (또는 `.1~.9` 자동 증가, `.10` exhausted throw) 로 저장. canonical `.md` 미변경. registry.pending_protections append + sidecar_hash 미갱신 (★ P1-2 단일 규칙)
+  - prompt 분기 (onConflict 제공): ConflictModal 등장 → preserve/overwrite/cancel 선택. plugin runIngestCore default modal 자동 주입 (P2-3)
+- [x] **시나리오 D fix — source page 사용자 메모 보호** (★ 2026-04-25 v3 narrowing):
+  - **scope**: `wiki/sources/source-*.md` 한정. entity/concept page 는 후속 (#4)
+  - Hook 2 (createPage 직전): `extractUserMarkers(existing)` → `mergeUserMarkers(newContent, markers)`. USER_MARKER_HEADERS = `['## 사용자 메모', '## User Notes', '## 메모']`. 멱등 (이미 존재하면 skip)
+  - entity/concept 보호는 후속 — `plan/phase-5-todox-5.3.1-incremental-reingest.md` 후속 항목 #4 참조
+- [x] **시나리오 B fix — movePair destination 충돌** (Step 4):
+  - `MovePairOptions.onSidecarConflict?: 'skip' | 'rename'` (default 'skip'). sidecar pre-resolve (원본 이동 전) + dest-conflict-exhausted (.1~.9 모두 충돌 → 원본 이동 안 함) + recordMoveWithSidecar atomic
+- [x] **시나리오 C fix — orphan sidecar 처리** (Step 5):
+  - audit-ingest.py JSON 신규 컬럼 `orphan_sidecars`: sidecar `.md` 만 있고 paired 원본 부재 + ingest-map miss
+- [x] **시나리오 E fix — duplicate hash 추적** (Step 1 + decideReingest):
+  - registry record 신규 필드 `duplicate_locations: string[]` (★ v4 정정: path_history 와 분리). decideReingest 에서 `duplicate-hash` conflict + `duplicate-hash-other-path` skip + `appendDuplicateLocation` (canonical 자체 제외, 멱등). reconcile() duplicate-aware (Map<hash, paths[]>)
+- [x] **wiki 재생성 정책**: 본 fix 들은 신규 ingest 경로에만 영향. 기존 wiki/sidecar 데이터 무관.
+- [x] **acceptance**: A/F 시나리오 cycle smoke step 5 reproduce → ConflictModal 등장 + Hook 2 user marker preserve 확증 / source-registry +11 / incremental-reingest +24 / movePair +6 / audit fixture +6 / query-pipeline +6 (Original-link footer mode) 모두 PASS / cycle smoke 5/5 PASS
 
 > **출처**: `activity/phase-5-result.md §5.2.9` 의 8 시나리오 표 + master 코드 분석 (`ingest-pipeline.ts:226-232` 무조건 overwrite). 본 §5.3.2 는 §5.3.1 hash diff 인프라가 우선 완성된 후 진입 — 두 항목 함께 진행.
 

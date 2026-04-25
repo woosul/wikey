@@ -54,7 +54,11 @@ export {
   collectCitationsFromFS,
   appendOriginalLinks,
 } from './query-pipeline.js'
-export type { QueryOptions, AppendOriginalLinksOptions } from './query-pipeline.js'
+export type {
+  QueryOptions,
+  AppendOriginalLinksOptions,
+  OriginalLinkMode,
+} from './query-pipeline.js'
 export {
   resolveSource,
   resolveSourceSync,
@@ -80,9 +84,25 @@ export {
   BUNDLED_INGEST_PROMPT,
   BUNDLED_STAGE2_MENTION_PROMPT,
   PlanRejectedError,
+  IngestCancelledByUserError,
+  IngestProtectionFailedError,
   assertNotWikiPath,
 } from './ingest-pipeline.js'
-export type { IngestOptions, PromptLoadResult } from './ingest-pipeline.js'
+export type {
+  IngestOptions,
+  PromptLoadResult,
+  SkippedIngestResult,
+} from './ingest-pipeline.js'
+// §5.3.1/§5.3.2 — incremental reingest helpers + types.
+export {
+  decideReingest,
+  USER_MARKER_HEADERS,
+  protectSidecarTargetPath,
+  computeSidecarHash,
+  IngestProtectionPathExhaustedError,
+} from './incremental-reingest.js'
+export type { ReingestDecision, ConflictInfo } from './incremental-reingest.js'
+export type { ReingestAction, ConflictKind } from './source-registry.js'
 export {
   classifyFile,
   classifyFileAsync,

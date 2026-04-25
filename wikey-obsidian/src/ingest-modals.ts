@@ -472,9 +472,25 @@ export class IngestFlowModal extends Modal {
 
     const btnRow = this.bodyEl.createDiv({ cls: 'wikey-modal-button-row' })
     const approveBtn = btnRow.createEl('button', { text: 'Approve & Write', cls: 'mod-cta' })
-    approveBtn.addEventListener('click', () => this.resolvePreview(true))
     const cancelBtn = btnRow.createEl('button', { text: 'Cancel (discard)' })
-    cancelBtn.addEventListener('click', () => this.resolvePreview(false))
+    // §5.3 follow-up — 사용자가 클릭 후 가시 피드백 부재로 반복 클릭하는 문제 차단:
+    //   1) 두 버튼 즉시 disable (race 방지)
+    //   2) Approve 라벨을 "Writing..." 으로 변경 + spinner-aware class 추가
+    //   3) caller 가 finish() 호출하면 modal close 됨 (별도 cleanup 불필요)
+    approveBtn.addEventListener('click', () => {
+      if (approveBtn.disabled) return
+      approveBtn.disabled = true
+      cancelBtn.disabled = true
+      approveBtn.setText('Writing… (please wait)')
+      approveBtn.addClass('wikey-modal-btn-busy')
+      this.resolvePreview(true)
+    })
+    cancelBtn.addEventListener('click', () => {
+      if (cancelBtn.disabled) return
+      cancelBtn.disabled = true
+      approveBtn.disabled = true
+      this.resolvePreview(false)
+    })
     setTimeout(() => approveBtn.focus(), 50)
   }
 

@@ -26,5 +26,24 @@
       }
     ],
     "tombstone": false
+  },
+  "sha256:dcbe5dd3f5325d4b": {
+    "vault_path": "raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf",
+    "sidecar_vault_path": "raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf.md",
+    "hash": "dcbe5dd3f5325d4b288b3bf5b65eba21dc3c63da7d3ed1093e4c9667792da8a3",
+    "size": 3634821,
+    "first_seen": "2026-04-25T13:21:52.622Z",
+    "ingested_pages": [
+      "wiki/sources/source-lotus-pms-product-intro.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf",
+        "at": "2026-04-25T13:21:52.622Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force",
+    "sidecar_hash": "d66c44b0c57a7513189986ed2144f8c95468c061677393886bb488d18fcccfda"
   }
 }

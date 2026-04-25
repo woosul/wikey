@@ -1,18 +1,40 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-25 session 11 종결 — §5.2.0~5 + §5.2.9 + §5.2.0 v2/v3 + §5.3.2 분석 모두 완료** (commit `f108e0c` → `dd8e8e1`, 13 commits 누적). master CDP cycle smoke 직접 실행 확증 + 사용자 UI follow-up 4건 + sidecar+ingest 8 시나리오 분석 todo 보존. **다음 진입점 = §5.3.1 (hash 기반 증분, P1) + §5.3.2 (sidecar+ingest 보호) 결합**.
+> 최신 갱신: **2026-04-25 session 12 종결 — §5.3.1 + §5.3.2 6-step TDD + cycle smoke 5/5 + PMS 실 ingest + 후속 follow-up 4건 모두 완료** (회귀 584 → 640 PASS, build 0 errors). plan v11 (codex APPROVE_WITH_CHANGES, P1 0건) 6-step 모두 GREEN. **다음 진입점 = §5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** 또는 §5.3 후속 follow-up (#10 R==null+paired sidecar 미보호, #11 entity/concept 출처 wikilink broken link fix).
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-04-25 session 11 종료 시점)
+## 🎯 다음 세션 첫 액션 (2026-04-25 session 12 종료 시점)
 
-1. `cat plan/phase-5-todo.md` — §5.2 + §5.2.9 + §5.2.0 v2 모두 종결 → §5.3 진입.
-2. **§5.3.1 hash 기반 증분 재인제스트 (P1) + §5.3.2 sidecar+ingest 불일치 보호 함께 진행 (★ 권장)** — §5.3.1 의 hash diff 인프라 위에서 §5.3.2 의 sidecar/wiki page 사용자 수정 보호 로직 (시나리오 A/F/D) 자연 결합. 8 시나리오 표는 todo 본문 + activity §5.2.0 v2 mirror 에 보존.
-3. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus 등장 시 즉시 착수.
-4. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
-5. **잔여 (별개)** — `reconcile case 3` walker 누락 root cause 추적 (§5.2.9 fix 는 후속 movePair 안전망. 잘못된 walker 마킹 자체 진단은 §5.8 영역).
-6. **§5.2 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임. 단 본 세션 §5.2.9 처럼 master 직접 실행 fallback 정상 활용.
+1. `cat plan/phase-5-todo.md` — §5.3 종결 표시 → §5.4 진입 또는 §5.3 후속 follow-up (#10/#11) 선택.
+2. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus (ISO/ITIL/GDPR 등) 등장 시 즉시 착수. PMBOK 의 v7-5 Stage 0 사전 검증 결과 (Concepts CV <15% 도달 여부) 가 gate.
+3. **§5.3 후속 follow-up #10 — R==null + paired sidecar 미보호 GAP fix**: 본 session PMS ingest 분석에서 도출. `decideReingest` 의 conflict 수집 로직에 `R == null && diskSidecarBytes != null` 시 'unmanaged-paired-sidecar' push → 첫 ingest 도 사용자 paired sidecar 보호. plan v11 미커버.
+4. **§5.3 후속 follow-up #11 — entity/concept `## 출처` wikilink broken link fix**: `[[<basename>]]` (확장자 없음) 이 paired sidecar 형식 (`<base>.<ext>.md`) 과 매칭 안 됨 → `[[source-<slug>]]` 표준화 또는 alias 형식. 단독 md (NanoVNA) 는 정상이므로 영향 범위 = paired pdf/hwp/docx/...
+5. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
+6. **잔여 (별개)** — `reconcile case 3` walker 누락 root cause 추적 (§5.2.9 fix 는 후속 movePair 안전망. 잘못된 walker 마킹 자체 진단은 §5.8 영역).
+7. **§5.2/§5.3 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임. 본 session 12 처럼 master 직접 cycle smoke 5-step 실행도 정상 fallback.
+
+---
+
+## ✅ Session 12 종료 (2026-04-25) — 처리 완료 요약
+
+| # | 작업 | 결과 |
+|---|------|-----|
+| 1 | §5.3.1 + §5.3.2 plan v11 6-step TDD (codex APPROVE_WITH_CHANGES, P1 0건) | 회귀 584 → 640 (+56), build 0 errors |
+| 2 | Step 1 source-registry — 5 신규 필드 + 4 helper + reconcile duplicate-aware | 11 신규 test PASS |
+| 3 | Step 2 incremental-reingest.ts 신규 — decideReingest + user-marker + sidecar protect helper | 24 신규 test PASS |
+| 4 | Step 3 ingest-pipeline 통합 — Step 0/0.5/0.6 + Hook 1/2/3 + buildV3SourceMeta + IngestResult union | 5 integration test (skip 분기) PASS |
+| 5 | Step 4 movePair — sidecar pre-resolve + onSidecarConflict + atomic | 6 신규 test PASS |
+| 6 | Step 5 audit-ingest.py — 5 신규 array (additive) | 6 fixture shell smoke PASS exit 0 |
+| 7 | Step 6 plugin entry + ConflictModal default + SkippedIngestResult type guard | cycle smoke 위임 |
+| 8 | Cycle smoke 5/5 (force / skip / duplicate / force / protect+ConflictModal) | master CDP 직접, 모두 PASS |
+| 9 | PMS_제품소개_R10_20220815.pdf 실 ingest (3.6MB + paired 6.4MB) | wiki 19 페이지 + registry 정상 + sidecar 보존 |
+| 10 | 잔재 정리 — cycle-smoke-5-3 raw/wiki/registry/log/index 모두 + /tmp 정리 | PMS/NanoVNA 영향 0 |
+| 11 | Approve & Write UX (button disable + spinner) | 다중 클릭 차단 |
+| 12 | Original-link footer mode (raw/sidecar/hidden) + alias `[[<full path>\|<basename>]]` + sidecar 파일 규칙 derive | 6 신규 test PASS |
+| 13 | Plugin settings UI — originalLinkMode dropdown | settings → 사용자 변경 |
+| 14 | Settings i18n — 35 한글 라인 → 0 (전부 영문, 일관된 스타일) | UI 일관성 |
 
 ---
 

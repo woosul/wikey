@@ -1805,6 +1805,28 @@
   padding-bottom: 2px;
 }
 
+/* §5.3 follow-up — Approve & Write 클릭 후 visual feedback (spinning + disabled).
+   사용자가 클릭 후 반응 없어 반복 클릭하던 문제 차단. 버튼 자체 disable + 좌측 inline spinner. */
+.wikey-modal-btn-busy {
+  opacity: 0.85;
+  cursor: progress !important;
+  position: relative;
+  padding-left: 28px !important;
+}
+.wikey-modal-btn-busy::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  border: 2px solid var(--text-muted);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: wikey-spin 0.8s linear infinite;
+}
+
 .wikey-ingest-flow-modal-wrap {
   /* Obsidian's default max-width (560px) is overridden by applyModalSize() inline style */
   max-width: none !important;

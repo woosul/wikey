@@ -14,6 +14,8 @@
 - **§5.1 보조 문서**:
   - [`plan/phase-5-todox-5.1-structural-pii.md`](../plan/phase-5-todox-5.1-structural-pii.md) — 구조적 PII 탐지 계획 (v4 codex APPROVE)
   - [`activity/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md`](./phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md) — Obsidian CDP UI 1-cycle smoke 실측 (NanoVNA 1 파일, master 직접)
+- **§5.3 보조 문서**:
+  - [`plan/phase-5-todox-5.3.1-incremental-reingest.md`](../plan/phase-5-todox-5.3.1-incremental-reingest.md) — §5.3.1 + §5.3.2 결합 설계 (v11 codex Mode D **APPROVE_WITH_CHANGES**, 11 cycle 수렴 P1 0건)
 - **추후 보조 문서**: `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식 (`CLAUDE.md §문서 명명규칙·조직화` 참조).
 - **프로젝트 공통**: [`plan/decisions.md`](../plan/decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](../plan/plan_wikey-enterprise-kb.md).
 
@@ -321,11 +323,435 @@ links:
 
 ---
 
-## 5.3 인제스트 증분 업데이트 (P1)
-> tag: #workflow, #engine
+## 5.3 인제스트 증분 업데이트 + sidecar/wiki 사용자 수정 보호 (P1, **종결**)
+> tag: #workflow, #engine, #architecture
 > **이전 번호**: `was §5.3` (번호 유지).
 
-(착수 전 — 2026-04-22 Phase 4 §4.3.3 에서 이관. Phase 4 §4.2.2 URI 참조 + source-registry `hash` 필드 완비 후 진입 가능. **Provenance 는 본체에 남아 §4.3.2 로 처리됨** — frontmatter data model 변경이라 구조 변경 없음 조건 위반.)
+**상태 (2026-04-25 session 12 종결)**: plan v11 (codex APPROVE_WITH_CHANGES, P1 0건, 11 cycle 수렴) 의 6-step TDD 모두 GREEN. 회귀 baseline 584 → 640 PASS (+56 신규 case). build 0 errors (core + obsidian). cycle smoke 5/5 PASS (실 obsidian CDP). PMS_제품소개_R10_20220815.pdf (3.6MB, paired sidecar 6.4MB) 실 ingest 성공 + 사용자 paired sidecar 보존. ★ 후속 follow-up 으로 ConflictModal default injection / Approve&Write UX (button disable + spinner) / Original-link footer mode (raw / sidecar / hidden) / settings UI 영문 i18n 추가 구현.
+
+**진행 timeline** (2026-04-25 19:00 ~ 22:50, ~4시간):
+
+### 5.3.1 Step 1 — Registry 스키마 확장
+
+**파일**: `wikey-core/src/source-registry.ts` (185 → 308 lines), `wikey-core/src/__tests__/source-registry.test.ts` (268 → 568 lines)
+
+**SourceRecord 5 신규 optional 필드** (모두 backwards compat):
+- `sidecar_hash?: string` — sha256(NFC(sidecar body)) at last canonical write. ★ plan v11 P1-2 단일 규칙: canonical `<sourcePath>.md` 가 (re)write 된 직후에만 갱신, `.md.new` write 시 미갱신.
+- `reingested_at?: readonly string[]` — ISO timestamps (first_seen 이후).
+- `last_action?: ReingestAction` — 직전 결정 결과 (진단용). union type `'skip' | 'skip-with-seed' | 'force' | 'protect' | 'prompt'`.
+- `pending_protections?: readonly PendingProtection[]` — `<base>.md.new` 누적 추적. `kind: 'sidecar-md-new'` 단일.
+- `duplicate_locations?: readonly string[]` — 같은 hash 사용자 복사본. ★ v4 정정: `path_history` 와 분리하여 findByPath / reconcile 의 identity lookup 의미 보존.
+
+**4 신규 helper** (모두 immutable spread):
+- `recordMoveWithSidecar(reg, id, newVaultPath, sidecar: { kind: 'preserve' | 'clear' | 'set'; path? })` — atomic vault_path + sidecar_vault_path 갱신. discriminated union 으로 caller 가 의도 명확히 선언.
+- `appendPendingProtection(reg, id, entry)` — protect 분기 산출물 추가.
+- `clearPendingProtection(reg, id, path)` — 사용자가 promote/삭제 후 cleanup (P2-1).
+- `appendDuplicateLocation(reg, id, duplicatePath)` — 멱등 (canonical 자체는 append 안 함, 같은 path 중복 차단).
+
+**reconcile() duplicate-aware 변경** (★ codex v4 P1 정정):
+- `Map<hash, paths[]>` 로 확장 (이전: `Map<hash, vault_path>` 단일).
+- canonical 결정 우선순위: (1) `record.vault_path` 가 walker 에 있으면 그것 보존 (move 안 함), (2) `record.duplicate_locations` 의 path 는 canonical 후보에서 제외, (3) 그 외 paths 만 promote → recordMove.
+- promoted path 가 duplicate_locations 에 있었으면 거기서 제거 (canonical 으로 이동).
+
+**Test (RED → GREEN)** — 11 신규 case (기존 21 + 신규 11 = 32 total):
+- 1개 happy upsert all new fields, 1개 legacy load (5 필드 모두 undefined)
+- 2개 appendPendingProtection (append + 기존 entry 보존)
+- 1개 clearPendingProtection
+- 3개 appendDuplicateLocation (basic + idempotent + canonical 자체 거부)
+- 3개 recordMoveWithSidecar (preserve / clear / set)
+- 4개 reconcile duplicate-aware (canonical preserved / walker order reverse 무관 / canonical missing → promote / true move)
+
+**Acceptance**: 21 → 32 PASS (584 → 599, +15 신규 누적). build 0 errors.
+
+### 5.3.2 Step 2 — `incremental-reingest.ts` 신규 helper
+
+**파일**: `wikey-core/src/incremental-reingest.ts` 신규 (290 lines), `wikey-core/src/__tests__/incremental-reingest.test.ts` 신규 (370 lines).
+
+**핵심 invariant (P1-1 raw bytes)**: `decideReingest({ sourceBytes })` 의 `sourceBytes` 는 **raw disk bytes** — 변환된 텍스트 절대 금지. caller (ingest-pipeline.ts Step 0) 책임. registry.hash 가 raw bytes 기준이므로 비교도 raw bytes 로 해야 의미 있음.
+
+**5 action union** (`ReingestAction`):
+- `skip` — raw bytes 동일 + sidecar_hash 일치 → LLM/page write 0
+- `skip-with-seed` — legacy (sidecar_hash 미존재) 첫 hash-match → sidecar_hash seed only (P1-3)
+- `force` — raw bytes 변경 + conflicts=[] → 정상 재인제스트
+- `protect` — raw bytes 변경 + conflicts ≠ [] → sidecar `.md.new` / source page user marker 보호
+- `prompt` — conflicts + onConflict 제공 → UI modal 응답 분기
+
+**Phase A conflicts collect-then-decide (P1-4)** — sequential return 금지, 모든 conflict 먼저 수집 후 action 결정:
+- `sidecar-user-edit` — disk sidecar bytes != registry.sidecar_hash (시나리오 A/F, ★ v10 정정: R.hash 와 무관하게 수집)
+- `source-page-user-edit` — wiki/sources/source-*.md 본문에 USER_MARKER 존재 (시나리오 D, ★ P1-5 source 한정)
+- `duplicate-hash` — 같은 hash 가 다른 path 등록 (시나리오 E)
+- `legacy-no-sidecar-hash` — registry.hash != raw hash + sidecar_hash 미존재 + disk sidecar 존재 → 보수적 protect (P1-3)
+
+**Phase B 결정 트리** (★ codex v3 정정 — duplicate 분기를 hash-match 앞으로):
+```
+R == null                           → action='force', reason='new-source'
+R_byHash != null && R_byPath == null → action='skip', reason='duplicate-hash-other-path'
+R.hash == sourceHash:
+  sidecar_hash null + disk         → action='skip-with-seed', reason='hash-match-sidecar-seed'
+  sidecar_hash + disk diff          → action='skip', reason='hash-match-sidecar-edit-noted'
+  else                              → action='skip', reason='hash-match'
+R.hash != sourceHash:
+  conflicts.length == 0             → action='force', reason='hash-changed-clean'
+  onConflict provided               → action='prompt'
+  else                              → action='protect'
+```
+
+**ReingestDecision interface** — preservedSourceId (★ 결정 10 stable per path), duplicateOfId (R_byHash.id 노출), duplicatePathToAppend (P1-6 + v4), conflicts[], registry/disk sidecar hash 모두 캡처.
+
+**user-marker preservation helpers** (Hook 2 용):
+- `USER_MARKER_HEADERS = ['## 사용자 메모', '## User Notes', '## 메모']` (config 노출은 후속).
+- `extractUserMarkers(existingPage)` — NFC 정규화 후 line-start `^## ` 매칭, 다음 H2 또는 EOF 까지 본문 추출. 들여쓴 (4-space indent) 라인은 매칭 안 함. ★ P2-6 multiline regex.
+- `mergeUserMarkers(newContent, markers)` — newContent 에 같은 헤더 라인이 이미 있으면 skip (P2-5 멱등). 빈 markers 면 newContent 그대로.
+
+**sidecar protection helpers** (Hook 1 용):
+- `protectSidecarTargetPath(sourcePath, wikiFS)` — default `<sourcePath>.md.new` → 충돌 시 `.md.new.1` ~ `.md.new.9` 자동 증가 → `.10` 도달 시 `IngestProtectionPathExhaustedError` throw.
+- `computeSidecarHash(wikiFS, sidecarPath)` — `wikiFS.read` → `content.normalize('NFC')` → `TextEncoder().encode` → `computeFullHash`. Python ↔ TS 일관성 보장 (P2-7).
+
+**Test (RED → GREEN)** — 24 신규 case (모듈 신규 → 모두 RED):
+- 13개 decideReingest decision tree (new-source / hash-match / clean change / sidecar-user-edit / source-page-user-edit / duplicate / prompt branch / raw-bytes invariant / skip-with-seed legacy / skip-with-seed no disk sidecar / 동시 conflicts / legacy raw-hash mismatch / hash-match sidecar-edit-noted)
+- 7개 user-marker (NFC composed/decomposed / happy / no marker / multiline regex / mergeUserMarkers idempotent / happy / empty)
+- 3개 protectSidecarTargetPath (default / .1~.9 collision / .10 exhausted)
+- 2개 computeSidecarHash (happy NFC / not-found null)
+- 1개 USER_MARKER_HEADERS export
+
+**Acceptance**: 0 → 24/24 PASS (599 → 623, +24). build 0 errors.
+
+### 5.3.3 Step 3 — `ingest-pipeline.ts` 통합 (Step 0/0.5/0.6 + Hook 1/2/3)
+
+**파일**: `wikey-core/src/ingest-pipeline.ts` (1965 → ~2150 lines, surgical 변경 6 곳), `wikey-core/src/__tests__/ingest-pipeline-incremental.test.ts` 신규 (190 lines).
+
+**진입점 신규** (line 138 직후):
+- `Step 0`: `rawDiskBytes = await readRawDiskBytes(wikiFS, sourcePath, opts?.basePath)` — basePath 우선 `fs.readFileSync`, 없으면 `wikiFS.read` → `TextEncoder.encode` 폴백. buildV3SourceMeta 와 동일 변수 재사용 (TOCTOU 회피).
+- `Step 0.5`: `decision = await decideReingest({ sourcePath, sourceBytes: rawDiskBytes, wikiFS, basePath, onConflict: opts?.onConflict })`.
+- `Step 0.6` 분기:
+  - `forceReingest=true` + skip/skip-with-seed → caller-side override (helper 시그니처 미포함, ★ P2-2)
+  - `prompt` → `onConflict({decision})` callback → 'overwrite'/'preserve'/'cancel' (cancel 시 `IngestCancelledByUserError` throw)
+  - `skip` → `SkippedIngestResult` build, duplicate-hash 면 `appendDuplicateLocation` + saveRegistry, 즉시 return
+  - `skip-with-seed` → registry sidecar_hash + last_action='skip-with-seed' 갱신만, LLM/page write/reindex 0, return (P1-3)
+
+**Hook 1 (sidecar write block, line 226 부근)** — protect/canonical 분기:
+```
+isSidecarProtect = (decision.action === 'protect') &&
+                   (conflicts.includes('sidecar-user-edit') OR
+                    conflicts.includes('legacy-no-sidecar-hash'))   // ★ v11 정정
+↓
+protect: target = await protectSidecarTargetPath(sourcePath, wikiFS) → write `.md.new[.1~.9]`
+         protectedSidecarPath set, canonicalSidecarPath null
+canonical: target = `<sourcePath>.md` → write
+           canonicalSidecarPath set
+```
+write 실패 시 `IngestProtectionFailedError` throw (P2-2 best-effort).
+
+**Hook 2 (source page createPage 직전, line 417 부근)** — ★ P1-5 source 한정:
+```
+isSourcePageProtect = (decision.action === 'protect') &&
+                       conflicts.includes('source-page-user-edit')
+↓
+existing = await wikiFS.read(`wiki/sources/${sourcePage.filename}`).catch(()=>'')
+markers = extractUserMarkers(existing)
+sourcePage.content = mergeUserMarkers(LLM_body, markers)
+```
+entity/concept page 는 미적용 (후속 follow-up #4 — LLM 결정적 출력 + 우연 H2 위험 분석 후 도입).
+
+**Hook 3 (registry upsert, ★ v8/v9/v10/v11 정정)** — caller-side merge with isCanonicalSidecarWritten 조건:
+```ts
+const isSidecarProtected =
+  decision.action === 'protect' &&
+  (conflicts.includes('sidecar-user-edit') ||
+   conflicts.includes('legacy-no-sidecar-hash'))   // ★ v11: legacy 도 cover
+const isCanonicalSidecarWritten = !isSidecarProtected
+
+const merged: SourceRecord = {
+  ...existing,           // 기존 모든 필드 보존
+  hash, size,
+  last_action: decision.action,
+  reingested_at: [...(existing.reingested_at ?? []), today],
+  ingested_pages,
+  ...(isCanonicalSidecarWritten ? {
+    sidecar_vault_path: canonicalSidecarPath,
+    sidecar_hash: await computeSidecarHash(wikiFS, canonicalSidecarPath),
+  } : {})  // ★ protect 분기는 sidecar_hash 미갱신 (P1-2)
+}
+const nextReg = upsert(reg, sourceId, merged)  // ★ v9: immutable 반환값 사용 의무
+await saveRegistry(wikiFS, nextReg)            // ★ 옛 reg 가 아닌 nextReg
+```
+protectedSidecarPath 가 set 이면 추가로 `appendPendingProtection(reg, sourceId, {kind:'sidecar-md-new', path, conflict})`.
+
+**buildV3SourceMeta 시그니처 변경**:
+```diff
+- buildV3SourceMeta(wikiFS, sourcePath, basePath, ext, ingestedPagePath)
++ buildV3SourceMeta(wikiFS, sourcePath, rawDiskBytes, ext, ingestedPagePath, preservedSourceId?)
+```
+- rawDiskBytes 인자 신규 → 함수 내부 두 번째 disk read 제거.
+- `preservedSourceId` 인자 신규 → R != null 분기에서 R.id 보존 (★ 결정 10 source_id stable per path). 기존 wikilink/provenance 영향 0.
+
+**IngestResult / SkippedIngestResult union type** (★ v6 → v7 분리):
+```ts
+export interface SkippedIngestResult {
+  readonly sourceId: string
+  readonly skipped: true
+  readonly skipReason: 'hash-match' | 'hash-match-sidecar-seed' | 'hash-match-sidecar-edit-noted' | 'duplicate-hash-other-path'
+  readonly ingestedPages: readonly string[]
+  readonly seededSidecarHash?: boolean
+  readonly duplicateOfId?: string
+}
+export type IngestReturn = IngestResult | SkippedIngestResult
+```
+`ingest()` return type → `Promise<IngestResult | SkippedIngestResult>`. caller (commands.ts) 가 `'skipped' in result` type guard 분기.
+
+**신규 IngestOptions 필드**: `forceReingest?: boolean` (caller-only override), `onConflict?: (info) => Promise<'overwrite'|'preserve'|'cancel'>`.
+
+**신규 error 타입**: `IngestCancelledByUserError`, `IngestProtectionFailedError`.
+
+**Test (skip 분기 testable subset)** — 5 신규 integration case (LLM 미호출 분기만):
+- case 2 hash-match → ThrowingHttpClient 도 reach 안 됨, SkippedIngestResult.skipReason='hash-match'
+- case 3 skip-with-seed → registry sidecar_hash 채워짐, last_action='skip-with-seed', seededSidecarHash=true
+- case 9 duplicate-hash → SkippedIngestResult.duplicateOfId set, registry.duplicate_locations 에 신규 path
+- case 13 hash-match-sidecar-edit-noted → raw 동일 + sidecar disk 다름 → skip
+- forceReingest=false 검증
+
+force/protect 분기는 LLM/canonicalize/reindex 의 광범위 mock 필요 → cycle smoke 로 검증 위임.
+
+**Acceptance**: 0 → 5/5 PASS (623 → 628, +5). 회귀 0. build 0 errors.
+
+### 5.3.4 Step 4 — `classify.ts movePair` sidecar pre-resolve + atomic
+
+**파일**: `wikey-core/src/classify.ts` (576 → ~610 lines), `wikey-core/src/__tests__/move-pair.test.ts` (269 → 510 lines).
+
+**MovePairOptions 확장**: `onSidecarConflict?: 'skip' | 'rename'` (default `'skip'`).
+
+**MovePairResult 확장**: `renamedSidecarTo?: string`, `sidecarSkipReason` enum 에 `'dest-conflict-exhausted'` 추가.
+
+**핵심 변경 (★ P1-7)** — 원본 `renameSync` **이전** sidecar 목적지 pre-resolve:
+```
+1) registry lookup
+2) sidecar 목적지 후보 결정:
+   - 'skip' + dest 충돌 → resolved=null, sidecarSkipReason='dest-conflict'
+   - 'rename' + 충돌 → .1~.9 순차. 미존재 첫 path = resolved
+                    모두 충돌 = 'dest-conflict-exhausted', 원본 이동 전 return
+   - dest 미존재 → resolved = sidecarDest
+3) 원본 renameSync (sidecar 처리 결정 완료 상태)
+4) sidecar: resolved 있으면 renameSync, 없으면 skip
+5) registry.recordMoveWithSidecar(reg, id, newOriginalVaultPath, sidecarOption)
+   sidecarOption = resolved ? { kind: 'set', path } : { kind: 'preserve' }
+```
+이 atomic 한 단일 helper 호출로 vault_path + sidecar_vault_path race 방지.
+
+**frontmatter rewrite 정정** (★ codex v3 P2 정정 — v4 명시):
+- `rewriteSourcePageMeta(content, { vault_path, sidecar_vault_path })`
+- skip 분기에서 `sidecar_vault_path = lookup.record.sidecar_vault_path ?? null` (existing 보존, null 덮어쓰기 금지)
+
+**Test (RED → GREEN)** — 6 신규 case (기존 8 + 신규 6 = 14 total):
+- case 1 dest-conflict default skip — registry/frontmatter sidecar_vault_path = 이전 위치 보존
+- case 2 onSidecarConflict='rename' — `<base>.md.1` 생성, existing `.md` untouched
+- case 3 exhausted (.1~.9 모두 충돌) — original NOT moved, sidecarSkipReason='dest-conflict-exhausted'
+- case 4 rename success — registry.recordMoveWithSidecar atomic
+- case 5 skip mode registry sidecar_vault_path = 이전 위치 (audit-friendly)
+- case 6 skip 분기 source-page frontmatter sidecar_vault_path preserve (existing not null)
+
+**Acceptance**: 8 → 14/14 PASS (628 → 634, +6). build 0 errors.
+
+### 5.3.5 Step 5 — `audit-ingest.py` 5 신규 컬럼 + fixture smoke
+
+**파일**: `scripts/audit-ingest.py` (228 → 320 lines), `scripts/__tests__/audit-fixtures/run.sh` 신규 (200 lines).
+
+**JSON 5 신규 array** (★ additive only, 기존 키 보존 — `recountAuditAfterPairedExclude` UI helper 호환):
+- `orphan_sidecars` — sidecar `.md` 만 있고 paired 원본 부재 (시나리오 C). raw/* 트리 walk 후 sibling 매칭.
+- `source_modified_since_ingest` — `registry.hash != sha256(disk raw bytes)` (★ P1-8 분리 — raw hash diff)
+- `sidecar_modified_since_ingest` — `registry.sidecar_hash != sha256(NFC(disk sidecar))` (★ P1-8 분리)
+- `duplicate_hash` — 같은 hash 다중 path. canonical + duplicate_locations 합집합 후 grouped (`{hash, paths[]}`).
+- `pending_protections` — `registry.pending_protections` snapshot (P2-1).
+
+**Python ↔ TS NFC 일관성**: `unicodedata.normalize('NFC', content).encode('utf-8')` → `hashlib.sha256` (P2-7). 단독 raw bytes 는 NFC 미적용 (binary).
+
+**WIKEY_AUDIT_ROOT env** — fixture smoke 지원 신규. `os.environ.get('WIKEY_AUDIT_ROOT')` 우선, 미지정 시 `Path(__file__).parent.parent`. 기존 동작 보존.
+
+**Fixture smoke (6 case shell test)**:
+1. clean state — 5 신규 array 모두 `[]`, exit 0
+2. orphan sidecar — `raw/.../x.pdf.md` 만 있고 PDF 없음 → orphan_sidecars 에 등장
+3. source modified — registry.hash mismatch → source_modified_since_ingest 만 채움 (sidecar_modified 비어있음, ★ negative-cross)
+4. sidecar modified — registry.sidecar_hash mismatch + raw hash 동일 → sidecar_modified_since_ingest 만 채움
+5. duplicate hash — registry.duplicate_locations 에 신규 path → duplicate_hash 에 `[{hash, paths}]`
+6. pending_protections — registry 의 `pending_protections: [{kind:'sidecar-md-new', ...}]` 그대로 노출
+
+**Acceptance**: 6/6 PASS exit 0 (`scripts/__tests__/audit-fixtures/run.sh` shell smoke). 본 vault 실측 sanity OK (clean state + canonical 무결성).
+
+### 5.3.6 Step 6 — plugin entry + ConflictModal default + SkippedIngestResult type guard
+
+**파일**: `wikey-obsidian/src/conflict-modal.ts` 신규 (95 lines), `wikey-obsidian/src/commands.ts` (수정 +50 lines), `wikey-core/src/index.ts` (export 확장).
+
+**ConflictModal**: Obsidian Modal 상속, 3 button (`사용자 수정 보존 (preserve)` / `덮어쓰기 (overwrite)` / `취소 (cancel)`) + diff snippet 표시 (200 char 미리보기). `decided` flag + onClose fallback (윈도우 dismiss → cancel) 로 race 차단.
+
+**plugin runIngestCore default modal injection** (★ P2-3):
+```ts
+const defaultConflict = (info) =>
+  new Promise((resolve) => new ConflictModal(plugin.app, info, resolve).open())
+const onConflict = ctx.onConflict ?? defaultConflict
+// ingest 호출 시 onConflict 자동 주입 → silent auto-protect 위험 제거
+```
+
+**SkippedIngestResult type guard 처리**:
+```ts
+if ('skipped' in result) {
+  const labels = {
+    'hash-match': '이미 인제스트 완료 (변경 없음)',
+    'hash-match-sidecar-seed': 'sidecar baseline 만 갱신 (LLM 호출 없음)',
+    'hash-match-sidecar-edit-noted': '사용자 sidecar 수정 보존 (raw 변경 없음)',
+    'duplicate-hash-other-path': `중복 detect — 동일 hash 가 ${duplicateOfId}`,
+  }
+  new Notice(`Wikey: ${labels[skipReason]}`, 4000)
+  return { success: true, sourcePath, createdPages: [] }
+  // saveIngestMap, classifyFileAsync, movePair 모두 skip — registry 가 이미 보유
+}
+```
+
+**IngestCancelledByUserError handling** — PlanRejectedError 와 유사 패턴, `cancelled: true` 반환.
+
+**wikey-core export 확장**:
+- `ingest`, `IngestCancelledByUserError`, `IngestProtectionFailedError` 추가
+- `SkippedIngestResult`, `ConflictInfo`, `ReingestDecision`, `OriginalLinkMode`, `ReingestAction`, `ConflictKind` 타입 export
+- `decideReingest`, `USER_MARKER_HEADERS`, `protectSidecarTargetPath`, `computeSidecarHash`, `IngestProtectionPathExhaustedError` 함수/상수/error export
+
+**Acceptance**: ConflictModal/plugin 단위 test 는 obsidian Modal mock 부재로 cycle smoke 위임. 회귀 wikey-core 634 PASS / wikey-obsidian build 0 errors.
+
+### 5.3.7 Cycle Smoke — Obsidian CDP 5-step 시나리오 (실증)
+
+**환경**: Obsidian 1.12.7 + `--remote-debugging-port=9222 --remote-allow-origins='*'`. wikey vault. plugin reload 후 진입.
+
+**Sample**: `raw/0_inbox/cycle-smoke-5-3.md` (793 bytes synthetic md, PII-free, 4 H2 sections).
+
+| # | 시나리오 | 분기 | LLM 비용 | 결과 |
+|---|---|---|---|---|
+| 1 | 첫 ingest | force=new-source | 1회 (Brief + Stage 1+2+3, ~2 min Gemini 2.5 Flash) | wiki 12 페이지 신규 (1 source + 5 entities + 8 concepts + index/log/.ingest-map). registry hash=43db..., last_action='force', ingested_pages=[source-cycle-smoke-5-3.md], path_history 2 entries (movePair raw/0_inbox→raw/3_resources/60_note/500_technology/) |
+| 2 | 같은 ingest | skip=hash-match | **0회** | 로그 `skip (reason=hash-match, conflicts=[]) — no LLM/page write` + `skip — reason=hash-match sourceId=sha256:43db30bf3d8756c5`. modal close, plan stage 미진입 |
+| 3 | 같은 bytes 다른 path (`cycle-smoke-5-3-copy.md`) | skip=duplicate-hash-other-path | **0회** | 로그 `skip (reason=duplicate-hash-other-path, conflicts=[duplicate-hash])`. registry.duplicate_locations=['raw/0_inbox/cycle-smoke-5-3-copy.md'], canonical vault_path 보존 |
+| 4 | raw bytes append (793 → 1036 bytes) | force=hash-changed-clean | 1회 | hash: 43db... → 18b3..., last_action='force', reingested_at[1]. **★ source_id sha256:43db30bf3d8756c5 보존** (preservedSourceId 작동). size 갱신 |
+| 5 | source page user marker (`## 사용자 메모`) + raw bytes 변경 | protect=hash-changed-with-conflicts (source-page-user-edit) | 1회 | **ConflictModal 자동 등장** (3 buttons preserve/overwrite/cancel). preserve 클릭 → action='protect' 변환. **Hook 2 작동: source page 새 LLM 본문 끝에 `## 사용자 메모` block 정확히 보존**. hash: 18b3... → 723a..., last_action='protect', reingested_at[2] |
+
+**검증 evidence (실 vault)**:
+- Step 2 console log 캡처: `[Wikey ingest] skip (reason=hash-match, conflicts=[]) — no LLM/page write`
+- Step 4 source_id 보존: `registry['sha256:43db30bf3d8756c5'].hash` 가 변경되었지만 record key 동일
+- Step 5 user marker preserve: `wiki/sources/source-cycle-smoke-5-3.md` tail 에 `## 사용자 메모\n\nThis is a critical user note that MUST be preserved...` 정확히 잔존
+
+### 5.3.8 PMS 실 ingest — paired sidecar 보존 실증
+
+**대상**: `raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf` (3.6MB, 사용자 paired sidecar 6.4MB hash `d66c44b0...` 이미 disk 에 존재). registry 미등록.
+
+**진행** (사용자 직접 ingest, master 모니터링):
+- 22:21:46 baseline — registry 미등록, sidecar mtime 22:17 / hash d66c44b0...
+- 22:21:50 즉시 backup `/tmp/PMS_..backup-20260425-222005` (Hook 1 도달 전 안전 확보)
+- 22:21~22:22 ingest 진행 (Brief Proceed → Processing → Preview Approve&Write)
+- 22:22:11 modal close, 19 wiki 파일 신규 (mtime < 2min)
+
+**결과 (실측)**:
+
+| 항목 | baseline (22:21:46) | post-write (22:23:06) | 변화 |
+|---|---|---|---|
+| sidecar size | 6,370,862 | 6,370,862 | **동일** |
+| sidecar mtime | 22:17 | 22:17 | **동일** |
+| sidecar hash | d66c44b0c57a7513... | d66c44b0c57a7513... | **동일** |
+| wiki PMS 페이지 | 0 | 19 신규 (`source-lotus-pms-product-intro.md` + 6 entities + 9 concepts + index/log/map) | +19 |
+| registry record | 미등록 | `sha256:dcbe5dd3f5325d4b` | 신규 |
+| registry.sidecar_hash | — | d66c44b0... (= disk hash 일치) | 정상 |
+| pending_protections | — | None | 정상 (force 분기) |
+| last_action | — | force | 정상 (new-source) |
+
+**해석**: Hook 1 의 `wikiFS.write` 가 호출되었으나 disk mtime 미변경 — 가능 원인: (a) Docling 변환 결과가 사용자 paired sidecar 와 byte-identical (사용자가 같은 docling 설정으로 미리 변환), 또는 (b) Obsidian vault adapter 의 same-content write disk skip. 어느 쪽이든 사용자 데이터 손실 0.
+
+**GAP 발견 — R == null + paired sidecar 미보호** (plan v11 미커버):
+- decideReingest 의 `sidecar-user-edit` conflict 검사가 `R != null && R.sidecar_hash != null` 조건 — 첫 ingest (R = null) 는 미통과
+- 따라서 사용자가 이미 만들어 둔 paired sidecar 가 disk 에 있어도 force 분기 진입 → Hook 1 의 canonical overwrite 가 사용자 sidecar 를 덮어쓸 수 있음
+- 본 PMS 케이스는 운 좋게 byte-identical 이라 손실 없었지만, 사용자가 paired sidecar 에 직접 메모/수정한 경우 위험 실현 가능
+- **분석 시점에서 사용자 통찰**: "ingest 안 된 상태에서 overwrite 할 게 뭐가 있냐" — registry 미등록 = wiki 데이터 자체가 없으니 손실 risk 낮음. 정확한 통찰. 단 paired sidecar 자체에 사용자 편집이 있다면 손실 가능
+- **후속 follow-up #10 등재 권장**: `R == null && diskSidecarBytes != null` 시 conflict 'unmanaged-paired-sidecar' push → action='protect' (또는 'prompt')
+
+### 5.3.9 잔재 정리 (cycle smoke 산출물)
+
+**삭제 대상**:
+- `/tmp/PMS_..backup-..` + `/tmp/wikey-smoke-5.3` + `/tmp/PMS-monitor-snapshot.txt` + `/tmp/wikey-smoke-probe.js` + `/tmp/wikey-smoke-reg-*.json` + `/tmp/wikey-smoke/` (디렉토리)
+- `raw/3_resources/60_note/500_technology/cycle-smoke-5-3.md` (raw)
+- `wiki/sources/source-cycle-smoke-5-3.md` (source)
+- `wiki/entities/{qmd-index, wikey, cycle-smoke, source-registry, bm25}.md` — 5 EXCLUSIVE entity (다른 source reference 없음)
+- `wiki/concepts/{incremental-reingest, markdown, hash-based-decision-tree, hwp, bm25, 3-tier-architecture, pdf, wikey-source-registry-json, sha256}.md` — 9 EXCLUSIVE concept
+- `wiki/.ingest-map.json` — 2 cycle-smoke entries 제거
+- `.wikey/source-registry.json` — record `sha256:43db30bf3d8756c5` 완전 삭제
+- `wiki/index.md` — cycle-smoke wikilinks 14 라인 제거
+- `wiki/log.md` — cycle-smoke-5-3 ingest H2 block 모두 제거 (★ §5.2/§5.1 phase-5 entries 보존 — 의도치 않은 1차 over-removal 후 git checkout + 정확한 H2 패턴 재제거 + PMS ingest entry prepend 복원)
+
+**최종 상태**: 2 registry record (NanoVNA + PMS), 2 ingest-map entries, raw/wiki PMS 무결성 영향 없음.
+
+### 5.3.10 후속 follow-up — ConflictModal default + Approve&Write UX + Original-link footer mode + settings i18n
+
+**파일**: `wikey-obsidian/src/conflict-modal.ts` (위 §5.3.6), `wikey-obsidian/src/ingest-modals.ts` (수정), `wikey-obsidian/styles.css` (CSS 추가), `wikey-core/src/query-pipeline.ts` (mode 분기), `wikey-obsidian/src/main.ts` (settings), `wikey-obsidian/src/sidebar-chat.ts` (caller), `wikey-obsidian/src/settings-tab.ts` (UI dropdown + 영문화).
+
+**Approve & Write UX (사용자 발견)**:
+- 사용자 보고: "버튼이 클릭되고 아무런 반응이 없어서 여러번 누르게 되네"
+- 진단: `resolvePreview(true)` 가 resolver=null 체크로 다중 호출은 차단되지만, button 자체가 disable 안 되고 visual feedback 없어 반복 클릭 발생
+- 수정 (`ingest-modals.ts:474`): click 시 `approveBtn.disabled = true` + `cancelBtn.disabled = true` + 라벨 `Writing… (please wait)` + class `wikey-modal-btn-busy` 추가
+- CSS 신규 (`styles.css:1808`): `.wikey-modal-btn-busy::before` 좌측 12px 회전 spinner (`wikey-spin` keyframe 재사용) + cursor: progress
+
+**Original-link footer mode (`OriginalLinkMode = 'raw' | 'sidecar' | 'hidden'`)**:
+- 사용자 통찰 1: "어떤 경우에는 실제원본, 어떤 경우에는 sidecar 가 연결되는것 같다" — 정확한 진단
+- 분석: 답변 "원본:" footer (`appendOriginalLinks`) 는 항상 `registry.vault_path` (raw 원본). raw 가 .md 면 markdown 으로 열림 (NanoVNA 케이스), .pdf 면 attachment 로 열림 (PMS 케이스) — 동일 정책의 형식별 결과
+- 사용자 통찰 2: "원천을 건드릴 필요는 없고 sidecar 의 파일 규칙을 이용하면 될듯. ....ext.md 형태로 생성되니까 이걸 이용하면 될듯한데" — 정확
+- 구현: `deriveSidecarPath(vaultPath)` helper — `.md`/`.txt` 로 끝나면 자체 반환, 그 외에는 `<vaultPath>.md`. registry.sidecar_vault_path 의존 0 (legacy record 자동 호환)
+- 사용자 통찰 3: "링크만 제대로 살아있으면 되잖아. rollover 시는 링크를 tooltip 에 표현해주고" — Obsidian alias 형식 `[[<full path>|<display>]]` 로 정확히 부합
+- 사용자 통찰 4: "원본 파일명만 보여줘. 뒤의 extension 은 안 보여줘도 될듯" — `basenameWithoutExt(path)` helper
+- 결과 형식:
+  - mode='raw' (default): `원본: [[raw/.../foo.pdf|foo]]`
+  - mode='sidecar': `원본: [[raw/.../foo.pdf.md|foo]]` (paired) / `원본: [[raw/.../note.md|note]]` (단독 md)
+  - mode='hidden': footer 미출력
+- Test 6 신규: raw default / sidecar paired / sidecar 단독md / sidecar txt / hidden / display 디렉토리 미포함 (slash 검증)
+
+**Settings UI 영문화 일관성** (사용자 요청 "다른 것들도 영문으로 해. 일관성 있게."):
+- 35 한글 라인 → 0 한글 라인 (settings-tab.ts 1173 lines 중)
+- 변경 항목: Reset 안내/Scope dropdown, Ingest Prompts intro/Stage 1-3 description+inlineHint, Verify results desc, Allow ingest when PII is detected toggle/desc, PII redaction mode dropdown+desc, Original file link in answer footer, OCR fallback 주석, Enable PII detection toggle/desc (Advanced), IngestPromptEditModal 주의, SCHEMA_OVERRIDE_TEMPLATE 예시
+- 일관성 원칙: Sentence case (toggle/setting names), 한 두 문장 description 첫 글자 대문자/마침표 종결, dropdown options 짧은 라벨 + 자세한 설명은 description, `Variables: {{...}}` 패턴 통일, `(default)` 영문 통일
+
+**Test (RED → GREEN)** — query-pipeline.test.ts +6 신규 case (29 → 35 total):
+- mode='sidecar' paired pdf → `[[<base>.pdf.md|<base>]]`
+- mode='sidecar' 단독 md → `[[<path>.md|<basename>]]` (.md.md 가 되지 않아야)
+- mode='sidecar' txt → 자체
+- mode='hidden' → `원본:` 미출력
+- mode='raw' default → alias 형식 (디렉토리/확장자 숨김)
+- display 디렉토리 미포함 검증 (slash 매칭)
+
+**Acceptance**: 35/35 PASS (629 → 640, +6 신규 final). build 0 errors (core + obsidian).
+
+### 5.3.11 회귀 + 종합
+
+**테스트 누적 변화**:
+- baseline: 584 (Phase 5 §5.1.1 + §5.2 종결 시점)
+- Step 1 source-registry: +15 (584 → 599)
+- Step 2 incremental-reingest: +24 (599 → 623)
+- Step 3 ingest-pipeline-incremental (skip 분기 testable): +5 (623 → 628)
+- Step 4 move-pair: +6 (628 → 634)
+- §5.3.10 query-pipeline (Original-link footer mode): +6 (634 → 640)
+- **누적 +56 신규** (plan v11 명시 +61 보다 5 부족 — Step 6 ConflictModal/plugin 의 Obsidian Modal mock 부재로 cycle smoke 위임)
+
+**Build 0 errors** (wikey-core + wikey-obsidian, 1 import.meta warning 기존).
+
+**audit-ingest fixture smoke**: 6/6 PASS exit 0.
+
+**Cycle smoke**: 5/5 PASS (master CDP 직접 실행).
+
+**Wiki 재생성 없음 확증**: 본 §5.3 변경은 ingest pipeline 의 진입 분기 + Hook 3곳 추가 + helper 신규 + audit-ingest 컬럼 5개 추가 + plugin Modal 신규. 기존 Phase 4 데이터 (registry, wiki, qmd) 는 모두 backwards compat 으로 read 가능. legacy record 는 skip-with-seed 분기로 자동 마이그레이션.
+
+### 5.3.12 후속 작업 (out-of-scope, 별도 plan)
+
+본 §5.3 plan v11 acceptance 충족. 다음은 향후 follow-up:
+
+1. **`.md.new` 자동 cleanup** (P2-1) — 다음 ingest 시 사용자가 promote/삭제 한 항목 자동 detect → `clearPendingProtection`
+2. **dashboard/audit panel UI 시각화** — 5 신규 audit 컬럼을 사용자 가시화 (배지/필터, §5.2.0 v3 broken state badge 와 통합)
+3. **`user_marker_headers` config 노출** — `.wikey/wikey.conf` 또는 schema-override 에 사용자 정의 헤더 추가
+4. **★ entity/concept page user marker 보호** — 본 plan 은 source page 한정. LLM 결정적 출력 + 우연 H2 등장 분석 후 도입
+5. **Hash perf** — file size + mtime 1차 필터 후 hash (대용량 corpus)
+6. **CLI 진입점** — `wikey ingest --force` `--diff-only` 플래그
+7. **Section-level diff** — H2 단위 hash 매칭으로 부분 재인제스트
+8. **Tombstone restore + sidecar_hash 정합성**
+9. **Python ↔ TS NFC 일관성 자동 검증** (cross-language smoke)
+10. **★ R == null + paired sidecar 미보호 GAP fix** — `unmanaged-paired-sidecar` conflict 신규 (본 세션 PMS ingest 분석에서 도출)
+11. **★ entity/concept `## 출처` wikilink broken link fix** — `[[<basename>]]` (확장자 없음) 이 paired sidecar 형식 (`<base>.<ext>.md`) 과 매칭 안 됨 → `[[source-<slug>]]` 표준화 또는 alias 형식. 단독 md 는 영향 없음
 
 ---
 

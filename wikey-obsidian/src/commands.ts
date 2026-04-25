@@ -5,7 +5,10 @@ import {
   ingest,
   PlanRejectedError,
   PiiIngestBlockedError,
+  IngestCancelledByUserError,
   type IngestPlan,
+  type SkippedIngestResult,
+  type ConflictInfo,
   classifyFileAsync,
   movePair,
   loadRegistry,
@@ -19,6 +22,7 @@ import {
   type ResetScope,
   reindexQuick,
 } from 'wikey-core'
+import { ConflictModal, type ConflictChoice } from './conflict-modal'
 import { WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { IngestFlowModal } from './ingest-modals'
 import { DeleteImpactModal, ResetImpactModal } from './reset-modals'
@@ -409,8 +413,15 @@ async function runIngestCore(
     planGate: ((plan: IngestPlan) => Promise<boolean>) | undefined
     onProgress?: (step: number, total: number, message: string, subStep?: number, subTotal?: number) => void
     autoMoveFromInbox?: boolean
+    forceReingest?: boolean
+    onConflict?: (info: ConflictInfo) => Promise<ConflictChoice>
   },
 ): Promise<IngestRunResult> {
+  // §5.3.1/§5.3.2 (plan v11 P2-3): default ConflictModal injection — silent auto-protect
+  // is never the default GUI experience; caller can override via ctx.onConflict.
+  const defaultConflict = (info: ConflictInfo): Promise<ConflictChoice> =>
+    new Promise((resolve) => new ConflictModal(plugin.app, info, resolve).open())
+  const onConflict = ctx.onConflict ?? defaultConflict
   try {
     const result = await ingest(
       sourcePath,
@@ -423,6 +434,9 @@ async function runIngestCore(
         execEnv: plugin.getExecEnv(),
         guideHint: ctx.guideHint,
         onPlanReady: ctx.planGate,
+        // §5.3.1/§5.3.2 — incremental reingest options.
+        forceReingest: ctx.forceReingest,
+        onConflict,
         // Phase 4 D.0.c — PII 2-layer gate (settings 에서 제어).
         piiGuardEnabled: plugin.settings.piiGuardEnabled,
         allowPiiIngest: plugin.settings.allowPiiIngest,
@@ -452,6 +466,23 @@ async function runIngestCore(
         },
       },
     )
+
+    // §5.3.1/§5.3.2 — type guard for skip branches: SkippedIngestResult has no LLM output.
+    if ('skipped' in result) {
+      const skipped = result as SkippedIngestResult
+      const labels: Record<SkippedIngestResult['skipReason'], string> = {
+        'hash-match': '이미 인제스트 완료 (변경 없음)',
+        'hash-match-sidecar-seed': 'sidecar baseline 만 갱신 (LLM 호출 없음)',
+        'hash-match-sidecar-edit-noted': '사용자 sidecar 수정 보존 (raw 변경 없음)',
+        'duplicate-hash-other-path': `중복 detect — 동일 hash 가 ${skipped.duplicateOfId ?? '다른 경로'}`,
+      }
+      new Notice(`Wikey: ${labels[skipped.skipReason]}`, 4000)
+      console.info(
+        `[Wikey ingest] skip — reason=${skipped.skipReason} sourceId=${skipped.sourceId}`,
+      )
+      // skip branches do NOT call saveIngestMap, classify, movePair, or autoMove.
+      return { success: true, sourcePath, createdPages: [] }
+    }
 
     const createdPages = [
       result.sourcePage.filename,
@@ -511,6 +542,11 @@ async function runIngestCore(
   } catch (err: any) {
     if (err instanceof PlanRejectedError) {
       console.info(`[Wikey ingest] cancelled at preview: ${sourcePath}`)
+      return { success: false, sourcePath, createdPages: [], cancelled: true }
+    }
+    if (err instanceof IngestCancelledByUserError) {
+      console.info(`[Wikey ingest] cancelled at conflict modal: ${sourcePath}`)
+      new Notice('인제스트 취소됨 (충돌 modal)', 3000)
       return { success: false, sourcePath, createdPages: [], cancelled: true }
     }
     if (err instanceof PiiIngestBlockedError) {

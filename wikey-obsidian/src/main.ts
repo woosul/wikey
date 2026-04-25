@@ -70,6 +70,11 @@ interface WikeySettings {
   allowPiiIngest: boolean
   piiRedactionMode: 'display' | 'mask' | 'hide'
   piiGuardEnabled: boolean
+  // ── §5.3 follow-up — 답변 끝 "원본:" footer 표시 모드 ──
+  // 'raw'     : 입력 원본 (pdf 면 pdf, md 면 md). default
+  // 'sidecar' : sidecar 파일 (paired 면 .md, 단독 md 면 자체)
+  // 'hidden'  : footer 미출력
+  originalLinkMode: 'raw' | 'sidecar' | 'hidden'
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -103,6 +108,7 @@ const DEFAULT_SETTINGS: WikeySettings = {
   allowPiiIngest: false,
   piiRedactionMode: 'mask',
   piiGuardEnabled: true,
+  originalLinkMode: 'raw',
 }
 
 export type { WikeySettings }

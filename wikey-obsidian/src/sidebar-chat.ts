@@ -358,6 +358,8 @@ export class WikeyChatView extends ItemView {
         basePath, wikiFS: this.plugin.wikiFS,
         execEnv: this.plugin.getExecEnv(),
         nodePath: this.plugin.settings.detectedNodePath,
+        // §5.3 follow-up — 사용자 설정 (raw / sidecar / hidden)
+        originalLinkMode: this.plugin.settings.originalLinkMode,
       })
       loadingEl.remove()
       const assistantMsg: ChatMessage = {

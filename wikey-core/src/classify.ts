@@ -448,15 +448,23 @@ import {
   saveRegistry,
   findByPath as registryFindByPath,
   recordMove as registryRecordMove,
+  recordMoveWithSidecar,
+  type SidecarMoveOption,
 } from './source-registry.js'
 import { rewriteSourcePageMeta } from './wiki-ops.js'
 
 export interface MovePairResult {
   readonly movedOriginal: boolean
   readonly movedSidecar: boolean
-  readonly sidecarSkipReason?: 'not-found' | 'dest-conflict' | 'is-md-original'
+  readonly sidecarSkipReason?:
+    | 'not-found'
+    | 'dest-conflict'
+    | 'dest-conflict-exhausted'
+    | 'is-md-original'
   readonly sourceId?: string
   readonly rewrittenSourcePages: readonly string[]
+  /** §5.3.1 plan v11 — set when onSidecarConflict='rename' and a `.N` suffix was used. */
+  readonly renamedSidecarTo?: string
 }
 
 export interface MovePairOptions {
@@ -470,6 +478,14 @@ export interface MovePairOptions {
    * these self-induced events (double-move prevention).
    */
   readonly renameGuard?: { register(path: string, ttlMs?: number): void }
+  /**
+   * §5.3.1 plan v11 P1-7 — sidecar dest-conflict policy.
+   *   - 'skip'   (default, backwards compat) : leave inbox sidecar untouched, mark
+   *                                            sidecarSkipReason='dest-conflict'.
+   *   - 'rename' : try `<base>.<ext>.md.1`..`.9`. All taken → 'dest-conflict-exhausted'
+   *                AND original is NOT moved.
+   */
+  readonly onSidecarConflict?: 'skip' | 'rename'
 }
 
 export async function movePair(opts: MovePairOptions): Promise<MovePairResult> {
@@ -497,35 +513,79 @@ export async function movePair(opts: MovePairOptions): Promise<MovePairResult> {
   const registry = await loadRegistry(opts.wikiFS)
   const lookup = registryFindByPath(registry, opts.sourceVaultPath)
 
-  // §4.2.4 S4-1: pre-register expected renames so the vault listener skips them.
   const newOriginalVaultPath = destDir + name
-  if (opts.renameGuard) opts.renameGuard.register(newOriginalVaultPath)
+  const conflictPolicy: 'skip' | 'rename' = opts.onSidecarConflict ?? 'skip'
 
-  // Move original
-  renameSync(sourceFullPath, destFullPath)
-
-  let movedSidecar = false
-  let sidecarSkipReason: MovePairResult['sidecarSkipReason'] | undefined
-  let newSidecarVaultPath: string | undefined
+  // ── §5.3.1 plan v11 P1-7: PRE-RESOLVE sidecar destination BEFORE moving original. ──
+  // Outcomes:
+  //   • isDir          → undefined (folder bundles have no sidecar)
+  //   • is-md-original → 'is-md-original'
+  //   • not-found      → 'not-found'
+  //   • dest free      → resolvedSidecarDest = sidecarDestPath
+  //   • dest conflict  + 'skip'   → 'dest-conflict' (resolvedSidecarDest = null)
+  //   • dest conflict  + 'rename' → try .1~.9, first free wins (or 'dest-conflict-exhausted'
+  //                                  → return BEFORE moving original)
+  let preSkipReason: MovePairResult['sidecarSkipReason'] | undefined
+  let resolvedSidecarFullPath: string | null = null
+  let resolvedSidecarVaultPath: string | null = null
+  let sidecarSourceFullPath: string | null = null
 
   if (isDir) {
-    sidecarSkipReason = undefined // folder bundles have no sidecar
+    preSkipReason = undefined
   } else if (isMdOriginal(name)) {
-    sidecarSkipReason = 'is-md-original'
+    preSkipReason = 'is-md-original'
   } else {
-    const sidecarSource = sourceFullPath + '.md'
-    const sidecarDest = destFullPath + '.md'
-    if (!existsSync(sidecarSource)) {
-      sidecarSkipReason = 'not-found'
-    } else if (existsSync(sidecarDest)) {
-      sidecarSkipReason = 'dest-conflict'
+    sidecarSourceFullPath = sourceFullPath + '.md'
+    if (!existsSync(sidecarSourceFullPath)) {
+      preSkipReason = 'not-found'
+      sidecarSourceFullPath = null
     } else {
-      const sidecarNewVaultPath = newOriginalVaultPath + '.md'
-      if (opts.renameGuard) opts.renameGuard.register(sidecarNewVaultPath)
-      renameSync(sidecarSource, sidecarDest)
-      movedSidecar = true
-      newSidecarVaultPath = sidecarNewVaultPath
+      const baseSidecarDest = destFullPath + '.md'
+      if (!existsSync(baseSidecarDest)) {
+        resolvedSidecarFullPath = baseSidecarDest
+        resolvedSidecarVaultPath = newOriginalVaultPath + '.md'
+      } else if (conflictPolicy === 'skip') {
+        preSkipReason = 'dest-conflict'
+      } else {
+        // 'rename' policy: try .1~.9
+        let found = false
+        for (let i = 1; i <= 9; i++) {
+          const candidate = `${baseSidecarDest}.${i}`
+          if (!existsSync(candidate)) {
+            resolvedSidecarFullPath = candidate
+            resolvedSidecarVaultPath = `${newOriginalVaultPath}.md.${i}`
+            found = true
+            break
+          }
+        }
+        if (!found) {
+          // ★ P1-7: exhausted — return BEFORE moving original
+          return {
+            movedOriginal: false,
+            movedSidecar: false,
+            sidecarSkipReason: 'dest-conflict-exhausted',
+            rewrittenSourcePages: [],
+            sourceId: lookup?.id,
+          }
+        }
+      }
     }
+  }
+
+  // §4.2.4 S4-1: pre-register expected renames so the vault listener skips them.
+  if (opts.renameGuard) opts.renameGuard.register(newOriginalVaultPath)
+  if (resolvedSidecarVaultPath && opts.renameGuard) {
+    opts.renameGuard.register(resolvedSidecarVaultPath)
+  }
+
+  // Move original (sidecar processing decision is final).
+  renameSync(sourceFullPath, destFullPath)
+
+  // Move sidecar if a resolved destination exists.
+  let movedSidecar = false
+  if (resolvedSidecarFullPath && sidecarSourceFullPath) {
+    renameSync(sidecarSourceFullPath, resolvedSidecarFullPath)
+    movedSidecar = true
   }
 
   const rewrittenPages: string[] = []
@@ -534,20 +594,28 @@ export async function movePair(opts: MovePairOptions): Promise<MovePairResult> {
 
   if (lookup) {
     sourceId = lookup.id
-    updatedRegistry = registryRecordMove(
+
+    // ★ P1-7 + v4: discriminated sidecar option. Skip branch preserves existing path.
+    const sidecarOption: SidecarMoveOption = resolvedSidecarVaultPath
+      ? { kind: 'set', path: resolvedSidecarVaultPath }
+      : { kind: 'preserve' }
+    updatedRegistry = recordMoveWithSidecar(
       registry,
       lookup.id,
       newOriginalVaultPath,
-      newSidecarVaultPath ?? (movedSidecar ? undefined : lookup.record.sidecar_vault_path),
+      sidecarOption,
     )
 
     // Rewrite frontmatter on every ingested source page.
+    // ★ P1-7 v3 정정: skip branch passes existing.sidecar_vault_path (NOT null).
+    const sidecarForFrontmatter: string | null =
+      resolvedSidecarVaultPath ?? lookup.record.sidecar_vault_path ?? null
     for (const pagePath of lookup.record.ingested_pages) {
       try {
         const content = await opts.wikiFS.read(pagePath)
         const rewritten = rewriteSourcePageMeta(content, {
           vault_path: newOriginalVaultPath,
-          sidecar_vault_path: newSidecarVaultPath ?? null,
+          sidecar_vault_path: sidecarForFrontmatter,
         })
         if (rewritten !== content) {
           await opts.wikiFS.write(pagePath, rewritten)
@@ -564,9 +632,12 @@ export async function movePair(opts: MovePairOptions): Promise<MovePairResult> {
   return {
     movedOriginal: true,
     movedSidecar,
-    sidecarSkipReason,
+    sidecarSkipReason: preSkipReason,
     sourceId,
     rewrittenSourcePages: rewrittenPages,
+    ...(resolvedSidecarVaultPath && resolvedSidecarVaultPath !== newOriginalVaultPath + '.md'
+      ? { renamedSidecarTo: resolvedSidecarVaultPath }
+      : {}),
   }
 }
 

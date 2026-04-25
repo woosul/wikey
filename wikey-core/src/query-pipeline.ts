@@ -18,6 +18,13 @@ export interface QueryOptions {
   readonly execEnv?: Record<string, string>
   /** 탐지된 node 바이너리 경로 */
   readonly nodePath?: string
+  /**
+   * §5.3 follow-up — 답변 끝 "원본:" footer 표시 모드.
+   *   - 'raw' (default) : 입력 원본 (vault_path) — pdf 면 pdf, md 면 md
+   *   - 'sidecar'       : `<vault_path>.md` derive — paired 면 sidecar, 단독 md 면 자체
+   *   - 'hidden'        : "원본:" footer 출력 안 함
+   */
+  readonly originalLinkMode?: OriginalLinkMode
 }
 
 export async function query(
@@ -84,7 +91,10 @@ export async function query(
     // Phase 4 D.0.h (v6 §4.5.2): citation 기반 원본 링크 자동 append.
     // wikiFS 없으면 LLM prompt 가 이미 출처 지시하므로 answer 그대로 반환.
     const answer = opts?.wikiFS
-      ? await appendOriginalLinks(rawAnswer, citations, { wikiFS: opts.wikiFS })
+      ? await appendOriginalLinks(rawAnswer, citations, {
+          wikiFS: opts.wikiFS,
+          mode: opts.originalLinkMode,
+        })
       : rawAnswer
     return { answer, sources: searchResults, citations }
   } catch (err: any) {
@@ -135,17 +145,58 @@ export function collectCitationsFromFS(
 
 // ── Phase 4 D.0.h (v6 §4.5.2) — citation 기반 원본 링크 자동 append ──
 
+/**
+ * 원본 표시 모드 (사용자 설정).
+ *   - 'raw'     : 입력 원본 (pdf 면 pdf, md 면 md). 기본값. registry.vault_path.
+ *   - 'sidecar' : sidecar 파일 규칙 derive — `<vault_path>.md` (단, vault_path 가
+ *                 이미 .md 면 그대로). 즉 paired pdf/hwp/... 면 `.md` sidecar,
+ *                 단독 md 면 자체. registry sidecar_vault_path 필드 의존 X
+ *                 (legacy record 도 동일 규칙으로 derive).
+ *   - 'hidden'  : "원본:" footer 자체 출력 안 함.
+ */
+export type OriginalLinkMode = 'raw' | 'sidecar' | 'hidden'
+
 export interface AppendOriginalLinksOptions {
   readonly wikiFS: WikiFS
   readonly vaultName?: string
+  /** Default 'raw' — 기존 동작 유지 (backwards compat). */
+  readonly mode?: OriginalLinkMode
+}
+
+/**
+ * Derive sidecar path from raw vault_path using the `<vault_path>.md` rule.
+ * 단독 md/txt 는 vault_path 자체 반환 (sidecar 미생성 정책과 정합).
+ */
+function deriveSidecarPath(vaultPath: string): string {
+  const lower = vaultPath.toLowerCase()
+  if (lower.endsWith('.md') || lower.endsWith('.txt')) return vaultPath
+  return `${vaultPath}.md`
+}
+
+/**
+ * Display name = basename without final extension.
+ *   raw/2_areas/foo.pdf      → foo
+ *   raw/3_resources/note.md  → note
+ *   raw/.../doc.pdf.md       → doc.pdf  (sidecar 도 raw basename 기준이 더 직관적이지만,
+ *                                         alias display 는 link target 의 basename 사용)
+ */
+function basenameWithoutExt(path: string): string {
+  const filename = path.split('/').pop() ?? path
+  const dotIdx = filename.lastIndexOf('.')
+  if (dotIdx <= 0) return filename
+  return filename.slice(0, dotIdx)
 }
 
 /**
  * LLM 답변 (`answer`) 끝에 citation 에서 해석한 원본 파일 wikilink 를 추가한다.
  *
+ * - mode='hidden': footer 미출력 (answer 그대로 trimEnd 만)
  * - citation 0개: `원본: (없음 — 외부 근거 없음)` (fail closed)
  * - citation 있지만 resolve 전부 실패: `원본: (해석 실패 — registry 점검 필요)`
- * - 일부 resolve 성공: `원본: [[raw/.../file.pdf]], [[...]]`
+ * - 일부 resolve 성공: `원본: [[<path>]], ...`
+ *   • mode='raw'     → record.vault_path
+ *   • mode='sidecar' → deriveSidecarPath(record.vault_path) — `<vault_path>.md`
+ *     (단독 md 면 vault_path 자체)
  *
  * rawVaultPath 는 current vault_path 우선, fallback 으로 path_history 마지막 유효 entry.
  * 둘 다 없으면 resolve 실패로 간주.
@@ -156,6 +207,10 @@ export async function appendOriginalLinks(
   opts: AppendOriginalLinksOptions,
 ): Promise<string> {
   const trimmed = answer.trimEnd()
+  const mode: OriginalLinkMode = opts.mode ?? 'raw'
+  if (mode === 'hidden') {
+    return trimmed
+  }
   if (citations.length === 0) {
     return `${trimmed}\n\n원본: (없음 — 외부 근거 없음)`
   }
@@ -170,9 +225,14 @@ export async function appendOriginalLinks(
           registry,
         })
         if (!resolved || !resolved.rawVaultPath) continue
-        if (seen.has(resolved.rawVaultPath)) continue
-        seen.add(resolved.rawVaultPath)
-        links.push(`[[${resolved.rawVaultPath}]]`)
+        const target =
+          mode === 'sidecar' ? deriveSidecarPath(resolved.rawVaultPath) : resolved.rawVaultPath
+        if (seen.has(target)) continue
+        seen.add(target)
+        // §5.3 follow-up — display 는 raw basename without ext (디렉토리/확장자 숨김).
+        // link target 은 full vault path → Obsidian rollover 시 tooltip 으로 노출됨.
+        const display = basenameWithoutExt(resolved.rawVaultPath)
+        links.push(`[[${target}|${display}]]`)
       } catch {
         // single citation resolve 실패는 건너뜀 — 전체가 실패해야 WARN 처리.
       }

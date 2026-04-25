@@ -267,3 +267,222 @@ first_seen: 2026-04-23T00:00:00.000Z
     expect(existsSync(join(basePath, 'raw/3_resources/30_manual/already.pdf'))).toBe(true)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// §5.3.1 Step 4 (plan v11) — sidecar pre-resolve + onSidecarConflict + atomic update
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('§5.3.1 movePair — sidecar pre-resolve + onSidecarConflict (plan v11)', () => {
+  it('case 1 — dest-conflict default skip: original moves, registry sidecar_vault_path preserved (existing path)', async () => {
+    const bytes = Buffer.from('skip-conflict')
+    const id = computeFileId(bytes)
+    const hash = computeFullHash(bytes)
+    writeFile('raw/0_inbox/c.pdf', bytes)
+    writeFile('raw/0_inbox/c.pdf.md', '# inbox sidecar')
+    writeFile('raw/3_resources/30_manual/c.pdf.md', '# existing sidecar')
+    await seedRegistry(
+      {
+        vault_path: 'raw/0_inbox/c.pdf',
+        sidecar_vault_path: 'raw/0_inbox/c.pdf.md',
+        hash,
+        size: bytes.length,
+        first_seen: '2026-04-25T00:00:00.000Z',
+        ingested_pages: ['wiki/sources/source-c.md'],
+        path_history: [{ vault_path: 'raw/0_inbox/c.pdf', at: '2026-04-25T00:00:00.000Z' }],
+        tombstone: false,
+      },
+      id,
+    )
+    writeFile(
+      'wiki/sources/source-c.md',
+      `---
+source_id: ${id}
+vault_path: raw/0_inbox/c.pdf
+sidecar_vault_path: raw/0_inbox/c.pdf.md
+hash: ${hash}
+size: ${bytes.length}
+first_seen: 2026-04-25T00:00:00.000Z
+---
+# c
+`,
+    )
+    const result = await movePair({
+      basePath,
+      sourceVaultPath: 'raw/0_inbox/c.pdf',
+      destDir: 'raw/3_resources/30_manual/',
+      wikiFS: fs,
+      // default onSidecarConflict = 'skip'
+    })
+    expect(result.movedOriginal).toBe(true)
+    expect(result.movedSidecar).toBe(false)
+    expect(result.sidecarSkipReason).toBe('dest-conflict')
+    // ★ P1-7 v3 정정: skip 분기에서 registry.sidecar_vault_path 는 existing 보존
+    const reg = await loadRegistry(fs)
+    expect(reg[id]?.vault_path).toBe('raw/3_resources/30_manual/c.pdf')
+    expect(reg[id]?.sidecar_vault_path).toBe('raw/0_inbox/c.pdf.md')
+    // frontmatter 도 sidecar_vault_path = 이전 위치 보존 (null/덮어쓰기 금지)
+    const page = await fs.read('wiki/sources/source-c.md')
+    expect(page).toContain('sidecar_vault_path: raw/0_inbox/c.pdf.md')
+    expect(page).toContain('vault_path: raw/3_resources/30_manual/c.pdf')
+  })
+
+  it("case 2 — dest-conflict + onSidecarConflict='rename': sidecar moved as <base>.<ext>.md.1", async () => {
+    const bytes = Buffer.from('rename-conflict')
+    writeFile('raw/0_inbox/d.pdf', bytes)
+    writeFile('raw/0_inbox/d.pdf.md', '# inbox sidecar')
+    writeFile('raw/3_resources/30_manual/d.pdf.md', '# existing sidecar')
+    const result = await movePair({
+      basePath,
+      sourceVaultPath: 'raw/0_inbox/d.pdf',
+      destDir: 'raw/3_resources/30_manual/',
+      wikiFS: fs,
+      onSidecarConflict: 'rename',
+    })
+    expect(result.movedOriginal).toBe(true)
+    expect(result.movedSidecar).toBe(true)
+    expect(result.renamedSidecarTo).toBe('raw/3_resources/30_manual/d.pdf.md.1')
+    expect(existsSync(join(basePath, 'raw/3_resources/30_manual/d.pdf.md.1'))).toBe(true)
+    // existing sidecar untouched
+    expect(readFileSync(join(basePath, 'raw/3_resources/30_manual/d.pdf.md'), 'utf-8')).toContain('existing sidecar')
+  })
+
+  it("case 3 — exhausted (.1~.9 all taken): original NOT moved, sidecarSkipReason='dest-conflict-exhausted'", async () => {
+    const bytes = Buffer.from('exhausted-conflict')
+    writeFile('raw/0_inbox/e.pdf', bytes)
+    writeFile('raw/0_inbox/e.pdf.md', '# inbox sidecar')
+    writeFile('raw/3_resources/30_manual/e.pdf.md', '# existing.md')
+    for (let i = 1; i <= 9; i++) {
+      writeFile(`raw/3_resources/30_manual/e.pdf.md.${i}`, `# existing.${i}`)
+    }
+    const result = await movePair({
+      basePath,
+      sourceVaultPath: 'raw/0_inbox/e.pdf',
+      destDir: 'raw/3_resources/30_manual/',
+      wikiFS: fs,
+      onSidecarConflict: 'rename',
+    })
+    expect(result.movedOriginal).toBe(false)
+    expect(result.movedSidecar).toBe(false)
+    expect(result.sidecarSkipReason).toBe('dest-conflict-exhausted')
+    // ★ P1-7: original 이동 전 return — inbox 에 그대로
+    expect(existsSync(join(basePath, 'raw/0_inbox/e.pdf'))).toBe(true)
+  })
+
+  it('case 4 — rename success: registry vault_path + sidecar_vault_path updated atomically', async () => {
+    const bytes = Buffer.from('atomic-rename')
+    const id = computeFileId(bytes)
+    const hash = computeFullHash(bytes)
+    writeFile('raw/0_inbox/f.pdf', bytes)
+    writeFile('raw/0_inbox/f.pdf.md', '# inbox sidecar')
+    writeFile('raw/3_resources/30_manual/f.pdf.md', '# existing sidecar')
+    await seedRegistry(
+      {
+        vault_path: 'raw/0_inbox/f.pdf',
+        sidecar_vault_path: 'raw/0_inbox/f.pdf.md',
+        hash,
+        size: bytes.length,
+        first_seen: '2026-04-25T00:00:00.000Z',
+        ingested_pages: ['wiki/sources/source-f.md'],
+        path_history: [{ vault_path: 'raw/0_inbox/f.pdf', at: '2026-04-25T00:00:00.000Z' }],
+        tombstone: false,
+      },
+      id,
+    )
+    const result = await movePair({
+      basePath,
+      sourceVaultPath: 'raw/0_inbox/f.pdf',
+      destDir: 'raw/3_resources/30_manual/',
+      wikiFS: fs,
+      onSidecarConflict: 'rename',
+    })
+    expect(result.movedOriginal).toBe(true)
+    expect(result.movedSidecar).toBe(true)
+    expect(result.renamedSidecarTo).toBe('raw/3_resources/30_manual/f.pdf.md.1')
+    const reg = await loadRegistry(fs)
+    expect(reg[id]?.vault_path).toBe('raw/3_resources/30_manual/f.pdf')
+    expect(reg[id]?.sidecar_vault_path).toBe('raw/3_resources/30_manual/f.pdf.md.1')
+  })
+
+  it('case 5 — skip default mode keeps registry sidecar_vault_path = previous location (audit-friendly)', async () => {
+    const bytes = Buffer.from('skip-default')
+    const id = computeFileId(bytes)
+    const hash = computeFullHash(bytes)
+    writeFile('raw/0_inbox/g.pdf', bytes)
+    writeFile('raw/0_inbox/g.pdf.md', '# inbox')
+    writeFile('raw/3_resources/30_manual/g.pdf.md', '# existing')
+    await seedRegistry(
+      {
+        vault_path: 'raw/0_inbox/g.pdf',
+        sidecar_vault_path: 'raw/0_inbox/g.pdf.md',
+        hash,
+        size: bytes.length,
+        first_seen: '2026-04-25T00:00:00.000Z',
+        ingested_pages: [],
+        path_history: [{ vault_path: 'raw/0_inbox/g.pdf', at: '2026-04-25T00:00:00.000Z' }],
+        tombstone: false,
+      },
+      id,
+    )
+    const result = await movePair({
+      basePath,
+      sourceVaultPath: 'raw/0_inbox/g.pdf',
+      destDir: 'raw/3_resources/30_manual/',
+      wikiFS: fs,
+      onSidecarConflict: 'skip',
+    })
+    expect(result.movedOriginal).toBe(true)
+    expect(result.movedSidecar).toBe(false)
+    expect(result.sidecarSkipReason).toBe('dest-conflict')
+    const reg = await loadRegistry(fs)
+    expect(reg[id]?.vault_path).toBe('raw/3_resources/30_manual/g.pdf')
+    expect(reg[id]?.sidecar_vault_path).toBe('raw/0_inbox/g.pdf.md') // preserve
+  })
+
+  it('case 6 — skip branch source-page frontmatter sidecar_vault_path preserve (existing not null)', async () => {
+    const bytes = Buffer.from('frontmatter-preserve')
+    const id = computeFileId(bytes)
+    const hash = computeFullHash(bytes)
+    writeFile('raw/0_inbox/h.pdf', bytes)
+    writeFile('raw/0_inbox/h.pdf.md', '# inbox')
+    writeFile('raw/3_resources/30_manual/h.pdf.md', '# existing')
+    writeFile(
+      'wiki/sources/source-h.md',
+      `---
+source_id: ${id}
+vault_path: raw/0_inbox/h.pdf
+sidecar_vault_path: raw/0_inbox/h.pdf.md
+hash: ${hash}
+size: ${bytes.length}
+first_seen: 2026-04-25T00:00:00.000Z
+---
+# h
+`,
+    )
+    await seedRegistry(
+      {
+        vault_path: 'raw/0_inbox/h.pdf',
+        sidecar_vault_path: 'raw/0_inbox/h.pdf.md',
+        hash,
+        size: bytes.length,
+        first_seen: '2026-04-25T00:00:00.000Z',
+        ingested_pages: ['wiki/sources/source-h.md'],
+        path_history: [{ vault_path: 'raw/0_inbox/h.pdf', at: '2026-04-25T00:00:00.000Z' }],
+        tombstone: false,
+      },
+      id,
+    )
+    const result = await movePair({
+      basePath,
+      sourceVaultPath: 'raw/0_inbox/h.pdf',
+      destDir: 'raw/3_resources/30_manual/',
+      wikiFS: fs,
+      onSidecarConflict: 'skip',
+    })
+    expect(result.movedOriginal).toBe(true)
+    expect(result.sidecarSkipReason).toBe('dest-conflict')
+    const page = await fs.read('wiki/sources/source-h.md')
+    expect(page).toContain('vault_path: raw/3_resources/30_manual/h.pdf')
+    expect(page).toContain('sidecar_vault_path: raw/0_inbox/h.pdf.md') // preserve
+    expect(page).not.toContain('sidecar_vault_path: null')
+  })
+})

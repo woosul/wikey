@@ -18,6 +18,12 @@ updated: 2026-04-22
 - [[dji]] — DJI는 중국의 드론 및 항공 촬영 기술 전문 기업이다. (소스: 1개)
 - [[vector-network-analyzer]] — RF 장치의 전기적 특성을 측정하는 데 사용되는 전자 테스트 장비. (소스: 1개)
 - [[nanovna-v2-plus4]] — NanoVNA V2의 확장 모델로, 최대 4.4GHz까지 주파수 측정이 가능한 소형 벡터 네트워크 분석기. (소스: 1개)
+- [[lotus-pms]] — LOTUS PMS (소스: 1개)
+- [[good-stream]] — 굿스트림 (소스: 1개)
+- [[lotus-scm]] — LOTUS SCM (소스: 1개)
+- [[mobile-app]] — 모바일 앱 (소스: 1개)
+- [[project-management-institute]] — 프로젝트 관리 협회 (소스: 1개)
+- [[lotus-mes]] — LOTUS MES (소스: 1개)
 ## 개념
 
 (없음)
@@ -34,10 +40,20 @@ updated: 2026-04-22
 - [[open-short-load-calibration]] — 벡터 네트워크 분석기(VNA)에서 정확한 측정을 위해 수행하는 표준 캘리브레이션 절차로, Open, Short, Load 세 가지 기준 상태를 사용한다. (소스: 1개)
 - [[s11]] — S-파라미터 중 반사 계수를 나타내는 표준 지표. (소스: 1개)
 - [[s21]] — S-파라미터 중 전송 계수를 나타내는 표준 지표. (소스: 1개)
+- [[enterprise-resource-planning]] — ERP 시스템 (소스: 1개)
+- [[manufacturing-execution-system]] — MES 시스템 (소스: 1개)
+- [[product-lifecycle-management]] — PLM 시스템 (소스: 1개)
+- [[project-management-body-of-knowledge]] — PMBOK (소스: 1개)
+- [[work-breakdown-structure]] — WBS (소스: 1개)
+- [[bill-of-materials]] — BOM (소스: 1개)
+- [[gantt-chart]] — 간트차트 (소스: 1개)
+- [[functional-specification]] — 기능명세서 (소스: 1개)
+- [[supply-chain-management]] — 공급망 전체의 계획, 조달, 생산, 배송 등을 통합 관리하여 효율성을 극대화하는 소프트웨어 시스템입니다. (소스: 1개)
 ## 소스
 
 (없음)
 - [[source-nanovna-v2-notes]] — > 날짜: 2026-04-11 (소스: 1개)
+- [[source-lotus-pms-product-intro]] — 본 문서는 (주) [[good-stream]]의 [[lotus-pms]] 제품에 대한 소개서입니다. (소스: 1개)
 ## 분석
 
 - [[self-extending-wiki]] — LLM Wiki 의 self-extending 지향 (철학 선언, Phase 5 §5.6 로드맵 포인터)
