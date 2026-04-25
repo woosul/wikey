@@ -829,6 +829,20 @@
   background: var(--background-modifier-active-hover);
 }
 
+/* §5.2.0 v2 (사용자 요청 2026-04-25): paired (sidecar.md 존재) 인데 audit 가
+   missing 분류 = broken state (registry/wiki reset 됐거나 ingest 결과 깨짐).
+   사용자 시각 경고 — 오렌지 배경 + 진한 글자. */
+.wikey-pair-sidecar-badge-broken {
+  background: #ff9800;
+  color: #fff;
+  border-color: #f57c00;
+}
+
+.wikey-pair-sidecar-badge-broken:hover {
+  background: #f57c00;
+  color: #fff;
+}
+
 .wikey-audit-path-line {
   display: flex;
   justify-content: space-between;

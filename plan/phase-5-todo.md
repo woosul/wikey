@@ -98,6 +98,15 @@
 - [x] **filename hover tooltip 단순화** — 사용자 요청 (2026-04-25): 한 줄, sidecar 생성일만 (`yyyy-mm-dd HH:MM`). `buildSidecarTooltip` 이전 2줄 (📄 sidecar / 📅 created) → 단일 string. filename + badge 양쪽에 동일 부착
 - [x] **Processing modal progress group 위치** — 사용자 요청: progress bar group 만 wrap 바닥, Back 버튼 위로 16px margin. `.wikey-modal-processing` `flex:1` + `padding-bottom:16px` + 신규 `.wikey-modal-progress-group` `margin-top:auto`. fileLabel/spinner 는 wrap 상단 그대로, Back 버튼 절대 위치 (modal 바닥) 그대로 유지. CDP 측정: gap=16px, group bottom=684.7, btn top=700.7
 
+#### 5.2.0 v3 — broken state badge 오렌지 (사용자 정의, 2026-04-25 종료)
+
+> **사용자 정의 (확정)**: 원본.ext alone → audit "missing" 정상. 원본.ext+원본.md (paired) → ingest 한 번 실행됐다는 의미 → "ingested" 분류여야. paired 인데 missing 으로 분류 = registry/wiki 와 sidecar 가 깨진 broken state.
+
+- [x] **broken 판정 + badge 변형** — `sidebar-chat.ts renderAuditSection` 에 `ingestedSet = new Set(auditData.ingested_files)` 신설. list + tree 2 row builders 모두 `hasSidecar && !ingestedSet.has(file)` 시 badge class `wikey-pair-sidecar-badge-broken` 추가
+- [x] **tooltip 보강** — broken 시 `⚠ ingest 결과 (registry/wiki) 없음 — sidecar 만 남은 broken state` 한 줄 prepend
+- [x] **CSS** — 오렌지 배경 (`#ff9800`) + 진한 글자 (`#fff`) + hover 변형. 정상 paired 는 회색 그대로
+- [x] **연관**: root cause = §5.3.2 시나리오 C/D (orphan sidecar / wiki page reset). §5.3.2 fix 로 발생률 자연 감소
+
 ### 5.2.1 Entity ↔ Concept cross-link 자동 생성 (★ 답변 풍부도 결정적 fix)
 
 > **보조 문서**: [`phase-5-todox-5.2.1-crosslink.md`](./phase-5-todox-5.2.1-crosslink.md) — 옵션 B (deterministic policy) 채택 근거 + Stage 1/2/3 책임 분석 + `## 관련` H2 위치 결정 + TDD 5 case · 4 step + codex 검증 포인트.

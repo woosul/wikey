@@ -270,6 +270,22 @@ links:
 
 **대시보드 카운트 검증** (사용자 추가 요청): Audit `All 7 / Ingested 1 / Missing 6` 정확. raw/3_resources/ 안 supported 원본 (paired sidecar 5건 제외) + nanovna-v2-notes (ingested 1) = 7.
 
+### 5.2.0 v3 — broken state badge 오렌지 (사용자 정의, 2026-04-25 종료 직전)
+
+**사용자 정의 (확정)**:
+- 원본.ext alone (no .md sidecar) → audit "missing" 정상
+- **원본.ext + 원본.md (paired) → 이미 ingest 가 한 번 실행돼서 sidecar 가 만들어진 상태 → "ingested" 분류여야 함**
+- paired 인데 audit 가 missing 으로 분류 = **registry/wiki 와 sidecar 가 깨진 broken state**
+
+**구현**:
+- `sidebar-chat.ts renderAuditSection`: `ingestedSet = new Set(auditData.ingested_files)` 신설
+- list view + tree view row 빌드 시: `hasSidecar(filePath, auditAllSet) && !ingestedSet.has(filePath)` → `isBroken=true`
+- broken 시 badge class = `wikey-pair-sidecar-badge wikey-pair-sidecar-badge-broken` (CSS 신규 변형)
+- broken 시 tooltip 앞에 `⚠ ingest 결과 (registry/wiki) 없음 — sidecar 만 남은 broken state` 라인 추가
+- CSS: `.wikey-pair-sidecar-badge-broken { background: #ff9800; color: #fff; border-color: #f57c00; }` + hover 변형
+
+**연관 분석** (§5.3.2): broken state 의 root cause = sidecar+ingest 불일치 (시나리오 C/D). 사용자가 wikey 외부에서 wiki/ 또는 .wikey/ 삭제했거나 reset 명령 후 sidecar 만 남은 케이스. §5.3.2 에서 시나리오 C/D fix (orphan sidecar 처리, wiki page user marker 보호) 와 함께 처리되면 broken state 발생률 자연 감소.
+
 **별개 분석 → §5.3.2 로 이관** (사용자 지시): sidecar+ingest 불일치 8 시나리오 (A~H). 위험 3건 (A/F/D — 사용자 직접 수정 LOST), 정상 2건 (G/H), 충돌 가능 3건 (B/C/E). 본 §5.2 가 아닌 §5.3 인제스트 증분 영역에서 hash diff + user marker 보호 로 처리 예정.
 
 ### 5.2.8 검증 (cycle smoke) — 1차 완료, fix 적용 후 재검증 권장

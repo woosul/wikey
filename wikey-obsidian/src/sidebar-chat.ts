@@ -832,6 +832,10 @@ Click [[page name]] in answers to navigate to the wiki page.
     }
     auditData.ingested = auditData.ingested_files.length
     auditData.missing = auditData.files.length
+    // §5.2.0 v2 (사용자 요청 2026-04-25): paired (sidecar.md 존재) 인데 audit
+    // missing 분류 = broken state (registry/wiki reset 됐거나 sidecar 만 남고
+    // ingested 안 됨). badge 오렌지로 시각 경고.
+    const ingestedSet = new Set<string>(auditData.ingested_files)
     auditData.unsupported = (auditData.unsupported_files ?? []).length
     auditData.total_documents = auditData.ingested + auditData.missing + (auditData.unsupported ?? 0)
 
@@ -1061,9 +1065,16 @@ Click [[page name]] in answers to navigate to the wiki page.
         // Tooltip 은 filename + badge 양쪽에 부착 (UX: hover 영역 넓힘).
         if (hasSidecar(filePath, auditAllSet)) {
           const sidecarFull = join(basePath, `${filePath}.md`)
-          const tooltip = this.buildSidecarTooltip(sidecarFull, `${name}.md`)
+          const isBroken = !ingestedSet.has(filePath)
+          const baseTooltip = this.buildSidecarTooltip(sidecarFull, `${name}.md`)
+          const tooltip = isBroken
+            ? `⚠ ingest 결과 (registry/wiki) 없음 — sidecar 만 남은 broken state\n${baseTooltip}`
+            : baseTooltip
           nameSpan.setAttr('title', tooltip)
-          const badge = nameWrap.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
+          const badgeCls = isBroken
+            ? 'wikey-pair-sidecar-badge wikey-pair-sidecar-badge-broken'
+            : 'wikey-pair-sidecar-badge'
+          const badge = nameWrap.createEl('span', { text: 'md', cls: badgeCls })
           badge.setAttr('title', tooltip)
         }
         const fullPath = join(basePath, filePath)
@@ -1162,9 +1173,16 @@ Click [[page name]] in answers to navigate to the wiki page.
           const treeName = treeNameWrap.createEl('span', { cls: 'wikey-audit-tree-file-name', text: fileName })
           if (hasSidecar(fullRel, auditAllSet)) {
             const sidecarFull = join(basePath, `${fullRel}.md`)
-            const tooltip = this.buildSidecarTooltip(sidecarFull, `${fileName}.md`)
+            const isBroken = !ingestedSet.has(fullRel)
+            const baseTooltip = this.buildSidecarTooltip(sidecarFull, `${fileName}.md`)
+            const tooltip = isBroken
+              ? `⚠ ingest 결과 (registry/wiki) 없음 — sidecar 만 남은 broken state\n${baseTooltip}`
+              : baseTooltip
             treeName.setAttr('title', tooltip)
-            const badge = treeNameWrap.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
+            const badgeCls = isBroken
+              ? 'wikey-pair-sidecar-badge wikey-pair-sidecar-badge-broken'
+              : 'wikey-pair-sidecar-badge'
+            const badge = treeNameWrap.createEl('span', { text: 'md', cls: badgeCls })
             badge.setAttr('title', tooltip)
           }
           rowMap.set(fullRel, row)
