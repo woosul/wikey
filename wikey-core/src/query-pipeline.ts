@@ -247,8 +247,13 @@ async function execQmdSearch(
 
   const koreanQuery = await tryKoreanPreprocess(question, basePath, execEnv)
 
-  // Cross-lingual: 한국어 질문이면 영문 키워드도 추출
-  const queryLines: string[] = [`lex: ${koreanQuery}`, `vec: ${question}`]
+  // Cross-lingual: 한국어 질문이면 영문 키워드도 추출.
+  // §5.2.9: qmd 의 vec/hyde query parser 가 `-` prefix 를 negation 으로 해석 →
+  // hyphenated 단어 (예: `NanoVNA-V2`) 가 query parse 단계에서 reject 됨
+  // ("Negation (-term) is not supported in vec/hyde queries"). vec line 에 한해
+  // hyphen → space 치환으로 negation 오인 차단. lex 는 negation 정상 지원이라 보존.
+  const vecQuestion = question.replace(/-/g, ' ')
+  const queryLines: string[] = [`lex: ${koreanQuery}`, `vec: ${vecQuestion}`]
 
   if (containsKorean(question) && httpClient) {
     const englishKeywords = await extractEnglishKeywords(question, config, httpClient)
