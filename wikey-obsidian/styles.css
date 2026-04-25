@@ -795,6 +795,28 @@
   flex-shrink: 0;
 }
 
+/* §5.2.0 — paired sidecar.md badge on original source row.
+   Indicates a derived <base>.<ext>.md sidecar exists for this source.
+   Read-only block (no click handler); hover title shows sidecar name + created. */
+.wikey-pair-sidecar-badge {
+  font-size: 0.72em;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--background-modifier-hover);
+  color: var(--text-faint);
+  border: 1px solid var(--background-modifier-border);
+  flex-shrink: 0;
+  cursor: help;
+  text-transform: uppercase;
+}
+
+.wikey-pair-sidecar-badge:hover {
+  color: var(--text-muted);
+  background: var(--background-modifier-active-hover);
+}
+
 .wikey-audit-path-line {
   display: flex;
   justify-content: space-between;

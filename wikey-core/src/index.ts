@@ -106,6 +106,11 @@ export {
 } from './uri.js'
 export type { BundleEntry } from './uri.js'
 export {
+  pairedSidecarSet,
+  hasSidecar,
+  filterOutPairedSidecars,
+} from './paired-sidecar.js'
+export {
   loadRegistry,
   saveRegistry,
   findById as registryFindById,
@@ -158,10 +163,13 @@ export {
   checkPii,
   reindex as reindexWiki,
   reindexCheck,
+  reindexQuick,
+  reindexCheckJson,
+  waitUntilFresh,
   costTrackerSummary,
   costTrackerAdd,
 } from './scripts-runner.js'
-export type { ScriptResult } from './scripts-runner.js'
+export type { ScriptResult, ReindexCheckResult, ReindexFreshness } from './scripts-runner.js'
 export {
   PROVIDER_CHAT_DEFAULTS,
   PROVIDER_VISION_DEFAULTS,

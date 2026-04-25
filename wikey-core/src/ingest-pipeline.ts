@@ -105,6 +105,9 @@ export interface IngestOptions {
   // reindexQuick 실패 또는 waitUntilFresh timeout 시 호출. UI 레이어 (Obsidian Notice)
   // 에서 사용자 가시화 — wikey-core 는 throw 대신 callback 으로 이벤트 전달만 담당.
   readonly onFreshnessIssue?: (reason: 'reindex-failed' | 'freshness-timeout', message: string) => void
+  // §5.2.5: success path also surfaced so silent fail (no Notice at all) is impossible —
+  // user always sees either "OK (Xs)" Notice or "실패/지연" Notice.
+  readonly onFreshnessOk?: (durationMs: number) => void
 }
 
 /**
@@ -495,7 +498,7 @@ export async function ingest(
   //     이미 성공했으므로 throw 하지 않되, 사용자는 Notice 로 stale 상태를 인지해야 한다
   //     (plan v6 §4.4.6 "지연 — 잠시 후 검색 가능").
   onProgress?.({ step: 4, total: 4, message: 'Indexing...' })
-  await runReindexAndWait(opts?.basePath, opts?.execEnv, log, opts?.onFreshnessIssue)
+  await runReindexAndWait(opts?.basePath, opts?.execEnv, log, opts?.onFreshnessIssue, opts?.onFreshnessOk)
   log(`done: ${sourcePath}`)
 
   return {
@@ -1927,6 +1930,7 @@ async function runReindexAndWait(
   execEnv: Record<string, string> | undefined,
   log: (msg: string, ...rest: unknown[]) => void,
   onIssue?: (reason: 'reindex-failed' | 'freshness-timeout', message: string) => void,
+  onOk?: (durationMs: number) => void,
 ): Promise<void> {
   const cwd = basePath ?? process.cwd()
   const env = execEnv ? { ...execEnv } : { ...process.env } as Record<string, string>
@@ -1937,10 +1941,11 @@ async function runReindexAndWait(
 
   const rawTimeout = Number(env.WIKEY_REINDEX_TIMEOUT_MS) || REINDEX_WAIT_DEFAULT_MS
   const timeoutMs = Math.min(Math.max(rawTimeout, 1_000), REINDEX_WAIT_MAX_MS)
+  const t0 = Date.now()
 
   try {
     await reindexQuick(cwd, env, timeoutMs)
-    log(`reindex --quick OK, waiting for freshness (timeout=${timeoutMs}ms)`)
+    log(`reindex --quick OK in ${Date.now() - t0}ms, waiting for freshness (timeout=${timeoutMs}ms)`)
   } catch (err) {
     const msg = errorMessage(err)
     console.warn(`[Wikey ingest] reindex --quick failed (non-fatal): ${msg}`)
@@ -1949,7 +1954,9 @@ async function runReindexAndWait(
   }
   try {
     await waitUntilFresh(cwd, env, timeoutMs)
-    log(`index is fresh`)
+    const elapsed = Date.now() - t0
+    log(`index is fresh (total ${elapsed}ms)`)
+    onOk?.(elapsed)
   } catch (err) {
     const msg = errorMessage(err)
     console.warn(`[Wikey ingest] freshness wait timed out (non-fatal): ${msg}`)

@@ -4,6 +4,7 @@ import {
   query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair,
   fetchModelList,
   resolveSourceSync, loadRegistry,
+  pairedSidecarSet, hasSidecar, filterOutPairedSidecars,
 } from 'wikey-core'
 import type { Citation, ResolvedSource, SourceRegistry } from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
@@ -811,6 +812,29 @@ Click [[page name]] in answers to navigate to the wiki page.
       if (!caps.unhwpInstalled) parts.push('unhwp (HWP/HWPX) — `pip install unhwp`')
       banner.setText(`⚠ 일부 포맷 변환기가 설치되지 않았습니다. 아래 빨간 행은 인제스트 불가: ${parts.join(' / ')}`)
     }
+
+    // §5.2.0 — paired sidecar.md (`<base>.<ext>.md` from docling/unhwp converter)
+    // is hidden from rows + excluded from counts. The original `<base>.<ext>` row
+    // gets a [md] badge instead. Filter at render time, source-of-truth (registry,
+    // wiki/, audit-ingest.py output) is unchanged.
+    const auditAllSet = new Set<string>([
+      ...auditData.files,
+      ...(auditData.ingested_files ?? []),
+      ...(auditData.unsupported_files ?? []),
+    ])
+    const auditPaired = pairedSidecarSet([...auditAllSet])
+    const dropPaired = (xs: readonly string[]) => xs.filter((x) => !auditPaired.has(x))
+    auditData = {
+      ...auditData,
+      files: dropPaired(auditData.files),
+      ingested_files: dropPaired(auditData.ingested_files ?? []),
+      unsupported_files: dropPaired(auditData.unsupported_files ?? []),
+    }
+    auditData.ingested = auditData.ingested_files.length
+    auditData.missing = auditData.files.length
+    auditData.unsupported = (auditData.unsupported_files ?? []).length
+    auditData.total_documents = auditData.ingested + auditData.missing + (auditData.unsupported ?? 0)
+
     const unsupportedSet = new Set(auditData.unsupported_files ?? [])
 
     // ── Audit UI state (filter/view/search) ──
@@ -1032,6 +1056,13 @@ Click [[page name]] in answers to navigate to the wiki page.
         // Line 1: filename + file size (right)
         const nameLine = info.createDiv({ cls: 'wikey-audit-name-line' })
         nameLine.createEl('span', { text: name, cls: 'wikey-audit-name' })
+        // §5.2.0: paired sidecar.md badge — original source row gets [md] tag.
+        if (hasSidecar(filePath, auditAllSet)) {
+          const sidecarFull = join(basePath, `${filePath}.md`)
+          const tooltip = this.buildSidecarTooltip(sidecarFull, `${name}.md`)
+          const badge = nameLine.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
+          badge.setAttr('title', tooltip)
+        }
         const fullPath = join(basePath, filePath)
         let fileSizeKb = 0
         if (existsSyncFn(fullPath)) {
@@ -1124,6 +1155,13 @@ Click [[page name]] in answers to navigate to the wiki page.
           if (isUnsupported) cb.setAttr('disabled', 'true')
           ;(cb as HTMLInputElement).checked = !isUnsupported && this.auditSelections.has(fullRel)
           row.createEl('span', { cls: 'wikey-audit-tree-file-name', text: fileName })
+          // §5.2.0: paired sidecar.md badge — tree view parity with list view.
+          if (hasSidecar(fullRel, auditAllSet)) {
+            const sidecarFull = join(basePath, `${fullRel}.md`)
+            const tooltip = this.buildSidecarTooltip(sidecarFull, `${fileName}.md`)
+            const badge = row.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
+            badge.setAttr('title', tooltip)
+          }
           rowMap.set(fullRel, row)
           const toggle = () => {
             if ((cb as HTMLInputElement).checked) this.auditSelections.add(fullRel)
@@ -1638,13 +1676,45 @@ Click [[page name]] in answers to navigate to the wiki page.
     return join(basePath, 'raw/0_inbox')
   }
 
-  private listInboxFiles(): string[] {
+  /**
+   * §5.2.0 — paired sidecar.md badge tooltip text.
+   * Returns: `📄 sidecar: <name>\n📅 created: <yyyy-mm-dd HH:MM>` (frontmatter
+   * `created` if available, else fs mtime).
+   */
+  private buildSidecarTooltip(sidecarFullPath: string, sidecarName: string): string {
+    const { existsSync, statSync, readFileSync } = require('node:fs') as typeof import('node:fs')
+    let created = ''
+    try {
+      if (existsSync(sidecarFullPath)) {
+        // Try frontmatter `created:` first (cheap line scan, no YAML parser).
+        try {
+          const head = readFileSync(sidecarFullPath, { encoding: 'utf-8' }).slice(0, 4096)
+          const m = head.match(/^created:\s*['"]?([^'"\n]+)['"]?\s*$/m)
+          if (m) created = m[1].trim().slice(0, 19).replace('T', ' ')
+        } catch { /* fall through to mtime */ }
+        if (!created) {
+          const mtime = statSync(sidecarFullPath).mtime
+          const pad = (n: number) => String(n).padStart(2, '0')
+          created = `${mtime.getFullYear()}-${pad(mtime.getMonth() + 1)}-${pad(mtime.getDate())} ${pad(mtime.getHours())}:${pad(mtime.getMinutes())}`
+        }
+      }
+    } catch { /* missing file → empty created */ }
+    return created
+      ? `📄 sidecar: ${sidecarName}\n📅 created: ${created}`
+      : `📄 sidecar: ${sidecarName}`
+  }
+
+  private listInboxFilesRaw(): string[] {
     const { readdirSync, existsSync } = require('node:fs') as typeof import('node:fs')
     const inboxDir = this.getInboxPath()
     if (!existsSync(inboxDir)) return []
     return readdirSync(inboxDir)
       .filter((f: string) => !f.startsWith('.'))
       .sort()
+  }
+
+  private listInboxFiles(): string[] {
+    return filterOutPairedSidecars(this.listInboxFilesRaw())
   }
 
   private async ingestInbox() {
@@ -1738,8 +1808,9 @@ Click [[page name]] in answers to navigate to the wiki page.
     else container.appendChild(inboxDiv)
 
     const files = this.listInboxFiles()
+    const inboxAllSet = new Set(this.listInboxFilesRaw())
 
-    // Title: "inbox | N" with styled number
+    // Title: "inbox | N" with styled number (paired sidecar.md excluded)
     const titleEl = inboxDiv.createDiv({ cls: 'wikey-ingest-section-label' })
     titleEl.createEl('span', { text: 'inbox | ' })
     titleEl.createEl('span', { text: String(files.length), cls: 'wikey-stat-number-white' })
@@ -1863,6 +1934,13 @@ Click [[page name]] in answers to navigate to the wiki page.
       const info = row.createDiv({ cls: 'wikey-audit-info' })
       const nameLine = info.createDiv({ cls: 'wikey-audit-name-line' })
       nameLine.createEl('span', { text: f, cls: 'wikey-audit-name' })
+      // §5.2.0: paired sidecar.md badge — original source row gets [md] tag.
+      if (hasSidecar(f, inboxAllSet)) {
+        const sidecarPath = join(basePath, 'raw/0_inbox', `${f}.md`)
+        const tooltip = this.buildSidecarTooltip(sidecarPath, `${f}.md`)
+        const badge = nameLine.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
+        badge.setAttr('title', tooltip)
+      }
       if (!isDir) nameLine.createEl('span', { text: sizeLabel, cls: 'wikey-audit-filesize' })
       const pathLine = info.createDiv({ cls: 'wikey-audit-path-line' })
       pathLine.createEl('span', { text: hint.hint, cls: 'wikey-audit-path' })

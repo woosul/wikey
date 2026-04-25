@@ -61,6 +61,84 @@ describe('parseQmdOutput', () => {
   })
 })
 
+// §5.2.3 — 1-hop wikilink graph expansion
+import { extractWikilinkBasenames, expandWithOneHopWikilinks } from '../query-pipeline.js'
+
+describe('extractWikilinkBasenames', () => {
+  it('extracts simple wikilinks', () => {
+    const md = 'See [[smith-chart]] and [[swr]] for more.'
+    expect(extractWikilinkBasenames(md)).toEqual(['smith-chart', 'swr'])
+  })
+
+  it('handles aliases and anchors', () => {
+    const md = 'Refer to [[s11|reflection]] and [[swr#measurement]].'
+    expect(extractWikilinkBasenames(md)).toEqual(['s11', 'swr'])
+  })
+
+  it('dedupes', () => {
+    const md = '[[smith-chart]] is great. See [[smith-chart]] again.'
+    expect(extractWikilinkBasenames(md)).toEqual(['smith-chart'])
+  })
+
+  it('strips path-style wikilinks (uses last segment)', () => {
+    const md = '[[concepts/smith-chart]]'
+    expect(extractWikilinkBasenames(md)).toEqual(['smith-chart'])
+  })
+
+  it('returns empty for content with no wikilinks', () => {
+    expect(extractWikilinkBasenames('plain text [no link]')).toEqual([])
+  })
+})
+
+describe('expandWithOneHopWikilinks', () => {
+  it('returns 1-hop targets sorted by frequency', async () => {
+    const base = [
+      { path: 'wiki/entities/nanovna-v2.md', content: 'Uses [[smith-chart]] and [[swr]]. See [[swr]].' },
+      { path: 'wiki/entities/foo.md', content: 'See [[smith-chart]].' },
+    ]
+    const reader = async (basename: string) => {
+      if (basename === 'smith-chart') return { path: 'wiki/concepts/smith-chart.md', content: '# Smith Chart' }
+      if (basename === 'swr') return { path: 'wiki/concepts/swr.md', content: '# SWR' }
+      return null
+    }
+    const expanded = await expandWithOneHopWikilinks(base, reader, 5)
+    // smith-chart freq=2, swr freq=2, sorted by freq then name
+    expect(expanded.map((e) => e.path)).toEqual([
+      'wiki/concepts/smith-chart.md',
+      'wiki/concepts/swr.md',
+    ])
+  })
+
+  it('respects cap', async () => {
+    const base = [{ path: 'a.md', content: '[[a]] [[b]] [[c]] [[d]] [[e]] [[f]]' }]
+    const reader = async (n: string) => ({ path: `wiki/entities/${n}.md`, content: '' })
+    const expanded = await expandWithOneHopWikilinks(base, reader, 3)
+    expect(expanded).toHaveLength(3)
+  })
+
+  it('skips wikilinks whose target is already in baseResults', async () => {
+    const base = [
+      { path: 'wiki/concepts/smith-chart.md', content: '# Smith Chart' },
+      { path: 'wiki/entities/nanovna-v2.md', content: 'See [[smith-chart]] and [[swr]].' },
+    ]
+    const reader = async (basename: string) => {
+      if (basename === 'smith-chart') return { path: 'wiki/concepts/smith-chart.md', content: '#' }
+      if (basename === 'swr') return { path: 'wiki/concepts/swr.md', content: '#' }
+      return null
+    }
+    const expanded = await expandWithOneHopWikilinks(base, reader, 5)
+    expect(expanded.map((e) => e.path)).toEqual(['wiki/concepts/swr.md'])
+  })
+
+  it('skips unresolvable wikilinks (target not in wiki)', async () => {
+    const base = [{ path: 'a.md', content: '[[exists]] [[missing]]' }]
+    const reader = async (n: string) => (n === 'exists' ? { path: `wiki/entities/${n}.md`, content: '' } : null)
+    const expanded = await expandWithOneHopWikilinks(base, reader, 5)
+    expect(expanded).toHaveLength(1)
+    expect(expanded[0].path).toBe('wiki/entities/exists.md')
+  })
+})
+
 describe('buildSynthesisPrompt', () => {
   it('includes context pages and question', () => {
     const context = '--- esc.md ---\n# ESC\nElectronic Speed Controller\n\n'
@@ -77,6 +155,22 @@ describe('buildSynthesisPrompt', () => {
     const prompt = buildSynthesisPrompt('context', 'test question')
     const questionIdx = prompt.indexOf('test question')
     expect(questionIdx).toBeGreaterThan(0)
+  })
+
+  // §5.2.2 — wikilink 1-hop 활용 지시 추가
+  it('instructs LLM to use information from [[wikilink]] referenced pages', () => {
+    const prompt = buildSynthesisPrompt('ctx', 'q')
+    expect(prompt).toMatch(/\[\[wikilink\]\].*활용|활용.*\[\[wikilink\]\]/)
+  })
+
+  it('instructs LLM to link first-mention entities/concepts as [[페이지명]]', () => {
+    const prompt = buildSynthesisPrompt('ctx', 'q')
+    expect(prompt).toMatch(/첫 등장.*\[\[페이지명\]\]/)
+  })
+
+  it('instructs LLM to include 1-hop link targets in 참고: block', () => {
+    const prompt = buildSynthesisPrompt('ctx', 'q')
+    expect(prompt).toMatch(/1-hop|직접 인용.*1-hop|1-hop.*참고/)
   })
 })
 

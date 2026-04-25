@@ -165,9 +165,13 @@ export async function waitUntilFresh(
   intervalMs = 500,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs
+  let lastStatus: ReindexFreshness | 'unknown' = 'unknown'
+  let lastStale = -1
   while (Date.now() < deadline) {
     try {
       const res = await reindexCheckJson(basePath, env)
+      lastStatus = res.status
+      lastStale = res.stale
       if (res.status === 'fresh' && res.stale === 0) return
     } catch (err) {
       // transient — 구버전 reindex.sh 등. timeout 까지 재시도.
@@ -175,5 +179,8 @@ export async function waitUntilFresh(
     }
     await new Promise((r) => setTimeout(r, intervalMs))
   }
-  throw new Error(`freshness timeout after ${timeoutMs}ms (never reached status=fresh && stale=0)`)
+  // §5.2.5: surface last status + stale count so diagnostic can identify race vs PATH vs timeout.
+  throw new Error(
+    `freshness timeout after ${timeoutMs}ms (last status=${lastStatus}, stale=${lastStale})`,
+  )
 }

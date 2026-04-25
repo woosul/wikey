@@ -630,3 +630,169 @@ describe('canonicalize — §4.5.1.6.4 FORCED_CATEGORIES canonical resolution', 
     expect(result.concepts[0].filename).toBe('bill-of-materials.md')
   })
 })
+
+// §5.2.1 — entity ↔ concept cross-link 자동 생성 (deterministic, plan: phase-5-todox-5.2.1-crosslink.md)
+describe('canonicalize — cross-link insertion (§5.2.1)', () => {
+  it('happy: entity gets ## 관련 with concept wikilinks (alphabetical), concepts get back-link', async () => {
+    const mentions: Mention[] = [
+      { name: 'nanovna-v2', type_hint: 'tool', evidence: 'NanoVNA-V2 vector network analyzer' },
+      { name: 'smith-chart', type_hint: 'standard', evidence: 'Smith chart for impedance' },
+      { name: 'swr', type_hint: 'standard', evidence: 'standing wave ratio' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'nanovna-v2', type: 'tool', description: 'Vector network analyzer.' }],
+      concepts: [
+        { name: 'smith-chart', type: 'standard', description: 'Impedance plot.' },
+        { name: 'swr', type: 'standard', description: 'Standing wave ratio.' },
+      ],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+
+    expect(result.entities).toHaveLength(1)
+    expect(result.concepts).toHaveLength(2)
+
+    const nanovna = result.entities[0].content
+    expect(nanovna).toContain('## 관련')
+    expect(nanovna).toMatch(/## 관련[\s\S]*\[\[smith-chart\]\][\s\S]*\[\[swr\]\]/)
+
+    const smith = result.concepts.find((c) => c.filename === 'smith-chart.md')!.content
+    const swr = result.concepts.find((c) => c.filename === 'swr.md')!.content
+    expect(smith).toContain('## 관련')
+    expect(smith).toContain('[[nanovna-v2]]')
+    expect(swr).toContain('## 관련')
+    expect(swr).toContain('[[nanovna-v2]]')
+
+    // §5.2.1 plan §5.1 — `## 관련` placed before `## 출처`
+    const idxRelated = nanovna.indexOf('## 관련')
+    const idxSource = nanovna.indexOf('## 출처')
+    expect(idxRelated).toBeGreaterThan(0)
+    expect(idxRelated).toBeLessThan(idxSource)
+  })
+
+  it('edge: empty concept pool → entity has no ## 관련 H2 (no empty section)', async () => {
+    const mentions: Mention[] = [
+      { name: 'nanovna-v2', type_hint: 'tool', evidence: 'tool' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'nanovna-v2', type: 'tool', description: 'VNA.' }],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].content).not.toContain('## 관련')
+  })
+
+  it('edge: concept-only (no entity) → concepts have no ## 관련 H2', async () => {
+    const mentions: Mention[] = [
+      { name: 'smith-chart', type_hint: 'standard', evidence: 's' },
+      { name: 'swr', type_hint: 'standard', evidence: 's' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [],
+      concepts: [
+        { name: 'smith-chart', type: 'standard', description: 'Impedance.' },
+        { name: 'swr', type: 'standard', description: 'SWR.' },
+      ],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.concepts).toHaveLength(2)
+    for (const c of result.concepts) {
+      expect(c.content).not.toContain('## 관련')
+    }
+  })
+
+  it('regression: cross-link is computed AFTER FORCED_CATEGORIES pin (restful-api → concept)', async () => {
+    // restful-api is pinned to concept/standard via FORCED_CATEGORIES.
+    // LLM mistakenly puts it in entities → pin moves to concept → cross-link must
+    // see it in the concept pool when computing nanovna's related list.
+    const mentions: Mention[] = [
+      { name: 'nanovna-v2', type_hint: 'tool', evidence: 'tool' },
+      { name: 'restful-api', type_hint: 'standard', evidence: 'API spec' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [
+        { name: 'nanovna-v2', type: 'tool', description: 'VNA.' },
+        { name: 'restful-api', type: 'tool', description: 'REST API.' }, // wrong pool — pin moves
+      ],
+      concepts: [],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities.map((e) => e.filename)).toEqual(['nanovna-v2.md'])
+    expect(result.concepts.map((c) => c.filename)).toEqual(['restful-api.md'])
+    expect(result.entities[0].content).toContain('[[restful-api]]')
+    expect(result.concepts[0].content).toContain('[[nanovna-v2]]')
+  })
+
+  it('regression: deterministic — same input twice → byte-for-byte identical entity content', async () => {
+    const mentions: Mention[] = [
+      { name: 'nanovna-v2', type_hint: 'tool', evidence: 't' },
+      { name: 'smith-chart', type_hint: 'standard', evidence: 's' },
+    ]
+    const json = JSON.stringify({
+      entities: [{ name: 'nanovna-v2', type: 'tool', description: 'VNA.' }],
+      concepts: [{ name: 'smith-chart', type: 'standard', description: 'Impedance.' }],
+    })
+    const a = await canonicalize({ ...baseArgs, llm: makeMockLLM(json), mentions })
+    const b = await canonicalize({ ...baseArgs, llm: makeMockLLM(json), mentions })
+    expect(a.entities[0].content).toBe(b.entities[0].content)
+    expect(a.concepts[0].content).toBe(b.concepts[0].content)
+  })
+
+  it('edge (codex P1-2): SLUG_ALIASES collapse — no self-link to own base', async () => {
+    // pmbok → project-management-body-of-knowledge (alias). If LLM puts pmbok in
+    // entities + the canonical in concepts, after canonicalizeSlug they merge into
+    // one base. The surviving page must NOT cross-link to itself.
+    const mentions: Mention[] = [
+      { name: 'pmbok', type_hint: 'standard', evidence: 'std' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'pmbok', type: 'tool', description: 'PM std.' }],
+      concepts: [{ name: 'project-management-body-of-knowledge', type: 'standard', description: 'PM std canonical.' }],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    const allPages = [...result.entities, ...result.concepts]
+    for (const p of allPages) {
+      const ownBase = p.filename.replace(/\.md$/, '')
+      expect(p.content).not.toContain(`[[${ownBase}]]`)
+    }
+  })
+
+  it('edge (codex P1-2): dual-pool — same base in both pools resolves to one, no self-link', async () => {
+    // Cross-pool dedup keeps base in entity pool, concept duplicate is dropped.
+    // Cross-link must not surface a self-reference for the surviving page.
+    const mentions: Mention[] = [
+      { name: 'mqtt', type_hint: 'tool', evidence: 'protocol' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'mqtt', type: 'tool', description: 'MQTT broker.' }],
+      concepts: [{ name: 'mqtt', type: 'standard', description: 'MQTT spec.' }],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    // mqtt is FORCED_CATEGORIES[entity/tool] — survives in entity pool only.
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('mqtt.md')
+    expect(result.concepts).toHaveLength(0)
+    expect(result.entities[0].content).not.toContain('[[mqtt]]')
+  })
+
+  it('edge (codex P1-2): rebuild idempotent — exactly one ## 관련 section, no duplicate bullets', async () => {
+    const mentions: Mention[] = [
+      { name: 'nanovna-v2', type_hint: 'tool', evidence: 't' },
+      { name: 'smith-chart', type_hint: 'standard', evidence: 's' },
+      { name: 'swr', type_hint: 'standard', evidence: 's' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{ name: 'nanovna-v2', type: 'tool', description: 'VNA.' }],
+      concepts: [
+        { name: 'smith-chart', type: 'standard', description: 'Impedance.' },
+        { name: 'swr', type: 'standard', description: 'SWR.' },
+      ],
+    }))
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    const nanovna = result.entities[0].content
+    const occurrences = (nanovna.match(/^## 관련$/gm) ?? []).length
+    expect(occurrences).toBe(1)
+    const smithBullets = (nanovna.match(/\[\[smith-chart\]\]/g) ?? []).length
+    expect(smithBullets).toBe(1)
+  })
+})

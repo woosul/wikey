@@ -12,7 +12,7 @@ const DEFAULTS: WikeyConfig = {
   WIKEY_BASIC_MODEL: 'claude-code',
   WIKEY_SEARCH_BACKEND: 'basic',
   WIKEY_MODEL: 'wikey',
-  WIKEY_QMD_TOP_N: 5,
+  WIKEY_QMD_TOP_N: 8,
   GEMINI_API_KEY: '',
   ANTHROPIC_API_KEY: '',
   OPENAI_API_KEY: '',

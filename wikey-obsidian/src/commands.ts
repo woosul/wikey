@@ -17,6 +17,7 @@ import {
   QMD_INDEX_MARKER,
   SETTINGS_MARKER,
   type ResetScope,
+  reindexQuick,
 } from 'wikey-core'
 import { WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { IngestFlowModal } from './ingest-modals'
@@ -423,6 +424,11 @@ async function runIngestCore(
           const label = reason === 'reindex-failed' ? '인덱싱 실패' : '인덱스 갱신 지연'
           new Notice(`${label} — 잠시 후 검색 가능 (${message.slice(0, 80)})`, 6000)
         },
+        // §5.2.5: silent-fail 자체 제거 — 성공 시도 항상 짧은 Notice. 사용자가 reindex 가
+        // 실제 호출됐는지 가시 확증.
+        onFreshnessOk: (ms) => {
+          new Notice(`✓ 검색 인덱스 최신 (${(ms / 1000).toFixed(1)}s)`, 2000)
+        },
       },
     )
 
@@ -462,6 +468,16 @@ async function runIngestCore(
           console.info(
             `[Wikey ingest] auto-moved to PARA: ${sourcePath} → ${newSourcePath} (${classifyResult.hint}) sidecar=${result.movedSidecar}${result.sidecarSkipReason ? ` [${result.sidecarSkipReason}]` : ''}`,
           )
+          // §5.2.5: movePair rewrote frontmatter on wiki/sources/source-*.md
+          // (vault_path/sidecar_vault_path patch). Without re-reindex the next
+          // --check would report stale because that source page mtime > STAMP_FILE
+          // (set by the reindex inside ingest()). Touch STAMP again so freshness
+          // gate is consistent.
+          try {
+            await reindexQuick(basePath, plugin.getExecEnv())
+          } catch (err: any) {
+            console.warn(`[Wikey ingest] post-movePair reindex failed (non-fatal): ${err?.message ?? err}`)
+          }
         } else {
           console.info(`[Wikey ingest] auto-move skipped (classify returned no destination): ${sourcePath}`)
         }

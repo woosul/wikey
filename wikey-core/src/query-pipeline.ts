@@ -243,7 +243,7 @@ async function execQmdSearch(
   nodePath?: string,
   httpClient?: HttpClient,
 ): Promise<readonly SearchResult[]> {
-  const topN = String(config.WIKEY_QMD_TOP_N || 5)
+  const topN = String(config.WIKEY_QMD_TOP_N || 8)
 
   const koreanQuery = await tryKoreanPreprocess(question, basePath, execEnv)
 
@@ -317,6 +317,9 @@ export function buildSynthesisPrompt(context: string, question: string): string 
 - 해요체(존댓말)를 사용하세요.
 - 답변 끝에 "참고: [[페이지명]], [[페이지명]]" 형식으로 출처를 나열하세요.
 - 위키에 해당 정보가 전혀 없을 때만 "위키에 아직 관련 내용이 없어요"라고 말하세요. 부분적으로라도 있으면 그 내용을 활용하세요.
+- 검색된 페이지 본문에 [[wikilink]] 로 언급된 다른 wiki 페이지가 있으면, 그 페이지의 정보도 가능한 활용해 답변에 포함하세요.
+- 답변에 등장한 모든 entity/concept 은 첫 등장 시 [[페이지명]] 으로 링크하세요.
+- 답변 끝 "참고:" 블록에는 직접 인용한 페이지 + 1-hop link target 페이지를 모두 나열하세요.
 
 ---
 위키 페이지:
@@ -326,45 +329,158 @@ ${context}
 질문: ${question}`
 }
 
+// §5.2.3 — 1-hop wikilink graph expansion.
+// Captures the wikilink target (no alias `|`, no anchor `#`) and reduces path-style
+// links (`[[concepts/smith-chart]]`) to the trailing basename so wiki/<cat>/<base>.md
+// resolution works uniformly.
+const WIKILINK_RE = /\[\[([^\]\n]+?)\]\]/g
+
+export function extractWikilinkBasenames(content: string): readonly string[] {
+  const seen = new Set<string>()
+  const order: string[] = []
+  for (const m of content.matchAll(WIKILINK_RE)) {
+    const raw = m[1].split('|')[0].split('#')[0].trim()
+    if (!raw) continue
+    const basename = raw.split('/').pop() ?? raw
+    if (seen.has(basename)) continue
+    seen.add(basename)
+    order.push(basename)
+  }
+  return order
+}
+
+export interface ExpandedPage {
+  readonly path: string
+  readonly content: string
+}
+
+/**
+ * §5.2.3 — given top-N base results (with content), parse `[[wikilink]]` from each
+ * body and fetch up to `cap` unique 1-hop targets via `reader(basename)`.
+ *
+ * Priority: frequency desc, then first-seen order. Targets already in baseResults
+ * are skipped. Unresolvable basenames (reader returns null) are skipped.
+ */
+export async function expandWithOneHopWikilinks(
+  baseResults: readonly { path: string; content: string }[],
+  reader: (basename: string) => Promise<ExpandedPage | null>,
+  cap: number,
+): Promise<readonly ExpandedPage[]> {
+  const basePaths = new Set(baseResults.map((r) => r.path))
+  const freq = new Map<string, number>()
+  const firstSeen = new Map<string, number>()
+  let order = 0
+  for (const result of baseResults) {
+    for (const basename of extractWikilinkBasenames(result.content)) {
+      freq.set(basename, (freq.get(basename) ?? 0) + 1)
+      if (!firstSeen.has(basename)) firstSeen.set(basename, order++)
+    }
+  }
+  const sorted = [...freq.entries()].sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1]
+    return (firstSeen.get(a[0]) ?? 0) - (firstSeen.get(b[0]) ?? 0)
+  })
+  const out: ExpandedPage[] = []
+  for (const [basename] of sorted) {
+    if (out.length >= cap) break
+    const page = await reader(basename)
+    if (!page) continue
+    if (basePaths.has(page.path)) continue
+    out.push(page)
+  }
+  return out
+}
+
+const WIKI_CATEGORIES = ['entities', 'concepts', 'sources', 'analyses'] as const
+
 async function buildContextWithWikiFS(
   results: readonly SearchResult[],
   wikiFS: WikiFS,
 ): Promise<string> {
-  const parts: string[] = []
-
+  const base: Array<{ path: string; content: string }> = []
   for (const result of results) {
     try {
       const content = await wikiFS.read(result.path)
-      const basename = result.path.split('/').pop()?.replace('.md', '') ?? result.path
-      parts.push(`--- ${basename}.md ---\n${content}\n`)
-    } catch {
-      // file not found — skip
-    }
+      base.push({ path: result.path, content })
+    } catch { /* file not found — skip */ }
   }
 
-  return parts.join('\n')
+  const reader = async (basename: string): Promise<ExpandedPage | null> => {
+    for (const cat of WIKI_CATEGORIES) {
+      const path = `wiki/${cat}/${basename}.md`
+      try {
+        const content = await wikiFS.read(path)
+        return { path, content }
+      } catch { /* try next category */ }
+    }
+    return null
+  }
+  const expanded = await expandWithOneHopWikilinks(base, reader, 5)
+
+  return [...base, ...expanded]
+    .map(({ path, content }) => {
+      const name = path.split('/').pop()?.replace('.md', '') ?? path
+      return `--- ${name}.md ---\n${content}\n`
+    })
+    .join('\n')
 }
 
 function buildContextFromFS(
   results: readonly SearchResult[],
   basePath: string,
 ): string {
-  const { readFileSync } = require('node:fs') as typeof import('node:fs')
+  const { readFileSync, existsSync } = require('node:fs') as typeof import('node:fs')
   const { join } = require('node:path') as typeof import('node:path')
-  const parts: string[] = []
-
+  const base: Array<{ path: string; content: string }> = []
   for (const result of results) {
     try {
       const fullPath = join(basePath, result.path)
       const content = readFileSync(fullPath, 'utf-8')
-      const basename = result.path.split('/').pop()?.replace('.md', '') ?? result.path
-      parts.push(`--- ${basename}.md ---\n${content}\n`)
-    } catch {
-      // file not found — skip
-    }
+      base.push({ path: result.path, content })
+    } catch { /* skip */ }
   }
 
-  return parts.join('\n')
+  // Sync expansion for FS path — used in non-wikiFS code path. We mirror the async
+  // helper logic but resolve via existsSync to avoid awaiting in a sync function.
+  const basePaths = new Set(base.map((r) => r.path))
+  const freq = new Map<string, number>()
+  const firstSeen = new Map<string, number>()
+  let order = 0
+  for (const result of base) {
+    for (const basename of extractWikilinkBasenames(result.content)) {
+      freq.set(basename, (freq.get(basename) ?? 0) + 1)
+      if (!firstSeen.has(basename)) firstSeen.set(basename, order++)
+    }
+  }
+  const sorted = [...freq.entries()].sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1]
+    return (firstSeen.get(a[0]) ?? 0) - (firstSeen.get(b[0]) ?? 0)
+  })
+  const expanded: ExpandedPage[] = []
+  for (const [basename] of sorted) {
+    if (expanded.length >= 5) break
+    let resolved: ExpandedPage | null = null
+    for (const cat of WIKI_CATEGORIES) {
+      const path = `wiki/${cat}/${basename}.md`
+      const fullPath = join(basePath, path)
+      if (existsSync(fullPath)) {
+        try {
+          resolved = { path, content: readFileSync(fullPath, 'utf-8') }
+          break
+        } catch { /* skip */ }
+      }
+    }
+    if (!resolved) continue
+    if (basePaths.has(resolved.path)) continue
+    expanded.push(resolved)
+  }
+
+  return [...base, ...expanded]
+    .map(({ path, content }) => {
+      const name = path.split('/').pop()?.replace('.md', '') ?? path
+      return `--- ${name}.md ---\n${content}\n`
+    })
+    .join('\n')
 }
 
 function tryKoreanPreprocess(

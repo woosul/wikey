@@ -319,7 +319,11 @@ function assembleCanonicalResult(
   }
 
   // v7 §4.5.1.4: apply E/C boundary pins (after schema validation + dedup)
-  const pinned = applyForcedCategories(entities, concepts, sourceFilename, today)
+  const pinnedRaw = applyForcedCategories(entities, concepts, sourceFilename, today)
+  // §5.2.1: inject `## 관련` cross-links between same-cycle entity ↔ concept pages.
+  // Deterministic policy: every entity links to all concepts in the cycle (and vice versa).
+  // Empty other-pool → no `## 관련` H2 (no empty section). Sorted alphabetically.
+  const pinned = applyCrossLinks(pinnedRaw.entities, pinnedRaw.concepts, sourceFilename, today)
 
   // Track dropped mentions: anything in `mentions` whose canonical base didn't survive
   const pinnedBases = new Set<string>()
@@ -466,9 +470,19 @@ function validateAndBuildPage(
 function buildPageContent(args: {
   name: string; type: string; description: string;
   category: 'entity' | 'concept'; sourceFilename: string; today: string;
+  relatedLinks?: readonly string[];
 }): string {
-  const { name, type, description, category, sourceFilename, today } = args
+  const { name, type, description, category, sourceFilename, today, relatedLinks } = args
   const typeField = category === 'entity' ? `entity_type: ${type}` : `concept_type: ${type}`
+  // §5.2.1: optional `## 관련` H2 sandwiched between description and `## 출처`.
+  // Empty/undefined relatedLinks → section omitted (no empty H2).
+  const relatedSection = relatedLinks && relatedLinks.length > 0
+    ? `## 관련
+
+${relatedLinks.map((b) => `- [[${b}]]`).join('\n')}
+
+`
+    : ''
   return `---
 title: ${name}
 type: ${category}
@@ -483,10 +497,53 @@ tags: []
 
 ${description}
 
-## 출처
+${relatedSection}## 출처
 
 - [[${sourceFilename.replace(/\.[^.]+$/, '')}]]
 `
+}
+
+/**
+ * §5.2.1 — inject `## 관련` cross-link section into entity/concept pages.
+ *
+ * Policy (option B, deterministic): every entity in the same ingest cycle links to
+ * every concept in that cycle (and vice versa). Self-links and entity↔entity /
+ * concept↔concept links are not generated. Empty other-pool → page is unchanged
+ * (no empty H2). Bullets sorted alphabetically by base.
+ */
+function applyCrossLinks(
+  entities: WikiPage[],
+  concepts: WikiPage[],
+  sourceFilename: string,
+  today: string,
+): { entities: WikiPage[]; concepts: WikiPage[] } {
+  const entityBases = entities.map((p) => normalizeBase(p.filename)).sort()
+  const conceptBases = concepts.map((p) => normalizeBase(p.filename)).sort()
+  const rebuild = (page: WikiPage, related: readonly string[]): WikiPage => {
+    if (related.length === 0) return page
+    const ownBase = normalizeBase(page.filename)
+    const filtered = related.filter((b) => b !== ownBase)
+    if (filtered.length === 0) return page
+    const isEntity = page.category === 'entities'
+    const type = isEntity ? page.entityType : page.conceptType
+    if (!type) return page
+    return {
+      ...page,
+      content: buildPageContent({
+        name: ownBase,
+        type: type as string,
+        description: extractDescription(page.content) || '(설명 없음)',
+        category: isEntity ? 'entity' : 'concept',
+        sourceFilename,
+        today,
+        relatedLinks: filtered,
+      }),
+    }
+  }
+  return {
+    entities: entities.map((p) => rebuild(p, conceptBases)),
+    concepts: concepts.map((p) => rebuild(p, entityBases)),
+  }
 }
 
 function computeDropReason(mention: Mention): string {
