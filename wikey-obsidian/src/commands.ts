@@ -33,7 +33,16 @@ export function registerCommands(plugin: WikeyPlugin): void {
       const file = plugin.app.workspace.getActiveFile()
       if (!file) return false
       if (checking) return true
-      runIngest(plugin, file.path, (s, t, m) => new Notice(`${s}/${t} ${m}`)).then((r) => {
+      // §5.2.9: raw/0_inbox/ 에서 트리거 시 audit panel 과 동일하게 자동 분류 +
+      // movePair (CLASSIFY.md + LLM fallback). 그렇지 않으면 inbox 잔재 + 답변 의
+      // 원본 backlink 가 inbox 가리킴 (사용자 의문 발생).
+      const autoMove = file.path.startsWith('raw/0_inbox/')
+      runIngest(
+        plugin,
+        file.path,
+        (s, t, m) => new Notice(`${s}/${t} ${m}`),
+        { autoMoveFromInbox: autoMove },
+      ).then((r) => {
         if (r.success) new Notice(`인제스트 완료: ${r.createdPages.length}개 페이지`)
         else new Notice(`인제스트 실패: ${r.error}`)
       })
