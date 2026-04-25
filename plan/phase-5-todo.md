@@ -49,9 +49,10 @@
 - [x] **§5.1.1.8** GREEN 확증 — `npm test` 537 passed (525 → +12) / `npm run build` 0 errors (2026-04-25 02:53, fresh).
 - [x] **§5.1.1.9** FP baseline — `fixtures/pii-structural-baseline/` N=30 synthetic PII-free 한국어 테크 문서 → structural match 0/30 확증 (`pii-structural.test.ts §5.1.1.9`).
 - [x] **§5.1.1.10** 문서 동기화 — 본 todo + `activity/phase-5-result.md §5.1.1` + `wiki/log.md` 엔트리.
-- [ ] **§5.1.1.11** (selective) `scripts/check-pii.sh --structural-only` flag — live wiki baseline (§12 E7(b)) 사용 시에만 필요. fixture baseline 0/30 이 mandatory 라 생략 가능. tester 단계에서 결정.
-- [ ] **§12 E1/E2.b/E3** live smoke 재실행 (Obsidian CDP 경유) → tester 에이전트 위임.
-- [ ] **wiki 재생성 없음 확증**: 기존 ingest 경로 `applyPiiGate` 내부 필터 1단만 추가. 과거 PII-leaked 위키 페이지는 사용자가 `Reset wiki` 로 수동 제거.
+- [~] **§5.1.1.11** (selective, **skip 결정 2026-04-25**) `scripts/check-pii.sh --structural-only` flag — fixture baseline 0/30 (E7a) 가 mandatory 검증을 충족. live wiki baseline (E7b) 경로 미사용. wiki 규모 확대 시 reopen.
+- [x] **§12 E1/E2.b/E3** live smoke — **master 직접 CDP smoke (commit 2da88cb)** Obsidian `--remote-debugging-port=9222` 기동 후 dist runtime end-to-end. fixture 7종 누출 차단 7/7 + baseline FP 0/30 + wiki pre-check BRN/CEO 0 hit. (Phase 4 D.0.l 와 동등한 구조적 검증).
+- [x] **wiki 재생성 없음 확증**: ingest 경로 변경 = `pii-redact.ts::detectPiiInternal` 에 `collectStructuralMatches` 분기 1건 추가만. `sanitizeForLlmPrompt` 기존 API 시그니처 (`{guardEnabled, structuralAllowed?}` 추가, default false 로 하위 호환). 기존 wiki 무변경, `applyPiiGate` 외부 호출 형태 유지.
+- [x] **§5.1.1.12** (post-compact 2026-04-25) over-mask 4건 fix — bundled YAML `ceo-multiline-form.valueExcludePrefixes` 13종 추가 (주소/전화/휴대/담당/접수/등기/등록/이메일/팩스/우편/사업/본점/소재) + `isCandidateExcluded` 가 same-line 모든 토큰 검사 (기존 last 2 → 전체) + `pii-over-mask-prevention.test.ts` 회귀 방지 (539 tests pass).
 
 ---
 

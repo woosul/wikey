@@ -1,7 +1,122 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-25 session 9 종료 — Phase 5 §5.1 구조적 PII 탐지 구현 + 인프라 스킬 정비**. 다음 = §5.1 live smoke (Obsidian CDP) 또는 §5.2/§5.3 P1 진입.
+> 최신 갱신: **2026-04-25 session 9 post-compact 처리 완료 — §5.1 over-masking fix + memory/todo 동기화**. 다음 = §5.2 검색 (P1) / §5.3 증분 (P1) / §5.4.1 schema.yaml 외부화 (P2 비전 gate) 중 선택.
 > 생성일: 2026-04-10
+
+---
+
+## ✅ Post-compact 처리 완료 (2026-04-25 session 9)
+
+핸드오프 (`plan/post-compact-handoff.md` — 작업 완료 후 삭제됨) 의 ①⑤⑥ 모두 처리:
+- **① over-masking 4건** — bundled YAML `ceo-multiline-form.valueExcludePrefixes` 13종 추가 + `isCandidateExcluded` 가 same-line 모든 토큰 검사. `pii-over-mask-prevention.test.ts` 회귀 방지. 검증: `ceo-blank-line.md → ['홍 길 동']` / `ceo-table-cell.md → ['이 영 희']` (4건 → 0건).
+- **⑤ memory** — `project_phase5_status.md` §5.1 done 섹션 append + MEMORY.md 인덱스 1줄 갱신.
+- **⑥ todo** — `phase-5-todo.md §12 E1/E2.b/E3` `[x]` (master 직접 CDP smoke), `§5.1.1.11` `[~]` (selective skip), `wiki 재생성 없음` `[x]`, 신규 `§5.1.1.12` over-mask fix `[x]`.
+- **검증**: `npm test` **539/539 passed** (537 + 신규 over-mask 2). build ok.
+
+<details>
+<summary>처리 전 핸드오프 원문 (참고용 archive)</summary>
+
+### ① ceo-structural over-masking 4건 — 수정
+
+**증거 (master CDP smoke 2026-04-25 03:25, dist runtime 실측)**:
+```
+ceo-blank-line.md:
+  ceo-structural → "홍 길 동"   (true positive ✅)
+  ceo-structural → "등기일"     (false positive ❌ over-mask)
+
+ceo-table-cell.md:
+  ceo-structural → "이 영 희"   (true positive ✅)
+  ceo-structural → "주소"       (false positive ❌)
+  ceo-structural → "서울시 어"  (false positive ❌, OCR-style chunked)
+  ceo-structural → "딘가"       (false positive ❌, OCR-style chunked)
+```
+
+**원인**: `wikey-core/src/defaults/pii-patterns.default.yaml` 의 `ceo-multiline-form` 패턴
+```yaml
+valuePattern: '[가-힣](?:[ \t]*[가-힣]){1,3}'   # 한글 2~4자, 공백 허용
+valueExcludePrefixes:
+  - '주식회사' / '(주)' / '㈜' / '유한회사' / '재단법인' / '사단법인' / '유한책임회사'
+```
+→ 회사명 접두어만 처리. **common field label 단어 (주소·등기·전화·담당·접수·이메일·fax)** 와 **OCR 잘림 어절** 은 제외 대상 아님.
+
+**수정 옵션 (선택)**:
+- (a) **valueExcludePrefixes 에 common label 추가** (가장 간단, YAML 1줄 추가):
+  ```yaml
+  valueExcludePrefixes:
+    - 주식회사 / (주) / ㈜ / 유한회사 / 재단법인 / 사단법인 / 유한책임회사
+    - 주소 / 전화 / 휴대 / 담당 / 접수 / 등기 / 등록 / 이메일 / 팩스 / 우편 / 사업
+  ```
+  부작용: 한글 단어 무한 확장. 그러나 PII 와 충돌 안 함 (이름 아님)
+- (b) **valuePattern 엄격화** (이름은 보통 공백 포함 또는 3자):
+  ```yaml
+  valuePattern: '[가-힣]{2,4}(?![가-힣])|[가-힣][ \t]+[가-힣](?:[ \t]*[가-힣]){0,2}'
+  # OR: 공백 포함 이름만 (`홍 길 동`). 붙여쓰기 (`홍길동`) 는 single-line ceo-label 이 처리
+  ```
+  부작용: `홍길동` 붙여쓰기 매치 불가. but Phase 4 D.0.l 실누출은 모두 공백 포함 형식.
+- (c) **label heuristic** (matcher 로직 변경): valueMatch 직후 colon 또는 newline 만 있으면 label 로 간주, 매치 skip.
+  부작용: 코드 변경 (pii-redact.ts), 테스트 추가 필요.
+
+**권고**: (a) 선택 — YAML 1줄 추가로 즉시 해결. 새 `over-mask-prevention.test.ts` 케이스 2개 (등기일·주소 over-mask 가 0 으로 sanitize) 추가. 누출 검증은 기존 7 fixture 유지.
+
+**검증 명령** (수정 후 실행):
+```bash
+cd /Users/denny/Project/wikey/wikey-core && npm run build && \
+node --input-type=module -e "
+import { loadPiiPatterns } from './dist/pii-patterns.js'
+import { detectPii } from './dist/pii-redact.js'
+import { readFileSync } from 'node:fs'
+const p = await loadPiiPatterns()
+for (const f of ['ceo-blank-line.md','ceo-table-cell.md']) {
+  const t = readFileSync('src/__tests__/fixtures/pii-structural/'+f,'utf8')
+  const struct = detectPii(t,p).filter(m=>m.kind.includes('structural')).map(m=>m.value)
+  console.log(f+':', struct)
+}
+" && npm test
+```
+**기대**: ceo-blank-line `['홍 길 동']` (1개), ceo-table-cell `['이 영 희']` (1개), 537+ tests pass.
+
+### ⑤ memory 업데이트
+
+**대상**: `~/.claude/projects/-Users-denny-Project-wikey/memory/project_phase5_status.md` (이미 존재 — update) + `MEMORY.md` 인덱스 1줄 갱신.
+
+**기존 status 확인 명령**:
+```bash
+cat ~/.claude/projects/-Users-denny-Project-wikey/memory/project_phase5_status.md
+```
+
+**append 할 내용** (§5.1 완료 status):
+```markdown
+## §5.1 구조적 PII 탐지 — 완료 (2026-04-25 session 9, commit 2da88cb)
+
+- 안 C (Context window heuristic) + multi-value capture + valueExcludePrefixes 채택
+- discriminated union (`PiiPattern = SingleLinePiiPattern | StructuralPiiPattern`, `patternType` discriminator)
+- 537/537 tests · build ok · FP baseline 0/30
+- master CDP smoke (Obsidian `--remote-debugging-port=9222`) PASS — PII 누출 차단 7/7 fixture
+- 계획 v1→v4 (codex 4 cycle, gpt-5.5 xhigh Mode D Panel) — v4 PASS 0 findings
+- Follow-up: ceo-structural over-masking 4건 (post-compact 처리 예정), canonicalizer.ts L270/276 few-shot `굿스트림` defer
+```
+
+**MEMORY.md 인덱스** (한 줄 추가):
+```
+- [§5.1 done](project_phase5_status.md) — 구조적 PII commit 2da88cb (2026-04-25)
+```
+
+### ⑥ phase-5-todo.md §5.1 잔여 체크박스 mark
+
+**현재 상태 (2026-04-25 03:25 grep)**:
+```
+§5.1.1.1~10 + §5.1.1.3.5    →  [x] 모두 완료 ✅
+§5.1.1.11 (selective)       →  [ ] selective skip (E7a fixture 0/30 가 mandatory 충족)
+§12 E1/E2.b/E3 live smoke   →  [ ] tester 위임으로 작성 — 사실 master 직접 CDP smoke 로 처리됨
+wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructuralMatches 만), wiki 무변경
+```
+
+**처리 작업**:
+1. **§12 E1/E2.b/E3** → `[x]` 로 mark + 노트: "master 직접 CDP smoke (commit 2da88cb), Obsidian `--remote-debugging-port=9222` 기동 후 dist runtime end-to-end. fixture 7종 누출 차단 + baseline FP 0/30. wiki/sources·entities pre-check BRN/CEO 0 hit."
+2. **§5.1.1.11** → `[~]` 또는 주석 갱신: "selective skip 결정 — `live wiki baseline` 경로 미사용. 향후 wiki 규모 확대 시 reopen."
+3. **wiki 재생성 없음 확증** → `[x]` mark + 노트: "ingest 경로 변경 = `pii-redact.ts::detectPiiInternal` 에 structural 분기 추가 1건 (sanitizeForLlmPrompt API 시그니처 호환). 기존 wiki 무변경, `applyPiiGate` 외부 호출 형태 유지."
+
+</details>
 
 ---
 

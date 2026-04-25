@@ -237,9 +237,10 @@ function computeWindowEnd(
 }
 
 /**
- * valueExcludePrefixes 검사 (§5.1 설계).
+ * valueExcludePrefixes 검사 (§5.1 설계 + 2026-04-25 over-masking 4건 fix).
  * - candidate 자체가 접두어로 시작 → exclude
- * - contextBeforeValue (같은 줄 내 valueMatch 직전 whitespace-split 토큰 1~2개) 가 접두어로 시작 → exclude
+ * - 같은 줄 내 valueMatch 직전 모든 whitespace-split 토큰 중 하나라도 접두어로 시작 → exclude
+ *   (테이블 셀 형식 `| 주소 | 서울시 어딘가 |` 처럼 라벨이 multi-token 떨어진 경우 모두 차단)
  * - 다른 줄의 내용은 포함 금지 (회사명 뒤 CEO 오탐 skip 방지).
  */
 function isCandidateExcluded(
@@ -252,14 +253,14 @@ function isCandidateExcluded(
   for (const prefix of excludePrefixes) {
     if (candidate.startsWith(prefix)) return true
   }
-  // 같은 줄 prefix 토큰 검사
   const lineStart = windowText.lastIndexOf('\n', valueIndexInWindow - 1) + 1
   const sameLinePrefix = windowText.slice(lineStart, valueIndexInWindow)
   const prefixTokens = sameLinePrefix.trim().split(/\s+/).filter(Boolean)
   if (prefixTokens.length === 0) return false
-  const lastTokens = prefixTokens.slice(-2).join(' ')
-  for (const prefix of excludePrefixes) {
-    if (lastTokens.startsWith(prefix)) return true
+  for (const token of prefixTokens) {
+    for (const prefix of excludePrefixes) {
+      if (token.startsWith(prefix)) return true
+    }
   }
   return false
 }
