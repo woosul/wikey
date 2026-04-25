@@ -320,6 +320,7 @@ export function buildSynthesisPrompt(context: string, question: string): string 
 - 검색된 페이지 본문에 [[wikilink]] 로 언급된 다른 wiki 페이지가 있으면, 그 페이지의 정보도 가능한 활용해 답변에 포함하세요.
 - 답변에 등장한 모든 entity/concept 은 첫 등장 시 [[페이지명]] 으로 링크하세요.
 - 답변 끝 "참고:" 블록에는 직접 인용한 페이지 + 1-hop link target 페이지를 모두 나열하세요.
+- 답변은 충분히 풍부하게 작성하세요. 단순 정의에 머무르지 말고 관련 개념·구성·용도·예시를 함께 설명해 한 단락 이상의 완성된 설명을 만드세요.
 
 ---
 위키 페이지:

@@ -134,8 +134,14 @@ cmd_reindex() {
     exit 1
   fi
 
+  # §5.2.5: capture full output even on failure so plugin sees real error in stderr
+  # (set -e aborts the assignment but `|| { ... }` runs first and routes to stderr).
   local update_out
-  update_out=$("$QMD_BIN" update 2>&1)
+  update_out=$("$QMD_BIN" update 2>&1) || {
+    echo "qmd update failed (exit=$?):" >&2
+    echo "$update_out" >&2
+    exit 1
+  }
   echo "$update_out" | grep -E "Indexed:|Collection:" | while IFS= read -r line; do
     log_ok "$line"
   done
@@ -143,7 +149,11 @@ cmd_reindex() {
   # Step 2: qmd embed
   log_step 2 "qmd embed — 벡터 임베딩"
   local embed_out
-  embed_out=$("$QMD_BIN" embed 2>&1)
+  embed_out=$("$QMD_BIN" embed 2>&1) || {
+    echo "qmd embed failed (exit=$?):" >&2
+    echo "$embed_out" >&2
+    exit 1
+  }
   if echo "$embed_out" | grep -q "Done!"; then
     log_ok "$(echo "$embed_out" | grep "Done!")"
   elif echo "$embed_out" | grep -q "up to date"; then
