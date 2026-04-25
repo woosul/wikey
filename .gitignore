@@ -1,6 +1,9 @@
 # Raw sources (PII protection)
 raw/
 
+# Wiki content (사용자 ingest 산출물 — 개인 자료, 공개 리포에 노출 금지)
+wiki/
+
 # Obsidian Web Clipper 기본 저장 폴더 — 개인 수집 자료, 공개 리포에 노출 금지
 Clippings/
 
