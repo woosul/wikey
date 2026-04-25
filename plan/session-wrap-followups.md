@@ -1,6 +1,6 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-25 session 11 종결 — §5.2.0~5 + §5.2.9 (qmd ABI + vec hyphen + autoMove + tombstone) 모두 완료** (commit `f108e0c` → `aad98f8`, 9 commits 누적). master CDP cycle smoke 직접 실행으로 plugin 실 동작 확증 (qmd results: 5 / 답변 1533 chars / inbox→3_resources autoMove / frontmatter rewrite / backlink 새 경로). **다음 진입점 = §5.3 (인제스트 증분, P1) 또는 §5.4.1 (self-extending Stage 1, P2 비전 gate)**.
+> 최신 갱신: **2026-04-25 session 11 종결 — §5.2.0~5 + §5.2.9 + §5.2.0 v2/v3 + §5.3.2 분석 모두 완료** (commit `f108e0c` → `dd8e8e1`, 13 commits 누적). master CDP cycle smoke 직접 실행 확증 + 사용자 UI follow-up 4건 + sidecar+ingest 8 시나리오 분석 todo 보존. **다음 진입점 = §5.3.1 (hash 기반 증분, P1) + §5.3.2 (sidecar+ingest 보호) 결합**.
 > 생성일: 2026-04-10
 
 ---
@@ -34,8 +34,10 @@
 | 12 | §5.2.9 vec query hyphen → space (commit `fb88dad`) — query-pipeline.ts:251 가 `NanoVNA-V2` 같은 hyphenated word 의 `-` 를 negation 으로 오인 차단 | regression | qmd results: 5 ✓ + 답변 1533 chars + 15 wiki refs |
 | 13 | §5.2.9 ingest-current-note autoMove (commit `953c9cb`) — Cmd+Shift+I 가 inbox 파일 트리거 시 `autoMoveFromInbox: true` 자동 패스 | — | inbox→raw/3_resources/60_note/600_technology/ 자동 분류 + frontmatter rewrite + 답변 backlink 새 경로 ✓ |
 | 14 | §5.2.9 recordMove tombstone false 자동 (commit `aad98f8`) — `source-registry.ts:98` 가 `tombstone` field 안 건드리던 bug. `move = 파일 살아있음` 의미적 정합 | TDD 1 신규 (578/578) | 현 stale tombstone 직접 복구 + 후속 movePair 자연 복구 보장 |
-| 15 | §5.2.0 v2 UI follow-up 3건 — [md] 뱃지 위치 (파일명 오른쪽 8px wrap) + filename tooltip 단일줄 (sidecar 생성일만) + processing modal progress group 위치 (wrap 바닥, Back 위 16px gap) | — | CDP 측정 gap=16px / Audit `All 7 / Ingested 1 / Missing 6` 정확 |
+| 15 | §5.2.0 v2 UI follow-up 3건 (commit `db693d4`) — [md] 뱃지 위치 (파일명 오른쪽 8px wrap) + filename tooltip 단일줄 (sidecar 생성일만) + processing modal progress group 위치 (wrap 바닥, Back 위 16px gap) | — | CDP 측정 gap=16px / Audit `All 7 / Ingested 1 / Missing 6` 정확 |
 | 16 | §5.3.2 신설 — sidecar+ingest 불일치 8 시나리오 분석 (A~H 위험도 표) → §5.3 인제스트 증분 영역에서 hash diff + user marker 보호로 처리 (사용자 지시) | — | 분석만 — 구현 다음 세션 |
+| 17 | §5.2.0 v3 broken state badge 오렌지 (commit `400b41f`) — 사용자 정의 (paired = ingested 분류여야 함, paired+missing = broken). list+tree 2 row builders `hasSidecar && !ingestedSet.has(file)` → badge `wikey-pair-sidecar-badge-broken` (`#ff9800`) + tooltip ⚠ 줄 prepend | — | 연관 root cause = §5.3.2 시나리오 C/D |
+| 18 | result/todo §5.2.0 v2/v3 mirror 정렬 (commit `dd8e8e1`) — heading h4 통일 + commit hash 양쪽 명시 | — | mirror 일관 |
 
 ---
 
