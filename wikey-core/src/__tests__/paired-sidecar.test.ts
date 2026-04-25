@@ -13,6 +13,7 @@ import {
   pairedSidecarSet,
   hasSidecar,
   filterOutPairedSidecars,
+  recountAuditAfterPairedExclude,
 } from '../paired-sidecar.js'
 
 describe('pairedSidecarSet', () => {
@@ -108,6 +109,74 @@ describe('hasSidecar', () => {
   it('returns false for txt (not converted)', () => {
     const all = new Set(['raw/a.txt', 'raw/a.txt.md'])
     expect(hasSidecar('raw/a.txt', all)).toBe(false)
+  })
+})
+
+describe('recountAuditAfterPairedExclude (§5.2.0 v4 dashboard sync)', () => {
+  it('excludes paired sidecar from totals + per-folder counts', () => {
+    const r = recountAuditAfterPairedExclude({
+      ingested: ['raw/0_inbox/a.pdf', 'raw/0_inbox/a.pdf.md'],
+      missing: ['raw/3_resources/b.docx', 'raw/3_resources/b.docx.md'],
+      unsupported: [],
+    })
+    expect(r.totalFiles).toBe(2)
+    expect(r.ingested).toEqual(['raw/0_inbox/a.pdf'])
+    expect(r.missing).toEqual(['raw/3_resources/b.docx'])
+    expect(r.folders['0_inbox']).toEqual({ total: 1, ingested: 1, missing: 0 })
+    expect(r.folders['3_resources']).toEqual({ total: 1, ingested: 0, missing: 1 })
+  })
+
+  it('preserves standalone .md and standalone originals', () => {
+    const r = recountAuditAfterPairedExclude({
+      ingested: ['raw/0_inbox/note.md'],
+      missing: ['raw/0_inbox/standalone.pdf'],
+    })
+    expect(r.totalFiles).toBe(2)
+    expect(r.ingested).toEqual(['raw/0_inbox/note.md'])
+    expect(r.missing).toEqual(['raw/0_inbox/standalone.pdf'])
+    expect(r.folders['0_inbox']).toEqual({ total: 2, ingested: 1, missing: 1 })
+  })
+
+  it('counts unsupported into total but NOT into missing (audit-ingest.py mirror)', () => {
+    const r = recountAuditAfterPairedExclude({
+      ingested: [],
+      missing: [],
+      unsupported: ['raw/0_inbox/legacy.doc'],
+    })
+    expect(r.totalFiles).toBe(1)
+    expect(r.ingested).toEqual([])
+    expect(r.missing).toEqual([])
+    expect(r.folders['0_inbox']).toEqual({ total: 1, ingested: 0, missing: 0 })
+  })
+
+  it('handles empty input', () => {
+    const r = recountAuditAfterPairedExclude({ ingested: [], missing: [] })
+    expect(r.totalFiles).toBe(0)
+    expect(r.folders).toEqual({})
+  })
+
+  it('mixed fixture mirrors §5.2.0 audit panel result for dashboard parity', () => {
+    const r = recountAuditAfterPairedExclude({
+      ingested: ['raw/0_inbox/a.pdf', 'raw/0_inbox/a.pdf.md', 'raw/3_resources/30_manual/x.md'],
+      missing: ['raw/1_projects/p.docx', 'raw/1_projects/p.docx.md', 'raw/0_inbox/orphan.pdf.md'],
+      unsupported: ['raw/0_inbox/legacy.doc'],
+    })
+    // paired = a.pdf.md, p.docx.md (orphan.pdf.md stays — no sibling original)
+    expect(r.ingested).toEqual(['raw/0_inbox/a.pdf', 'raw/3_resources/30_manual/x.md'])
+    expect(r.missing).toEqual(['raw/1_projects/p.docx', 'raw/0_inbox/orphan.pdf.md'])
+    expect(r.unsupported).toEqual(['raw/0_inbox/legacy.doc'])
+    expect(r.totalFiles).toBe(5)
+    expect(r.folders['0_inbox']).toEqual({ total: 3, ingested: 1, missing: 1 })
+    expect(r.folders['1_projects']).toEqual({ total: 1, ingested: 0, missing: 1 })
+    expect(r.folders['3_resources']).toEqual({ total: 1, ingested: 1, missing: 0 })
+  })
+
+  it('does not mutate input arrays', () => {
+    const ingested = ['raw/a.pdf', 'raw/a.pdf.md']
+    const missing = ['raw/b.docx']
+    const before = [...ingested, ...missing]
+    recountAuditAfterPairedExclude({ ingested, missing })
+    expect([...ingested, ...missing]).toEqual(before)
   })
 })
 

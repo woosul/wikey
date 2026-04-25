@@ -98,6 +98,15 @@
 - [x] **filename hover tooltip 단순화** — 사용자 요청 (2026-04-25): 한 줄, sidecar 생성일만 (`yyyy-mm-dd HH:MM`). `buildSidecarTooltip` 이전 2줄 (📄 sidecar / 📅 created) → 단일 string. filename + badge 양쪽에 동일 부착
 - [x] **Processing modal progress group 위치** — 사용자 요청: progress bar group 만 wrap 바닥, Back 버튼 위로 16px margin. `.wikey-modal-processing` `flex:1` + `padding-bottom:16px` + 신규 `.wikey-modal-progress-group` `margin-top:auto`. fileLabel/spinner 는 wrap 상단 그대로, Back 버튼 절대 위치 (modal 바닥) 그대로 유지. CDP 측정: gap=16px, group bottom=684.7, btn top=700.7
 
+#### 5.2.0 v4 — Dashboard raw sources 카운트 paired 통합 (사용자 요청 2026-04-25 session 12)
+
+> **사용자 관찰**: Dashboard 의 Raw Sources 카운트 (Total Files / Ingested / Missing / PARA folder) 가 audit-ingest.py raw output 을 그대로 표시 → paired sidecar (`<base>.<ext>.md`) 를 별도 파일로 카운트해 audit 패널 카운트와 불일치. audit 패널은 §5.2.0 에서 paired 제외 후 재계산.
+
+- [x] **helper 추출**: `wikey-core/src/paired-sidecar.ts` 에 `recountAuditAfterPairedExclude({ingested, missing, unsupported}) → {ingested, missing, unsupported, totalFiles, folders}` 신규. paired 제외 후 totalFiles + per-folder {total, ingested, missing} 재계산. unsupported 는 audit-ingest.py 정책 mirror — total 합산, missing 미포함. 6 unit tests (PASS)
+- [x] **dashboard 적용**: `wikey-obsidian/src/sidebar-chat.ts:renderRawSourcesDashboard` 가 helper 사용 → audit 패널과 동일 카운트
+- [x] **audit-ingest.py 미수정**: source-of-truth 유지 (registry/wiki). UI 레이어만 변경
+- [x] **검증**: wikey-core 584 tests PASS / wikey-obsidian production build 0 errors
+
 #### 5.2.0 v3 — broken state badge 오렌지 (사용자 정의, 2026-04-25 종료 직전, commit `400b41f`)
 
 > **사용자 정의 (확정)**: 원본.ext alone → audit "missing" 정상. 원본.ext+원본.md (paired) → ingest 한 번 실행됐다는 의미 → "ingested" 분류여야. paired 인데 missing 으로 분류 = registry/wiki 와 sidecar 가 깨진 broken state.
@@ -107,53 +116,45 @@
 - [x] **CSS** — 오렌지 배경 (`#ff9800`) + 진한 글자 (`#fff`) + hover 변형. 정상 paired 는 회색 그대로
 - [x] **연관**: root cause = §5.3.2 시나리오 C/D (orphan sidecar / wiki page reset). §5.3.2 fix 로 발생률 자연 감소
 
-### 5.2.1 Entity ↔ Concept cross-link 자동 생성 (★ 답변 풍부도 결정적 fix)
+### 5.2.1 Entity ↔ Concept cross-link 자동 생성 (★ 답변 풍부도 결정적 fix) — 완료 (commit `f108e0c`, 2026-04-25)
 
 > **보조 문서**: [`phase-5-todox-5.2.1-crosslink.md`](./phase-5-todox-5.2.1-crosslink.md) — 옵션 B (deterministic policy) 채택 근거 + Stage 1/2/3 책임 분석 + `## 관련` H2 위치 결정 + TDD 5 case · 4 step + codex 검증 포인트.
 
-- [ ] canonicalizer Stage 3 (`wikey-core/src/canonicalizer.ts`) 가 **같은 ingest 사이클의 entity ↔ concept** 사이 wikilink 를 본문에 자동 삽입
+- [x] canonicalizer Stage 3 (`wikey-core/src/canonicalizer.ts`) 가 **같은 ingest 사이클의 entity ↔ concept** 사이 wikilink 를 본문에 자동 삽입 (`applyCrossLinks` helper, 8 unit + codex P1-2 edge 3 case)
   - 현재: `index_additions` 만 wiki/index.md 에 추가. entity/concept 본문은 LLM JSON 의 `description` 만 (1~2 문장).
   - 목표: entity 본문 끝에 `## 관련` H2 섹션 + 같이 만들어진 concept 들의 `[[wikilink]]` list. concept 본문 끝에도 entity 와의 양방향 link.
   - LLM prompt 에 "entity-concept 관계 추출" 단계 추가 또는 같은 source 기반이라 자동 cross-ref 정책 ("같은 source 의 entity 와 concept 은 서로 link") 으로 결정적 생성
   - 측정: NanoVNA fixture 재실행 시 nanovna-v2.md 본문에 smith-chart, swr, s11/s21 등 wikilink 등장 확인
-- [ ] **wiki 재생성 없음 확증**: 신규 ingest 부터 적용. 기존 wiki entity/concept 본문은 손대지 않음 (사용자가 reset 후 재인제스트 선택).
+- [x] **wiki 재생성 없음 확증**: 신규 ingest 부터 적용. 기존 wiki entity/concept 본문은 손대지 않음 (사용자가 reset 후 재인제스트 선택).
 
-### 5.2.2 답변 prompt 강화 — 검색 hit 의 wikilink 1-hop 활용
+### 5.2.2 답변 prompt 강화 — 검색 hit 의 wikilink 1-hop 활용 — 완료 (commits `f108e0c`, `7ae636f`, 2026-04-25)
 
-- [ ] `query-pipeline.ts buildSynthesisPrompt` 에 다음 지시 추가:
+- [x] `query-pipeline.ts buildSynthesisPrompt` 에 다음 지시 추가 (3 unit PASS):
   - "검색된 페이지 본문에 `[[wikilink]]` 로 언급된 다른 wiki 페이지가 있으면, 그 페이지의 정보도 가능한 활용해 답변에 포함"
   - "답변에 등장한 모든 entity/concept 은 첫 등장 시 `[[페이지명]]` 으로 링크"
   - "답변 끝 `참고:` 블록에는 직접 인용 페이지 + 1-hop link target 페이지를 모두 나열"
-- [ ] 측정: NanoVNA 동일 질문 재실행 시 답변 길이 + citation 수 + 인용된 concept 수 비교
-- [ ] **wiki 재생성 없음 확증**: prompt 변경만, 인덱스/wiki 무관
+- [x] 측정: NanoVNA 동일 질문 재실행 시 답변 길이 + citation 수 + 인용된 concept 수 비교 (cycle smoke 1533/1304 chars + 11~15 wiki refs)
+- [x] **wiki 재생성 없음 확증**: prompt 변경만, 인덱스/wiki 무관
 
-### 5.2.3 검색 graph expansion — 1-hop wikilink target 자동 fetch
+### 5.2.3 검색 graph expansion — 1-hop wikilink target 자동 fetch — 완료 (commit `f108e0c`, 2026-04-25)
 
-- [ ] `query-pipeline.ts` 의 `buildContextFromFS` / `buildContextWithWikiFS` 가 검색 top-N 페이지의 본문 wikilink 를 parse → target 페이지 추가 fetch (1-hop only, depth=1 cap)
+- [x] `query-pipeline.ts` 의 `buildContextFromFS` / `buildContextWithWikiFS` 가 검색 top-N 페이지의 본문 wikilink 를 parse → target 페이지 추가 fetch (1-hop only, depth=1 cap) — `extractWikilinkBasenames` + `expandWithOneHopWikilinks` helpers, 4-카테고리 resolve, cap 5, 9 unit PASS
   - 예: nanovna-v2.md 가 `[[smith-chart]]`, `[[swr]]` 인용 → smith-chart.md, swr.md 본문도 LLM context 에 추가 (TOP_N=5 검색 → context 페이지 = 5 + 1-hop expansion ≤ N)
   - cap: expansion 으로 추가되는 페이지 수 ≤ 5 (token budget). 우선순위 = 검색 score + wikilink 빈도
   - Phase 5 §5.5 (지식 그래프) 의 일부 구현 (cross-ref). 본 항목은 query 시점 expansion 만, §5.5 는 사전 인덱스화.
-- [ ] **wiki 재생성 없음 확증**: query 시 fetch 만, 인덱스/wiki 무관
+- [x] **wiki 재생성 없음 확증**: query 시 fetch 만, 인덱스/wiki 무관
 
-### 5.2.4 TOP_N 상향 + 측정 (단기 quick win)
+### 5.2.4 TOP_N 상향 + 측정 (단기 quick win) — 완료 (commit `f108e0c`, 2026-04-25)
 
-- [ ] `WIKEY_QMD_TOP_N` default 5 → 7~10 (`wikey.conf` + `wikey-core/src/config.ts`)
-- [ ] 비용 영향 측정: prompt token 증가, LLM cost 증가
-- [ ] §5.2.2/§5.2.3 적용 전 baseline 측정 → 적용 후 개선 폭 비교
+- [x] `WIKEY_QMD_TOP_N` default 5 → 8 (`wikey.conf` + `wikey-core/src/config.ts` + query-pipeline fallback)
+- [x] 비용 영향 측정: cycle smoke 시 prompt token + cost 변화 미미 (regression PASS)
+- [x] §5.2.2/§5.2.3 적용 전 baseline 측정 → 적용 후 개선 폭 비교 (cycle smoke 답변 1533 chars / 11~15 refs vs baseline 184 chars / 2 citations)
 
-### 5.2.5 자동 reindex silent fail 진단·수정 (검색 freshness 직결)
+### 5.2.5 자동 reindex silent fail 진단·수정 (검색 freshness 직결) — 완료 (commits `f108e0c`, `7ae636f`, 2026-04-25)
 
-- [ ] **재현·진단** (cycle smoke 2026-04-25 실측, `activity/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md §9.1` 4 후보):
-  - (a) `reindex.sh --quick` race — `appendLog` 직후 호출 시 wiki 파일 fsync 전 가능성
-  - (b) plugin execEnv PATH 누락으로 `qmd` binary ENOENT (silent)
-  - (c) `--quick` 가 timestamp metadata 미갱신 → `--check` 가 stale 판정
-  - (d) `WIKEY_REINDEX_TIMEOUT_MS` default 60s 부족 → silent timeout
-- [ ] **routine**:
-  1. NanoVNA fixture 재실행, `init-log` 후 끝까지 console capture (중간 `capture-logs` 금지)
-  2. log 에서 `reindex --quick OK` / `freshness wait timed out` / `reindex --quick failed` 어느 메시지인지 확인
-  3. 동시에 `bash ./scripts/reindex.sh --quick` 단독 실행 → exit code + stderr + 후속 `--check` timestamp 변화
-  4. 후보 매치 → fix (race → debounce / PATH → execEnv 보강 / timestamp → quick metadata 갱신 / timeout → setting up)
-- [ ] fix 적용 후 cycle smoke 재실행 → reindex 자동 OK + Notice 정상 발동 확증
+- [x] **재현·진단** — cycle smoke 가 §5.2.9 (qmd `--quick` exit=1) 와 동일 root cause 확증, observability 추가 (waitUntilFresh 진단 + onFreshnessOk callback + post-movePair re-reindex)
+- [x] **routine** — silent fail 자체 제거: stderr 보존 (commit `7ae636f`) + ABI 미스매치 specific Notice (12s) — 일반 인덱싱 실패와 구분
+- [x] fix 적용 후 cycle smoke 재실행 → reindex 자동 OK + Notice 정상 발동 확증 (master CDP 직접 실행, 15:55-16:10)
 
 ### 5.2.6 페이지 내부 H2 섹션 의미 활용 (탐구)
 
@@ -172,24 +173,25 @@
 >
 > **현상 (2026-04-25 cycle smoke 측정)**: ingest 후 plugin 이 `reindex.sh --quick` invoke 시 exit=1, stderr 비어있음 (commit `f108e0c` 이전), commit `7ae636f` 부터는 stderr 보존. CLI 단독 (`bash ./scripts/reindex.sh --quick`) 은 동일 상태에서 exit=0 (15:01 timestamp 확증). 즉 **plugin's execEnv 또는 invocation context** 차이가 root cause.
 
-- [ ] 재검증 cycle smoke — commit `7ae636f` 의 reindex.sh stderr 보존 fix 적용 후 NanoVNA fixture 재인제스트. qmd update / embed 의 실제 stderr 메시지를 plugin console (DevTools) 에 capture
-- [ ] 4 후보 좁힘:
-  - (i) **PATH/cwd 차이** — plugin's `execEnv` (`makeEnv(shellPath)`, env-detect.ts:64) vs CLI shell. PATH 검증 + cwd=basePath 확인
-  - (ii) **qmd 의존성** (dyld/dylib/모델 파일) — Electron 환경에서만 fail. `otool -L` / DYLD trace
-  - (iii) **동시 wiki write race** — Obsidian metadata cache 가 새 wiki 파일 indexing 중 qmd update 와 lock 충돌
-  - (iv) **qmd 자체 버그** (file lock / sqlite WAL conflict)
-- [ ] root cause 매치 → fix:
-  - (i)/(ii): execEnv 보강 또는 qmd 실행 wrapper / DYLD_LIBRARY_PATH 추가
-  - (iii): write 후 fsync sleep 또는 retry / debounce
-  - (iv): qmd binary 우회 또는 sqlite_busy_timeout
-- [ ] 검증: 재재 cycle smoke → reindex 자동 OK + `✓ 검색 인덱스 최신` Notice 등장 + STAMP 갱신 + 후속 query 가 새 페이지 검색 결과 포함
-- [ ] **§5.8.3 W-C1 closed alias 마크**: `phase-5-todo.md §5.8.3` 에 "→ §5.2.9 로 승격, 동일 issue" 한 줄
+- [x] 재검증 cycle smoke — commit `7ae636f` 의 reindex.sh stderr 보존 fix 적용 후 NanoVNA fixture 재인제스트. qmd update / embed 의 실제 stderr 메시지를 plugin console (DevTools) 에 capture
+- [x] 4 후보 좁힘 → **(i) PATH/cwd + (iv) qmd ABI 미스매치 결합**:
+  - nvm node v22 (NODE_MODULE_VERSION 127) 로 qmd install → better-sqlite3.node 가 v22 ABI
+  - plugin execEnv PATH 가 homebrew node v24 (NODE_MODULE_VERSION 137) 우선 → `process.dlopen` ERR_DLOPEN_FAILED
+  - CLI 단독 실행 (cmux interactive shell) 은 nvm v22 우선 → exit=0 (master CLI 검증과 plugin ingest 동작 갈림)
+- [x] root cause fix 5건 (commits `f3dbbfa` → `aad98f8`):
+  - `f3dbbfa`: `scripts/rebuild-qmd-deps.sh` (login shell node 명시 사용해 better-sqlite3 강제 rebuild) + commands.ts onFreshnessIssue ABI 미스매치 specific Notice
+  - `525c488`: findCompatibleNode 명시 fallback (`/opt/homebrew/bin/node` 등 4단계 candidate iteration)
+  - `fb88dad`: vec query hyphen → space (qmd negation 오인 차단)
+  - `953c9cb`: ingest-current-note autoMove (Cmd+Shift+I 가 raw/0_inbox/ 트리거 시 자동 분류 + movePair)
+  - `aad98f8`: recordMove tombstone false 자동 (stale tombstone 복구)
+- [x] 검증: 재재 cycle smoke → reindex 자동 OK + 답변 1533/1304 chars + 11~15 wiki refs + frontmatter 새 경로 (master CDP 직접 실행 15:55-16:10)
+- [x] **§5.8.3 W-C1 closed alias 마크**: 본 항목 §5.2.9 로 승격, §5.8.3 은 alias 유지
 
-### 5.2.8 검증
+### 5.2.8 검증 — 완료 (commits `aceb7ff` 후속, master CDP 15:55-16:10)
 
-- [ ] cycle smoke 재실행 (NanoVNA 1 파일 + PII-heavy 1 파일) — entity/concept cross-link + 답변 풍부도 + reindex 자동성 + citation 수 모두 측정
-- [ ] 측정 항목 baseline (cycle smoke 2026-04-25): citation 2건 / 답변 184 chars / cross-link 0건 / reindex stale (silent fail)
-- [ ] 목표: citation ≥ 5건 / 답변 ≥ 500 chars / cross-link ≥ 3건 (entity 당) / reindex auto fresh
+- [x] cycle smoke 재실행 (NanoVNA 1 파일 + PII-heavy 1 파일) — entity/concept cross-link + 답변 풍부도 + reindex 자동성 + citation 수 모두 측정
+- [x] 측정 항목 baseline (cycle smoke 2026-04-25 baseline): citation 2건 / 답변 184 chars / cross-link 0건 / reindex stale (silent fail)
+- [x] 목표 도달: 답변 1533/1304 chars + 11~15 wiki refs + cross-link 3+ entity 당 + reindex auto fresh (☑ 모든 목표치 초과)
 
 ---
 
@@ -453,7 +455,7 @@
 - [ ] 문제: Pass A 는 `20_report/000_general`, Pass B 는 `60_note/000_general` — LLM reasoning 수준의 non-determinism.
 - [ ] 해결 방향: CLASSIFY.md 가이드 강화 (기준 명확화), 혹은 LLM prompt stability 개선. tier/분류 1차 depth 6/6 일치는 이미 PASS 이므로 우선순위 낮음.
 
-### 5.8.3 W-C1 reindex --quick non-fatal exit=1 → §5.2.9 로 승격 (2026-04-25)
+### 5.8.3 W-C1 reindex --quick non-fatal exit=1 → §5.2.9 로 승격, 동일 issue (2026-04-25, alias closed)
 > tag: #reindex
 > **이전 번호**: `was §5.8.5`.
 > **2026-04-25 status**: §5.2.5 cycle smoke 가 본 issue 정확 재현 + "사용자 UX 영향 없음" 가정 무효 확증 (검색 freshness 직격). **§5.2.9 로 승격, 본 항목은 alias**.

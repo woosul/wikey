@@ -5,6 +5,7 @@ import {
   fetchModelList,
   resolveSourceSync, loadRegistry,
   pairedSidecarSet, hasSidecar, filterOutPairedSidecars,
+  recountAuditAfterPairedExclude,
 } from 'wikey-core'
 import type { Citation, ResolvedSource, SourceRegistry } from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
@@ -722,13 +723,23 @@ Click [[page name]] in answers to navigate to the wiki page.
         cwd: basePath, timeout: 10000, env, encoding: 'utf-8',
       })
       const data = JSON.parse(stdout)
-      const folders: Record<string, { total: number; ingested: number; missing: number }> = data.folders ?? {}
+
+      // §5.2.0 v4 (2026-04-25 사용자 요청): paired sidecar `<base>.<ext>.md` 를
+      // dashboard 카운트에서도 제외 (audit panel §5.2.0 와 동일 정책).
+      // 원본.ext + 원본.md 를 하나의 원본으로 취급. UI 레이어 처리, audit-ingest.py
+      // raw output (registry/wiki) 는 source-of-truth 로 유지.
+      const recount = recountAuditAfterPairedExclude({
+        ingested: data.ingested_files ?? [],
+        missing: data.files ?? [],
+        unsupported: data.unsupported_files ?? [],
+      })
+      const folders = recount.folders
 
       // Row 1: Total / Ingested / Missing
       const grid = container.createDiv({ cls: 'wikey-dashboard-grid' })
-      this.addStatCard(grid, String(data.total_documents), 'Total Files')
-      this.addAccentStatCard(grid, String(data.ingested), 'Ingested')
-      this.addStatCard(grid, String(data.missing), 'Missing')
+      this.addStatCard(grid, String(recount.totalFiles), 'Total Files')
+      this.addAccentStatCard(grid, String(recount.ingested.length), 'Ingested')
+      this.addStatCard(grid, String(recount.missing.length), 'Missing')
 
       // Row 2: PARA folders as "ingested/total".
       // `_delayed` 는 보류 상태 — ingest 대상 아님. Dashboard 노출 금지.

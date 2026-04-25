@@ -270,6 +270,21 @@ links:
 
 **대시보드 카운트 검증** (사용자 추가 요청): Audit `All 7 / Ingested 1 / Missing 6` 정확. raw/3_resources/ 안 supported 원본 (paired sidecar 5건 제외) + nanovna-v2-notes (ingested 1) = 7.
 
+#### 5.2.0 v4 — Dashboard raw sources 카운트 paired 통합 (사용자 요청 2026-04-25 session 12)
+
+**사용자 관찰**: Dashboard 의 Raw Sources 카운트 (Total Files / Ingested / Missing / PARA folder) 가 audit-ingest.py raw output 을 그대로 표시 → paired sidecar (`<base>.<ext>.md`) 를 별도 파일로 카운트해 audit 패널 카운트와 불일치. audit 패널은 §5.2.0 에서 paired 제외 후 재계산.
+
+**구현**:
+- `wikey-core/src/paired-sidecar.ts` 에 `recountAuditAfterPairedExclude({ingested, missing, unsupported}) → {ingested, missing, unsupported, totalFiles, folders}` 신규 helper. paired 제외 후 totalFiles + per-folder {total, ingested, missing} 재계산. unsupported 는 audit-ingest.py 정책 mirror — total 합산, missing 미포함
+- `wikey-obsidian/src/sidebar-chat.ts:renderRawSourcesDashboard` 가 helper 사용 → audit 패널과 동일 카운트
+- audit-ingest.py 는 source-of-truth 유지 (registry/wiki). UI 레이어만 변경
+
+**검증**:
+- TDD 6 신규 unit (`paired-sidecar.test.ts`): paired 제외 + per-folder + unsupported total-only + 빈 입력 + mixed fixture + immutability
+- wikey-core 584 tests PASS / wikey-obsidian production build 0 errors
+
+**audit panel sweep 미수행 (surgical)**: audit panel (sidebar-chat.ts:820-840) 의 inline 카운트 정정 로직은 기존대로 유지. 본 변경은 dashboard 한정.
+
 #### 5.2.0 v3 — broken state badge 오렌지 (사용자 정의, 2026-04-25 종료 직전, commit `400b41f`)
 
 **사용자 정의 (확정)**:

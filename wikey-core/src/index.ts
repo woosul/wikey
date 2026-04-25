@@ -109,7 +109,9 @@ export {
   pairedSidecarSet,
   hasSidecar,
   filterOutPairedSidecars,
+  recountAuditAfterPairedExclude,
 } from './paired-sidecar.js'
+export type { AuditCountInput, AuditCountResult } from './paired-sidecar.js'
 export {
   loadRegistry,
   saveRegistry,
