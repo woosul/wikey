@@ -1,19 +1,18 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-25 session 11 — §5.2.0~5 검색·답변 품질 6건 통합 코드 완료 (commit `f108e0c`, wikey-core 577/577 + build OK), CDP cycle smoke (§5.2.8) tester 분기 진행 중**. analyst plan + codex Mode D APPROVE_WITH_CHANGES P1 3건 정정 반영. **다음 진입점 = §5.2.8 cycle smoke 결과 확정 → §5.3 (인제스트 증분, P1) 또는 §5.4.1 (self-extending Stage 1, P2 비전 gate)**.
+> 최신 갱신: **2026-04-25 session 11 종결 — §5.2.0~5 + §5.2.9 (qmd ABI + vec hyphen + autoMove + tombstone) 모두 완료** (commit `f108e0c` → `aad98f8`, 9 commits 누적). master CDP cycle smoke 직접 실행으로 plugin 실 동작 확증 (qmd results: 5 / 답변 1533 chars / inbox→3_resources autoMove / frontmatter rewrite / backlink 새 경로). **다음 진입점 = §5.3 (인제스트 증분, P1) 또는 §5.4.1 (self-extending Stage 1, P2 비전 gate)**.
 > 생성일: 2026-04-10
 
 ---
 
 ## 🎯 다음 세션 첫 액션 (2026-04-25 session 11 종료 시점)
 
-1. `cat plan/phase-5-todo.md` — §5.2 종결 + §5.3 / §5.4 / §5.8.3 진입 결정.
-2. **§5.2 재검증 cycle smoke** — commit `7ae636f` (reindex.sh stderr 보존 + prompt 보강) 적용 후 NanoVNA fixture 재실행. 측정 (a) §5.2.2 답변 ≥500 chars 재확인 (b) §5.2.5 qmd 실제 stderr 메시지 capture → §5.8.3 진단 연결.
-3. **(권장) §5.8.3 W-C1 reindex --quick non-fatal exit=1 진단** (Phase 4 D.0.l 잔여, Low → 본 세션 §5.2.5 cycle smoke 로 인해 우선순위 상향) — plugin-only 환경에서 qmd update/embed 가 fail 하는 이유. CLI 단독은 exit=0 (15:01 timestamp 확증). plugin's execEnv 차이 추적 (PATH / cwd / qmd 의존성 / 동시 wiki write race 4 후보).
-4. **§5.3 인제스트 증분 (P1)** — `plan/phase-5-todo.md §5.3.1` hash 기반 증분 재인제스트. Phase 4 §4.2.2 URI + source-registry hash 필드 완비 위에서 로직만 추가. wiki 재생성 무관.
-5. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus 등장 시 즉시 착수.
-6. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
-7. **§5.2 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임.
+1. `cat plan/phase-5-todo.md` — §5.2 + §5.2.9 완전 종결 → §5.3 / §5.4 진입 결정.
+2. **§5.3 인제스트 증분 (P1, 권장)** — `plan/phase-5-todo.md §5.3.1` hash 기반 증분 재인제스트. Phase 4 §4.2.2 URI + source-registry hash 필드 완비 위에서 로직만 추가. wiki 재생성 무관.
+3. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus 등장 시 즉시 착수.
+4. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
+5. **잔여 (별개)** — `reconcile case 3` walker 누락 root cause 추적 (§5.2.9 fix 는 후속 movePair 안전망. 잘못된 walker 마킹 자체 진단은 §5.8 영역).
+6. **§5.2 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임. 단 본 세션 §5.2.9 처럼 master 직접 실행 fallback 정상 활용.
 
 ---
 
@@ -29,7 +28,12 @@
 | 6 | §5.2.4 TOP_N 5 → 8 (config.ts + wikey.conf + query-pipeline fallback) | (regression) | PASS |
 | 7 | plan/phase-5-todox-5.2.1-crosslink.md 신설 (analyst v2 — codex P1 3건 정정) + phase-5-todo.md `## 관련 문서` 등재 | — | — |
 | 8 | §5.2.8 검증 (cycle smoke) — tester 분기 완료 → 4 PASS / 1 PARTIAL (495→fix) / 1 FAIL (observability ✓, qmd exit=1 = §5.8.3) | — | 4P/1Pa/1F |
-| 9 | §5.2.5 + §5.2.2 fix (commit `7ae636f`) — reindex.sh stderr 보존 + buildSynthesisPrompt "충분히 풍부하게" 지시 | regression | 다음 cycle smoke 시 재측정 |
+| 9 | §5.2.5 + §5.2.2 fix (commit `7ae636f`) — reindex.sh stderr 보존 + buildSynthesisPrompt "충분히 풍부하게" 지시 | regression | 다음 cycle smoke 재측정 |
+| 10 | §5.2.9 root cause = better-sqlite3 ABI mismatch (commit `f3dbbfa`) — `scripts/rebuild-qmd-deps.sh` 신규 + plugin defense Notice (NODE_MODULE_VERSION 패턴 감지 → specific 안내) | — | master CLI 환경 등가 검증 OK |
+| 11 | §5.2.9 findCompatibleNode 명시 fallback (commit `525c488`) — `/opt/homebrew/bin/node` 등 candidate 4단계 추가. 모든 nvm 후보 ABI fail 시 homebrew v24 시도 cache | — | console `qmd 호환 node 발견: /opt/homebrew/bin/node` ✓ |
+| 12 | §5.2.9 vec query hyphen → space (commit `fb88dad`) — query-pipeline.ts:251 가 `NanoVNA-V2` 같은 hyphenated word 의 `-` 를 negation 으로 오인 차단 | regression | qmd results: 5 ✓ + 답변 1533 chars + 15 wiki refs |
+| 13 | §5.2.9 ingest-current-note autoMove (commit `953c9cb`) — Cmd+Shift+I 가 inbox 파일 트리거 시 `autoMoveFromInbox: true` 자동 패스 | — | inbox→raw/3_resources/60_note/600_technology/ 자동 분류 + frontmatter rewrite + 답변 backlink 새 경로 ✓ |
+| 14 | §5.2.9 recordMove tombstone false 자동 (commit `aad98f8`) — `source-registry.ts:98` 가 `tombstone` field 안 건드리던 bug. `move = 파일 살아있음` 의미적 정합 | TDD 1 신규 (578/578) | 현 stale tombstone 직접 복구 + 후속 movePair 자연 복구 보장 |
 
 ---
 

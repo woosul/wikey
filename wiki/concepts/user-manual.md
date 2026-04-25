@@ -1,7 +1,7 @@
 ---
-title: swr
+title: user-manual
 type: concept
-concept_type: standard
+concept_type: document_type
 created: 2026-04-25
 updated: 2026-04-25
 sources: [nanovna-v2-notes.md]
@@ -11,9 +11,9 @@ provenance:
     ref: sources/sha256:5d96b65588a65d5a
 ---
 
-# swr
+# user-manual
 
-안테나 시스템에서 전송선로를 따라 진행하는 전압파와 반사되는 전압파의 비율을 나타내는 표준 지표.
+특정 제품이나 시스템의 사용 방법을 설명하는 문서 유형.
 
 ## 관련
 
@@ -21,6 +21,7 @@ provenance:
 - [[nanovna-qt]]
 - [[nanovna-v2]]
 - [[nanovna-v2-plus4]]
+- [[vector-network-analyzer]]
 
 ## 출처
 

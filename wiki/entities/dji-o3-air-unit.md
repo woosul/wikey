@@ -13,13 +13,17 @@ provenance:
 
 # dji-o3-air-unit
 
-DJI O3 Air Unit은 DJI의 FPV 드론 시스템에 사용되는 고성능 디지털 영상 전송 장치이다.
+DJI에서 개발한 FPV 드론용 디지털 영상 전송 시스템.
 
 ## 관련
 
-- [[mmcx]]
+- [[mmcx-connector]]
+- [[open-short-load-calibration]]
 - [[s-parameter]]
-- [[sma]]
+- [[s11]]
+- [[s21]]
+- [[sma-connector]]
+- [[smith-chart]]
 - [[swr]]
 
 ## 출처

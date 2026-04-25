@@ -1,5 +1,5 @@
 ---
-title: swr
+title: open-short-load-calibration
 type: concept
 concept_type: standard
 created: 2026-04-25
@@ -11,9 +11,9 @@ provenance:
     ref: sources/sha256:5d96b65588a65d5a
 ---
 
-# swr
+# open-short-load-calibration
 
-안테나 시스템에서 전송선로를 따라 진행하는 전압파와 반사되는 전압파의 비율을 나타내는 표준 지표.
+벡터 네트워크 분석기(VNA) 측정의 정확도를 높이기 위해 수행하는 표준 캘리브레이션 절차.
 
 ## 관련
 

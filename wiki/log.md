@@ -8,6 +8,41 @@ updated: 2026-04-25
 ## [2026-04-25] ingest | nanovna-v2-notes.md
 
 - 엔티티 생성: [[nanovna-v2]]
+- 엔티티 생성: [[nanovna-v2-plus4]]
+- 엔티티 생성: [[nanovna-qt]]
+- 엔티티 생성: [[dji-o3-air-unit]]
+- 개념 생성: [[swr]]
+- 개념 생성: [[s-parameter]]
+- 개념 생성: [[s11]]
+- 개념 생성: [[s21]]
+- 개념 생성: [[smith-chart]]
+- 개념 생성: [[sma-connector]]
+- 개념 생성: [[mmcx-connector]]
+- 개념 생성: [[open-short-load-calibration]]
+- 추가 소스: [[source-nanovna-v2-notes]]
+
+
+## [2026-04-25] ingest | nanovna-v2-notes.md
+
+- 엔티티 생성: [[nanovna-v2]]
+- 엔티티 생성: [[vector-network-analyzer]]
+- 엔티티 생성: [[nanovna-v2-plus4]]
+- 엔티티 생성: [[nanovna-qt]]
+- 엔티티 생성: [[dji-o3-air-unit]]
+- 개념 생성: [[user-manual]]
+- 개념 생성: [[standing-wave-ratio]]
+- 개념 생성: [[impedance]]
+- 개념 생성: [[s-parameter]]
+- 개념 생성: [[smith-chart]]
+- 개념 생성: [[sma-connector]]
+- 개념 생성: [[mmcx-connector]]
+- 개념 생성: [[open-short-load-calibration]]
+- 추가 소스: [[source-nanovna-v2-notes]]
+
+
+## [2026-04-25] ingest | nanovna-v2-notes.md
+
+- 엔티티 생성: [[nanovna-v2]]
 - 엔티티 생성: [[vna]]
 - 엔티티 생성: [[v2-plus4]]
 - 엔티티 생성: [[nanovna-qt]]

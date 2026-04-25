@@ -1,5 +1,5 @@
 ---
-title: swr
+title: standing-wave-ratio
 type: concept
 concept_type: standard
 created: 2026-04-25
@@ -11,9 +11,9 @@ provenance:
     ref: sources/sha256:5d96b65588a65d5a
 ---
 
-# swr
+# standing-wave-ratio
 
-안테나 시스템에서 전송선로를 따라 진행하는 전압파와 반사되는 전압파의 비율을 나타내는 표준 지표.
+전송선로에서 진행파와 반사파의 비율을 나타내는 값으로, 안테나 매칭 상태를 평가하는 데 사용되는 표준 지표.
 
 ## 관련
 
@@ -21,6 +21,7 @@ provenance:
 - [[nanovna-qt]]
 - [[nanovna-v2]]
 - [[nanovna-v2-plus4]]
+- [[vector-network-analyzer]]
 
 ## 출처
 

@@ -220,6 +220,44 @@ links:
 ### 5.2.7 (archived) Anthropic-style contextual chunk 재작성
 2026-04-25 archive — Phase 4 §4.5.1.5 v2 가 RAG chunk 패턴 자체 배격 결정과 충돌.
 
+### 5.2.9 plugin-only qmd `--quick` exit=1 root cause 진단·수정 (★ §5.8.3 W-C1 승격, commit `f3dbbfa`)
+
+**근본 원인 (master minimal-PATH 재현 으로 확증, 2026-04-25 15:08-15:14)**:
+- nvm node v22 (NODE_MODULE_VERSION 127) 로 처음 install → `tools/qmd/node_modules/better-sqlite3/build/Release/better_sqlite3.node` 가 v22 ABI 로 컴파일됨
+- plugin's execEnv (`env-detect.ts:64 makeEnv`) = login shell PATH (`zsh -l -c 'echo $PATH'`) → homebrew node v24 (NODE_MODULE_VERSION 137) 가 nvm bin 보다 앞에 위치 → qmd 의 `node "$DIR/dist/cli/qmd.js"` 가 v24 로 호출됨 → better-sqlite3 의 `process.dlopen` 에서 `ERR_DLOPEN_FAILED` (NODE_MODULE_VERSION 불일치)
+- CLI 단독 (cmux interactive shell) 은 nvm v22 우선 → 동일 ABI → exit=0. 그래서 master CLI 검증과 plugin ingest 동작이 갈렸음.
+
+**4 후보 매치**: (i) PATH/cwd → ✓ confirmed (PATH 순서 차이)와 (iv) qmd 자체 (ABI 미스매치) 의 결합. (ii) dyld 일반 / (iii) wiki write race 는 무관.
+
+**Fix 3건**:
+- `scripts/rebuild-qmd-deps.sh` (신규, 실행 가능) — login shell node 명시 사용해 better-sqlite3 강제 rebuild. nvm vs homebrew 어느 쪽 install 이든 plugin 이 쓸 node 와 ABI 매칭 보장. 사용자 node 업그레이드 후 재실행 가능.
+- `wikey-obsidian/src/commands.ts onFreshnessIssue` — stderr 의 `NODE_MODULE_VERSION` / `ERR_DLOPEN_FAILED` 패턴 감지 시 specific Notice 12s ("qmd 네이티브 모듈 ABI 불일치 — bash ./scripts/rebuild-qmd-deps.sh") 표시. 일반 인덱싱 실패와 구분.
+- `plan/phase-5-todo.md §5.2.9` 신설 + `§5.8.3 W-C1` alias 마크.
+
+**검증**:
+- master 가 `./scripts/rebuild-qmd-deps.sh` 1회 실행 — homebrew node v24 로 better-sqlite3 재빌드 완료 (15:09).
+- master 가 minimal PATH 환경 (homebrew node v24 강제) 에서 `bash ./scripts/reindex.sh --quick` → exit=0, 26초, 정상 동작 확증.
+- plugin 검증은 §5.2.8 재실행 cycle smoke (tester 분기) 결과 확정 후 closed.
+
+**후속 fix 4건 (cycle smoke 발견 → 본 세션 즉시 처리)**:
+
+| commit | 항목 | 변경 |
+|--------|------|------|
+| `525c488` | findCompatibleNode 명시 fallback | candidate iteration 4단계로 `/opt/homebrew/bin/node`, `/usr/local/bin/node`, `/usr/bin/node` 추가. 모든 nvm 후보 ABI fail 시도 homebrew v24 시도해서 cache → search 작동 |
+| `fb88dad` | vec query hyphen → space | `query-pipeline.ts:251` 가 question 의 hyphen 을 vec line 에 그대로 넘기던 것을 space 치환. qmd 의 `Negation (-term) is not supported in vec/hyde queries` 차단. 답변 1533 chars + 15 wiki refs 확증 |
+| `953c9cb` | ingest-current-note autoMove | `commands.ts:36` (Cmd+Shift+I) 가 inbox 파일 트리거 시 `autoMoveFromInbox: true` 자동 패스. 이전: ingest 후 원본 inbox 잔재 + frontmatter `vault_path` inbox 가리킴. 이후: raw/0_inbox/ → raw/3_resources/60_note/600_technology/ 자동 분류 + frontmatter rewrite + 답변 backlink 새 경로 |
+| `aad98f8` | recordMove tombstone false 자동 | `source-registry.ts:98` 의 `recordMove` 가 `tombstone` field 안 건드리던 bug. 이전 reconcile case 3 (walker 누락 → tombstone) 이 잘못 마킹한 record 가 후속 movePair 100번 해도 false 안 됨. `tombstone: false` 명시 추가 + TDD 신규 case + 현 stale tombstone 직접 복구 |
+
+**최종 검증** (master CDP cycle smoke 직접 실행, 2026-04-25 15:55-16:10):
+- console: `[Wikey] qmd 호환 node 발견: /opt/homebrew/bin/node` ✓
+- `qmd results: 5` (검색 정상) ✓
+- ingest-current-note → `inbox=False, resources=True` (movePair 작동) ✓
+- frontmatter `vault_path: raw/3_resources/60_note/600_technology/nanovna-v2-notes.md` ✓
+- 답변 `원본:` 새 경로 ✓
+- 답변 길이 1533/1304 chars + 11~15 wiki refs ✓
+
+**578/578 tests + build 0 errors. §5.2 + §5.2.9 완전 종결.**
+
 ### 5.2.8 검증 (cycle smoke) — 1차 완료, fix 적용 후 재검증 권장
 2026-04-25 tester 분기 (CDP UI smoke) — `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md`.
 

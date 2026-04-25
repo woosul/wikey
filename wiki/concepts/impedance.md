@@ -1,5 +1,5 @@
 ---
-title: swr
+title: impedance
 type: concept
 concept_type: standard
 created: 2026-04-25
@@ -11,9 +11,9 @@ provenance:
     ref: sources/sha256:5d96b65588a65d5a
 ---
 
-# swr
+# impedance
 
-안테나 시스템에서 전송선로를 따라 진행하는 전압파와 반사되는 전압파의 비율을 나타내는 표준 지표.
+교류 회로에서 전류의 흐름에 대한 저항을 나타내는 전기적 특성으로, 저항, 유도 리액턴스, 용량 리액턴스를 포함한다.
 
 ## 관련
 
@@ -21,6 +21,7 @@ provenance:
 - [[nanovna-qt]]
 - [[nanovna-v2]]
 - [[nanovna-v2-plus4]]
+- [[vector-network-analyzer]]
 
 ## 출처
 

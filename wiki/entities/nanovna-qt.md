@@ -13,13 +13,17 @@ provenance:
 
 # nanovna-qt
 
-NanoVNA-QT는 NanoVNA 장비를 제어하고 데이터를 시각화하는 오픈소스 소프트웨어 도구이다.
+NanoVNA 장비와 연동하여 데이터를 시각화하고 제어하는 오픈소스 소프트웨어.
 
 ## 관련
 
-- [[mmcx]]
+- [[mmcx-connector]]
+- [[open-short-load-calibration]]
 - [[s-parameter]]
-- [[sma]]
+- [[s11]]
+- [[s21]]
+- [[sma-connector]]
+- [[smith-chart]]
 - [[swr]]
 
 ## 출처

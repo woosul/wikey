@@ -1,5 +1,5 @@
 ---
-title: swr
+title: smith-chart
 type: concept
 concept_type: standard
 created: 2026-04-25
@@ -11,9 +11,9 @@ provenance:
     ref: sources/sha256:5d96b65588a65d5a
 ---
 
-# swr
+# smith-chart
 
-안테나 시스템에서 전송선로를 따라 진행하는 전압파와 반사되는 전압파의 비율을 나타내는 표준 지표.
+고주파 회로에서 임피던스 매칭 및 전송선 특성을 분석하는 데 사용되는 표준 그래픽 도구.
 
 ## 관련
 

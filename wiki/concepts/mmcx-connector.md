@@ -1,5 +1,5 @@
 ---
-title: swr
+title: mmcx-connector
 type: concept
 concept_type: standard
 created: 2026-04-25
@@ -11,9 +11,9 @@ provenance:
     ref: sources/sha256:5d96b65588a65d5a
 ---
 
-# swr
+# mmcx-connector
 
-안테나 시스템에서 전송선로를 따라 진행하는 전압파와 반사되는 전압파의 비율을 나타내는 표준 지표.
+소형 무선 주파수 애플리케이션에 사용되는 표준 마이크로 미니어처 동축 커넥터 유형.
 
 ## 관련
 

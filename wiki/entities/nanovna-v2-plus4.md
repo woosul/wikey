@@ -1,5 +1,5 @@
 ---
-title: nanovna-v2
+title: nanovna-v2-plus4
 type: entity
 entity_type: product
 created: 2026-04-25
@@ -11,9 +11,9 @@ provenance:
     ref: sources/sha256:5d96b65588a65d5a
 ---
 
-# nanovna-v2
+# nanovna-v2-plus4
 
-50kHz~3GHz 대역을 측정하는 소형 벡터 네트워크 분석기(VNA).
+NanoVNA V2의 확장 모델로, 4.4GHz까지 주파수 측정이 가능한 소형 벡터 네트워크 분석기.
 
 ## 관련
 

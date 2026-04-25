@@ -13,16 +13,14 @@ provenance:
 
 # s-parameter
 
-S-파라미터(Scattering parameter)는 고주파 회로 및 장치의 전기적 특성을 정의하는 표준 파라미터이다.
+고주파 회로 및 장치의 전기적 특성을 나타내는 표준 파라미터.
 
 ## 관련
 
-- [[dji]]
 - [[dji-o3-air-unit]]
 - [[nanovna-qt]]
 - [[nanovna-v2]]
-- [[v2-plus4]]
-- [[vna]]
+- [[nanovna-v2-plus4]]
 
 ## 출처
 
