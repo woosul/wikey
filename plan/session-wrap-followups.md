@@ -1,18 +1,33 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-25 session 10 — §5.1.2 over-mask + P2 분리 + example-placeholders 모듈 (commit 3f1fa6d) + §5.1.3 Obsidian CDP cycle smoke (NanoVNA 1 파일, master 직접) 완료**. **다음 진입점 = §5.2 (검색 재현율 + 답변 품질)** — `phase-5-todo.md §5.2.1~5` 단일 소스 (cycle smoke 발견 follow-up 5건 통합).
+> 최신 갱신: **2026-04-25 session 11 — §5.2.0~5 검색·답변 품질 6건 통합 코드 완료 (commit `f108e0c`, wikey-core 577/577 + build OK), CDP cycle smoke (§5.2.8) tester 분기 진행 중**. analyst plan + codex Mode D APPROVE_WITH_CHANGES P1 3건 정정 반영. **다음 진입점 = §5.2.8 cycle smoke 결과 확정 → §5.3 (인제스트 증분, P1) 또는 §5.4.1 (self-extending Stage 1, P2 비전 gate)**.
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-04-25 session 10 종료 시점)
+## 🎯 다음 세션 첫 액션 (2026-04-25 session 11 종료 시점)
 
-1. `cat plan/phase-5-todo.md` §5.2 — 진입점·작업 단위 확인. `★ 현 진입점` 섹션. 단일 소스.
-2. **§5.2.0 Ingest/Audit UI — paired sidecar.md row hide + 뱃지 + 카운트 정정 + tooltip** (사용자 요청 2026-04-25 종료 직전) — UI 레이어만 변경, 데이터 무관. 단위 테스트 + CDP UI smoke 검증.
-3. **(권장) §5.2.1 entity↔concept cross-link 자동 생성** — 답변 풍부도 결정적 fix. canonicalizer Stage 3 (`wikey-core/src/canonicalizer.ts`) 가 같은 ingest 사이클 entity↔concept 사이 wikilink 를 본문 `## 관련` H2 섹션에 자동 삽입. 측정: NanoVNA fixture 재실행 시 `nanovna-v2.md` 본문에 `[[smith-chart]]` 등 등장 확증.
-4. **§5.2.5 자동 reindex silent fail 진단** — `ingest-pipeline.ts:498 runReindexAndWait` 코드 wiring 정상인데 실측 stale. 4 후보 (race / PATH / quick metadata / timeout) 좁혀둠. routine: NanoVNA 재실행 + console log capture (`init-log` 후 끝까지 보존, 중간 capture-logs 금지) + `bash ./scripts/reindex.sh --quick` 단독 실행 + exit code/stderr/timestamp 측정.
-5. **§5.2 작업은 tester 1차 + master fallback** — 사용자 정책 (2026-04-25 update). Obsidian CDP UI smoke 가 tester 책임 (`~/.claude/skills/obsidian-cdp/SKILL.md §1` + `~/.claude/agents/tester.md` "CDP·E2E 검증 1차 책임").
-6. **샘플 위치 = `raw/0_inbox/`** — `commands.ts:442` 가드 (`autoMoveFromInbox && raw/0_inbox/`) 로 movePair 발동 조건. 본 세션 cycle smoke 는 `_delayed/` 라 IV.A 검증 누락 — skill `obsidian-cdp §6.0` 에 명시.
+1. `cat plan/phase-5-todo.md` — §5.2.8 검증 결과 + §5.3 / §5.4 진입 결정.
+2. **§5.2.8 cycle smoke 결과 확인** — 본 세션 tester 분기 결과 → `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md` 측정값 확인. PASS 항목 / FAIL 항목 / PARTIAL 항목 분류. FAIL 시 즉시 fix → 재실행.
+3. **(권장) §5.3 인제스트 증분 (P1)** — `plan/phase-5-todo.md §5.3.1` hash 기반 증분 재인제스트. Phase 4 §4.2.2 URI + source-registry hash 필드 완비 위에서 로직만 추가. 부분 재인제스트는 `section-index.ts parseSections` H2 단위 hash 매칭. wiki 재생성 무관.
+4. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus 등장 시 즉시 착수. PMBOK 하드코딩 외재화 + `SchemaOverride.standard_decompositions[]` 필드 추가. canonicalizer 의 `buildStandardDecompositionBlock(override)` 동적 로더.
+5. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
+6. **§5.2 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임 (`~/.claude/skills/obsidian-cdp/SKILL.md` + `~/.claude/agents/tester.md`).
+
+---
+
+## ✅ Session 11 종료 (2026-04-25, commit `f108e0c`) — 처리 완료 요약
+
+| # | 작업 | TDD | 결과 |
+|---|------|-----|------|
+| 1 | §5.2.0 paired sidecar.md UI (helper + 3 row builders + CSS + tooltip + 카운트 정정) | 17 unit | PASS |
+| 2 | §5.2.5 reindex silent fail observability + race fix (waitUntilFresh 진단 / onFreshnessOk callback / post-movePair re-reindex) | (existing tests) | PASS — silent fail 자체 제거 |
+| 3 | §5.2.1 ★ entity↔concept cross-link (canonicalizer applyCrossLinks helper) — analyst plan + codex APPROVE_WITH_CHANGES P1 3건 정정 반영 | 8 unit (codex P1-2 edge 3건 추가) | PASS |
+| 4 | §5.2.2 답변 prompt 강화 (wikilink 1-hop 활용 + 첫 등장 [[페이지명]] + 1-hop 참고 블록 지시) | 3 unit | PASS |
+| 5 | §5.2.3 검색 graph expansion (extractWikilinkBasenames + expandWithOneHopWikilinks helpers + 4-카테고리 resolve, cap 5) | 9 unit | PASS |
+| 6 | §5.2.4 TOP_N 5 → 8 (config.ts + wikey.conf + query-pipeline fallback) | (regression) | PASS |
+| 7 | plan/phase-5-todox-5.2.1-crosslink.md 신설 (analyst v2 — codex P1 3건 정정) + phase-5-todo.md `## 관련 문서` 등재 | — | — |
+| 8 | §5.2.8 검증 (cycle smoke) — tester 분기 진행 중 → `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md` | — | 진행 중 |
 
 ---
 

@@ -195,13 +195,33 @@ links:
 
 ---
 
-## 5.2 검색 재현율 + 답변 품질 (P1) ★ 현 진입점
+## 5.2 검색 재현율 + 답변 품질 (P1)
 > tag: #eval, #engine, #philosophy
 > **이전 번호**: `was §5.1`. 2026-04-25 §5.1.3 cycle smoke 후 검색·답변 품질 follow-up 5건 통합으로 재정의.
 
 **진입 조건 충족** (2026-04-25): §5.1.3 Obsidian CDP cycle smoke 가 검색·답변 단계의 결정적 결함 (entity↔concept cross-link 누락 + 자동 reindex silent fail + 답변 짧음) 을 정량 측정. wikey 철학 (RAG chunk 배제, H2 section 단위, 페이지 단위 검색 — Phase 4 §4.5.1.7.2 v2 결정) 정합 작업.
 
-(착수 전 — todo `plan/phase-5-todo.md §5.2` 단일 소스. 본 result §5.2 는 진입 시 timeline 시작.)
+### 5.2.0~5 통합 구현 (commit `f108e0c`, 2026-04-25)
+
+| § | 항목 | 변경 | TDD |
+|---|------|------|-----|
+| 5.2.0 | paired sidecar.md UI | wikey-core/paired-sidecar.ts (helper) + sidebar-chat.ts 3 row builders ([md] 뱃지 + tooltip + 카운트 정정) + styles.css | 17 unit |
+| 5.2.1 ★ | entity↔concept cross-link | canonicalizer.ts applyCrossLinks helper — `## 관련` H2 (description ↔ `## 출처` 사이) 결정적 양방향 wikilink | 8 unit (codex P1-2 edge 3건 추가 반영) |
+| 5.2.2 | 답변 prompt 강화 | buildSynthesisPrompt 에 wikilink 1-hop 활용 + 첫 등장 [[페이지명]] 링크 + 1-hop target 참고 블록 지시 3건 | 3 unit |
+| 5.2.3 | 검색 graph expansion | extractWikilinkBasenames + expandWithOneHopWikilinks pure helpers + buildContextFromFS/buildContextWithWikiFS 가 top-N 페이지의 wikilink 를 1-hop fetch (cap 5) | 9 unit |
+| 5.2.4 | TOP_N 5 → 8 | config.ts default + wikey.conf + query-pipeline fallback | (regression covered) |
+| 5.2.5 | reindex silent fail observability + race fix | waitUntilFresh timeout 시 last status + stale count 노출 / onFreshnessOk 신규 callback (성공 Notice) / commands.ts post-movePair re-reindex | (existing tests) |
+
+**unit 신규 37개 / wikey-core 577/577 passed / build 0 errors.** plan: `plan/phase-5-todox-5.2.1-crosslink.md` (analyst v2 + codex APPROVE_WITH_CHANGES P1 3건 정정 반영).
+
+### 5.2.6 (탐구) 페이지 H2 섹션 의미 활용
+(미착수 — §5.2.1~5 적용 후 정확도 부족 시 진입.)
+
+### 5.2.7 (archived) Anthropic-style contextual chunk 재작성
+2026-04-25 archive — Phase 4 §4.5.1.5 v2 가 RAG chunk 패턴 자체 배격 결정과 충돌.
+
+### 5.2.8 검증 (cycle smoke) — 진행 중
+2026-04-25: tester 분기 (CDP UI smoke). NanoVNA fixture 재실행 + 측정값 (cross-link / 답변 길이 / citation / reindex Notice) → `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md` (예정).
 
 ---
 

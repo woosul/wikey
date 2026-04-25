@@ -5,6 +5,17 @@ created: 2026-04-10
 updated: 2026-04-25
 ---
 
+## [2026-04-25] phase-5 | §5.2.0~5 검색·답변 품질 6건 통합 (commit f108e0c)
+
+- **§5.2.0 paired sidecar.md UI** — `wikey-core/paired-sidecar.ts` 신규 (helper + 17 unit tests). `wikey-obsidian/sidebar-chat.ts` 의 Ingest list / Audit list / Audit tree 3 row builders 모두 `<base>.<ext>.md` row 숨김 + `<base>.<ext>` row 에 [md] 뱃지 (`.wikey-pair-sidecar-badge` CSS) + tooltip (`📄 sidecar` + `📅 created`) + 카운트 정정 (auditData filter 후 ingested/missing/total 재계산). UI 레이어만 변경 — registry/movePair/wiki/ 데이터 무관.
+- **§5.2.1 ★ entity↔concept cross-link** — `canonicalizer.ts` `applyCrossLinks` helper 신규. 같은 ingest 사이클 entity ↔ concept 사이 결정적 양방향 wikilink. `## 관련` H2 (description ↔ `## 출처` 사이) + alphabetical bullets. self-link 차단. FORCED_CATEGORIES post-pin 적용. plan: `phase-5-todox-5.2.1-crosslink.md` (analyst v2). codex Mode D Panel APPROVE_WITH_CHANGES → P1 3건 정정 (baseline 4건 / TDD edge 3건 추가 / option B scope 명시) 반영. 8 unit tests (happy, empty, concept-only, FORCED_CATEGORIES post-pin, determinism, SLUG_ALIASES self-link, dual-pool, rebuild idempotent).
+- **§5.2.2 답변 prompt 강화** — `query-pipeline.ts buildSynthesisPrompt` 에 (1) 검색 페이지 본문 `wikilink` 활용 (2) 답변 첫 등장 entity/concept 을 `페이지명` 으로 링크 (3) "참고:" 블록에 직접 인용 + 1-hop target 모두 나열 — 3 지시 추가. 3 unit tests.
+- **§5.2.3 검색 graph expansion** — `extractWikilinkBasenames` + `expandWithOneHopWikilinks` pure helpers (5 tests). `buildContextFromFS` / `buildContextWithWikiFS` 가 top-N 페이지 본문의 `wikilink` parse → wiki/{entities,concepts,sources,analyses}/<base>.md 4-카테고리 resolve → cap 5 추가 fetch (frequency desc, first-seen tie-break). 4 unit tests.
+- **§5.2.4 TOP_N default 5 → 8** — `config.ts` + `wikey.conf` + query-pipeline fallback 모두 8.
+- **§5.2.5 reindex silent fail observability + race fix** — `waitUntilFresh` timeout 시 last status + stale count 노출 (진단성). `ingest-pipeline.ts` `onFreshnessOk` callback 신규 (성공 시 plugin 이 Notice "✓ 검색 인덱스 최신 (Xs)" 발동 — silent fail 자체 제거). `commands.ts` post-movePair re-reindex (autoMove 로 인한 wiki/sources/source-*.md frontmatter rewrite 가 STAMP_FILE 갱신 후 발생해 stale 트리거하던 race 차단).
+- **검증**: `npx vitest run wikey-core/src/` → 577/577 (37 신규). `npm run build` 0 errors (core + obsidian). CDP UI cycle smoke = §5.2.8 tester 분기 진행 중.
+- 참조: `activity/phase-5-result.md §5.2.0~5`, `plan/phase-5-todox-5.2.1-crosslink.md`, `plan/phase-5-todo.md §5.2`.
+
 ## [2026-04-25] phase-5 | §5.1 over-mask fix + P2 분리 + cycle smoke (master 직접)
 
 - **§5.1.2 Phase A** (commit `5e32ec4`) — `ceo-multiline-form.valueExcludePrefixes` 13 라벨 추가 + `isCandidateExcluded` same-line 전체 토큰 검사. master CDP smoke 발견 over-mask 4건 (`등기일`/`주소`/`서울시 어`/`딘가`) 차단. 회귀 테스트 `pii-over-mask-prevention.test.ts` 2건 신규. 539/539 pass.
