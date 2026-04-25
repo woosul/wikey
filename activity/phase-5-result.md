@@ -737,21 +737,126 @@ if ('skipped' in result) {
 
 **Wiki 재생성 없음 확증**: 본 §5.3 변경은 ingest pipeline 의 진입 분기 + Hook 3곳 추가 + helper 신규 + audit-ingest 컬럼 5개 추가 + plugin Modal 신규. 기존 Phase 4 데이터 (registry, wiki, qmd) 는 모두 backwards compat 으로 read 가능. legacy record 는 skip-with-seed 분기로 자동 마이그레이션.
 
-### 5.3.12 후속 작업 (out-of-scope, 별도 plan)
+### 5.3.12 후속 follow-up #10/#11 종결 (2026-04-25 session 12 추가 작업)
 
-본 §5.3 plan v11 acceptance 충족. 다음은 향후 follow-up:
+본 세션 PMS 실 ingest 분석 + 사용자 통찰 ("어떤 경우엔 raw, 어떤 경우엔 sidecar 가 연결") 에서 도출된 GAP 2건. plan v11 미커버 영역. 사용자 지시로 동일 세션에서 즉시 해결.
 
-1. **`.md.new` 자동 cleanup** (P2-1) — 다음 ingest 시 사용자가 promote/삭제 한 항목 자동 detect → `clearPendingProtection`
-2. **dashboard/audit panel UI 시각화** — 5 신규 audit 컬럼을 사용자 가시화 (배지/필터, §5.2.0 v3 broken state badge 와 통합)
-3. **`user_marker_headers` config 노출** — `.wikey/wikey.conf` 또는 schema-override 에 사용자 정의 헤더 추가
-4. **★ entity/concept page user marker 보호** — 본 plan 은 source page 한정. LLM 결정적 출력 + 우연 H2 등장 분석 후 도입
-5. **Hash perf** — file size + mtime 1차 필터 후 hash (대용량 corpus)
-6. **CLI 진입점** — `wikey ingest --force` `--diff-only` 플래그
-7. **Section-level diff** — H2 단위 hash 매칭으로 부분 재인제스트
-8. **Tombstone restore + sidecar_hash 정합성**
-9. **Python ↔ TS NFC 일관성 자동 검증** (cross-language smoke)
-10. **★ R == null + paired sidecar 미보호 GAP fix** — `unmanaged-paired-sidecar` conflict 신규 (본 세션 PMS ingest 분석에서 도출)
-11. **★ entity/concept `## 출처` wikilink broken link fix** — `[[<basename>]]` (확장자 없음) 이 paired sidecar 형식 (`<base>.<ext>.md`) 과 매칭 안 됨 → `[[source-<slug>]]` 표준화 또는 alias 형식. 단독 md 는 영향 없음
+#### 5.3.12.1 #10 fix — R==null + paired sidecar 보호
+
+**파일**: `wikey-core/src/source-registry.ts` (ConflictKind union 확장), `wikey-core/src/incremental-reingest.ts` (Phase A + Phase B), `wikey-core/src/ingest-pipeline.ts` (Hook 1 + Hook 3 + pending_protections kind 분기), `wikey-core/src/__tests__/incremental-reingest.test.ts` (+4 신규 case).
+
+**ConflictKind 확장**:
+```ts
+export type ConflictKind =
+  | 'sidecar-user-edit'
+  | 'source-page-user-edit'
+  | 'duplicate-hash'
+  | 'orphan-sidecar'
+  | 'legacy-no-sidecar-hash'
+  | 'unmanaged-paired-sidecar'   // ★ 신규 — R==null + disk sidecar 존재
+```
+
+**decideReingest Phase A 확장** — `R == null && diskSidecarExists` 시 `'unmanaged-paired-sidecar'` push:
+```ts
+if (R == null && diskSidecarExists) {
+  conflicts.push('unmanaged-paired-sidecar')
+}
+```
+
+**Phase B `R == null` 분기 재구성** (이전: 무조건 force):
+```ts
+if (R == null) {
+  if (conflicts.length === 0) → action='force', reason='new-source'
+  else if (onConflict provided) → action='prompt', reason='new-source'
+  else → action='protect', reason='new-source'
+}
+```
+
+**Hook 1 (`isSidecarProtect`) + Hook 3 (`isSidecarProtected`) 조건 확장** — `'unmanaged-paired-sidecar'` 도 sidecar 보호 분기:
+```ts
+const isSidecarProtect = protectMode &&
+  (conflicts.includes('sidecar-user-edit') ||
+   conflicts.includes('legacy-no-sidecar-hash') ||
+   conflicts.includes('unmanaged-paired-sidecar'))   // ★ #10
+```
+
+**pending_protections kind 분기 확장**:
+```ts
+const conflict = decision.conflicts.includes('sidecar-user-edit')
+  ? 'sidecar-user-edit'
+  : decision.conflicts.includes('unmanaged-paired-sidecar')   // ★ #10
+  ? 'unmanaged-paired-sidecar'
+  : 'legacy-no-sidecar-hash'
+```
+
+**Test (RED → GREEN)** — 4 신규 case (24 → 28 total):
+- case A: R==null + disk sidecar → action='protect', conflicts=['unmanaged-paired-sidecar']
+- case B: R==null + disk sidecar + onConflict → action='prompt'
+- case C: R==null + disk sidecar 부재 → action='force' (이전 동작 유지, 회귀 0)
+- case D: hwp 파일에 paired md → 'unmanaged-paired-sidecar' (md/pdf 외 포맷도 동일)
+
+**Acceptance**: 24 → 28 PASS. 회귀 0. build 0 errors.
+
+#### 5.3.12.2 #11 fix — entity/concept `## 출처` wikilink alias 표준화
+
+**파일**: `wikey-core/src/canonicalizer.ts` (`buildPageContent` 의 `## 출처` 형식), `wikey-core/src/__tests__/canonicalizer.test.ts` (+4 신규 case), `scripts/fix-source-wikilinks.py` 신규 (one-off bulk fix script).
+
+**형식 변경 (`buildPageContent`)**:
+```diff
+- - [[${sourceFilename.replace(/\.[^.]+$/, '')}]]
++ const lower = sourceFilename.toLowerCase()
++ const sidecarRef = lower.endsWith('.md') || lower.endsWith('.txt')
++   ? sourceFilename
++   : `${sourceFilename}.md`
++ const sourceDisplay = sourceFilename.replace(/\.[^.]+$/, '')
++ - [[${sidecarRef}|${sourceDisplay}]]
+```
+
+결과:
+- PDF: `[[PMS_제품소개_R10_20220815.pdf.md|PMS_제품소개_R10_20220815]]` — sidecar md 로 resolve, 화면에 raw basename 표시
+- 단독 md: `[[note.md|note]]` — 자체로 resolve (`.md.md` 가 되지 않음)
+- HWP: `[[doc.hwp.md|doc]]` — 단독 md 와 동일 패턴
+- TXT: `[[plain.txt|plain]]` — 자체로 resolve (sidecar 미생성 정책 정합)
+
+**Test (RED → GREEN)** — 4 신규 case (53 → 57 total):
+- paired pdf alias 형식 + 이전 broken 형식 잔존 안 함
+- 단독 md alias 형식 + `.md.md` 미발생 검증
+- hwp alias 형식
+- txt alias 형식 (sidecar 미생성)
+
+**기존 vault broken link 일괄 fix script** (`scripts/fix-source-wikilinks.py`):
+- `wiki/sources/source-*.md` frontmatter 의 `vault_path` 읽어 source index 구축
+- `wiki/entities/*.md` + `wiki/concepts/*.md` 의 `## 출처` 섹션 안 `- [[<basename>]]` (alias 아닌 형태) 매칭 시 alias 형식으로 교체
+- idempotent — 이미 alias 형식이면 skip
+- `LINE_RE = /^(- \[\[)([^\]\|]+)(\]\])\s*$/m` — `|` 없는 형태만 매칭 (alias 형식 무시)
+
+**일괄 fix 실행 결과**:
+- source index: 2 entries (NanoVNA + PMS)
+- 36 페이지 fix: PMS 6 entities/9 concepts + NanoVNA 4 entities (nanovna-v2 / nanovna-v2-plus4 / vector-network-analyzer / vna 등) + 11 concepts + 2 source 페이지의 자체 entity 도 포함
+- ★ 0 unchanged → 모든 페이지가 broken 형식이었음 (cycle smoke 잔재 정리 후 남은 것 모두 해당)
+
+**CDP unresolvedLinks 재검증** — fix 후:
+- `wiki/entities/lotus-pms.md` unresolvedLinks: `{}` (이전: `{ PMS_제품소개_R10_20220815: 1 }`)
+- resolvedLinks count: 9 → **10** (출처 link 가 resolved 로 이동)
+- `metadataCache.getFirstLinkpathDest('PMS_제품소개_R10_20220815.pdf.md', ...)` → resolved (sidecar md 로 매칭)
+
+**Acceptance**: 53 → 57 canonicalizer test PASS. 36 wiki 페이지 broken link 모두 fix. CDP 검증 unresolved 0.
+
+#### 5.3.12.3 회귀 + Build (#10 + #11 합산)
+
+- wikey-core test: 640 → **648 PASS** (+8 신규: #10 +4 + #11 +4)
+- build 0 errors (core + obsidian, 1 import.meta warning 기존)
+- plugin reload 완료
+- 잔여 follow-up (다음 세션):
+  - `.md.new` 자동 cleanup (P2-1)
+  - dashboard/audit panel UI 시각화 (5 신규 컬럼 배지)
+  - `user_marker_headers` config 노출
+  - entity/concept page user marker 보호 (LLM 결정적 출력 분석 후)
+  - Hash perf (file size + mtime 1차 필터)
+  - CLI `--force` `--diff-only` 플래그
+  - Section-level diff (H2 단위 hash 매칭)
+  - Tombstone restore + sidecar_hash 정합성
+  - Python ↔ TS NFC cross-language 자동 검증
 
 ---
 

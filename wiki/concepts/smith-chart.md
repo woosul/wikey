@@ -24,4 +24,4 @@ provenance:
 
 ## 출처
 
-- [[nanovna-v2-notes]]
+- [[raw/3_resources/60_note/600_technology/nanovna-v2-notes.md|nanovna-v2-notes]]

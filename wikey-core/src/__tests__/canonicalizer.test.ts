@@ -701,6 +701,86 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
     }
   })
 
+  // §5.3 follow-up #11 — entity/concept '## 출처' wikilink alias 형식 (broken link 방지)
+  it('## 출처 — paired pdf source: alias 형식 [[<base>.pdf.md|<base>]]', async () => {
+    const mentions: Mention[] = [{ name: 'lotus-pms', type_hint: 'product', evidence: 'p' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [{ name: 'lotus-pms', type: 'product', description: 'PMS product.' }],
+        concepts: [],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'PMS_제품소개_R10_20220815.pdf',
+    })
+    const lotus = result.entities[0].content
+    // alias: link target = sidecar md (paired), display = raw basename
+    expect(lotus).toContain('## 출처')
+    expect(lotus).toContain(
+      '[[PMS_제품소개_R10_20220815.pdf.md|PMS_제품소개_R10_20220815]]',
+    )
+    // 이전 broken 형식이 잔존하지 않아야 (basename only without alias)
+    expect(lotus).not.toMatch(/\[\[PMS_제품소개_R10_20220815\]\]/)
+  })
+
+  it('## 출처 — 단독 md source: alias 형식 [[note.md|note]] (단독 md 자체)', async () => {
+    const mentions: Mention[] = [{ name: 'topic', type_hint: 'standard', evidence: 't' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{ name: 'topic', type: 'standard', description: 'A topic.' }],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'note.md',
+    })
+    const topic = result.concepts[0].content
+    expect(topic).toContain('[[note.md|note]]')
+    // 단독 md 는 .md.md 가 되지 않아야 함
+    expect(topic).not.toContain('note.md.md')
+  })
+
+  it('## 출처 — hwp source: alias 형식 [[doc.hwp.md|doc]]', async () => {
+    const mentions: Mention[] = [{ name: 'foo', type_hint: 'standard', evidence: 'e' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{ name: 'foo', type: 'standard', description: 'Foo.' }],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'doc.hwp',
+    })
+    expect(result.concepts[0].content).toContain('[[doc.hwp.md|doc]]')
+  })
+
+  it('## 출처 — txt source: alias 형식 [[plain.txt|plain]] (txt 자체, sidecar 미생성 정책 정합)', async () => {
+    const mentions: Mention[] = [{ name: 'bar', type_hint: 'standard', evidence: 'e' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{ name: 'bar', type: 'standard', description: 'Bar.' }],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'plain.txt',
+    })
+    expect(result.concepts[0].content).toContain('[[plain.txt|plain]]')
+    expect(result.concepts[0].content).not.toContain('plain.txt.md')
+  })
+
   it('regression: cross-link is computed AFTER FORCED_CATEGORIES pin (restful-api → concept)', async () => {
     // restful-api is pinned to concept/standard via FORCED_CATEGORIES.
     // LLM mistakenly puts it in entities → pin moves to concept → cross-link must

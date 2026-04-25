@@ -1,19 +1,36 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-25 session 12 종결 — §5.3.1 + §5.3.2 6-step TDD + cycle smoke 5/5 + PMS 실 ingest + 후속 follow-up 4건 모두 완료** (회귀 584 → 640 PASS, build 0 errors). plan v11 (codex APPROVE_WITH_CHANGES, P1 0건) 6-step 모두 GREEN. **다음 진입점 = §5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** 또는 §5.3 후속 follow-up (#10 R==null+paired sidecar 미보호, #11 entity/concept 출처 wikilink broken link fix).
+> 최신 갱신: **2026-04-25 session 12 종결 — §5.3 plan v11 6-step + cycle smoke 5/5 + PMS 실 ingest + 후속 follow-up 4건 + 추가 #10/#11 GAP 도 모두 fix** (회귀 584 → **648 PASS**, build 0 errors). plan v11 acceptance + 본 세션 분석에서 도출된 GAP 모두 GREEN. **다음 진입점 = §5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate, 두 번째 표준 corpus 대기)** 또는 잔여 §5.3 follow-up (`.md.new` cleanup / dashboard UI / hash perf / section-level diff 등).
 > 생성일: 2026-04-10
 
 ---
 
 ## 🎯 다음 세션 첫 액션 (2026-04-25 session 12 종료 시점)
 
-1. `cat plan/phase-5-todo.md` — §5.3 종결 표시 → §5.4 진입 또는 §5.3 후속 follow-up (#10/#11) 선택.
-2. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus (ISO/ITIL/GDPR 등) 등장 시 즉시 착수. PMBOK 의 v7-5 Stage 0 사전 검증 결과 (Concepts CV <15% 도달 여부) 가 gate.
-3. **§5.3 후속 follow-up #10 — R==null + paired sidecar 미보호 GAP fix**: 본 session PMS ingest 분석에서 도출. `decideReingest` 의 conflict 수집 로직에 `R == null && diskSidecarBytes != null` 시 'unmanaged-paired-sidecar' push → 첫 ingest 도 사용자 paired sidecar 보호. plan v11 미커버.
-4. **§5.3 후속 follow-up #11 — entity/concept `## 출처` wikilink broken link fix**: `[[<basename>]]` (확장자 없음) 이 paired sidecar 형식 (`<base>.<ext>.md`) 과 매칭 안 됨 → `[[source-<slug>]]` 표준화 또는 alias 형식. 단독 md (NanoVNA) 는 정상이므로 영향 범위 = paired pdf/hwp/docx/...
-5. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
-6. **잔여 (별개)** — `reconcile case 3` walker 누락 root cause 추적 (§5.2.9 fix 는 후속 movePair 안전망. 잘못된 walker 마킹 자체 진단은 §5.8 영역).
-7. **§5.2/§5.3 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임. 본 session 12 처럼 master 직접 cycle smoke 5-step 실행도 정상 fallback.
+1. `cat plan/phase-5-todo.md` — §5.3 종결 + #10/#11 fix 확인 → §5.4 진입 또는 잔여 follow-up 선택.
+2. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus (ISO/ITIL/GDPR 등) 등장 시 즉시 착수. PMBOK 의 v7-5 Stage 0 사전 검증 결과 (Concepts CV <15% 도달 여부) 가 gate. 현재 PMBOK 1 corpus 만 있어 진입 의미 적음.
+3. **§5.3 잔여 follow-up (out-of-scope, 우선순위 낮음)**:
+   - `.md.new` 자동 cleanup (P2-1) — 다음 ingest 시 사용자가 promote/삭제 한 항목 자동 detect → `clearPendingProtection`
+   - dashboard/audit panel UI 시각화 — 5 신규 audit 컬럼 배지/필터
+   - `user_marker_headers` config 노출 — `.wikey/wikey.conf` 에 사용자 정의 헤더 추가
+   - entity/concept page user marker 보호 — LLM 결정적 출력 분석 후 도입
+   - Hash perf (file size + mtime 1차 필터) — 대용량 corpus 대응
+   - CLI `wikey ingest --force` `--diff-only` 플래그
+   - Section-level diff (H2 단위 hash 매칭) — 부분 재인제스트
+   - Tombstone restore + sidecar_hash 정합성
+   - Python ↔ TS NFC 일관성 자동 검증 (cross-language smoke)
+4. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
+5. **잔여 (별개)** — `reconcile case 3` walker 누락 root cause 추적 (§5.2.9 fix 는 후속 movePair 안전망. 잘못된 walker 마킹 자체 진단은 §5.8 영역).
+6. **§5.2/§5.3 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임. 본 session 12 처럼 master 직접 cycle smoke 5-step 실행도 정상 fallback.
+
+---
+
+## ✅ Session 12 추가 fix (2026-04-25, follow-up #10/#11)
+
+| # | 작업 | 결과 |
+|---|------|-----|
+| #10 | R==null + paired sidecar 보호 — ConflictKind 에 `unmanaged-paired-sidecar` 추가 + decideReingest Phase A/B 확장 + Hook 1/3 조건 확장 + pending_protections kind 분기 | 4 신규 test PASS (24 → 28) |
+| #11 | entity/concept `## 출처` alias 표준화 — `buildPageContent` 의 wikilink 형식 변경 + 4 신규 canonicalizer test (53 → 57) + `scripts/fix-source-wikilinks.py` one-off bulk script (36 페이지 일괄 fix) | CDP unresolvedLinks 검증 lotus-pms `{}` |
 
 ---
 

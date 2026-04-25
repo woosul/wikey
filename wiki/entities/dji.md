@@ -24,4 +24,4 @@ DJI는 중국의 드론 및 항공 촬영 기술 전문 기업이다.
 
 ## 출처
 
-- [[nanovna-v2-notes]]
+- [[raw/3_resources/60_note/600_technology/nanovna-v2-notes.md|nanovna-v2-notes]]

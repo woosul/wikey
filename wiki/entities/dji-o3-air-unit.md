@@ -28,4 +28,4 @@ DJI에서 개발한 FPV 드론용 디지털 영상 전송 시스템.
 
 ## 출처
 
-- [[nanovna-v2-notes]]
+- [[raw/3_resources/60_note/600_technology/nanovna-v2-notes.md|nanovna-v2-notes]]

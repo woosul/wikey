@@ -5,6 +5,15 @@ created: 2026-04-10
 updated: 2026-04-25
 ---
 
+## [2026-04-25] phase-5 | §5.3 follow-up #10 + #11 종결 (R==null+paired sidecar 보호 + 출처 wikilink 표준화)
+
+- **#10 R==null + paired sidecar 보호**: `ConflictKind` 에 `'unmanaged-paired-sidecar'` 추가. `decideReingest` Phase A 에서 `R == null && diskSidecarExists` 시 push. Phase B `R == null` 분기 재구성 (conflicts=[] → force / onConflict → prompt / else → protect). Hook 1 + Hook 3 + pending_protections kind 분기 모두 확장. PMS 같은 paired pdf 첫 ingest 시 사용자가 미리 만들어 둔 paired sidecar (docling 사전 변환 등) 보호. 4 신규 test PASS.
+- **#11 entity/concept '## 출처' wikilink alias 표준화**: canonicalizer.ts `buildPageContent` 의 `## 출처` 를 `[​[<sidecar path>|<basename without ext>]​]` alias 형식으로 변경. sidecar 파일 규칙 derive (`.md`/`.txt` 자체, 그 외 `<base>.<ext>.md`). PDF: `[​[PMS_..pdf.md|PMS_..]​]`, 단독 md: `[​[note.md|note]​]`. Obsidian metadataCache 가 정확히 resolve. 4 신규 test PASS.
+- **기존 vault broken link 일괄 fix**: `scripts/fix-source-wikilinks.py` one-off script 작성 + 실행. wiki/sources frontmatter 의 vault_path 읽어 source index 구축 → entity/concept '## 출처' 의 `[​[<basename>]​]` (alias 아닌 형태) 매칭 시 alias 형식으로 교체. 멱등 (이미 alias 면 skip). 36 페이지 fix (PMS 9 + NanoVNA 27).
+- **CDP unresolvedLinks 검증**: lotus-pms.md unresolvedLinks `{}` (이전: `{ PMS_..: 1 }`), resolvedLinks count 9 → 10 (출처 link 정상 resolve). PDF sidecar 매칭 정상.
+- **회귀**: 640 → **648 PASS** (+8 신규). build 0 errors (core + obsidian).
+- 참조: `activity/phase-5-result.md §5.3.12`, `plan/phase-5-todox-5.3.1-incremental-reingest.md` 후속 follow-up #10/#11.
+
 ## [2026-04-25] phase-5 | §5.3 hash 기반 증분 재인제스트 + sidecar/wiki 사용자 수정 보호 (plan v11 6-step TDD 종결)
 
 - **§5.3.1 + §5.3.2 결합 종결** — `plan/phase-5-todox-5.3.1-incremental-reingest.md` v11 (codex Mode D APPROVE_WITH_CHANGES, 11 cycle 수렴 P1 0건). 6-step TDD 모두 GREEN.

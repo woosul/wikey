@@ -26,11 +26,23 @@ done
 # Wikilink는 wiki/ 내 .md 또는 raw/ 내 임의 파일(PDF/이미지 등)을 가리킬 수 있음.
 # Obsidian은 파일명 기반 자동 해결이라 위치 무관.
 echo "=== 검증 2: 위키링크 확인 ==="
+# Wikilink 형식 모두 지원 (§5.3 follow-up #11):
+#   [[basename]]               — vault 안의 같은 basename .md 또는 raw/<basename>.<any> 매칭
+#   [[<vault path>]]           — full path 직접 존재 (raw/.../*.md 등 sidecar 포함)
+#   [[<vault path>|<display>]] — alias 형식. link 부분 = | 앞쪽 (perl 에서 /\|/ 로 split)
 find "$WIKI_DIR" -name "*.md" -print0 | while IFS= read -r -d '' file; do
-  perl -ne 'while (/\[\[([^\]|]+)/g) { print "$1\n" }' "$file" | while read -r link; do
+  perl -ne 'while (/\[\[([^\]]+)\]\]/g) { my $l = $1; $l =~ s/\|.*//; print "$l\n" }' "$file" | while read -r link; do
+    # path 형태 (`/` 포함) 면 vault root 기준으로 직접 존재 검사
+    if printf '%s' "$link" | grep -q '/'; then
+      if [ -f "$link" ]; then
+        continue
+      fi
+      error "$file: 깨진 위키링크 [[${link}]]"
+      continue
+    fi
+    # basename 형태 — wiki/ 안 .md 매칭 우선, 없으면 raw/ 안 임의 확장자
     found=$(find "$WIKI_DIR" -name "${link}.md" -print -quit 2>/dev/null)
     if [ -z "$found" ]; then
-      # wiki/ .md에 없으면 raw/에서 임의 확장자 허용 (PDF, 이미지 등)
       found=$(find raw -name "${link}.*" -print -quit 2>/dev/null)
     fi
     if [ -z "$found" ]; then

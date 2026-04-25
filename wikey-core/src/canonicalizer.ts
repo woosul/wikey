@@ -483,6 +483,18 @@ ${relatedLinks.map((b) => `- [[${b}]]`).join('\n')}
 
 `
     : ''
+  // §5.3 follow-up #11 — entity/concept '## 출처' wikilink 표준화.
+  // 이전: [[<basename without ext>]] 형식 — Obsidian wikilink resolver 가 .md 파일만 매칭하므로
+  //       paired pdf/hwp 등의 sidecar (`<base>.<ext>.md`) basename 과 안 맞아 unresolved.
+  // 변경: alias `[[<sidecar path>|<basename without ext>]]` — sidecar 파일 규칙 derive
+  //       (`.md`/`.txt` 자체, 그 외 `<base>.<ext>.md`). sidecar 가 vault 에 있으면 resolve OK,
+  //       화면 display 는 raw basename 으로 짧게.
+  const lowerSrc = sourceFilename.toLowerCase()
+  const sidecarRef =
+    lowerSrc.endsWith('.md') || lowerSrc.endsWith('.txt')
+      ? sourceFilename
+      : `${sourceFilename}.md`
+  const sourceDisplay = sourceFilename.replace(/\.[^.]+$/, '')
   return `---
 title: ${name}
 type: ${category}
@@ -499,7 +511,7 @@ ${description}
 
 ${relatedSection}## 출처
 
-- [[${sourceFilename.replace(/\.[^.]+$/, '')}]]
+- [[${sidecarRef}|${sourceDisplay}]]
 `
 }
 

@@ -325,7 +325,8 @@ export async function ingest(
   const isSidecarProtect =
     protectMode &&
     (decision.conflicts.includes('sidecar-user-edit') ||
-      decision.conflicts.includes('legacy-no-sidecar-hash'))
+      decision.conflicts.includes('legacy-no-sidecar-hash') ||
+      decision.conflicts.includes('unmanaged-paired-sidecar'))
   const isSourcePageProtect =
     protectMode && decision.conflicts.includes('source-page-user-edit')
 
@@ -715,8 +716,11 @@ export async function ingest(
 
     // protect 분기: pending_protections append (canonical 미변경 표식)
     if (protectedSidecarPath) {
+      // 우선순위: sidecar-user-edit > unmanaged-paired-sidecar > legacy-no-sidecar-hash
       const conflict = decision.conflicts.includes('sidecar-user-edit')
         ? 'sidecar-user-edit'
+        : decision.conflicts.includes('unmanaged-paired-sidecar')
+        ? 'unmanaged-paired-sidecar'
         : 'legacy-no-sidecar-hash'
       reg = appendPendingProtection(reg, v3Meta.id, {
         kind: 'sidecar-md-new',

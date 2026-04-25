@@ -522,3 +522,67 @@ describe('USER_MARKER_HEADERS exposes default headers', () => {
     expect(USER_MARKER_HEADERS).toContain('## 메모')
   })
 })
+
+// §5.3 follow-up #10 — R==null + paired sidecar 보호 (PMS ingest 분석 도출)
+describe('decideReingest follow-up #10 — unmanaged-paired-sidecar', () => {
+  it('case A — R==null + disk sidecar 존재 → action=protect, conflicts=[unmanaged-paired-sidecar]', async () => {
+    const fs = new MemoryFS()
+    await seedRegistryToFS(fs, {})
+    const bytes = new TextEncoder().encode('first-ingest-with-paired-sidecar')
+    // 사용자가 미리 만들어둔 paired sidecar (docling 사전 변환 등)
+    await fs.write('raw/x.pdf.md', '# user-prepared sidecar\n사용자 정리 본문')
+    const decision = await decideReingest({
+      sourcePath: 'raw/x.pdf',
+      sourceBytes: bytes,
+      wikiFS: fs,
+    })
+    expect(decision.action).toBe('protect')
+    expect(decision.reason).toBe('new-source')
+    expect(decision.conflicts).toContain('unmanaged-paired-sidecar')
+  })
+
+  it('case B — R==null + disk sidecar 존재 + onConflict 제공 → action=prompt', async () => {
+    const fs = new MemoryFS()
+    await seedRegistryToFS(fs, {})
+    const bytes = new TextEncoder().encode('first-ingest-prompt')
+    await fs.write('raw/y.pdf.md', '# user sidecar')
+    const decision = await decideReingest({
+      sourcePath: 'raw/y.pdf',
+      sourceBytes: bytes,
+      wikiFS: fs,
+      onConflict: async () => 'preserve',
+    })
+    expect(decision.action).toBe('prompt')
+    expect(decision.conflicts).toContain('unmanaged-paired-sidecar')
+  })
+
+  it('case C — R==null + disk sidecar 부재 → action=force (이전 동작 유지)', async () => {
+    const fs = new MemoryFS()
+    await seedRegistryToFS(fs, {})
+    const bytes = new TextEncoder().encode('first-ingest-no-sidecar')
+    // sidecar 미작성
+    const decision = await decideReingest({
+      sourcePath: 'raw/z.pdf',
+      sourceBytes: bytes,
+      wikiFS: fs,
+    })
+    expect(decision.action).toBe('force')
+    expect(decision.reason).toBe('new-source')
+    expect(decision.conflicts).toEqual([])
+  })
+
+  it('case D — R==null + disk md sidecar (단독 md 형태) → 보호 (txt/md 도 동일)', async () => {
+    const fs = new MemoryFS()
+    await seedRegistryToFS(fs, {})
+    const bytes = new TextEncoder().encode('hwp-bytes')
+    // hwp 파일에 paired md 가 있는 케이스
+    await fs.write('raw/doc.hwp.md', '# paired sidecar')
+    const decision = await decideReingest({
+      sourcePath: 'raw/doc.hwp',
+      sourceBytes: bytes,
+      wikiFS: fs,
+    })
+    expect(decision.action).toBe('protect')
+    expect(decision.conflicts).toContain('unmanaged-paired-sidecar')
+  })
+})

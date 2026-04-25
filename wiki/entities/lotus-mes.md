@@ -29,4 +29,4 @@ LOTUS MES는 설비 인터페이스 및 사용자 환경을 위한 C# 및 JAVA/W
 
 ## 출처
 
-- [[PMS_제품소개_R10_20220815]]
+- [[raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf.md|PMS_제품소개_R10_20220815]]

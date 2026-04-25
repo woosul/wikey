@@ -29,4 +29,4 @@ LOTUS SCM은 공급망 관리 시스템으로, LOTUS PMS와 연계 가능한 옵
 
 ## 출처
 
-- [[PMS_제품소개_R10_20220815]]
+- [[raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf.md|PMS_제품소개_R10_20220815]]

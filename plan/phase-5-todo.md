@@ -219,10 +219,10 @@
   - **Original-link footer mode** (`OriginalLinkMode = 'raw' | 'sidecar' | 'hidden'`) — `appendOriginalLinks` mode 분기 + `deriveSidecarPath` (`<vaultPath>.md` derive, `.md`/`.txt` 자체) + alias `[[<full path>|<basename without ext>]]` (디렉토리/확장자 숨김, rollover 시 full path tooltip). 6 신규 test PASS (634 → 640)
   - **Plugin settings UI** — originalLinkMode dropdown (PII 모드 다음 위치). default 'raw'
   - **Settings i18n** — settings-tab.ts 35 한글 라인 → 0 (전부 영문, Sentence case + 짧은 dropdown 라벨 + description 자세한 설명). OCR Model inputbox → renderModelDropdown
+- [x] **★ #10 R==null + paired sidecar 미보호 GAP fix** (2026-04-25 session 12 추가): `ConflictKind` 에 `'unmanaged-paired-sidecar'` 추가. `decideReingest` Phase A 에서 `R == null && diskSidecarExists` 시 push. Phase B `R == null` 분기 재구성 (conflicts=[] → force / onConflict → prompt / else → protect). Hook 1 + Hook 3 + pending_protections kind 분기 확장. 4 신규 test PASS (24 → 28)
+- [x] **★ #11 entity/concept `## 출처` wikilink broken link fix** (2026-04-25 session 12 추가): canonicalizer.ts `buildPageContent` 의 `## 출처` 를 alias `[[<sidecar path>|<basename without ext>]]` 형식으로 변경. sidecar 파일 규칙 derive (`.md`/`.txt` 자체, 그 외 `<base>.<ext>.md`). 4 신규 test PASS (53 → 57). `scripts/fix-source-wikilinks.py` one-off bulk fix script 로 기존 vault 36 페이지 일괄 fix. CDP unresolvedLinks 검증: lotus-pms.md `{}` (이전 `{PMS_..: 1}`) — resolved
 - [ ] **잔여 follow-up (out-of-scope, 다음 세션)**:
   - `.md.new` 자동 cleanup / dashboard·audit panel UI 시각화 (5 신규 컬럼 배지) / user_marker_headers config 노출 / entity·concept page user marker 보호 / hash perf (mtime 1차 필터) / CLI `--force` `--diff-only` 플래그 / section-level diff / tombstone restore + sidecar_hash / Python ↔ TS NFC cross-language 자동 검증
-  - **★ #10 R==null + paired sidecar 미보호 GAP fix** (본 session PMS ingest 분석 도출) — `decideReingest` 의 conflict 검사가 R != null 조건이라 첫 ingest 의 사용자 paired sidecar 가 force 분기에서 덮어써질 위험. 'unmanaged-paired-sidecar' conflict 신규
-  - **★ #11 entity/concept `## 출처` wikilink broken link fix** — paired pdf/hwp 등에서 `[[<basename>]]` (확장자 없음) 이 sidecar 형식 (`<base>.<ext>.md`) 과 매칭 안 됨 → unresolved. `[[source-<slug>]]` 표준화 또는 alias 형식. 단독 md 는 정상이므로 영향 없음
 - [ ] **삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리** (★ 본 결합 plan 범위 밖 — Phase 4 §4.2.2 source-registry 의 tombstone 처리 + §5.5 그래프 영역. §5.3 종결 후 별도 평가)
 - [x] **wiki 재생성 없음 확증**: source-registry 스키마는 Phase 4 §4.2.2 에서 선결정. 본 항목은 로직만 추가, 기존 wiki 는 hash 변경된 소스만 재인제스트로 갱신. legacy record 는 skip-with-seed 자동 마이그레이션. 기존 NanoVNA / PMS 데이터 backwards compat read OK
 

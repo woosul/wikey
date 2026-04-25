@@ -260,6 +260,12 @@ export async function decideReingest(args: DecideArgs): Promise<ReingestDecision
     conflicts.push('legacy-no-sidecar-hash')
   }
 
+  // ★ plan v11 follow-up #10 (PMS ingest 분석 도출): R == null + disk sidecar 존재 시
+  // 첫 ingest 의 사용자 paired sidecar 보호. plan v11 본체는 R != null 분기만 cover.
+  if (R == null && diskSidecarExists) {
+    conflicts.push('unmanaged-paired-sidecar')
+  }
+
   // Phase B — action.
   const baseDecision = {
     sourceHash,
@@ -271,8 +277,24 @@ export async function decideReingest(args: DecideArgs): Promise<ReingestDecision
   } as const
 
   if (R == null) {
+    // ★ follow-up #10: R == null 인데 disk paired sidecar 가 있으면 'unmanaged-paired-sidecar'
+    // conflict 가 위 Phase A 에서 push 됨. action 을 force 대신 protect/prompt 로 분기.
+    if (conflicts.length === 0) {
+      return {
+        action: 'force',
+        reason: 'new-source',
+        ...baseDecision,
+      }
+    }
+    if (onConflict != null) {
+      return {
+        action: 'prompt',
+        reason: 'new-source',
+        ...baseDecision,
+      }
+    }
     return {
-      action: 'force',
+      action: 'protect',
       reason: 'new-source',
       ...baseDecision,
     }

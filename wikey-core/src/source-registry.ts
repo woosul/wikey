@@ -32,11 +32,14 @@ export type ReingestAction = 'skip' | 'skip-with-seed' | 'force' | 'protect' | '
 
 /**
  * §5.3.1/§5.3.2 — conflict 종류. decideReingest 가 collect 후 phase B 에서 action 결정.
- *   - sidecar-user-edit       : disk sidecar bytes != registry.sidecar_hash (시나리오 A/F)
- *   - source-page-user-edit   : wiki/sources/source-*.md 본문에 USER_MARKER (## 사용자 메모 등) 존재 (시나리오 D)
- *   - duplicate-hash          : 같은 hash 가 다른 path 에서 등록됨 (시나리오 E)
- *   - orphan-sidecar          : sidecar 만 남고 원본 부재 — audit 단계에서만 검출 (decideReingest 미진입)
- *   - legacy-no-sidecar-hash  : registry hash != raw hash + sidecar_hash 미존재 + disk sidecar 존재 → 보수적 protect
+ *   - sidecar-user-edit         : disk sidecar bytes != registry.sidecar_hash (시나리오 A/F)
+ *   - source-page-user-edit     : wiki/sources/source-*.md 본문에 USER_MARKER (## 사용자 메모 등) 존재 (시나리오 D)
+ *   - duplicate-hash            : 같은 hash 가 다른 path 에서 등록됨 (시나리오 E)
+ *   - orphan-sidecar            : sidecar 만 남고 원본 부재 — audit 단계에서만 검출 (decideReingest 미진입)
+ *   - legacy-no-sidecar-hash    : registry hash != raw hash + sidecar_hash 미존재 + disk sidecar 존재 → 보수적 protect
+ *   - unmanaged-paired-sidecar  : R == null (registry 미등록) + disk sidecar 존재 → 사용자가 미리 만들어 둔
+ *                                 paired sidecar (docling 사전 변환 등) 가 첫 ingest 시 silent overwrite 되는
+ *                                 GAP. plan v11 follow-up #10 (PMS 실 ingest 분석에서 도출).
  */
 export type ConflictKind =
   | 'sidecar-user-edit'
@@ -44,6 +47,7 @@ export type ConflictKind =
   | 'duplicate-hash'
   | 'orphan-sidecar'
   | 'legacy-no-sidecar-hash'
+  | 'unmanaged-paired-sidecar'
 
 /**
  * §5.3.1/§5.3.2 — protect 분기에서 발생한 pending 산출물.

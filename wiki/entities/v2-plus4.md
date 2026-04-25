@@ -24,4 +24,4 @@ V2 Plus4는 NanoVNA V2의 확장 모델로, 주파수 측정 범위가 4.4GHz까
 
 ## 출처
 
-- [[nanovna-v2-notes]]
+- [[raw/3_resources/60_note/600_technology/nanovna-v2-notes.md|nanovna-v2-notes]]
