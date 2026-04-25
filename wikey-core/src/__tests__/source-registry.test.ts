@@ -165,6 +165,18 @@ describe('recordMove', () => {
     expect(r.path_history.length).toBe(2)
     expect(r.path_history.at(-1)?.vault_path).toBe('raw/3_resources/a.pdf')
   })
+
+  // §5.2.9: recordMove 가 호출된다 = 파일이 disk 에 있어서 move 한다 → tombstone 해제.
+  // 이전 reconcile (case 3) 이 walker 누락으로 잘못 tombstone 마킹한 record 가 다음
+  // movePair 시 자동 복구되도록.
+  it('clears tombstone flag (move implies file is alive)', () => {
+    let reg: SourceRegistry = {
+      'sha256:1': { ...makeRecord('raw/0_inbox/a.pdf', 'h'), tombstone: true },
+    }
+    reg = recordMove(reg, 'sha256:1', 'raw/3_resources/a.pdf')
+    const r = findById(reg, 'sha256:1')!
+    expect(r.tombstone).toBe(false)
+  })
 })
 
 describe('recordDelete + restoreTombstone', () => {

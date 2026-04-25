@@ -15,8 +15,16 @@
       {
         "vault_path": "raw/3_resources/60_note/600_technology/nanovna-v2-notes.md",
         "at": "2026-04-25T05:46:58.687Z"
+      },
+      {
+        "vault_path": "raw/0_inbox/nanovna-v2-notes.md",
+        "at": "2026-04-25T06:14:49.788Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/600_technology/nanovna-v2-notes.md",
+        "at": "2026-04-25T06:43:55.252Z"
       }
     ],
-    "tombstone": true
+    "tombstone": false
   }
 }

@@ -113,6 +113,9 @@ export function recordMove(
     vault_path: newVaultPath,
     sidecar_vault_path: newSidecarVaultPath ?? existing.sidecar_vault_path,
     path_history: nextHistory,
+    // §5.2.9: move = 파일이 disk 에 살아 있다 = tombstone 해제.
+    // 이전 reconcile (case 3, walker 누락) 이 잘못 마킹한 stale tombstone 자동 복구.
+    tombstone: false,
   }
   return { ...reg, [id]: next }
 }
