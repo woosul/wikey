@@ -84,17 +84,19 @@
 
 > **배경 (사용자 관찰)**: Phase 4 §4.1.3 + §4.2 의 sidecar pair 정책 (`원본.ext` + `원본.md` 한 쌍, registry 의 `path_history` 동기 이동) 결과로 raw/ 안에 동일 base 의 `.ext` + `.md` 두 파일이 병행 존재. 그러나 Ingest/Audit 패널 UI 가 이 둘을 **개별 row** 로 노출 + 카운트해 사용자에게 "원본 N 개" 와 row 수가 일치하지 않는 혼선 발생. 또한 `원본.md` 자체는 사용자가 직접 조작할 일이 없는 derived artifact 인데 row 가 노출되어 잘못 클릭/이동/삭제 위험.
 
-- [ ] **paired sidecar.md row hide** — `wikey-obsidian/src/sidebar-chat.ts` (Ingest 패널 row 렌더) + `wikey-obsidian/src/audit-panel.ts` (Audit 패널 row 렌더, 정확 파일명은 grep 으로 확정) 에서 row 빌드 시 `<base>.<ext>` 와 `<base>.md` 가 같은 디렉터리에 동시 존재 + `<ext> ∈ { pdf, hwp, hwpx, docx, pptx, xlsx, html, ... }` (PDF/HWP 등 변환 대상 형식) 이면 `.md` row 를 목록에서 제외.
-- [ ] **paired sidecar.md 뱃지 표시** — 원본 row 우측 (파일명 옆) 에 `[md]` 형태의 small block badge (CSS class 신규 — `wikey-pair-sidecar-badge` 권장). hover 시 sidecar.md 의 파일명 + 생성일 (frontmatter 의 `created` 또는 fs mtime) tooltip 표시. 클릭 동작은 일단 없음 (read-only badge).
-- [ ] **파일 카운트 정정** — 패널 헤더의 "N files" 카운트 + Audit summary 에서 paired sidecar.md 제외. **단독 .md** (sidecar 가 아닌 원본 markdown 직접 입력) 는 그대로 카운트. 판정 로직: 같은 base name 의 변환 대상 ext 파일이 같은 디렉터리에 있으면 paired, 없으면 standalone.
-- [ ] **개별 조작 차단** — paired sidecar.md 는 row 가 없어 자연스레 ingest/move/delete 클릭 경로 차단. 추가 가드 불필요. 단 row 에서 "Ingest 클릭 시 sidecar 도 같이 처리되는가" 는 기존 로직 (registry 의 movePair) 그대로 유지 — UI 만 변경, 데이터 흐름 무관.
-- [ ] **rollover tooltip** — 원본 row 의 파일명 (또는 `[md]` 뱃지) 위 mouse rollover 시 native title 또는 wikey 의 tooltip helper 로:
-  - `📄 sidecar: <base>.md`
-  - `📅 created: <yyyy-mm-dd HH:MM>` (sidecar 의 frontmatter `created` 우선, 없으면 fs mtime)
-- [ ] **검증**:
-  - 단위 테스트: `paired-sidecar-row-filter.test.ts` (신규) — fixture: `[a.pdf, a.md, b.md, c.docx, c.md]` → 표시: `[a.pdf (badge md), b.md, c.docx (badge md)]`, 카운트 = 3
-  - CDP UI smoke: Ingest 패널 + Audit 패널 각 1회 — paired pair 1 개 + 단독 md 1 개 + 변환 ext 1 개 fixture 로 row 표시 + 카운트 + tooltip 모두 시각 확증 (skill `obsidian-cdp` §6.7 query 검증과 분리, UI 검증 단계로 추가)
-- [ ] **wiki 재생성 없음 확증**: UI 레이어만 변경. registry / movePair / wiki/ 데이터 무관.
+- [x] **paired sidecar.md row hide** — `wikey-obsidian/src/sidebar-chat.ts` Ingest list / Audit list / Audit tree 3 row builders 모두에서 `<base>.<ext>` 와 `<base>.<ext>.md` 가 같은 디렉터리에 동시 존재 시 `.md` row 제외 (commit `f108e0c`)
+- [x] **paired sidecar.md 뱃지 표시** — `wikey-pair-sidecar-badge` CSS class 신규. 원본 row 의 파일명 오른쪽 (commit `f108e0c`)
+- [x] **파일 카운트 정정** — Audit summary stat (All/Ingested/Missing) 모두 paired sidecar 제외 후 재계산 (commit `f108e0c`)
+- [x] **개별 조작 차단** — row hide 로 자동 차단 (commit `f108e0c`)
+- [x] **rollover tooltip** — filename + badge 양쪽에 sidecar 생성일 (frontmatter `created` 우선, fs mtime fallback) tooltip (commit `f108e0c`)
+- [x] **검증** — 17 unit tests (paired-sidecar.test.ts) PASS / CDP UI smoke 시각 확증 (Audit All 7 / Ingested 1 / Missing 6 / 5 badge / tooltip 작동) (cycle smoke 2026-04-25)
+- [x] **wiki 재생성 없음 확증** — UI 레이어만 변경 (commit `f108e0c`)
+
+#### 5.2.0 v2 사용자 follow-up 3건 (2026-04-25 사용자 추가 요청, 본 세션 종료 직전 commit `<HASH>`)
+
+- [x] **[md] 뱃지 위치 정밀화** — 파일명 오른쪽 8px margin (이전: nameLine flex space-between 으로 badge 가 filesize 옆에 부유). `.wikey-audit-name-wrap` (flex, gap:8px, flex:1, min-width:0) sub-div 로 filename + badge 묶음. filename `flex: 0 1 auto` 로 자연 width + ellipsis 보존, filesize 는 nameLine 의 두 번째 자식으로 우측 끝 자연 정렬. 3 row builders 모두 적용
+- [x] **filename hover tooltip 단순화** — 사용자 요청 (2026-04-25): 한 줄, sidecar 생성일만 (`yyyy-mm-dd HH:MM`). `buildSidecarTooltip` 이전 2줄 (📄 sidecar / 📅 created) → 단일 string. filename + badge 양쪽에 동일 부착
+- [x] **Processing modal progress group 위치** — 사용자 요청: progress bar group 만 wrap 바닥, Back 버튼 위로 16px margin. `.wikey-modal-processing` `flex:1` + `padding-bottom:16px` + 신규 `.wikey-modal-progress-group` `margin-top:auto`. fileLabel/spinner 는 wrap 상단 그대로, Back 버튼 절대 위치 (modal 바닥) 그대로 유지. CDP 측정: gap=16px, group bottom=684.7, btn top=700.7
 
 ### 5.2.1 Entity ↔ Concept cross-link 자동 생성 (★ 답변 풍부도 결정적 fix)
 
@@ -194,6 +196,44 @@
 - [ ] 삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리
 - [ ] 부분 재인제스트 — section diff 기반 증분 (`section-index.ts parseSections` H2 단위 hash 매칭. Phase 4 §4.5.1.5 §5 의 chunk → section 전환에 정합)
 - [ ] **wiki 재생성 없음 확증**: source-registry 스키마는 Phase 4 §4.2.2 에서 선결정. 본 항목은 로직만 추가, 기존 wiki 는 hash 변경된 소스만 재인제스트로 갱신.
+
+### 5.3.2 sidecar + ingest 불일치 예외 처리 (★ 2026-04-25 §5.2.9 사용자 발견 — §5.3 으로 분리)
+
+> **배경 (2026-04-25 사용자 발견 + master 코드 분석)**: 현 ingest pipeline 은 매 ingest 시점마다 `wikiFS.write(sidecarPath, sidecarBody)` (`ingest-pipeline.ts:226-232`) 와 `wiki/sources/source-*.md` write 를 무조건 overwrite. registry/wiki 와 disk 의 sidecar/wiki page 동기 보장은 **ingest 시점만**. 그 사이 사용자가 disk 직접 수정 (sidecar.md 메모, wiki page 추가 내용) 하면 다음 ingest 시 LOST.
+>
+> **8 시나리오 분석** (`activity/phase-5-result.md §5.2.9` 후속 분석 참조):
+>
+> | # | 시나리오 | 동작 | 위험도 |
+> |---|----------|------|--------|
+> | A | sidecar.md 사용자 직접 수정 후 ingest | overwrite → 사용자 수정 LOST | 🔴 높음 |
+> | B | 원본만 raw/0_inbox/ + 이전 sidecar 다른 폴더 | movePair destination 에 같은 이름 sidecar 있으면 덮어씀 | 🟡 중간 |
+> | C | sidecar.md 만 남고 원본 (PDF) 삭제 | audit 가 .md standalone 표시. ingest 시 새 source_id (hash 다름) → 이전 PDF 의 wiki 잔존 (stale) | 🟡 중간 |
+> | D | registry 비고 wiki/sources/source-*.md 남음 | ingest 가 wiki page overwrite → 사용자 추가 메모 LOST | 🟡 중간 |
+> | E | 같은 hash PDF 두 위치 (사용자 복사) | registry record 1개. reconcile 의 hash 매칭 destination 불확정 | 🟡 중간 |
+> | F | sidecar hash 변경, 원본 PDF 그대로 | A 동일 — overwrite | 🔴 높음 |
+> | G | paired 에서 PDF 만 삭제, .md 남음 | audit 가 .md standalone 표시. paired helper: sibling 원본 없으면 paired 아님 | 🟢 낮음 (정상) |
+> | H | paired 에서 .md 만 삭제, PDF 남음 | hasSidecar=false → 변환 단계 새 sidecar 생성 + registry/wiki update | 🟢 낮음 (정상) |
+>
+> **핵심 위험**: A/F (sidecar 수정 LOST) + D (wiki page 메모 LOST). 사용자가 ingest 결과를 직접 수정하는 정상 워크플로우가 다음 ingest 로 파괴됨.
+
+- [ ] **시나리오 A/F fix — sidecar 수정 보호**:
+  - 시작 전 sidecar.md hash 비교: 이전 ingest 의 sidecar hash (registry record 신규 필드 `sidecar_hash`) vs 현재 disk hash
+  - 다르면 → 사용자 수정 감지 → 충돌 prompt (덮어쓰기 / 사용자 수정 유지 / cancel) 또는 user-section marker (예: `## 사용자 메모` H2 이후 보존)
+  - 또는 새 sidecar 를 `<base>.md.new` 로 저장 + diff modal 노출
+- [ ] **시나리오 D fix — wiki page 사용자 메모 보호**:
+  - source/entity/concept page 도 동일 보호 패턴
+  - canonicalizer 가 page write 전 기존 page 의 사용자 marker (`## 사용자 메모` 등) 추출 후 새 본문에 prepend/append
+- [ ] **시나리오 B fix — movePair destination 충돌**:
+  - movePair (`classify.ts`) 가 destination 에 같은 이름 sidecar 있으면 detect → 사용자 prompt 또는 rename suffix (`<base>.<ext>.md.1`)
+- [ ] **시나리오 C fix — orphan sidecar 처리**:
+  - audit 가 .md standalone 표시 + 추가 hint ("이전 ingest 결과 sidecar 가능성") 노출
+  - 사용자가 ingest 시도 시 confirm prompt ("orphan sidecar — 새 source 로 등록할까요?")
+- [ ] **시나리오 E fix — duplicate hash 추적**:
+  - registry 가 같은 hash 의 다중 path 추적 (`record.locations: string[]`) — 또는 reconcile policy 명문화 (가장 최근 mtime 우선 등)
+- [ ] **wiki 재생성 정책**: 본 fix 들은 신규 ingest 경로에만 영향. 기존 wiki/sidecar 데이터 무관.
+- [ ] **acceptance**: A/F 시나리오 수동 reproduce → 사용자 수정 보존 확증 / 단위 테스트 신규 (sidecar hash diff detect, wiki page user marker 보존) / cycle smoke 재실행
+
+> **출처**: `activity/phase-5-result.md §5.2.9` 의 8 시나리오 표 + master 코드 분석 (`ingest-pipeline.ts:226-232` 무조건 overwrite). 본 §5.3.2 는 §5.3.1 hash diff 인프라가 우선 완성된 후 진입 — 두 항목 함께 진행.
 
 ---
 

@@ -1055,12 +1055,15 @@ Click [[page name]] in answers to navigate to the wiki page.
 
         // Line 1: filename + file size (right)
         const nameLine = info.createDiv({ cls: 'wikey-audit-name-line' })
-        nameLine.createEl('span', { text: name, cls: 'wikey-audit-name' })
-        // §5.2.0: paired sidecar.md badge — original source row gets [md] tag.
+        const nameWrap = nameLine.createDiv({ cls: 'wikey-audit-name-wrap' })
+        const nameSpan = nameWrap.createEl('span', { text: name, cls: 'wikey-audit-name' })
+        // §5.2.0: paired sidecar.md badge — 파일명 right with 8px margin (wrap gap).
+        // Tooltip 은 filename + badge 양쪽에 부착 (UX: hover 영역 넓힘).
         if (hasSidecar(filePath, auditAllSet)) {
           const sidecarFull = join(basePath, `${filePath}.md`)
           const tooltip = this.buildSidecarTooltip(sidecarFull, `${name}.md`)
-          const badge = nameLine.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
+          nameSpan.setAttr('title', tooltip)
+          const badge = nameWrap.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
           badge.setAttr('title', tooltip)
         }
         const fullPath = join(basePath, filePath)
@@ -1154,12 +1157,14 @@ Click [[page name]] in answers to navigate to the wiki page.
           const cb = row.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
           if (isUnsupported) cb.setAttr('disabled', 'true')
           ;(cb as HTMLInputElement).checked = !isUnsupported && this.auditSelections.has(fullRel)
-          row.createEl('span', { cls: 'wikey-audit-tree-file-name', text: fileName })
-          // §5.2.0: paired sidecar.md badge — tree view parity with list view.
+          // wrap filename + badge so badge sits 8px right of filename text.
+          const treeNameWrap = row.createDiv({ cls: 'wikey-audit-name-wrap' })
+          const treeName = treeNameWrap.createEl('span', { cls: 'wikey-audit-tree-file-name', text: fileName })
           if (hasSidecar(fullRel, auditAllSet)) {
             const sidecarFull = join(basePath, `${fullRel}.md`)
             const tooltip = this.buildSidecarTooltip(sidecarFull, `${fileName}.md`)
-            const badge = row.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
+            treeName.setAttr('title', tooltip)
+            const badge = treeNameWrap.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
             badge.setAttr('title', tooltip)
           }
           rowMap.set(fullRel, row)
@@ -1677,31 +1682,25 @@ Click [[page name]] in answers to navigate to the wiki page.
   }
 
   /**
-   * §5.2.0 — paired sidecar.md badge tooltip text.
-   * Returns: `📄 sidecar: <name>\n📅 created: <yyyy-mm-dd HH:MM>` (frontmatter
-   * `created` if available, else fs mtime).
+   * §5.2.0 — paired sidecar.md tooltip = ingest 실행일 (sidecar 생성일) 1줄.
+   * 사용자 요청 (2026-04-25): 한 줄, `yyyy-mm-dd HH:MM` 형식만.
+   * frontmatter `created` 우선, 없으면 fs mtime.
    */
-  private buildSidecarTooltip(sidecarFullPath: string, sidecarName: string): string {
+  private buildSidecarTooltip(sidecarFullPath: string, _sidecarName: string): string {
     const { existsSync, statSync, readFileSync } = require('node:fs') as typeof import('node:fs')
-    let created = ''
     try {
-      if (existsSync(sidecarFullPath)) {
-        // Try frontmatter `created:` first (cheap line scan, no YAML parser).
-        try {
-          const head = readFileSync(sidecarFullPath, { encoding: 'utf-8' }).slice(0, 4096)
-          const m = head.match(/^created:\s*['"]?([^'"\n]+)['"]?\s*$/m)
-          if (m) created = m[1].trim().slice(0, 19).replace('T', ' ')
-        } catch { /* fall through to mtime */ }
-        if (!created) {
-          const mtime = statSync(sidecarFullPath).mtime
-          const pad = (n: number) => String(n).padStart(2, '0')
-          created = `${mtime.getFullYear()}-${pad(mtime.getMonth() + 1)}-${pad(mtime.getDate())} ${pad(mtime.getHours())}:${pad(mtime.getMinutes())}`
-        }
-      }
-    } catch { /* missing file → empty created */ }
-    return created
-      ? `📄 sidecar: ${sidecarName}\n📅 created: ${created}`
-      : `📄 sidecar: ${sidecarName}`
+      if (!existsSync(sidecarFullPath)) return ''
+      try {
+        const head = readFileSync(sidecarFullPath, { encoding: 'utf-8' }).slice(0, 4096)
+        const m = head.match(/^created:\s*['"]?([^'"\n]+)['"]?\s*$/m)
+        if (m) return m[1].trim().slice(0, 19).replace('T', ' ')
+      } catch { /* fall through to mtime */ }
+      const mtime = statSync(sidecarFullPath).mtime
+      const pad = (n: number) => String(n).padStart(2, '0')
+      return `${mtime.getFullYear()}-${pad(mtime.getMonth() + 1)}-${pad(mtime.getDate())} ${pad(mtime.getHours())}:${pad(mtime.getMinutes())}`
+    } catch {
+      return ''
+    }
   }
 
   private listInboxFilesRaw(): string[] {
@@ -1933,12 +1932,13 @@ Click [[page name]] in answers to navigate to the wiki page.
 
       const info = row.createDiv({ cls: 'wikey-audit-info' })
       const nameLine = info.createDiv({ cls: 'wikey-audit-name-line' })
-      nameLine.createEl('span', { text: f, cls: 'wikey-audit-name' })
-      // §5.2.0: paired sidecar.md badge — original source row gets [md] tag.
+      const nameWrap = nameLine.createDiv({ cls: 'wikey-audit-name-wrap' })
+      const nameSpan = nameWrap.createEl('span', { text: f, cls: 'wikey-audit-name' })
       if (hasSidecar(f, inboxAllSet)) {
         const sidecarPath = join(basePath, 'raw/0_inbox', `${f}.md`)
         const tooltip = this.buildSidecarTooltip(sidecarPath, `${f}.md`)
-        const badge = nameLine.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
+        nameSpan.setAttr('title', tooltip)
+        const badge = nameWrap.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
         badge.setAttr('title', tooltip)
       }
       if (!isDir) nameLine.createEl('span', { text: sizeLabel, cls: 'wikey-audit-filesize' })

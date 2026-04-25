@@ -411,25 +411,29 @@ export class IngestFlowModal extends Modal {
 
     wrap.createDiv({ cls: 'wikey-modal-spinner' })
 
-    const pct = this.computeFractionPct()
-
-    const msgLine = wrap.createDiv({ cls: 'wikey-modal-progress-line' })
-    msgLine.createEl('span', {
-      cls: 'wikey-modal-progress-msg',
-      text: `${this.progressStep}/${this.progressTotal} · ${this.progressMessage}`,
-    })
-    msgLine.createEl('span', { cls: 'wikey-modal-progress-pct', text: `${pct}%` })
-
-    const barOuter = wrap.createDiv({ cls: 'wikey-modal-progress-bar' })
-    const barFill = barOuter.createDiv({ cls: 'wikey-modal-progress-fill' })
-    barFill.style.width = `${pct}%`
-
+    // 사용자 가이드 (있으면) 는 spinner 직후, progress 위.
     if (this.guideHint.trim()) {
       const guideEcho = wrap.createDiv({ cls: 'wikey-modal-guide-echo' })
       guideEcho.createEl('div', { cls: 'wikey-modal-label', text: '적용된 가이드' })
       const box = guideEcho.createDiv({ cls: 'wikey-modal-brief' })
       box.setText(this.guideHint.trim())
     }
+
+    // §5.2.0 v2: progress 그룹 (msg line + bar) 을 wrap 하단으로 push (CSS margin-top: auto).
+    const pct = this.computeFractionPct()
+    const progressGroup = wrap.createDiv({ cls: 'wikey-modal-progress-group' })
+
+    const msgLine = progressGroup.createDiv({ cls: 'wikey-modal-progress-line' })
+    msgLine.createEl('span', {
+      cls: 'wikey-modal-progress-msg',
+      text: `${this.progressStep}/${this.progressTotal} · ${this.progressMessage}`,
+    })
+    msgLine.createEl('span', { cls: 'wikey-modal-progress-pct', text: `${pct}%` })
+
+    const barOuter = progressGroup.createDiv({ cls: 'wikey-modal-progress-bar' })
+    const barFill = barOuter.createDiv({ cls: 'wikey-modal-progress-fill' })
+    barFill.style.width = `${pct}%`
+
     const btnRow = this.bodyEl.createDiv({ cls: 'wikey-modal-button-row wikey-modal-button-row-bottom' })
     const backBtn = btnRow.createEl('button', { text: 'Back' })
     backBtn.addEventListener('click', () => {

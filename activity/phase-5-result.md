@@ -258,6 +258,20 @@ links:
 
 **578/578 tests + build 0 errors. §5.2 + §5.2.9 완전 종결.**
 
+### 5.2.0 v2 — 사용자 UI follow-up 3건 (2026-04-25 종료 직전)
+
+사용자 요청 직접 처리, master CDP 시각 확증:
+
+| # | 항목 | 변경 | 측정 |
+|---|------|------|------|
+| 1 | [md] 뱃지 위치 = 파일명 오른쪽 8px margin | `.wikey-audit-name-wrap` sub-div (flex, gap:8px) 신규. filename + badge 묶음. 3 row builders 모두 (Ingest list / Audit list / Audit tree) | DOM 확증: `<div class="wikey-audit-name-wrap"><span class="wikey-audit-name">...</span><span class="wikey-pair-sidecar-badge">md</span></div>` |
+| 2 | filename hover tooltip 단순화 | `buildSidecarTooltip` 이전 2줄 → 단일 `yyyy-mm-dd HH:MM`. filename + badge 양쪽 동일 title | sample title="2026-04-24 21:21" |
+| 3 | Processing modal progress group 위치 | `.wikey-modal-processing` `flex:1` + `padding-bottom:16px` + 신규 `.wikey-modal-progress-group` `margin-top:auto`. fileLabel/spinner 위치 그대로, Back 버튼 절대 위치 (modal 바닥) 그대로 유지 | wrap top=502.7 bottom=684.7, group bottom=684.7 (wrap 바닥에 정확히), btn top=700.7 → **gap=16px** |
+
+**대시보드 카운트 검증** (사용자 추가 요청): Audit `All 7 / Ingested 1 / Missing 6` 정확. raw/3_resources/ 안 supported 원본 (paired sidecar 5건 제외) + nanovna-v2-notes (ingested 1) = 7.
+
+**별개 분석 → §5.3.2 로 이관** (사용자 지시): sidecar+ingest 불일치 8 시나리오 (A~H). 위험 3건 (A/F/D — 사용자 직접 수정 LOST), 정상 2건 (G/H), 충돌 가능 3건 (B/C/E). 본 §5.2 가 아닌 §5.3 인제스트 증분 영역에서 hash diff + user marker 보호 로 처리 예정.
+
 ### 5.2.8 검증 (cycle smoke) — 1차 완료, fix 적용 후 재검증 권장
 2026-04-25 tester 분기 (CDP UI smoke) — `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md`.
 

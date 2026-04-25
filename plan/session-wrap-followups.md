@@ -7,8 +7,8 @@
 
 ## 🎯 다음 세션 첫 액션 (2026-04-25 session 11 종료 시점)
 
-1. `cat plan/phase-5-todo.md` — §5.2 + §5.2.9 완전 종결 → §5.3 / §5.4 진입 결정.
-2. **§5.3 인제스트 증분 (P1, 권장)** — `plan/phase-5-todo.md §5.3.1` hash 기반 증분 재인제스트. Phase 4 §4.2.2 URI + source-registry hash 필드 완비 위에서 로직만 추가. wiki 재생성 무관.
+1. `cat plan/phase-5-todo.md` — §5.2 + §5.2.9 + §5.2.0 v2 모두 종결 → §5.3 진입.
+2. **§5.3.1 hash 기반 증분 재인제스트 (P1) + §5.3.2 sidecar+ingest 불일치 보호 함께 진행 (★ 권장)** — §5.3.1 의 hash diff 인프라 위에서 §5.3.2 의 sidecar/wiki page 사용자 수정 보호 로직 (시나리오 A/F/D) 자연 결합. 8 시나리오 표는 todo 본문 + activity §5.2.0 v2 mirror 에 보존.
 3. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus 등장 시 즉시 착수.
 4. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
 5. **잔여 (별개)** — `reconcile case 3` walker 누락 root cause 추적 (§5.2.9 fix 는 후속 movePair 안전망. 잘못된 walker 마킹 자체 진단은 §5.8 영역).
@@ -34,6 +34,8 @@
 | 12 | §5.2.9 vec query hyphen → space (commit `fb88dad`) — query-pipeline.ts:251 가 `NanoVNA-V2` 같은 hyphenated word 의 `-` 를 negation 으로 오인 차단 | regression | qmd results: 5 ✓ + 답변 1533 chars + 15 wiki refs |
 | 13 | §5.2.9 ingest-current-note autoMove (commit `953c9cb`) — Cmd+Shift+I 가 inbox 파일 트리거 시 `autoMoveFromInbox: true` 자동 패스 | — | inbox→raw/3_resources/60_note/600_technology/ 자동 분류 + frontmatter rewrite + 답변 backlink 새 경로 ✓ |
 | 14 | §5.2.9 recordMove tombstone false 자동 (commit `aad98f8`) — `source-registry.ts:98` 가 `tombstone` field 안 건드리던 bug. `move = 파일 살아있음` 의미적 정합 | TDD 1 신규 (578/578) | 현 stale tombstone 직접 복구 + 후속 movePair 자연 복구 보장 |
+| 15 | §5.2.0 v2 UI follow-up 3건 — [md] 뱃지 위치 (파일명 오른쪽 8px wrap) + filename tooltip 단일줄 (sidecar 생성일만) + processing modal progress group 위치 (wrap 바닥, Back 위 16px gap) | — | CDP 측정 gap=16px / Audit `All 7 / Ingested 1 / Missing 6` 정확 |
+| 16 | §5.3.2 신설 — sidecar+ingest 불일치 8 시나리오 분석 (A~H 위험도 표) → §5.3 인제스트 증분 영역에서 hash diff + user marker 보호로 처리 (사용자 지시) | — | 분석만 — 구현 다음 세션 |
 
 ---
 

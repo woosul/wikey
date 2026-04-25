@@ -775,13 +775,25 @@
   gap: 6px;
 }
 
+/* §5.2.0 v2: filename + [md] 뱃지를 sub-wrap 으로 묶어 뱃지가 파일명 오른쪽에
+   margin 8px 로 붙도록. wrap 자체가 flex:1 로 nameLine 의 좌측 공간을 차지하고,
+   filesize 는 우측 끝으로 자연 정렬. */
+.wikey-audit-name-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .wikey-audit-name {
   font-size: 0.92em;
   color: var(--text-normal);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
 }
 
@@ -2041,7 +2053,20 @@
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  padding: 24px 0 16px;
+  padding: 24px 0 16px;  /* padding-bottom 16px = progress group 과 Back 버튼 사이 간격 */
+  flex: 1;  /* §5.2.0 v2: bodyEl 의 남은 높이 채워서 progress group 을 wrap 바닥으로 push */
+}
+
+/* §5.2.0 v2: progress group (msg line + bar) 를 processing wrap 의 바닥으로 push.
+   상단의 fileLabel/spinner/guideEcho 와의 자연 gap 은 wrap 의 14px gap 으로 유지하되,
+   margin-top: auto 가 빈 공간 전부를 group 위로 흡수해 group 이 바닥에 붙는다. */
+.wikey-modal-progress-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  margin-top: auto;
 }
 
 /* Phase 4 D.0.i (v6 §4.5.3): 처리 중 파일 라벨 (original.ext → converted.md). */
@@ -2071,7 +2096,10 @@
   word-break: break-all;
 }
 
-/* Phase 4 D.0.i (v6 §4.5.4): processing phase 의 button row 를 모달 바닥으로 push. */
+/* Phase 4 D.0.i (v6 §4.5.4): processing phase 의 button row 를 모달 바닥으로 push.
+   §5.2.0 v2 (2026-04-25): wrap (.wikey-modal-processing) 가 flex:1 로 다 차지하므로
+   margin-top: auto 가 효과 없어도 (push 할 공간 없음) btnRow 는 자연스럽게 wrap
+   바로 아래 = bodyEl 바닥에 위치. Back 버튼 위치는 이전 fix 와 동일하게 유지. */
 .wikey-ingest-flow-modal .wikey-modal-body > .wikey-modal-button-row-bottom {
   margin-top: auto;
 }
