@@ -50,7 +50,13 @@ export interface SingleLinePiiPattern {
  * §5.1 신규 structural 패턴. `patternType` 은 필수 discriminator.
  *
  * `labelPattern` 이 일치한 뒤 forward window (non-empty 줄 N개) 안에서 `valuePattern`
- * 의 모든 매치를 수집. `valueExcludePrefixes` 에 걸리는 후보는 배제.
+ * 의 모든 매치를 수집. 아래 두 prefix 리스트로 후보 배제 (2026-04-25 codex P2 fix):
+ *
+ * - `valueExcludePrefixes`: candidate **자체** 가 시작어로 매치되면 배제. 회사명 접두어 등
+ *   (예: '주식회사 테스트벤치' → '주식회사' 시작 → 회사명이지 사람 이름 아님). same-line 검사는 **하지 않음**.
+ * - `contextLabelPrefixes`: candidate 와 **같은 줄** 의 사전 토큰 중 하나라도 시작어로 매치되면
+ *   배제. 폼 라벨 단어 (주소/전화/등기 등). candidate 자체와는 비교하지 **않음** —
+ *   '주소영' 같은 실재 한국 이름이 '주' 로 시작한다고 false-negative 되는 것을 막는다.
  */
 export interface StructuralPiiPattern {
   readonly id: string
@@ -62,6 +68,7 @@ export interface StructuralPiiPattern {
   readonly windowLines: number
   readonly windowChars?: number
   readonly valueExcludePrefixes?: readonly string[]
+  readonly contextLabelPrefixes?: readonly string[]
   readonly mask: 'digits' | 'full'
   readonly description?: string
 }
@@ -93,6 +100,7 @@ export interface CompiledStructuralPiiPattern {
   readonly windowLines: number
   readonly windowChars?: number
   readonly valueExcludePrefixes?: readonly string[]
+  readonly contextLabelPrefixes?: readonly string[]
   readonly mask: 'digits' | 'full'
   readonly description?: string
 }
@@ -158,6 +166,7 @@ export function compilePattern(p: PiiPattern): CompiledPiiPattern | null {
         windowLines: p.windowLines,
         windowChars: p.windowChars,
         valueExcludePrefixes: p.valueExcludePrefixes,
+        contextLabelPrefixes: p.contextLabelPrefixes,
         mask: p.mask,
         description: p.description,
       }
@@ -299,6 +308,9 @@ function buildPatternFromYamlEntry(e: Record<string, unknown>): PiiPattern | nul
     const valueExcludePrefixes = Array.isArray(e.valueExcludePrefixes)
       ? (e.valueExcludePrefixes as unknown[]).filter((x): x is string => typeof x === 'string')
       : undefined
+    const contextLabelPrefixes = Array.isArray(e.contextLabelPrefixes)
+      ? (e.contextLabelPrefixes as unknown[]).filter((x): x is string => typeof x === 'string')
+      : undefined
     const description = typeof e.description === 'string' ? e.description : undefined
     return {
       id,
@@ -309,6 +321,7 @@ function buildPatternFromYamlEntry(e: Record<string, unknown>): PiiPattern | nul
       windowLines,
       windowChars,
       valueExcludePrefixes,
+      contextLabelPrefixes,
       mask,
       description,
     }

@@ -7,6 +7,10 @@ import {
   detectAntiPattern, buildSchemaPromptBlock,
 } from './schema.js'
 import { normalizeBase } from './wiki-ops.js'
+import {
+  EXAMPLE_ORG_BASE, EXAMPLE_ORG_ALIAS, EXAMPLE_ORG_KO, EXAMPLE_ORG_DESC_KO,
+  EXAMPLE_CONCEPT_BASE, EXAMPLE_CONCEPT_ALIAS,
+} from './example-placeholders.js'
 
 /**
  * Phase C v6: Stage 2 Canonicalizer.
@@ -251,7 +255,7 @@ ${schemaBlock}
 
 1. **분류**: 각 mention을 위 7개 타입 중 하나로 분류. 어디에도 안 맞으면 entities/concepts 출력에서 **제외** (자동 dropped 처리됨).
 2. **약어↔풀네임 통합**: \`pms\`와 \`project-management-system\`이 같은 mention이면 풀네임 1개만 출력 (약어는 \`aliases\`에).
-3. **기존 페이지 재사용**: 위 "기존 wiki 페이지" 목록과 매칭되면 filename은 기존 base 그대로 사용 (예: \`goodstream-co-ltd\` 발견 → \`goodstream\`로 새로 만들지 말 것).
+3. **기존 페이지 재사용**: 위 "기존 wiki 페이지" 목록과 매칭되면 filename은 기존 base 그대로 사용 (예: \`${EXAMPLE_ORG_BASE}\` 발견 → \`${EXAMPLE_ORG_ALIAS}\`로 새로 만들지 말 것).
 4. **거부 패턴 자동 제외**: 한국어 라벨, X-management/X-service 같은 단순 기능명, 비즈니스 객체(quotation/order 등)는 schema 위반이므로 제외.
 5. **filename 형식**: \`name\` 필드는 base name만 (소문자, 하이픈 구분, .md/디렉토리 prefix 금지).
 6. **description**: 1~2문장, 산업 표준 정의 위주 (기능 설명 X).
@@ -267,15 +271,15 @@ JSON only:
 \`\`\`json
 {
   "entities": [
-    {"name": "goodstream-co-ltd", "type": "organization", "description": "주식회사 굿스트림. 소프트웨어 개발/제조업.", "aliases": ["goodstream"]}
+    {"name": "${EXAMPLE_ORG_BASE}", "type": "organization", "description": "${EXAMPLE_ORG_DESC_KO}", "aliases": ["${EXAMPLE_ORG_ALIAS}"]}
   ],
   "concepts": [
-    {"name": "project-management-body-of-knowledge", "type": "standard", "description": "PMI가 제정한 프로젝트 관리 표준 지식체계.", "aliases": ["pmbok"]}
+    {"name": "${EXAMPLE_CONCEPT_BASE}", "type": "standard", "description": "PMI가 제정한 프로젝트 관리 표준 지식체계.", "aliases": ["${EXAMPLE_CONCEPT_ALIAS}"]}
   ],
   "index_additions": [
-    "- [[goodstream-co-ltd]] — 주식회사 굿스트림 (소스: 1개)"
+    "- [[${EXAMPLE_ORG_BASE}]] — ${EXAMPLE_ORG_KO} (소스: 1개)"
   ],
-  "log_entry": "- 엔티티 생성: [[goodstream-co-ltd]]\\n- 개념 생성: [[project-management-body-of-knowledge]]"
+  "log_entry": "- 엔티티 생성: [[${EXAMPLE_ORG_BASE}]]\\n- 개념 생성: [[${EXAMPLE_CONCEPT_BASE}]]"
 }
 \`\`\`
 

@@ -47,4 +47,15 @@ describe('PII over-masking 회귀 방지 (bundled YAML default)', () => {
       .map((m) => m.value)
     expect(ceo).toEqual(['이 영 희'])
   })
+
+  it('candidate-prefix vs context-label 분리 — 라벨 단어로 시작하는 실재 이름 false-negative 방지 (codex P2)', () => {
+    // '주소영' 은 contextLabelPrefixes 의 '주소' 와 음절이 겹치는 실재 한국 이름.
+    // candidate self check 는 valueExcludePrefixes (회사명) 에만 — '주소' 로 candidate
+    // self 가 차단되면 안 된다. label 이 같은 줄에 없으면 PII 로 탐지되어야 함.
+    const md = '대표자\n\n주 소 영\n'
+    const ceo = detectPii(md, patterns)
+      .filter((m) => m.kind === 'ceo-structural')
+      .map((m) => m.value)
+    expect(ceo).toEqual(['주 소 영'])
+  })
 })

@@ -35,6 +35,9 @@ import {
 } from './source-registry.js'
 import { canonicalize } from './canonicalizer.js'
 import { loadSchemaOverride } from './schema.js'
+import {
+  EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
+} from './example-placeholders.js'
 import type { Mention, EntityType, ConceptType } from './types.js'
 import { PROVIDER_VISION_DEFAULTS } from './provider-defaults.js'
 import { stripEmbeddedImages, countEmbeddedImages } from './rag-preprocess.js'
@@ -567,7 +570,7 @@ Source: {{SOURCE_FILENAME}}
 분류하지 마세요. 페이지를 만들지 마세요. 단지 "이 chunk에 등장하는 wiki 후보"를 짧게 나열만 하세요.
 
 각 mention은 다음 정보를 가집니다:
-- \`name\`: 정규화된 base name (소문자 + 하이픈 구분, 예: \`pmbok\`, \`goodstream-co-ltd\`)
+- \`name\`: 정규화된 base name (소문자 + 하이픈 구분, 예: \`${EXAMPLE_CONCEPT_ALIAS}\`, \`${EXAMPLE_ORG_BASE}\`)
 - \`type_hint\`: 다음 중 하나 또는 \`unknown\`
   - **entity 후보**: \`organization\` (회사/기관), \`person\` (실명 인물), \`product\` (제품명), \`tool\` (소프트웨어/프로토콜)
   - **concept 후보**: \`standard\` (산업표준/규격), \`methodology\` (방법론), \`document_type\` (문서종류)
@@ -593,9 +596,9 @@ Source: {{SOURCE_FILENAME}}
 \`\`\`json
 {
   "mentions": [
-    {"name": "goodstream-co-ltd", "type_hint": "organization", "evidence": "사업자등록증 발급 대상"},
-    {"name": "pmbok", "type_hint": "standard", "evidence": "프로젝트 관리 표준 지식체계로 명시"},
-    {"name": "lotus-pms", "type_hint": "product", "evidence": "이 문서가 소개하는 제품명"}
+    {"name": "${EXAMPLE_ORG_BASE}", "type_hint": "organization", "evidence": "사업자등록증 발급 대상"},
+    {"name": "${EXAMPLE_CONCEPT_ALIAS}", "type_hint": "standard", "evidence": "프로젝트 관리 표준 지식체계로 명시"},
+    {"name": "${EXAMPLE_PRODUCT_BASE}", "type_hint": "product", "evidence": "이 문서가 소개하는 제품명"}
   ]
 }
 \`\`\`

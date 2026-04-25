@@ -1,4 +1,7 @@
 import type { EntityType, ConceptType, Mention, SchemaOverride, SchemaCustomType, WikiFS } from './types.js'
+import {
+  EXAMPLE_ORG_BASE, EXAMPLE_PERSON_BASE, EXAMPLE_PRODUCT_BASE,
+} from './example-placeholders.js'
 
 /**
  * Phase B v6: Schema-Guided Extraction.
@@ -16,9 +19,9 @@ export const CONCEPT_TYPES: readonly ConceptType[] = ['standard', 'methodology',
 
 /** Human-readable description for prompt injection. Keep short — LLM uses these to classify. */
 export const ENTITY_TYPE_DESCRIPTIONS: Record<EntityType, string> = {
-  organization: '회사·기관·법인·정부조직 (예: goodstream-co-ltd, national-tax-service)',
-  person: '실명 인물 (예: kim-myung-ho). 직책/역할 라벨 제외.',
-  product: '구체적 제품명·서비스명 (예: lotus-pms, mariadb). 제품 카테고리 제외.',
+  organization: `회사·기관·법인·정부조직 (예: ${EXAMPLE_ORG_BASE}, national-tax-service)`,
+  person: `실명 인물 (예: ${EXAMPLE_PERSON_BASE}). 직책/역할 라벨 제외.`,
+  product: `구체적 제품명·서비스명 (예: ${EXAMPLE_PRODUCT_BASE}, mariadb). 제품 카테고리 제외.`,
   tool: '소프트웨어 도구·라이브러리·프로토콜 (예: apache-tomcat, mqtt, restful-api).',
 }
 

@@ -3,6 +3,7 @@ import {
   canonicalize, buildCanonicalizerPrompt,
   canonicalizeSlug, SLUG_ALIASES, FORCED_CATEGORIES,
 } from '../canonicalizer.js'
+import { EXAMPLE_ORG_BASE } from '../example-placeholders.js'
 import type { Mention } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
 
@@ -39,22 +40,22 @@ describe('canonicalize — empty input', () => {
 describe('canonicalize — valid responses build pages with schema types', () => {
   it('builds entity WikiPage with entityType set', async () => {
     const mentions: Mention[] = [
-      { name: 'goodstream-co-ltd', type_hint: 'organization', evidence: '사업자등록증 발급 대상' },
+      { name: EXAMPLE_ORG_BASE, type_hint: 'organization', evidence: '사업자등록증 발급 대상' },
     ]
     const llm = makeMockLLM(JSON.stringify({
       entities: [{
-        name: 'goodstream-co-ltd', type: 'organization',
-        description: '주식회사 굿스트림. 소프트웨어 개발 회사.',
+        name: EXAMPLE_ORG_BASE, type: 'organization',
+        description: '주식회사 예제. 소프트웨어 개발 회사.',
       }],
       concepts: [],
     }))
     const result = await canonicalize({ ...baseArgs, llm, mentions })
     expect(result.entities).toHaveLength(1)
-    expect(result.entities[0].filename).toBe('goodstream-co-ltd.md')
+    expect(result.entities[0].filename).toBe(`${EXAMPLE_ORG_BASE}.md`)
     expect(result.entities[0].category).toBe('entities')
     expect(result.entities[0].entityType).toBe('organization')
     expect(result.entities[0].content).toContain('entity_type: organization')
-    expect(result.entities[0].content).toContain('주식회사 굿스트림')
+    expect(result.entities[0].content).toContain('주식회사 예제')
   })
 
   it('builds concept WikiPage with conceptType set', async () => {
@@ -165,14 +166,17 @@ describe('buildCanonicalizerPrompt', () => {
     expect(prompt).toContain('document_type')
   })
 
-  it('includes existing pages block', () => {
+  it('includes example org placeholder + reuse rule', () => {
+    // Note: bundled prompt template 은 existingEntityBases 를 직접 echo 하지 않고
+    // example placeholder (EXAMPLE_ORG_BASE) 와 "재사용" 규칙 텍스트만 노출한다.
+    // override path 만 {{EXISTING_BLOCK}} substitute 가 동작 (별도 테스트에서 검증).
     const prompt = buildCanonicalizerPrompt({
       mentions: [{ name: 'pms', evidence: 'X' }],
-      existingEntityBases: ['goodstream-co-ltd'],
+      existingEntityBases: ['some-existing-corp'],
       existingConceptBases: ['pmbok'],
       sourceFilename: 'test.pdf',
     })
-    expect(prompt).toContain('goodstream-co-ltd')
+    expect(prompt).toContain(EXAMPLE_ORG_BASE)
     expect(prompt).toContain('pmbok')
     expect(prompt).toContain('재사용')
   })
@@ -263,7 +267,7 @@ Mentions ({{MENTIONS_COUNT}}):
         { name: 'pmbok', type_hint: 'standard', evidence: 'appears twice' },
         { name: 'mes', type_hint: 'tool', evidence: 'manufacturing execution' },
       ],
-      existingEntityBases: ['goodstream-co-ltd'],
+      existingEntityBases: [EXAMPLE_ORG_BASE],
       existingConceptBases: ['pmbok'],
       sourceFilename: 'pms.pdf',
       guideHint: '정밀 추출',
@@ -278,7 +282,7 @@ Mentions ({{MENTIONS_COUNT}}):
     expect(prompt).toContain('`pmbok` (hint: standard)')
     expect(prompt).toContain('`mes` (hint: tool)')
     expect(prompt).toContain('정밀 추출') // guide block inline
-    expect(prompt).toContain('goodstream-co-ltd') // existing block rendered
+    expect(prompt).toContain(EXAMPLE_ORG_BASE) // existing block rendered
   })
 
   it('empty overridePrompt (all whitespace) is ignored — bundled default wins', () => {

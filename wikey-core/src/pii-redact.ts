@@ -184,7 +184,7 @@ function collectStructuralMatches(
     let valueMatch: RegExpExecArray | null
     while ((valueMatch = p.valueRegex.exec(windowText)) !== null) {
       const candidate = valueMatch[0]
-      if (isCandidateExcluded(windowText, valueMatch.index, candidate, p.valueExcludePrefixes)) {
+      if (isCandidateExcluded(windowText, valueMatch.index, candidate, p.valueExcludePrefixes, p.contextLabelPrefixes)) {
         if (valueMatch.index === p.valueRegex.lastIndex) p.valueRegex.lastIndex++
         continue
       }
@@ -237,29 +237,48 @@ function computeWindowEnd(
 }
 
 /**
- * valueExcludePrefixes 검사 (§5.1 설계 + 2026-04-25 over-masking 4건 fix).
- * - candidate 자체가 접두어로 시작 → exclude
- * - 같은 줄 내 valueMatch 직전 모든 whitespace-split 토큰 중 하나라도 접두어로 시작 → exclude
- *   (테이블 셀 형식 `| 주소 | 서울시 어딘가 |` 처럼 라벨이 multi-token 떨어진 경우 모두 차단)
+ * §5.1 + 2026-04-25 over-masking 4건 fix + codex P2 분리:
+ *
+ * - `valueExcludePrefixes`: candidate **자체** 가 startsWith 매치되면 exclude.
+ *   회사명 prefix (주식회사/(주)/㈜ 등) 차단 전용. startsWith 가 적절한 이유는
+ *   회사명은 prefix 뒤 회사 본명이 길게 이어지기 때문 (e.g., '주식회사 테스트벤치').
+ * - `contextLabelPrefixes`: 두 가지 차단 경로
+ *   1) **same-line context**: candidate 와 같은 줄 내 valueMatch 직전 whitespace-split
+ *      토큰 중 하나라도 prefix 로 startsWith 하면 exclude (테이블 셀 라벨 차단).
+ *   2) **candidate self exact**: candidate 가 prefix 와 **정확히 같으면** exclude
+ *      (='주소' 단독). startsWith 가 아닌 === 인 이유는 '주소영' 같은 실재 한국 이름
+ *      false-negative 를 막기 위함. 라벨 변형 ('등기일', '등기부' 등) 은 list 에 명시.
  * - 다른 줄의 내용은 포함 금지 (회사명 뒤 CEO 오탐 skip 방지).
  */
 function isCandidateExcluded(
   windowText: string,
   valueIndexInWindow: number,
   candidate: string,
-  excludePrefixes: readonly string[] | undefined,
+  valueExcludePrefixes: readonly string[] | undefined,
+  contextLabelPrefixes: readonly string[] | undefined,
 ): boolean {
-  if (!excludePrefixes || excludePrefixes.length === 0) return false
-  for (const prefix of excludePrefixes) {
-    if (candidate.startsWith(prefix)) return true
-  }
   const lineStart = windowText.lastIndexOf('\n', valueIndexInWindow - 1) + 1
   const sameLinePrefix = windowText.slice(lineStart, valueIndexInWindow)
   const prefixTokens = sameLinePrefix.trim().split(/\s+/).filter(Boolean)
-  if (prefixTokens.length === 0) return false
-  for (const token of prefixTokens) {
-    for (const prefix of excludePrefixes) {
-      if (token.startsWith(prefix)) return true
+
+  if (valueExcludePrefixes && valueExcludePrefixes.length > 0) {
+    for (const prefix of valueExcludePrefixes) {
+      if (candidate.startsWith(prefix)) return true
+    }
+    for (const token of prefixTokens) {
+      for (const prefix of valueExcludePrefixes) {
+        if (token.startsWith(prefix)) return true
+      }
+    }
+  }
+  if (contextLabelPrefixes && contextLabelPrefixes.length > 0) {
+    for (const prefix of contextLabelPrefixes) {
+      if (candidate === prefix) return true
+    }
+    for (const token of prefixTokens) {
+      for (const prefix of contextLabelPrefixes) {
+        if (token.startsWith(prefix)) return true
+      }
     }
   }
   return false
