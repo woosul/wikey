@@ -3,7 +3,7 @@ title: Phase A — Claude Code 세션 유지·context 안정화 인프라
 phase: a
 type: cross-phase-infra
 created: 2026-04-25
-status: 합의 완료, 구현 진입 대기
+status: 구현 완료 + smoke 검증 OK (2026-04-25 13:52)
 ---
 
 > **이 문서의 위치**: cross-phase 인프라 작업. Phase 1~6 의 도메인 작업과 별개로 Claude Code 자체의 context 관리 안정화. wikey 프로젝트 한정 + (일부) 글로벌 영향. todo 단일 소스 원칙은 phase-N 한정 — 본 phase-a 는 자체 체크박스 보유 OK.
@@ -158,15 +158,47 @@ status: 합의 완료, 구현 진입 대기
 - [ ] **CLAUDE.md Subagent 기준 적용 회귀**: 다음 세션에서 large output 작업 발생 시 master 가 자동으로 subagent 위임 선택하는지 관찰
 - [ ] **/sync gauge**: sync skill 실행 시 context% 표시 OK
 
-## 5. 다음 action
+## 5. 구현 결과 (2026-04-25 session 10, 13:50~13:52)
 
-본 phase-a 는 합의·계획 완료 상태. 다음 turn:
+### 5.1 산출물
 
-1. 사용자가 "설정 들어가고 싶다" 명시 → Claude 가 ~/.claude/settings.json + hook script 직접 작성·등록 진입
-2. 작성·등록 후 §4.5 검증 routine 1회 수행
-3. 검증 통과하면 본 plan/phase-a-session-maintenance.md `status: 합의 완료, 구현 진입 대기` → `status: 구현 완료 + 검증 OK` 로 갱신
-4. 다음 세션 (또는 같은 세션 후속) 에서 wikey CLAUDE.md Subagent 위임 기준 명문화 + /sync gauge skill 수정
+| 파일 | 종류 | 비고 |
+|------|------|------|
+| `~/.claude/hooks/pre-compact-wikey.sh` | 신규 (5450 bytes, chmod +x) | wikey 한정. transcript archive + handoff 자동 생성 |
+| `~/.claude/hooks/session-start-wikey.sh` | 신규 (2597 bytes, chmod +x) | wikey 한정. session-wrap 상단 + handoff (있으면) + git status stdout inject |
+| `~/.claude/settings.json` (실제 `claude-forge-custom/settings.json`) | 변경 | env `CLAUDE_AUTOCOMPACT_PCT_OVERRIDE=80` + PreCompact hook entry + SessionStart wikey entry. `.bak.20260425` 백업 보관 |
+| `wikey/CLAUDE.md` | 변경 | "Subagent 위임 기준" 섹션 신설 (위임 대상 6 / 호출 형식 / 위임 안 하는 경우) |
+| `~/.claude/skills/sync/SKILL.md` | 변경 | Phase 3 출력 끝에 `[Context Health]` block 추가 (사용량 % / threshold / last compact / last archive / 임계 sign) + 산출 방법 명세 |
 
-## 6. 변경 이력
+### 5.2 smoke 검증 결과
 
-- **2026-04-25 (session 10)**: 본 문서 신설. 사용자 ↔ master 합의 결과 (A=a2, B=b2, C=c1, D, E). F (rewind/clear memory) 는 후순위로 제외.
+PreCompact hook 수동 stdin 주입 (`session_id=smoke-test, cwd=/Users/denny/Project/wikey, trigger=manual`):
+- transcript archive: `~/.claude/archives/wikey-smoke-test-20260425-135233.jsonl` (7.1 MB) 생성 OK
+- handoff 자동 생성: `plan/post-compact-handoff.md` (3 KB) — last commit `e510f90` + uncommitted (M CLAUDE.md) + diff stat 정확
+- exit code 0
+- smoke 산출물 (handoff) 정리됨, archive 는 transcript 백업 가치라 유지
+
+SessionStart hook 수동 smoke:
+- wikey 외 cwd (/tmp): 즉시 exit (silent OK)
+- wikey cwd: session-wrap 상단 30 lines + git status + last commit 정확 출력 OK
+
+### 5.3 미검증 항목 (실측 확인 필요, 다음 세션)
+
+- [ ] **autoCompactThreshold 80% 실측** — 실제 long task 진행 중 80% 도달 시 자동 compact 발동 + PreCompact hook 자동 trigger 확증. 현 세션은 수동 stdin smoke 만.
+- [ ] **SessionStart hook inject 확증** — `claude --continue` 또는 새 session 시작 시 stdout 이 Claude context 에 자동 반영되어 첫 응답에 영향 주는지 관찰.
+- [ ] **/sync gauge 동작** — 다음 /sync 실행 시 `[Context Health]` block 출력 OK.
+- [ ] **CLAUDE.md Subagent 기준 회귀** — 다음 large output 작업에서 master 가 자동으로 subagent 위임 선택하는지 관찰.
+
+## 6. 다음 action
+
+1. 본 phase-a 구현 완료. 다음 세션부터 자동 작동 (`claude --continue` 또는 새 session 시작 시 SessionStart hook 자동 발동, compact 80% 임계 도달 시 PreCompact hook 자동 발동).
+2. `phase-5-todo.md §5.2` 본 작업 진입 (사용자 정책 — tester 1차 / master fallback). 첫 후보:
+   - §5.2.0 Ingest/Audit UI paired sidecar.md 일관화 (UI only, 빠른 fix)
+   - §5.2.1 ★ entity↔concept cross-link 자동 생성 (canonicalizer Stage 3, 답변 풍부도 결정적)
+   - §5.2.5 자동 reindex silent fail 진단 (4 후보 좁힘)
+3. §5.3 미검증 4 항목은 실 사용 중 자연 검증.
+
+## 7. 변경 이력
+
+- **2026-04-25 13:46 (session 10, 합의)**: 본 문서 신설. 사용자 ↔ master 합의 결과 (A=a2, B=b2, C=c1, D, E). F (rewind/clear memory) 는 후순위로 제외.
+- **2026-04-25 13:52 (session 10, 구현)**: 합의 5건 모두 구현 + smoke 검증 OK. status `합의 완료, 구현 진입 대기` → `구현 완료 + smoke 검증 OK`.

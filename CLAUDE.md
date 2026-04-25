@@ -141,3 +141,28 @@ wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`
 
 예외: 단순 오타 수정·한 줄 코드 변경처럼 문서 mirror가 불필요한 경우는 이 플로우를 건너뛰어도 된다. 판단 기준은 "result에 기록할 새 작업인가" — 그렇다면 반드시 이 순서.
 
+## Subagent 위임 기준 (Claude Code context 보호 — 2026-04-25 phase-a 합의)
+
+다음 경우 main session 에서 직접 처리하지 말고 subagent (claude-panel / codex / gemini-panel / general-purpose / Explore) 위임. main context 를 보호하고 large output 을 격리한다.
+
+**위임 대상 (확정)**:
+- **Output 500+ lines**: log tail, test 전체 출력, 대량 grep 결과, file list 100+ entries
+- **Long-running 5분+**: `npm run build`, `npm test` (전체), docling 변환, qmd reindex full, llm-ingest 1 파일 이상
+- **Domain isolated**: DB review (database-reviewer), security audit (reviewer/codex), UI/UX review (gemini-panel/ui-designer), refactor cleanup (refactor-cleaner)
+- **Obsidian CDP UI smoke**: tester 1차 책임 — `~/.claude/skills/obsidian-cdp/SKILL.md §1`. master 는 환경 외 사유 fallback.
+- **Plan 검증**: codex Mode D Panel — `~/.claude/skills/codex/SKILL.md` 기본 정책. 길이 무관 Mode D 우선.
+- **3 query 이상 codebase 탐색**: Explore agent (Glob+Grep+Read).
+
+**위임 호출 형식**:
+- Agent tool prompt 에 (a) 목표 (b) 입력 file 경로 (c) 출력 형식 명시. self-contained.
+- subagent 종료 후 결과만 main 으로 복귀 — large output 은 subagent context 에만 남고 main 은 summary 수신.
+- 결과 통합: master 가 subagent 결과의 "summary + key finding + 다음 액션" 만 user 에게 보고. 원본 raw 는 inline 인용 금지 (필요 시 file 경로만).
+
+**위임 안 하는 경우**:
+- 1-2 line code edit
+- 단일 file Read (300 lines 이하)
+- bash 1-3 command 즉답
+- 사용자가 "직접 처리" 명시
+
+**참조**: `plan/phase-a-session-maintenance.md §3.D`, `feedback_no_defer_to_next_session.md`, `feedback_reuse_prior_artifacts.md`.
+
