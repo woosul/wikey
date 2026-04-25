@@ -92,13 +92,13 @@
 - [x] **검증** — 17 unit tests (paired-sidecar.test.ts) PASS / CDP UI smoke 시각 확증 (Audit All 7 / Ingested 1 / Missing 6 / 5 badge / tooltip 작동) (cycle smoke 2026-04-25)
 - [x] **wiki 재생성 없음 확증** — UI 레이어만 변경 (commit `f108e0c`)
 
-#### 5.2.0 v2 사용자 follow-up 3건 (2026-04-25 사용자 추가 요청, 본 세션 종료 직전 commit `<HASH>`)
+#### 5.2.0 v2 사용자 follow-up 3건 (2026-04-25 사용자 추가 요청, 본 세션 종료 직전, commit `db693d4`)
 
 - [x] **[md] 뱃지 위치 정밀화** — 파일명 오른쪽 8px margin (이전: nameLine flex space-between 으로 badge 가 filesize 옆에 부유). `.wikey-audit-name-wrap` (flex, gap:8px, flex:1, min-width:0) sub-div 로 filename + badge 묶음. filename `flex: 0 1 auto` 로 자연 width + ellipsis 보존, filesize 는 nameLine 의 두 번째 자식으로 우측 끝 자연 정렬. 3 row builders 모두 적용
 - [x] **filename hover tooltip 단순화** — 사용자 요청 (2026-04-25): 한 줄, sidecar 생성일만 (`yyyy-mm-dd HH:MM`). `buildSidecarTooltip` 이전 2줄 (📄 sidecar / 📅 created) → 단일 string. filename + badge 양쪽에 동일 부착
 - [x] **Processing modal progress group 위치** — 사용자 요청: progress bar group 만 wrap 바닥, Back 버튼 위로 16px margin. `.wikey-modal-processing` `flex:1` + `padding-bottom:16px` + 신규 `.wikey-modal-progress-group` `margin-top:auto`. fileLabel/spinner 는 wrap 상단 그대로, Back 버튼 절대 위치 (modal 바닥) 그대로 유지. CDP 측정: gap=16px, group bottom=684.7, btn top=700.7
 
-#### 5.2.0 v3 — broken state badge 오렌지 (사용자 정의, 2026-04-25 종료)
+#### 5.2.0 v3 — broken state badge 오렌지 (사용자 정의, 2026-04-25 종료 직전, commit `400b41f`)
 
 > **사용자 정의 (확정)**: 원본.ext alone → audit "missing" 정상. 원본.ext+원본.md (paired) → ingest 한 번 실행됐다는 의미 → "ingested" 분류여야. paired 인데 missing 으로 분류 = registry/wiki 와 sidecar 가 깨진 broken state.
 

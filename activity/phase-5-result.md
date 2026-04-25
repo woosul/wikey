@@ -258,7 +258,7 @@ links:
 
 **578/578 tests + build 0 errors. §5.2 + §5.2.9 완전 종결.**
 
-### 5.2.0 v2 — 사용자 UI follow-up 3건 (2026-04-25 종료 직전)
+#### 5.2.0 v2 — 사용자 UI follow-up 3건 (2026-04-25 종료 직전, commit `db693d4`)
 
 사용자 요청 직접 처리, master CDP 시각 확증:
 
@@ -270,7 +270,7 @@ links:
 
 **대시보드 카운트 검증** (사용자 추가 요청): Audit `All 7 / Ingested 1 / Missing 6` 정확. raw/3_resources/ 안 supported 원본 (paired sidecar 5건 제외) + nanovna-v2-notes (ingested 1) = 7.
 
-### 5.2.0 v3 — broken state badge 오렌지 (사용자 정의, 2026-04-25 종료 직전)
+#### 5.2.0 v3 — broken state badge 오렌지 (사용자 정의, 2026-04-25 종료 직전, commit `400b41f`)
 
 **사용자 정의 (확정)**:
 - 원본.ext alone (no .md sidecar) → audit "missing" 정상
