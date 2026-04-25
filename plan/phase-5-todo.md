@@ -78,6 +78,22 @@
 >
 > **검색·답변 품질이 본체 동작 (검색·답변 UX) 의 결정적 영향이라 Phase 5 의 P0 다음 진입점**.
 
+### 5.2.0 Ingest/Audit 패널 UI — paired sidecar.md 표현·카운트 일관화 (사용자 요청 2026-04-25)
+
+> **배경 (사용자 관찰)**: Phase 4 §4.1.3 + §4.2 의 sidecar pair 정책 (`원본.ext` + `원본.md` 한 쌍, registry 의 `path_history` 동기 이동) 결과로 raw/ 안에 동일 base 의 `.ext` + `.md` 두 파일이 병행 존재. 그러나 Ingest/Audit 패널 UI 가 이 둘을 **개별 row** 로 노출 + 카운트해 사용자에게 "원본 N 개" 와 row 수가 일치하지 않는 혼선 발생. 또한 `원본.md` 자체는 사용자가 직접 조작할 일이 없는 derived artifact 인데 row 가 노출되어 잘못 클릭/이동/삭제 위험.
+
+- [ ] **paired sidecar.md row hide** — `wikey-obsidian/src/sidebar-chat.ts` (Ingest 패널 row 렌더) + `wikey-obsidian/src/audit-panel.ts` (Audit 패널 row 렌더, 정확 파일명은 grep 으로 확정) 에서 row 빌드 시 `<base>.<ext>` 와 `<base>.md` 가 같은 디렉터리에 동시 존재 + `<ext> ∈ { pdf, hwp, hwpx, docx, pptx, xlsx, html, ... }` (PDF/HWP 등 변환 대상 형식) 이면 `.md` row 를 목록에서 제외.
+- [ ] **paired sidecar.md 뱃지 표시** — 원본 row 우측 (파일명 옆) 에 `[md]` 형태의 small block badge (CSS class 신규 — `wikey-pair-sidecar-badge` 권장). hover 시 sidecar.md 의 파일명 + 생성일 (frontmatter 의 `created` 또는 fs mtime) tooltip 표시. 클릭 동작은 일단 없음 (read-only badge).
+- [ ] **파일 카운트 정정** — 패널 헤더의 "N files" 카운트 + Audit summary 에서 paired sidecar.md 제외. **단독 .md** (sidecar 가 아닌 원본 markdown 직접 입력) 는 그대로 카운트. 판정 로직: 같은 base name 의 변환 대상 ext 파일이 같은 디렉터리에 있으면 paired, 없으면 standalone.
+- [ ] **개별 조작 차단** — paired sidecar.md 는 row 가 없어 자연스레 ingest/move/delete 클릭 경로 차단. 추가 가드 불필요. 단 row 에서 "Ingest 클릭 시 sidecar 도 같이 처리되는가" 는 기존 로직 (registry 의 movePair) 그대로 유지 — UI 만 변경, 데이터 흐름 무관.
+- [ ] **rollover tooltip** — 원본 row 의 파일명 (또는 `[md]` 뱃지) 위 mouse rollover 시 native title 또는 wikey 의 tooltip helper 로:
+  - `📄 sidecar: <base>.md`
+  - `📅 created: <yyyy-mm-dd HH:MM>` (sidecar 의 frontmatter `created` 우선, 없으면 fs mtime)
+- [ ] **검증**:
+  - 단위 테스트: `paired-sidecar-row-filter.test.ts` (신규) — fixture: `[a.pdf, a.md, b.md, c.docx, c.md]` → 표시: `[a.pdf (badge md), b.md, c.docx (badge md)]`, 카운트 = 3
+  - CDP UI smoke: Ingest 패널 + Audit 패널 각 1회 — paired pair 1 개 + 단독 md 1 개 + 변환 ext 1 개 fixture 로 row 표시 + 카운트 + tooltip 모두 시각 확증 (skill `obsidian-cdp` §6.7 query 검증과 분리, UI 검증 단계로 추가)
+- [ ] **wiki 재생성 없음 확증**: UI 레이어만 변경. registry / movePair / wiki/ 데이터 무관.
+
 ### 5.2.1 Entity ↔ Concept cross-link 자동 생성 (★ 답변 풍부도 결정적 fix)
 
 - [ ] canonicalizer Stage 3 (`wikey-core/src/canonicalizer.ts`) 가 **같은 ingest 사이클의 entity ↔ concept** 사이 wikilink 를 본문에 자동 삽입

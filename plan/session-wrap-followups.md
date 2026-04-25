@@ -8,10 +8,11 @@
 ## 🎯 다음 세션 첫 액션 (2026-04-25 session 10 종료 시점)
 
 1. `cat plan/phase-5-todo.md` §5.2 — 진입점·작업 단위 확인. `★ 현 진입점` 섹션. 단일 소스.
-2. **(권장) §5.2.1 entity↔concept cross-link 자동 생성** — 답변 풍부도 결정적 fix. canonicalizer Stage 3 (`wikey-core/src/canonicalizer.ts`) 가 같은 ingest 사이클 entity↔concept 사이 wikilink 를 본문 `## 관련` H2 섹션에 자동 삽입. 측정: NanoVNA fixture 재실행 시 `nanovna-v2.md` 본문에 `[[smith-chart]]` 등 등장 확증.
-3. **§5.2.5 자동 reindex silent fail 진단** — `ingest-pipeline.ts:498 runReindexAndWait` 코드 wiring 정상인데 실측 stale. 4 후보 (race / PATH / quick metadata / timeout) 좁혀둠. routine: NanoVNA 재실행 + console log capture (`init-log` 후 끝까지 보존, 중간 capture-logs 금지) + `bash ./scripts/reindex.sh --quick` 단독 실행 + exit code/stderr/timestamp 측정.
-4. **§5.2 작업은 tester 1차 + master fallback** — 사용자 정책 (2026-04-25 update). Obsidian CDP UI smoke 가 tester 책임 (`~/.claude/skills/obsidian-cdp/SKILL.md §1` + `~/.claude/agents/tester.md` "CDP·E2E 검증 1차 책임").
-5. **샘플 위치 = `raw/0_inbox/`** — `commands.ts:442` 가드 (`autoMoveFromInbox && raw/0_inbox/`) 로 movePair 발동 조건. 본 세션 cycle smoke 는 `_delayed/` 라 IV.A 검증 누락 — skill `obsidian-cdp §6.0` 에 명시.
+2. **§5.2.0 Ingest/Audit UI — paired sidecar.md row hide + 뱃지 + 카운트 정정 + tooltip** (사용자 요청 2026-04-25 종료 직전) — UI 레이어만 변경, 데이터 무관. 단위 테스트 + CDP UI smoke 검증.
+3. **(권장) §5.2.1 entity↔concept cross-link 자동 생성** — 답변 풍부도 결정적 fix. canonicalizer Stage 3 (`wikey-core/src/canonicalizer.ts`) 가 같은 ingest 사이클 entity↔concept 사이 wikilink 를 본문 `## 관련` H2 섹션에 자동 삽입. 측정: NanoVNA fixture 재실행 시 `nanovna-v2.md` 본문에 `[[smith-chart]]` 등 등장 확증.
+4. **§5.2.5 자동 reindex silent fail 진단** — `ingest-pipeline.ts:498 runReindexAndWait` 코드 wiring 정상인데 실측 stale. 4 후보 (race / PATH / quick metadata / timeout) 좁혀둠. routine: NanoVNA 재실행 + console log capture (`init-log` 후 끝까지 보존, 중간 capture-logs 금지) + `bash ./scripts/reindex.sh --quick` 단독 실행 + exit code/stderr/timestamp 측정.
+5. **§5.2 작업은 tester 1차 + master fallback** — 사용자 정책 (2026-04-25 update). Obsidian CDP UI smoke 가 tester 책임 (`~/.claude/skills/obsidian-cdp/SKILL.md §1` + `~/.claude/agents/tester.md` "CDP·E2E 검증 1차 책임").
+6. **샘플 위치 = `raw/0_inbox/`** — `commands.ts:442` 가드 (`autoMoveFromInbox && raw/0_inbox/`) 로 movePair 발동 조건. 본 세션 cycle smoke 는 `_delayed/` 라 IV.A 검증 누락 — skill `obsidian-cdp §6.0` 에 명시.
 
 ---
 
