@@ -155,6 +155,25 @@
 
 > **2026-04-25 archive 결정**: Phase 4 §4.5.1.5 v2 가 RAG chunk 패턴 자체를 schema §19·§21 배격 대상으로 결정·코드 제거 완료 (`source_chunk_id` 삭제, `splitIntoChunks` 삭제). chunk-level contextual retrieval 적용은 그 결정과 충돌. **본 항목 archive**, 재현율 추가 개선이 필요하면 페이지 단위 contextual prefix (Phase 2 Step 3-2 Gemma4 contextual prefix 로 이미 구현 — 페이지 임베딩 시 문서 맥락 prefix 주입) 강화 방향으로 재검토.
 
+### 5.2.9 plugin-only qmd `--quick` exit=1 root cause 진단·수정 (★ §5.8.3 W-C1 승격)
+
+> **2026-04-25 신설**: 본 세션 §5.2.5 cycle smoke 가 실증한 issue. `§5.8.3 W-C1` 의 "Low" 우선순위 무효 (검색 freshness 직격 = §5.2 블로킹). §5.8.3 은 본 항목의 alias 로 유지.
+>
+> **현상 (2026-04-25 cycle smoke 측정)**: ingest 후 plugin 이 `reindex.sh --quick` invoke 시 exit=1, stderr 비어있음 (commit `f108e0c` 이전), commit `7ae636f` 부터는 stderr 보존. CLI 단독 (`bash ./scripts/reindex.sh --quick`) 은 동일 상태에서 exit=0 (15:01 timestamp 확증). 즉 **plugin's execEnv 또는 invocation context** 차이가 root cause.
+
+- [ ] 재검증 cycle smoke — commit `7ae636f` 의 reindex.sh stderr 보존 fix 적용 후 NanoVNA fixture 재인제스트. qmd update / embed 의 실제 stderr 메시지를 plugin console (DevTools) 에 capture
+- [ ] 4 후보 좁힘:
+  - (i) **PATH/cwd 차이** — plugin's `execEnv` (`makeEnv(shellPath)`, env-detect.ts:64) vs CLI shell. PATH 검증 + cwd=basePath 확인
+  - (ii) **qmd 의존성** (dyld/dylib/모델 파일) — Electron 환경에서만 fail. `otool -L` / DYLD trace
+  - (iii) **동시 wiki write race** — Obsidian metadata cache 가 새 wiki 파일 indexing 중 qmd update 와 lock 충돌
+  - (iv) **qmd 자체 버그** (file lock / sqlite WAL conflict)
+- [ ] root cause 매치 → fix:
+  - (i)/(ii): execEnv 보강 또는 qmd 실행 wrapper / DYLD_LIBRARY_PATH 추가
+  - (iii): write 후 fsync sleep 또는 retry / debounce
+  - (iv): qmd binary 우회 또는 sqlite_busy_timeout
+- [ ] 검증: 재재 cycle smoke → reindex 자동 OK + `✓ 검색 인덱스 최신` Notice 등장 + STAMP 갱신 + 후속 query 가 새 페이지 검색 결과 포함
+- [ ] **§5.8.3 W-C1 closed alias 마크**: `phase-5-todo.md §5.8.3` 에 "→ §5.2.9 로 승격, 동일 issue" 한 줄
+
 ### 5.2.8 검증
 
 - [ ] cycle smoke 재실행 (NanoVNA 1 파일 + PII-heavy 1 파일) — entity/concept cross-link + 답변 풍부도 + reindex 자동성 + citation 수 모두 측정
@@ -385,13 +404,10 @@
 - [ ] 문제: Pass A 는 `20_report/000_general`, Pass B 는 `60_note/000_general` — LLM reasoning 수준의 non-determinism.
 - [ ] 해결 방향: CLASSIFY.md 가이드 강화 (기준 명확화), 혹은 LLM prompt stability 개선. tier/분류 1차 depth 6/6 일치는 이미 PASS 이므로 우선순위 낮음.
 
-### 5.8.3 W-C1 reindex --quick non-fatal exit=1 (Low)
+### 5.8.3 W-C1 reindex --quick non-fatal exit=1 → §5.2.9 로 승격 (2026-04-25)
 > tag: #reindex
 > **이전 번호**: `was §5.8.5`.
-
-- [ ] 문제: 양 pass 에서 `runReindexAndWait` 가 `reindex --quick failed (non-fatal)` 12회 emit. stderr 비어있으나 exit=1.
-- [ ] 해결 방향: `scripts/reindex.sh --quick` 내부 원인 조사 (qmd CLI 의 stale 상태 처리 exit code). stale 은 정상 경로라면 exit 0 이어야.
-- [ ] 현재는 warn 로 다운그레이드 + `onFreshnessIssue` Notice 표시 → 사용자 UX 영향 없음. 원인 해소 후 가드 일관성 확보.
+> **2026-04-25 status**: §5.2.5 cycle smoke 가 본 issue 정확 재현 + "사용자 UX 영향 없음" 가정 무효 확증 (검색 freshness 직격). **§5.2.9 로 승격, 본 항목은 alias**.
 
 ---
 

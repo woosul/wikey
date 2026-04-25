@@ -420,7 +420,19 @@ async function runIngestCore(
         piiRedactionMode: plugin.settings.piiRedactionMode,
         // Phase 4 D.0.f follow-up (codex P2): user-visible Notice on reindex/freshness issue
         // (plan v6 §4.4.6 — 사용자가 stale 상태를 인지해야 한다).
+        // §5.2.9: better-sqlite3 ABI mismatch (`ERR_DLOPEN_FAILED` / `NODE_MODULE_VERSION`)
+        // detection — user 가 nvm node 로 처음 install 했고 plugin 이 system node 를 쓰면
+        // 발생. specific 해결 명령 안내.
         onFreshnessIssue: (reason, message) => {
+          const isAbiMismatch = /NODE_MODULE_VERSION|ERR_DLOPEN_FAILED/.test(message)
+          if (isAbiMismatch) {
+            new Notice(
+              `qmd 네이티브 모듈 ABI 불일치 — 터미널에서 다음 실행 후 재시도:\n` +
+              `  bash ./scripts/rebuild-qmd-deps.sh`,
+              12000,
+            )
+            return
+          }
           const label = reason === 'reindex-failed' ? '인덱싱 실패' : '인덱스 갱신 지연'
           new Notice(`${label} — 잠시 후 검색 가능 (${message.slice(0, 80)})`, 6000)
         },
