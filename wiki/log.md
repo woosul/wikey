@@ -5,6 +5,21 @@ created: 2026-04-10
 updated: 2026-04-25
 ---
 
+## [2026-04-25] ingest | nanovna-v2-notes.md
+
+- 엔티티 생성: [[nanovna-v2]]
+- 엔티티 생성: [[vna]]
+- 엔티티 생성: [[v2-plus4]]
+- 엔티티 생성: [[nanovna-qt]]
+- 엔티티 생성: [[dji-o3-air-unit]]
+- 엔티티 생성: [[dji]]
+- 개념 생성: [[swr]]
+- 개념 생성: [[s-parameter]]
+- 개념 생성: [[sma]]
+- 개념 생성: [[mmcx]]
+- 추가 소스: [[source-nanovna-v2-notes]]
+
+
 ## [2026-04-25] phase-5 | §5.2.0~5 검색·답변 품질 6건 통합 (commit f108e0c)
 
 - **§5.2.0 paired sidecar.md UI** — `wikey-core/paired-sidecar.ts` 신규 (helper + 17 unit tests). `wikey-obsidian/sidebar-chat.ts` 의 Ingest list / Audit list / Audit tree 3 row builders 모두 `<base>.<ext>.md` row 숨김 + `<base>.<ext>` row 에 [md] 뱃지 (`.wikey-pair-sidecar-badge` CSS) + tooltip (`📄 sidecar` + `📅 created`) + 카운트 정정 (auditData filter 후 ingested/missing/total 재계산). UI 레이어만 변경 — registry/movePair/wiki/ 데이터 무관.
@@ -13,8 +28,8 @@ updated: 2026-04-25
 - **§5.2.3 검색 graph expansion** — `extractWikilinkBasenames` + `expandWithOneHopWikilinks` pure helpers (5 tests). `buildContextFromFS` / `buildContextWithWikiFS` 가 top-N 페이지 본문의 `wikilink` parse → wiki/{entities,concepts,sources,analyses}/<base>.md 4-카테고리 resolve → cap 5 추가 fetch (frequency desc, first-seen tie-break). 4 unit tests.
 - **§5.2.4 TOP_N default 5 → 8** — `config.ts` + `wikey.conf` + query-pipeline fallback 모두 8.
 - **§5.2.5 reindex silent fail observability + race fix** — `waitUntilFresh` timeout 시 last status + stale count 노출 (진단성). `ingest-pipeline.ts` `onFreshnessOk` callback 신규 (성공 시 plugin 이 Notice "✓ 검색 인덱스 최신 (Xs)" 발동 — silent fail 자체 제거). `commands.ts` post-movePair re-reindex (autoMove 로 인한 wiki/sources/source-*.md frontmatter rewrite 가 STAMP_FILE 갱신 후 발생해 stale 트리거하던 race 차단).
-- **검증**: `npx vitest run wikey-core/src/` → 577/577 (37 신규). `npm run build` 0 errors (core + obsidian). CDP UI cycle smoke = §5.2.8 tester 분기 진행 중.
-- 참조: `activity/phase-5-result.md §5.2.0~5`, `plan/phase-5-todox-5.2.1-crosslink.md`, `plan/phase-5-todo.md §5.2`.
+- **검증**: `npx vitest run wikey-core/src/` → 577/577 (37 신규). `npm run build` 0 errors (core + obsidian). CDP UI cycle smoke (§5.2.8): 4 PASS / 1 PARTIAL (495→500+ fix) / 1 FAIL (observability ✓, qmd plugin-only exit=1 = §5.8.3 W-C1 영역). commit `7ae636f` 로 reindex.sh stderr 보존 + prompt 보강 추가.
+- 참조: `activity/phase-5-result.md §5.2.0~5 / §5.2.8`, `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md`, `plan/phase-5-todox-5.2.1-crosslink.md`, `plan/phase-5-todo.md §5.2`.
 
 ## [2026-04-25] phase-5 | §5.1 over-mask fix + P2 분리 + cycle smoke (master 직접)
 

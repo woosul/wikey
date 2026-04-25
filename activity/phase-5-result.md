@@ -220,8 +220,21 @@ links:
 ### 5.2.7 (archived) Anthropic-style contextual chunk 재작성
 2026-04-25 archive — Phase 4 §4.5.1.5 v2 가 RAG chunk 패턴 자체 배격 결정과 충돌.
 
-### 5.2.8 검증 (cycle smoke) — 진행 중
-2026-04-25: tester 분기 (CDP UI smoke). NanoVNA fixture 재실행 + 측정값 (cross-link / 답변 길이 / citation / reindex Notice) → `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md` (예정).
+### 5.2.8 검증 (cycle smoke) — 1차 완료, fix 적용 후 재검증 권장
+2026-04-25 tester 분기 (CDP UI smoke) — `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md`.
+
+| § | 결과 | 측정값 |
+|---|------|--------|
+| 5.2.0 [md] 뱃지 | **PASS** | Audit List/Tree + Ingest 3곳 모두 5건 노출, tooltip 정상, 7 rows (12 raw → sidecar 5 dedupe), 카운트 정정 |
+| 5.2.1 cross-link | **PASS** | nanovna-v2.md `## 관련` H2 + 4 concepts 양방향 (mmcx/s-parameter/sma/swr), distinct=5, 27 lines (+5). swr/s-parameter 본문에 6 entity backlink |
+| 5.2.2 답변 길이/citation | **PARTIAL → FIX 적용** | 495 chars (목표 500 미달 5 chars), 참고 11 wiki refs (≥5 ✓), inline 15+ → commit `7ae636f` prompt "충분히 풍부하게" 1줄 추가 |
+| 5.2.3 graph expansion | **PASS** | 답변에 1-hop target dji/dji-o3-air-unit 등장 |
+| 5.2.4 TOP_N=8 | **PASS** | wikey.conf + plugin runtime 8 적용, corpus 부족 시 cap 동작 |
+| 5.2.5 reindex Notice | **FAIL → FIX 적용** | console warn observable ✓ but stderr 비어있어 근본 원인 미식별. STAMP 미갱신 → commit `7ae636f` reindex.sh 가 qmd update/embed 실패 시 stderr 로 full output dump. plugin-only exit=1 자체는 `§5.8.3 W-C1` 영역 (Phase 4 D.0.l 잔여, Low) |
+
+**산출물**: 신규 wiki 11 files (1 source + 6 entities + 4 concepts) + 양방향 cross-link 완비. fixture: `raw/0_inbox/nanovna-v2-notes.md`.
+
+**다음 cycle smoke 권장 시점**: commit `7ae636f` 적용 후 (a) §5.2.2 답변 ≥500 chars 재측정 + (b) §5.2.5 qmd 실제 stderr 메시지 확보 → §5.8.3 상세 진단으로 연결.
 
 ---
 

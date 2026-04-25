@@ -7,12 +7,13 @@
 
 ## 🎯 다음 세션 첫 액션 (2026-04-25 session 11 종료 시점)
 
-1. `cat plan/phase-5-todo.md` — §5.2.8 검증 결과 + §5.3 / §5.4 진입 결정.
-2. **§5.2.8 cycle smoke 결과 확인** — 본 세션 tester 분기 결과 → `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md` 측정값 확인. PASS 항목 / FAIL 항목 / PARTIAL 항목 분류. FAIL 시 즉시 fix → 재실행.
-3. **(권장) §5.3 인제스트 증분 (P1)** — `plan/phase-5-todo.md §5.3.1` hash 기반 증분 재인제스트. Phase 4 §4.2.2 URI + source-registry hash 필드 완비 위에서 로직만 추가. 부분 재인제스트는 `section-index.ts parseSections` H2 단위 hash 매칭. wiki 재생성 무관.
-4. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus 등장 시 즉시 착수. PMBOK 하드코딩 외재화 + `SchemaOverride.standard_decompositions[]` 필드 추가. canonicalizer 의 `buildStandardDecompositionBlock(override)` 동적 로더.
-5. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
-6. **§5.2 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임 (`~/.claude/skills/obsidian-cdp/SKILL.md` + `~/.claude/agents/tester.md`).
+1. `cat plan/phase-5-todo.md` — §5.2 종결 + §5.3 / §5.4 / §5.8.3 진입 결정.
+2. **§5.2 재검증 cycle smoke** — commit `7ae636f` (reindex.sh stderr 보존 + prompt 보강) 적용 후 NanoVNA fixture 재실행. 측정 (a) §5.2.2 답변 ≥500 chars 재확인 (b) §5.2.5 qmd 실제 stderr 메시지 capture → §5.8.3 진단 연결.
+3. **(권장) §5.8.3 W-C1 reindex --quick non-fatal exit=1 진단** (Phase 4 D.0.l 잔여, Low → 본 세션 §5.2.5 cycle smoke 로 인해 우선순위 상향) — plugin-only 환경에서 qmd update/embed 가 fail 하는 이유. CLI 단독은 exit=0 (15:01 timestamp 확증). plugin's execEnv 차이 추적 (PATH / cwd / qmd 의존성 / 동시 wiki write race 4 후보).
+4. **§5.3 인제스트 증분 (P1)** — `plan/phase-5-todo.md §5.3.1` hash 기반 증분 재인제스트. Phase 4 §4.2.2 URI + source-registry hash 필드 완비 위에서 로직만 추가. wiki 재생성 무관.
+5. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus 등장 시 즉시 착수.
+6. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
+7. **§5.2 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임.
 
 ---
 
@@ -27,7 +28,8 @@
 | 5 | §5.2.3 검색 graph expansion (extractWikilinkBasenames + expandWithOneHopWikilinks helpers + 4-카테고리 resolve, cap 5) | 9 unit | PASS |
 | 6 | §5.2.4 TOP_N 5 → 8 (config.ts + wikey.conf + query-pipeline fallback) | (regression) | PASS |
 | 7 | plan/phase-5-todox-5.2.1-crosslink.md 신설 (analyst v2 — codex P1 3건 정정) + phase-5-todo.md `## 관련 문서` 등재 | — | — |
-| 8 | §5.2.8 검증 (cycle smoke) — tester 분기 진행 중 → `activity/phase-5-resultx-5.2-cycle-smoke-2026-04-25.md` | — | 진행 중 |
+| 8 | §5.2.8 검증 (cycle smoke) — tester 분기 완료 → 4 PASS / 1 PARTIAL (495→fix) / 1 FAIL (observability ✓, qmd exit=1 = §5.8.3) | — | 4P/1Pa/1F |
+| 9 | §5.2.5 + §5.2.2 fix (commit `7ae636f`) — reindex.sh stderr 보존 + buildSynthesisPrompt "충분히 풍부하게" 지시 | regression | 다음 cycle smoke 시 재측정 |
 
 ---
 
