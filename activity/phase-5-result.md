@@ -1204,17 +1204,68 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 ⇒ **도메인 내부 (0.59~0.91) ≫ 도메인 간 (0.20~0.36)**. 의미 보존 확증. (한/영 페어 spot check 는 wiki 에 한국어 slug 자체가 없어 미수행 — 다국어 cluster 검증은 실 한국어 자료 ingest 후 별 cycle.)
 
-**alpha v1 wire 한계 발견**:
-- ConvergedDecomposition 의 `components` / `sources` 필드가 **mock baseline 시점에도 0** 이었음 → alpha v1 wire 는 ConvergedDecomposition 의 metadata shell 만 생성하고 components 채움은 v2 작업
-- 본 §5.4.8 의 핵심 가치 (실 embedding pipeline + 의미 보존 cluster 가능성) 는 모두 확증
-- ConvergedDecomposition components 채움 자체는 별 follow-up (§5.4.7 3순위 review modal 과 함께 cycle)
+**ConvergedDecomposition 실 cluster 결과 — 의미 보존 확증** (2026-04-26 session 14 추가 검증):
+
+이전 § 본문에서 "alpha v1 wire 한계 — components / sources 가 0" 으로 기록했으나, 이는 spot-check Python script 의 잘못된 field 명 접근 (`components`/`sources` vs 실제 `converged_components`/`source_mentions`) 로 인한 false negative. 정정.
+
+| umbrella_slug | converged_components (실 cluster) | source_mentions | arbitration |
+|---|---|---|---|
+| **iso-iec-27001-2022** | 4건: `iso-iec-27001-2022`, `iso-iec-27001`, `isms-certification`, `iso-27001` (같은 표준의 연도/약어/별칭 변형) | 3 sources: `iso-27001-overview.md`, `iso-27001-annex-a-detail.md`, `itil-4-practices.md` | union, confidence 1.0 |
+| **itil-4** | 2건: `itil-4`, `itil-v3` (ITIL 버전 변형) | 2 sources: `itil-4-overview.md`, `itil-4-practices.md` | union, confidence 1.0 |
+
+⇒ alpha v1 wire **정상 작동**. ConvergedDecomposition 이 mention graph + cosine cluster + arbitration 를 거쳐 실제로 같은 표준의 다른 표기를 통합. ISO 27001 cluster 의 `iso-iec-27001-2022` ↔ `iso-27001` 통합이 정확히 사용자가 의도한 "다른 표현 자동 통합 인식" 의 alpha 단계 결실.
 
 **검증 합계**:
 - ✅ script 실행 시 59 / 59 slug embedding 추출 (`extracted: 59 / 59`)
 - ✅ convergence-pass 실 embeddings inject 작동 (`loaded 59 embeddings → wrote 2 ConvergedDecomposition(s)`)
 - ✅ cluster 의미 spot-check — 도메인 내부 ≫ 도메인 간 (cosine 차이 ≥ 0.3)
+- ✅ ConvergedDecomposition.converged_components / source_mentions 모두 채워진 의미 cluster — alpha v1 wire 정상 (이전 false negative 정정)
 - ✅ 회귀 baseline 732 PASS 유지 (38 files / 0 fail)
 - ⚠️ 한/영 cluster cosine ≥ 0.85 검증은 wiki 한국어 slug 부재로 보류 — `plan/phase-5-todo.md §5.4.7` 후속 follow-up
+
+### 5.4.9 2/3/4순위 통합 종결 — Suggestions panel UI 개선 (2026-04-26 session 14)
+> tag: #ui, #suggestion, #stage-2, #stage-4
+
+> **mini plan**: `plan/phase-5-todox-5.4-integration.md §11`. 사용자 영구 결정 (2026-04-26 session 14): "2/3/4순위 동시 진행. 위임 없이 master 직접". UI 변경 단일 file (sidebar-chat.ts) + 1 type export 추가 (wikey-core index.ts) + CSS append. **회귀 코드 0 변경 → 732 PASS 유지**.
+
+**사용자 UI spec (2026-04-26 직접 명시)**:
+1. 아이콘: clipboard_check (Bootstrap, 신규 ICONS 추가)
+2. title: guide 패널 형식 (`## Wikey Suggestions` 마크다운 렌더)
+3. 패턴 후보 목록: audit 패널 그리드 동일 — Select All checkbox + 멀티 row + 상단 패턴명 + 하단 출처
+4. 버튼 (하단 고정): Accept (멀티) / Reject (멀티) / Add (in-line edit) / Edit (mode → row → in-line)
+5. LLM 모델명: audit 패널 최하단 default ai model 출력 형식 (provider+model select)
+
+**구현 (single file sidebar-chat.ts + 1 export 추가)**:
+- ICONS.clipboardCheck 추가 (Bootstrap SVG)
+- header button icon = clipboardCheck (기존 question 대체)
+- `SuggestionsPanelRow` discriminated union (3-kind: `suggestion` / `converged` / `user-added`) — Stage 2 Suggestion + Stage 4 ConvergedDecomposition + user Add 통합 표시
+- `rowToSuggestionShape` helper — ConvergedDecomposition + user-added 를 Suggestion shape 으로 wrap → `appendStandardDecomposition` writer 재사용 (회귀 0)
+- `loadConvergedStoreFromVault` / `saveConvergedStoreToVault` 신규 helper — `.wikey/converged-decompositions.json` read-only load + Reject/Accept 후 persist write
+- `openSuggestionsPanel()` 전면 재구현 — audit 그리드 패턴 (Select All + 멀티 row + 하단 고정 버튼 + provider/model bar)
+- Accept (multi): 선택 row 모두 → `appendStandardDecomposition(wikiFS, suggestion)` 재사용 → Stage 2 = SuggestionStore.state=accepted / Stage 4 = converged store 제거 / user-added = in-memory 제거. 실패 시 reason hint Notice
+- Reject (multi): Stage 2 = `rejectSuggestionFromPanel` (negativeCache) / Stage 4 = converged store 제거 / user-added = in-memory 제거
+- Add: 빈 user-added row 상단 insert + editMode 자동 활성화 + 선택 → input 두 줄 (umbrella_slug + umbrella_name) → Enter Save
+- Edit: editMode 토글 → row 선택 → inline input 표시 → Enter Save → 기존 row 를 user-added shape 으로 대체 (semantics: "이 행 기반으로 사용자 정의 변형 등록")
+- CSS: audit row pattern 재사용 + suggestion 전용 변형 (source badge wiki/user/origin 색상, edit input, edit mode active button, disabled apply button) — `wikey-obsidian/styles.css` append
+
+**type export 추가** (wikey-core/src/index.ts):
+- `StandardDecompositionComponent`, `StandardDecomposition` re-export — UI 에서 row.components 타입 사용
+
+**4순위 처리** (사용자 지적 후 정정):
+- (a) Edit modal 검증 → 본 §11 의 inline edit 동작으로 자연 통합 (별 modal 없이 row inline input 채택, Karpathy #2 Simplicity First)
+- (b) 자료 자동 분류 race condition → self-resolve, scope 외 (재발 시 별 cycle)
+- (c) "alpha v1 wire 한계 — components/sources 채움" → **사실 한계 아님**. 1순위 spot-check Python script field 명 오류 (false negative). 실 데이터 정상 채워짐 (iso-iec-27001-2022 cluster 4 components / 3 sources, itil-4 cluster 2 components / 2 sources). §5.4.8 본문 정정 반영.
+
+**검증 합계**:
+- ✅ wikey-core build 0 errors
+- ✅ wikey-obsidian build 0 errors (1 기존 warning — pii-patterns.js cjs/import.meta, §5.3 부터 알려진 항목)
+- ✅ 회귀 baseline 732 PASS 유지 (38 files / 0 fail) — UI 변경 + 1 type re-export, 회귀 코드 0 변경
+- ⚠️ 라이브 UI cycle smoke (Obsidian CDP) — 본 활동 기록 시점 사용자 vault 에서 실 ingest 결과 (ConvergedDecomposition 2건) 와 함께 master 직접 검증 권장
+
+**Out of scope (후속)** — `plan/phase-5-todox-5.4-integration.md §11.8`:
+- Stage 3 SelfDeclaration 'origin' source persist 통합 (현재 runtime-only, store 신규 추가 필요)
+- 정렬 / 필터 / negativeCache view (MVP 후 확장)
+- ConvergedDecomposition arbitration_method 'llm' (현 'union' default 충분)
 
 ---
 

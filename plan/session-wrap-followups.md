@@ -1,15 +1,15 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-26 session 14 — §5.4.7 1순위 (Stage 4 실 qmd embeddings 통합) 종결**. Node.js + better-sqlite3 + sqlite-vec path 채택 (Python 기각, system Python `enable_load_extension` 비활성). 59/59 slug × 1024-dim 추출 + convergence-pass 실 inject + cluster 의미 spot-check (도메인 내부 0.59~0.91 ≫ 도메인 간 0.20~0.36). 회귀 **732 PASS** 유지. **다음 진입점 = §5.4.7 2순위 (Suggestions panel UI 개선)**.
+> 최신 갱신: **2026-04-26 session 14 — §5.4.7 1/2/3/4순위 모두 종결**. 1순위 = Stage 4 실 qmd embeddings 통합 (Node.js + better-sqlite3 + sqlite-vec, 59/59 slug × 1024-dim, alpha v1 wire 정상 cluster — false negative 정정 후 확증). 2/3/4순위 = Suggestions panel UI 개선 통합 cycle (audit 그리드 + Accept/Reject 멀티 + Add/Edit in-line + Stage 4 통합 표시 + 4순위 해석 정정). 회귀 **732 PASS** 유지. build 0 errors. **다음 진입점 = Phase 5 §5.5~§5.9 또는 §5.4.7 후속 (Stage 3 SelfDeclaration persist 통합 / 정렬·필터·negativeCache view / arbitration LLM)**.
 > 생성일: 2026-04-10
 
 ---
 
 ## 🎯 다음 세션 첫 액션 (2026-04-26 session 14 종료 시점)
 
-> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: 본 session 의 deferred 4 항목 (§5.4.7) 은 **다음 세션 진입 즉시 첫 작업** 으로 진행. ~~1순위 (Stage 4 실 qmd) — session 14 종결~~. **2순위 (UI 수정, Suggestions panel) 가 다음 진입점**. 3·4순위 는 2 완료 후 순차.
+> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: §5.4.7 deferred 4 항목 모두 **session 14 종결**. 다음 세션은 master 가 사용자에게 후속 우선순위 확인 후 진입.
 >
-> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (2/3/4순위 체크박스) → (3) `activity/phase-5-result.md §5.4.8` (1순위 종결) / §5.4.7 (deferral table) → (4) 2순위 작업 시작.
+> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (모두 [x]) → (3) `activity/phase-5-result.md §5.4.8` (1순위) + `§5.4.9` (2/3/4순위) → (4) 다음 우선순위 사용자 확인.
 
 ### 1순위 — Stage 4 실 qmd embeddings 통합 ✅ 종결 (2026-04-26 session 14)
 

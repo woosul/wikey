@@ -12,7 +12,8 @@ import {
 } from 'wikey-core'
 import type {
   Citation, ResolvedSource, SourceRegistry,
-  Suggestion, SuggestionStore,
+  Suggestion, SuggestionStore, ConvergedDecomposition,
+  StandardDecompositionComponent,
 } from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
 import type { IngestRunResult } from './commands'
@@ -41,9 +42,84 @@ const ICONS = {
   thumbUp: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.864.046C7.908-.193 7.02.53 6.956 1.466c-.072 1.051-.23 2.016-.428 2.59-.125.36-.479 1.013-1.04 1.639-.557.623-1.282 1.178-2.131 1.41C2.685 7.288 2 7.87 2 8.72v4.001c0 .845.682 1.464 1.448 1.545 1.07.114 1.564.415 2.068.723l.048.03c.272.165.578.348.97.484.397.136.861.217 1.466.217h3.5c.937 0 1.599-.477 1.934-1.064a1.86 1.86 0 0 0 .254-.912c0-.152-.023-.312-.077-.464.201-.263.38-.578.488-.901.11-.33.172-.762.004-1.149.069-.13.12-.269.159-.403.077-.27.113-.568.113-.857 0-.288-.036-.585-.113-.856a2 2 0 0 0-.138-.362 1.9 1.9 0 0 0 .234-1.734c-.206-.592-.682-1.1-1.2-1.272-.847-.282-1.803-.276-2.516-.211a10 10 0 0 0-.443.05 9.4 9.4 0 0 0-.062-4.509A1.38 1.38 0 0 0 8.864.046M11.5 14.721H8c-.51 0-.863-.069-1.14-.164-.281-.097-.506-.228-.776-.393l-.04-.024c-.555-.339-1.198-.731-2.49-.868-.333-.036-.554-.29-.554-.55V8.72c0-.254.226-.543.62-.65 1.095-.3 1.977-.996 2.614-1.708.635-.71 1.064-1.475 1.238-1.978.243-.7.407-1.768.482-2.85.025-.362.36-.594.667-.518l.262.066c.16.04.258.143.288.255a8.34 8.34 0 0 1-.145 4.725.5.5 0 0 0 .595.644l.003-.001.014-.003.058-.014a9 9 0 0 1 1.036-.157c.663-.06 1.457-.054 2.11.164.175.058.45.3.57.65.107.308.087.67-.266 1.022l-.353.353.353.354c.043.043.105.141.154.315.048.167.075.37.075.581 0 .212-.027.414-.075.582-.05.174-.111.272-.154.315l-.353.353.353.354c.047.047.109.177.005.488a2.2 2.2 0 0 1-.505.805l-.353.353.353.354c.006.005.041.05.041.17a.9.9 0 0 1-.121.416c-.165.288-.503.56-1.066.56z"/></svg>',
   thumbDown: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8.864 15.674c-.956.24-1.843-.484-1.908-1.42-.072-1.05-.23-2.015-.428-2.59-.125-.36-.479-1.012-1.04-1.638-.557-.624-1.282-1.179-2.131-1.41C2.685 8.432 2 7.85 2 7V3c0-.845.682-1.464 1.448-1.546 1.07-.113 1.564-.415 2.068-.723l.048-.029c.272-.166.578-.349.97-.484C6.931.08 7.395 0 8 0h3.5c.937 0 1.599.478 1.934 1.064.164.287.254.607.254.913 0 .152-.023.312-.077.464.201.262.38.577.488.9.11.33.172.762.004 1.15.069.13.12.268.159.403.077.27.113.567.113.856s-.036.586-.113.856c-.035.12-.08.244-.138.363.394.571.418 1.2.234 1.733-.206.592-.682 1.1-1.2 1.272-.847.283-1.803.276-2.516.211a10 10 0 0 1-.443-.05 9.36 9.36 0 0 1-.062 4.51c-.138.508-.55.848-1.012.964zM11.5 1H8c-.51 0-.863.068-1.14.163-.281.097-.506.229-.776.393l-.04.025c-.555.338-1.198.73-2.49.868-.333.035-.554.29-.554.55V7c0 .255.226.543.62.65 1.095.3 1.977.997 2.614 1.709.635.71 1.064 1.475 1.238 1.977.243.7.407 1.768.482 2.85.025.362.36.595.667.518l.262-.065c.16-.04.258-.144.288-.255a8.34 8.34 0 0 0-.145-4.726.5.5 0 0 1 .595-.643h.003l.014.004.058.013a9 9 0 0 0 1.036.157c.663.06 1.457.054 2.11-.163.175-.059.45-.301.57-.651.107-.308.087-.67-.266-1.021L12.793 7l.353-.354c.043-.042.105-.14.154-.315.048-.167.075-.37.075-.581s-.027-.414-.075-.581c-.05-.174-.111-.273-.154-.315l-.353-.354.353-.354c.047-.047.109-.176.005-.488a2.2 2.2 0 0 0-.505-.804l-.353-.354.353-.354c.006-.005.041-.05.041-.17a.9.9 0 0 0-.121-.415C12.4 1.272 12.063 1 11.5 1"/></svg>',
   folder: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3H14a2 2 0 0 1 2 2v1.5a.5.5 0 0 1-1 0V5a1 1 0 0 0-1-1H9.828a3 3 0 0 1-2.12-.879l-.83-.828A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/><path d="M14.5 5.5a.5.5 0 0 0-.468.324L12.78 9H3.22l-1.252-3.176A.5.5 0 0 0 1.5 5.5a.5.5 0 0 0-.49.412L.008 11.91a.5.5 0 0 0 .49.588h15.004a.5.5 0 0 0 .49-.588l-1.002-5.998A.5.5 0 0 0 14.5 5.5"/></svg>',
+  clipboardCheck: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0"/><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></svg>',
 }
 
 type PanelName = 'chat' | 'dashboard' | 'audit' | 'ingest' | 'help' | 'suggestions'
+
+// §11 — Suggestions panel row union (Stage 2 + Stage 4 + user-added).
+// `origin` discriminates the persistence backing; `source` drives the UI badge.
+type SuggestionsPanelRow =
+  | {
+      readonly origin: 'suggestion'
+      readonly source: 'wiki'
+      readonly id: string
+      readonly umbrella_slug: string
+      readonly umbrella_name?: string
+      readonly components: readonly StandardDecompositionComponent[]
+      readonly sourceLabel: string
+      readonly raw: Suggestion
+    }
+  | {
+      readonly origin: 'converged'
+      readonly source: 'wiki'
+      readonly id: string
+      readonly umbrella_slug: string
+      readonly umbrella_name: string
+      readonly components: readonly StandardDecompositionComponent[]
+      readonly sourceLabel: string
+      readonly raw: ConvergedDecomposition
+    }
+  | {
+      readonly origin: 'user-added'
+      readonly source: 'user'
+      readonly id: string
+      readonly umbrella_slug: string
+      readonly umbrella_name: string
+      readonly components: readonly StandardDecompositionComponent[]
+      readonly sourceLabel: string
+    }
+
+// `appendStandardDecomposition` writer 가 Suggestion 만 받음.
+// Stage 4 ConvergedDecomposition + user-added 는 Suggestion shape 으로 wrap 후 재사용.
+function rowToSuggestionShape(row: SuggestionsPanelRow): Suggestion {
+  if (row.origin === 'suggestion') return row.raw
+  const now = new Date().toISOString()
+  if (row.origin === 'converged') {
+    const c = row.raw
+    return {
+      id: row.id,
+      umbrella_slug: c.umbrella_slug,
+      umbrella_name: c.umbrella_name,
+      candidate_components: c.converged_components,
+      support_count: c.source_mentions.length,
+      suffix_score: 0,
+      mention_count: c.source_mentions.reduce((acc, sm) => acc + sm.mentioned_components.length, 0),
+      confidence: c.arbitration_confidence,
+      evidence: [],
+      state: { kind: 'pending' },
+      createdAt: c.convergedAt,
+      updatedAt: c.convergedAt,
+    }
+  }
+  // user-added
+  return {
+    id: row.id,
+    umbrella_slug: row.umbrella_slug,
+    umbrella_name: row.umbrella_name,
+    candidate_components: row.components.length > 0
+      ? row.components
+      : [{ slug: row.umbrella_slug, type: 'methodology' }],
+    support_count: 0,
+    suffix_score: 0,
+    mention_count: 0,
+    confidence: 1,
+    evidence: [],
+    state: { kind: 'pending' },
+    createdAt: now,
+    updatedAt: now,
+  }
+}
 
 const PROVIDER_PRETTY_NAMES: Readonly<Record<string, string>> = {
   gemini: 'Google Gemini',
@@ -141,7 +217,7 @@ export class WikeyChatView extends ItemView {
     this.panelBtns.dashboard = this.makeHeaderBtn(actions, ICONS.dashboard, 'Dashboard', () => this.selectPanel('dashboard'))
     this.panelBtns.ingest = this.makeHeaderBtn(actions, ICONS.plus, 'Ingest', () => this.selectPanel('ingest'))
     this.panelBtns.audit = this.makeHeaderBtn(actions, ICONS.audit, 'Audit', () => this.selectPanel('audit'))
-    this.panelBtns.suggestions = this.makeHeaderBtn(actions, ICONS.question, 'Suggestions', () => this.selectPanel('suggestions'))
+    this.panelBtns.suggestions = this.makeHeaderBtn(actions, ICONS.clipboardCheck, 'Suggestions', () => this.selectPanel('suggestions'))
     this.panelBtns.help = this.makeHeaderBtn(actions, ICONS.question, 'Help', () => this.selectPanel('help'))
     this.makeHeaderBtn(actions, ICONS.reload, 'Reload', () => (this.app as any).commands?.executeCommandById?.('app:reload'))
     this.makeHeaderBtn(actions, ICONS.close, 'Close', () => this.leaf.detach())
@@ -589,7 +665,7 @@ Click [[page name]] in answers to navigate to the wiki page.
     MarkdownRenderer.render(this.app, helpMd, helpEl, '', this.plugin)
   }
 
-  // ── Suggestions (§5.4.2 Stage 2) ──
+  // ── Suggestions (§5.4.2 Stage 2 + §5.4.4 Stage 4 통합 panel, §11) ──
 
   private async loadSuggestionStoreFromVault(): Promise<SuggestionStore> {
     const path = '.wikey/suggestions.json'
@@ -613,85 +689,368 @@ Click [[page name]] in answers to navigate to the wiki page.
     await this.plugin.wikiFS.write('.wikey/suggestions.json', JSON.stringify(store, null, 2) + '\n')
   }
 
-  private async openSuggestionsPanel() {
-    this.suggestionsPanel = createDiv({ cls: 'wikey-chat-suggestions' })
-    this.messagesEl.parentElement?.insertBefore(this.suggestionsPanel, this.messagesEl)
-    const panel = this.suggestionsPanel
-    panel.createEl('h3', { text: '🔔 표준 분해 후보' })
-
-    const store = await this.loadSuggestionStoreFromVault()
-    const pending = store.suggestions.filter((s) => s.state.kind === 'pending')
-    if (pending.length === 0) {
-      panel.createEl('p', { text: '대기 중인 제안이 없습니다.' })
-      return
+  // §11 — Stage 4 ConvergedDecomposition store (read-only load + persist write)
+  private async loadConvergedStoreFromVault(): Promise<ConvergedDecomposition[]> {
+    const path = '.wikey/converged-decompositions.json'
+    try {
+      if (!(await this.plugin.wikiFS.exists(path))) return []
+      const raw = await this.plugin.wikiFS.read(path)
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) ? parsed as ConvergedDecomposition[] : []
+    } catch (err) {
+      console.warn('[Wikey converged] load failed:', err)
+      return []
     }
-    for (const s of pending) this.renderSuggestionCard(panel, s)
   }
 
-  private renderSuggestionCard(parent: HTMLElement, s: Suggestion) {
-    const model = buildSuggestionCardModel(s)
-    const card = parent.createDiv({ cls: 'wikey-suggestion-card' })
-    card.createEl('h4', { text: model.title })
-    card.createEl('p', { text: `${model.confidenceLabel} · ${model.summary}` })
-    const list = card.createEl('ul')
-    for (const slug of model.componentSlugs) list.createEl('li', { text: slug })
-    if (model.evidenceLines.length > 0) {
-      const ev = card.createEl('details')
-      ev.createEl('summary', { text: 'Evidence' })
-      for (const line of model.evidenceLines) ev.createEl('div', { text: line })
+  private async saveConvergedStoreToVault(items: ConvergedDecomposition[]): Promise<void> {
+    await this.plugin.wikiFS.write('.wikey/converged-decompositions.json', JSON.stringify(items, null, 2) + '\n')
+  }
+
+  // §11 — SuggestionsPanelRow union: Stage 2 Suggestion + Stage 4 ConvergedDecomposition + user-added
+  // Single shape feeding the audit-style grid panel. discriminator = `origin`.
+  private suggestionRows: SuggestionsPanelRow[] = []
+  private suggestionSelections: Set<string> = new Set()
+  private suggestionEditMode = false
+  private suggestionUserCounter = 0
+
+  private async openSuggestionsPanel() {
+    this.suggestionsPanel = createDiv({ cls: 'wikey-suggestions-panel' })
+    this.messagesEl.parentElement?.insertBefore(this.suggestionsPanel, this.messagesEl)
+    const panel = this.suggestionsPanel
+    const helpMd = '## Wikey Suggestions\n\n자동 탐지된 표준 분해 후보 + 직접 추가한 패턴을 검토합니다. 체크박스로 선택 후 Accept (적용) 또는 Reject (삭제). Add 로 새 패턴, Edit 으로 행 수정.'
+    const titleEl = panel.createDiv({ cls: 'wikey-suggestions-title' })
+    await MarkdownRenderer.render(this.app, helpMd, titleEl, '', this.plugin)
+
+    // Reset state on each open (so reopening shows fresh data)
+    this.suggestionSelections = new Set()
+    this.suggestionEditMode = false
+
+    await this.refreshSuggestionRows()
+    this.renderSuggestionsGrid(panel)
+  }
+
+  private async refreshSuggestionRows(): Promise<void> {
+    const [suggStore, converged] = await Promise.all([
+      this.loadSuggestionStoreFromVault(),
+      this.loadConvergedStoreFromVault(),
+    ])
+    const rows: SuggestionsPanelRow[] = []
+    for (const s of suggStore.suggestions) {
+      if (s.state.kind !== 'pending') continue
+      rows.push({
+        origin: 'suggestion',
+        source: 'wiki',
+        id: s.id,
+        umbrella_slug: s.umbrella_slug,
+        umbrella_name: s.umbrella_name,
+        components: s.candidate_components,
+        sourceLabel: 'wiki (mention graph)',
+        raw: s,
+      })
     }
-    const actions = card.createDiv({ cls: 'wikey-suggestion-actions' })
-    const acceptBtn = actions.createEl('button', { text: 'Accept' })
-    const editBtn = actions.createEl('button', { text: 'Edit' })
-    const rejectBtn = actions.createEl('button', { text: 'Reject' })
-    acceptBtn.disabled = !model.actions.accept
-    editBtn.disabled = !model.actions.edit
-    rejectBtn.disabled = !model.actions.reject
+    for (const c of converged) {
+      rows.push({
+        origin: 'converged',
+        source: 'wiki',
+        id: c.umbrella_slug,
+        umbrella_slug: c.umbrella_slug,
+        umbrella_name: c.umbrella_name,
+        components: c.converged_components,
+        sourceLabel: c.source_mentions.length > 0
+          ? `wiki (cluster, ${c.source_mentions.length} sources)`
+          : 'wiki (cluster)',
+        raw: c,
+      })
+    }
+    // Preserve user-added rows from prior render (in-memory only)
+    for (const r of this.suggestionRows) {
+      if (r.origin === 'user-added') rows.push(r)
+    }
+    this.suggestionRows = rows
+  }
+
+  private renderSuggestionsGrid(panel: HTMLElement): void {
+    // ── Top: select-all + total ──
+    const listArea = panel.createDiv({ cls: 'wikey-audit-list-area wikey-suggestions-list-area' })
+    const selectAllRow = listArea.createDiv({ cls: 'wikey-audit-selectall' })
+    const selectAllCb = selectAllRow.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' }) as HTMLInputElement
+    selectAllRow.createEl('span', { text: 'Select All', cls: 'wikey-audit-selectall-label' })
+    const selectAllTotal = selectAllRow.createEl('span', { cls: 'wikey-audit-selectall-total' })
+    const updateSelectAllTotal = (n: number) => {
+      selectAllTotal.empty()
+      selectAllTotal.createEl('span', { text: 'Total | ', cls: 'wikey-audit-selectall-total-label' })
+      selectAllTotal.createEl('span', { text: String(n), cls: 'wikey-audit-selectall-total-number' })
+    }
+
+    const listEl = listArea.createDiv({ cls: 'wikey-audit-list wikey-suggestions-list' })
+
+    // ── Bottom: Accept / Reject / Add / Edit + provider/model ──
+    const bottomBar = panel.createDiv({ cls: 'wikey-audit-bottom' })
+    const applyBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar' })
+    const acceptBtn = applyBar.createEl('button', { text: 'Accept', cls: 'wikey-audit-apply-btn' })
+    const rejectBtn = applyBar.createEl('button', { text: 'Reject', cls: 'wikey-audit-delay-action-btn' })
+    const addBtn = applyBar.createEl('button', { text: 'Add', cls: 'wikey-audit-delay-action-btn' })
+    const editBtn = applyBar.createEl('button', { text: 'Edit', cls: 'wikey-audit-delay-action-btn' })
+
+    // Provider/Model row (audit panel 동일)
+    const providerBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
+    const providerSelect = providerBar.createEl('select', { cls: 'wikey-select' })
+    const providerOptions = [
+      { value: '', text: 'DEFAULT' },
+      { value: 'ollama', text: 'Local' },
+      { value: 'gemini', text: 'Google Gemini' },
+      { value: 'openai', text: 'OpenAI Codex' },
+      { value: 'anthropic', text: 'Anthropic Claude' },
+    ]
+    const currentSuggProvider = this.plugin.settings.ingestProvider || ''
+    for (const opt of providerOptions) {
+      const el = providerSelect.createEl('option', { text: opt.text, attr: { value: opt.value } })
+      if (opt.value === currentSuggProvider) el.selected = true
+    }
+    const modelSelect = providerBar.createEl('select', { cls: 'wikey-select' })
+    const savedSuggModel = this.plugin.settings.ingestModel || ''
+    modelSelect.createEl('option', { text: 'DEFAULT', attr: { value: '' } })
+    const loadModels = async (provider: string) => {
+      const config = this.plugin.buildConfig()
+      const models = await fetchModelList(provider as any, config, this.plugin.httpClient)
+      modelSelect.empty()
+      const defaultOpt = modelSelect.createEl('option', { text: 'DEFAULT', attr: { value: '' } })
+      if (!savedSuggModel) defaultOpt.selected = true
+      for (const m of models) {
+        const opt = modelSelect.createEl('option', { text: m, attr: { value: m } })
+        if (m === savedSuggModel) opt.selected = true
+      }
+    }
+    loadModels(providerSelect.value)
+    providerSelect.addEventListener('change', () => loadModels(providerSelect.value))
+
+    // ── Update logic ──
+    const updateButtons = () => {
+      const selCount = this.suggestionSelections.size
+      acceptBtn.toggleClass('wikey-audit-apply-disabled', selCount === 0)
+      rejectBtn.toggleClass('wikey-audit-apply-disabled', selCount === 0)
+      if (selCount === 0) {
+        acceptBtn.setAttr('disabled', 'true')
+        rejectBtn.setAttr('disabled', 'true')
+      } else {
+        acceptBtn.removeAttribute('disabled')
+        rejectBtn.removeAttribute('disabled')
+      }
+      editBtn.toggleClass('wikey-audit-edit-active', this.suggestionEditMode)
+    }
+
+    const renderRows = () => {
+      listEl.empty()
+      const rows = this.suggestionRows
+      updateSelectAllTotal(rows.length)
+      const allChecked = rows.length > 0 && rows.every((r) => this.suggestionSelections.has(r.id))
+      selectAllCb.checked = allChecked
+
+      if (rows.length === 0) {
+        listEl.createEl('div', { cls: 'wikey-dashboard-empty', text: '대기 중인 후보가 없습니다. Add 로 직접 추가하거나 ingest 후 자동 탐지 결과를 기다리세요.' })
+        updateButtons()
+        return
+      }
+
+      for (const row of rows) {
+        const rowEl = listEl.createDiv({ cls: 'wikey-audit-row wikey-suggestion-row' })
+        const cb = rowEl.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' }) as HTMLInputElement
+        cb.checked = this.suggestionSelections.has(row.id)
+
+        const info = rowEl.createDiv({ cls: 'wikey-audit-info' })
+        const nameLine = info.createDiv({ cls: 'wikey-audit-name-line' })
+        const nameWrap = nameLine.createDiv({ cls: 'wikey-audit-name-wrap' })
+
+        if (this.suggestionEditMode && this.suggestionSelections.has(row.id)) {
+          // inline edit input — replaces the name span
+          const slugInput = nameWrap.createEl('input', {
+            cls: 'wikey-suggestion-edit-input', attr: { type: 'text', value: row.umbrella_slug, placeholder: 'umbrella_slug' },
+          }) as HTMLInputElement
+          const nameInput = nameWrap.createEl('input', {
+            cls: 'wikey-suggestion-edit-input', attr: { type: 'text', value: row.umbrella_name ?? row.umbrella_slug, placeholder: 'umbrella_name' },
+          }) as HTMLInputElement
+          const saveInline = () => {
+            const newSlug = slugInput.value.trim().toLowerCase().replace(/\s+/g, '-')
+            const newName = nameInput.value.trim() || newSlug
+            if (!/^[a-z][a-z0-9-]*$/.test(newSlug)) {
+              new Notice('umbrella_slug 형식 위반 (소문자, 숫자, 하이픈, 첫 글자 = 소문자)')
+              return
+            }
+            this.replaceRowWithUserAdded(row, newSlug, newName)
+            this.suggestionSelections.delete(row.id)
+            renderRows()
+            updateButtons()
+          }
+          slugInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveInline() })
+          nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveInline() })
+        } else {
+          const displayName = row.umbrella_name && row.umbrella_name !== row.umbrella_slug
+            ? `${row.umbrella_name} · ${row.umbrella_slug}`
+            : row.umbrella_slug
+          nameWrap.createEl('span', { text: displayName, cls: 'wikey-audit-name' })
+          const sourceBadge = nameWrap.createEl('span', {
+            text: row.source,
+            cls: `wikey-suggestion-source-badge wikey-suggestion-source-${row.source}`,
+          })
+          sourceBadge.setAttr('title', row.sourceLabel)
+        }
+        nameLine.createEl('span', {
+          text: `${row.components.length} components`,
+          cls: 'wikey-audit-filesize',
+        })
+
+        const pathLine = info.createDiv({ cls: 'wikey-audit-path-line' })
+        pathLine.createEl('span', { text: row.sourceLabel, cls: 'wikey-audit-path' })
+
+        const toggleCb = () => {
+          if (cb.checked) this.suggestionSelections.add(row.id)
+          else this.suggestionSelections.delete(row.id)
+          updateButtons()
+          const all = this.suggestionRows.every((r) => this.suggestionSelections.has(r.id))
+          selectAllCb.checked = all
+          // editMode + selection 변화 시 inline edit input 토글을 반영하기 위해 행 부분 재렌더
+          if (this.suggestionEditMode) renderRows()
+        }
+        cb.addEventListener('change', toggleCb)
+        rowEl.addEventListener('click', (e) => {
+          if (e.target === cb) return
+          const inputTargets = ['INPUT', 'TEXTAREA', 'SELECT']
+          if (inputTargets.includes((e.target as HTMLElement).tagName)) return
+          cb.checked = !cb.checked
+          toggleCb()
+        })
+      }
+      updateButtons()
+    }
+
+    selectAllCb.addEventListener('change', () => {
+      const checked = selectAllCb.checked
+      this.suggestionSelections.clear()
+      if (checked) {
+        for (const r of this.suggestionRows) this.suggestionSelections.add(r.id)
+      }
+      renderRows()
+    })
 
     acceptBtn.addEventListener('click', async () => {
-      try {
-        const result = await appendStandardDecomposition(this.plugin.wikiFS, s)
-        // Post-impl Cycle #2 F2 lingering fix: append 가 실패하면 (invalid-slug /
-        // header-unsafe / already-exists) suggestion state 를 accept 로 전환하지 않는다 —
-        // schema.yaml 에 기록 안 된 항목이 panel 에서 사라지는 손실 방지.
-        if (!result.appended) {
-          const reasonHint = result.reason === 'invalid-slug'
-            ? 'umbrella_slug 또는 components.slug 가 schema parser regex (/^[a-z][a-z0-9-]*$/) 와 일치하지 않습니다. Edit 으로 수정 후 다시 Accept 하세요.'
-            : result.reason === 'header-unsafe'
-              ? 'standard_decompositions: [] 로 명시 disable 된 상태입니다. schema.yaml 의 header 를 비우거나 entry 형태로 변경하세요.'
-              : result.reason === 'already-exists'
-                ? '동일 umbrella_slug 가 schema.yaml 에 이미 존재합니다.'
-                : '알 수 없는 사유로 schema.yaml 가 갱신되지 않았습니다.'
-          new Notice(`Schema 미갱신 (${result.reason ?? 'unknown'}): ${reasonHint}`)
-          // 카드 + suggestion state 모두 보존 (사용자 fix 후 재시도 가능).
-          return
+      const selectedIds = Array.from(this.suggestionSelections)
+      if (selectedIds.length === 0) return
+      const selected = this.suggestionRows.filter((r) => selectedIds.includes(r.id))
+      let appendedCount = 0
+      const failures: string[] = []
+      for (const row of selected) {
+        const suggestionShape = rowToSuggestionShape(row)
+        try {
+          const result = await appendStandardDecomposition(this.plugin.wikiFS, suggestionShape)
+          if (!result.appended) {
+            failures.push(`${row.umbrella_slug}: ${result.reason ?? 'unknown'}`)
+            continue
+          }
+          appendedCount++
+          if (row.origin === 'suggestion') {
+            const store = await this.loadSuggestionStoreFromVault()
+            const next = acceptSuggestion(store, row.id)
+            await this.saveSuggestionStoreToVault(next)
+          } else if (row.origin === 'converged') {
+            const items = await this.loadConvergedStoreFromVault()
+            await this.saveConvergedStoreToVault(items.filter((c) => c.umbrella_slug !== row.id))
+          }
+          // user-added: in-memory removal handled by refresh below
+          this.suggestionSelections.delete(row.id)
+        } catch (err) {
+          failures.push(`${row.umbrella_slug}: ${(err as Error).message}`)
         }
-        const store = await this.loadSuggestionStoreFromVault()
-        const next = acceptSuggestion(store, s.id)
-        await this.saveSuggestionStoreToVault(next)
-        card.remove()
-        new Notice(`Accepted suggestion: ${s.umbrella_slug}`)
-      } catch (err) {
-        new Notice(`Accept failed: ${(err as Error).message}`)
       }
+      // Remove accepted user-added rows from the in-memory list before refresh.
+      this.suggestionRows = this.suggestionRows.filter((r) => {
+        if (r.origin !== 'user-added') return true
+        return !selectedIds.includes(r.id) || failures.some((f) => f.startsWith(`${r.umbrella_slug}:`))
+      })
+      await this.refreshSuggestionRows()
+      renderRows()
+      const msg = failures.length === 0
+        ? `Accepted ${appendedCount} suggestion(s)`
+        : `Accepted ${appendedCount}, failed ${failures.length}: ${failures.slice(0, 3).join(' / ')}${failures.length > 3 ? ' ...' : ''}`
+      new Notice(msg)
     })
 
     rejectBtn.addEventListener('click', async () => {
-      try {
-        const store = await this.loadSuggestionStoreFromVault()
-        const next = rejectSuggestionFromPanel(store, s.id)
-        await this.saveSuggestionStoreToVault(next)
-        card.remove()
-        new Notice(`Rejected suggestion: ${s.umbrella_slug}`)
-      } catch (err) {
-        new Notice(`Reject failed: ${(err as Error).message}`)
+      const selectedIds = Array.from(this.suggestionSelections)
+      if (selectedIds.length === 0) return
+      const selected = this.suggestionRows.filter((r) => selectedIds.includes(r.id))
+      let removedCount = 0
+      for (const row of selected) {
+        if (row.origin === 'suggestion') {
+          const store = await this.loadSuggestionStoreFromVault()
+          const next = rejectSuggestionFromPanel(store, row.id)
+          await this.saveSuggestionStoreToVault(next)
+          removedCount++
+        } else if (row.origin === 'converged') {
+          const items = await this.loadConvergedStoreFromVault()
+          await this.saveConvergedStoreToVault(items.filter((c) => c.umbrella_slug !== row.id))
+          removedCount++
+        } else {
+          // user-added: remove from in-memory list
+          removedCount++
+        }
       }
+      this.suggestionRows = this.suggestionRows.filter((r) => !(r.origin === 'user-added' && selectedIds.includes(r.id)))
+      this.suggestionSelections.clear()
+      await this.refreshSuggestionRows()
+      renderRows()
+      new Notice(`Rejected ${removedCount} suggestion(s)`)
+    })
+
+    addBtn.addEventListener('click', () => {
+      this.suggestionUserCounter++
+      const newId = `user-${Date.now()}-${this.suggestionUserCounter}`
+      const newRow: SuggestionsPanelRow = {
+        origin: 'user-added',
+        source: 'user',
+        id: newId,
+        umbrella_slug: '',
+        umbrella_name: '',
+        components: [],
+        sourceLabel: 'user (manual add)',
+      }
+      // Prepend so inline edit는 상단에 노출
+      this.suggestionRows = [newRow, ...this.suggestionRows]
+      this.suggestionEditMode = true
+      this.suggestionSelections.clear()
+      this.suggestionSelections.add(newId)
+      renderRows()
     })
 
     editBtn.addEventListener('click', () => {
-      // Edit modal deferred to §5.4.5 cycle smoke (out of Stage 2 scope).
-      new Notice('Edit modal: deferred to §5.4.5 live cycle smoke')
+      this.suggestionEditMode = !this.suggestionEditMode
+      renderRows()
     })
+
+    renderRows()
+  }
+
+  private replaceRowWithUserAdded(row: SuggestionsPanelRow, newSlug: string, newName: string): void {
+    const components: readonly StandardDecompositionComponent[] = row.components.length > 0
+      ? row.components
+      : [{ slug: newSlug, type: 'methodology' }]
+    const updated: SuggestionsPanelRow = {
+      origin: 'user-added',
+      source: 'user',
+      id: row.origin === 'user-added' ? row.id : `user-${Date.now()}-${++this.suggestionUserCounter}`,
+      umbrella_slug: newSlug,
+      umbrella_name: newName,
+      components,
+      sourceLabel: row.origin === 'user-added' ? 'user (manual add)' : `user (edited from ${row.sourceLabel})`,
+    }
+    const idx = this.suggestionRows.findIndex((r) => r.id === row.id)
+    if (idx === -1) {
+      this.suggestionRows = [updated, ...this.suggestionRows]
+    } else {
+      // 기존 wiki/converged row 였다면 원본은 보존하지 않고 user-added 로 대체
+      // (Edit = "이 행 기반으로 사용자 정의 변형 등록" semantics)
+      this.suggestionRows = this.suggestionRows.map((r, i) => i === idx ? updated : r)
+    }
   }
 
   // ── Dashboard ──

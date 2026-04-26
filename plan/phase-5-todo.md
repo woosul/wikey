@@ -490,9 +490,9 @@
   - [x] §10.6 acceptance — 회귀 baseline **732 PASS 유지** (38 files, 0 fail)
   - [x] activity/phase-5-result.md §5.4.8 신규 + 1순위 [x] mark + commit
   - **alpha v1 wire 한계 발견**: ConvergedDecomposition 의 `components`/`sources` 가 mock 시점에도 0 — alpha v1 wire 는 metadata shell 만 생성. components 채움은 v2 작업 (§5.4.7 3순위 review modal cycle 과 함께 follow-up).
-- [ ] **2순위 (★ fresh session 첫 작업, UI 수정) — Suggestions panel UI 개선**: 카드 시각 디자인 (confidence bar / badge / icon) + Edit modal 구현 (umbrella_slug / umbrella_name / aliases / components 수정) + 정렬 / 필터 / negativeCache view + Stage 3 SelfDeclaration runtime / Stage 4 ConvergedDecomposition 통합 표시 + 빈 state UX + 반응형. ui-designer (gemini-panel) 위임 권장.
-- [ ] **3순위 — Stage 4 ConvergedDecomposition 사용자 review modal**: Stage 2 Suggestions panel 패턴 재사용 (Accept/Edit/Reject + writer 호출). 1·2순위 완료 후 진입 권장.
-- [ ] **4순위 — §5.4 minor follow-up**: 자료 자동 분류 race condition 1 case (재현 어려움 — self-resolve), Edit modal 검증 (2순위 통합).
+- [x] **2순위 — Suggestions panel UI 개선** (2026-04-26 session 14 종결, activity §5.4.9, mini plan §11): clipboard_check 아이콘 + guide 형식 title + audit 그리드 (Select All + 멀티 row + 상단 패턴명 + 하단 출처) + 하단 고정 버튼 (Accept/Reject 멀티 + Add/Edit in-line) + provider/model bar. ui-designer 위임 없이 master 직접 (사용자 영구 결정).
+- [x] **3순위 — Stage 4 ConvergedDecomposition 통합 표시** (2026-04-26 session 14, 2순위와 동일 cycle): 별도 review modal 없이 Suggestions panel 의 row 로 통합 (source badge `wiki`, sourceLabel `wiki (cluster, N sources)`). Accept 시 Stage 2 와 동일 `appendStandardDecomposition` writer 재사용 (Karpathy #2 Simplicity First).
+- [x] **4순위 — §5.4 minor follow-up** (2026-04-26 session 14, 2/3순위 통합 cycle): (a) Edit modal 검증 = inline edit 동작으로 자연 통합 / (b) 자료 분류 race = self-resolve scope 외 / (c) "alpha v1 wire components/sources 한계" = 사실 한계 아님 — 1순위 spot-check Python script field 명 오류로 인한 false negative, §5.4.8 정정 반영.
 
 **연계**:
 - Phase 4 §4.3.2 Provenance tracking (본체) — Stage 3 의 self-declaration 오염 제어 장치로 직접 필요.

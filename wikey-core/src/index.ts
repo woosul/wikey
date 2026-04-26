@@ -165,6 +165,8 @@ export type {
   SuggestionStore,
   SuggestionStorageReader,
   SuggestionStorageWriter,
+  StandardDecompositionComponent,
+  StandardDecomposition,
 } from './types.js'
 export {
   emptyStore,

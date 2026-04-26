@@ -1855,3 +1855,157 @@ Stage 4 fail (LLM down)
 2. 실행 → `.wikey/qmd-embeddings.json` 생성 (Task #3)
 3. run-convergence-pass.mjs 실행 → 결과 비교 (Task #3)
 4. cluster spot-check + activity 문서 + commit (Task #4)
+
+---
+
+## 11. v7 — Suggestions panel UI 개선 (§5.4.7 2/3/4순위 통합 follow-up, 2026-04-26 session 14)
+
+> **배경**: §5.4.7 v2 deferral 의 2순위 (Suggestions panel UI 개선) + 3순위 (ConvergedDecomposition review modal) + 4순위 (Edit modal 검증) 를 동일 audit-style 그리드 UI 로 통합. 사용자 영구 결정 (2026-04-26 session 14): "2/3/4순위 동시 진행. 위임 없이 master 직접 진행".
+>
+> **목표**: Suggestions panel 을 audit 패널 그리드 패턴으로 전면 재구현. Stage 2 Suggestion + Stage 4 ConvergedDecomposition + user Add 3 source 통합 표시. Accept/Reject 멀티 + Add/Edit in-line. Stage 3 SelfDeclaration 의 'origin' source 통합은 후속 (현재 runtime-only, persist store 미존재).
+
+### 11.1 사용자 UI spec (2026-04-26 session 14, 사용자 직접 명시)
+
+| # | 항목 | 정의 |
+|---|------|------|
+| 1 | header 아이콘 | clipboard_check (Bootstrap, 신규 ICONS.clipboardCheck 추가) |
+| 2 | panel title | guide 패널 형식 (`## Wikey Suggestions`) |
+| 3 | 패턴 후보 목록 | audit 그리드 동일 — 상단 Select All checkbox + 멀티 row + 상단 (파일명 위치) = 패턴명 + 하단 (폴더명 위치) = 출처 |
+| 3a | 출처 = 'user' | Add 직접 추가 (사용자 수동) |
+| 3b | 출처 = 'wiki' | Stage 2 Suggestion (mention graph detector) + Stage 4 ConvergedDecomposition (cluster) |
+| 3c | 출처 = 'origin' | Stage 3 SelfDeclaration (현재 runtime-only — 본 cycle 미통합, §11.7 후속) |
+| 4 | 하단 고정 버튼 | Accept (멀티 선택 후 적용) / Reject (멀티 선택 후 삭제) / Add (목록 추가 후 in-line edit) / Edit (mode 토글 → 행 선택 → in-line edit) |
+| 5 | LLM 모델명 | audit 패널 최하단 default ai model 출력 형식 (provider+model select bar) |
+
+### 11.2 데이터 모델 통합 — SuggestionsPanelRow union
+
+```ts
+type SuggestionPanelOrigin = 'suggestion' | 'converged' | 'user-added'
+type SuggestionPanelSource = 'user' | 'wiki' | 'origin'
+
+type SuggestionsPanelRow =
+  | {
+      readonly origin: 'suggestion'
+      readonly source: 'wiki'
+      readonly id: string                            // Suggestion.id (sha1)
+      readonly umbrella_slug: string
+      readonly umbrella_name?: string
+      readonly components: readonly StandardDecompositionComponent[]
+      readonly raw: Suggestion
+    }
+  | {
+      readonly origin: 'converged'
+      readonly source: 'wiki'
+      readonly id: string                            // ConvergedDecomposition.umbrella_slug (stable key)
+      readonly umbrella_slug: string
+      readonly umbrella_name: string
+      readonly components: readonly StandardDecompositionComponent[]
+      readonly raw: ConvergedDecomposition
+    }
+  | {
+      readonly origin: 'user-added'
+      readonly source: 'user'
+      readonly id: string                            // ephemeral uuid (Date.now() + counter)
+      readonly umbrella_slug: string                 // user input
+      readonly umbrella_name: string                 // user input
+      readonly components: readonly StandardDecompositionComponent[]  // empty initially, future inline edit expand
+    }
+```
+
+**Persistence**:
+- Suggestion: `.wikey/suggestions.json` (기존 SuggestionStore, 변경 없음)
+- ConvergedDecomposition: `.wikey/converged-decompositions.json` (기존, alpha v1)
+- user-added: in-memory only — Add → schema.yaml append → row 사라짐 (별 store 미신설로 Karpathy #2 Simplicity First 따름)
+
+### 11.3 동작 명세
+
+| 동작 | 멀티 | 처리 흐름 | 결과 |
+|------|------|----------|------|
+| **Accept** | ✅ (선택 row[]) | 각 row → suggestion-shape 변환 → `appendStandardDecomposition(wikiFS, suggestion)` writer 재사용 → 성공 시: Stage 2 = SuggestionStore.state=accepted / Stage 4 = converged store 에서 제거 / user-added = in-memory 제거 | row 사라짐 + Notice (성공 N건) |
+| **Reject** | ✅ (선택 row[]) | Stage 2 = `rejectSuggestionFromPanel` (negativeCache 추가) / Stage 4 = converged store 제거 / user-added = in-memory 제거 | row 사라짐 + Notice |
+| **Add** | ❌ | 빈 row 상단 insert + inline 입력 (umbrella_slug + umbrella_name 두 input) → Save → user-added row 로 등록 (다음 Accept 까지 메모리 보존) | 신규 row 추가 |
+| **Edit** | ✅ (mode toggle) | "Edit" 클릭 → editMode 토글 → row 선택 시 inline edit 모드 (umbrella_slug + umbrella_name) → Save → user-added shape 로 변경 (Stage 2/4 원본은 reject + user-added 신규 등록) | 기존 row reject + 신규 user-added row |
+
+### 11.4 변환 로직 (ConvergedDecomposition → Suggestion-like)
+
+`appendStandardDecomposition` 가 `Suggestion` 만 받는다. ConvergedDecomposition / user-added 는 Suggestion 형태로 wrap:
+
+```ts
+function rowToSuggestionShape(row: SuggestionsPanelRow): Suggestion {
+  if (row.origin === 'suggestion') return row.raw
+  const now = new Date().toISOString()
+  return {
+    id: row.id,
+    umbrella_slug: row.umbrella_slug,
+    umbrella_name: row.umbrella_name,
+    candidate_components: row.components,
+    support_count: row.origin === 'converged' ? row.raw.source_mentions.length : 0,
+    suffix_score: 0,
+    mention_count: 0,
+    confidence: row.origin === 'converged' ? row.raw.arbitration_confidence : 0,
+    evidence: [],
+    state: { kind: 'pending' },
+    createdAt: now,
+  }
+}
+```
+
+### 11.5 작업 단계
+
+1. ✅ mini plan §11 작성 (본 단계)
+2. ICONS.clipboardCheck 추가 + suggestions header 아이콘 변경 (`ICONS.question` → `ICONS.clipboardCheck`)
+3. ConvergedDecompositionStore load helper (sidebar-chat.ts 신규 method)
+4. openSuggestionsPanel() 전면 재구현 — audit 그리드 패턴 (selectAll + 멀티 + bottom bar + provider/model)
+5. row render: checkbox + info (top: pattern name + source badge, bottom: 출처 텍스트)
+6. Accept (multi) / Reject (multi) 동작
+7. Add inline edit (빈 row insert → input → Save)
+8. Edit mode toggle + selected row inline edit
+9. CSS 보강 (audit 패턴 기반 + suggestion 전용 변형)
+10. build (wikey-core + wikey-obsidian) + vitest fresh re-run (회귀 732 PASS 유지)
+11. master 직접 obsidian-cdp UI smoke (실 vault) — 환경 가용 시
+12. activity §5.4.9 + 본 §11 self-check + commit/push
+
+### 11.6 Acceptance
+
+- [ ] 회귀 baseline 732 PASS 유지 (UI 변경, 회귀 코드 X — `appendStandardDecomposition` writer 재사용)
+- [ ] build wikey-core + wikey-obsidian 0 errors
+- [ ] Suggestions panel 그리드 표시: Stage 2 (`.wikey/suggestions.json`) + Stage 4 (`.wikey/converged-decompositions.json`) 통합
+- [ ] Accept multi: 2건 이상 선택 후 클릭 → 모두 schema.yaml append + state 갱신 (단위 또는 라이브 검증)
+- [ ] Reject multi: 2건 이상 선택 후 클릭 → 모두 store 제거
+- [ ] Add: 신규 row 입력 → 다음 Accept 시 schema.yaml 정상 append
+- [ ] Edit: edit mode → row 선택 → inline edit → 기존 row reject + user-added 신규 등록 (라이브 검증)
+- [ ] activity §5.4.9 신규 + plan §5.4.7 2/3/4순위 [x] mark + commit
+
+### 11.7 4순위 follow-up 구체 계획 (2026-04-26 session 14 추가 — 사용자 지적 후속)
+
+**§5.4.7 4순위 원안**: "자료 자동 분류 race condition 1 case (재현 어려움 — self-resolve), Edit modal 검증 (2순위 통합)"
+
+**재정의** (1순위 종결 직후 발견 정정 반영):
+
+| # | 4순위 항목 | 본 §11 처리 방안 |
+|---|----------|-----------------|
+| (a) | **Edit modal 검증** | 본 §11 의 Edit 동작 (mode 토글 → row 선택 → inline edit) 으로 자연 통합. 별 modal 없이 inline edit 으로 처리해 Karpathy #2 (Simplicity First) 따름. 검증 = §11.6 acceptance "Edit: edit mode → row 선택 → inline edit". |
+| (b) | **자료 자동 분류 race condition** | self-resolve (재현 어려움). 본 §11 scope 외 — 발생 시 별 cycle 에서 재현 + 진단. 현 vault 에 재발 신호 없음 (2026-04-26 session 14 시점). |
+| (c) | **alpha v1 wire 한계 — converged_components/source_mentions 채움** (사용자 지적 + master 진단 후 정정) | **사실 한계 아님** (false negative). 1순위 spot-check Python script 의 field 명 오류로 인한 오진. 실 데이터 (`.wikey/converged-decompositions.json`) 검증: iso-iec-27001-2022 cluster 4 components / 3 sources, itil-4 cluster 2 components / 2 sources, 모두 정상 채워짐. §10 활동 문서 (`activity/phase-5-result.md §5.4.8`) 정정 반영. |
+
+⇒ **4순위 구체 액션 = 본 §11 의 Edit 동작에 (a) 통합 흡수, (b) self-resolve scope 외, (c) 사실 정정 완료**. 별도 cycle 불필요.
+
+### 11.8 Out of scope (후속 follow-up, 4순위와 별개)
+
+- Stage 3 SelfDeclaration 'origin' source persist 통합 — 현재 runtime-only (`.wikey/self-declarations.json` store 미존재). store 신규 추가 + ingest 시 persist + panel 'origin' 출처 통합은 별 cycle (§5.4.7 후속 5순위 후보).
+- 정렬 / 필터 / negativeCache view — 본 §11 MVP 후 확장 (mini plan 추가 unit work)
+- ConvergedDecomposition arbitration_method 'llm' (LLM 기반 의미 정제) — 현 'union' default (확률 1.0) 충분, 비용 발생 cycle
+
+### 11.9 7-anchor self-check (master 송부 전)
+
+| # | Anchor | 결과 |
+|---|--------|------|
+| (a) | 시그니처 일관성 — Suggestion / ConvergedDecomposition 타입 그대로 사용 | ✅ |
+| (b) | state/data 표 형식 — SuggestionsPanelRow union 3-kind (`suggestion` / `converged` / `user-added`) cross-section 일관 | ✅ |
+| (c) | builder/parser 분기 — `rowToSuggestionShape` 가 3-origin discriminator 모두 처리 | ✅ |
+| (d) | AC test — 본 §11 의 acceptance 6 항목 (회귀/build/그리드/Accept/Reject/Add/Edit/문서) 1:1 매핑 | ✅ |
+| (e) | self-check drift — v7 신규, 이전 v5 본문 변경 없음 (UI 레이어 추가만) | ✅ |
+| (f) | footer + cycle 일관 — 본 §11 = v7, §1~9 = v5 (변경 없음) | ✅ |
+| (g) | 코드 ↔ test exact phrase — `appendStandardDecomposition` writer 재사용으로 schema.yaml 출력 phrase 변경 0 (회귀 0) | ✅ |
+
+**self-check 결과**: 7/7 ✅. 별도 codex review cycle 생략 (UI 레이어 추가, 회귀 0). master 직접 진행.
