@@ -4,6 +4,14 @@ raw/
 # Wiki content (사용자 ingest 산출물 — 개인 자료, 공개 리포에 노출 금지)
 wiki/
 
+# .wikey/ vault state — 사용자 vault 별 dynamic, git 충돌 방지
+# source-registry.json 은 historic tracked → 유지. 나머지 ignore.
+.wikey/mention-history.json
+.wikey/suggestions.json
+.wikey/converged-decompositions.json
+.wikey/self-declarations.json
+.wikey/schema.yaml
+
 # Obsidian Web Clipper 기본 저장 폴더 — 개인 수집 자료, 공개 리포에 노출 금지
 Clippings/
 

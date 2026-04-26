@@ -81,6 +81,15 @@ export function runSuggestionDetection(
   return { suggestions, updatedHistory }
 }
 
+/** §5.4.5 라이브 cycle smoke (2026-04-26) 발견 bug fix:
+ *  canon.concepts[].filename 은 ".md" 확장자 포함된 wiki page filename.
+ *  Stage 2 detector 의 suffix matching (`-management`, `-control`, ...) 은 slug
+ *  단위 비교라 ".md" 확장자가 붙으면 모든 매치 fail → suggestions 0건.
+ *  slug = filename 에서 .md 확장자 strip. */
+function stripMdExt(s: string): string {
+  return s.replace(/\.md$/i, '')
+}
+
 function ingestRecordFromCanon(
   sourcePath: string,
   ingestedAt: string,
@@ -88,10 +97,10 @@ function ingestRecordFromCanon(
 ): IngestRecord {
   const concepts = canon.concepts
     .filter((p) => p.conceptType !== undefined)
-    .map((p) => ({ slug: p.filename, type: p.conceptType as ConceptType }))
+    .map((p) => ({ slug: stripMdExt(p.filename), type: p.conceptType as ConceptType }))
   const entities = canon.entities
     .filter((p) => p.entityType !== undefined)
-    .map((p) => ({ slug: p.filename, type: p.entityType as EntityType }))
+    .map((p) => ({ slug: stripMdExt(p.filename), type: p.entityType as EntityType }))
   return { source: sourcePath, ingestedAt, concepts, entities }
 }
 

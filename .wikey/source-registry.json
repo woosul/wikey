@@ -45,5 +45,131 @@
     "tombstone": false,
     "last_action": "force",
     "sidecar_hash": "d66c44b0c57a7513189986ed2144f8c95468c061677393886bb488d18fcccfda"
+  },
+  "sha256:3238149072ecd4c3": {
+    "vault_path": "raw/3_resources/60_note/200_social/pmbok/pmbok-overview.md",
+    "hash": "3238149072ecd4c30216322e45a7be750bc1006fc9d3ed1a5601022e7c24d824",
+    "size": 2889,
+    "first_seen": "2026-04-26T07:39:10.205Z",
+    "ingested_pages": [
+      "wiki/sources/source-pmbok-overview.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/integration-cycle-smoke/pmbok-overview.md",
+        "at": "2026-04-26T07:39:10.205Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/200_social/pmbok/pmbok-overview.md",
+        "at": "2026-04-26T07:39:37.463Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:1b53c2b4e431c903": {
+    "vault_path": "raw/3_resources/60_note/200_social/pmbok-knowledge-areas.md",
+    "hash": "1b53c2b4e431c903f5a555f9c2157a35574c2b90326a8d5620680aae5f9cd8f0",
+    "size": 2662,
+    "first_seen": "2026-04-26T07:41:38.856Z",
+    "ingested_pages": [
+      "wiki/sources/source-pmbok-knowledge-areas.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/integration-cycle-smoke/pmbok-knowledge-areas.md",
+        "at": "2026-04-26T07:41:38.856Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/200_social/pmbok-knowledge-areas.md",
+        "at": "2026-04-26T07:43:04.470Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:b06dc860b4952f01": {
+    "vault_path": "raw/3_resources/60_note/300_social_sciences/iso-27001-overview.md",
+    "hash": "b06dc860b4952f0166061d471a0ad5fb428f9d5cd85e3eee82f642a3ccd3ee79",
+    "size": 2549,
+    "first_seen": "2026-04-26T07:54:04.421Z",
+    "ingested_pages": [
+      "wiki/sources/source-iso-27001-overview.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/integration-cycle-smoke/iso-27001-overview.md",
+        "at": "2026-04-26T07:54:04.421Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/300_social_sciences/iso-27001-overview.md",
+        "at": "2026-04-26T07:54:34.481Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:2ad5797051b4a95a": {
+    "vault_path": "raw/3_resources/60_note/500_technology/iso-27001-annex-a-detail.md",
+    "hash": "2ad5797051b4a95a885edb83d407bbe2d8b0ccb83af8d5eae27f295734a04d7c",
+    "size": 2833,
+    "first_seen": "2026-04-26T08:03:58.001Z",
+    "ingested_pages": [
+      "wiki/sources/source-iso-27001-annex-a-detail.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/integration-cycle-smoke/iso-27001-annex-a-detail.md",
+        "at": "2026-04-26T08:03:58.001Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/iso-27001-annex-a-detail.md",
+        "at": "2026-04-26T08:04:20.993Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:3b6bc9a9679378ae": {
+    "vault_path": "raw/3_resources/60_note/000_computer_science/itil-4-overview.md",
+    "hash": "3b6bc9a9679378ae23be38efeec4c2a515007a8a7605dd26023341a4fb0b4fa9",
+    "size": 2388,
+    "first_seen": "2026-04-26T08:16:16.644Z",
+    "ingested_pages": [
+      "wiki/sources/source-itil-4-overview.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/integration-cycle-smoke/itil-4-overview.md",
+        "at": "2026-04-26T08:16:16.644Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/000_computer_science/itil-4-overview.md",
+        "at": "2026-04-26T08:16:39.137Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:ba7803efc62459bf": {
+    "vault_path": "raw/3_resources/60_note/500_technology/itil-4-practices.md",
+    "hash": "ba7803efc62459bff735cb85934881d88e54d70e6e1fed79b9b08fb227abe35f",
+    "size": 2637,
+    "first_seen": "2026-04-26T08:38:16.274Z",
+    "ingested_pages": [
+      "wiki/sources/source-itil-4-practices.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/integration-cycle-smoke/itil-4-practices.md",
+        "at": "2026-04-26T08:38:16.274Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/itil-4-practices.md",
+        "at": "2026-04-26T08:38:38.196Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
   }
 }

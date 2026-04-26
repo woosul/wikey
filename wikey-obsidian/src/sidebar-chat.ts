@@ -1854,12 +1854,30 @@ Click [[page name]] in answers to navigate to the wiki page.
   }
 
   private listInboxFilesRaw(): string[] {
-    const { readdirSync, existsSync } = require('node:fs') as typeof import('node:fs')
+    const { readdirSync, existsSync, statSync } = require('node:fs') as typeof import('node:fs')
+    const { join } = require('node:path') as typeof import('node:path')
     const inboxDir = this.getInboxPath()
     if (!existsSync(inboxDir)) return []
-    return readdirSync(inboxDir)
-      .filter((f: string) => !f.startsWith('.'))
-      .sort()
+
+    // 사용자 영구 결정 (2026-04-26): inbox 가 폴더 형태로 들어와도 ingest panel 에는
+    // 파일만 평탄 표시 (옵션 B). 재귀 탐색 + 폴더 자체는 list 에 X (파일만 표시).
+    // 표시 path = inbox 기준 상대경로 (예: 'subfolder/file.md').
+    const out: string[] = []
+    const walk = (dir: string, prefix: string) => {
+      let entries: string[]
+      try { entries = readdirSync(dir) } catch { return }
+      for (const e of entries) {
+        if (e.startsWith('.')) continue
+        const full = join(dir, e)
+        let isDir = false
+        try { isDir = statSync(full).isDirectory() } catch { continue }
+        const rel = prefix ? `${prefix}/${e}` : e
+        if (isDir) walk(full, rel)
+        else out.push(rel)
+      }
+    }
+    walk(inboxDir, '')
+    return out.sort()
   }
 
   private listInboxFiles(): string[] {
@@ -2065,11 +2083,14 @@ Click [[page name]] in answers to navigate to the wiki page.
     }
 
     for (const f of displayFiles) {
+      // 사용자 영구 결정 (2026-04-26): inbox 가 폴더 형태로 들어와도 ingest panel 에는
+      // 파일만 평탄 표시 (옵션 B). listInboxFilesRaw 가 재귀로 file 만 평탄화해서 반환
+      // 하므로 이 시점 모든 entry 는 파일 (isDir=false 보장). f = 'file.md' 또는
+      // 'subfolder/file.md' 형태.
       const fullPath = join(basePath, 'raw/0_inbox', f)
-      const isDir = existsSync(fullPath) && statSync(fullPath).isDirectory()
-      const hint = classifyFile(f, isDir)
+      const hint = classifyFile(f, /* isDir */ false)
       let fileSizeKb = 0
-      if (!isDir && existsSync(fullPath)) {
+      if (existsSync(fullPath)) {
         try { fileSizeKb = Math.round(statSync(fullPath).size / 1024) } catch { /* skip */ }
       }
       const sizeLabel = fileSizeKb >= 1024 ? `${(fileSizeKb / 1024).toFixed(1)}MB` : `${fileSizeKb}KB`
@@ -2083,7 +2104,9 @@ Click [[page name]] in answers to navigate to the wiki page.
       const info = row.createDiv({ cls: 'wikey-audit-info' })
       const nameLine = info.createDiv({ cls: 'wikey-audit-name-line' })
       const nameWrap = nameLine.createDiv({ cls: 'wikey-audit-name-wrap' })
-      const nameSpan = nameWrap.createEl('span', { text: f, cls: 'wikey-audit-name' })
+      // 표시: file basename (subfolder 정보는 path line 에 따로 표시)
+      const displayName = f.includes('/') ? f.split('/').pop()! : f
+      const nameSpan = nameWrap.createEl('span', { text: displayName, cls: 'wikey-audit-name' })
       if (hasSidecar(f, inboxAllSet)) {
         const sidecarPath = join(basePath, 'raw/0_inbox', `${f}.md`)
         const tooltip = this.buildSidecarTooltip(sidecarPath, `${f}.md`)
@@ -2091,10 +2114,12 @@ Click [[page name]] in answers to navigate to the wiki page.
         const badge = nameWrap.createEl('span', { text: 'md', cls: 'wikey-pair-sidecar-badge' })
         badge.setAttr('title', tooltip)
       }
-      if (!isDir) nameLine.createEl('span', { text: sizeLabel, cls: 'wikey-audit-filesize' })
+      nameLine.createEl('span', { text: sizeLabel, cls: 'wikey-audit-filesize' })
       const pathLine = info.createDiv({ cls: 'wikey-audit-path-line' })
+      // 사용자 영구 결정: ingest panel 은 폴더 구조 표시 X, 파일 목록 only.
+      // path line 은 classify hint (auto-classify 결과) 만. subfolder 정보 숨김.
       pathLine.createEl('span', { text: hint.hint, cls: 'wikey-audit-path' })
-      if (!isDir) pathLine.createEl('span', { text: recommend, cls: `wikey-audit-recommend wikey-audit-recommend-${recommend.toLowerCase()}` })
+      pathLine.createEl('span', { text: recommend, cls: `wikey-audit-recommend wikey-audit-recommend-${recommend.toLowerCase()}` })
 
       // Preserve prior fail state across re-renders (TTL 10min, cleared on retry)
       const failInfo = this.inboxFailState.get(f)
