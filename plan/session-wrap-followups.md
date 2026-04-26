@@ -7,9 +7,9 @@
 
 ## 🎯 다음 세션 첫 액션 (2026-04-26 session 14 종료 시점)
 
-> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: §5.4.7 deferred 4 항목 모두 **session 14 종결**. 다음 세션은 master 가 사용자에게 후속 우선순위 확인 후 진입.
+> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: §5.4.7 deferred 4 항목 모두 **session 14 종결**. panel UI 라이브 검증 중 사용자 추가 fix 11건 (안내문/link/margin/scaling/필터/modal 사용자친화/help icon/도메인 표시/Edit 확장/Add+Edit secondary/조회 위주 톤) 모두 동일 cycle 안 반영. **§5.4.10 미처리 후속 등록** (ingest 자동 등록 + audit 컨셉 panel, 사용자 design philosophy 반영) — 당장 사용 문제 없음, 나중/다음 세션 결정.
 >
-> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (모두 [x]) → (3) `activity/phase-5-result.md §5.4.8` (1순위) + `§5.4.9` (2/3/4순위) → (4) 다음 우선순위 사용자 확인.
+> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (모두 [x]) + `§5.4.10` (미처리 후속) → (3) `activity/phase-5-result.md §5.4.8` (1순위) + `§5.4.9` (2/3/4순위 + UI fix 11건) → (4) 다음 우선순위 사용자 확인 (§5.5~§5.9 또는 §5.4.10).
 
 ### 1순위 — Stage 4 실 qmd embeddings 통합 ✅ 종결 (2026-04-26 session 14)
 

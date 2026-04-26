@@ -2336,6 +2336,7 @@
 .wikey-suggestions-schema-info {
   flex-shrink: 0;
   padding: 8px 14px;
+  margin-bottom: 16px;
   font-size: 0.78em;
   color: var(--text-muted, #999);
   border-top: 1px solid var(--background-modifier-border, #3a3a3a);
@@ -2356,6 +2357,287 @@
 .wikey-suggestions-schema-link:hover {
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* §11 — search input + edit textarea + save btn + help btn */
+.wikey-suggestions-filter {
+  flex-shrink: 0;
+  padding: 8px 14px;
+}
+
+.wikey-suggestions-filter .wikey-audit-search {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--background-modifier-border, #3a3a3a);
+  border-radius: 4px;
+  background: var(--background-primary, #1e1e1e);
+  color: var(--text-normal);
+  font-size: 0.88em;
+}
+
+.wikey-suggestions-filter .wikey-audit-search:focus {
+  outline: 1px solid var(--interactive-accent, #8a5cf5);
+  outline-offset: 0;
+}
+
+.wikey-suggestion-edit-comps-line {
+  width: 100%;
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  align-items: flex-start;
+}
+
+.wikey-suggestion-edit-textarea {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: var(--font-monospace, monospace);
+  border: 1px solid var(--background-modifier-border, #444);
+  border-radius: 3px;
+  background: var(--background-primary, #1e1e1e);
+  color: var(--text-normal, #ddd);
+  resize: vertical;
+  min-height: 60px;
+}
+
+.wikey-suggestion-edit-textarea:focus {
+  outline: 1px solid var(--interactive-accent, #4a78c4);
+  outline-offset: 0;
+}
+
+.wikey-suggestion-edit-save-btn {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  background: var(--interactive-accent, #8a5cf5) !important;
+  color: var(--text-on-accent, #fff) !important;
+  border: none !important;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.wikey-suggestion-edit-save-btn:hover {
+  opacity: 0.9;
+}
+
+/* §11 — Add/Edit secondary actions (조회 위주 panel, 예외 케이스만 사용) */
+.wikey-suggestions-advanced-spacer {
+  flex: 1;
+}
+
+.wikey-suggestions-secondary-btn {
+  font-size: 0.82em !important;
+  opacity: 0.6;
+  background: transparent !important;
+  border: 1px solid var(--background-modifier-border, #3a3a3a) !important;
+  color: var(--text-muted, #999) !important;
+}
+
+.wikey-suggestions-secondary-btn:hover {
+  opacity: 1;
+  color: var(--text-normal) !important;
+}
+
+.wikey-suggestions-secondary-btn.wikey-audit-edit-active {
+  opacity: 1;
+  background: var(--interactive-accent, #8a5cf5) !important;
+  color: var(--text-on-accent, #fff) !important;
+}
+
+/* §11 — modal help button (title row) */
+.wikey-schema-yaml-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.wikey-schema-yaml-help-btn {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--background-modifier-border, #3a3a3a) !important;
+  color: var(--text-muted, #999) !important;
+  border: none !important;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wikey-schema-yaml-help-btn:hover {
+  background: var(--interactive-accent, #8a5cf5) !important;
+  color: var(--text-on-accent, #fff) !important;
+}
+
+/* §11 — modal help body */
+.wikey-schema-yaml-help {
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  background: var(--background-secondary, #2a2a2a);
+  border-left: 3px solid var(--interactive-accent, #8a5cf5);
+  border-radius: 3px;
+  font-size: 0.85em;
+  color: var(--text-normal);
+}
+
+.wikey-schema-yaml-help-summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--interactive-accent, #8a5cf5);
+}
+
+.wikey-schema-yaml-help-body {
+  margin-top: 8px;
+}
+
+.wikey-schema-yaml-help-body h4 {
+  font-size: 0.95em;
+  margin: 12px 0 4px;
+  color: var(--text-normal);
+}
+
+.wikey-schema-yaml-help-body p {
+  margin: 4px 0;
+  line-height: 1.5;
+}
+
+.wikey-schema-yaml-help-body ul {
+  margin: 4px 0;
+  padding-left: 20px;
+  line-height: 1.6;
+}
+
+/* §11 — modal cards (등록된 표준 친화 표시) */
+.wikey-schema-yaml-cards {
+  margin-top: 8px;
+}
+
+.wikey-schema-yaml-cards-intro {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--background-modifier-border, #3a3a3a);
+}
+
+.wikey-schema-yaml-card {
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  background: var(--background-primary-alt, var(--background-secondary));
+  border: 1px solid var(--background-modifier-border, #3a3a3a);
+  border-radius: 4px;
+}
+
+.wikey-schema-yaml-card-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.wikey-schema-yaml-card-idx {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.wikey-schema-yaml-card-name {
+  font-weight: 600;
+  font-size: 1em;
+  color: var(--interactive-accent, #8a5cf5);
+}
+
+.wikey-schema-yaml-link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.wikey-schema-yaml-link:hover {
+  text-decoration: underline;
+}
+
+.wikey-schema-yaml-card-slug {
+  font-family: var(--font-monospace, monospace);
+  font-size: 0.82em;
+  color: var(--text-muted);
+}
+
+.wikey-schema-yaml-card-meta {
+  font-size: 0.82em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.wikey-schema-yaml-card-meta span {
+  margin-right: 4px;
+}
+
+.wikey-schema-yaml-card-comps {
+  font-size: 0.85em;
+}
+
+.wikey-schema-yaml-card-comps strong {
+  color: var(--text-normal);
+}
+
+.wikey-schema-yaml-card-comps-list {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+.wikey-schema-yaml-card-comps-list li {
+  margin: 1px 0;
+}
+
+.wikey-schema-yaml-comp-slug {
+  font-family: var(--font-monospace, monospace);
+  font-size: 0.92em;
+  color: var(--interactive-accent, #8a5cf5);
+}
+
+.wikey-schema-yaml-comp-type {
+  color: var(--text-muted);
+  font-size: 0.88em;
+}
+
+.wikey-schema-yaml-comp-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 0.85em;
+  padding-left: 12px;
+}
+
+.wikey-schema-yaml-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.wikey-schema-yaml-warn {
+  padding: 10px 12px;
+  background: rgba(245, 165, 0, 0.08);
+  border-left: 3px solid var(--text-warning, #f5a500);
+  color: var(--text-normal);
+  font-size: 0.88em;
+  border-radius: 3px;
+}
+
+.wikey-schema-yaml-raw {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border, #3a3a3a);
+}
+
+.wikey-schema-yaml-raw summary {
+  cursor: pointer;
+  font-size: 0.82em;
+  color: var(--text-muted);
 }
 
 /* §11 — schema.yaml read-only modal popup */

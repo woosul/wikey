@@ -1280,6 +1280,33 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - ✅ 회귀 baseline 732 PASS 유지 (38 files / 0 fail) — UI 변경 + 1 type re-export, 회귀 코드 0 변경
 - ✅ **라이브 UI cycle smoke 14/14 PASS** (Plugin reload / Panel 진입 / title 스타일 / row 통합 / bottom buttons / providerBar 삭제 / badge 삭제 / Select All toggle / Add / inline edit save / Reject / Edit mode / Accept end-to-end / schema.yaml entry 정확)
 
+**§5.4.7 종결 후 panel UI 라이브 검증 중 사용자 추가 요구 (2026-04-26 session 14, 동일 cycle 안 모두 반영)**:
+
+| # | 사용자 요구 | 반영 |
+|---|------------|------|
+| 1 | schema.yaml 등록 안내문 + link 본문 하단 고정 | `.wikey-suggestions-schema-info` div listArea 와 bottomBar 사이. parser kind 5 분기 (absent/present/empty-explicit/empty-all-skipped/unparseable) 안내 텍스트 + "schema.yaml 확인 →" link |
+| 2 | link 빈 화면 (Obsidian dotted folder vault index hidden) | `app.vault.adapter.read` 직접 + `SchemaYamlModal` popup 으로 우회 |
+| 3 | margin 16px (안내문 ↔ button) | CSS `.wikey-suggestions-schema-info` margin-bottom: 16px |
+| 4 | 1000+ rows scaling | search input (placeholder "Search pattern name…", umbrella_slug + umbrella_name 부분 매칭) + 빈 결과 메시지 차별화 |
+| 5 | 기등록 umbrella_slug 자동 필터 | `refreshSuggestionRows` 에서 `loadRegisteredStandards.rawSlugs` Set 으로 Stage 2 / Stage 4 / user-added 모두 필터 |
+| 6 | yaml 사람 친화 표시 | Modal 내 entry 별 카드 (그룹명 + 식별자 + 규칙 + 출처 + 신뢰도 + 구성요소 list) + group/component wiki page link click |
+| 7 | modal help icon 으로 충분한 설명 | title row 의 `?` button → details toggle, 6 sections (자동 등록 효과 / 구조 / 사용 흐름 / 규칙 / 팁) |
+| 8 | row 하단 = 출처 → 도메인 (umbrella_name) + 구성요소 preview | pathLine 텍스트 = `도메인: <umbrella_name> · 구성요소: <preview 3개><suffix>` |
+| 9 | Edit 시 그룹 + 구성요소 모두 수정 | Edit mode + row 선택 시 inline 2-line: slug/name input + components textarea (각 줄 1 슬러그) + Save 버튼. Cmd/Ctrl+Enter 또는 Save click 으로 저장 |
+| 10 | 사용자 직접 추가/변경 자제 (Add/Edit secondary) | Add/Edit 버튼에 `.wikey-suggestions-secondary-btn` 클래스 (작고 muted 색상, 우측 정렬 spacer) + tooltip "예외 케이스" 명시. Accept/Reject 강조 유지. |
+| 11 | modal intro 조회 위주 톤 | "📌 자동 등록이 기본입니다" + "🛠 본 패널 사용 흐름 (조회 위주)" + "💡 활용 팁: 대부분 사용자는 Add/Edit 을 거의 사용하지 않습니다" 명시 |
+
+**4순위 false negative 정정** (2026-04-26 session 14): §5.4.8 본문에서 보고했던 "alpha v1 wire components/sources 한계" 는 1순위 spot-check Python script 의 field 명 오류 (실제 field 명 = `converged_components` / `source_mentions`, 잘못된 접근 = `components` / `sources`). 실 데이터 정상 채워짐 (iso-iec-27001-2022 cluster 4 components / 3 sources, itil-4 cluster 2 components / 2 sources). §5.4.8 본문 정정 완료.
+
+**라이브 UI smoke 추가 검증** (2026-04-26 session 14, 본 cycle 추가 fix 후):
+- search input placeholder "Search pattern name…" + 자동 필터 동작
+- schema info margin-bottom 16px (button 과 분리)
+- Add/Edit secondary 클래스 적용 (panel buttons array: Accept primary / Reject primary / Add secondary / Edit secondary)
+- cluster-management 자동 필터 (이전 row 3 → 현재 row 2)
+- modal popup: title row + ? help button + cards (그룹명 + 식별자 + 규칙 + 구성요소 wiki link) + raw YAML collapse
+
+**§5.4.10 미처리 후속 등록** (2026-04-26 session 14, 사용자 design philosophy 정식 등록): ingest pipeline → schema.yaml 자동 등록 + audit 컨셉 panel rename + confidence threshold split + audit log + 자동/수동 구분 시각화. 본 cycle 사용 문제 없음 — 나중 또는 다음 세션 결정 (사용자 명시). 상세 = `plan/phase-5-todo.md §5.4.10`.
+
 **Out of scope (후속)** — `plan/phase-5-todox-5.4-integration.md §11.8`:
 - Stage 3 SelfDeclaration 'origin' source persist 통합 (현재 runtime-only, store 신규 추가 필요)
 - 정렬 / 필터 / negativeCache view (MVP 후 확장)

@@ -494,6 +494,39 @@
 - [x] **3순위 — Stage 4 ConvergedDecomposition 통합 표시** (2026-04-26 session 14, 2순위와 동일 cycle): 별도 review modal 없이 Suggestions panel 의 row 로 통합 (source badge `wiki`, sourceLabel `wiki (cluster, N sources)`). Accept 시 Stage 2 와 동일 `appendStandardDecomposition` writer 재사용 (Karpathy #2 Simplicity First).
 - [x] **4순위 — §5.4 minor follow-up** (2026-04-26 session 14, 2/3순위 통합 cycle): (a) Edit modal 검증 = inline edit 동작으로 자연 통합 / (b) 자료 분류 race = self-resolve scope 외 / (c) "alpha v1 wire components/sources 한계" = 사실 한계 아님 — 1순위 spot-check Python script field 명 오류로 인한 false negative, §5.4.8 정정 반영.
 
+### 5.4.10 미처리 후속 — ingest 자동 등록 + audit 컨셉 panel (2026-04-26 session 14 등록)
+
+> **상태**: 미처리. 당장 사용 문제 없음 (현 §5.4.7 종결 panel UI 로 정상 동작). 나중에 또는 다음 세션에 진행 여부 결정.
+>
+> **사용자 design philosophy** (2026-04-26 session 14, panel UI 라이브 검증 중 명시): 표준 분해 등록은 ingest 시 자동이 본 흐름. panel 은 audit 컨셉 — low-confidence 또는 오류 케이스만 사용자 검토. Add/Edit/Accept/Reject 모두 예외. 일반 사용자는 panel 거의 안 써도 됨.
+>
+> **본 §5.4.10 의 trigger**: §5.4.7 1/2/3/4순위 종결 후 panel UI 라이브 검증 중 사용자가 design philosophy 제시. 본 cycle (panel UI) 안에서 panel 측 부분 반영 (Add/Edit secondary 약화 + intro 조회 톤) + 본격 자동화 (ingest pipeline 변경) 는 본 §5.4.10 으로 분리.
+
+- [ ] **ingest pipeline → schema.yaml 자동 등록 (high-confidence)**: 현재 Stage 2 detector → `.wikey/suggestions.json` (pending) → panel Accept 흐름. 사용자 의도 = ingest 단계에서 confidence ≥ threshold (예: 0.85) 후보를 schema.yaml 에 직접 append. 사용자 Accept 우회. `appendStandardDecomposition` 를 ingest pipeline 에서 직접 호출 path 추가.
+- [ ] **Confidence threshold split**: 두 단계 — high (자동 schema.yaml 등록) / low (panel 후보 표시 = 사용자 검토). user setting 으로 threshold 조정 가능 (`wikey.conf` 또는 plugin settings).
+- [ ] **자동 등록 audit log**: `.wikey/standard-audit.json` 신규. 자동 등록 이력 trace — 어떤 후보가 어떤 confidence 로 어떤 ingest event 에서 등록됐는지. 사용자가 추후 review 가능.
+- [ ] **panel rename**: `Suggestions` → `Audit` 또는 `표준 audit` (사용자 의도 정확 반영). icon (`clipboard_check`) 도 audit 컨셉 적합 검토. header button label / panel title / modal title 모두 일관.
+- [ ] **audit-only UI (Add/Edit 더 깊이 숨김)**: 본 cycle 의 secondary 약화 다음 단계 — Add/Edit 을 footer 작은 link 또는 plugin settings tab 으로 이동. 일반 사용자는 거의 안 씀. 진정한 예외 (오류 직접 수정 / 누락 표준 추가) 만.
+- [ ] **오류 케이스 audit 표시**: ingest 시 자동 등록 실패 (parser invalid slug / append 충돌 / 형식 위반 등) 항목을 panel 에 별도 row 로 표시 (warning badge). 사용자가 직접 fix → 등록.
+- [ ] **자동 / 수동 구분 시각화**: schema.yaml 의 `origin` 필드 (suggested / manual / converged / builtin) 를 panel 조회 시 색상 / icon 으로 구분.
+- [ ] **threshold tuning**: 자동 등록 후 false positive (사용자가 schema.yaml 에서 직접 제거) 발생 시 threshold 자동 상향 (자가 학습 — 별 P3 sub-cycle).
+- [ ] **이관 plan 작성**: 본 §5.4.10 mini plan 진입 시 `plan/phase-5-todox-5.4-audit-automation.md` 신규 작성 — 본 todo 의 acceptance 별 detail spec.
+
+**연계**:
+- 본 §5.4.10 = §5.4 self-extending 의 **자동성 phase**. §5.4.1~9 가 본체 (Stage 1~4 + integration + UI) + §5.4.10 이 자동화 완성.
+- 본 §5.4.10 의 audit log 는 §5.4.7 deferred 의 "오류로 등록 안 된 항목만 audit panel 에 표시" 와 정확히 매핑.
+- ingest pipeline 변경 = `wikey-core/src/ingest-pipeline.ts` Stage 2 detector 호출 부분 + `appendStandardDecomposition` 직접 호출 path 추가.
+
+**현재 §5.4.7 cycle 안 부분 반영 (사용자 design philosophy 의 panel UI 차원)**:
+- Add/Edit 버튼 secondary 스타일 (작고 muted, 우측 정렬) — 사용 자제 시각화
+- modal intro 톤 = "조회 위주, Add/Edit 은 예외 케이스" 명시
+- modal help button (?) → 충분한 설명 (조회/등록/규칙/팁) 자동 제공
+- search input + 자동 필터 (1000+ scaling)
+- 기등록 자동 hide (panel 깔끔)
+- schema 안내문 + link (조회 흐름 강화)
+
+**기록 책임**: 본 §5.4.10 = phase-5-todo 의 P2 항목. 진입 시 phase-5-todox-5.4-audit-automation.md 신규 + activity §5.4.10 신규.
+
 **연계**:
 - Phase 4 §4.3.2 Provenance tracking (본체) — Stage 3 의 self-declaration 오염 제어 장치로 직접 필요.
 - Phase 4 §4.2.2 URI 기반 안정 참조 (본체) — Stage 4 convergence 가 여러 소스의 canonical 참조를 필요로 함.

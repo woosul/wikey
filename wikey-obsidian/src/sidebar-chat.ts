@@ -809,6 +809,23 @@ Click [[page name]] in answers to navigate to the wiki page.
   }
 
   private renderSuggestionsGrid(panel: HTMLElement): void {
+    // ── Filter row: search input (1000+ scaling 대비) ──
+    let suggestionSearchQuery = ''
+    const filterRow = panel.createDiv({ cls: 'wikey-audit-filter wikey-suggestions-filter' })
+    const searchInput = filterRow.createEl('input', {
+      cls: 'wikey-audit-search',
+      attr: { type: 'text', placeholder: 'Search pattern name…' },
+    }) as HTMLInputElement
+
+    const getFilteredRows = (): SuggestionsPanelRow[] => {
+      const q = suggestionSearchQuery.trim().toLowerCase()
+      if (!q) return this.suggestionRows
+      return this.suggestionRows.filter((r) =>
+        r.umbrella_slug.toLowerCase().includes(q)
+        || (r.umbrella_name?.toLowerCase().includes(q) ?? false),
+      )
+    }
+
     // ── Top: select-all + total ──
     const listArea = panel.createDiv({ cls: 'wikey-audit-list-area wikey-suggestions-list-area' })
     const selectAllRow = listArea.createDiv({ cls: 'wikey-audit-selectall' })
@@ -870,10 +887,22 @@ Click [[page name]] in answers to navigate to the wiki page.
     // ── Bottom: Accept / Reject / Add / Edit + provider/model ──
     const bottomBar = panel.createDiv({ cls: 'wikey-audit-bottom' })
     const applyBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar' })
+    // Primary actions (자동 탐지 후보 user gate) — 강조
     const acceptBtn = applyBar.createEl('button', { text: 'Accept', cls: 'wikey-audit-apply-btn' })
     const rejectBtn = applyBar.createEl('button', { text: 'Reject', cls: 'wikey-audit-delay-action-btn' })
-    const addBtn = applyBar.createEl('button', { text: 'Add', cls: 'wikey-audit-delay-action-btn' })
-    const editBtn = applyBar.createEl('button', { text: 'Edit', cls: 'wikey-audit-delay-action-btn' })
+    // Secondary actions (예외 케이스, 자동 탐지 누락 시 직접 추가/수정) — 약화 + 우측 정렬
+    const advancedSpacer = applyBar.createDiv({ cls: 'wikey-suggestions-advanced-spacer' })
+    const addBtn = applyBar.createEl('button', {
+      text: 'Add',
+      cls: 'wikey-audit-delay-action-btn wikey-suggestions-secondary-btn',
+      attr: { title: '예외 케이스: 자동 탐지가 놓친 표준을 직접 추가' },
+    })
+    const editBtn = applyBar.createEl('button', {
+      text: 'Edit',
+      cls: 'wikey-audit-delay-action-btn wikey-suggestions-secondary-btn',
+      attr: { title: '예외 케이스: 자동 탐지 결과를 직접 수정' },
+    })
+    void advancedSpacer
 
     // ── Update logic ──
     const updateButtons = () => {
@@ -892,13 +921,16 @@ Click [[page name]] in answers to navigate to the wiki page.
 
     const renderRows = () => {
       listEl.empty()
-      const rows = this.suggestionRows
+      const rows = getFilteredRows()
       updateSelectAllTotal(rows.length)
       const allChecked = rows.length > 0 && rows.every((r) => this.suggestionSelections.has(r.id))
       selectAllCb.checked = allChecked
 
       if (rows.length === 0) {
-        listEl.createEl('div', { cls: 'wikey-dashboard-empty', text: '대기 중인 후보가 없습니다. Add 로 직접 추가하거나 ingest 후 자동 탐지 결과를 기다리세요.' })
+        const emptyMsg = suggestionSearchQuery.trim()
+          ? `검색어 "${suggestionSearchQuery.trim()}" 와 일치하는 후보 없음.`
+          : '대기 중인 후보가 없습니다. Add 로 직접 추가하거나 ingest 후 자동 탐지 결과를 기다리세요.'
+        listEl.createEl('div', { cls: 'wikey-dashboard-empty', text: emptyMsg })
         updateButtons()
         return
       }
@@ -913,13 +945,24 @@ Click [[page name]] in answers to navigate to the wiki page.
         const nameWrap = nameLine.createDiv({ cls: 'wikey-audit-name-wrap' })
 
         if (this.suggestionEditMode && this.suggestionSelections.has(row.id)) {
-          // inline edit input — replaces the name span
+          // inline edit — 그룹 이름 (umbrella_slug + umbrella_name) + 구성요소 textarea
           const slugInput = nameWrap.createEl('input', {
             cls: 'wikey-suggestion-edit-input', attr: { type: 'text', value: row.umbrella_slug, placeholder: 'umbrella_slug' },
           }) as HTMLInputElement
           const nameInput = nameWrap.createEl('input', {
-            cls: 'wikey-suggestion-edit-input', attr: { type: 'text', value: row.umbrella_name ?? row.umbrella_slug, placeholder: 'umbrella_name' },
+            cls: 'wikey-suggestion-edit-input', attr: { type: 'text', value: row.umbrella_name ?? row.umbrella_slug, placeholder: 'umbrella_name (도메인 이름)' },
           }) as HTMLInputElement
+          // components textarea — 두번째 줄에 별도 line
+          const compsLine = info.createDiv({ cls: 'wikey-suggestion-edit-comps-line' })
+          const compsTextarea = compsLine.createEl('textarea', {
+            cls: 'wikey-suggestion-edit-textarea',
+            attr: {
+              placeholder: '구성요소 (각 줄 1 슬러그, 비우면 그룹만)',
+              rows: '3',
+            },
+          }) as HTMLTextAreaElement
+          compsTextarea.value = row.components.map((c) => c.slug).join('\n')
+          const saveBtn = compsLine.createEl('button', { text: 'Save', cls: 'wikey-suggestion-edit-save-btn' })
           const saveInline = () => {
             const newSlug = slugInput.value.trim().toLowerCase().replace(/\s+/g, '-')
             const newName = nameInput.value.trim() || newSlug
@@ -927,26 +970,52 @@ Click [[page name]] in answers to navigate to the wiki page.
               new Notice('umbrella_slug 형식 위반 (소문자, 숫자, 하이픈, 첫 글자 = 소문자)')
               return
             }
-            this.replaceRowWithUserAdded(row, newSlug, newName)
+            const compsRaw = compsTextarea.value
+              .split(/\n+/)
+              .map((s) => s.trim().toLowerCase().replace(/\s+/g, '-'))
+              .filter(Boolean)
+            const invalid = compsRaw.find((s) => !/^[a-z][a-z0-9-]*$/.test(s))
+            if (invalid) {
+              new Notice(`구성요소 슬러그 형식 위반: ${invalid}`)
+              return
+            }
+            const newComps: StandardDecompositionComponent[] = compsRaw.length > 0
+              ? compsRaw.map((slug) => ({ slug, type: 'methodology' as const }))
+              : [{ slug: newSlug, type: 'methodology' }]
+            this.replaceRowWithUserAdded(row, newSlug, newName, newComps)
             this.suggestionSelections.delete(row.id)
             renderRows()
             updateButtons()
           }
-          slugInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveInline() })
-          nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveInline() })
+          slugInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) saveInline() })
+          nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) saveInline() })
+          // textarea 의 Enter 는 줄바꿈, Cmd/Ctrl+Enter 로 save
+          compsTextarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveInline()
+          })
+          saveBtn.addEventListener('click', saveInline)
         } else {
-          const displayName = row.umbrella_name && row.umbrella_name !== row.umbrella_slug
-            ? `${row.umbrella_name} · ${row.umbrella_slug}`
-            : row.umbrella_slug
-          nameWrap.createEl('span', { text: displayName, cls: 'wikey-audit-name' })
+          // 상단: 그룹 식별자 (umbrella_slug)
+          nameWrap.createEl('span', { text: row.umbrella_slug, cls: 'wikey-audit-name' })
         }
         nameLine.createEl('span', {
           text: `${row.components.length} components`,
           cls: 'wikey-audit-filesize',
         })
 
+        // 하단: 도메인 (umbrella_name, 다를 때만) + 구성요소 preview
         const pathLine = info.createDiv({ cls: 'wikey-audit-path-line' })
-        pathLine.createEl('span', { text: row.sourceLabel, cls: 'wikey-audit-path' })
+        if (!(this.suggestionEditMode && this.suggestionSelections.has(row.id))) {
+          const hasName = !!(row.umbrella_name && row.umbrella_name !== row.umbrella_slug)
+          const compsList = row.components.map((c) => c.slug)
+          const compsPreview = compsList.slice(0, 3).join(', ')
+          const compsSuffix = compsList.length > 3 ? ` 외 ${compsList.length - 3}건` : ''
+          const parts: string[] = []
+          if (hasName) parts.push(`도메인: ${row.umbrella_name}`)
+          if (compsList.length > 0) parts.push(`구성요소: ${compsPreview}${compsSuffix}`)
+          const pathText = parts.length > 0 ? parts.join(' · ') : '(구성요소 없음)'
+          pathLine.createEl('span', { text: pathText, cls: 'wikey-audit-path' })
+        }
 
         const toggleCb = () => {
           if (cb.checked) this.suggestionSelections.add(row.id)
@@ -960,7 +1029,7 @@ Click [[page name]] in answers to navigate to the wiki page.
         cb.addEventListener('change', toggleCb)
         rowEl.addEventListener('click', (e) => {
           if (e.target === cb) return
-          const inputTargets = ['INPUT', 'TEXTAREA', 'SELECT']
+          const inputTargets = ['INPUT', 'TEXTAREA', 'SELECT', 'BUTTON', 'A']
           if (inputTargets.includes((e.target as HTMLElement).tagName)) return
           cb.checked = !cb.checked
           toggleCb()
@@ -971,10 +1040,18 @@ Click [[page name]] in answers to navigate to the wiki page.
 
     selectAllCb.addEventListener('change', () => {
       const checked = selectAllCb.checked
-      this.suggestionSelections.clear()
+      const filtered = getFilteredRows()
+      // search 결과만 토글 (다른 selection 보존)
       if (checked) {
-        for (const r of this.suggestionRows) this.suggestionSelections.add(r.id)
+        for (const r of filtered) this.suggestionSelections.add(r.id)
+      } else {
+        for (const r of filtered) this.suggestionSelections.delete(r.id)
       }
+      renderRows()
+    })
+
+    searchInput.addEventListener('input', () => {
+      suggestionSearchQuery = searchInput.value
       renderRows()
     })
 
@@ -1076,10 +1153,16 @@ Click [[page name]] in answers to navigate to the wiki page.
     renderRows()
   }
 
-  private replaceRowWithUserAdded(row: SuggestionsPanelRow, newSlug: string, newName: string): void {
-    const components: readonly StandardDecompositionComponent[] = row.components.length > 0
-      ? row.components
-      : [{ slug: newSlug, type: 'methodology' }]
+  private replaceRowWithUserAdded(
+    row: SuggestionsPanelRow,
+    newSlug: string,
+    newName: string,
+    newComponents?: readonly StandardDecompositionComponent[],
+  ): void {
+    const components: readonly StandardDecompositionComponent[] = newComponents
+      ?? (row.components.length > 0
+        ? row.components
+        : [{ slug: newSlug, type: 'methodology' }])
     const updated: SuggestionsPanelRow = {
       origin: 'user-added',
       source: 'user',
@@ -2807,23 +2890,193 @@ Click [[page name]] in answers to navigate to the wiki page.
 
 // §11 — schema.yaml 내용 표시 modal. Obsidian 의 dotted folder (`.wikey/`) 가
 // vault index 에서 hidden 이라 `getAbstractFileByPath` 가 null 반환 — adapter 로
-// 직접 read 후 popup 표시 (read-only).
+// 직접 read 후 popup 표시 (read-only). 사용자 친화 카드 + raw YAML collapse.
 class SchemaYamlModal extends Modal {
   constructor(app: App, private path: string, private content: string) {
     super(app)
   }
+
+  private formatRule(rule: string): string {
+    if (rule === 'decompose') return 'decompose (구성요소로 분해)'
+    if (rule === 'bundle') return 'bundle (한 묶음으로 유지)'
+    return rule
+  }
+
+  private formatOrigin(origin: string | undefined): string {
+    if (!origin) return '미지정'
+    if (origin === 'suggested') return 'suggested (자동 탐지 후 사용자 승인)'
+    if (origin === 'manual') return 'manual (사용자 직접 추가)'
+    if (origin === 'converged') return 'converged (cross-source 통합)'
+    if (origin === 'builtin') return 'builtin (기본 내장)'
+    return origin
+  }
+
   onOpen() {
     const { contentEl } = this
     contentEl.addClass('wikey-schema-yaml-modal')
     const header = contentEl.createDiv({ cls: 'wikey-schema-yaml-header' })
-    header.createEl('h3', { text: this.path, cls: 'wikey-schema-yaml-title' })
+    const titleRow = header.createDiv({ cls: 'wikey-schema-yaml-title-row' })
+    titleRow.createEl('h3', { text: '등록된 표준 분해', cls: 'wikey-schema-yaml-title' })
+    const helpBtn = titleRow.createEl('button', {
+      text: '?',
+      cls: 'wikey-schema-yaml-help-btn',
+      attr: { 'aria-label': '도움말', title: '도움말 보기 / 숨기기' },
+    })
     header.createEl('div', {
-      text: 'read-only — 편집은 vault 의 .wikey/schema.yaml 직접 수정',
+      text: `${this.path} · read-only (편집은 vault 의 .wikey/schema.yaml 직접 수정)`,
       cls: 'wikey-schema-yaml-subtitle',
     })
-    const pre = contentEl.createEl('pre', { cls: 'wikey-schema-yaml-pre' })
+
+    // Parse 시도 — 실패 시 raw fallback
+    const parsed = parseSchemaOverrideYaml(this.content)
+    const sd = parsed?.standardDecompositions
+
+    // ── 도움말 (default closed, ? 버튼으로 toggle, 충분한 설명 포함) ──
+    const help = contentEl.createEl('details', { cls: 'wikey-schema-yaml-help' })
+    help.createEl('summary', {
+      text: '도움말 — 표준 분해 사용법 (click 또는 상단 ? 버튼)',
+      cls: 'wikey-schema-yaml-help-summary',
+    })
+    const helpBody = help.createDiv({ cls: 'wikey-schema-yaml-help-body' })
+
+    helpBody.createEl('p', {
+      text: '표준 분해는 wikey 가 새 자료를 정리할 때 참고하는 표준 (Standard) 정의입니다. 예: PMBOK 의 10 knowledge areas, ISO 27001 의 Annex A controls, COBIT 5 도메인, 사내 부서 분류 등.',
+    })
+
+    helpBody.createEl('h4', { text: '📌 자동 등록이 기본입니다' })
+    helpBody.createEl('p', {
+      text: '일반적으로 사용자가 직접 추가하지 않습니다. 표준 자료를 ingest 하면 wikey 가 자동으로 그룹 + 구성요소를 탐지하고 등록합니다. 본 패널은 주로 어떤 표준이 등록되어 있는지 조회하는 용도입니다.',
+    })
+    const ul1 = helpBody.createEl('ul')
+    ul1.createEl('li', { text: '자동 인식 — 새 ingest 시 소스의 표준 mention 을 wikey 가 자동 탐지 → wiki/concepts/ 또는 wiki/entities/ 페이지 생성.' })
+    ul1.createEl('li', { text: '다국어 / 별칭 통합 — 같은 표준의 다른 표기 (예: "ISO 27001" / "iso-iec-27001-2022" / "ISMS") 한 wiki 페이지로 통합.' })
+    ul1.createEl('li', { text: '할루시네이션 방지 — require_explicit_mention 시 소스에 명시된 mention 만 추출 (LLM 추측 차단).' })
+
+    helpBody.createEl('h4', { text: '🧩 구조: 그룹 + 구성요소' })
+    const ulStruct = helpBody.createEl('ul')
+    ulStruct.createEl('li', { text: '그룹 (umbrella) — 표준 식별자 + 이름. 예: 그룹명 "iso-iec-27001-2022", 표시명 "ISO/IEC 27001:2022".' })
+    ulStruct.createEl('li', { text: '구성요소 (components) — 그룹 안 sub-element. 예: PMBOK 의 10 areas, ISO 27001 의 Annex A 통제.' })
+
+    helpBody.createEl('h4', { text: '🛠 본 패널 사용 흐름 (조회 위주)' })
+    const ul2 = helpBody.createEl('ul')
+    ul2.createEl('li', { text: '주 용도: 자동 탐지된 후보를 검토하고 Accept (등록) 또는 Reject (제외).' })
+    ul2.createEl('li', { text: '조회: schema.yaml 확인 link 로 현재 등록된 표준 분류 전체 검토.' })
+    ul2.createEl('li', { text: 'Add / Edit (예외 케이스): 자동 탐지가 누락한 표준을 불가피하게 추가하거나, 자동 결과의 오류를 직접 수정해야 할 때만 사용.' })
+
+    helpBody.createEl('h4', { text: '📋 규칙 (rule)' })
+    const ulRule = helpBody.createEl('ul')
+    ulRule.createEl('li', { text: 'Decompose — 그룹을 구성요소로 분해. 검색 시 component 단위 정확 매칭.' })
+    ulRule.createEl('li', { text: 'Bundle — 그룹 한 묶음으로 유지 (분해 X).' })
+
+    helpBody.createEl('h4', { text: '💡 활용 팁' })
+    const ulTip = helpBody.createEl('ul')
+    ulTip.createEl('li', { text: '표준 자료 ingest 후 자동 등록 결과를 본 패널에서 확인 → Accept 만으로 마무리.' })
+    ulTip.createEl('li', { text: '각 표준명 / 구성요소를 클릭하면 wiki 페이지로 이동해 의미 확인.' })
+    ulTip.createEl('li', { text: '대부분 사용자는 Add/Edit 을 거의 사용하지 않습니다. 조회와 Accept 가 주 흐름입니다.' })
+
+    helpBtn.addEventListener('click', () => {
+      help.open = !help.open
+    })
+
+    const cardArea = contentEl.createDiv({ cls: 'wikey-schema-yaml-cards' })
+
+    if (!parsed || !sd || (sd.kind !== 'present' && sd.kind !== 'empty-all-skipped')) {
+      const empty = cardArea.createDiv({ cls: 'wikey-schema-yaml-empty' })
+      if (sd?.kind === 'empty-explicit') {
+        empty.setText('명시 비활성화 상태 (`standard_decompositions: []`).')
+      } else {
+        empty.setText('등록된 표준 분해가 없습니다.')
+      }
+    } else if (sd.kind === 'empty-all-skipped') {
+      const warn = cardArea.createDiv({ cls: 'wikey-schema-yaml-warn' })
+      warn.setText(`${sd.skippedCount}건 등록되어 있으나 parser 가 모두 skip — slug 형식이 \`/^[a-z][a-z0-9-]*$/\` 와 일치하지 않습니다. 아래 raw YAML 에서 직접 확인 가능.`)
+    } else {
+      // sd.kind === 'present' — 카드 형식 표시
+      const intro2 = cardArea.createDiv({ cls: 'wikey-schema-yaml-cards-intro' })
+      intro2.setText(`등록된 ${sd.items.length}개 표준 ↓ (각 표준명/구성요소 클릭 시 wiki 페이지 열림)`)
+
+      const openWikiPage = async (slug: string) => {
+        const candidates = [
+          `wiki/concepts/${slug}.md`,
+          `wiki/entities/${slug}.md`,
+        ]
+        for (const path of candidates) {
+          const file = this.app.vault.getAbstractFileByPath(path)
+          if (file) {
+            this.close()
+            await this.app.workspace.getLeaf(false).openFile(file as any)
+            return
+          }
+        }
+        new Notice(`wiki 페이지 없음: ${slug} — 아직 ingest 되지 않은 항목입니다.`)
+      }
+
+      sd.items.forEach((item, idx) => {
+        const card = cardArea.createDiv({ cls: 'wikey-schema-yaml-card' })
+
+        const titleRow = card.createDiv({ cls: 'wikey-schema-yaml-card-title-row' })
+        titleRow.createEl('span', { text: `${idx + 1}.`, cls: 'wikey-schema-yaml-card-idx' })
+        const nameLink = titleRow.createEl('a', {
+          text: (item as any).name ?? item.umbrella_slug,
+          cls: 'wikey-schema-yaml-card-name wikey-schema-yaml-link',
+          attr: { href: '#', title: 'wiki 페이지 열기' },
+        })
+        nameLink.addEventListener('click', (e) => {
+          e.preventDefault()
+          openWikiPage(item.umbrella_slug)
+        })
+        titleRow.createEl('span', {
+          text: item.umbrella_slug,
+          cls: 'wikey-schema-yaml-card-slug',
+        })
+
+        const meta = card.createDiv({ cls: 'wikey-schema-yaml-card-meta' })
+        const ruleVal = (item as any).rule ?? 'decompose'
+        meta.createEl('span', { text: `규칙: ${this.formatRule(ruleVal)}` })
+        const originVal = (item as any).origin
+        meta.createEl('span', { text: `· 출처: ${this.formatOrigin(originVal)}` })
+        const conf = (item as any).confidence
+        if (typeof conf === 'number') {
+          meta.createEl('span', { text: `· 신뢰도: ${conf.toFixed(2)}` })
+        }
+        const rem = (item as any).require_explicit_mention
+        if (rem === true) meta.createEl('span', { text: '· 명시 mention 필수' })
+
+        const compsRow = card.createDiv({ cls: 'wikey-schema-yaml-card-comps' })
+        const components = (item as any).components ?? []
+        compsRow.createEl('strong', { text: `구성요소 (${components.length}건)` })
+        if (components.length > 0) {
+          const ul = compsRow.createEl('ul', { cls: 'wikey-schema-yaml-card-comps-list' })
+          for (const c of components) {
+            const li = ul.createEl('li')
+            const compLink = li.createEl('a', {
+              text: (c as any).slug,
+              cls: 'wikey-schema-yaml-link wikey-schema-yaml-comp-slug',
+              attr: { href: '#', title: 'wiki 페이지 열기' },
+            })
+            compLink.addEventListener('click', (e) => {
+              e.preventDefault()
+              openWikiPage((c as any).slug)
+            })
+            const t = (c as any).type
+            if (t) li.createEl('span', { text: ` · ${t}`, cls: 'wikey-schema-yaml-comp-type' })
+          }
+        } else {
+          compsRow.createEl('div', {
+            text: '구성요소 없음 — Bundle 규칙 표준은 분해 안 함.',
+            cls: 'wikey-schema-yaml-comp-empty',
+          })
+        }
+      })
+    }
+
+    // ── Raw YAML collapse (디버깅 / 직접 확인) ──
+    const rawDetails = contentEl.createEl('details', { cls: 'wikey-schema-yaml-raw' })
+    rawDetails.createEl('summary', { text: 'raw YAML 보기 (디버깅 용)' })
+    const pre = rawDetails.createEl('pre', { cls: 'wikey-schema-yaml-pre' })
     pre.setText(this.content || '(empty)')
   }
+
   onClose() {
     this.contentEl.empty()
   }
