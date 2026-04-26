@@ -140,9 +140,51 @@ export interface SchemaCustomType {
   readonly description: string
 }
 
+/**
+ * §5.4.1 Stage 1: a single component within a standard decomposition (e.g.
+ * one of PMBOK's 10 knowledge areas). `aliases` preserves legacy slugs that
+ * existed in earlier hardcoded prompts (e.g. `project-time-management` for
+ * `project-schedule-management`) so prompt anchors remain stable.
+ */
+export interface StandardDecompositionComponent {
+  readonly slug: string
+  readonly type: string
+  readonly aliases?: readonly string[]
+}
+
+/**
+ * §5.4.1 Stage 1: declarative replacement for the canonicalizer prompt's
+ * "task rule #7" (PMBOK 10 areas hardcode). One umbrella standard expands
+ * into N components either via `decompose` (extract each separately) or
+ * `bundle` (collapse into a single umbrella slug).
+ */
+export interface StandardDecomposition {
+  readonly name: string
+  readonly aliases: readonly string[]
+  readonly umbrella_slug: string
+  readonly components: readonly StandardDecompositionComponent[]
+  readonly rule: 'decompose' | 'bundle'
+  readonly require_explicit_mention: boolean
+  readonly origin?: 'hardcoded' | 'user-yaml' | 'suggested' | 'self-declared' | 'converged'
+  readonly confidence?: number
+}
+
+/**
+ * §5.4.1 Stage 1 (codex cycle #2 단일화): absent ⟺ undefined. Present states
+ * captured by the discriminated union below.
+ *   - empty-explicit: yaml `standard_decompositions: []` (or block-empty).
+ *   - empty-all-skipped: yaml had entries but every entry failed validation.
+ *   - present: at least one valid user entry.
+ */
+export type StandardDecompositionsState =
+  | { readonly kind: 'empty-explicit' }
+  | { readonly kind: 'empty-all-skipped'; readonly skippedCount: number }
+  | { readonly kind: 'present'; readonly items: readonly StandardDecomposition[] }
+
 export interface SchemaOverride {
   readonly entityTypes: readonly SchemaCustomType[]
   readonly conceptTypes: readonly SchemaCustomType[]
+  readonly standardDecompositions?: StandardDecompositionsState
 }
 
 /**

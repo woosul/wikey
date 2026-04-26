@@ -1132,6 +1132,50 @@ entity_types:
 concept_types:
   - name: regulation
     description: Regulations or laws of a country or agency (e.g. gdpr, k-fda-guidelines)
+
+# Standard decomposition rules (§5.4.1 Stage 1)
+# - Omit this key entirely → the built-in PMBOK decomposition applies (default).
+# - Set \`standard_decompositions: []\` to explicitly disable PMBOK.
+# - Add new entries (ISO-27001, ITIL 4, ...) below in the same shape; user entries
+#   are APPENDED on top of built-in (PMBOK stays active alongside).
+# - The PMBOK YAML below is the **built-in shape for reference** — code applies it
+#   automatically, do NOT uncomment. v4 does not yet support replacing built-in PMBOK
+#   with a user definition (mergeWithBuiltin: 'replace' is a future option); to turn
+#   PMBOK off, use \`standard_decompositions: []\`.
+#
+# standard_decompositions:
+#   - name: PMBOK
+#     umbrella_slug: project-management-body-of-knowledge
+#     rule: decompose
+#     require_explicit_mention: true
+#     aliases:
+#       - Project Management Body of Knowledge
+#       - 프로젝트 관리 지식체계
+#     components:
+#       - slug: project-integration-management
+#         type: methodology
+#       - slug: project-scope-management
+#         type: methodology
+#       - slug: project-schedule-management
+#         type: methodology
+#         aliases:
+#           - project-time-management
+#       - slug: project-cost-management
+#         type: methodology
+#       - slug: project-quality-management
+#         type: methodology
+#       - slug: project-resource-management
+#         type: methodology
+#         aliases:
+#           - project-human-resource-management
+#       - slug: project-communications-management
+#         type: methodology
+#       - slug: project-risk-management
+#         type: methodology
+#       - slug: project-procurement-management
+#         type: methodology
+#       - slug: project-stakeholder-management
+#         type: methodology
 `
 
 /**

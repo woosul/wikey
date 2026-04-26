@@ -1,0 +1,23 @@
+# §5.4.1 Stage 1 — AC5.a fixture (5-control unit smoke).
+# ISO 27001 Annex A control families, abbreviated to 5 entries for fast unit
+# testing. Verifies (i) parser accepts user entry on top of built-in PMBOK,
+# (ii) builder F1-append output contains BOTH PMBOK + ISO-27001 sections.
+standard_decompositions:
+  - name: ISO-27001
+    umbrella_slug: iso-27001
+    rule: decompose
+    require_explicit_mention: true
+    aliases:
+      - Information Security Management System
+      - 정보보안경영시스템
+    components:
+      - slug: a-5-organizational-controls
+        type: standard
+      - slug: a-6-people-controls
+        type: standard
+      - slug: a-7-physical-controls
+        type: standard
+      - slug: a-8-technological-controls
+        type: standard
+      - slug: a-9-supplier-relationships
+        type: standard

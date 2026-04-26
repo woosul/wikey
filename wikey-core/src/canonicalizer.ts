@@ -4,7 +4,7 @@ import type {
 } from './types.js'
 import {
   ENTITY_TYPES, CONCEPT_TYPES, isValidEntityType, isValidConceptType,
-  detectAntiPattern, buildSchemaPromptBlock,
+  detectAntiPattern, buildSchemaPromptBlock, buildStandardDecompositionBlock,
 } from './schema.js'
 import { normalizeBase } from './wiki-ops.js'
 import {
@@ -207,12 +207,11 @@ interface PromptArgs {
 }
 
 /**
- * §4.5.1.7.2 PMBOK 10 knowledge areas 결정화 (작업 규칙 #7) 는 **단일 표준 하드코딩** 이다
- * (Phase 5 §5.6 Stage 0 사전 검증 성격). 실측으로 효과가 확증되면 이 블록은 self-extending
- * 구조로 이행한다 — 실행 로드맵은 `plan/phase-5-todo.md §5.6`, 철학 선언은
- * `wiki/analyses/self-extending-wiki.md`. 다음 표준 (ISO/ITIL/GDPR 등) 이 들어와도
- * **여기에 블록을 더 추가하지 말고** §5.6 Stage 1 (schema.yaml 로더화) 먼저 착수.
- * 누적 하드코딩 3 개 넘기 전에 이행.
+ * §4.5.1.7.2 PMBOK 10 knowledge areas 결정화 (작업 규칙 #7) 는 §5.4.1 Stage 1 진입과
+ * 함께 schema.yaml 로 이전됨 — `BUILTIN_STANDARD_DECOMPOSITIONS` 가 코드 default 로
+ * PMBOK 을 자동 적용하고, `.wikey/schema.yaml` 의 `standard_decompositions:` entry 가
+ * built-in append (F1) 또는 `[]` explicit disable. 다음 표준 (ISO/ITIL/GDPR 등) 은
+ * 사용자가 vault yaml 에 entry 만 추가하면 자동 통합 — 여기 블록을 더 추가하지 말 것.
  */
 export function buildCanonicalizerPrompt(args: PromptArgs): string {
   const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint, schemaOverride, overridePrompt } = args
@@ -234,16 +233,20 @@ export function buildCanonicalizerPrompt(args: PromptArgs): string {
   }).join('\n')
 
   const schemaBlock = buildSchemaPromptBlock(schemaOverride)
+  const decompositionBlock = buildStandardDecompositionBlock(schemaOverride)
 
   if (overridePrompt && overridePrompt.trim()) {
     return overridePrompt
       .replaceAll('{{SOURCE_FILENAME}}', sourceFilename)
       .replaceAll('{{GUIDE_BLOCK}}', guideBlock)
       .replaceAll('{{SCHEMA_BLOCK}}', schemaBlock)
+      .replaceAll('{{STANDARD_DECOMPOSITION_BLOCK}}', decompositionBlock)
       .replaceAll('{{EXISTING_BLOCK}}', existingBlock)
       .replaceAll('{{MENTIONS_BLOCK}}', mentionsBlock)
       .replaceAll('{{MENTIONS_COUNT}}', String(mentions.length))
   }
+
+  const decompositionSection = decompositionBlock ? `\n${decompositionBlock}\n` : ''
 
   return `당신은 wikey LLM Wiki의 canonicalizer입니다. chunk LLM이 추출한 mention 리스트를 받아 schema에 맞춰 분류하고 canonical filename으로 통합합니다.
 
@@ -259,8 +262,7 @@ ${schemaBlock}
 4. **거부 패턴 자동 제외**: 한국어 라벨, X-management/X-service 같은 단순 기능명, 비즈니스 객체(quotation/order 등)는 schema 위반이므로 제외.
 5. **filename 형식**: \`name\` 필드는 base name만 (소문자, 하이픈 구분, .md/디렉토리 prefix 금지).
 6. **description**: 1~2문장, 산업 표준 정의 위주 (기능 설명 X).
-7. **PMBOK 10 knowledge areas 개별 추출** (concepts 결정화): 본문에 PMBOK / 프로젝트 관리 지식체계 맥락이 등장하면 다음 10 영역은 각각 **별도 concept** 로 추출하고 상위 \`project-management-body-of-knowledge\` 하나로 묶지 말 것. 본문에 해당 영역이 직접 언급되지 않으면 추출하지 않는다 (hallucination 금지): \`project-integration-management\`, \`project-scope-management\`, \`project-schedule-management\` (또는 \`project-time-management\`), \`project-cost-management\`, \`project-quality-management\`, \`project-resource-management\` (또는 \`project-human-resource-management\`), \`project-communications-management\`, \`project-risk-management\`, \`project-procurement-management\`, \`project-stakeholder-management\`. 각 영역 type 은 \`methodology\`.
-
+${decompositionSection}
 ## 입력 mention (${mentions.length}개)
 
 ${mentionsBlock}

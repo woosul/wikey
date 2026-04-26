@@ -1,11 +1,18 @@
 import { describe, it, expect, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
 import {
   canonicalize, buildCanonicalizerPrompt,
   canonicalizeSlug, SLUG_ALIASES, FORCED_CATEGORIES,
 } from '../canonicalizer.js'
+import { parseSchemaOverrideYaml, buildStandardDecompositionBlock } from '../schema.js'
 import { EXAMPLE_ORG_BASE } from '../example-placeholders.js'
-import type { Mention } from '../types.js'
+import type { Mention, SchemaOverride } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const fixturePath = (name: string): string => join(__dirname, 'fixtures', name)
 
 /**
  * Mock LLMClient that returns a canned JSON response.
@@ -874,5 +881,137 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
     expect(occurrences).toBe(1)
     const smithBullets = (nanovna.match(/\[\[smith-chart\]\]/g) ?? []).length
     expect(smithBullets).toBe(1)
+  })
+})
+
+// ── §5.4.1 Stage 1: standard decomposition prompt integration (AC4 + AC5 + AC6.a) ──
+
+describe('buildCanonicalizerPrompt — §5.4.1 standard decomposition', () => {
+  // AC4 (i) — default path: built-in PMBOK block + marker auto-included.
+  it('AC4(i) default path (no schemaOverride) → built-in PMBOK block + marker', () => {
+    const prompt = buildCanonicalizerPrompt({
+      mentions: [{ name: 'pms', evidence: 'PMS' }],
+      existingEntityBases: [],
+      existingConceptBases: [],
+      sourceFilename: 'test.pdf',
+    })
+    expect(prompt).toContain('PMBOK 10 knowledge areas 개별 추출')
+    expect(prompt).toContain('project-integration-management')
+    expect(prompt).toContain('project-stakeholder-management')
+  })
+
+  // AC4 (ii) — overridePrompt branch: {{STANDARD_DECOMPOSITION_BLOCK}} placeholder substitution.
+  it('AC4(ii) overridePrompt with {{STANDARD_DECOMPOSITION_BLOCK}} → built-in PMBOK substituted', () => {
+    const override = `CUSTOM-OVERRIDE
+Source: {{SOURCE_FILENAME}}
+{{SCHEMA_BLOCK}}
+{{STANDARD_DECOMPOSITION_BLOCK}}
+Mentions ({{MENTIONS_COUNT}}):
+{{MENTIONS_BLOCK}}
+`
+    const prompt = buildCanonicalizerPrompt({
+      mentions: [{ name: 'pmbok', type_hint: 'standard', evidence: 'X' }],
+      existingEntityBases: [],
+      existingConceptBases: [],
+      sourceFilename: 'pms.pdf',
+      overridePrompt: override,
+    })
+    expect(prompt).toContain('CUSTOM-OVERRIDE')
+    expect(prompt).toContain('PMBOK 10 knowledge areas 개별 추출')
+    expect(prompt).toContain('project-integration-management')
+  })
+
+  // AC4 (ii.b) — overridePrompt without placeholder → no decomposition block leaked into output.
+  it('AC4(ii.b) overridePrompt without placeholder → no decomposition block in output', () => {
+    const override = `MINIMAL-OVERRIDE
+Source: {{SOURCE_FILENAME}}
+Mentions ({{MENTIONS_COUNT}}):
+{{MENTIONS_BLOCK}}
+`
+    const prompt = buildCanonicalizerPrompt({
+      mentions: [{ name: 'x', evidence: 'y' }],
+      existingEntityBases: [],
+      existingConceptBases: [],
+      sourceFilename: 'test.pdf',
+      overridePrompt: override,
+    })
+    expect(prompt.startsWith('MINIMAL-OVERRIDE')).toBe(true)
+    expect(prompt).not.toContain('PMBOK 10 knowledge areas')
+    expect(prompt).not.toContain('project-integration-management')
+  })
+
+  // AC5.a — ISO-27001 5-control fixture: built-in PMBOK + ISO both rendered (F1 append).
+  it('AC5.a (5-control) → prompt contains BOTH built-in PMBOK and ISO-27001 sections', () => {
+    const yaml = readFileSync(fixturePath('iso27001-5-control.yaml'), 'utf-8')
+    const override = parseSchemaOverrideYaml(yaml)
+    expect(override).not.toBeNull()
+    expect(override!.standardDecompositions?.kind).toBe('present')
+    const prompt = buildCanonicalizerPrompt({
+      mentions: [{ name: 'iso27001', type_hint: 'standard', evidence: 'X' }],
+      existingEntityBases: [],
+      existingConceptBases: [],
+      sourceFilename: 'iso.pdf',
+      schemaOverride: override!,
+    })
+    // built-in PMBOK still present (F1 append, not replace)
+    expect(prompt).toContain('PMBOK')
+    expect(prompt).toContain('project-integration-management')
+    // ISO-27001 + 5 control slugs present
+    expect(prompt).toContain('ISO-27001')
+    expect(prompt).toContain('a-5-organizational-controls')
+    expect(prompt).toContain('a-6-people-controls')
+    expect(prompt).toContain('a-7-physical-controls')
+    expect(prompt).toContain('a-8-technological-controls')
+    expect(prompt).toContain('a-9-supplier-relationships')
+  })
+
+  // AC5.b — 93-control fixture: parser accepts all 93 + builder runs in <100ms (smoke).
+  it('AC5.b (93-control) → parser accepts all 93 + builder <100ms', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const yaml = readFileSync(fixturePath('iso27001-93-control.yaml'), 'utf-8')
+    const override = parseSchemaOverrideYaml(yaml)
+    expect(override).not.toBeNull()
+    expect(override!.standardDecompositions?.kind).toBe('present')
+    if (override!.standardDecompositions?.kind === 'present') {
+      const items = override!.standardDecompositions.items
+      expect(items).toHaveLength(1)
+      expect(items[0].components).toHaveLength(93)
+    }
+    expect(warnSpy).not.toHaveBeenCalled()
+    const t0 = performance.now()
+    const block = buildStandardDecompositionBlock(override!)
+    const elapsedMs = performance.now() - t0
+    expect(elapsedMs).toBeLessThan(100)
+    // spot-check substring matches across all 4 control families
+    expect(block).toContain('a-5-1-organizational-control')
+    expect(block).toContain('a-5-37-organizational-control')
+    expect(block).toContain('a-6-1-people-control')
+    expect(block).toContain('a-7-14-physical-control')
+    expect(block).toContain('a-8-34-technological-control')
+    warnSpy.mockRestore()
+  })
+
+  // AC6.a — 3-anchor (marker + 10 main slugs + 2 alternate slugs) preserved in default builder.
+  it('AC6.a 3-anchor: marker + 10 PMBOK slugs + 2 alternate slugs', () => {
+    const block = buildStandardDecompositionBlock(undefined)
+    // (i) marker phrase
+    expect(block).toContain('PMBOK 10 knowledge areas 개별 추출')
+    // (ii) 10 main PMBOK slugs
+    const mainSlugs = [
+      'project-integration-management',
+      'project-scope-management',
+      'project-schedule-management',
+      'project-cost-management',
+      'project-quality-management',
+      'project-resource-management',
+      'project-communications-management',
+      'project-risk-management',
+      'project-procurement-management',
+      'project-stakeholder-management',
+    ]
+    for (const slug of mainSlugs) expect(block).toContain(slug)
+    // (iii) 2 alternate slugs (legacy anchor)
+    expect(block).toContain('project-time-management')
+    expect(block).toContain('project-human-resource-management')
   })
 })

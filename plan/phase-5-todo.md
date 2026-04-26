@@ -270,6 +270,10 @@
 > tag: #framework, #engine, #architecture
 > **이전 번호**: `was §5.6`. 2026-04-22 Phase 4 §4.5.1.7.2 PMBOK 하드코딩이 Stage 0 사전 검증에 해당.
 
+> **§5.4 통합 개발 계획서 단일 소스**: [`plan/phase-5-todox-5.4-integration.md`](./phase-5-todox-5.4-integration.md) v5 (codex Cycle #5 APPROVE 2026-04-26 / BUILD_BREAK_RISK LOW / Cycle 누적 #1~#5). **세부 설계 (4 Stage detailed 알고리즘 + 통합 시나리오 §4 5 가지 + 우선순위 chain + 8 종 신규 export 타입 + writer section-range insertion + store 분리 + LLM mapper) 는 통합 plan v5 본문에**, 진행 상태 추적 (체크박스) 은 본 §5.4 통합 관리. AC 본문 변경 시 통합 plan 갱신 → 본 체크박스 동기화.
+>
+> **§5.4.1 Stage 1 단독 plan**: [`plan/phase-5-todox-5.4.1-self-extending.md`](./phase-5-todox-5.4.1-self-extending.md) v7 (codex Cycle #9 APPROVE 2026-04-26). Stage 1 한정 detailed (통합 plan §3.1 reference 단일 소스).
+>
 > **현재 위치**. 2026-04-22 Phase 4 §4.5.1.7.2 (PMBOK 10 knowledge areas 프롬프트 하드코딩) 구현 완료, CDP 실측 대기 — 이 사전 검증이 본 §5.4 의 Stage 0 에 해당. 실측에서 Concepts CV 24.6% → <15% 확증되면 Stage 1 (schema.yaml 외부화) 진입.
 >
 > **배경**. PMBOK 을 canonicalizer 프롬프트에 단발 하드코딩했다. ISO 27001 controls / ITIL 4 practices / GDPR 7 원칙 / SAFe configurations / OWASP Top 10 / OSI 7 Layer / 12 Factor App 등 구조적으로 동일한 "표준 = N 하위 영역" 패턴이 연속 등장할 것이 확정되어 있는 만큼, 매번 prompt 블록을 늘리는 건 유지 불가. **사용자 수동 등록도 궁극의 답이 아니며**, wiki 가 축적될수록 wikey 자체가 표준 분해 구조를 **스스로 학습·확장** 하는 구조로 이행해야 한다.
@@ -297,38 +301,145 @@
 
 ### 5.4.1 Stage 1 — static `.wikey/schema.yaml` override (가까운 후속, 두 번째 표준 등장 시 즉시 착수)
 
-- [ ] `SchemaOverride.standard_decompositions: StandardDecomposition[]` 필드 추가 (`schema-override.test.ts` 확장)
-- [ ] `canonicalizer.ts` 에 `buildStandardDecompositionBlock(override)` 로더 함수 신규 — 현재 하드코딩된 작업 규칙 #7 블록을 동적 생성
-- [ ] PMBOK 하드코딩 **제거**, default vault 템플릿 `.wikey/schema.yaml` 에 `PMBOK` entry 포함 (사용자 vault 가 override 안 해도 동작 유지)
-- [ ] 단위 테스트: override 에 ISO-27001 entry 주입 → 프롬프트에 93 controls 블록이 동적으로 포함
-- [ ] 트리거: 두 번째 표준 corpus (ISO/ITIL 등) 가 wiki 에 인제스트될 때
+> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4.1-self-extending.md`](./phase-5-todox-5.4.1-self-extending.md) v7 (codex Cycle #9 APPROVE 2026-04-26, file rename 2026-04-26 사용자 명명 정책 — 기존 `phase-5-todox-5.4-self-extending.md` → `phase-5-todox-5.4.1-self-extending.md`. 5.4 통합 plan 은 별 파일 `phase-5-todox-5.4-integration.md`). 본 체크박스는 v7 §3.5 의 9 AC + R1/R3 + AC6.b 라이브 측정 + AC7 회귀를 narrowing — 진행 상태만 추적. AC 본문 변경 시 todox 갱신 → 본 체크박스 동기화.
+> **트리거**: 두 번째 표준 corpus (ISO 27001 / ITIL 4 / GDPR / SAFe / OWASP / OSI 7 Layer / 12 Factor App 등) 가 wiki 인제스트 직전. PMBOK 1 corpus 만 있는 동안은 진입 대기.
+> **Entry gate (본 plan 책임 영역 아님 — todox §3.6 F7 entry gate vs no-regression 분리)**: Phase 4 §4.5.1.7.2 PMS 5-run 실측 Concepts CV 24.6% → <15% 도달. 본 plan AC6.a (단위 테스트) + AC6.b (라이브 측정) 는 post-change no-regression 만 약속.
+> **Baseline (불변)**: 648 PASS / build 0 errors (Phase 5 §5.3 cycle smoke 종결 시점).
+
+#### 5.4.1.1 데이터 모델 + 상수 (`types.ts` / `schema.ts`)
+- [ ] **AC1** — 타입 4종 + 상수 1종 export (`schema.ts`):
+  - `StandardDecompositionComponent` (with optional `aliases`, F3) · `StandardDecomposition` · `StandardDecompositionsState` (3-kind discriminated union: `empty-explicit` / `empty-all-skipped` / `present`, absent 는 `undefined` 자체 — codex Cycle #2 단일화) · `SchemaOverride.standardDecompositions?: StandardDecompositionsState` 필드 추가 (`types.ts:143-146`)
+  - `BUILTIN_STANDARD_DECOMPOSITIONS` 상수 (export, F3 component aliases 포함) — PMBOK 10 areas 코드 default
+  - `STANDARD_EXCEPTIONS` Set 갱신 (`schema.ts:143`): canonical slug 2개 추가 — `project-schedule-management` · `project-resource-management` (P3 codex Cycle #2). canonical slug 가 `-management` suffix anti-pattern 으로 잡히지 않도록.
+  - `tsc --noEmit` 0 errors. `SchemaOverride` 사용 site 6곳 (ingest-pipeline `:491` + schema-override.test 5곳) 모두 빌드 OK.
+
+#### 5.4.1.2 YAML 파서 확장 (`schema.ts:289-354`)
+- [ ] **AC2** — `parseSchemaOverrideYaml` 가 `standard_decompositions:` top-level section 인식. 신규 단위 테스트 ≥ 9 cases:
+  - (1) standard_decompositions only YAML → 파서 non-null + `entityTypes: []` (F2 null 조건 변경)
+  - (2) explicit `standard_decompositions: []` → state `{ kind: 'empty-explicit' }`
+  - (3) `standard_decompositions:` 키 부재 → `standardDecompositions === undefined` (absent 단일화)
+  - (4) 모든 entry invalid silent skip + warn → state `{ kind: 'empty-all-skipped', skippedCount: N }` + builder built-in fallback 검증
+  - (5) component slug 충돌 first-wins (M6) + warn 메시지 검증 (`vi.spyOn(console, 'warn')`)
+  - (6) tab indentation 거부 + warn (Scrutiny c)
+  - (7) `components[].type` invalid (override + built-in 어디에도 없음) → component skip + warn (F5 런타임 검증)
+  - (8) 잘못된 `rule` (`decompose|bundle` 외) → 항목 skip
+  - (9) `components[].aliases` (F3) 정상 파싱 + 동일 항목 안 중복 skip
+  - 각 warn 케이스 spy capture 확인 (UNDECIDED #2 v3: `loadSchemaOverride` 시그니처 변경 없이 관측)
+
+#### 5.4.1.3 프롬프트 동적 빌더 (`canonicalizer.ts`)
+- [ ] **AC3** — `buildStandardDecompositionBlock(override)` 신규 (4 시나리오 분기): `undefined` → built-in / `empty-explicit` → 빈 string / `empty-all-skipped` → built-in fallback + warn / `present` → built-in append user entries (F1 v3 정정). `buildCanonicalizerPrompt` 가 `{{STANDARD_DECOMPOSITION_BLOCK}}` placeholder 치환 (F4). 작업 규칙 #7 PMBOK 10 areas 인라인 (`canonicalizer.ts:262`) 제거. `canonicalizer.ts:209-216` 주석을 §5.4.1 표기로 정정. ≥ 5 cases.
+- [ ] **AC4** — `overridePrompt` 분기에 `{{STANDARD_DECOMPOSITION_BLOCK}}` placeholder 추가 (`canonicalizer.ts:238-246`). 사용자 정의 prompt 시 동적 블록 inline. ≥ 2 cases (custom prompt with/without placeholder).
+- [ ] **builder exact phrase 보존** (P2-5 codex Cycle #2): `canonicalizer.test.ts:230` 의 두 anchor — `'묶지 말 것'` + `'직접 언급되지 않으면 추출하지 않는다'` — builder 출력 그대로 등장 (todox §3.3 line 320/323/344). PMBOK 10 knowledge areas 개별 추출 표현 유지.
+- [ ] **prompt entity 일반화** (F5): 기존 "별도 concept" → "별도 entity 또는 concept" 로 변경 (component type 이 entity 도 허용).
+
+#### 5.4.1.4 두 번째 표준 등록 가능성 (ISO-27001 fixture)
+- [ ] **AC5.a** — ISO-27001 5-control unit fixture (`__tests__/fixtures/iso27001-5-control.yaml`) → schema 주입 → canonicalizer prompt 에 5 control slug 동적 출력. PMBOK 10 areas 동시 출력 (F1 append).
+- [ ] **AC5.b** — ISO-27001 93-control fixture (line count 측정 제거, F6 v3) → parser ≥ 93 components 인식 + warn 0건. 메모리 / 시간 회귀 없음.
+
+#### 5.4.1.5 회귀 무결성 (PMS 5-run 라이브 측정)
+- [ ] **AC6.a** — 단위 테스트 기준: builder 가 PMBOK entry 1개 유지 시 출력에 `'묶지 말 것'` + `'직접 언급되지 않으면 추출하지 않는다'` + `'PMBOK 10 knowledge areas 개별 추출'` 3-anchor phrase 모두 포함 (deterministic 등가성).
+- [ ] **AC6.b** — PMS 5-run 라이브 측정 (tester 책임): Stage 1 변경 전후 Concepts CV 동일 또는 개선 (entry gate 24.6% → <15% 는 별개 — 본 plan 은 no-regression 만 약속, F7).
+
+#### 5.4.1.6 빌드/테스트 통과
+- [ ] **AC7** — `npm run build` 0 errors + `npm test` baseline 648 → ≥ 667 PASS (신규 ≥ 19 cases: AC2 9 + AC3 5 + AC4 2 + AC5.a 1 + AC5.b 1 + AC6.a 1). AC6.b 는 라이브 측정 (단위 테스트 N/A).
+
+#### 5.4.1.7 사용자 vault 호환 (R1 강등 / R3 제거)
+- [ ] **R1 (Medium → Low)** — `.wikey/schema.yaml` 에 `standard_decompositions:` 키 부재 시 `standardDecompositions === undefined` → `BUILTIN_STANDARD_DECOMPOSITIONS` 자동 사용. §4.5.1.7.2 효과 자동 보존, 마이그레이션 불필요.
+- [ ] **R3 (제거)** — F1 v3 append 정책 적용으로 사용자가 ISO-27001 만 추가해도 PMBOK 자동 유지. risk 자체 제거.
+- [ ] `SCHEMA_OVERRIDE_TEMPLATE` (`settings-tab.ts:1118-1135`) 갱신: PMBOK 예시 entry 주석-out (P2-4) — 신규 vault 가 yaml 안에서 PMBOK 구조 학습 가능, 사용자가 자유롭게 활성화. 단일 yaml 파일에서 `standard_decompositions: []` 와 entries 동시 불가능 (mergeWithBuiltin 미지원, R9 limitation).
+
+#### 5.4.1.8 진입·종료 조건
+- [ ] **진입 trigger**: 두 번째 표준 corpus 인제스트 직전. PMBOK 1 corpus 만 있는 동안 대기.
+- [ ] **종료 조건**: 9 AC 모두 GREEN + AC7 baseline ≥ 667 PASS + AC6.b 라이브 측정 no-regression. 종료 후 Stage 2 (§5.4.2) gate 평가.
 
 ### 5.4.2 Stage 2 — extraction graph 기반 suggestion (Stage 1 완료 후, 중기)
 
-- [ ] 전제: Stage 1 이 안정 동작. 수동 등록이 번거로운 수준으로 표준 수 누적 (≥5 개)
-- [ ] canonicalizer 가 인제스트 결과의 mention graph 위에 패턴 탐지:
-  - co-occurrence: 동일 소스에서 N 개 mention 이 같은 상위 concept (`*-management`, `*-control`, `*-principle`) 의 sibling 으로 등장
-  - suffix clustering: `-management`, `-domain`, `-practice`, `-control`, `-principle` 등 suffix 빈도 + 같은 표준명 co-mention
-  - confidence score: support count × suffix homogeneity × mention count 에서 임계 이상
-- [ ] Audit UI 에 suggestion 카드 — "PMBOK 패턴 감지: 9 candidate components. 표준 분해로 등록하시겠습니까?" (accept/reject/edit)
-- [ ] 승인 시 `.wikey/schema.yaml` append (`origin: 'suggested'`, `confidence: <score>`)
-- [ ] 리스크: false positive — marketing 카피에 나열된 feature 리스트가 오인될 수 있음. 임계값 튜닝 + 사용자 승인 필수
+> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4-integration.md §3.2`](./phase-5-todox-5.4-integration.md) v5 (codex Cycle #5 APPROVE). 본 체크박스는 v5 §5 의 AC2~AC8 narrowing — 진행 상태 추적만.
+> **전제**: Stage 1 (§5.4.1) 안정 동작 + AC21 fixture corpus 6 자료 마련 (master 책임, U4 — `raw/__fixtures__/integration-cycle-smoke/` PMBOK + ISO 27001 + ITIL/SAFe/OWASP × 2 source).
+> **Baseline (불변)**: §5.4.1 staged 670 PASS / build 0 errors.
+
+#### 5.4.2.1 SuggestionStorage + 데이터 모델
+- [ ] **AC2** — `Suggestion` / `SuggestionState` (4-kind: pending / accepted / rejected / edited) / `SuggestionStorage` interface export (wikey-core/src/types.ts + suggestion-storage.ts 신규). `.wikey/suggestions.json` schema (rotation 안 함, negativeCache 영구). `.wikey/mention-history.json` schema (rotation 5000 ingest 또는 10MB). 신규 단위 테스트 ≥ 3 cases.
+
+#### 5.4.2.2 패턴 탐지 알고리즘
+- [ ] **AC3** — co-occurrence detector (minSiblings ≥ 3, prefix ≥ 5 chars). 신규 단위 테스트 ≥ 4 cases (정상 패턴 / 임계 미만 / 다중 표준 / sibling 부족).
+- [ ] **AC4** — suffix clustering (whitelist 6 종: `-management`, `-domain`, `-practice`, `-control`, `-principle`, `-policy`). 신규 단위 테스트 ≥ 3 cases.
+- [ ] **AC5** — confidence score formula (0.4·support + 0.3·suffix_homogeneity + 0.2·mention_density + 0.1·builtinOverlap, 임계 ≥ 0.6 alpha default). 신규 단위 테스트 ≥ 3 cases. **alpha calibration 의무** (cycle #2~#6 라이브 검증 후 baseline 측정 → hardening, 그 전까지 임계 변경 금지).
+
+#### 5.4.2.3 Audit UI suggestion 카드
+- [ ] **AC6** — `wikey-obsidian/src/sidebar-chat.ts` Suggestions panel 신규 (Audit panel 과 분리). accept / reject / edit 버튼 + 사용자 승인 게이트 필수. 신규 단위 테스트 ≥ 2 cases.
+
+#### 5.4.2.4 schema.yaml writer (section-range insertion)
+- [ ] **AC7** — `wikey-core/src/schema-yaml-writer.ts` 신규 (`appendStandardDecomposition`). section-range insertion (line-level scan, parse 안 함) — `standard_decompositions:` 다음 top-level key 직전 line splice. header `[]` 인 경우 `header-unsafe` reject (사용자 명시 disable 의도 보호). idempotency check (`umbrella_slug:` substring marker). 신규 단위 테스트 ≥ 3 cases (yaml 보존 / append idempotent / header `[]` reject).
+
+#### 5.4.2.5 ingest pipeline trigger
+- [ ] **AC8** — `wikey-core/src/ingest-pipeline.ts` 가 ingest 직후 `runSuggestionDetection` 호출 → `.wikey/suggestions.json` 누적. mention-history 도 동시 누적. 신규 단위 테스트 ≥ 2 cases (정상 trigger / 동시성 보호).
+
+#### 5.4.2.6 false positive 방지 + 리스크
+- [ ] marketing 카피 distinguish: 임계값 + 사용자 승인 게이트 + 본 cycle baseline calibration 필수 (alpha → hardening trigger)
+- [ ] **종료 조건**: AC2~AC8 모두 GREEN + ≥ 17 신규 cases + 670 → ≥ 687 PASS. Stage 3 (§5.4.3) 진입.
 
 ### 5.4.3 Stage 3 — in-source self-declaration (장기, Stage 2 정확도 증명 후)
 
-- [ ] 전제: Stage 2 suggestion 의 accept rate ≥ 80% — 즉 패턴 탐지가 신뢰할 수준
-- [ ] 소스 본문이 "이 표준은 다음 N 영역을 갖습니다: A, B, C..." 같이 enumerate 하면 `section-index.ts` 가 "표준 개요" 섹션을 감지 → structured decomposition extraction
-- [ ] runtime-scope decomposition: 해당 소스 인제스트 세션에만 적용, 세션 종료 시 자동 persist 제안 or 폐기
-- [ ] 장점: 사용자·Stage 2 suggestion 개입 없이 문서 하나로 확장
-- [ ] 리스크: 문서가 marketing 용이거나 부정확하면 오염 전파 — Phase 4 §4.3.2 provenance tracking 과 직접 연계 필수
+> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4-integration.md §3.3`](./phase-5-todox-5.4-integration.md) v5. 본 체크박스는 v5 §5 의 AC9~AC14 narrowing.
+> **전제**: Stage 2 (§5.4.2) AC2~AC8 GREEN + 라이브 검증 후 false positive rate calibration 완료. accept rate ≥ 80% 또는 baseline 임계 정의.
+
+#### 5.4.3.1 SelfDeclaration 타입 + persist 결정
+- [ ] **AC9** — `SelfDeclaration` 타입 + `SelfDeclarationPersistChoice` (3-kind: runtime-only / pending-user-review / persisted) 신규 export. `mergeRuntimeIntoOverride(SchemaOverride, SelfDeclaration[])` helper (Stage 1 BUILTIN 위에 runtime entries append). 신규 단위 테스트 ≥ 1.
+
+#### 5.4.3.2 section-index "표준 개요" detector
+- [ ] **AC10** — `wikey-core/src/section-index.ts` 의 `headingPattern` 신규 `'standard-overview'` 추가 (keyword regex `/개요|overview|introduction/`). 신규 단위 테스트 ≥ 3 cases (한국어 / 영어 / 미매치).
+
+#### 5.4.3.3 structured decomposition extractor
+- [ ] **AC11** — deterministic pattern matching (numbered list 또는 bullet list ≥ 5 items + umbrella reference). LLM 호출 옵션 (ii) v2 deferral. 신규 단위 테스트 ≥ 3 cases.
+
+#### 5.4.3.4 runtime-scope vs persist 결정 트리
+- [ ] **AC12** — default = runtime-only (해당 ingest 세션에만 적용). 사용자 승인 시 `pending-user-review` → review modal → `persisted` (schema.yaml append, Stage 2 writer 재사용). 자동 persist 강제 금지. 신규 단위 테스트 ≥ 2 cases.
+
+#### 5.4.3.5 Stage 2 suggestion 충돌 처리
+- [ ] **AC13** — `shouldStage3ProposeRuntime(store, umbrella_slug)` 분기 (no prior / pending / accepted / rejected). suggestion 이미 있는 표준이 self-declared 자료에 등장 시 우선순위 결정. 신규 단위 테스트 ≥ 2 cases.
+
+#### 5.4.3.6 false positive 방지
+- [ ] **AC14** — marketing 자료 본문이 enumerate 형태로 표준처럼 보이는 경우 guard. Phase 4 §4.3.2 provenance tracking 연계. 신규 단위 테스트 ≥ 1.
+
+- [ ] **종료 조건**: AC9~AC14 모두 GREEN + ≥ 12 신규 cases. Stage 4 (§5.4.4) 진입.
 
 ### 5.4.4 Stage 4 — cross-source convergence (Phase 5 내 최후 단계, 실험적)
 
-- [ ] 여러 소스가 같은 표준을 다른 각도에서 언급 → wiki 전체 mention graph 를 배치 분석해 canonical decomposition 을 inference
-- [ ] 예: 소스 A 는 PMBOK 3 영역, 소스 B 는 다른 5 영역, 소스 C 는 umbrella 만 → union 으로 canonical decomposition 확증
-- [ ] 구현 경로: qmd vector index + clustering + LLM arbitration. `reindex.sh` batch job 에 convergence pass 훅 추가
-- [ ] 데이터 선결 조건: Stage 3 까지의 decomposition 인스턴스가 cross-validation 가능할 만큼 누적 (최소 3 개 표준 × 2 소스 이상). 선결 미충족 시 §5.4.4 는 대기 상태로 남고 Phase 5 종료 시 §5.4.1~3 까지만 closed
-- [ ] **Phase 6 이관 없음** — Phase 6 은 웹 인터페이스 스코프. self-extension 모든 단계는 Phase 5 안에서 완결
+> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4-integration.md §3.4`](./phase-5-todox-5.4-integration.md) v5. 본 체크박스는 v5 §5 의 AC15~AC20 narrowing.
+> **전제**: Stage 3 (§5.4.3) AC9~AC14 GREEN + mention-history 누적 ≥ 3 표준 × 2 source = 6 instance.
+> **정확도**: alpha / page-level-limited (mention-level granularity v2 deferral).
+
+#### 5.4.4.1 ConvergedDecomposition 타입
+- [ ] **AC15** — `ConvergedDecomposition` (with `arbitration_method: 'union' | 'llm'` + `arbitration_confidence: number 0~1` + `source_mentions: SourceMention[]` + `arbitration_log?: string`) export. `.wikey/converged-decompositions.json` schema. 신규 단위 테스트 ≥ 1.
+
+#### 5.4.4.2 mention graph clustering
+- [ ] **AC16** — page-level qmd vector clustering (cosine similarity ≥ 0.75 임계, alpha default). agglomerative simple. 신규 단위 테스트 ≥ 2 cases (cluster 정상 / 임계 미만).
+
+#### 5.4.4.3 LLM arbitration
+- [ ] **AC17** — `arbitrate(cluster, 'union' | 'llm', tokenBudget)`. default = `union` (LLM 호출 0). `--arbitration llm` opt-in 시 LLM 호출 + JSON 응답 → ConvergedDecomposition mapper (`arbitration_confidence` 일관 명시). 신규 단위 테스트 ≥ 2 cases (Happy union arbitration_confidence=1.0 / Happy llm arbitration_confidence=0.8).
+
+#### 5.4.4.4 reindex.sh hook
+- [ ] **AC18** — `scripts/reindex.sh` 마지막에 conditional block (`WIKEY_CONVERGENCE_ENABLED=true` 일 때만, default off). 신규 shell test 또는 mjs test ≥ 1.
+
+#### 5.4.4.5 우선순위 충돌 처리 (`mergeAllSources`)
+- [ ] **AC19** — 우선순위 chain: user-yaml > suggested > self-declared > converged > runtime > BUILTIN. 같은 umbrella_slug 충돌 시 우선순위 적용. 신규 단위 테스트 ≥ 2 cases.
+
+#### 5.4.4.6 데이터 선결 조건 검증
+- [ ] **AC20** — `runConvergencePass` 실행 전 mention-history 누적 ≥ 3 표준 × 2 source = 6 instance 검증. 미달 시 skip (사용자 알림). 신규 단위 테스트 ≥ 1.
+
+- [ ] **Phase 6 이관 없음** — Phase 6 은 웹 인터페이스 스코프. self-extension 모든 단계는 Phase 5 안에서 완결.
+- [ ] **종료 조건**: AC15~AC20 모두 GREEN + ≥ 9 신규 cases. §5.4.5 통합 라이브 검증 진입.
+
+### 5.4.5 통합 라이브 검증 + build/test baseline (Stage 1+2+3+4 통합)
+
+> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4-integration.md §5 AC21/AC22`](./phase-5-todox-5.4-integration.md) v5. tester 위임 (Agent in-process — agent-management.md §0).
+
+- [ ] **AC21 통합 라이브 cycle smoke** (tester 책임): vault 의 실제 mention graph 에서 Stage 1+2+3+4 통합 시나리오 8 step (Vault reset → fixture corpus 6 자료 인제스트 → Stage 2 suggestion 카드 → Accept → schema.yaml append → 다음 ingest 신규 표준 분해 등장 → Stage 3 runtime-scope 적용 → Stage 4 convergence review modal → wiki write 정합성). obsidian-cdp full cycle smoke. 결과 `activity/phase-5-resultx-5.4-integration-cycle-smoke-<date>.md` 신규.
+- [ ] **AC22 build/test baseline**: `npm run build` 0 errors + `npm test` ≥ 711 PASS (Stage 1 staged 670 + 신규 ≥ 41: AC2~AC8 ≥ 17 + AC9~AC14 ≥ 12 + AC15~AC20 ≥ 9 + Stage 1 maintenance 0). wikey-obsidian build OK.
+- [ ] **AC21 fixture corpus master 마련** (gate, U4): `raw/__fixtures__/integration-cycle-smoke/` 신규 — PMBOK + ISO 27001 + ITIL/SAFe/OWASP × 2 source = 6 자료. Stage 2 cycle 시작 전 완료 의무.
+- [ ] **codex Cycle #N post-implementation review** (Stage 1+2+3+4 통합 코드): plan v5 acceptance 충족 / Karpathy 4원칙 / 보안 / 회귀 검증.
+- [ ] **§5.4 종료 조건**: 22 AC + AC21 라이브 통과 + AC22 ≥ 711 PASS + codex APPROVE → 사용자 승인 commit/push.
 
 **연계**:
 - Phase 4 §4.3.2 Provenance tracking (본체) — Stage 3 의 self-declaration 오염 제어 장치로 직접 필요.

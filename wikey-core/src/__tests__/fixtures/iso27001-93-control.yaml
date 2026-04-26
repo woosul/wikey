@@ -1,0 +1,197 @@
+# §5.4.1 Stage 1 — AC5.b fixture (93-control smoke).
+# ISO 27001:2022 Annex A: 37 organizational + 8 people + 14 physical + 34 technological = 93.
+# Verifies parser handles all 93 entries + builder runs in <100ms (perf no-regression).
+standard_decompositions:
+  - name: ISO-27001-2022
+    umbrella_slug: iso-27001-2022
+    rule: decompose
+    require_explicit_mention: true
+    aliases:
+      - Information Security Management System 2022
+    components:
+      - slug: a-5-1-organizational-control
+        type: standard
+      - slug: a-5-2-organizational-control
+        type: standard
+      - slug: a-5-3-organizational-control
+        type: standard
+      - slug: a-5-4-organizational-control
+        type: standard
+      - slug: a-5-5-organizational-control
+        type: standard
+      - slug: a-5-6-organizational-control
+        type: standard
+      - slug: a-5-7-organizational-control
+        type: standard
+      - slug: a-5-8-organizational-control
+        type: standard
+      - slug: a-5-9-organizational-control
+        type: standard
+      - slug: a-5-10-organizational-control
+        type: standard
+      - slug: a-5-11-organizational-control
+        type: standard
+      - slug: a-5-12-organizational-control
+        type: standard
+      - slug: a-5-13-organizational-control
+        type: standard
+      - slug: a-5-14-organizational-control
+        type: standard
+      - slug: a-5-15-organizational-control
+        type: standard
+      - slug: a-5-16-organizational-control
+        type: standard
+      - slug: a-5-17-organizational-control
+        type: standard
+      - slug: a-5-18-organizational-control
+        type: standard
+      - slug: a-5-19-organizational-control
+        type: standard
+      - slug: a-5-20-organizational-control
+        type: standard
+      - slug: a-5-21-organizational-control
+        type: standard
+      - slug: a-5-22-organizational-control
+        type: standard
+      - slug: a-5-23-organizational-control
+        type: standard
+      - slug: a-5-24-organizational-control
+        type: standard
+      - slug: a-5-25-organizational-control
+        type: standard
+      - slug: a-5-26-organizational-control
+        type: standard
+      - slug: a-5-27-organizational-control
+        type: standard
+      - slug: a-5-28-organizational-control
+        type: standard
+      - slug: a-5-29-organizational-control
+        type: standard
+      - slug: a-5-30-organizational-control
+        type: standard
+      - slug: a-5-31-organizational-control
+        type: standard
+      - slug: a-5-32-organizational-control
+        type: standard
+      - slug: a-5-33-organizational-control
+        type: standard
+      - slug: a-5-34-organizational-control
+        type: standard
+      - slug: a-5-35-organizational-control
+        type: standard
+      - slug: a-5-36-organizational-control
+        type: standard
+      - slug: a-5-37-organizational-control
+        type: standard
+      - slug: a-6-1-people-control
+        type: standard
+      - slug: a-6-2-people-control
+        type: standard
+      - slug: a-6-3-people-control
+        type: standard
+      - slug: a-6-4-people-control
+        type: standard
+      - slug: a-6-5-people-control
+        type: standard
+      - slug: a-6-6-people-control
+        type: standard
+      - slug: a-6-7-people-control
+        type: standard
+      - slug: a-6-8-people-control
+        type: standard
+      - slug: a-7-1-physical-control
+        type: standard
+      - slug: a-7-2-physical-control
+        type: standard
+      - slug: a-7-3-physical-control
+        type: standard
+      - slug: a-7-4-physical-control
+        type: standard
+      - slug: a-7-5-physical-control
+        type: standard
+      - slug: a-7-6-physical-control
+        type: standard
+      - slug: a-7-7-physical-control
+        type: standard
+      - slug: a-7-8-physical-control
+        type: standard
+      - slug: a-7-9-physical-control
+        type: standard
+      - slug: a-7-10-physical-control
+        type: standard
+      - slug: a-7-11-physical-control
+        type: standard
+      - slug: a-7-12-physical-control
+        type: standard
+      - slug: a-7-13-physical-control
+        type: standard
+      - slug: a-7-14-physical-control
+        type: standard
+      - slug: a-8-1-technological-control
+        type: standard
+      - slug: a-8-2-technological-control
+        type: standard
+      - slug: a-8-3-technological-control
+        type: standard
+      - slug: a-8-4-technological-control
+        type: standard
+      - slug: a-8-5-technological-control
+        type: standard
+      - slug: a-8-6-technological-control
+        type: standard
+      - slug: a-8-7-technological-control
+        type: standard
+      - slug: a-8-8-technological-control
+        type: standard
+      - slug: a-8-9-technological-control
+        type: standard
+      - slug: a-8-10-technological-control
+        type: standard
+      - slug: a-8-11-technological-control
+        type: standard
+      - slug: a-8-12-technological-control
+        type: standard
+      - slug: a-8-13-technological-control
+        type: standard
+      - slug: a-8-14-technological-control
+        type: standard
+      - slug: a-8-15-technological-control
+        type: standard
+      - slug: a-8-16-technological-control
+        type: standard
+      - slug: a-8-17-technological-control
+        type: standard
+      - slug: a-8-18-technological-control
+        type: standard
+      - slug: a-8-19-technological-control
+        type: standard
+      - slug: a-8-20-technological-control
+        type: standard
+      - slug: a-8-21-technological-control
+        type: standard
+      - slug: a-8-22-technological-control
+        type: standard
+      - slug: a-8-23-technological-control
+        type: standard
+      - slug: a-8-24-technological-control
+        type: standard
+      - slug: a-8-25-technological-control
+        type: standard
+      - slug: a-8-26-technological-control
+        type: standard
+      - slug: a-8-27-technological-control
+        type: standard
+      - slug: a-8-28-technological-control
+        type: standard
+      - slug: a-8-29-technological-control
+        type: standard
+      - slug: a-8-30-technological-control
+        type: standard
+      - slug: a-8-31-technological-control
+        type: standard
+      - slug: a-8-32-technological-control
+        type: standard
+      - slug: a-8-33-technological-control
+        type: standard
+      - slug: a-8-34-technological-control
+        type: standard
