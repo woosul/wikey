@@ -1,8 +1,8 @@
 # Wikey — 프로젝트 전체 계획 (plan-full)
 
-> **역할**: wikey 프로젝트의 전체 로드맵·운영 체제·기술 스택·문서 체계를 한 페이지로 요약한 단일 진입점. Phase 별 상세는 `plan/phase-N-todo.md` + `activity/phase-N-result.md` 로 위임.
-> **최종 개정**: 2026-04-25 (Phase 5 진입 시점)
-> **이력**: 2026-04-25 기존 Phase 3 설계서였던 `plan/plan-full.md` 를 `plan/phase-3-full.md` 로 분리하고, 본 파일을 전체 계획 문서로 신규 작성.
+> **역할**: wikey 프로젝트의 전체 로드맵·운영 체제·기술 스택·문서 체계 + **각 Phase 의 목표·핵심 spec 상세** 를 단일 진입점으로 정리. README.md 갱신 시 본 문서 + `wikey.schema.md` + `CLAUDE.md` 3 핵심 문서를 source 로 사용.
+> **최종 개정**: 2026-04-26 (Phase 5 §5.4 종결 + §5.10 paradigm shift issue 등록)
+> **이력**: 2026-04-25 기존 Phase 3 설계서였던 `plan/plan-full.md` 를 `plan/phase-3-full.md` 로 분리하고, 본 파일을 전체 계획 문서로 신규 작성. 2026-04-26 session 14: §3 Phase 별 상세 spec 추가 + Phase 5 진행 반영.
 
 ## 1. 프로젝트 정체성
 
@@ -86,6 +86,113 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 | **P4 잔여** | §5.7 / §5.8 / §5.9 | 운영 포팅 / Phase 4 D.0.l 잔여 / Variance 진단 | 시간 여유 시, 현 상태로도 동작 |
 
 추천 실행 순서: §5.1 (P0) → §5.2+§5.3 (P1 병행) → §5.4 Stage 1 (P2 gate) → §5.4.2~4 / §5.5 / §5.6 (상황별) → §5.7~9.
+
+### 3.3 Phase 별 상세 spec (2026-04-26 보강)
+
+#### 3.3.1 Phase 1 — CLI 인프라 + 스키마 + BYOAI 검증 (완료 2026-04-11)
+
+**목표**: wikey 의 인프라 골격 확정. wikey.schema.md 의 3계층 + 워크플로우 + 컨벤션 정립.
+
+**핵심 산출**:
+- `wikey.schema.md` (3계층 / 인제스트 / 쿼리 / 린트 / 페이지 컨벤션 / 핵심 원칙)
+- `scripts/` 인프라 (validate-wiki / check-pii / pre-commit / korean-tokenize / setup.sh)
+- 프로바이더 설정 4종 (Anthropic / OpenAI / Gemini / Ollama)
+- BYOAI 검증 (Codex CLI 로 반복 인제스트 확증)
+- 위키 콘텐츠 시드 29 파일 (entities / concepts / sources / analyses)
+
+**종결 기준**: 인제스트 1회 + 쿼리 1회 + 린트 1회 모두 정상. PII 룰 1차 적용. wikey.schema.md 가 LLM 의 단일 행동 지침.
+
+**참조**: `phase-1-result.md` / `phase-1-todo.md`.
+
+#### 3.3.2 Phase 2 — qmd 하이브리드 검색 + 한국어 + Contextual Retrieval (완료 2026-04-18)
+
+**목표**: 검색 품질을 BM25 단순에서 LLM 기반 다층 검색으로 확장. 한국어 자료 정확 매칭. compounding 증거.
+
+**핵심 산출**:
+- `tools/qmd/` vendored — SQLite FTS5 (BM25) + sqlite-vec (cosine) + RRF + 리랭킹 + Qwen3 query expansion
+- PARA 재구조화 (raw/0_inbox / 1_projects / 2_areas / 3_resources / 4_archive) + classify-inbox.sh
+- 한국어 형태소 전처리 — `scripts/korean-tokenize.py --batch` (kiwipiepy)
+- Contextual Retrieval — Gemma 4 prefix cache (`~/.cache/qmd/contextual-prefixes.json`), BM25 Top-1 60% 도달
+- Qwen3-Embedding 채택 (jina-v3 기각, vsearch 100%)
+- 비용 분석 + cost-tracker.sh
+
+**종결 기준**: BM25 Top-1 60% / vsearch Top-1 100% / 한국어 자료 매칭 정상. Contextual chunk 캐시 안정.
+
+**참조**: `phase-2-result.md` / `phase-2-todo.md`.
+
+#### 3.3.3 Phase 3 — Obsidian 플러그인 (wikey-core + wikey-obsidian) (완료 2026-04-24 session 8)
+
+**목표**: 사용자 일상 도구화 — Obsidian 안 사이드바 채팅 + 인제스트 UI + v6 파이프라인.
+
+**핵심 산출**:
+- `wikey-core/` — TypeScript 핵심 (query-pipeline / ingest-pipeline / wiki-ops / llm-client / pii-patterns / config / canonicalizer / schema)
+- `wikey-obsidian/` — Obsidian 플러그인 (main / sidebar-chat / settings-tab / commands / status-bar / conflict-modal)
+- 인제스트 v1~v6 + 3-stage 재설계 (Brief / Plan / Generate / Write)
+- 스키마 안정화 + 결정성 (v7 시리즈, Concepts CV -37% / Total CV -53%)
+
+**종결 기준**: Obsidian 플러그인 정상 동작 + 결정성 v7 안정 + Phase 4 진입 조건 충족 (frontmatter 고정 / data model 안정).
+
+**참조**: `phase-3-result.md` / `phase-3-todo.md` / `phase-3-full.md` (설계서).
+
+#### 3.3.4 Phase 4 — 본체 완성 (완료 2026-04-24 session 8, D.0.a~o + PII 패턴 엔진)
+
+**목표**: 원본 → wiki ingest 가 더 이상 wiki 를 초기화·재생성하지 않는 상태. frontmatter / data model / 워크플로우 구조 고정.
+
+**핵심 산출**:
+- 문서 전처리 — Docling 메인화 (PDF/DOCX/PPTX/XLSX/HTML), unhwp (HWP), tesseract OCR fallback
+- 분류 + 파일 관리 — inbox → PARA classify-inbox / movePair / source-registry / file system listener
+- 인제스트 LLM 추출 — canonicalizer (entity/concept slug normalization, log_entry, citation) + wiki-ops
+- PII 패턴 엔진 — `wikey-core/src/pii-patterns.ts` + bundled YAML default + 사용자 override
+- D.0 Critical Fix 15 항목 (D.0.a~o) — 재생성 없는 정합성 보장
+- 회귀 baseline 525 PASS
+
+**종결 기준**: D.0.a~o 모두 충족 + PII 룰 default 적용 + 인제스트 12 file fixture 6 categories smoke 통과.
+
+**참조**: `phase-4-result.md` / `phase-4-todo.md` / `phase-4-todox-4.6-integrated-test.md`.
+
+#### 3.3.5 Phase 5 — 튜닝·고도화·개선·확장 (진행 중 2026-04-25~)
+
+**목표**: 본체 (Phase 4) 완성 후 wiki 재생성을 유발하지 않는 범위에서 검색·답변 품질·분해 정확도·자동화·확장성·진단 도구를 점진 개선.
+
+**핵심 9 subject + 진행 상태** (2026-04-26 session 14 기준):
+
+| § | 내용 | 우선순위 | 상태 |
+|---|------|---------|------|
+| 5.1 | 구조적 PII 탐지 (multi-line 폼, context-window heuristic) | P0 | ✅ 종결 (session 9~10, commits 2da88cb→5e32ec4→3f1fa6d) |
+| 5.2 | 검색 재현율 + 답변 품질 (cross-link / prompt / graph expansion / TOP_N / reindex 진단) | P1 | ✅ 종결 (session 11, commit f108e0c, 577 PASS) |
+| 5.3 | 인제스트 증분 + sidecar/wiki 사용자 수정 보호 (hash diff / ConflictModal / 6-step TDD) | P1 | ✅ 종결 (session 12, 640 PASS) |
+| 5.4 | 표준 분해 self-extending 4 Stage (BUILTIN PMBOK + Stage 2 detector + Stage 3 self-declaration + Stage 4 cluster) | P2 | ✅ 종결 (session 13, 732 PASS) + §5.4.7 1/2/3/4순위 (session 14) |
+| 5.5 | 지식 그래프 · 시각화 (NetworkX + Leiden + vis.js / Obsidian Graph View) | P3 | ⬜ 대기 |
+| 5.6 | 성능·엔진 확장 (llama.cpp PoC / rapidocr Linux) | P3 | ⬜ 대기 |
+| 5.7 | 운영 인프라 포팅 (bash → TS / qmd SDK import) | P4 | ⬜ 대기 |
+| 5.8 | Phase 4 D.0.l 잔여 (dedup / classify variance / reindex exit) | P4 | ⬜ 대기 |
+| 5.9 | Variance 기여도·diagnostic (4-points ablation / Ollama baseline) | P4 | ⬜ 대기 |
+| **5.10** | **Graph emergent ontology — §5.4 paradigm shift (사용자 본질 비판 6 chain)** | P1 | **issue 등록 (session 14, 2026-04-26)**, 4 옵션 결정 대기 |
+
+**§5.10 (★ session 14 신규 issue)**: 사용자 본질 비판 — "표준 분해 그룹은 PMBOK 류 외부 정형 표준에만 fit, 일반 지식에 mismatch. LLM 백 위에서 ontology 분류는 시대착오." 4 옵션:
+- A. 점진 (panel UI 유지 + 자동 등록 추가)
+- B. paradigm shift (graph emergent, schema deprecate, §5.5 graph 격상)
+- C. 관망 (현 상태 유지)
+- **★ D. LLM-only** — Stage 1~4 전체 deprecate, qmd embedding + LLM 답변만 신뢰. wikey 의 LLM-백 위 4 layer (raw → wiki organization / canonical alias / LLM retrieval / UI) 만 유지. **사용자 통찰 가장 정확 반영**.
+
+정당성 검증 (`plan/phase-5-todox-5.10-graph-emergent-ontology.md §9`): §5.4 가 없어도 wikey 정상 작동 (raw → wiki / 검색 / 답변 / wikilink / PII / incremental reingest 모두 §5.4 무관). §5.4 의 *유일한* 가치 = 외부 정형 표준 component 분해 정확도 +10~15% 보조.
+
+**진입 조건**: Phase 4 본체 완성 (§4.1/§4.2/§4.3/§4.5.1/§4.5.2 + Concepts CV <15% + Total CV <10%) — session 8 충족.
+
+**참조**: `phase-5-result.md` / `phase-5-todo.md` + 보조 plan (`phase-5-todox-5.1-structural-pii.md` / `phase-5-todox-5.2.1-crosslink.md` / `phase-5-todox-5.3.1-incremental-reingest.md` / `phase-5-todox-5.4-integration.md` / `phase-5-todox-5.4.1-self-extending.md` / `phase-5-todox-5.10-graph-emergent-ontology.md`).
+
+#### 3.3.6 Phase 6 — 웹 환경 (대기, skeleton)
+
+**목표**: wikey 의 웹 클라이언트 + 백엔드 API + 배포 인프라. 본체 + 고도화 (Phase 5) 안정 후 진입.
+
+**핵심 spec (skeleton, 2026-04-22 Phase 재편 시점)**:
+- §6.1 프론트엔드 — Next.js 또는 SvelteKit. raw → wiki 인제스트 UI + 채팅 + 그래프 뷰
+- §6.2 백엔드 API — REST 또는 tRPC. wikey-core 의 query-pipeline / ingest-pipeline 을 HTTP wrapping
+- §6.3 배포 — Docker + 클라우드 (사용자 자체 호스팅 가능)
+
+**진입 조건**: Phase 5 본체 (§5.1~§5.4) 완료 + §5.10 paradigm shift 결정 (옵션 D 채택 시 schema 단순화로 web client 도 단순). 웹은 일상 사용 부담 시 검토.
+
+**참조**: `phase-6-todo.md`.
 
 ---
 
@@ -205,12 +312,18 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 
 ## 8. 현재 진입점
 
-"지금 뭘 할지" 의 최신 답 (2026-04-25).
+"지금 뭘 할지" 의 최신 답 (2026-04-26 session 14 종결 시점).
 
-- **Phase 5 §5.1 (P0 긴급)** — 구조적 PII 탐지 계획서 작성 완료 (`plan/phase-5-todox-5.1-structural-pii.md`), codex 검증 진행 예정. multi-line 폼 label↔value 상관 해결이 PII-heavy 문서 보안에 직결.
-- **Phase 5 §5.2 / §5.3 (P1 병행)** — 검색 재현율 고도화 (Anthropic-style contextual chunk) + 인제스트 증분 재인제스트 (source-registry hash 기반). 두 축이 독립이라 병렬 실행 가능.
-- **Phase 5 §5.4 Stage 1 (P2 gate)** — `.wikey/schema.yaml` 에 `standard_decompositions` 필드 도입해 PMBOK 하드코딩 외재화. Phase 4 §4.5.1.7.2 PMS 5-run 실측 (Concepts CV <15%) 확증 대기.
-- **일정 제약 없음.** 완료 기준은 각 subject 의 성공 기준 (`phase-5-todo.md` 참조) + fresh 실행 증거 (전역 rules §1 Evidence-Based Completion).
+**Phase 5 진행** — §5.1 / §5.2 / §5.3 / §5.4 모두 종결 (회귀 732 PASS). §5.4.7 deferred 1/2/3/4순위 모두 종결 (session 14).
+
+**다음 진입점 후보** (사용자 우선순위 결정 필요):
+
+1. **★ §5.10 paradigm shift 결정** — 사용자 본질 비판 6 chain (`phase-5-todox-5.10-graph-emergent-ontology.md`). 4 옵션 (A 점진 / B graph emergent / C 관망 / **★ D LLM-only Stage 1~4 deprecate**). 옵션 D 는 §5.4 본체 deprecate + ~30~50 file 변경 + ~100 test 폐기 (732 → ~630). 사용자 통찰 가장 정확 반영.
+2. **§5.5 지식 그래프 · 시각화** (P3) — NetworkX + Leiden 클러스터링 + vis.js / Obsidian Graph View. §5.10 옵션 B 의 inferred technical foundation.
+3. **§5.6 성능 · 엔진 확장** (P3) — Ollama vs llama.cpp 실측 gap + rapidocr Linux baseline.
+4. **§5.7~§5.9** (P4) — 운영 인프라 포팅 / Phase 4 D.0.l 잔여 / Variance diagnostic.
+
+**일정 제약 없음.** 완료 기준은 각 subject 의 성공 기준 (`phase-5-todo.md` 참조) + fresh 실행 증거 (전역 rules §1 Evidence-Based Completion).
 
 ---
 

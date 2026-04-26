@@ -2,6 +2,17 @@
 
 > 프로바이더 독립 마스터 스키마. LLM 에이전트는 이 파일을 **먼저 읽고** 위키의 구조, 컨벤션, 워크플로우를 파악한 후 작업한다.
 > 프로바이더별 도구 사용법은 각 설정 파일을 참조: `CLAUDE.md` (Claude Code), `AGENTS.md` (Codex), `local-llm/system-prompt.md` (로컬 LLM).
+>
+> ## 참조문서로서의 역할 (필수 준수)
+>
+> 본 파일은 **Karpathy 의 [llm-wiki.md](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 철학** 을 wikey 프로젝트에 고스란히 녹여둔 *유일한 단일 진실 소스* 이다. 따라서:
+>
+> 1. **모든 작업 / 계획 / 구현의 시작점**: master / analyst / developer / tester / reviewer 모든 에이전트는 작업 진입 시 본 파일을 첫 read 대상으로 삼는다.
+> 2. **계획서 작성 시 필수 참고**: `plan/phase-N-todo.md` / `plan/phase-N-todox-*.md` / 신규 issue 등록 / paradigm shift 검토 — 모든 plan 산출물은 본 파일의 4 원칙 (Explicit / Yours / File over app / BYOAI) + 3계층 + 워크플로우 + 페이지 컨벤션과 일치하는지 검증 후 작성.
+> 3. **architecture 결정의 단일 기준**: 코드 / schema / data model / UI 변경 시 본 파일과 충돌하면 본 파일이 우선. 본 파일 자체 수정은 사용자 승인 필수 (CLAUDE.md 쓰기 규칙).
+> 4. **README.md 의 source**: 향후 README.md 갱신 시 본 파일 + `plan/plan-full.md` + `CLAUDE.md` 3 핵심 문서가 source.
+>
+> Karpathy 의 핵심 통찰 4 가지 — 본 파일 §"LLM Wiki 개인화의 4가지 장점 (Karpathy)" 섹션 참조. 모든 architecture 결정의 epistemology base.
 
 ## 프로젝트 개요
 
