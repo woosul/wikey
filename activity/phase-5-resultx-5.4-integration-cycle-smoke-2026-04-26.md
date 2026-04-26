@@ -133,7 +133,7 @@ Card 의 Accept button click:
 | 항목 | 상태 |
 |------|------|
 | Stage 3 SelfDeclaration runtime extraction 검증 | ✅ **완료** (§3.5 follow-up cycle, COBIT 2019 fixture ingest) |
-| Stage 4 convergence pass 라이브 | ⏸ 별 세션 (qmd embeddings 외부 dump 필요) |
+| Stage 4 convergence pass 라이브 | ✅ **완료** (§3.8 — alpha v1 wire mock embeddings 검증) |
 | umbrella name UX (default) | ✅ **완료** (§3.6 — suffix detector firstWord prefix 추출) |
 | classify-inbox.sh subfolder 처리 | ✅ **완료** (§3.7 — `find -type f` 평탄화) |
 
@@ -182,6 +182,63 @@ section + numbered list 5 items).
 
 회귀 보존: 731 → 732 PASS.
 
+## 3.8 Stage 4 convergence 라이브 (alpha v1 wire 검증, 2026-04-26 §5.4 follow-up)
+
+**의도**: Stage 4 의 `--embeddings` JSON 외부 inject + `clusterMentionsAcrossSources` +
+`arbitrate` + JSON write 가 정상 동작하는지 검증. 실 qmd embeddings 통합은 v2 deferral —
+본 검증은 alpha v1 wire (외부 도구 inject) 의 정상 동작 확증.
+
+**procedure**:
+
+1. mock embeddings 생성 (Python script, `/tmp/mock-embeddings.json`):
+   - mention slug 별 group 분류 (prefix 기반: `project` / `iso` / `itil` / `cobit` / `other`)
+   - group 마다 다른 axis 1.0 (1024-dim) — 같은 group 끼리 cosine ≈ 1.0 cluster 형성
+   - 59 unique slug embedding map
+
+2. mjs wrapper schema bug fix (post-impl Cycle #2 F4 alpha v1 wire 후속):
+   - `run-convergence-pass.mjs:43-58` — mention-history schema `{ version, ingests: [...] }`
+     처리 추가. 이전엔 bare array 만 expect → `parsed.ingests` 인식 못 함 (실측 fix).
+
+3. run-convergence-pass.mjs 실행:
+   ```bash
+   node wikey-core/dist/scripts/run-convergence-pass.mjs \
+     --history .wikey/mention-history.json \
+     --qmd-db ~/.cache/qmd/index.sqlite \
+     --output .wikey/converged-decompositions.json \
+     --arbitration union \
+     --token-budget 50000 \
+     --embeddings /tmp/mock-embeddings.json
+   ```
+
+**결과** (alpha v1 wire 정상 동작):
+- ✅ `convergence pass: loaded 59 embeddings from /tmp/mock-embeddings.json`
+- ✅ `convergence pass: wrote 4 ConvergedDecomposition(s) → .wikey/converged-decompositions.json`
+- ✅ 4 cluster 생성:
+  | umbrella_slug | method | conf | components | sources |
+  |---|---|---|---|---|
+  | project-management-body-of-knowledge | union | 1.0 | 12 | 2 |
+  | work-breakdown-structure | union | 1.0 | 28 | 7 |
+  | iso-iec-27001-2022 | union | 1.0 | 5 | 3 |
+  | itil-4 | union | 1.0 | 9 | 2 |
+
+**검증 항목 (alpha v1)**:
+- ✅ `--embeddings` JSON 인자 parse + Map<slug, vec> inject
+- ✅ `clusterMentionsAcrossSources` 가 cosine ≥ 0.75 기준 cluster 형성 (post-impl Cycle #3 F4
+  singleton drop guard 정상 — singleton 0건 emit)
+- ✅ `arbitrate` union method + arbitration_confidence 1.0
+- ✅ `runConvergencePass` 가 precondition 충족 (3 표준 × 2 source = 6 instance) 후 결과 생성
+- ✅ atomic write — `.wikey/converged-decompositions.json` 정상 생성
+
+**한계** (mock embeddings):
+- 실 qmd vector 가 아니라 mock random axis vector — cluster 정확도는 본 검증 scope 외
+- 실 qmd 통합은 v2 deferral (sqlite-vec extension load 필요, macOS 시스템 Python 제한)
+
+**v2 권장 path** (별 세션):
+- Python sqlite-vec extension load 가능한 build (homebrew python3 또는 pyenv `--enable-loadable-sqlite-extensions`)
+- 또는 Node.js 의 sqlite-vec wrapper (`@valgreens/sqlite-vec` 등)
+- mention slug → wiki/concepts/<slug>.md → documents.path → documents.hash → content_vectors.hash → vectors_vec.embedding
+- cluster 정확도 검증 (실 표준 도메인 별 cosine 분포)
+
 ## 3.7 classify-inbox.sh subfolder 평탄화 (2026-04-26 §5.4 follow-up)
 
 **의도**: classify-inbox.sh 의 find 가 `-maxdepth 1` 라 inbox 의 subfolder 안 file 미인식. 사용자
@@ -227,7 +284,7 @@ standard_decompositions:
 - ✅ Stage 1 (BUILTIN + user yaml override): wiki ingest 정상
 - ✅ Stage 2 (extraction graph 기반 suggestion): 라이브 cycle smoke 통과
 - ✅ Stage 3 (in-source self-declaration): ingest-pipeline wiring + runtime extraction 모두 검증 (§3.5 follow-up)
-- ⏸ Stage 4 (cross-source convergence): qmd embeddings 외부 inject 필요 (alpha v1 wire 명시)
+- ✅ Stage 4 (cross-source convergence): alpha v1 wire mock embeddings 검증 완료 (§3.8). 실 qmd embeddings 통합은 v2 deferral
 - ✅ post-impl review codex Cycle #6 APPROVE
 - ✅ AC21 라이브 cycle smoke (본 문서)
 - ✅ AC22 build/test ≥ 711 PASS (achieved 731)

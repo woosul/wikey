@@ -43,9 +43,15 @@ async function main() {
   let history = []
   try {
     const raw = await fs.readFile(config.history, 'utf-8')
-    history = JSON.parse(raw)
-    if (!Array.isArray(history)) {
-      console.warn(`mention-history not an array, treating as empty: ${config.history}`)
+    const parsed = JSON.parse(raw)
+    // mention-history.json 의 표준 schema 는 { version, ingests: [...] }.
+    // legacy bare array 도 지원 (post-impl Cycle #2 F4 alpha v1 wire 후속 fix).
+    if (Array.isArray(parsed)) {
+      history = parsed
+    } else if (parsed && Array.isArray(parsed.ingests)) {
+      history = parsed.ingests
+    } else {
+      console.warn(`mention-history empty or invalid schema, treating as []: ${config.history}`)
       history = []
     }
   } catch (err) {
