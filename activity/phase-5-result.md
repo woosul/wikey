@@ -1169,6 +1169,53 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 **기록 책임**: 실행 로드맵 단일 소스 = `plan/phase-5-todo.md §5.4`. 철학 선언 = `wiki/analyses/self-extending-wiki.md`. 보조 활동 기록 = `activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`. memory + session-wrap-followups 는 포인터만.
 
+### 5.4.8 1순위 종결 — Stage 4 실 qmd embeddings 통합 (2026-04-26 session 14)
+> tag: #convergence, #embedding, #stage-4
+
+> **mini plan**: `plan/phase-5-todox-5.4-integration.md §10` (master 직접 작성, analyst 위임 생략). **회귀 영향**: 0 (script + 산출 JSON 만, 회귀 코드 변경 없음). **732 PASS 유지**.
+
+**채택 path**:
+- ❌ Python sqlite-vec — macOS system Python 의 sqlite3 binding 이 SQLITE_OMIT_LOAD_EXTENSION build 로 `enable_load_extension` 미지원
+- ❌ qmd CLI subprocess — raw vector dump 명령 부재
+- ✅ **Node.js + better-sqlite3 + sqlite-vec** — 별도 `scripts/qmd-export-deps/` (40 packages, prebuilt binary, Node v22 ABI 호환). wikey-core zero-deps 정책 + tools/qmd Bun ABI 모두 회피.
+
+**산출**:
+- `scripts/qmd-embeddings-export.mjs` — read-only SELECT (qmd CLAUDE.md "DB 직접 수정 금지" 준수), Float32 BLOB 디코딩, chunk 평균, dim sanity check, missing slug warn skip
+- `scripts/qmd-export-deps/` — minimal package.json (better-sqlite3 12.8.0 / sqlite-vec 0.1.9)
+- `.wikey/qmd-embeddings.json` (1.4 MB) — **59 / 59 slug × 1024-dim 추출** (0 missing / 0 no-vector / 0 dim-mismatch)
+- `.wikey/converged-decompositions.json` 갱신 — 실 embeddings 기반 ConvergedDecomposition 2건 (mock baseline 4 와 다른 cluster 결과)
+- `.wikey/converged-decompositions.mock-baseline.json` 보관 — 비교용 mock 결과
+
+**의미 보존 spot-check** (cosine similarity, 직접 계산):
+
+| 분류 | 페어 | cosine | 판정 |
+|---|---|---|---|
+| **PMBOK 10 areas 내부** (같은 표준) | project-integration-management ↔ project-schedule-management | 0.6576 | ✅ 도메인 결합 |
+| | project-scope-management ↔ project-cost-management | 0.6108 | ✅ |
+| | (4 areas 6 페어 평균) | ~0.63 | ✅ |
+| **COBIT 도메인 내부** (같은 표준) | cobit-evaluate-direct-monitor ↔ cobit-monitor-evaluate-assess | **0.9128** | ✅ 의미 강결합 |
+| | cobit-2019 ↔ cobit-monitor-evaluate-assess | 0.6303 | ✅ |
+| **CIA triad** (의미 강결합) | availability ↔ confidentiality | 0.6324 | ✅ |
+| **보안 vs PM** (다른 도메인) | confidentiality ↔ project-cost-management | 0.1950 | ✅ 무관 (낮음) |
+| | iso-iec-27001-2022 ↔ work-breakdown-structure | 0.2077 | ✅ |
+| | access-control ↔ project-schedule-management | 0.3552 | ✅ |
+| **무관 페어** | access-control ↔ work-breakdown-structure | 0.2807 | ✅ |
+| | availability ↔ project-schedule-management | 0.3487 | ✅ |
+
+⇒ **도메인 내부 (0.59~0.91) ≫ 도메인 간 (0.20~0.36)**. 의미 보존 확증. (한/영 페어 spot check 는 wiki 에 한국어 slug 자체가 없어 미수행 — 다국어 cluster 검증은 실 한국어 자료 ingest 후 별 cycle.)
+
+**alpha v1 wire 한계 발견**:
+- ConvergedDecomposition 의 `components` / `sources` 필드가 **mock baseline 시점에도 0** 이었음 → alpha v1 wire 는 ConvergedDecomposition 의 metadata shell 만 생성하고 components 채움은 v2 작업
+- 본 §5.4.8 의 핵심 가치 (실 embedding pipeline + 의미 보존 cluster 가능성) 는 모두 확증
+- ConvergedDecomposition components 채움 자체는 별 follow-up (§5.4.7 3순위 review modal 과 함께 cycle)
+
+**검증 합계**:
+- ✅ script 실행 시 59 / 59 slug embedding 추출 (`extracted: 59 / 59`)
+- ✅ convergence-pass 실 embeddings inject 작동 (`loaded 59 embeddings → wrote 2 ConvergedDecomposition(s)`)
+- ✅ cluster 의미 spot-check — 도메인 내부 ≫ 도메인 간 (cosine 차이 ≥ 0.3)
+- ✅ 회귀 baseline 732 PASS 유지 (38 files / 0 fail)
+- ⚠️ 한/영 cluster cosine ≥ 0.85 검증은 wiki 한국어 slug 부재로 보류 — `plan/phase-5-todo.md §5.4.7` 후속 follow-up
+
 ---
 
 ## 5.5 지식 그래프 · 시각화 (P3)

@@ -1785,3 +1785,73 @@ Stage 4 fail (LLM down)
 1. 본 v5 plan 의 7-anchor grep cross-check (master self-fix cross-check 의무 — rules.md §10.2) — v5 작성 시점에 수행, stale 0 확증
 2. codex Mode D Panel Cycle #5 송부 (fresh panel, agent-management.md §2 따름)
 3. APPROVE 시 사용자 승인 받아 Stage 2 구현 cycle 진입 (developer Agent in-process, agent-management.md §0 따름) + AC21 fixture corpus 6 자료 마련 (master 책임, U4)
+
+---
+
+## 10. v6 — 실 qmd embeddings 통합 (1순위 deferred follow-up, 2026-04-26 session 14)
+
+> **배경**: v5 plan (Stage 4 alpha v1 wire) 은 mock embeddings JSON 으로만 검증 완료 — 실 의미 유사도 cluster 미검증. 본 §10 = phase-5-todo §5.4.7 1순위 deferred 작업의 mini plan.
+>
+> **목표**: qmd vector store 에서 mention 별 실 embedding 을 dump → run-convergence-pass.mjs 의 `--embeddings` 인자로 inject → ConvergedDecomposition 의 cluster 가 다국어 / synonym 자동 통합 인식.
+
+### 10.1 정찰 결과 (2026-04-26 session 14 사전 정찰)
+
+| # | 사실 | 출처 |
+|---|------|------|
+| (i) | qmd DB 위치 | `~/.cache/qmd/index.sqlite` (10.2 MB, 2026-04-26 18:03) |
+| (ii) | sqlite-vec extension 가용성 | Python: ❌ macOS system Python sqlite3 binding 이 SQLITE_OMIT_LOAD_EXTENSION build (`enable_load_extension` 미지원). Node.js: ✅ `tools/qmd/node_modules/sqlite-vec` (v0.1.9, getLoadablePath() 가용) |
+| (iii) | qmd schema (vec0 virtual table) | `vectors_vec(hash_seq TEXT PRIMARY KEY, embedding float[1024] distance_metric=cosine)`. content_vectors(hash, seq, model, embedded_at) 메타. documents.hash JOIN content.hash. |
+| (iv) | mention-history schema | `{ version, ingests: [{ source, ingestedAt, concepts: [{slug, type}], entities: [{slug, type}] }] }`. 현재 7 ingests · **59 unique slug** (concepts/entities 통합) |
+| (v) | qmd documents.path 형식 | `concepts/<slug>.md` / `entities/<slug>.md` (collection `wikey-wiki` 기준, base `/Users/denny/Project/wikey/wiki`) |
+| (vi) | run-convergence-pass.mjs --embeddings 입력 형식 | `{ "<slug>": [number, ...×1024] }` JSON. 미지정 또는 load 실패 시 빈 Map → cluster 0 → graceful skip + warn (alpha v1 wire 본문 기존 명시) |
+
+### 10.2 채택 path: Node.js + better-sqlite3 + sqlite-vec extension
+
+**기각**:
+- **Path 1 — Python sqlite-vec**: 정찰 (ii) 의 sqlite3 binding 한계. 별도 pyenv `--enable-loadable-sqlite-extensions` build 비용 ≥ 1 시간.
+- **Path 3 — qmd CLI subprocess**: `qmd` CLI 명령 (query/search/vsearch/get/embed) 중 raw vector dump 명령 부재.
+
+**채택**:
+- **Path 2 — Node.js + better-sqlite3 + sqlite-vec**: tools/qmd/ 가 같은 stack 으로 검증. wikey-core 는 zero-deps 정책이라 deps 미보유 → tools/qmd/node_modules/ 의 deps 를 createRequire 로 재사용. **read-only SELECT 만** (qmd CLAUDE.md "DB 직접 수정 금지" 정책 준수). Float32 binary blob 은 Buffer → Float32Array reinterpret 으로 디코딩.
+
+### 10.3 작업 단계
+
+| # | 단계 | 산출 | 검증 |
+|---|------|------|------|
+| 1 | `scripts/qmd-embeddings-export.mjs` 작성 | 실행 가능 Node.js script | --help 동작 + dry-run 으로 schema 확증 |
+| 2 | mention-history slug 추출 + qmd DB JOIN export | `.wikey/qmd-embeddings.json` (≤ 59 entry × 1024-dim, missing slug 은 warn skip) | JSON parse 가능 + dim 일관 (모든 vec.length === 1024) |
+| 3 | run-convergence-pass.mjs 실 embeddings 실행 | 갱신된 `.wikey/converged-decompositions.json` | 결과 ≥ 1 ConvergedDecomposition 생성 (mock baseline 4 와 비교) |
+| 4 | cluster 정확도 spot check | 한/영 페어 또는 synonym 페어 cosine ≥ 0.85 의미 유사도 | 본 §10.4 평가 표 채움 |
+
+### 10.4 평가 표 (실 cluster 후 채움)
+
+| umbrella_slug | components (실 embedding) | cluster size | spot-check (cosine 또는 의미) | 판정 |
+|---------------|--------------------------|--------------|-------------------------------|------|
+| (실행 후 채움) | | | | |
+
+### 10.5 산출 위치
+
+- 본 §10 = mini plan (analyst 위임 없이 master 직접 작성, todox 보조 문서 단일 소스)
+- script: `scripts/qmd-embeddings-export.mjs`
+- intermediate output: `.wikey/qmd-embeddings.json` (`.gitignore` 기존 `.wikey/` 정책 따름 — 가공 산출물)
+- ConvergedDecomposition 갱신: `.wikey/converged-decompositions.json` (기존 위치)
+- 결과 활동 문서: `activity/phase-5-result.md` 의 §5.4.7 1순위 → §5.4.8 신규 (실 qmd 통합) + 필요 시 보조 `activity/phase-5-resultx-5.4-real-qmd-embeddings-2026-04-26.md`
+
+### 10.6 Acceptance
+
+- [ ] script 실행 시 59 slug 중 가용한 모든 slug embedding 추출 (없는 slug 은 warn + skip, exit 0)
+- [ ] convergence-pass 가 실 embeddings 로 ≥ 1 ConvergedDecomposition 생성 (mock baseline 4 와 비교 — 변동 시 본문 기록)
+- [ ] cluster 정확도 spot-check ≥ 0.85 cosine 또는 의미 평가 PASS (한/영 / synonym 1 페어 이상)
+- [ ] 회귀 baseline 유지 (732 PASS) — 본 mini plan 은 회귀 코드 변경 없는 범위 (script + 산출 JSON 만)
+- [ ] activity/phase-5-result.md §5.4.7 1순위 [x] mark + commit
+
+### 10.7 7-anchor self-check (mini plan 자체)
+
+- (a) 시그니처 — 본 §10 은 신규 helper script 단일 + 기존 v5 plan 의 §3.4 데이터 모델 (ConvergedDecomposition / SourceMention) 그대로 사용. cross-file 일관 ✅.
+- (b)~(g) — 본 §10 는 v5 본문 type/state 변경 없는 helper layer 추가라 기존 §9 self-check 결과 (7/7 ✅) 가 그대로 유효.
+
+**다음 master 액션** (본 §10):
+1. `scripts/qmd-embeddings-export.mjs` 작성 (Task #2)
+2. 실행 → `.wikey/qmd-embeddings.json` 생성 (Task #3)
+3. run-convergence-pass.mjs 실행 → 결과 비교 (Task #3)
+4. cluster spot-check + activity 문서 + commit (Task #4)

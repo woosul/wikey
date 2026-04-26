@@ -1,39 +1,31 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-26 session 13 종결 — §5.4 self-extending 표준 분해 4 Stage + integration test + AC21 라이브 cycle smoke + follow-up 4 항목 모두 종결** (회귀 670 → **732 PASS**, build 0 errors, 14 commits push 9b7da21 → da42cef). codex post-impl review 6 cycle (NEEDS_REVISION 3 + REJECT 2 + APPROVE 1) → APPROVE. Stage 1+2+3 라이브 검증 + Stage 4 alpha v1 wire mock embeddings 검증 완료. **다음 진입점 = (1) Stage 4 실 qmd embeddings 통합 + (2) Suggestions panel UI 개선 (사용자 영구 결정 2026-04-26 — 우선순위 1, 2)**.
+> 최신 갱신: **2026-04-26 session 14 — §5.4.7 1순위 (Stage 4 실 qmd embeddings 통합) 종결**. Node.js + better-sqlite3 + sqlite-vec path 채택 (Python 기각, system Python `enable_load_extension` 비활성). 59/59 slug × 1024-dim 추출 + convergence-pass 실 inject + cluster 의미 spot-check (도메인 내부 0.59~0.91 ≫ 도메인 간 0.20~0.36). 회귀 **732 PASS** 유지. **다음 진입점 = §5.4.7 2순위 (Suggestions panel UI 개선)**.
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-04-26 session 13 종료 시점)
+## 🎯 다음 세션 첫 액션 (2026-04-26 session 14 종료 시점)
 
-> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: 본 session 의 deferred 4 항목 (§5.4.7) 은 **다음 세션 진입 즉시 첫 작업** 으로 진행. 1순위 (Stage 4 실 qmd) + **2순위 (UI 수정, Suggestions panel) 모두 fresh session 첫 cycle 안에서 처리**. 3·4순위 는 1·2 완료 후 순차.
+> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: 본 session 의 deferred 4 항목 (§5.4.7) 은 **다음 세션 진입 즉시 첫 작업** 으로 진행. ~~1순위 (Stage 4 실 qmd) — session 14 종결~~. **2순위 (UI 수정, Suggestions panel) 가 다음 진입점**. 3·4순위 는 2 완료 후 순차.
 >
-> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (4 체크박스) → (3) `activity/phase-5-result.md §5.4.7` (deferral table) → (4) 작업 시작.
+> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (2/3/4순위 체크박스) → (3) `activity/phase-5-result.md §5.4.8` (1순위 종결) / §5.4.7 (deferral table) → (4) 2순위 작업 시작.
 
-### 1순위 — Stage 4 실 qmd embeddings 통합 (사용자 영구 결정 2026-04-26)
+### 1순위 — Stage 4 실 qmd embeddings 통합 ✅ 종결 (2026-04-26 session 14)
 
-**의도 (사용자 강조)**: wikey 가 다국어 / 다른 표현 / synonym 자동 통합 인식. 본 세션 = mock embeddings 로 alpha v1 wire 만 검증, 실 의미 유사도 cluster 미검증.
+**채택 path**: Node.js + better-sqlite3 + sqlite-vec (Python 기각: macOS system Python sqlite3 binding 의 `enable_load_extension` 미지원). isolated `scripts/qmd-export-deps/` 으로 wikey-core zero-deps 정책 + tools/qmd Bun ABI 모두 회피.
 
-**가치 (사용자 체감)**:
-- "리스크 경영" 검색 = "risk management" 검색 = 같은 wiki page 결과
-- 한국어 / 영어 PMBOK 자료가 cluster 로 묶여 단일 지식 체계
-- 같은 표준 다른 표기를 별 페이지로 분리 안 함
+**산출**:
+- `scripts/qmd-embeddings-export.mjs` — read-only SELECT, Float32 BLOB 디코딩, chunk 평균
+- `.wikey/qmd-embeddings.json` (1.4 MB) — 59 / 59 slug × 1024-dim
+- `.wikey/converged-decompositions.json` 갱신 (실 embeddings) + `.mock-baseline.json` 보관
+- 활동 기록: `activity/phase-5-result.md §5.4.8`. mini plan: `plan/phase-5-todox-5.4-integration.md §10`.
 
-**구현 path 3 후보** (활동 문서 §3.8 참조):
-1. **Python sqlite-vec extension** (권장) — homebrew python3 또는 pyenv `--enable-loadable-sqlite-extensions` build. mention slug → wiki/concepts/<slug>.md → documents.path → documents.hash → content_vectors.hash → vectors_vec.embedding fetch + JSON dump → `--embeddings` inject. 1~2시간.
-2. **Node.js sqlite-vec wrapper** (`@valgreens/sqlite-vec` 등) — wikey-core zero deps 정책 → 별 helper script 또는 wikey-cli 신규 모듈
-3. **qmd CLI subprocess** — single doc embedding self-fetch 명령 부재로 우회 어려움. 비추.
+**의미 보존 spot-check**: PMBOK 4 areas 0.59~0.66 / COBIT 5 도메인 0.58~**0.91** (evaluate-direct ↔ monitor-evaluate 0.91 의미 강결합) / 보안 vs PM 0.20~0.36 / CIA triad 0.63. 도메인 내부 ≫ 도메인 간 → 의미 보존 확증.
 
-**작업 단계**:
-- [ ] qmd schema 검증: documents.path → wiki/concepts/<slug>.md 매핑 확증
-- [ ] Python helper script 작성 (`scripts/qmd-embeddings-export.py`)
-- [ ] 실 vault 에서 mention-history slug → embedding JSON dump
-- [ ] run-convergence-pass.mjs `--embeddings` inject + cluster 정확도 측정
-- [ ] ConvergedDecomposition 결과 검증 (mock vs 실 cluster 차이 비교)
-- [ ] 결과 문서: `activity/phase-5-resultx-5.4-qmd-integration-<date>.md`
+**alpha v1 wire 한계 발견**: ConvergedDecomposition.components/sources 가 mock 시점에도 0 — components 채움은 §5.4.7 3순위 review modal cycle 과 함께 follow-up. 한/영 cluster cosine ≥ 0.85 검증은 wiki 한국어 slug 부재로 보류 (실 한국어 자료 ingest 후 별 cycle).
 
-**선결 조건** (선택): 사용자 vault 에 한국어 + 영어 같은 표준 자료 ≥ 1쌍 (다국어 cluster 효과 측정). 본 cycle 의 6 fixture (영어 only) 만으로도 wire 검증 가능.
+**회귀**: **732 PASS** (38 files / 0 fail) 유지.
 
 ### 2순위 — Suggestions panel UI 개선 (사용자 영구 결정 2026-04-26 — 1순위와 fresh session 첫 cycle 동시 진행)
 

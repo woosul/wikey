@@ -1,0 +1,10 @@
+{
+  "name": "qmd-export-deps",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Isolated deps for scripts/qmd-embeddings-export.mjs (Phase 5 §5.4.7 1순위). better-sqlite3 + sqlite-vec native bindings for the host Node version. Not part of wikey-core (zero-deps policy).",
+  "dependencies": {
+    "better-sqlite3": "12.8.0",
+    "sqlite-vec": "0.1.9"
+  }
+}

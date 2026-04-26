@@ -9,6 +9,8 @@ wiki/
 .wikey/mention-history.json
 .wikey/suggestions.json
 .wikey/converged-decompositions.json
+.wikey/converged-decompositions.mock-baseline.json
+.wikey/qmd-embeddings.json
 # (converged-decompositions.json 도 사용자 vault dynamic state — git 충돌 방지)
 .wikey/self-declarations.json
 .wikey/schema.yaml

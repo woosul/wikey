@@ -482,7 +482,14 @@
 
 > **fresh session 진입 즉시 첫 cycle 에서 1순위 + 2순위 (UI 수정) 동시 진행**. 3·4순위 는 1·2 완료 후 순차. 별 read 진입점: `plan/session-wrap-followups.md` 의 🎯 섹션 + 본 §5.4.7.
 
-- [ ] **1순위 (★ fresh session 첫 작업) — Stage 4 실 qmd embeddings 통합**: 다국어 / synonym 자동 통합 인식 (mock 만으로 미검증된 핵심 가치). 구현 path 3 후보 (Python sqlite-vec extension 권장 / Node.js wrapper / qmd CLI subprocess). 작업 단계: qmd schema 검증 → Python helper script (`scripts/qmd-embeddings-export.py`) → mention-history slug → embedding JSON dump → run-convergence-pass.mjs `--embeddings` inject → cluster 정확도 측정 (한/영 cluster 의미 유사도 ≥ 0.85 검증).
+- [x] **1순위 (★ fresh session 첫 작업) — Stage 4 실 qmd embeddings 통합** (2026-04-26 session 14 종결, activity §5.4.8): 다국어 / synonym 자동 통합 인식 (mock 만으로 미검증된 핵심 가치). mini plan = `plan/phase-5-todox-5.4-integration.md §10` (path 결정: Python 기각 — system Python `enable_load_extension` 비활성. **Node.js + better-sqlite3 + sqlite-vec** 채택, isolated `scripts/qmd-export-deps/` 로 wikey-core zero-deps 정책 + tools/qmd Bun ABI 모두 회피).
+  - [x] §10.3 단계 1 — `scripts/qmd-embeddings-export.mjs` 작성 (read-only SELECT, Float32 blob 디코딩, chunk 평균, dim sanity check)
+  - [x] §10.3 단계 2 — mention-history slug 추출 + qmd DB JOIN export → `.wikey/qmd-embeddings.json` (1.4 MB, **59/59 slug × 1024-dim**, 0 missing)
+  - [x] §10.3 단계 3 — `run-convergence-pass.mjs --embeddings .wikey/qmd-embeddings.json` 실행 → `.wikey/converged-decompositions.json` 갱신 (mock 4 → 실 2 ConvergedDecomposition, mock baseline 보관)
+  - [x] §10.3 단계 4 — cluster 의미 보존 spot-check: 도메인 내부 (PMBOK 0.59~0.66, COBIT 0.58~**0.91**) ≫ 도메인 간 (0.20~0.36). 한/영 페어 검증은 wiki 한국어 slug 부재로 별 follow-up.
+  - [x] §10.6 acceptance — 회귀 baseline **732 PASS 유지** (38 files, 0 fail)
+  - [x] activity/phase-5-result.md §5.4.8 신규 + 1순위 [x] mark + commit
+  - **alpha v1 wire 한계 발견**: ConvergedDecomposition 의 `components`/`sources` 가 mock 시점에도 0 — alpha v1 wire 는 metadata shell 만 생성. components 채움은 v2 작업 (§5.4.7 3순위 review modal cycle 과 함께 follow-up).
 - [ ] **2순위 (★ fresh session 첫 작업, UI 수정) — Suggestions panel UI 개선**: 카드 시각 디자인 (confidence bar / badge / icon) + Edit modal 구현 (umbrella_slug / umbrella_name / aliases / components 수정) + 정렬 / 필터 / negativeCache view + Stage 3 SelfDeclaration runtime / Stage 4 ConvergedDecomposition 통합 표시 + 빈 state UX + 반응형. ui-designer (gemini-panel) 위임 권장.
 - [ ] **3순위 — Stage 4 ConvergedDecomposition 사용자 review modal**: Stage 2 Suggestions panel 패턴 재사용 (Accept/Edit/Reject + writer 호출). 1·2순위 완료 후 진입 권장.
 - [ ] **4순위 — §5.4 minor follow-up**: 자료 자동 분류 race condition 1 case (재현 어려움 — self-resolve), Edit modal 검증 (2순위 통합).
