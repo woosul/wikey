@@ -1,57 +1,69 @@
 ---
-created: 2026-04-25 21:22:42
-session_id: 84115dab-ba12-47a8-8e45-83a1cbbde490
+created: 2026-04-26 14:05:54
+session_id: fe4afef1-3756-458d-bfcc-3bcc6dec0879
 compact_trigger: manual
-last_commit: 9695893 feat(phase-5): §5.2.0 v4 + §5.2 todo 동기화 — 완전 종결
+last_commit: 4728c05 chore: wiki/ 폴더 untrack + .gitignore 등록
 generator: ~/.claude/hooks/pre-compact-wikey.sh
 ---
 
-# Post-compact 핸드오프 (자동 생성, 20260425-212241)
+# Post-compact 핸드오프 (자동 생성, 20260426-140554)
 
 > 이 파일은 compact 직전 PreCompact hook 이 자동 생성. compact 후 차례에서 master 가 cat 으로 read → 작업 복구. 작업 완료 후 commit 메시지에 "rm plan/post-compact-handoff.md" 명기 후 삭제.
 
 ## 1. 마지막 commit
 
 ```
-9695893 feat(phase-5): §5.2.0 v4 + §5.2 todo 동기화 — 완전 종결
+4728c05 chore: wiki/ 폴더 untrack + .gitignore 등록
 ```
 
-## 2. uncommitted 변경 (11 파일)
+## 2. uncommitted 변경 (12 파일)
 
 ```
- M CLAUDE.md
- M plan/phase-5-todo.md
-?? "DJI O3 Air Unit.md"
-?? FPV.md
-?? "NanoVNA V2 Plus4.md"
-?? "NanoVNA V2.md"
-?? plan/phase-5-todox-5.3.1-incremental-reingest.md
-?? plan/post-compact-handoff.md
-?? rules/master-pre-validation.md
-?? rules/subagent-visibility.md
-?? "\353\262\241\355\204\260 \353\204\244\355\212\270\354\233\214\355\201\254 \353\266\204\354\204\235\352\270\260 (VNA).md"
+M  plan/phase-5-todo.md
+A  plan/phase-5-todox-5.4-integration.md
+A  plan/phase-5-todox-5.4.1-self-extending.md
+ D plan/post-compact-handoff.md
+M  wikey-core/src/__tests__/canonicalizer.test.ts
+A  wikey-core/src/__tests__/fixtures/iso27001-5-control.yaml
+A  wikey-core/src/__tests__/fixtures/iso27001-93-control.yaml
+M  wikey-core/src/__tests__/schema-override.test.ts
+M  wikey-core/src/canonicalizer.ts
+M  wikey-core/src/schema.ts
+M  wikey-core/src/types.ts
+M  wikey-obsidian/src/settings-tab.ts
 ```
 
 ### diff stat (HEAD 기준)
 
 ```
- CLAUDE.md            |  2 +-
- plan/phase-5-todo.md | 25 ++++++++++++++++++-------
- 2 files changed, 19 insertions(+), 8 deletions(-)
+ plan/phase-5-todo.md                               |  157 +-
+ plan/phase-5-todox-5.4-integration.md              | 1667 ++++++++++++++++++++
+ plan/phase-5-todox-5.4.1-self-extending.md         |  707 +++++++++
+ plan/post-compact-handoff.md                       |   72 -
+ wikey-core/src/__tests__/canonicalizer.test.ts     |  141 +-
+ .../src/__tests__/fixtures/iso27001-5-control.yaml |   23 +
+ .../__tests__/fixtures/iso27001-93-control.yaml    |  197 +++
+ wikey-core/src/__tests__/schema-override.test.ts   |  328 +++-
+ wikey-core/src/canonicalizer.ts                    |   20 +-
+ wikey-core/src/schema.ts                           |  358 ++++-
+ wikey-core/src/types.ts                            |   42 +
+ wikey-obsidian/src/settings-tab.ts                 |   44 +
+ 12 files changed, 3630 insertions(+), 126 deletions(-)
 ```
 
 ## 3. 마지막 user message 5건 (transcript 발췌)
 
-1. 어떻게 강제를 해야 너가 지킬 수 있나? 고민하고 있음.
+1. 다음 스테이지 기능 구현 진입
 
-2. 일하는 것도 중요하지만 서로간의 약속이 지켜지는것도 매우 중요한 부분이야... 
-매번 일관성없이 일을 하면, 같이 일하기 힘들어.
+2. 그런데 developer 패널은 왜 열렸어?
 
-3. A적용해.
+3. 5.4 계획을 세우랬더니 5.4.1만 세웠네. 통합개발계획이 세워져야 전체 프로세스를 보면서 계획이 수립되지...부분부분 진행할 부분만 계획이 세워지면 통합후 예외상황이 많이 발생하지 않겠어.
 
-4. 좋아. 계획서가 완료된거지?
+게획전송할때 5.4.1게획도 참고하라고 해.
 
-5. 해당 계획서를 근거로 todo 업데이트 해줘. todo 업데이트 이후 compact 실행예정.
+4. agent관리 룰 변경, 외부 패널을 띄우는건 외부툴 (reviewer: codex, UI designer: gemini 등)에만 제한되고, 그외 analyst, developer, tester는 내부 백그라운드로 진행하며, agent tool에 의한 시각화 지원.
+
+5. compact전에 통합계획서 내용을 phase-5-todo.md에 반영. 5.4계획서안에는 세부계획만 있고, todo checkbox는 phase-5-todo.md에서 통합관리 (확인)
 
 ## 4. 다음 action 체크리스트
 
@@ -68,5 +80,5 @@ post-compact 차례에서 master 가 즉시 수행:
 ## 5. 환경 정보
 
 - WIKEY_ROOT: /Users/denny/Project/wikey
-- TRANSCRIPT: /Users/denny/.claude/projects/-Users-denny-Project-wikey/84115dab-ba12-47a8-8e45-83a1cbbde490.jsonl
-- ARCHIVE: /Users/denny/.claude/archives/wikey-84115dab-ba12-47a8-8e45-83a1cbbde490-20260425-212241.jsonl
+- TRANSCRIPT: /Users/denny/.claude/projects/-Users-denny-Project-wikey/fe4afef1-3756-458d-bfcc-3bcc6dec0879.jsonl
+- ARCHIVE: /Users/denny/.claude/archives/wikey-fe4afef1-3756-458d-bfcc-3bcc6dec0879-20260426-140554.jsonl
