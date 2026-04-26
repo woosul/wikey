@@ -2278,11 +2278,20 @@
 }
 
 .wikey-suggestions-title {
-  padding: 0 12px 4px 12px;
+  padding: 16px 14px 8px 14px;
+  background: var(--background-primary-alt, var(--background-secondary));
+  font-size: 0.88em;
+  color: var(--text-normal);
 }
 
 .wikey-suggestions-title h2 {
-  margin-top: 0;
+  font-size: 1.05em;
+  margin: 0 0 10px;
+  color: var(--interactive-accent);
+}
+
+.wikey-suggestions-title p {
+  margin: 0;
 }
 
 .wikey-suggestions-list-area {
@@ -2294,34 +2303,6 @@
 .wikey-suggestion-row {
   /* audit row 와 동일 base, 추가 padding 만 */
   align-items: center;
-}
-
-/* source badge — suggestion / converged → wiki, user-added → user */
-.wikey-suggestion-source-badge {
-  display: inline-block;
-  margin-left: 8px;
-  padding: 1px 6px;
-  font-size: 10px;
-  line-height: 14px;
-  border-radius: 3px;
-  vertical-align: middle;
-  text-transform: lowercase;
-  font-weight: 500;
-}
-
-.wikey-suggestion-source-wiki {
-  background: var(--background-modifier-success, #2d4a2d);
-  color: var(--text-on-accent, #d4f0d4);
-}
-
-.wikey-suggestion-source-user {
-  background: var(--interactive-accent, #4a78c4);
-  color: var(--text-on-accent, #ffffff);
-}
-
-.wikey-suggestion-source-origin {
-  background: var(--background-modifier-border-hover, #5a4a2d);
-  color: var(--text-on-accent, #f0e4c4);
 }
 
 /* in-line edit input (Add / Edit mode) */

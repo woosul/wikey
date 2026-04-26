@@ -1256,11 +1256,29 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - (b) 자료 자동 분류 race condition → self-resolve, scope 외 (재발 시 별 cycle)
 - (c) "alpha v1 wire 한계 — components/sources 채움" → **사실 한계 아님**. 1순위 spot-check Python script field 명 오류 (false negative). 실 데이터 정상 채워짐 (iso-iec-27001-2022 cluster 4 components / 3 sources, itil-4 cluster 2 components / 2 sources). §5.4.8 본문 정정 반영.
 
+**사용자 점검 후 fix (2026-04-26 session 14, 라이브 검증 직전)**:
+- title 영역 padding/배경/H2 색을 help 패널 (`.wikey-chat-help`) 동일 스타일 매핑 (CSS `.wikey-suggestions-title` 갱신)
+- bottom bar 의 provider/model select bar 삭제 (suggestions panel 미사용 — 사용자 요청)
+- row 의 source badge (`[wiki]`/`[user]`) 삭제 (하단 폴더 위치의 sourceLabel 텍스트로 충분 — 사용자 요청)
+
+**라이브 obsidian-cdp UI smoke** (2026-04-26 session 14, master 직접):
+- Plugin reload (`disablePlugin('wikey') → enablePlugin('wikey')`) → `wikey:*` 9 commands 정상
+- Suggestions panel 진입: title H2 "Wikey Suggestions" + 설명문 P 마크다운 렌더 정상
+- title 계산 스타일: padding 16px 14px 8px, bg dark-alt, H2 accent (rgb 138,92,245) 13.86px (= 1.05em) — help 패널 매핑 정상
+- 3 rows 통합 표시: cluster-management (Stage 2 mention graph) + iso-iec-27001-2022 (Stage 4, 3 sources) + itil-4 (Stage 4, 2 sources)
+- bottom buttons 4 (Accept/Reject/Add/Edit), provider/model bar 0, source badge 0 — 사용자 요청 fix 모두 반영
+- Select All toggle: 모든 row checkbox sync + Accept/Reject disabled toggle 정상
+- Add: row 3→4, 첫 row 빈 user-added + 2 inline input (umbrella_slug + umbrella_name) + edit mode auto-active
+- inline edit save (Enter): user-added row "CDP Test Pattern · cdp-test-pattern" 정상 등록, path "user (manual add)"
+- Reject: 1 row 선택 후 클릭 → user-added 만 제거 (3 wiki rows 유지)
+- Edit mode toggle + row select: inline input 2개 등장, 기존 slug/name prefill 정상
+- **Accept end-to-end**: "CDP Accept Test · cdp-accept-test" Add → Select → Accept → `.wikey/schema.yaml` 에 entry 정확히 append (rule:decompose / require_explicit_mention:true / origin:suggested / confidence:1.00 / components: cdp-accept-test methodology) → panel row 자동 제거. backup 복원으로 test entry 정리 완료.
+
 **검증 합계**:
 - ✅ wikey-core build 0 errors
 - ✅ wikey-obsidian build 0 errors (1 기존 warning — pii-patterns.js cjs/import.meta, §5.3 부터 알려진 항목)
 - ✅ 회귀 baseline 732 PASS 유지 (38 files / 0 fail) — UI 변경 + 1 type re-export, 회귀 코드 0 변경
-- ⚠️ 라이브 UI cycle smoke (Obsidian CDP) — 본 활동 기록 시점 사용자 vault 에서 실 ingest 결과 (ConvergedDecomposition 2건) 와 함께 master 직접 검증 권장
+- ✅ **라이브 UI cycle smoke 14/14 PASS** (Plugin reload / Panel 진입 / title 스타일 / row 통합 / bottom buttons / providerBar 삭제 / badge 삭제 / Select All toggle / Add / inline edit save / Reject / Edit mode / Accept end-to-end / schema.yaml entry 정확)
 
 **Out of scope (후속)** — `plan/phase-5-todox-5.4-integration.md §11.8`:
 - Stage 3 SelfDeclaration 'origin' source persist 통합 (현재 runtime-only, store 신규 추가 필요)

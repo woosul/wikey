@@ -793,38 +793,6 @@ Click [[page name]] in answers to navigate to the wiki page.
     const addBtn = applyBar.createEl('button', { text: 'Add', cls: 'wikey-audit-delay-action-btn' })
     const editBtn = applyBar.createEl('button', { text: 'Edit', cls: 'wikey-audit-delay-action-btn' })
 
-    // Provider/Model row (audit panel 동일)
-    const providerBar = bottomBar.createDiv({ cls: 'wikey-audit-apply-bar wikey-provider-model-bar' })
-    const providerSelect = providerBar.createEl('select', { cls: 'wikey-select' })
-    const providerOptions = [
-      { value: '', text: 'DEFAULT' },
-      { value: 'ollama', text: 'Local' },
-      { value: 'gemini', text: 'Google Gemini' },
-      { value: 'openai', text: 'OpenAI Codex' },
-      { value: 'anthropic', text: 'Anthropic Claude' },
-    ]
-    const currentSuggProvider = this.plugin.settings.ingestProvider || ''
-    for (const opt of providerOptions) {
-      const el = providerSelect.createEl('option', { text: opt.text, attr: { value: opt.value } })
-      if (opt.value === currentSuggProvider) el.selected = true
-    }
-    const modelSelect = providerBar.createEl('select', { cls: 'wikey-select' })
-    const savedSuggModel = this.plugin.settings.ingestModel || ''
-    modelSelect.createEl('option', { text: 'DEFAULT', attr: { value: '' } })
-    const loadModels = async (provider: string) => {
-      const config = this.plugin.buildConfig()
-      const models = await fetchModelList(provider as any, config, this.plugin.httpClient)
-      modelSelect.empty()
-      const defaultOpt = modelSelect.createEl('option', { text: 'DEFAULT', attr: { value: '' } })
-      if (!savedSuggModel) defaultOpt.selected = true
-      for (const m of models) {
-        const opt = modelSelect.createEl('option', { text: m, attr: { value: m } })
-        if (m === savedSuggModel) opt.selected = true
-      }
-    }
-    loadModels(providerSelect.value)
-    providerSelect.addEventListener('change', () => loadModels(providerSelect.value))
-
     // ── Update logic ──
     const updateButtons = () => {
       const selCount = this.suggestionSelections.size
@@ -889,11 +857,6 @@ Click [[page name]] in answers to navigate to the wiki page.
             ? `${row.umbrella_name} · ${row.umbrella_slug}`
             : row.umbrella_slug
           nameWrap.createEl('span', { text: displayName, cls: 'wikey-audit-name' })
-          const sourceBadge = nameWrap.createEl('span', {
-            text: row.source,
-            cls: `wikey-suggestion-source-badge wikey-suggestion-source-${row.source}`,
-          })
-          sourceBadge.setAttr('title', row.sourceLabel)
         }
         nameLine.createEl('span', {
           text: `${row.components.length} components`,
