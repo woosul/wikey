@@ -16,6 +16,10 @@
   - [`activity/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md`](./phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md) — Obsidian CDP UI 1-cycle smoke 실측 (NanoVNA 1 파일, master 직접)
 - **§5.3 보조 문서**:
   - [`plan/phase-5-todox-5.3.1-incremental-reingest.md`](../plan/phase-5-todox-5.3.1-incremental-reingest.md) — §5.3.1 + §5.3.2 결합 설계 (v11 codex Mode D **APPROVE_WITH_CHANGES**, 11 cycle 수렴 P1 0건)
+- **§5.4 보조 문서** (2026-04-26 session 13 종결):
+  - [`plan/phase-5-todox-5.4-integration.md`](../plan/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10, codex post-impl Cycle #6 APPROVE)
+  - [`plan/phase-5-todox-5.4.1-self-extending.md`](../plan/phase-5-todox-5.4.1-self-extending.md) — Stage 1 단독 plan (v7, codex Cycle #9 APPROVE)
+  - [`activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](./phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md) — AC21 라이브 cycle smoke + Stage 3 inspect + Stage 4 alpha v1 wire 검증 (master 직접)
 - **추후 보조 문서**: `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식 (`CLAUDE.md §문서 명명규칙·조직화` 참조).
 - **프로젝트 공통**: [`plan/decisions.md`](../plan/decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](../plan/plan_wikey-enterprise-kb.md).
 
@@ -860,27 +864,96 @@ const conflict = decision.conflicts.includes('sidecar-user-edit')
 
 ---
 
-## 5.4 표준 분해 규칙 self-extending 구조 (P2)
+## 5.4 표준 분해 규칙 self-extending 구조 (P2) — **종결** (2026-04-26 session 13)
 > tag: #framework, #engine, #architecture
-> **이전 번호**: `was §5.6`. 2026-04-22 Phase 4 §4.5.1.7.2 PMBOK 하드코딩이 Stage 0 사전 검증에 해당.
+> **이전 번호**: `was §5.6`. 2026-04-22 Phase 4 §4.5.1.7.2 PMBOK 하드코딩이 Stage 0 사전 검증.
+> **session 13 종결** (2026-04-26): 4 Stage + integration test + AC21 라이브 cycle smoke + follow-up 4 항목 모두 GREEN. codex post-impl review Cycle #6 APPROVE. Stage 4 = alpha v1 wire mock embeddings 검증 완료, 실 qmd 통합은 v2 deferral (다음 세션 진입점).
 
-**Stage 0 사전 검증** (2026-04-22, Phase 4 내 진행 중):
-- Phase 4 §4.5.1.7.2 에서 PMBOK 10 knowledge areas 를 canonicalizer prompt 에 단발 하드코딩 (A안). `canonicalizer.ts buildCanonicalizerPrompt` "작업 규칙" 7번 항목 신규 + `canonicalizer.test.ts` 단위 테스트 anchor. 352/352 PASS.
-- 철학 선언은 `wiki/analyses/self-extending-wiki.md` (wiki 본체 analysis) 에 정식 기록.
-- 실측: PMS 5-run 재측정으로 Concepts CV 24.6% → <15% 달성 여부 확증 (후속 Obsidian CDP 세션). 효과 확증 시 Stage 1 진입.
+### 5.4.0 Stage 0 사전 검증 (Phase 4 §4.5.1.7.2)
 
-**§5.4 gate**: Phase 4 §4.5.1.7.2 PMS 5-run 실측 (Concepts CV 24.6% → <15%) 에서 효과 확증. 미달 시 Stage 1 진입 전에 A안 재설계 또는 B안 보강 (9 slug FORCED_CATEGORIES pin).
+- PMBOK 10 knowledge areas 를 canonicalizer prompt 에 단발 하드코딩 (A안). 352/352 PASS.
+- 철학 선언: `wiki/analyses/self-extending-wiki.md`.
+- 실측: PMS 5-run 후 Stage 1 진입 결정 (별 작업).
 
-**Stage 1~4** (미진입):
+### 5.4.1 Stage 1 — static `.wikey/schema.yaml` override (commit 9b7da21)
 
-| Stage | 상태 | 트리거 |
+- `StandardDecompositionsState` 3-kind discriminated union (`empty-explicit` / `empty-all-skipped` / `present`, absent ⟺ `undefined`).
+- `BUILTIN_STANDARD_DECOMPOSITIONS` (PMBOK 10 areas + F3 component aliases).
+- `parseSchemaOverrideYaml` 4 시나리오 (warn 검증).
+- `buildStandardDecompositionBlock` placeholder (canonicalizer.ts 작업 규칙 #7 인라인 PMBOK 제거).
+- F1 v3 append 정책 (BUILTIN + user yaml entries 모두 출력).
+- ISO 27001 fixtures (5/93 control). 670 PASS / build 0 errors.
+- codex Cycle #1~#13 plan 검증 → APPROVE.
+
+### 5.4.2 Stage 2 — extraction graph suggestion (commit ce547ca, +20 cases)
+
+- `Suggestion` / `SuggestionState` 4-kind / `SuggestionStorage` (suggestion-storage.ts).
+- `detectCoOccurrence` (minSiblings=3, prefix ≥ 5 chars) + `detectSuffixCluster` (minSources=2, whitelist 6 종) + `computeConfidence` (0.4·support + 0.3·suffix_homogeneity + 0.2·mention_density + 0.1·builtinOverlap, 임계 ≥ 0.6 alpha).
+- `appendStandardDecomposition` section-range insertion writer (header `[]` reject + idempotency).
+- `runSuggestionDetection` ingest finalize 단계 hook + `.wikey/{suggestions,mention-history}.json` 누적.
+- Audit UI Suggestions panel (sidebar-chat.ts).
+- baseline 670 → 690 PASS.
+
+### 5.4.3 Stage 3 — in-source self-declaration (commit c34b128, +21 cases)
+
+- `SelfDeclaration` + `SelfDeclarationPersistChoice` 3-kind (runtime-only / pending-user-review / persisted).
+- `mergeRuntimeIntoOverride` 4 시나리오 (empty-explicit / empty-all-skipped / present / undefined).
+- `extractSelfDeclaration` deterministic pattern matching (numbered/bullet list ≥ 5 items).
+- `section-index.ts` `headingPattern` `'standard-overview'` 추가 (한국어/영어 keyword 6 regex).
+- `shouldStage3ProposeRuntime` (4 분기: 신규/accepted/rejected/pending).
+- false positive guard (marketing keyword silent drop / component slug ≥ 5 chars).
+- baseline 690 → 711 PASS.
+
+### 5.4.4 Stage 4 — cross-source convergence (commit 87969fa, +10 cases)
+
+- `ConvergedDecomposition` + `SourceMention` + `MentionCluster` (arbitration_method 'union' | 'llm' / arbitration_confidence 0~1 / arbitration_log).
+- `clusterMentionsAcrossSources` (cosine ≥ 0.75 agglomerative, post-impl Cycle #3 fix: singleton drop guard).
+- `arbitrate` (default 'union' arbitration_confidence=1.0 / 'llm' opt-in mock caller).
+- `mergeAllSources` (Stage 3 mergeRuntimeIntoOverride 재사용).
+- `runConvergencePass` precondition (≥ 3 표준 × 2 source = 6 instance).
+- `run-convergence-pass.mjs` entry-point + `scripts/reindex.sh` conditional hook (default off).
+- baseline 711 → 721 PASS.
+
+### 5.4.5 통합 시나리오 integration test + 라이브 cycle smoke (commits bdc0773 → da42cef)
+
+**통합 시나리오 7 cases** (bdc0773): Scenario 4.1~4.5 (mock fs + mock LLM in-memory).
+
+**post-impl review codex 6 cycle**:
+- Cycle #1 NEEDS_REVISION (CRITICAL Stage 4 stub + HIGH Stage 2 round-trip + HIGH UI unreachable + MEDIUM AC21 fixture) → fix (31f3e28)
+- Cycle #2 NEEDS_REVISION (F4 alpha v1 wire 명시 + F2 lingering accept handler) → fix (c564cd3)
+- Cycle #3 NEEDS_REVISION (singleton cluster graceful skip 깨짐 + LOW stale) → fix (0296cc7)
+- Cycle #4 REJECT (LOW §3.4.2 stale) → fix (9d15ba5)
+- Cycle #5 REJECT (LOW §4.1 fresh ingest stale) → fix (d8f1c78)
+- Cycle #6 **APPROVE** (Findings: None / 731 PASS) — §5.4 코드 부분 종료
+
+**AC21 라이브 cycle smoke** (eb4b697): master 직접 6 fixture (PMBOK x2 + ISO 27001 x2 + ITIL 4 x2) ingest → Stage 1 BUILTIN 정상 + Stage 2 detector → 1 suggestion (cluster-management → fix 후 'project-management' UX 개선) → Accept round-trip → schema.yaml append.
+- 발견 bug fix: suggestion-pipeline slug `.md` 확장자 strip
+- UX 옵션 B: ingest panel 폴더 평탄화 + Suggestions header button 등장 검증
+
+**follow-up 4 항목** (308bc72 + da42cef):
+- §3.5 Stage 3 inspect (COBIT 2019 fixture → `stage3 self-declarations — 1 runtime entries` log + 5 wiki/concepts/cobit-* 생성)
+- §3.6 Suggestions umbrella default UX (firstWord prefix → 의미있는 이름)
+- §3.7 classify-inbox.sh subfolder 평탄화
+- §3.8 Stage 4 라이브 alpha v1 wire mock embeddings 검증 (4 ConvergedDecomposition 생성)
+
+### 5.4.5.종결 회귀 + commits 통계
+
+- baseline: 670 → **732 PASS / 38 files / 0 fail**
+- build: wikey-core 0 errors / wikey-obsidian 0 errors
+- 신규 cases: 62 (Stage 2 20 + Stage 3 21 + Stage 4 10 + integration 7 + Cycle 후속 4)
+- Total commits push (15 commits): 9b7da21 → e749515
+- 보조 문서: [`activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](./phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md)
+
+### 5.4.6 v2 deferral (다음 세션 진입점, 사용자 영구 결정 2026-04-26)
+
+| 우선순위 | 항목 | 가치 |
 |---|---|---|
-| Stage 1 외부화 (`.wikey/schema.yaml`) | 대기 | Stage 0 실측 + 두 번째 표준 corpus (ISO/ITIL 등) 등장 |
-| Stage 2 extraction graph suggestion | 대기 | Stage 1 안정 동작 + 표준 ≥5 누적 |
-| Stage 3 in-source self-declaration | 대기 | Stage 2 accept rate ≥ 80% |
-| Stage 4 cross-source convergence | 대기 | Stage 3 누적 ≥ 3 표준 × 2 소스 |
+| **1** | Stage 4 실 qmd embeddings 통합 | 다국어 / synonym 자동 통합 인식 (mock 만으로 미검증된 핵심) |
+| **2** | Suggestions panel UI 개선 | 카드 디자인 / Edit modal / 정렬 / 필터 / negativeCache view (ui-designer/gemini-panel 권장) |
+| 3 | ConvergedDecomposition review modal | Stage 2 패턴 재사용 |
+| 4 | §5.4 minor follow-up | 자료 분류 race / Edit modal 검증 |
 
-**기록 책임**: 실행 로드맵 단일 소스는 `plan/phase-5-todo.md §5.4`, 철학 선언 단일 소스는 `wiki/analyses/self-extending-wiki.md`. `wikey-core/src/canonicalizer.ts` 작업 규칙 #7 위 주석, `plan/session-wrap-followups.md`, memory 는 포인터만.
+**기록 책임**: 실행 로드맵 단일 소스 = `plan/phase-5-todo.md §5.4`. 철학 선언 = `wiki/analyses/self-extending-wiki.md`. 보조 활동 기록 = `activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`. memory + session-wrap-followups 는 포인터만.
 
 ---
 

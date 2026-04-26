@@ -15,6 +15,8 @@
   - [`plan/phase-5-todox-5.1-structural-pii.md`](./phase-5-todox-5.1-structural-pii.md) — §5.1 PII 보조 (완료)
   - [`plan/phase-5-todox-5.2.1-crosslink.md`](./phase-5-todox-5.2.1-crosslink.md) — §5.2.1 entity↔concept cross-link 설계 (analyst v2 + codex APPROVE_WITH_CHANGES)
   - [`plan/phase-5-todox-5.3.1-incremental-reingest.md`](./phase-5-todox-5.3.1-incremental-reingest.md) — §5.3.1 + §5.3.2 결합 설계 (★ 2026-04-25 master v11 + codex Mode D **APPROVE_WITH_CHANGES**, 11 cycle 수렴 P1 0건)
+  - [`plan/phase-5-todox-5.4-integration.md`](./phase-5-todox-5.4-integration.md) — §5.4 4 Stage 통합 plan (★ 2026-04-26 v10 codex post-impl Cycle #6 APPROVE)
+  - [`plan/phase-5-todox-5.4.1-self-extending.md`](./phase-5-todox-5.4.1-self-extending.md) — §5.4.1 Stage 1 단독 plan (v7 codex Cycle #9 APPROVE)
 - **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
 
 ## 우선순위 가이드 (2026-04-24 재조정)
