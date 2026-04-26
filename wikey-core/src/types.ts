@@ -187,6 +187,39 @@ export interface SchemaOverride {
   readonly standardDecompositions?: StandardDecompositionsState
 }
 
+/**
+ * §5.4 Stage 3 (AC9): in-source self-declaration. A "표준 개요" section in the
+ * source body enumerates the standard's components → deterministic extractor
+ * (or future LLM call) emits a SelfDeclaration. Default scope = runtime-only
+ * (current ingest session). Can be elevated to user review then persisted into
+ * `.wikey/schema.yaml`.
+ *
+ * spec: plan/phase-5-todox-5.4-integration.md §3.3
+ */
+export interface SelfDeclaration {
+  readonly umbrella_slug: string
+  readonly umbrella_name: string
+  readonly components: readonly StandardDecompositionComponent[]
+  readonly rule: 'decompose' | 'bundle'
+  readonly require_explicit_mention: boolean
+  readonly source: string                       // wiki/sources/<source>.md path (provenance)
+  readonly section_idx: number                  // section-index.ts idx (provenance)
+  readonly section_title: string
+  readonly extractor: 'pattern-matching' | 'llm'
+  readonly extractedAt: string                  // ISO datetime
+  readonly persistChoice: SelfDeclarationPersistChoice
+}
+
+/**
+ * §5.4 Stage 3 (AC12): 3-kind discriminated union. Default = runtime-only
+ * (해당 ingest 세션만). Re-ingest 시 elevation → pending-user-review. 사용자
+ * accept 시 → persisted (schema.yaml append 완료).
+ */
+export type SelfDeclarationPersistChoice =
+  | { readonly kind: 'runtime-only' }
+  | { readonly kind: 'pending-user-review' }
+  | { readonly kind: 'persisted'; readonly persistedAt: string }
+
 // ── §5.4 Stage 2: extraction-graph driven suggestions ──
 
 /**

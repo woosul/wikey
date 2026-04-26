@@ -20,7 +20,7 @@ export type SectionWarning =
   | 'preamble'
 
 export type HeadingPattern =
-  | 'toc' | 'appendix' | 'contact' | 'revision' | 'copyright' | 'normal'
+  | 'toc' | 'appendix' | 'contact' | 'revision' | 'copyright' | 'standard-overview' | 'normal'
 
 export type HeuristicPriority = 'skip' | 'core' | 'support'
 
@@ -363,6 +363,19 @@ function classifyHeadingPattern(title: string): HeadingPattern {
   if (/^(contact|contacts|contact us|문의)/.test(lower) || /^문의/.test(koreanAlias)) return 'contact'
   if (/^revision\b|^change log|^changelog|^개정\s*이력|^개정이력|^변경\s*이력|^변경이력/.test(lower) || /^개정이력|^변경이력/.test(koreanAlias)) return 'revision'
   if (/^copyright|^license|^저작권/.test(lower) || /^저작권/.test(koreanAlias)) return 'copyright'
+
+  // §5.4 Stage 3 (AC10): "표준 개요" detector — title 에 표준 keyword 가 있으면
+  // standard-overview 분류. extractor 가 추가로 본문 enumerate ≥ 5 items 검사.
+  // false positive 방지: marketing-specific term 제외 (`feature`, `benefit`, `핵심 기능`)
+  const standardKeywords = [
+    /개요|overview|introduction/,
+    /구조|structure|architecture/,
+    /구성|composition/,
+    /영역|domain|area/,
+    /지식체계|body of knowledge/,
+    /knowledge\s+area/,
+  ]
+  if (standardKeywords.some((re) => re.test(lower))) return 'standard-overview'
   return 'normal'
 }
 

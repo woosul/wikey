@@ -196,6 +196,15 @@ export {
   rejectSuggestionFromPanel,
 } from './suggestion-panel-builder.js'
 export type { SuggestionCardModel } from './suggestion-panel-builder.js'
+// §5.4 Stage 3 — in-source self-declaration
+export type { SelfDeclaration, SelfDeclarationPersistChoice } from './types.js'
+export {
+  mergeRuntimeIntoOverride,
+  extractSelfDeclaration,
+  elevateToReview,
+  persistDeclaration,
+  shouldStage3ProposeRuntime,
+} from './self-declaration.js'
 export {
   RenameGuard,
   reconcileExternalRename,
