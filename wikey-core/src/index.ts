@@ -205,6 +205,23 @@ export {
   persistDeclaration,
   shouldStage3ProposeRuntime,
 } from './self-declaration.js'
+// §5.4 Stage 4 — cross-source convergence
+export type {
+  ConvergedDecomposition,
+  SourceMention,
+  MentionCluster,
+} from './types.js'
+export {
+  clusterMentionsAcrossSources,
+  arbitrate,
+  createConvergencePass,
+  mergeAllSources,
+  runConvergencePass,
+} from './convergence.js'
+export type {
+  ConvergencePassConfig,
+  RunConvergencePassOptions,
+} from './convergence.js'
 export {
   RenameGuard,
   reconcileExternalRename,

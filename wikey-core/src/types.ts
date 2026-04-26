@@ -382,3 +382,51 @@ export interface Citation {
   /** 검색 결과 snippet 재사용 (UI 툴팁용). */
   readonly excerpt?: string
 }
+
+// ── §5.4 Stage 4 — cross-source convergence ────────────────────────────────
+
+/**
+ * §5.4.4 AC15: per-source mention summary feeding cross-source arbitration.
+ * `is_umbrella_only` = source mentioned only the umbrella name (no components).
+ *
+ * spec: plan/phase-5-todox-5.4-integration.md §3.4.1 (line 786-790)
+ */
+export interface SourceMention {
+  readonly source: string
+  readonly mentioned_components: readonly string[]
+  readonly is_umbrella_only: boolean
+}
+
+/**
+ * §5.4.4 AC15: ConvergedDecomposition produced by Stage 4 batch convergence
+ * pass. Persisted in `.wikey/converged-decompositions.json`. User review modal
+ * accepts → schema.yaml append (Stage 2 writer reuse).
+ *
+ * Field name `arbitration_confidence` (NOT `confidence`) — codex Cycle #2
+ *정정 (plan §3.4.1 line 798) keeps the LLM JSON contract aligned with the TS
+ * type (avoid silent name drift between prompt JSON and storage schema).
+ *
+ * spec: plan/phase-5-todox-5.4-integration.md §3.4.1 (line 792-801)
+ */
+export interface ConvergedDecomposition {
+  readonly umbrella_slug: string
+  readonly umbrella_name: string
+  readonly converged_components: readonly StandardDecompositionComponent[]
+  readonly source_mentions: readonly SourceMention[]
+  readonly arbitration_method: 'union' | 'llm'
+  readonly arbitration_confidence: number
+  readonly arbitration_log?: string
+  readonly convergedAt: string
+}
+
+/**
+ * §5.4.4 AC16: cluster of mention slugs grouped across sources by cosine
+ * similarity (page-level embeddings, alpha — see plan §3.4.2 line 833 v2
+ * deferral notice).
+ */
+export interface MentionCluster {
+  readonly cluster_id: string
+  readonly mention_slugs: readonly string[]
+  readonly source_count: number
+  readonly mention_count: number
+}

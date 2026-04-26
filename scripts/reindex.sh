@@ -209,6 +209,25 @@ cmd_reindex() {
     fi
   fi
 
+  # §5.4.4 — convergence pass 훅 (default off, opt-in via env)
+  # spec: plan/phase-5-todox-5.4-integration.md §3.4.3 line 906-916
+  if [ "${WIKEY_CONVERGENCE_ENABLED:-false}" = "true" ]; then
+    echo -e "\n${BOLD}[+]${NC} ${BOLD}§5.4.4 convergence pass 실행${NC}"
+    local pass_script="${PROJECT_DIR}/wikey-core/dist/scripts/run-convergence-pass.mjs"
+    if [ ! -f "$pass_script" ]; then
+      log_skip "convergence pass: ${pass_script} 없음 (npm run build 필요)"
+    else
+      local wiki_dir="${WIKI_DIR:-${PROJECT_DIR}/wiki}"
+      node "$pass_script" \
+        --history "${wiki_dir}/.wikey/mention-history.json" \
+        --qmd-db "${HOME}/.cache/qmd/index.sqlite" \
+        --output "${wiki_dir}/.wikey/converged-decompositions.json" \
+        --arbitration "${WIKEY_ARBITRATION_METHOD:-union}" \
+        --token-budget "${WIKEY_CONVERGENCE_TOKEN_BUDGET:-50000}" \
+        || log_err "convergence pass 실패 (계속 진행)"
+    fi
+  fi
+
   # 타임스탬프 갱신
   mkdir -p "$(dirname "$STAMP_FILE")"
   touch "$STAMP_FILE"
