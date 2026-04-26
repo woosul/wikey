@@ -120,7 +120,7 @@ describe('AC16 — clusterMentionsAcrossSources', () => {
     expect(clusters[0].mention_count).toBe(3)
   })
 
-  it('keeps mentions in separate clusters when cosine similarity < 0.75', () => {
+  it('drops singleton clusters when cosine similarity < 0.75 (post-impl Cycle #3 F4 fix — alpha v1 graceful skip)', () => {
     const history = buildHistory([
       {
         source: 'wiki/sources/a.md',
@@ -131,7 +131,7 @@ describe('AC16 — clusterMentionsAcrossSources', () => {
       },
     ])
 
-    // orthogonal vectors → cosine 0 → below 0.75 threshold
+    // orthogonal vectors → cosine 0 → below 0.75 threshold → 각 singleton
     const embeddings = new Map<string, readonly number[]>([
       ['pmbok-scope', vec([1, 0, 0])],
       ['iso-27001-a-5', vec([0, 1, 0])],
@@ -139,9 +139,9 @@ describe('AC16 — clusterMentionsAcrossSources', () => {
 
     const clusters = clusterMentionsAcrossSources(history, embeddings)
 
-    // each mention sits alone
-    expect(clusters.length).toBe(2)
-    expect(clusters.every((c) => c.mention_slugs.length === 1)).toBe(true)
+    // post-impl Cycle #3 F4 fix: singleton (mention_slugs.length < 2) drop —
+    // vector merge 가 형성되지 않은 cluster 는 의미 없음 (convergence 미발생).
+    expect(clusters.length).toBe(0)
   })
 })
 
@@ -406,5 +406,36 @@ describe('AC20 — runConvergencePass insufficient-mention precondition', () => 
     expect(result.length).toBeGreaterThanOrEqual(1)
     expect(result[0].arbitration_method).toBe('union')
     expect(result[0].arbitration_confidence).toBe(1.0)
+  })
+
+  // post-impl Cycle #3 F4 fix: empty embeddings 시 singleton cluster drop → 빈 결과
+  it('returns [] when embeddings map is empty even with threshold-satisfied history (alpha v1 graceful skip)', async () => {
+    const history = buildHistory([
+      {
+        source: 'wiki/sources/a.md',
+        concepts: [
+          { slug: 'alpha', type: 'methodology' },
+          { slug: 'beta', type: 'methodology' },
+          { slug: 'gamma', type: 'methodology' },
+        ],
+      },
+      {
+        source: 'wiki/sources/b.md',
+        concepts: [
+          { slug: 'alpha', type: 'methodology' },
+          { slug: 'beta', type: 'methodology' },
+          { slug: 'gamma', type: 'methodology' },
+        ],
+      },
+    ])
+
+    const result = await runConvergencePass(history, {
+      arbitration: 'union',
+      tokenBudget: 50000,
+      embeddings: new Map(), // empty — alpha v1 외부 dump 미제공 시나리오
+    })
+
+    // singleton clusters 가 cluster 단계에서 drop → 빈 결과 (graceful skip)
+    expect(result).toEqual([])
   })
 })

@@ -923,21 +923,30 @@ fi
 - v2 deferral: qmd-db 직접 query 통합 (sqlite3 subprocess 또는 sqlite-vec extension load). v1 은 advisory 인자로만 보존.
 - `--embeddings` 미지정 시: 빈 Map → cluster 0 → graceful skip + warn. 사용자에게 "no embeddings provided, alpha v1 — external dump required" 알림.
 
-신규 script `wikey-core/scripts/run-convergence-pass.mjs` — entry point:
+신규 script `wikey-core/scripts/run-convergence-pass.mjs` — entry point (post-impl Cycle #2 F4 alpha v1 wire 갱신):
 ```ts
-// args 파싱 → mention-history load → cluster → arbitration → save
+// args 파싱 → mention-history load → embeddings JSON load (옵션) → cluster → arbitration → save
 async function main() {
-  const history = await loadHistory()
-  const qmdClient = new QmdIndexClient(args.qmdDb)
-  const clusters = await clusterMentionsAcrossSources(history, qmdClient)
-  const converged: ConvergedDecomposition[] = []
-  for (const cluster of clusters) {
-    if (cluster.source_count >= 3) {                               // 임계: ≥ 3 source
-      const result = await arbitrate(cluster, args.arbitration, args.tokenBudget)
-      if (result.arbitration_confidence >= 0.7) converged.push(result)
-    }
+  const config = createConvergencePass(process.argv.slice(2))
+  const history = await loadHistoryJson(config.history)
+
+  // alpha v1 wire: 외부 도구 dump 한 JSON 을 Map<slug, vec> 으로 inject. 미지정/load 실패 시 빈 Map.
+  const embeddings = new Map<string, readonly number[]>()
+  if (config.embeddings) {
+    try {
+      const parsed = JSON.parse(await fs.readFile(config.embeddings, 'utf-8'))
+      for (const [slug, vec] of Object.entries(parsed)) {
+        if (Array.isArray(vec) && vec.every((n) => typeof n === 'number')) embeddings.set(slug, vec)
+      }
+    } catch (err) { console.warn(`embeddings load failed: ${err.message}`) }
   }
-  await saveConvergedDecompositions(converged)
+
+  // empty embeddings → singleton clusters → drop (post-impl Cycle #3 F4 fix). graceful skip.
+  const converged = await runConvergencePass(history, {
+    arbitration: config.arbitration, tokenBudget: config.tokenBudget, embeddings,
+  })
+  // runConvergencePass 안: cluster.source_count >= 3 + arbitration_confidence >= 0.7 만 emit
+  if (converged.length > 0) await saveConvergedDecompositions(config.output, converged)
 }
 ```
 
@@ -1512,7 +1521,27 @@ Stage 4 fail (LLM down)
 
 ---
 
-## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master fix → v6 post-impl Cycle #1 fix → v7 post-impl Cycle #2 fix)
+## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master fix → v6 post-impl Cycle #1 → v7 post-impl Cycle #2 → v8 post-impl Cycle #3 fix)
+
+### 8.8 v8 post-implementation Cycle #3 master 직접 fix (2026-04-26, codex post-impl Cycle #3 NEEDS_REVISION 후속)
+
+**codex Cycle #3 발견 2 finding** (HIGH 1 + LOW 1):
+
+| Finding | severity | 위치 | master 결정 + fix |
+|---|---|---|---|
+| **F4 lingering** singleton cluster graceful-skip 깨짐 | HIGH | convergence.ts clusterMentionsAcrossSources line 135-149 | 동의 (codex 직접 실행 confirm — empty embeddings + 3 slugs × 2 sources → 3 singleton ConvergedDecomposition 생성). fix: clusterMentionsAcrossSources 가 mention_slugs.length < 2 인 singleton cluster 를 flatMap 으로 drop. empty embeddings → 모든 cluster singleton → 빈 배열 반환 → graceful skip 계약 회복. AC16 test 정정 (cosine < 0.75 → 0 cluster, 이전 2 → singleton drop) + AC20 신규 case 1 (empty embeddings + threshold-satisfied → 빈 결과) |
+| **plan/주석 stale** | LOW | plan §3.4.3 line 920-935 + convergence.ts line 81-83 | 동의. plan §3.4.3 의 pseudocode 가 QmdIndexClient (v0 표현) 잔존 → alpha v1 외부 JSON inject + singleton drop 흐름으로 갱신. convergence.ts 주석도 alpha v1 wire (외부 도구 후보 4종 + v2 deferral) 명시 |
+
+**v8 self-check** (master 1차 검증 의무 + cross-check):
+- (a) ✅ 시그니처 cross-file 일관 (변경 X)
+- (b) ✅ Union kind 무변경
+- (c) ✅ clusterMentionsAcrossSources flatMap 분기로 singleton drop 명확
+- (d) ✅ AC1~AC22 + 신규 AC20 empty-embeddings case 1 (총 ≥ 62 신규 cases, achieved 731 PASS)
+- (e) ✅ stale 0: plan §3.4.3 pseudocode 갱신, convergence.ts 주석 갱신, 둘 다 alpha v1 wire 일관
+- (f) ✅ header v5 ↔ §8.8 v8 ↔ footer (post-impl Cycle #3)
+- (g) ✅ exact phrase 보존 + alpha v1 graceful skip 계약 명시 phrase 일관
+
+**baseline 갱신**: 730 → 731 PASS (신규 empty-embeddings AC20 case 1).
 
 ### 8.7 v7 post-implementation Cycle #2 master 직접 fix (2026-04-26, codex post-impl Cycle #2 NEEDS_REVISION 후속)
 

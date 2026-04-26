@@ -78,15 +78,23 @@ function buildSlugToSources(history: readonly IngestRecord[]): Map<string, Set<s
 /**
  * Page-level (alpha) agglomerative clustering by cosine similarity ≥ 0.75.
  *
- * Embeddings are injected (no qmd dependency) so unit tests can mock them.
- * Real callers fetch them from the qmd vector index inside
- * run-convergence-pass.mjs.
+ * Embeddings are injected (alpha v1 wire — post-impl Cycle #2 F4 fix). Real
+ * callers populate the Map by parsing a JSON dump from external tools (qmd
+ * vsearch / sqlite3 CLI / Python helper / qmd MCP server) via the
+ * `--embeddings <path>` arg in `run-convergence-pass.mjs`. v2 deferral =
+ * direct qmd-db query.
  *
  * v1 plan 한계 (plan §3.4.2 line 833): page-level only — mention-level
  * granularity 는 v2 deferral. arbitration_confidence 임계 + 사용자 review modal
  * 이 false convergence guard.
  *
- * spec: plan §3.4.2 (line 808-833)
+ * spec: plan §3.4.2 (line 808-833) + §3.4.3 alpha v1 wire
+ *
+ * post-impl Cycle #3 F4 fix: empty embeddings 시 singleton cluster 도 drop
+ * (vector merge 가 형성되지 않은 cluster 는 의미 없음 — convergence 가 발생
+ * 안 한 상태). 이전엔 singleton 도 반환되어 source_count >= 2 면 union
+ * confidence 1.0 으로 output 생성 → graceful skip 계약 위반. 이제 mention_slugs
+ * length >= 2 인 cluster 만 emit.
  */
 export function clusterMentionsAcrossSources(
   history: readonly IngestRecord[],
@@ -132,7 +140,10 @@ export function clusterMentionsAcrossSources(
     }
   }
 
-  return clusters.map((memberSlugs, idx) => {
+  // post-impl Cycle #3 F4 fix: singleton clusters (vector merge 형성 안 됨) drop.
+  // empty embeddings 시 모든 cluster 가 singleton → 빈 배열 반환 → graceful skip.
+  return clusters.flatMap((memberSlugs, idx) => {
+    if (memberSlugs.length < 2) return []
     const sources = new Set<string>()
     let mentionCount = 0
     for (const slug of memberSlugs) {
@@ -141,12 +152,12 @@ export function clusterMentionsAcrossSources(
       for (const s of srcs) sources.add(s)
       mentionCount += srcs.size
     }
-    return Object.freeze({
+    return [Object.freeze({
       cluster_id: `c${idx + 1}`,
       mention_slugs: Object.freeze([...memberSlugs]) as readonly string[],
       source_count: sources.size,
       mention_count: mentionCount,
-    })
+    })]
   })
 }
 
