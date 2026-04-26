@@ -9,6 +9,7 @@ import {
   buildSuggestionCardModel, acceptSuggestion, rejectSuggestionFromPanel,
   appendStandardDecomposition,
   emptyStore,
+  parseSchemaOverrideYaml,
 } from 'wikey-core'
 import type {
   Citation, ResolvedSource, SourceRegistry,
@@ -689,6 +690,33 @@ Click [[page name]] in answers to navigate to the wiki page.
     await this.plugin.wikiFS.write('.wikey/suggestions.json', JSON.stringify(store, null, 2) + '\n')
   }
 
+  // §11 — `.wikey/schema.yaml` 에 등록된 standard_decompositions 안내용 read.
+  // raw umbrella_slug regex (parser 의 valid skip 과 무관하게 사용자가 본 entries 모두 카운트)
+  // + parser kind 로 invalid skip 정보 보강.
+  private async loadRegisteredStandards(): Promise<{
+    rawSlugs: readonly string[]
+    parserKind: 'absent' | 'present' | 'empty-explicit' | 'empty-all-skipped' | 'unparseable'
+    skippedCount: number
+  }> {
+    try {
+      if (!(await this.plugin.wikiFS.exists('.wikey/schema.yaml'))) {
+        return { rawSlugs: [], parserKind: 'absent', skippedCount: 0 }
+      }
+      const raw = await this.plugin.wikiFS.read('.wikey/schema.yaml')
+      const rawSlugs = (raw.match(/^\s*umbrella_slug:\s*([a-zA-Z0-9_-]+)/gm) ?? [])
+        .map((m) => m.replace(/^\s*umbrella_slug:\s*/, '').trim())
+      const parsed = parseSchemaOverrideYaml(raw)
+      if (!parsed) return { rawSlugs, parserKind: 'unparseable', skippedCount: 0 }
+      const sd = parsed.standardDecompositions
+      if (!sd) return { rawSlugs, parserKind: 'absent', skippedCount: 0 }
+      if (sd.kind === 'present') return { rawSlugs, parserKind: 'present', skippedCount: 0 }
+      if (sd.kind === 'empty-explicit') return { rawSlugs, parserKind: 'empty-explicit', skippedCount: 0 }
+      return { rawSlugs, parserKind: 'empty-all-skipped', skippedCount: sd.skippedCount ?? rawSlugs.length }
+    } catch {
+      return { rawSlugs: [], parserKind: 'unparseable', skippedCount: 0 }
+    }
+  }
+
   // §11 — Stage 4 ConvergedDecomposition store (read-only load + persist write)
   private async loadConvergedStoreFromVault(): Promise<ConvergedDecomposition[]> {
     const path = '.wikey/converged-decompositions.json'
@@ -731,13 +759,19 @@ Click [[page name]] in answers to navigate to the wiki page.
   }
 
   private async refreshSuggestionRows(): Promise<void> {
-    const [suggStore, converged] = await Promise.all([
+    const [suggStore, converged, registered] = await Promise.all([
       this.loadSuggestionStoreFromVault(),
       this.loadConvergedStoreFromVault(),
+      this.loadRegisteredStandards(),
     ])
+    // schema.yaml 에 이미 등록된 umbrella_slug 는 panel 에서 자동 필터.
+    // appendStandardDecomposition writer 가 raw umbrella_slug 기준 already-exists
+    // reject 하므로 panel filter 도 raw 기준 일치.
+    const registeredSet = new Set<string>(registered.rawSlugs)
     const rows: SuggestionsPanelRow[] = []
     for (const s of suggStore.suggestions) {
       if (s.state.kind !== 'pending') continue
+      if (registeredSet.has(s.umbrella_slug)) continue
       rows.push({
         origin: 'suggestion',
         source: 'wiki',
@@ -750,6 +784,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       })
     }
     for (const c of converged) {
+      if (registeredSet.has(c.umbrella_slug)) continue
       rows.push({
         origin: 'converged',
         source: 'wiki',
@@ -763,9 +798,11 @@ Click [[page name]] in answers to navigate to the wiki page.
         raw: c,
       })
     }
-    // Preserve user-added rows from prior render (in-memory only)
+    // Preserve user-added rows from prior render (in-memory only). user-added
+    // 는 still-pending 의미 — 등록되면 자연 사라지므로 별도 filter 불필요하지만
+    // 일관성을 위해 동일 정책 적용 (기존에 같은 slug 등록 시 hide).
     for (const r of this.suggestionRows) {
-      if (r.origin === 'user-added') rows.push(r)
+      if (r.origin === 'user-added' && !registeredSet.has(r.umbrella_slug)) rows.push(r)
     }
     this.suggestionRows = rows
   }
@@ -784,6 +821,42 @@ Click [[page name]] in answers to navigate to the wiki page.
     }
 
     const listEl = listArea.createDiv({ cls: 'wikey-audit-list wikey-suggestions-list' })
+
+    // ── schema.yaml 등록 안내 (본문 하단 고정, button 위) ──
+    const schemaInfo = panel.createDiv({ cls: 'wikey-suggestions-schema-info' })
+    const updateSchemaInfo = async () => {
+      const { rawSlugs, parserKind, skippedCount } = await this.loadRegisteredStandards()
+      schemaInfo.empty()
+      const text = schemaInfo.createEl('span', { cls: 'wikey-suggestions-schema-info-text' })
+      const preview = rawSlugs.slice(0, 4).join(', ')
+      const suffix = rawSlugs.length > 4 ? ` 외 ${rawSlugs.length - 4}건` : ''
+      if (parserKind === 'absent') {
+        text.setText('schema.yaml 에 등록된 표준 분해 없음. Accept 시 자동 등록됩니다. ')
+      } else if (parserKind === 'empty-explicit') {
+        text.setText('schema.yaml 명시 비활성화 (`standard_decompositions: []`). ')
+      } else if (parserKind === 'unparseable') {
+        text.setText('schema.yaml parser 실패 — 직접 확인 필요. ')
+      } else if (parserKind === 'empty-all-skipped') {
+        text.setText(`schema.yaml 에 ${skippedCount}건 등록되어 있으나 parser 가 모두 skip (slug 형식 확인 필요): ${preview}${suffix}. `)
+      } else {
+        text.setText(`schema.yaml 에 ${rawSlugs.length}건 등록됨: ${preview}${suffix}. `)
+      }
+      const link = schemaInfo.createEl('a', {
+        text: 'schema.yaml 확인 →',
+        cls: 'wikey-suggestions-schema-link',
+        attr: { href: '#' },
+      })
+      link.addEventListener('click', async (e) => {
+        e.preventDefault()
+        const file = this.app.vault.getAbstractFileByPath('.wikey/schema.yaml')
+        if (file) {
+          await this.app.workspace.getLeaf(false).openFile(file as any)
+        } else {
+          new Notice('.wikey/schema.yaml 파일이 아직 생성되지 않았습니다. Accept 시 자동 생성됩니다.')
+        }
+      })
+    }
+    updateSchemaInfo()
 
     // ── Bottom: Accept / Reject / Add / Edit + provider/model ──
     const bottomBar = panel.createDiv({ cls: 'wikey-audit-bottom' })
@@ -932,6 +1005,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       })
       await this.refreshSuggestionRows()
       renderRows()
+      await updateSchemaInfo()
       const msg = failures.length === 0
         ? `Accepted ${appendedCount} suggestion(s)`
         : `Accepted ${appendedCount}, failed ${failures.length}: ${failures.slice(0, 3).join(' / ')}${failures.length > 3 ? ' ...' : ''}`

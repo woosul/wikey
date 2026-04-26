@@ -2331,3 +2331,29 @@
 .wikey-audit-apply-disabled {
   opacity: 0.5;
 }
+
+/* schema.yaml 등록 안내 (본문 하단 고정, bottom button 위) */
+.wikey-suggestions-schema-info {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  font-size: 0.78em;
+  color: var(--text-muted, #999);
+  border-top: 1px solid var(--background-modifier-border, #3a3a3a);
+  background: var(--background-primary, #1e1e1e);
+  line-height: 1.5;
+}
+
+.wikey-suggestions-schema-info-text {
+  color: var(--text-muted, #999);
+}
+
+.wikey-suggestions-schema-link {
+  color: var(--interactive-accent, #8a5cf5);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.wikey-suggestions-schema-link:hover {
+  text-decoration: underline;
+  cursor: pointer;
+}
