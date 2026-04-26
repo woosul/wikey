@@ -809,17 +809,18 @@ export interface ConvergedDecomposition {
 
 ```ts
 // mention-history.json 의 모든 ingest 결과 → page-level vector cluster
-// qmd vector index 사용 (현재 page-level)
+// embeddings 는 alpha v1 wire 로 외부에서 inject (post-impl Cycle #2 F4 fix — §3.4.3 alpha v1 wire 참조)
 // cluster algorithm: simple agglomerative + cosine similarity threshold ≥ 0.75
+// post-impl Cycle #3 F4 fix: singleton (mention_slugs.length < 2) cluster drop — graceful skip 계약
 
 function clusterMentionsAcrossSources(
-  history: IngestRecord[],
-  qmdIndex: QmdIndexClient,
+  history: readonly IngestRecord[],
+  embeddings: ReadonlyMap<string, readonly number[]>,
 ): ReadonlyArray<MentionCluster> {
   // 1. 모든 unique mention slug 수집
-  // 2. 각 slug 의 page-level embedding fetch
+  // 2. embeddings Map 에서 각 slug 의 vector lookup (외부 도구 inject — qmd vsearch / sqlite3 / Python helper / qmd MCP)
   // 3. cluster (cosine ≥ 0.75)
-  // 4. cluster 안 ≥ 3 source 에 등장하면 ConvergedDecomposition 후보
+  // 4. cluster 안 ≥ 3 source 에 등장 + mention_slugs.length ≥ 2 (singleton drop) 이면 ConvergedDecomposition 후보
 }
 
 interface MentionCluster {
@@ -1521,7 +1522,28 @@ Stage 4 fail (LLM down)
 
 ---
 
-## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master fix → v6 post-impl Cycle #1 → v7 post-impl Cycle #2 → v8 post-impl Cycle #3 fix)
+## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master → v6 Cycle #1 → v7 Cycle #2 → v8 Cycle #3 → v9 Cycle #4 fix)
+
+### 8.9 v9 post-implementation Cycle #4 master 직접 fix (2026-04-26, codex post-impl Cycle #4 REJECT 후속 — LOW lingering)
+
+**codex Cycle #4 발견 1 finding** (LOW stale lingering):
+
+| Finding | severity | 위치 | master 결정 + fix |
+|---|---|---|---|
+| **plan §3.4.2 stale pseudocode** | LOW | plan §3.4.2 line 815-818 | 동의. §3.4.3 의 pseudocode 만 갱신했고 §3.4.2 의 동일 pseudocode 잔존 (`clusterMentionsAcrossSources(history, qmdIndex: QmdIndexClient)` v0 표현). fix: alpha v1 embeddings inject 흐름 + singleton drop 명시로 갱신 |
+
+**참고**: codex verdict 가 REJECT 였으나 finding 자체는 LOW 1건만 (regression PASS / F4 PASS / Cycle #3 fix 정상 confirm). codex 가 LOW 만으로 REJECT verdict 한 경우는 master 결정 = LOW fix 적용 후 cycle #5.
+
+**v9 self-check** (master 1차 검증 의무 + cross-check):
+- (a) ✅ 시그니처 cross-file 일관: §3.4.2 pseudocode + §3.4.3 pseudocode + convergence.ts 모두 (history, embeddings) 시그니처 일관
+- (b) ✅ Union kind 무변경
+- (c) ✅ singleton drop 명시 §3.4.2 + §3.4.3 + convergence.ts:142-146 일관
+- (d) ✅ AC1~AC22 + 신규 cases 누적 731 PASS 보존
+- (e) ✅ stale 0: §3.4.2 + §3.4.3 + convergence.ts 주석 모두 alpha v1 wire 일관
+- (f) ✅ header v5 ↔ §8.9 v9 ↔ footer (post-impl Cycle #4)
+- (g) ✅ exact phrase 보존 + alpha v1 embeddings inject + singleton drop 표현 일관
+
+**baseline 보존**: 731 PASS / 0 build errors (코드 변경 없음 — plan 문서 수정만).
 
 ### 8.8 v8 post-implementation Cycle #3 master 직접 fix (2026-04-26, codex post-impl Cycle #3 NEEDS_REVISION 후속)
 
