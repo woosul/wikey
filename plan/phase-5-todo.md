@@ -268,9 +268,16 @@
 
 ---
 
-## 5.4 표준 분해 규칙 self-extending 구조 (P2)
+## 5.4 표준 분해 규칙 self-extending 구조 (P2) — **종결** (2026-04-26 session 13)
 > tag: #framework, #engine, #architecture
 > **이전 번호**: `was §5.6`. 2026-04-22 Phase 4 §4.5.1.7.2 PMBOK 하드코딩이 Stage 0 사전 검증에 해당.
+> **session 13 종결** (2026-04-26): 4 Stage + integration test + AC21 라이브 cycle smoke + follow-up 4 항목 모두 GREEN. codex post-impl Cycle #6 APPROVE / 670 → 732 PASS / 16 commits push 9b7da21 → 7e6c2fb. 다음 세션 = Stage 4 실 qmd embeddings 통합 (1순위) + Suggestions UI 개선 (2순위).
+
+### 5.4.0 Stage 0 사전 검증 (Phase 4 §4.5.1.7.2) — **완료** (이관 mirror)
+
+- [x] PMBOK 10 knowledge areas canonicalizer prompt 단발 하드코딩 (A안). 352/352 PASS (Phase 4 §4.5.1.7.2 본체).
+- [x] 철학 선언 `wiki/analyses/self-extending-wiki.md` 정식 기록.
+- [x] PMS 5-run 실측 (Concepts CV 24.6% → <15%) 후 Stage 1 진입 결정.
 
 > **§5.4 통합 개발 계획서 단일 소스**: [`plan/phase-5-todox-5.4-integration.md`](./phase-5-todox-5.4-integration.md) v5 (codex Cycle #5 APPROVE 2026-04-26 / BUILD_BREAK_RISK LOW / Cycle 누적 #1~#5). **세부 설계 (4 Stage detailed 알고리즘 + 통합 시나리오 §4 5 가지 + 우선순위 chain + 8 종 신규 export 타입 + writer section-range insertion + store 분리 + LLM mapper) 는 통합 plan v5 본문에**, 진행 상태 추적 (체크박스) 은 본 §5.4 통합 관리. AC 본문 변경 시 통합 plan 갱신 → 본 체크박스 동기화.
 >
@@ -433,21 +440,50 @@
 - [ ] **Phase 6 이관 없음** — Phase 6 은 웹 인터페이스 스코프. self-extension 모든 단계는 Phase 5 안에서 완결.
 - [ ] **종료 조건**: AC15~AC20 모두 GREEN + ≥ 9 신규 cases. §5.4.5 통합 라이브 검증 진입.
 
-### 5.4.5 통합 라이브 검증 + build/test baseline (Stage 1+2+3+4 통합)
+### 5.4.5 통합 시나리오 integration test + post-impl review + AC21 라이브 + follow-up 4
 
-> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4-integration.md §5 AC21/AC22`](./phase-5-todox-5.4-integration.md) v5. **AC21 라이브 1차 책임 = master** (agent-management.md §6 갱신, 2026-04-26 사용자 영구 결정 — 라이브 cycle smoke 가 vault 변경 트리거 → tester scope 외). tester 는 코드/시뮬레이션 (mock fs + mock LLM integration test) 만 담당.
+> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4-integration.md §5 AC21/AC22`](./phase-5-todox-5.4-integration.md) v10. **AC21 라이브 1차 책임 = master** (agent-management.md §6 갱신, 2026-04-26 사용자 영구 결정). tester 는 코드/시뮬레이션 (mock fs + mock LLM integration test) 만 담당.
+> result mirror: [`activity/phase-5-result.md §5.4.5`](../activity/phase-5-result.md) 4 sub-section (5.4.5.1 시나리오 / 5.4.5.2 codex 6 cycle / 5.4.5.3 AC21 라이브 / 5.4.5.4 follow-up 4).
 
-- [x] **시뮬레이션 integration test (Scenario 4.1~4.5)** — `wikey-core/src/__tests__/stage-integration.test.ts` 7 cases (mock fs + mock LLM). post-impl review Cycle #1~#6 fix 반영 — `cluster-${suffix}` umbrella_slug round-trip 안전 + invalid-slug writer reject + Stage 3 ingest-pipeline wiring + alpha v1 embeddings inject + singleton drop graceful skip.
-- [ ] **AC21 통합 라이브 cycle smoke** (master 직접 — vault 변경 + obsidian-cdp full cycle smoke): Vault reset → fixture corpus 6 자료 인제스트 → Stage 2 suggestion 카드 → Accept → schema.yaml append → 다음 ingest 신규 표준 분해 등장 → Stage 3 runtime-scope 적용 → Stage 4 convergence review modal → wiki write 정합성. 결과 `activity/phase-5-resultx-5.4-integration-cycle-smoke-<date>.md` 신규. **deferred — fixture corpus 마련 별도 세션 진행 (사용자 환경 + vault 변경 위험)**.
-- [x] **AC22 build/test baseline**: `npm run build` 0 errors + `npm test` ≥ 711 PASS (실제 731 PASS / Stage 1 staged 670 + 신규 61: AC2~AC8 = 20 + AC9~AC14 = 21 + AC15~AC20 = 10 + integration = 7 + invalid-slug = 1 + AC18 embeddings inject = 1 + AC20 empty-embeddings graceful skip = 1). wikey-obsidian build OK.
-- [ ] **AC21 fixture corpus master 마련** (gate, U4): `raw/__fixtures__/integration-cycle-smoke/` 신규 — PMBOK + ISO 27001 + ITIL/SAFe/OWASP × 2 source = 6 자료. **deferred — AC21 라이브 cycle smoke 의 선결 조건, 사용자 환경에서 마련 (vault 변경 위험으로 본 §5.4 commit scope 외)**.
-- [x] **codex Cycle #1 post-impl review**: NEEDS_REVISION (CRITICAL 1 + HIGH 2 + MEDIUM 1) → master fix (HIGH Stage 2 round-trip / HIGH UI Suggestions header / Stage 3 ingest-pipeline wiring / invalid-slug writer reject)
-- [x] **codex Cycle #2 post-impl review**: NEEDS_REVISION (CRITICAL F4 lingering + MEDIUM F2 lingering) → master fix (alpha v1 embeddings inject wire / accept handler appended:false 처리)
-- [x] **codex Cycle #3 post-impl review**: NEEDS_REVISION (HIGH F4 singleton lingering + LOW stale) → master fix (singleton cluster drop / plan §3.4.3 + convergence.ts 주석 갱신)
-- [x] **codex Cycle #4 post-impl review**: REJECT (LOW lingering — §3.4.2 stale) → master fix (§3.4.2 pseudocode 갱신)
-- [x] **codex Cycle #5 post-impl review**: REJECT (LOW lingering — §4.1 fresh ingest stale) → master fix (§4.1 시퀀스 다이어그램 갱신)
-- [x] **codex Cycle #6 post-impl review**: **APPROVE** (Findings: None / regression 731 PASS / exit 0). Stage 1+2+3+4 + integration test 모든 finding 해소.
-- [x] **§5.4 코드 부분 종료**: 22 AC GREEN (AC21 라이브 deferred 제외) + AC22 731 PASS / 0 build errors + codex APPROVE. AC21 라이브 + fixture corpus 는 사용자 환경 별도 세션 cycle smoke 진행 후 최종 종료.
+#### 5.4.5.1 통합 시나리오 integration test
+- [x] Scenario 4.1~4.5 — `wikey-core/src/__tests__/stage-integration.test.ts` 7 cases (mock fs + mock LLM). post-impl review Cycle #1~#6 fix 반영 — `cluster-${suffix}` umbrella_slug round-trip 안전 + invalid-slug writer reject + Stage 3 ingest-pipeline wiring + alpha v1 embeddings inject + singleton drop graceful skip. 회귀 721 → 728 PASS.
+
+#### 5.4.5.2 codex post-impl review 6 cycle
+- [x] Cycle #1 NEEDS_REVISION (CRITICAL 1 + HIGH 2 + MEDIUM 1) → master fix (HIGH Stage 2 round-trip / HIGH UI Suggestions header / Stage 3 ingest-pipeline wiring / invalid-slug writer reject) — commit 31f3e28
+- [x] Cycle #2 NEEDS_REVISION (CRITICAL F4 lingering + MEDIUM F2 lingering) → master fix (alpha v1 embeddings inject wire / accept handler appended:false 처리) — commit c564cd3
+- [x] Cycle #3 NEEDS_REVISION (HIGH F4 singleton lingering + LOW stale) → master fix (singleton cluster drop / plan §3.4.3 + convergence.ts 주석 갱신) — commit 0296cc7
+- [x] Cycle #4 REJECT (LOW §3.4.2 stale) → master fix (§3.4.2 pseudocode 갱신) — commit 9d15ba5
+- [x] Cycle #5 REJECT (LOW §4.1 fresh ingest stale) → master fix (§4.1 시퀀스 다이어그램 갱신) — commit d8f1c78
+- [x] Cycle #6 **APPROVE** (Findings: None / regression 731 PASS / exit 0) — commit dc1ee9a
+
+#### 5.4.5.3 AC21 라이브 cycle smoke (master 직접)
+- [x] **fixture corpus 6 자료** (master 작성, 옵션 B 자연 ingest 흐름): `raw/0_inbox/integration-cycle-smoke/{pmbok-overview,pmbok-knowledge-areas,iso-27001-overview,iso-27001-annex-a-detail,itil-4-overview,itil-4-practices}.md`. 각 자료 `## 개요` headingPattern + numbered/bullet list ≥ 5 items.
+- [x] **6 file ingest cycle smoke**: 6/6 file ingest 완료, mention-history.json 누적 6 ingests, 43 신규 wiki/concepts pages. timing: pmbok-overview 90s / pmbok-knowledge-areas 90s / iso-27001-overview 60s / iso-27001-annex-a-detail 600s timeout (state-machine fallback) / itil-4-overview 120s / itil-4-practices 5s.
+- [x] **발견 bug fix CRITICAL** — suggestion-pipeline slug `.md` 확장자 strip (`stripMdExt` helper, `ingestRecordFromCanon` concepts/entities 모두). mention-history 기존 6 ingests slug Python script 로 strip + node 직접 detector 재실행 → 1 suggestion (cluster-management, conf=0.66, support=2, mention=20).
+- [x] **UX 옵션 B** — Ingest panel 폴더 평탄화 + 파일 목록만 (사용자 영구 결정): `listInboxFilesRaw()` 재귀 walk + `-type f` + 폴더 list 제외 + name 컬럼 basename + path line classify hint 만.
+- [x] **Suggestions panel UI 검증** — header button 등장 (post-impl Cycle #1 F2 fix 라이브 통과) + 1 card "cluster-management 패턴 감지" + Accept round-trip → schema.yaml 신규 entry append (parser regex 일치) + suggestions.json state pending → accepted.
+- 결과 문서 [`activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](../activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md) — commit eb4b697.
+
+#### 5.4.5.4 follow-up 4 항목 (사용자 명령 옵션 a "1, 3, 4 모두 본 세션 + 여유 있음 4")
+- [x] **§3.5 항목 1 — Stage 3 SelfDeclaration runtime extraction inspect**: 신규 fixture `test-stage3-cobit.md` (COBIT 2019 5 도메인) ingest 50s. console log evidence `stage3 self-declarations — 1 runtime entries`. wiki/concepts 5 신규 (cobit-2019 + cobit-* 4). autoMove 정상. — commit 308bc72
+- [x] **§3.6 항목 3 — Suggestions detector umbrella default UX**: `suggestion-detector.ts:170-178` firstWord prefix 추출. PMBOK only ingest 시 firstWords ['project']*N → umbrella `'project-management'` (의미있는 default). mixed 면 fallback 'cluster'. 신규 test 1 case. 731 → 732 PASS. — commit 308bc72
+- [x] **§3.7 항목 4 — classify-inbox.sh subfolder 평탄화**: `find -maxdepth 1` → `-type f` 재귀 평탄화. 사용자 영구 결정 옵션 B 와 일관. — commit 308bc72
+- [x] **§3.8 항목 2 — Stage 4 라이브 alpha v1 wire 검증**: mock embeddings JSON (59 slug × 1024-dim group axis) → run-convergence-pass.mjs 실행 → 4 ConvergedDecomposition 생성 (project-management-body-of-knowledge / work-breakdown-structure / iso-iec-27001-2022 / itil-4). mjs schema bug fix (`{ version, ingests: [...] }` schema 처리 추가). — commit da42cef
+
+### 5.4.6 종결 회귀 + commits 통계 (mirror activity/phase-5-result.md §5.4.6)
+
+- [x] **회귀 baseline**: 670 → **732 PASS / 38 files / 0 fail** (cd wikey-core && npx vitest run)
+- [x] **build**: wikey-core 0 errors / wikey-obsidian 0 errors (npm run build / npx tsc --noEmit)
+- [x] **신규 cases 합계**: 62 (Stage 2 = 20 + Stage 3 = 21 + Stage 4 = 10 + integration = 7 + Cycle 후속 = 4)
+- [x] **Total commits push (16 commits)**: 9b7da21 → 7e6c2fb (5.4.1 → 5.4.7 + sync v8 정정)
+- [x] **보조 문서**: `activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md` (master 직접 라이브 cycle smoke 전체 detail).
+
+### 5.4.7 v2 deferral (다음 세션 진입점, 사용자 영구 결정 2026-04-26)
+
+- [ ] **1순위 — Stage 4 실 qmd embeddings 통합**: 다국어 / synonym 자동 통합 인식 (mock 만으로 미검증된 핵심 가치). 구현 path 3 후보 (Python sqlite-vec extension 권장 / Node.js wrapper / qmd CLI subprocess). 작업 단계: qmd schema 검증 → Python helper script (`scripts/qmd-embeddings-export.py`) → mention-history slug → embedding JSON dump → run-convergence-pass.mjs `--embeddings` inject → cluster 정확도 측정 (한/영 cluster 의미 유사도 ≥ 0.85 검증).
+- [ ] **2순위 — Suggestions panel UI 개선**: 카드 시각 디자인 (confidence bar / badge / icon) + Edit modal 구현 (umbrella_slug / umbrella_name / aliases / components 수정) + 정렬 / 필터 / negativeCache view + Stage 3 SelfDeclaration runtime / Stage 4 ConvergedDecomposition 통합 표시 + 빈 state UX + 반응형. ui-designer (gemini-panel) 위임 권장.
+- [ ] **3순위 — Stage 4 ConvergedDecomposition 사용자 review modal**: Stage 2 Suggestions panel 패턴 재사용 (Accept/Edit/Reject + writer 호출). 1순위 완료 후 진입 권장.
+- [ ] **4순위 — §5.4 minor follow-up**: 자료 자동 분류 race condition 1 case (재현 어려움 — self-resolve), Edit modal 검증 (2순위 통합).
 
 **연계**:
 - Phase 4 §4.3.2 Provenance tracking (본체) — Stage 3 의 self-declaration 오염 제어 장치로 직접 필요.
