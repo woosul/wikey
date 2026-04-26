@@ -7,9 +7,11 @@
 
 ## 🎯 다음 세션 첫 액션 (2026-04-26 session 14 종료 시점)
 
-> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: §5.4.7 deferred 4 항목 모두 **session 14 종결**. panel UI 라이브 검증 중 사용자 추가 fix 11건 (안내문/link/margin/scaling/필터/modal 사용자친화/help icon/도메인 표시/Edit 확장/Add+Edit secondary/조회 위주 톤) 모두 동일 cycle 안 반영. **§5.4.10 미처리 후속 등록** (ingest 자동 등록 + audit 컨셉 panel, 사용자 design philosophy 반영) — 당장 사용 문제 없음, 나중/다음 세션 결정.
+> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: §5.4.7 deferred 4 항목 모두 **session 14 종결**. panel UI 라이브 검증 중 사용자 추가 fix 11건 + modal tag cloud 재구성 + raw YAML 제거 + 사용자 본질 비판 6 chain (graph emergent / 자동 ontology / 지식 분해 한계 / LLM 백 시대착오) 모두 §5.10 main subject (큰 작업 정식 이슈) 로 등록.
 >
-> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (모두 [x]) + `§5.4.10` (미처리 후속) → (3) `activity/phase-5-result.md §5.4.8` (1순위) + `§5.4.9` (2/3/4순위 + UI fix 11건) → (4) 다음 우선순위 사용자 확인 (§5.5~§5.9 또는 §5.4.10).
+> **★ §5.10 Graph emergent ontology — §5.4 paradigm shift** (2026-04-26 session 14 신규 issue 등록): 4 옵션 (A 점진 / B graph emergent / C 관망 / **★ D LLM-only ontology 폐기**). 사용자 다음 세션 시작 시 옵션 명시 후 진입. 보조 plan = `plan/phase-5-todox-5.10-graph-emergent-ontology.md`.
+>
+> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (모두 [x]) + `§5.10` (★ paradigm shift 4 옵션 결정) → (3) `plan/phase-5-todox-5.10-graph-emergent-ontology.md` (보조 detail spec) → (4) `activity/phase-5-result.md §5.4.8` (1순위) + `§5.4.9` (2/3/4순위 + UI fix 11건) → (5) 사용자 옵션 결정 후 진입 (D 권장 — 사용자 통찰 가장 정확 반영).
 
 ### 1순위 — Stage 4 실 qmd embeddings 통합 ✅ 종결 (2026-04-26 session 14)
 

@@ -272,6 +272,7 @@
 > tag: #framework, #engine, #architecture
 > **이전 번호**: `was §5.6`. 2026-04-22 Phase 4 §4.5.1.7.2 PMBOK 하드코딩이 Stage 0 사전 검증에 해당.
 > **session 13 종결** (2026-04-26): 4 Stage + integration test + AC21 라이브 cycle smoke + follow-up 4 항목 모두 GREEN. codex post-impl Cycle #6 APPROVE / 670 → 732 PASS / 16 commits push 9b7da21 → 7e6c2fb. 다음 세션 = Stage 4 실 qmd embeddings 통합 (1순위) + Suggestions UI 개선 (2순위).
+> **★ paradigm shift issue 등록** (2026-04-26 session 14): 사용자 본질 비판 6 chain (graph emergent / 자동 ontology / 지식 분해 한계 / LLM 백 시대착오) → 본 §5.4 architecture 자체 deprecation 검토. 정식 issue = `§5.10 Graph emergent ontology — §5.4 paradigm shift`. 4 옵션 (A 점진 / B graph emergent / C 관망 / **★ D LLM-only ontology 폐기**) 중 사용자 다음 세션 결정.
 
 ### 5.4.0 Stage 0 사전 검증 (Phase 4 §4.5.1.7.2) — **완료** (이관 mirror)
 
@@ -846,3 +847,125 @@
 - [ ] canonicalizer.ts `assembleCanonicalResult` 의 `logEntry: raw.log_entry` 는 LLM 원본. FORCED_CATEGORIES 로 이동된 slug 는 파일 위치 ↔ log 문구 엇갈림
 - [ ] 수정: pin 후 `pinned.entities` + `pinned.concepts` 로부터 결정적 log body 재생성. 기존 wiki-ops.ts `appendLog` 패턴 참조
 - [ ] TDD: pin 으로 axis 가 바뀐 slug 의 log 엔트리가 "엔티티 생성" → "개념 생성" 으로 올바르게 전환
+
+---
+
+## 5.10 Graph emergent ontology — §5.4 paradigm shift (P1, ★ 사용자 본질 비판 2026-04-26 session 14)
+> tag: #ontology, #architecture, #paradigm-shift, #self-extending, #graph
+
+> **배경**: §5.4 self-extending 구현 (Stage 1~4) 완료 후 panel UI 라이브 검증 중 사용자가 §5.4 architecture 자체에 대한 본질 비판 5건 chain 명시. 본 §5.10 = 그 비판의 정식 이슈화 (큰 작업 main subject 격상). §5.4.10 (sub) 의 내용을 본 §5.10 으로 promote.
+>
+> **사용자 본질 비판 chain**:
+> 1. "표준 분해 패턴을 왜 등록·관리해야 하나? 너무 엔지니어링적 사고."
+> 2. "self-extending 인데 진짜는 자동 확장 ontology 개념이어야지. 지금은 수동."
+> 3. "표준 분해 그룹 = 지식 그룹? 표준 분해 그룹 ⊂ 지식 그룹."
+> 4. "wiki 가장 많이 노출되는 게 중심으로 — 굳이 그룹으로 나눠 제한 두는 게 이상해."
+> 5. "지식 분해하는 그룹이 왜 필요? 세상 수많은 지식을 어떻게 표준화?"
+
+### 5.10.1 issue 요약 (정식 이슈화)
+
+| 측면 | 현 §5.4 self-extending | 사용자 ideal (graph emergent) |
+|------|----------------------|---------------------------|
+| 모델 | 지식 = decomposable (그룹 → components) | 지식 = relational (graph) |
+| 적용 범위 | PMBOK / ISO 27001 같은 외부 정형 표준만 fit | 모든 지식 일반 (잡지·메모·임의 PDF) |
+| ontology 결정 | schema.yaml 명시 (umbrella + components) | mention graph 자체가 ontology source |
+| 등록 chain | 사용자 Accept gate (수동) | 자동 (graph 형성 자체) |
+| naming | "self-extending" (오해 야기) | "self-organizing graph" / "emergent ontology" |
+
+### 5.10.2 결정 분기 (다음 세션 사용자 명시)
+
+> **사용자 추가 통찰** (2026-04-26 session 14): "굳이 어려운 말 써가면서 지식을 분류할 필요 없잖아. LLM 이라는 든든한 백 위에서 움직이는 건데." → 옵션 D 추가. 가장 사용자 mental model 에 가까움.
+
+- **A (점진)**: 본 §5.4 panel UI 유지 + §5.10.3 자동화 만 추가 + §5.5 graph 시각화 추가. schema.yaml 보조 (외부 표준 명시 case 만).
+- **B (paradigm shift, graph emergent)**: schema.yaml `standard_decompositions` 영역 deprecate. §5.5 graph 가 ontology source. canonicalizer (alias dedup) 만 보존. panel 폐기 또는 graph view 로 교체.
+- **C (관망)**: 본 §5.10 자체 보류. §5.4 본체 (PMBOK 명시 분해) 만 사용.
+- **★ D (LLM-only, ontology layer 제거)**: §5.4 self-extending 전체 deprecate (Stage 1~4 모두). LLM + qmd embedding 백이 의미 처리 일임. wikey 는 raw → wiki organization + retrieval interface 만. 본 옵션이 사용자 통찰 가장 정확 반영.
+
+#### 5.10.2.D 옵션 D 상세 (LLM-only architecture)
+
+> **사용자 mental model**: LLM 시대의 ontology 시대착오. 전통 ontology (umbrella / decomposition / components / RDF / OWL / Schema.org) = pre-LLM (~2020) reductionist approach. LLM 시대 = 의미 추론 백에서 자동 (예: "ISO 27001" / "iso-iec-27001-2022" / "ISMS" 가 같은 개념임을 LLM 이 이미 인식). schema 명시 = 인위 layer.
+
+**wikey 의 LLM-백 위 layer 정의** (옵션 D 시):
+1. raw → wiki organization (자료 인입 + 분류 + 페이지 생성) — 사용자 가치 명확
+2. canonical slug normalization (minimal — file hash 기준 dedup, alias 다국어 / 동명이인 정도만)
+3. LLM 자연 retrieval (qmd embedding + LLM 답변)
+4. 사용자 interface (chat / dashboard / search / settings)
+
+**deprecate 대상** (옵션 D):
+- §5.4 Stage 1~4 (self-extending 전체)
+- `standard_decompositions` schema 모델
+- `.wikey/schema.yaml` 의 standard_decompositions 영역 (alias / PII / custom-types 는 보존)
+- `.wikey/suggestions.json` (Stage 2 store)
+- `.wikey/converged-decompositions.json` (Stage 4 store)
+- `.wikey/mention-history.json` (단 §5.5 graph 시각화 retention 시 보존)
+- panel Suggestions UI (header button + sidebar-chat.ts 의 §11 코드 모두 + SchemaYamlModal)
+- canonicalizer.ts 의 Stage 1 schema override 로직 (BUILTIN_STANDARD_DECOMPOSITIONS 포함)
+
+**유지** (옵션 D):
+- canonicalizer.ts 의 minimal alias normalization (slug → canonical-slug, 동명이인·다국어·약어)
+- §5.2 검색 graph expansion (1-hop wikilink) — 단순 wikilink 그래프, ontology layer X
+- qmd embedding + LLM 답변 (§5.2 핵심)
+- raw → wiki organization (Stage 0 ingest pipeline 의 wiki write)
+- entity / concept 페이지 생성 (canonicalizer LLM 추출, schema 명시 없이)
+
+**migration cost** (옵션 D):
+- 약 30~50 file 변경 (Stage 1~4 코드 + test + plan + schema)
+- §5.4 cycle 의 732 PASS 중 ~100 test 폐기 또는 deprecate (Stage 1~4 unit + integration)
+- 회귀 risk: §5.4 가 §5.2 (canonicalizer cross-link) / §5.3 (incremental reingest) 와 직접 dependency 약함 — 분리 가능
+- migration script 1 회: 기존 schema.yaml standard_decompositions → `manual-overrides.yaml` (사용자 명시 hardcode 만 보존)
+
+**옵션 D 정당성** (사용자 통찰 기반):
+- LLM 백이 의미 처리 자동 → 인위 ontology layer redundant
+- 사용자 인지 부담 (panel / schema / Add/Edit/Accept/Reject) 0 → "사용자가 거의 안 써도 됨" design philosophy 완전 실현
+- 코드 단순화 → maintenance cost 감소
+- §5.4 self-extending 명명 자체 폐기 → naming confusion 해결
+
+**옵션 D 후속 검토** (옵션 D 채택 시):
+- §5.5 (graph 시각화) — graph 가 ontology source 가 아니라 *시각화 도구* 로만 유지. 사용자가 wiki 관계 보는 보조 UI.
+- §5.6 / §5.7 / §5.8 / §5.9 — 영향 없음, 그대로 진행.
+
+### 5.10.3 작업 단위 (옵션 A 시 — 가장 가벼운 path)
+
+- [ ] **자동/수동 매트릭스 chain break 3 fix**:
+  - schema.yaml 등록 자동화 (ingest 시 high-confidence 후보 직접 append, panel Accept 우회)
+  - alias 자동 merging (canonicalizer 강화 — 같은 표준의 다른 표기 한 wiki 페이지 통합)
+  - umbrella 자체 wiki 페이지 자동 생성 (group level concept page)
+- [ ] **자동 등록 audit log** (`.wikey/standard-audit.json`): 자동 등록 이력 trace.
+- [ ] **panel rename**: `Suggestions` → `Knowledge audit` 또는 `지식 audit` (audit 컨셉 일치).
+- [ ] **threshold split**: high-confidence 자동 / low-confidence panel review.
+- [ ] **자동 / 수동 구분 시각화**: schema.yaml `origin` 필드 (suggested / manual / converged / builtin / auto-ingested) 색상 / icon 구분.
+
+### 5.10.4 작업 단위 (옵션 B 시 — paradigm shift, 큰 작업)
+
+- [ ] **§5.4 본체 deprecation 결정**: `standard_decompositions` schema 모델 폐기. 외부 표준 명시는 별 schema (`aliases.yaml` 또는 `manual-overrides.yaml`) 로 분리.
+- [ ] **§5.5 graph 시각화 → ontology source 격상**: NetworkX + Leiden community detection 이 자연 cluster 발견. mention graph 가 primary ontology.
+- [ ] **canonicalizer alias dedup 강화**: canonical slug normalization 로직 강화 (다국어 / synonym / 동명이인 / 모델 변형 모두 graph node identity 통합).
+- [ ] **검색 PageRank 통합** (§5.2 확장): 1-hop wikilink 외에 PageRank-like ranking 으로 자연 중심 search 결과 정렬.
+- [ ] **panel UI 폐기 또는 graph view 교체**: header button 제거 또는 graph 시각화 panel 으로 대체.
+- [ ] **migration script**: 기존 schema.yaml `standard_decompositions` → `manual-overrides.yaml` (외부 표준 명시 hardcode 만 보존).
+- [ ] **wiki/concepts/<umbrella>.md 자동 생성**: graph cluster center 가 자체 wiki 페이지 — 그룹 명시 schema 없이 graph 관계만으로.
+
+### 5.10.5 epistemology 비판 (영구 기록)
+
+> **사용자 명시**: "지식 분해하는 그룹이 왜 필요? 세상 수많은 지식을 어떻게 표준화?"
+
+§5.4 의 "표준 분해" = **외부 정형 표준에만 적용 가능한 reductionism**. 일반 지식 (잡지·메모·임의 자료) 에는 mismatch. wikey 의 *진정한* 가치 = mention graph (relational) + 의미 search (LLM/embedding) — 그룹 분해 X.
+
+본 §5.10 의 epistemology 정당화는 다음 세션 사용자 결정 (옵션 A/B/C) 시점에도 보존.
+
+### 5.10.6 보조 plan 문서
+
+- [ ] `plan/phase-5-todox-5.10-graph-emergent-ontology.md` — 본 §5.10 진입 시 detail spec. migration script + canonicalizer 강화 + graph community detection 알고리즘 + 검색 PageRank 통합 + panel rename / 폐기 결정 로직.
+- [ ] `activity/phase-5-result.md §5.10` — 진행 시 timeline + 결정 분기 (A/B/C) + 산출.
+
+### 5.10.7 연계 / dependency
+
+- §5.5 지식 그래프 · 시각화 (NetworkX + Leiden + vis.js) — 본 §5.10 paradigm shift 의 inferred technical foundation. §5.10 진행 시 §5.5 와 통합.
+- §5.4 self-extending — 본 §5.10 의 deprecation 또는 보존 대상. 옵션 A/B/C 결정에 따라 §5.4 의 향후 위치 변동.
+- §5.2 검색 graph expansion (1-hop wikilink) — graph emergent 의 일부 구현. 본 §5.10 옵션 B 시 PageRank 까지 확장.
+- canonicalizer.ts — alias dedup 강화의 단일 진입점. 본 §5.10 옵션 B 의 핵심 수정 대상.
+
+### 5.10.8 진행 권장 시점
+
+- 즉시 진행 X (사용자 결정 대기). 다음 세션 시작 시 옵션 A/B/C 명시 후 진입.
+- 본 §5.10 = main subject. §5.4.10 sub-section 의 내용 ⊂ 본 §5.10. §5.4.10 는 promote pointer 로 짧게 유지 또는 본 §5.10 으로 통합.
