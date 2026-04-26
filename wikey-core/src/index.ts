@@ -155,6 +155,47 @@ export {
 } from './wiki-ops.js'
 export type { SourceFrontmatter } from './wiki-ops.js'
 export type { Citation, ProvenanceType, ProvenanceEntry } from './types.js'
+// §5.4.2 Stage 2 — extraction-graph driven suggestions
+export type {
+  IngestRecord,
+  CandidatePattern,
+  SuggestionEvidence,
+  SuggestionState,
+  Suggestion,
+  SuggestionStore,
+  SuggestionStorageReader,
+  SuggestionStorageWriter,
+} from './types.js'
+export {
+  emptyStore,
+  addSuggestion,
+  updateSuggestionState,
+  rejectSuggestion,
+  isInNegativeCache,
+} from './suggestion-storage.js'
+export {
+  detectCoOccurrence,
+  detectSuffixCluster,
+  computeConfidence,
+} from './suggestion-detector.js'
+export {
+  runSuggestionDetection,
+  appendIngestHistory,
+} from './suggestion-pipeline.js'
+export type {
+  RunSuggestionDetectionInput,
+  RunSuggestionDetectionResult,
+} from './suggestion-pipeline.js'
+export {
+  appendStandardDecomposition,
+} from './schema-yaml-writer.js'
+export type { AppendResult as AppendStandardDecompositionResult } from './schema-yaml-writer.js'
+export {
+  buildSuggestionCardModel,
+  acceptSuggestion,
+  rejectSuggestionFromPanel,
+} from './suggestion-panel-builder.js'
+export type { SuggestionCardModel } from './suggestion-panel-builder.js'
 export {
   RenameGuard,
   reconcileExternalRename,

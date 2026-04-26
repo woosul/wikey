@@ -6,8 +6,14 @@ import {
   resolveSourceSync, loadRegistry,
   pairedSidecarSet, hasSidecar, filterOutPairedSidecars,
   recountAuditAfterPairedExclude,
+  buildSuggestionCardModel, acceptSuggestion, rejectSuggestionFromPanel,
+  appendStandardDecomposition,
+  emptyStore,
 } from 'wikey-core'
-import type { Citation, ResolvedSource, SourceRegistry } from 'wikey-core'
+import type {
+  Citation, ResolvedSource, SourceRegistry,
+  Suggestion, SuggestionStore,
+} from 'wikey-core'
 import { runIngest, IngestFileSuggestModal } from './commands'
 import type { IngestRunResult } from './commands'
 
@@ -37,7 +43,7 @@ const ICONS = {
   folder: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.54 3.87.5 3a2 2 0 0 1 2-2h3.672a2 2 0 0 1 1.414.586l.828.828A2 2 0 0 0 9.828 3H14a2 2 0 0 1 2 2v1.5a.5.5 0 0 1-1 0V5a1 1 0 0 0-1-1H9.828a3 3 0 0 1-2.12-.879l-.83-.828A1 1 0 0 0 6.172 2H2.5a1 1 0 0 0-1 .981z"/><path d="M14.5 5.5a.5.5 0 0 0-.468.324L12.78 9H3.22l-1.252-3.176A.5.5 0 0 0 1.5 5.5a.5.5 0 0 0-.49.412L.008 11.91a.5.5 0 0 0 .49.588h15.004a.5.5 0 0 0 .49-.588l-1.002-5.998A.5.5 0 0 0 14.5 5.5"/></svg>',
 }
 
-type PanelName = 'chat' | 'dashboard' | 'audit' | 'ingest' | 'help'
+type PanelName = 'chat' | 'dashboard' | 'audit' | 'ingest' | 'help' | 'suggestions'
 
 const PROVIDER_PRETTY_NAMES: Readonly<Record<string, string>> = {
   gemini: 'Google Gemini',
@@ -254,6 +260,7 @@ export class WikeyChatView extends ItemView {
     else if (name === 'audit') this.openAuditPanel()
     else if (name === 'ingest') this.openIngestPanel()
     else if (name === 'help') this.openHelp()
+    else if (name === 'suggestions') this.openSuggestionsPanel()
     // chat: 별도 DOM 마운트 불필요 (messagesEl이 chat view 자체)
     this.updatePanelBtnStates()
     this.applyPanelVisibility()
@@ -261,6 +268,8 @@ export class WikeyChatView extends ItemView {
   }
 
   private auditPanel: HTMLElement | null = null
+  // §5.4.2 AC6 — Suggestions panel (extraction-graph driven standard candidates).
+  private suggestionsPanel: HTMLElement | null = null
 
   private closeActivePanel() {
     if (this.dashboardPanel) {
@@ -279,6 +288,10 @@ export class WikeyChatView extends ItemView {
       this.ingestPanel.remove()
       this.ingestPanel = null
       this.pendingFiles = []
+    }
+    if (this.suggestionsPanel) {
+      this.suggestionsPanel.remove()
+      this.suggestionsPanel = null
     }
   }
 
@@ -573,6 +586,99 @@ Click [[page name]] in answers to navigate to the wiki page.
 \`Cmd+,\` → Wikey tab to manage models, API keys, Ollama connection.`
 
     MarkdownRenderer.render(this.app, helpMd, helpEl, '', this.plugin)
+  }
+
+  // ── Suggestions (§5.4.2 Stage 2) ──
+
+  private async loadSuggestionStoreFromVault(): Promise<SuggestionStore> {
+    const path = '.wikey/suggestions.json'
+    try {
+      if (!(await this.plugin.wikiFS.exists(path))) return emptyStore()
+      const raw = await this.plugin.wikiFS.read(path)
+      const parsed = JSON.parse(raw) as Partial<SuggestionStore>
+      if (parsed.version !== 1) return emptyStore()
+      return {
+        version: 1,
+        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
+        negativeCache: Array.isArray(parsed.negativeCache) ? parsed.negativeCache : [],
+      }
+    } catch (err) {
+      console.warn('[Wikey suggestions] load failed:', err)
+      return emptyStore()
+    }
+  }
+
+  private async saveSuggestionStoreToVault(store: SuggestionStore): Promise<void> {
+    await this.plugin.wikiFS.write('.wikey/suggestions.json', JSON.stringify(store, null, 2) + '\n')
+  }
+
+  private async openSuggestionsPanel() {
+    this.suggestionsPanel = createDiv({ cls: 'wikey-chat-suggestions' })
+    this.messagesEl.parentElement?.insertBefore(this.suggestionsPanel, this.messagesEl)
+    const panel = this.suggestionsPanel
+    panel.createEl('h3', { text: '🔔 표준 분해 후보' })
+
+    const store = await this.loadSuggestionStoreFromVault()
+    const pending = store.suggestions.filter((s) => s.state.kind === 'pending')
+    if (pending.length === 0) {
+      panel.createEl('p', { text: '대기 중인 제안이 없습니다.' })
+      return
+    }
+    for (const s of pending) this.renderSuggestionCard(panel, s)
+  }
+
+  private renderSuggestionCard(parent: HTMLElement, s: Suggestion) {
+    const model = buildSuggestionCardModel(s)
+    const card = parent.createDiv({ cls: 'wikey-suggestion-card' })
+    card.createEl('h4', { text: model.title })
+    card.createEl('p', { text: `${model.confidenceLabel} · ${model.summary}` })
+    const list = card.createEl('ul')
+    for (const slug of model.componentSlugs) list.createEl('li', { text: slug })
+    if (model.evidenceLines.length > 0) {
+      const ev = card.createEl('details')
+      ev.createEl('summary', { text: 'Evidence' })
+      for (const line of model.evidenceLines) ev.createEl('div', { text: line })
+    }
+    const actions = card.createDiv({ cls: 'wikey-suggestion-actions' })
+    const acceptBtn = actions.createEl('button', { text: 'Accept' })
+    const editBtn = actions.createEl('button', { text: 'Edit' })
+    const rejectBtn = actions.createEl('button', { text: 'Reject' })
+    acceptBtn.disabled = !model.actions.accept
+    editBtn.disabled = !model.actions.edit
+    rejectBtn.disabled = !model.actions.reject
+
+    acceptBtn.addEventListener('click', async () => {
+      try {
+        const result = await appendStandardDecomposition(this.plugin.wikiFS, s)
+        if (!result.appended) {
+          new Notice(`schema.yaml not updated: ${result.reason ?? 'unknown'}`)
+        }
+        const store = await this.loadSuggestionStoreFromVault()
+        const next = acceptSuggestion(store, s.id)
+        await this.saveSuggestionStoreToVault(next)
+        card.remove()
+        new Notice(`Accepted suggestion: ${s.umbrella_slug}`)
+      } catch (err) {
+        new Notice(`Accept failed: ${(err as Error).message}`)
+      }
+    })
+
+    rejectBtn.addEventListener('click', async () => {
+      try {
+        const store = await this.loadSuggestionStoreFromVault()
+        const next = rejectSuggestionFromPanel(store, s.id)
+        await this.saveSuggestionStoreToVault(next)
+        card.remove()
+        new Notice(`Rejected suggestion: ${s.umbrella_slug}`)
+      } catch (err) {
+        new Notice(`Reject failed: ${(err as Error).message}`)
+      }
+    })
+
+    editBtn.addEventListener('click', () => {
+      // Edit modal deferred to §5.4.5 cycle smoke (out of Stage 2 scope).
+      new Notice('Edit modal: deferred to §5.4.5 live cycle smoke')
+    })
   }
 
   // ── Dashboard ──

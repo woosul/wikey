@@ -187,6 +187,75 @@ export interface SchemaOverride {
   readonly standardDecompositions?: StandardDecompositionsState
 }
 
+// ── §5.4 Stage 2: extraction-graph driven suggestions ──
+
+/**
+ * §5.4.2 AC2: Per-source ingest accumulation feeding the Stage 2 pattern detector.
+ * Persisted in `.wikey/mention-history.json` (separate from `.wikey/suggestions.json`).
+ */
+export interface IngestRecord {
+  readonly source: string                         // wiki/sources/<base>.md path
+  readonly ingestedAt: string                     // ISO datetime
+  readonly concepts: ReadonlyArray<{ readonly slug: string; readonly type: ConceptType }>
+  readonly entities: ReadonlyArray<{ readonly slug: string; readonly type: EntityType }>
+}
+
+/**
+ * §5.4.2 AC3/AC4: candidate pattern produced by the co-occurrence / suffix
+ * cluster detectors before confidence scoring.
+ */
+export interface CandidatePattern {
+  readonly umbrella_slug: string                  // inferred prefix or grouping key
+  readonly umbrella_name?: string
+  readonly components: readonly StandardDecompositionComponent[]
+  readonly support_count: number                  // # distinct sources supporting the pattern
+  readonly unique_suffixes: number                // # distinct suffix shapes among matches
+  readonly mention_count: number                  // total mention occurrences across history
+  readonly overlapsWithBuiltin: boolean           // any component slug overlaps a BUILTIN entry
+  readonly evidence: readonly SuggestionEvidence[]
+}
+
+export interface SuggestionEvidence {
+  readonly source: string                         // wiki/sources/<source>.md path
+  readonly mentions: readonly string[]            // co-occurring mention slugs
+  readonly observedAt: string                     // ISO datetime
+}
+
+export type SuggestionState =
+  | { readonly kind: 'pending' }
+  | { readonly kind: 'accepted'; readonly acceptedAt: string }
+  | { readonly kind: 'rejected'; readonly rejectedAt: string; readonly reason?: string }
+  | { readonly kind: 'edited'; readonly userEdits: Partial<StandardDecomposition> }
+
+export interface Suggestion {
+  readonly id: string                             // sha1 of canonical signature
+  readonly umbrella_slug: string
+  readonly umbrella_name?: string
+  readonly candidate_components: readonly StandardDecompositionComponent[]
+  readonly support_count: number
+  readonly suffix_score: number                   // 0..1 (suffix homogeneity)
+  readonly mention_count: number
+  readonly confidence: number                     // 0..1 — see §3.2.2 formula
+  readonly evidence: readonly SuggestionEvidence[]
+  readonly state: SuggestionState
+  readonly createdAt: string
+  readonly updatedAt: string
+}
+
+export interface SuggestionStore {
+  readonly version: 1
+  readonly suggestions: readonly Suggestion[]
+  readonly negativeCache: readonly string[]
+}
+
+export interface SuggestionStorageReader {
+  readonly load: () => Promise<SuggestionStore>
+}
+
+export interface SuggestionStorageWriter {
+  readonly save: (store: SuggestionStore) => Promise<void>
+}
+
 /**
  * A raw mention extracted by Phase B (no classification yet).
  * Stage 2 canonicalizer turns these into WikiPage objects with type assigned.
