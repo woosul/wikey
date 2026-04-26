@@ -218,12 +218,19 @@ cmd_reindex() {
       log_skip "convergence pass: ${pass_script} 없음 (npm run build 필요)"
     else
       local wiki_dir="${WIKI_DIR:-${PROJECT_DIR}/wiki}"
+      # post-impl Cycle #2 F4 fix: --embeddings 외부 JSON inject 지원 (alpha v1).
+      # WIKEY_CONVERGENCE_EMBEDDINGS env 가 설정되어 있고 파일이 존재하면 forward.
+      local emb_args=()
+      if [ -n "${WIKEY_CONVERGENCE_EMBEDDINGS:-}" ] && [ -f "${WIKEY_CONVERGENCE_EMBEDDINGS}" ]; then
+        emb_args=(--embeddings "${WIKEY_CONVERGENCE_EMBEDDINGS}")
+      fi
       node "$pass_script" \
         --history "${wiki_dir}/.wikey/mention-history.json" \
         --qmd-db "${HOME}/.cache/qmd/index.sqlite" \
         --output "${wiki_dir}/.wikey/converged-decompositions.json" \
         --arbitration "${WIKEY_ARBITRATION_METHOD:-union}" \
         --token-budget "${WIKEY_CONVERGENCE_TOKEN_BUDGET:-50000}" \
+        "${emb_args[@]}" \
         || log_err "convergence pass 실패 (계속 진행)"
     fi
   fi

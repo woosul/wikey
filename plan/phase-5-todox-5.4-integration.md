@@ -912,9 +912,16 @@ if [ "$WIKEY_CONVERGENCE_ENABLED" = "true" ]; then
     --qmd-db "$HOME/.cache/qmd/index.sqlite" \
     --output "$WIKI_DIR/.wikey/converged-decompositions.json" \
     --arbitration "${WIKEY_ARBITRATION_METHOD:-union}" \
-    --token-budget "${WIKEY_CONVERGENCE_TOKEN_BUDGET:-50000}"
+    --token-budget "${WIKEY_CONVERGENCE_TOKEN_BUDGET:-50000}" \
+    ${WIKEY_CONVERGENCE_EMBEDDINGS:+--embeddings "$WIKEY_CONVERGENCE_EMBEDDINGS"}
 fi
 ```
+
+**alpha v1 wire 명시** (post-impl Cycle #2 F4 fix):
+- v1 acceptance: `--embeddings <json-path>` 인자로 외부 도구가 미리 계산한 mention-slug → vector dump 를 inject. dump 형식: `{ "<slug>": [number, ...], ... }`. 환경변수 `WIKEY_CONVERGENCE_EMBEDDINGS` 로 reindex.sh hook 에 forward.
+- 외부 도구 후보 (사용자 환경 책임): qmd vsearch 결과 변환 / sqlite3 CLI 직접 query / Python 헬퍼 / qmd MCP server. 어느 도구든 위 JSON 형식으로 export 가능하면 즉시 plug-in.
+- v2 deferral: qmd-db 직접 query 통합 (sqlite3 subprocess 또는 sqlite-vec extension load). v1 은 advisory 인자로만 보존.
+- `--embeddings` 미지정 시: 빈 Map → cluster 0 → graceful skip + warn. 사용자에게 "no embeddings provided, alpha v1 — external dump required" 알림.
 
 신규 script `wikey-core/scripts/run-convergence-pass.mjs` — entry point:
 ```ts
@@ -1505,7 +1512,27 @@ Stage 4 fail (LLM down)
 
 ---
 
-## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master fix → v6 post-impl Cycle #1 fix)
+## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master fix → v6 post-impl Cycle #1 fix → v7 post-impl Cycle #2 fix)
+
+### 8.7 v7 post-implementation Cycle #2 master 직접 fix (2026-04-26, codex post-impl Cycle #2 NEEDS_REVISION 후속)
+
+**codex Cycle #2 발견 2 finding** (CRITICAL 1 + MEDIUM 1):
+
+| Finding | severity | 위치 | master 결정 + fix |
+|---|---|---|---|
+| **F4 lingering** Stage 4 qmd vector stub | CRITICAL | run-convergence-pass.mjs:58 | 동의 (codex 정확). alpha 단계 명시만으로는 wire 미흡. fix: createConvergencePass 에 `--embeddings <json>` 인자 추가 + mjs wrapper 가 JSON load → Map<slug, vec> inject. reindex.sh 가 `WIKEY_CONVERGENCE_EMBEDDINGS` env forward. plan §3.4.3 의 alpha v1 wire 명시 강화 (외부 도구 inject + v2 deferral 명확화) |
+| **F2 lingering** sidebar-chat accept handler | MEDIUM | sidebar-chat.ts:653 | 동의. fix: appendStandardDecomposition 가 invalid-slug / header-unsafe / already-exists 반환 시 suggestion state 전환 안 함 + 카드 보존 + reason 별 사용자 알림 (Notice). 사용자가 fix 후 재시도 가능 |
+
+**v7 self-check** (master 1차 검증 의무 + cross-check):
+- (a) ✅ 시그니처 cross-file 일관: ConvergencePassConfig.embeddings? optional 추가, 기존 시그니처 보존
+- (b) ✅ Union kind 무변경
+- (c) ✅ writer 분기 무변경 (Cycle #1 fix invalid-slug 그대로)
+- (d) ✅ AC1~AC22 + 신규 AC18 embeddings inject case 1 (총 ≥ 61 신규 cases, achieved 730 PASS)
+- (e) ✅ stale 0: F4 alpha v1 wire 명확화, F2 lingering accept handler fix 명확
+- (f) ✅ header v5 (acceptance 부분 변경 X) ↔ §8.7 v7 (변경 이력) ↔ footer (post-impl Cycle #2)
+- (g) ✅ exact phrase 보존: cluster-management 형식 + arbitration_confidence 일관 + section-range insertion writer 표현 + alpha v1 wire 표현 (—embeddings JSON inject)
+
+**baseline 갱신**: 729 → 730 PASS (신규 embeddings inject AC18 case 1).
 
 ### 8.6 v6 post-implementation Cycle #1 master 직접 fix (2026-04-26, codex post-impl review NEEDS_REVISION 후속)
 

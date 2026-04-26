@@ -256,6 +256,14 @@ export interface ConvergencePassConfig {
   readonly output: string
   readonly arbitration: 'union' | 'llm'
   readonly tokenBudget: number
+  /**
+   * Optional: path to a JSON file containing precomputed embeddings as
+   * `{ "<slug>": [number, number, ...], ... }`. Post-impl Cycle #2 F4 fix —
+   * alpha v1 wire 명시: 사용자 또는 외부 도구 (qmd vsearch / sqlite query /
+   * Python helper) 가 mention slug 별 embedding 을 JSON 으로 dump → 본
+   * pass 가 inject. 미지정 시 빈 Map → cluster 형성 0 → graceful skip.
+   */
+  readonly embeddings?: string
 }
 
 /**
@@ -264,6 +272,9 @@ export interface ConvergencePassConfig {
  * Defaults match the reindex.sh hook block (plan §3.4.3 line 906-916):
  *   --arbitration "${WIKEY_ARBITRATION_METHOD:-union}"
  *   --token-budget "${WIKEY_CONVERGENCE_TOKEN_BUDGET:-50000}"
+ *
+ * Optional embeddings inject (post-impl Cycle #2 F4 fix):
+ *   --embeddings <path>    JSON file: { "<slug>": [vec...], ... }
  *
  * The mjs wrapper reads sys.argv and forwards to this factory; unit tests
  * exercise this function directly (no shell coupling).
@@ -290,8 +301,9 @@ export function createConvergencePass(args: readonly string[]): ConvergencePassC
   if (!Number.isFinite(tokenBudget) || tokenBudget <= 0) {
     throw new Error(`createConvergencePass: --token-budget must be positive (got ${budgetRaw})`)
   }
+  const embeddings = get('--embeddings')
 
-  return { history, qmdDb, output, arbitration: arbRaw, tokenBudget }
+  return { history, qmdDb, output, arbitration: arbRaw, tokenBudget, embeddings }
 }
 
 // ── AC19 — mergeAllSources ─────────────────────────────────────────────────

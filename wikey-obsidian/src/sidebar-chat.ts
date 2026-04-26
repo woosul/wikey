@@ -651,8 +651,20 @@ Click [[page name]] in answers to navigate to the wiki page.
     acceptBtn.addEventListener('click', async () => {
       try {
         const result = await appendStandardDecomposition(this.plugin.wikiFS, s)
+        // Post-impl Cycle #2 F2 lingering fix: append 가 실패하면 (invalid-slug /
+        // header-unsafe / already-exists) suggestion state 를 accept 로 전환하지 않는다 —
+        // schema.yaml 에 기록 안 된 항목이 panel 에서 사라지는 손실 방지.
         if (!result.appended) {
-          new Notice(`schema.yaml not updated: ${result.reason ?? 'unknown'}`)
+          const reasonHint = result.reason === 'invalid-slug'
+            ? 'umbrella_slug 또는 components.slug 가 schema parser regex (/^[a-z][a-z0-9-]*$/) 와 일치하지 않습니다. Edit 으로 수정 후 다시 Accept 하세요.'
+            : result.reason === 'header-unsafe'
+              ? 'standard_decompositions: [] 로 명시 disable 된 상태입니다. schema.yaml 의 header 를 비우거나 entry 형태로 변경하세요.'
+              : result.reason === 'already-exists'
+                ? '동일 umbrella_slug 가 schema.yaml 에 이미 존재합니다.'
+                : '알 수 없는 사유로 schema.yaml 가 갱신되지 않았습니다.'
+          new Notice(`Schema 미갱신 (${result.reason ?? 'unknown'}): ${reasonHint}`)
+          // 카드 + suggestion state 모두 보존 (사용자 fix 후 재시도 가능).
+          return
         }
         const store = await this.loadSuggestionStoreFromVault()
         const next = acceptSuggestion(store, s.id)

@@ -218,6 +218,19 @@ describe('AC18 — createConvergencePass (run-convergence-pass.mjs entry)', () =
     // defaults
     expect(pass.arbitration).toBe('union')
     expect(pass.tokenBudget).toBe(50000)
+    // post-impl Cycle #2 F4 fix: --embeddings optional
+    expect(pass.embeddings).toBeUndefined()
+  })
+
+  it('accepts optional --embeddings JSON path (post-impl Cycle #2 F4 alpha v1 wire)', () => {
+    const pass = createConvergencePass([
+      '--history', '/tmp/h.json',
+      '--qmd-db', '/tmp/qmd.sqlite',
+      '--output', '/tmp/c.json',
+      '--embeddings', '/tmp/emb.json',
+    ])
+
+    expect(pass.embeddings).toBe('/tmp/emb.json')
   })
 })
 

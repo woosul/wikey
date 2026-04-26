@@ -7,20 +7,21 @@
  *
  * Args (createConvergencePass 가 parse):
  *   --history       <path>   .wikey/mention-history.json
- *   --qmd-db        <path>   ~/.cache/qmd/index.sqlite
+ *   --qmd-db        <path>   ~/.cache/qmd/index.sqlite (advisory in v1)
  *   --output        <path>   .wikey/converged-decompositions.json
  *   --arbitration   union|llm
  *   --token-budget  <num>
+ *   --embeddings    <path>   (optional) JSON `{ "<slug>": [vec...], ... }`
  *
  * Behavior:
  *   - history JSON load → runConvergencePass (precondition check 포함, AC20)
+ *   - --embeddings 인자가 있으면 JSON load → Map<slug, vec> 으로 inject
+ *     (post-impl Cycle #2 F4 fix — alpha v1 wire 명시: 외부 도구가
+ *      embeddings 를 미리 dump 후 inject. 추후 v2 에서 qmd-db 직접 query
+ *      통합 — 본 v1 은 advisory 인자로만 보존하고 embeddings 는 외부 inject)
  *   - 결과를 output JSON 으로 atomic write (tmp + rename)
  *   - precondition 미달 / 결과 0 → output 미작성 + warn 로깅 (exit 0)
- *
- * v1 한계: qmd 벡터 인덱스 fetch 는 stub (빈 embeddings map). 실 통합은
- * §5.4.5 라이브 cycle 에서 plug-in 한다 — 본 wrapper 는 entry-point 만
- * 검증하면 된다 (단위 test 는 createConvergencePass / runConvergencePass
- * TS 함수에서 직접 검증).
+ *   - --embeddings 미지정 또는 load 실패 → 빈 Map → cluster 0 → graceful skip + warn
  */
 
 import { promises as fs } from 'node:fs'
@@ -55,9 +56,28 @@ async function main() {
     throw err
   }
 
-  // v1 stub — qmd vector index fetch 는 §5.4.5 라이브 cycle 에서 plug-in.
-  // 빈 embeddings map → cluster 가 형성 안 됨 → 결과 [] (silent skip).
+  // post-impl Cycle #2 F4 fix — alpha v1 wire: --embeddings JSON 파일이 지정되면
+  // load 후 Map<slug, vec> 으로 inject. 미지정 또는 load 실패 시 빈 Map →
+  // cluster 0 → graceful skip + warn.
   const embeddings = new Map()
+  if (config.embeddings) {
+    try {
+      const raw = await fs.readFile(config.embeddings, 'utf-8')
+      const parsed = JSON.parse(raw)
+      if (parsed && typeof parsed === 'object') {
+        for (const [slug, vec] of Object.entries(parsed)) {
+          if (Array.isArray(vec) && vec.every((n) => typeof n === 'number')) {
+            embeddings.set(slug, vec)
+          }
+        }
+      }
+      console.log(`convergence pass: loaded ${embeddings.size} embeddings from ${config.embeddings}`)
+    } catch (err) {
+      console.warn(`embeddings load failed (${config.embeddings}): ${err && err.message ? err.message : err}`)
+    }
+  } else {
+    console.warn('convergence pass: no --embeddings provided, cluster will be empty (alpha v1 — external dump required)')
+  }
 
   const converged = await runConvergencePass(history, {
     arbitration: config.arbitration,
