@@ -2357,3 +2357,41 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* §11 — schema.yaml read-only modal popup */
+.wikey-schema-yaml-modal .modal-content {
+  max-width: 720px;
+}
+
+.wikey-schema-yaml-header {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--background-modifier-border, #3a3a3a);
+}
+
+.wikey-schema-yaml-title {
+  margin: 0 0 4px;
+  font-size: 1em;
+  color: var(--interactive-accent, #8a5cf5);
+  font-family: var(--font-monospace, monospace);
+}
+
+.wikey-schema-yaml-subtitle {
+  font-size: 0.78em;
+  color: var(--text-muted, #999);
+}
+
+.wikey-schema-yaml-pre {
+  max-height: 60vh;
+  overflow: auto;
+  padding: 12px;
+  background: var(--background-primary-alt, var(--background-secondary));
+  border: 1px solid var(--background-modifier-border, #3a3a3a);
+  border-radius: 4px;
+  font-family: var(--font-monospace, monospace);
+  font-size: 0.85em;
+  line-height: 1.5;
+  white-space: pre;
+  color: var(--text-normal);
+  margin: 0;
+}

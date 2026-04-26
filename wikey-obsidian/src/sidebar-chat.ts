@@ -1,4 +1,5 @@
-import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
+import { ItemView, MarkdownRenderer, Modal, Notice, WorkspaceLeaf } from 'obsidian'
+import type { App } from 'obsidian'
 import type WikeyPlugin from './main'
 import {
   query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair,
@@ -848,11 +849,19 @@ Click [[page name]] in answers to navigate to the wiki page.
       })
       link.addEventListener('click', async (e) => {
         e.preventDefault()
-        const file = this.app.vault.getAbstractFileByPath('.wikey/schema.yaml')
-        if (file) {
-          await this.app.workspace.getLeaf(false).openFile(file as any)
-        } else {
-          new Notice('.wikey/schema.yaml 파일이 아직 생성되지 않았습니다. Accept 시 자동 생성됩니다.')
+        // Obsidian 의 dotted folder (.wikey/) 가 vault index 에서 hidden 이라
+        // getAbstractFileByPath 가 null. adapter 로 직접 read 후 modal popup.
+        try {
+          const adapter = this.app.vault.adapter
+          const exists = await adapter.exists('.wikey/schema.yaml')
+          if (!exists) {
+            new Notice('.wikey/schema.yaml 파일이 아직 생성되지 않았습니다. Accept 시 자동 생성됩니다.')
+            return
+          }
+          const raw = await adapter.read('.wikey/schema.yaml')
+          new SchemaYamlModal(this.app, '.wikey/schema.yaml', raw).open()
+        } catch (err) {
+          new Notice(`schema.yaml read 실패: ${(err as Error).message}`)
         }
       })
     }
@@ -2793,5 +2802,29 @@ Click [[page name]] in answers to navigate to the wiki page.
     if (!models.includes(currentModel) && models.length > 0) {
       selectEl.value = models[0]
     }
+  }
+}
+
+// §11 — schema.yaml 내용 표시 modal. Obsidian 의 dotted folder (`.wikey/`) 가
+// vault index 에서 hidden 이라 `getAbstractFileByPath` 가 null 반환 — adapter 로
+// 직접 read 후 popup 표시 (read-only).
+class SchemaYamlModal extends Modal {
+  constructor(app: App, private path: string, private content: string) {
+    super(app)
+  }
+  onOpen() {
+    const { contentEl } = this
+    contentEl.addClass('wikey-schema-yaml-modal')
+    const header = contentEl.createDiv({ cls: 'wikey-schema-yaml-header' })
+    header.createEl('h3', { text: this.path, cls: 'wikey-schema-yaml-title' })
+    header.createEl('div', {
+      text: 'read-only — 편집은 vault 의 .wikey/schema.yaml 직접 수정',
+      cls: 'wikey-schema-yaml-subtitle',
+    })
+    const pre = contentEl.createEl('pre', { cls: 'wikey-schema-yaml-pre' })
+    pre.setText(this.content || '(empty)')
+  }
+  onClose() {
+    this.contentEl.empty()
   }
 }
