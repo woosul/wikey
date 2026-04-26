@@ -1,27 +1,78 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-04-25 session 12 종결 — §5.3 plan v11 6-step + cycle smoke 5/5 + PMS 실 ingest + 후속 follow-up 4건 + 추가 #10/#11 GAP 도 모두 fix** (회귀 584 → **648 PASS**, build 0 errors). plan v11 acceptance + 본 세션 분석에서 도출된 GAP 모두 GREEN. **다음 진입점 = §5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate, 두 번째 표준 corpus 대기)** 또는 잔여 §5.3 follow-up (`.md.new` cleanup / dashboard UI / hash perf / section-level diff 등).
+> 최신 갱신: **2026-04-26 session 13 종결 — §5.4 self-extending 표준 분해 4 Stage + integration test + AC21 라이브 cycle smoke + follow-up 4 항목 모두 종결** (회귀 670 → **732 PASS**, build 0 errors, 14 commits push 9b7da21 → da42cef). codex post-impl review 6 cycle (NEEDS_REVISION 3 + REJECT 2 + APPROVE 1) → APPROVE. Stage 1+2+3 라이브 검증 + Stage 4 alpha v1 wire mock embeddings 검증 완료. **다음 진입점 = (1) Stage 4 실 qmd embeddings 통합 + (2) Suggestions panel UI 개선 (사용자 영구 결정 2026-04-26 — 우선순위 1, 2)**.
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-04-25 session 12 종료 시점)
+## 🎯 다음 세션 첫 액션 (2026-04-26 session 13 종료 시점)
 
-1. `cat plan/phase-5-todo.md` — §5.3 종결 + #10/#11 fix 확인 → §5.4 진입 또는 잔여 follow-up 선택.
-2. **§5.4.1 Stage 1 schema.yaml 외부화 (P2 비전 gate)** — 두 번째 표준 corpus (ISO/ITIL/GDPR 등) 등장 시 즉시 착수. PMBOK 의 v7-5 Stage 0 사전 검증 결과 (Concepts CV <15% 도달 여부) 가 gate. 현재 PMBOK 1 corpus 만 있어 진입 의미 적음.
-3. **§5.3 잔여 follow-up (out-of-scope, 우선순위 낮음)**:
-   - `.md.new` 자동 cleanup (P2-1) — 다음 ingest 시 사용자가 promote/삭제 한 항목 자동 detect → `clearPendingProtection`
-   - dashboard/audit panel UI 시각화 — 5 신규 audit 컬럼 배지/필터
-   - `user_marker_headers` config 노출 — `.wikey/wikey.conf` 에 사용자 정의 헤더 추가
-   - entity/concept page user marker 보호 — LLM 결정적 출력 분석 후 도입
-   - Hash perf (file size + mtime 1차 필터) — 대용량 corpus 대응
-   - CLI `wikey ingest --force` `--diff-only` 플래그
-   - Section-level diff (H2 단위 hash 매칭) — 부분 재인제스트
-   - Tombstone restore + sidecar_hash 정합성
-   - Python ↔ TS NFC 일관성 자동 검증 (cross-language smoke)
-4. **§5.2.6 H2 섹션 의미 활용 (탐구)** — §5.2.0~5 적용 후 정확도 부족하면 진입 (조건부).
-5. **잔여 (별개)** — `reconcile case 3` walker 누락 root cause 추적 (§5.2.9 fix 는 후속 movePair 안전망. 잘못된 walker 마킹 자체 진단은 §5.8 영역).
-6. **§5.2/§5.3 작업 정책 유지** — tester 1차 + master fallback. Obsidian CDP UI smoke 가 tester 책임. 본 session 12 처럼 master 직접 cycle smoke 5-step 실행도 정상 fallback.
+### 1순위 — Stage 4 실 qmd embeddings 통합 (사용자 영구 결정 2026-04-26)
+
+**의도 (사용자 강조)**: wikey 가 다국어 / 다른 표현 / synonym 자동 통합 인식. 본 세션 = mock embeddings 로 alpha v1 wire 만 검증, 실 의미 유사도 cluster 미검증.
+
+**가치 (사용자 체감)**:
+- "리스크 경영" 검색 = "risk management" 검색 = 같은 wiki page 결과
+- 한국어 / 영어 PMBOK 자료가 cluster 로 묶여 단일 지식 체계
+- 같은 표준 다른 표기를 별 페이지로 분리 안 함
+
+**구현 path 3 후보** (활동 문서 §3.8 참조):
+1. **Python sqlite-vec extension** (권장) — homebrew python3 또는 pyenv `--enable-loadable-sqlite-extensions` build. mention slug → wiki/concepts/<slug>.md → documents.path → documents.hash → content_vectors.hash → vectors_vec.embedding fetch + JSON dump → `--embeddings` inject. 1~2시간.
+2. **Node.js sqlite-vec wrapper** (`@valgreens/sqlite-vec` 등) — wikey-core zero deps 정책 → 별 helper script 또는 wikey-cli 신규 모듈
+3. **qmd CLI subprocess** — single doc embedding self-fetch 명령 부재로 우회 어려움. 비추.
+
+**작업 단계**:
+- [ ] qmd schema 검증: documents.path → wiki/concepts/<slug>.md 매핑 확증
+- [ ] Python helper script 작성 (`scripts/qmd-embeddings-export.py`)
+- [ ] 실 vault 에서 mention-history slug → embedding JSON dump
+- [ ] run-convergence-pass.mjs `--embeddings` inject + cluster 정확도 측정
+- [ ] ConvergedDecomposition 결과 검증 (mock vs 실 cluster 차이 비교)
+- [ ] 결과 문서: `activity/phase-5-resultx-5.4-qmd-integration-<date>.md`
+
+**선결 조건** (선택): 사용자 vault 에 한국어 + 영어 같은 표준 자료 ≥ 1쌍 (다국어 cluster 효과 측정). 본 cycle 의 6 fixture (영어 only) 만으로도 wire 검증 가능.
+
+### 2순위 — Suggestions panel UI 개선 (사용자 영구 결정 2026-04-26)
+
+**의도**: 본 세션에서 Suggestions panel 신규 추가 (Header button + 카드 + Accept/Edit/Reject). minimal 구현 — UX 개선 필요.
+
+**개선 영역**:
+- [ ] 카드 시각 디자인 (현재 minimal h4/p/ul) — confidence bar / badge / icon
+- [ ] **Edit modal 구현** — umbrella_slug / umbrella_name / aliases / components 수정 (현재 코드 stub 만, 실제 modal 미구현 가능성 확인)
+- [ ] 정렬 / 필터 — confidence 순 / pending / accepted / rejected 필터
+- [ ] negativeCache view (rejected suggestions 목록 + 복구 옵션)
+- [ ] Stage 3 SelfDeclaration runtime / Stage 4 ConvergedDecomposition 통합 표시 (현재 Suggestions panel 만)
+- [ ] 빈 state UX ("대기 중인 제안이 없습니다." → 다음 ingest 안내)
+- [ ] mobile / 좁은 sidebar 반응형
+
+**선결 조건**: ui-designer (gemini-panel) 위임 권장 — UI/UX 리뷰 + WCAG / 접근성 / 색 대비 / focus state 검증.
+
+### 3순위 — Stage 4 ConvergedDecomposition 사용자 review modal UX
+
+- Stage 4 결과 (`.wikey/converged-decompositions.json`) 사용자 검토 후 schema.yaml 영속화 UI 미구현
+- Stage 2 Suggestions panel 패턴 재사용 가능 (Accept/Edit/Reject + writer 호출)
+- 1순위 완료 후 진입 권장
+
+### 4순위 — §5.4 follow-up (별 세션, 우선순위 낮음)
+
+- 자료 자동 분류 race condition 1 case (재현 어려움 — self-resolve 됨)
+- cluster-management 가 mixed firstWord 시 사용자가 Edit modal 사용 — 2순위 Edit modal 검증 시 같이
+
+### 5순위 — Phase 5 §5.5 이후 (Stage 4 실 통합 + Suggestions UI 종결 후)
+
+- §5.5 지식 그래프 · 시각화 (P3) — wiki/ entity/concept 그래프 NetworkX
+- §5.6 성능 · 엔진 확장 (P3) — llama.cpp PoC, rapidocr fallback
+- §5.7 운영 인프라 포팅 (P4)
+- §5.8 Phase 4 D.0.l 이관 잔여 (P4)
+- §5.9 Variance 기여도 · Diagnostic (P4)
+
+### 작업 정책 유지 (agent-management.md §0/§6/§7 갱신 반영)
+
+- analyst / developer / tester / 특화 4 = **in-process Agent tool** (cmux 새 surface 금지, claude-panel 폐기)
+- reviewer = **codex Mode D Panel** (cmux 새 surface 정당)
+- ui-designer = **gemini-panel** (cmux 새 surface 정당)
+- 라이브 검증 1차 책임 = **master 직접** (이전 tester → 변경)
+- codex 외부 panel 모니터링 = **백그라운드 처리, UI 노출 X** + master verdict 결정 의무
+- codex 응답 형식 강제 = **`VERDICT: <APPROVE|NEEDS_REVISION|REJECT>` 마지막 한 줄**
 
 ---
 
