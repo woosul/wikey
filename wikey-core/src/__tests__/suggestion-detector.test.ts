@@ -106,9 +106,11 @@ describe('detectSuffixCluster', () => {
     ]
     const out = detectSuffixCluster(history)
     expect(out.length).toBeGreaterThanOrEqual(1)
-    const mgmt = out.find((c) => c.umbrella_slug === '*-management')
+    const mgmt = out.find((c) => c.umbrella_slug === 'cluster-management')
     expect(mgmt).toBeDefined()
     expect(mgmt!.support_count).toBe(2)
+    // round-trip: schema.ts:435 parser regex /^[a-z][a-z0-9-]*$/ 와 일치 확인
+    expect(/^[a-z][a-z0-9-]*$/.test(mgmt!.umbrella_slug)).toBe(true)
   })
 
   it('rejects suffixes outside the whitelist (e.g. -feature)', () => {

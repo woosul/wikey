@@ -141,6 +141,7 @@ export class WikeyChatView extends ItemView {
     this.panelBtns.dashboard = this.makeHeaderBtn(actions, ICONS.dashboard, 'Dashboard', () => this.selectPanel('dashboard'))
     this.panelBtns.ingest = this.makeHeaderBtn(actions, ICONS.plus, 'Ingest', () => this.selectPanel('ingest'))
     this.panelBtns.audit = this.makeHeaderBtn(actions, ICONS.audit, 'Audit', () => this.selectPanel('audit'))
+    this.panelBtns.suggestions = this.makeHeaderBtn(actions, ICONS.question, 'Suggestions', () => this.selectPanel('suggestions'))
     this.panelBtns.help = this.makeHeaderBtn(actions, ICONS.question, 'Help', () => this.selectPanel('help'))
     this.makeHeaderBtn(actions, ICONS.reload, 'Reload', () => (this.app as any).commands?.executeCommandById?.('app:reload'))
     this.makeHeaderBtn(actions, ICONS.close, 'Close', () => this.leaf.detach())

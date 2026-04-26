@@ -88,4 +88,22 @@ describe('appendStandardDecomposition — schema.yaml writer', () => {
     // File unchanged.
     expect(fs._files['.wikey/schema.yaml']).toBe(before)
   })
+
+  it('refuses umbrella_slug or component slug that does not match parser regex (round-trip safety, post-impl HIGH fix)', async () => {
+    const fs = makeFS()
+    // (a) wildcard prefix `*-management` (legacy detector output) — invalid
+    const invalid = sample({ umbrella_slug: '*-management' })
+    const out1 = await appendStandardDecomposition(fs, invalid)
+    expect(out1.appended).toBe(false)
+    expect(out1.reason).toBe('invalid-slug')
+    expect(fs._files['.wikey/schema.yaml']).toBeUndefined()
+
+    // (b) component slug 의 invalid char (uppercase, underscore) — invalid
+    const invalidComp = sample({
+      candidate_components: [{ slug: 'ISO_27001_A_5', type: 'methodology' }],
+    })
+    const out2 = await appendStandardDecomposition(fs, invalidComp)
+    expect(out2.appended).toBe(false)
+    expect(out2.reason).toBe('invalid-slug')
+  })
 })

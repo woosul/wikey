@@ -230,8 +230,9 @@ describe('Scenario 4.2 — Incremental flow (Stage 2 suggestion accept → schem
       })
       expect(result.updatedHistory).toHaveLength(3)
 
-      // suffix-cluster detector 가 `*-management` umbrella 로 1+ 후보 emit
-      const suffixSugg = result.suggestions.find((s) => s.umbrella_slug === '*-management')
+      // suffix-cluster detector 가 `cluster-management` umbrella 로 1+ 후보 emit (post-impl
+      // review HIGH fix — schema.ts:435 parser regex 와 round-trip 보장)
+      const suffixSugg = result.suggestions.find((s) => s.umbrella_slug === 'cluster-management')
       expect(suffixSugg).toBeDefined()
       expect(suffixSugg!.support_count).toBeGreaterThanOrEqual(3)
       expect(suffixSugg!.state.kind).toBe('pending')
@@ -251,12 +252,11 @@ describe('Scenario 4.2 — Incremental flow (Stage 2 suggestion accept → schem
       expect(append.appended).toBe(true)
       expect(fs._files['.wikey/schema.yaml']).toBeDefined()
       expect(fs._files['.wikey/schema.yaml']).toContain('standard_decompositions:')
-      expect(fs._files['.wikey/schema.yaml']).toContain('umbrella_slug: *-management')
+      expect(fs._files['.wikey/schema.yaml']).toContain('umbrella_slug: cluster-management')
 
-      // (d) round-trip — 다음 ingest 의 loadSchemaOverride 가 user yaml 인식
-      // 단 yaml 안 umbrella_slug 가 `*-management` 같은 wildcard 라 schema parser 의 보호 검증
-      // 까지는 본 시나리오 scope 가 아님 — 실제 사용자가 accept 전에 sanitize 한다고 가정.
-      // 핵심: writer 가 idempotent + 파일 보존.
+      // (d) round-trip — schema parser regex /^[a-z][a-z0-9-]*$/ 와 일치 확인. 다음 ingest
+      // 의 loadSchemaOverride 가 user yaml 을 정상 인식 (post-impl review HIGH fix).
+      expect(/^[a-z][a-z0-9-]*$/.test(suffixSugg!.umbrella_slug)).toBe(true)
       const append2 = await appendStandardDecomposition(fs, suffixSugg!)
       expect(append2.appended).toBe(false)
       expect(append2.reason).toBe('already-exists')

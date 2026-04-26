@@ -12,14 +12,31 @@ const SCHEMA_YAML_PATH = '.wikey/schema.yaml'
 
 export interface AppendResult {
   readonly appended: boolean
-  readonly reason?: 'already-exists' | 'header-unsafe'
+  readonly reason?: 'already-exists' | 'header-unsafe' | 'invalid-slug'
 }
+
+// schema.ts:435 parser regex 와 일치 — round-trip acceptance 보장.
+// 본 validator 가 reject 하는 slug 는 parser 도 reject 하므로 append 의미 없음 (codex post-impl
+// review HIGH finding fix).
+const VALID_SLUG_RE = /^[a-z][a-z0-9-]*$/
 
 export async function appendStandardDecomposition(
   wikiFS: WikiFS,
   suggestion: Suggestion,
   path: string = SCHEMA_YAML_PATH,
 ): Promise<AppendResult> {
+  // (0) round-trip validation: umbrella_slug + components.slug 가 schema.ts parser regex 와
+  //     일치해야 한다. 미일치 시 schema.yaml 에 write 해도 다음 ingest 시 parser 가 reject
+  //     → suggestion accept 무용지물. 이를 방지하기 위해 writer 단계에서 reject.
+  if (!VALID_SLUG_RE.test(suggestion.umbrella_slug)) {
+    return { appended: false, reason: 'invalid-slug' }
+  }
+  for (const c of suggestion.candidate_components) {
+    if (!VALID_SLUG_RE.test(c.slug)) {
+      return { appended: false, reason: 'invalid-slug' }
+    }
+  }
+
   let content = ''
   try {
     if (await wikiFS.exists(path)) content = await wikiFS.read(path)

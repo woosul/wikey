@@ -48,6 +48,8 @@ import {
 } from './incremental-reingest.js'
 import { canonicalize } from './canonicalizer.js'
 import { loadSchemaOverride } from './schema.js'
+import { extractSelfDeclaration, mergeRuntimeIntoOverride } from './self-declaration.js'
+import type { SelfDeclaration } from './types.js'
 import {
   runSuggestionDetection,
   appendIngestHistory as appendIngestHistoryRecord,
@@ -499,6 +501,23 @@ export async function ingest(
     log(`schema override — entities=${schemaOverride.entityTypes.length}, concepts=${schemaOverride.conceptTypes.length}`)
   }
 
+  // §5.4.3 Stage 3: collect runtime self-declarations from 'standard-overview' sections.
+  // Each section that classifies as a standard overview (Korean/English keywords) and contains
+  // a numbered/bullet list of ≥ 5 components yields a runtime SelfDeclaration. Merged on top of
+  // schemaOverride before canonicalize so the prompt sees BUILTIN + user yaml + runtime entries.
+  const runtimeSelfDeclarations: SelfDeclaration[] = []
+  for (const section of sectionIndex.sections) {
+    if (section.headingPattern !== 'standard-overview') continue
+    const sd = extractSelfDeclaration(section, llmSourceFilename, {})
+    if (sd) runtimeSelfDeclarations.push(sd)
+  }
+  const effectiveOverride = runtimeSelfDeclarations.length > 0
+    ? (mergeRuntimeIntoOverride(schemaOverride, runtimeSelfDeclarations) ?? schemaOverride)
+    : schemaOverride
+  if (runtimeSelfDeclarations.length > 0) {
+    log(`stage3 self-declarations — ${runtimeSelfDeclarations.length} runtime entries`)
+  }
+
   const today = formatLocalDate(new Date())
 
   // §5.4.2 AC8: capture the canonicalized result so the suggestion-detection
@@ -522,7 +541,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride, deterministic, overridePrompt: stage3OverridePrompt,
+      schemaOverride: effectiveOverride, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     canonResult = canon
@@ -582,7 +601,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride, deterministic, overridePrompt: stage3OverridePrompt,
+      schemaOverride: effectiveOverride, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     if (canon.dropped.length > 0) {

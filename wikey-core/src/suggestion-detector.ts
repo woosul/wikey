@@ -166,8 +166,11 @@ export function detectSuffixCluster(
       return { slug, type: t }
     })
 
+    // suffix cluster 의 umbrella_slug 는 parser regex /^[a-z][a-z0-9-]*$/ 와 일치해야 한다
+    // (schema.ts:435 isValidSlug). suffix '-management' → 'cluster-management' 형식.
+    const suffixBase = suffix.replace(/^-/, '')
     out.push({
-      umbrella_slug: `*${suffix}`,
+      umbrella_slug: `cluster-${suffixBase}`,
       components,
       support_count: sourcesWithSuffix.size,
       unique_suffixes: 1,                 // single suffix by construction

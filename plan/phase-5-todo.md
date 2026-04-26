@@ -433,13 +433,15 @@
 
 ### 5.4.5 통합 라이브 검증 + build/test baseline (Stage 1+2+3+4 통합)
 
-> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4-integration.md §5 AC21/AC22`](./phase-5-todox-5.4-integration.md) v5. tester 위임 (Agent in-process — agent-management.md §0).
+> **상세 설계 단일 소스**: [`plan/phase-5-todox-5.4-integration.md §5 AC21/AC22`](./phase-5-todox-5.4-integration.md) v5. **AC21 라이브 1차 책임 = master** (agent-management.md §6 갱신, 2026-04-26 사용자 영구 결정 — 라이브 cycle smoke 가 vault 변경 트리거 → tester scope 외). tester 는 코드/시뮬레이션 (mock fs + mock LLM integration test) 만 담당.
 
-- [ ] **AC21 통합 라이브 cycle smoke** (tester 책임): vault 의 실제 mention graph 에서 Stage 1+2+3+4 통합 시나리오 8 step (Vault reset → fixture corpus 6 자료 인제스트 → Stage 2 suggestion 카드 → Accept → schema.yaml append → 다음 ingest 신규 표준 분해 등장 → Stage 3 runtime-scope 적용 → Stage 4 convergence review modal → wiki write 정합성). obsidian-cdp full cycle smoke. 결과 `activity/phase-5-resultx-5.4-integration-cycle-smoke-<date>.md` 신규.
-- [ ] **AC22 build/test baseline**: `npm run build` 0 errors + `npm test` ≥ 711 PASS (Stage 1 staged 670 + 신규 ≥ 41: AC2~AC8 ≥ 17 + AC9~AC14 ≥ 12 + AC15~AC20 ≥ 9 + Stage 1 maintenance 0). wikey-obsidian build OK.
-- [ ] **AC21 fixture corpus master 마련** (gate, U4): `raw/__fixtures__/integration-cycle-smoke/` 신규 — PMBOK + ISO 27001 + ITIL/SAFe/OWASP × 2 source = 6 자료. Stage 2 cycle 시작 전 완료 의무.
-- [ ] **codex Cycle #N post-implementation review** (Stage 1+2+3+4 통합 코드): plan v5 acceptance 충족 / Karpathy 4원칙 / 보안 / 회귀 검증.
-- [ ] **§5.4 종료 조건**: 22 AC + AC21 라이브 통과 + AC22 ≥ 711 PASS + codex APPROVE → 사용자 승인 commit/push.
+- [x] **시뮬레이션 integration test (Scenario 4.1~4.5)** — `wikey-core/src/__tests__/stage-integration.test.ts` 7 cases (mock fs + mock LLM). codex post-impl Cycle #1 NEEDS_REVISION 후속 fix 반영 — `cluster-${suffix}` umbrella_slug round-trip 안전 + invalid-slug writer reject.
+- [ ] **AC21 통합 라이브 cycle smoke** (master 직접 — vault 변경 + obsidian-cdp full cycle smoke): Vault reset → fixture corpus 6 자료 인제스트 → Stage 2 suggestion 카드 → Accept → schema.yaml append → 다음 ingest 신규 표준 분해 등장 → Stage 3 runtime-scope 적용 → Stage 4 convergence review modal → wiki write 정합성. 결과 `activity/phase-5-resultx-5.4-integration-cycle-smoke-<date>.md` 신규. **deferred — fixture corpus 마련 별도 세션 진행 (사용자 환경 + vault 변경 위험)**.
+- [x] **AC22 build/test baseline**: `npm run build` 0 errors + `npm test` ≥ 711 PASS (실제 729 PASS / Stage 1 staged 670 + 신규 ≥ 59: AC2~AC8 = 20 + AC9~AC14 = 21 + AC15~AC20 = 10 + integration = 7 + invalid-slug = 1). wikey-obsidian build OK.
+- [ ] **AC21 fixture corpus master 마련** (gate, U4): `raw/__fixtures__/integration-cycle-smoke/` 신규 — PMBOK + ISO 27001 + ITIL/SAFe/OWASP × 2 source = 6 자료. **deferred — AC21 라이브 cycle smoke 의 선결 조건, 사용자 환경에서 마련 (vault 변경 위험으로 본 §5.4 commit scope 외)**.
+- [x] **codex Cycle #1 post-implementation review** (Stage 1+2+3+4 통합 코드): NEEDS_REVISION (CRITICAL 1 + HIGH 2 + MEDIUM 1) → master fix 적용 (HIGH Stage 2 round-trip / HIGH UI Suggestions header / Stage 3 ingest-pipeline wiring / invalid-slug writer reject) → cycle #2 진행 예정.
+- [ ] **codex Cycle #2 post-implementation review**: cycle #1 fix 검증.
+- [ ] **§5.4 종료 조건**: 22 AC GREEN (AC21 라이브 deferred 제외) + AC22 ≥ 711 PASS (achieved 729) + codex Cycle #2 APPROVE → §5.4 코드 부분 종료. AC21 라이브는 사용자 환경 fixture 마련 후 별도 세션 cycle smoke 진행 + 그 시점 §5.4 최종 종료.
 
 **연계**:
 - Phase 4 §4.3.2 Provenance tracking (본체) — Stage 3 의 self-declaration 오염 제어 장치로 직접 필요.

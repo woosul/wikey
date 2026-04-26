@@ -1505,7 +1505,30 @@ Stage 4 fail (LLM down)
 
 ---
 
-## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master fix)
+## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master fix → v6 post-impl Cycle #1 fix)
+
+### 8.6 v6 post-implementation Cycle #1 master 직접 fix (2026-04-26, codex post-impl review NEEDS_REVISION 후속)
+
+**codex post-impl Cycle #1 발견 4 finding** (CRITICAL 1 + HIGH 2 + MEDIUM 1):
+
+| Finding | severity | 위치 | master 결정 + fix |
+|---|---|---|---|
+| **F1** Stage 2 round-trip violation | HIGH | suggestion-detector.ts:169 + schema-yaml-writer.ts | 동의. suffix cluster umbrella_slug `*${suffix}` → `cluster-${suffix}` 변경 (parser regex `/^[a-z][a-z0-9-]*$/` 와 일치). schema-yaml-writer 에 invalid-slug reject 추가 (umbrella + components 모두). 신규 case 1 (round-trip safety) |
+| **F2** UI Suggestions panel unreachable | HIGH | sidebar-chat.ts header | 동의. `selectPanel('suggestions')` 호출 button 추가 (icon: ICONS.question, title: 'Suggestions') |
+| **F3** Stage 3 ingest-pipeline wiring 누락 | (CRITICAL implicit) | ingest-pipeline.ts:494 schemaOverride 흐름 | 동의. self-declaration 추출 + mergeRuntimeIntoOverride wiring 추가 (FULL/SEGMENTED 둘 다). canonicalize 호출 site 의 `schemaOverride` 인자 → `effectiveOverride` |
+| **F4** Stage 4 qmd vector stub | CRITICAL | run-convergence-pass.mjs:58 | **이견** (alpha 단계 명시 잔존 — plan §3.4.2 line 833 "alpha / page-level-limited" 명시). real qmd 통합은 v2 (Stage 4 acceptance 의 "alpha" granularity 가 의도). embeddings inject 인터페이스로 mock 테스트 가능. 본 v1 plan 안에서 stub 유지 + post-impl review 에서 alpha 단계 acceptance 재확인 |
+| **F5** AC21 fixture/live smoke absence | MEDIUM | plan §5 AC21 | **이견** (사용자 영구 결정 — vault 변경 위험으로 별도 세션 진행. plan §5.4.5 deferred 명확화). 본 §5.4 commit scope = 코드 + 시뮬레이션 integration test. 라이브 cycle smoke 는 사용자 환경 fixture 마련 후 별도 (§5.4.5 todo 갱신 — agent-management.md §6 master 1차 책임 갱신 반영) |
+
+**v6 self-check** (master 1차 검증 의무 + cross-check):
+- (a) ✅ 시그니처 cross-file 일관 (수정 후 round-trip 안전)
+- (b) ✅ Union kind 무변경
+- (c) ✅ writer: invalid-slug reject 추가, 기존 already-exists/header-unsafe 보존
+- (d) ✅ AC1~AC22 + 신규 invalid-slug case 1 (총 ≥ 60 신규 cases, achieved 729 PASS)
+- (e) ✅ stale 0: F1/F2/F3 fix 명확, F4/F5 master 이견 정당화 본문 명시
+- (f) ✅ header v5 (plan acceptance 부분 변경 X) ↔ §8.6 v6 (변경 이력) ↔ footer (post-impl Cycle #1)
+- (g) ✅ exact phrase 보존: cluster-management 형식 + arbitration_confidence 일관 + section-range insertion writer 표현 보존
+
+**baseline 갱신**: 728 → 729 PASS (신규 invalid-slug 1 case + 기존 7 cases umbrella_slug 형식 정정).
 
 ### 8.5 v5 master 직접 fix (2026-04-26, codex Cycle #4 NEEDS_REVISION 후속)
 
