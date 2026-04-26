@@ -2497,6 +2497,7 @@
 
 .wikey-schema-yaml-help-body h4 {
   font-size: 0.95em;
+  font-weight: 700;
   margin: 12px 0 4px;
   color: var(--text-normal);
 }

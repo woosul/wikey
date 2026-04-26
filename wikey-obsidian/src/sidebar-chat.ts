@@ -3019,7 +3019,7 @@ class SchemaYamlModal extends Modal {
       text: '표준 분해는 wikey 가 새 자료를 정리할 때 참고하는 표준 (Standard) 정의입니다. 예: PMBOK 의 10 knowledge areas, ISO 27001 의 Annex A controls, COBIT 5 도메인, 사내 부서 분류 등.',
     })
 
-    helpBody.createEl('h4', { text: '📌 자동 등록이 기본입니다' })
+    helpBody.createEl('h4', { text: '자동 등록이 기본입니다' })
     helpBody.createEl('p', {
       text: '일반적으로 사용자가 직접 추가하지 않습니다. 표준 자료를 ingest 하면 wikey 가 자동으로 그룹 + 구성요소를 탐지하고 등록합니다. 본 패널은 주로 어떤 표준이 등록되어 있는지 조회하는 용도입니다.',
     })
@@ -3028,23 +3028,23 @@ class SchemaYamlModal extends Modal {
     ul1.createEl('li', { text: '다국어 / 별칭 통합 — 같은 표준의 다른 표기 (예: "ISO 27001" / "iso-iec-27001-2022" / "ISMS") 한 wiki 페이지로 통합.' })
     ul1.createEl('li', { text: '할루시네이션 방지 — require_explicit_mention 시 소스에 명시된 mention 만 추출 (LLM 추측 차단).' })
 
-    helpBody.createEl('h4', { text: '🧩 구조: 그룹 + 구성요소' })
+    helpBody.createEl('h4', { text: '구조: 그룹 + 구성요소' })
     const ulStruct = helpBody.createEl('ul')
     ulStruct.createEl('li', { text: '그룹 (umbrella) — 표준 식별자 + 이름. 예: 그룹명 "iso-iec-27001-2022", 표시명 "ISO/IEC 27001:2022".' })
     ulStruct.createEl('li', { text: '구성요소 (components) — 그룹 안 sub-element. 예: PMBOK 의 10 areas, ISO 27001 의 Annex A 통제.' })
 
-    helpBody.createEl('h4', { text: '🛠 본 패널 사용 흐름 (조회 위주)' })
+    helpBody.createEl('h4', { text: '본 패널 사용 흐름 (조회 위주)' })
     const ul2 = helpBody.createEl('ul')
     ul2.createEl('li', { text: '주 용도: 자동 탐지된 후보를 검토하고 Accept (등록) 또는 Reject (제외).' })
     ul2.createEl('li', { text: '조회: schema.yaml 확인 link 로 현재 등록된 표준 분류 전체 검토.' })
     ul2.createEl('li', { text: 'Add / Edit (예외 케이스): 자동 탐지가 누락한 표준을 불가피하게 추가하거나, 자동 결과의 오류를 직접 수정해야 할 때만 사용.' })
 
-    helpBody.createEl('h4', { text: '📋 규칙 (rule)' })
+    helpBody.createEl('h4', { text: '규칙 (rule)' })
     const ulRule = helpBody.createEl('ul')
     ulRule.createEl('li', { text: 'Decompose — 그룹을 구성요소로 분해. 검색 시 component 단위 정확 매칭.' })
     ulRule.createEl('li', { text: 'Bundle — 그룹 한 묶음으로 유지 (분해 X).' })
 
-    helpBody.createEl('h4', { text: '💡 활용 팁' })
+    helpBody.createEl('h4', { text: '활용 팁' })
     const ulTip = helpBody.createEl('ul')
     ulTip.createEl('li', { text: '표준 자료 ingest 후 자동 등록 결과를 본 패널에서 확인 → Accept 만으로 마무리.' })
     ulTip.createEl('li', { text: '각 표준명 / 구성요소를 클릭하면 wiki 페이지로 이동해 의미 확인.' })
@@ -3076,7 +3076,7 @@ class SchemaYamlModal extends Modal {
     } else {
       if (isEmptyAllSkipped) {
         const warn = cardArea.createDiv({ cls: 'wikey-schema-yaml-warn' })
-        warn.setText(`⚠ parser 가 ${sd!.skippedCount}건을 invalid 로 판정 (예: slug 형식 위반). 아래는 raw 스캔 결과 — wiki 자동 인식에 적용되지 않을 수 있습니다.`)
+        warn.setText(`parser 가 ${sd!.skippedCount}건을 invalid 로 판정 (예: slug 형식 위반). 아래는 raw 스캔 결과 — wiki 자동 인식에 적용되지 않을 수 있습니다.`)
       }
       // 도메인 tag cloud + 하단 detail (스크롤). present + empty-all-skipped 모두 동일 layout.
       const intro2 = cardArea.createDiv({ cls: 'wikey-schema-yaml-cards-intro' })
