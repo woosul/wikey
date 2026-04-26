@@ -875,76 +875,290 @@ const conflict = decision.conflicts.includes('sidecar-user-edit')
 - 철학 선언: `wiki/analyses/self-extending-wiki.md`.
 - 실측: PMS 5-run 후 Stage 1 진입 결정 (별 작업).
 
-### 5.4.1 Stage 1 — static `.wikey/schema.yaml` override (commit 9b7da21)
+### 5.4.1 Stage 1 — static `.wikey/schema.yaml` override (commit 9b7da21, 2026-04-26 14:09)
 
-- `StandardDecompositionsState` 3-kind discriminated union (`empty-explicit` / `empty-all-skipped` / `present`, absent ⟺ `undefined`).
-- `BUILTIN_STANDARD_DECOMPOSITIONS` (PMBOK 10 areas + F3 component aliases).
-- `parseSchemaOverrideYaml` 4 시나리오 (warn 검증).
-- `buildStandardDecompositionBlock` placeholder (canonicalizer.ts 작업 규칙 #7 인라인 PMBOK 제거).
-- F1 v3 append 정책 (BUILTIN + user yaml entries 모두 출력).
-- ISO 27001 fixtures (5/93 control). 670 PASS / build 0 errors.
-- codex Cycle #1~#13 plan 검증 → APPROVE.
+**Plan v7 (codex pre-impl Cycle #9 APPROVE)**: `plan/phase-5-todox-5.4.1-self-extending.md`. cycle #1~#13 master fix 누적 (line 1 / b / c / d / e / f / g 7-anchor 검증 통과).
 
-### 5.4.2 Stage 2 — extraction graph suggestion (commit ce547ca, +20 cases)
+**구현 (4 file, +69/-1)**:
+- `wikey-core/src/types.ts:172-260` (+42): `StandardDecompositionComponent` (slug + type + optional aliases, F3) / `StandardDecomposition` (name + aliases + umbrella_slug + components + rule + require_explicit_mention + origin) / `StandardDecompositionsState` 3-kind discriminated union — `{ kind: 'empty-explicit' }` (사용자 명시 disable, header `[]`) / `{ kind: 'empty-all-skipped'; skippedCount: N }` (silent skip + warn) / `{ kind: 'present'; items: ... }` (정상). absent ⟺ `undefined` 자체 (codex Cycle #2 단일화 결정 — `kind: 'absent'` literal 폐기). `SchemaOverride.standardDecompositions?: StandardDecompositionsState` 추가.
+- `wikey-core/src/schema.ts:284-464` (+358/-31):
+  - `BUILTIN_STANDARD_DECOMPOSITIONS` 상수 (line 284, export): PMBOK 10 areas — project-{integration, scope, schedule (alias project-time), cost, quality, resource (alias project-human-resource), communications, risk, procurement, stakeholder}-management. 6판 → 7판 변경 (`project-time-management` → `project-schedule-management`, `project-human-resource-management` → `project-resource-management`) F3 aliases 로 backward compat.
+  - `parseSchemaOverrideYaml` 4 시나리오: (1) `standard_decompositions:` 키 부재 → `standardDecompositions === undefined` (BUILTIN 자동) (2) `standard_decompositions: []` → `kind: 'empty-explicit'` (사용자 명시 disable) (3) entry invalid silent skip + warn → `kind: 'empty-all-skipped'` + `skippedCount` (4) 정상 entries → `kind: 'present'`.
+  - `STANDARD_EXCEPTIONS` Set (line 143) 갱신: `project-schedule-management` + `project-resource-management` canonical slug 2 추가 (anti-pattern `-management` suffix 차단으로부터 보호) — codex Cycle #2 P3 정정.
+  - `buildStandardDecompositionBlock(override)` 4 시나리오 분기 (line 600-680): `undefined` → BUILTIN 만 / `empty-explicit` → 빈 string (disable 의도 보존) / `empty-all-skipped` → BUILTIN fallback + warn / `present` → BUILTIN + user entries append (F1 v3 정책 — 사용자가 ISO-27001 만 추가해도 PMBOK 자동 유지).
+- `wikey-core/src/canonicalizer.ts:209-262` (+13/-7): 작업 규칙 #7 의 PMBOK 10 areas 인라인 (line 262) 제거 → `{{STANDARD_DECOMPOSITION_BLOCK}}` placeholder 치환 (F4). overridePrompt 분기 (line 238-246) 도 동일 placeholder. prompt 의 "별도 concept" → "별도 entity 또는 concept" (F5 — component type 이 entity 도 허용).
+- `wikey-core/src/__tests__/{canonicalizer,schema-override}.test.ts` (+141/+328): 22 신규 cases — parseSchemaOverrideYaml 9 (4 시나리오 + warn capture spy) + builder 5 + override 2 + ISO-27001 fixtures 2 + AC6.a 3-anchor phrase 1 + AC7 build/test 1.
+- ISO 27001 fixtures: `__tests__/fixtures/iso27001-{5,93}-control.yaml` (5 control / 93 control 으로 메모리·시간 회귀 검증, F6 v3).
 
-- `Suggestion` / `SuggestionState` 4-kind / `SuggestionStorage` (suggestion-storage.ts).
-- `detectCoOccurrence` (minSiblings=3, prefix ≥ 5 chars) + `detectSuffixCluster` (minSources=2, whitelist 6 종) + `computeConfidence` (0.4·support + 0.3·suffix_homogeneity + 0.2·mention_density + 0.1·builtinOverlap, 임계 ≥ 0.6 alpha).
-- `appendStandardDecomposition` section-range insertion writer (header `[]` reject + idempotency).
-- `runSuggestionDetection` ingest finalize 단계 hook + `.wikey/{suggestions,mention-history}.json` 누적.
-- Audit UI Suggestions panel (sidebar-chat.ts).
-- baseline 670 → 690 PASS.
+**의사결정 근거**:
+- 3-kind union vs nullable: `null` 단일화 → `empty-explicit` (사용자 명시) vs `empty-all-skipped` (자동 fallback) 의미 구분 불가. discriminated union 으로 builder 분기 명확.
+- F1 append vs replace: 사용자가 ISO-27001 1개만 추가해도 PMBOK 사라지면 신규 vault 가 갑자기 분해 정확도 ↓ (R3 risk). append 가 사용자 부담 0.
+- v3 append 정책: built-in PMBOK + user yaml 의 same umbrella_slug 충돌 시 first-wins (BUILTIN spread 가 array 앞). 사용자 명시 user-yaml 이 BUILTIN 을 override 가능 (codex Cycle #2 정정).
 
-### 5.4.3 Stage 3 — in-source self-declaration (commit c34b128, +21 cases)
+**검증** (commit 9b7da21):
+- 단위 회귀: 525 → **670 PASS** (Stage 1 신규 22 cases + 기존 525 + 누적 123). build 0 errors (`npx tsc --noEmit`).
+- codex Cycle #1~#13 (plan v1 → v7 master fix 누적 13 사이클): F1~F8 finding 누적 18건 master fix → v7 final APPROVE.
+- 7-anchor self-check (rules.md §10): (a)(b)(c)(d)(e)(f)(g) 모두 GREEN.
 
-- `SelfDeclaration` + `SelfDeclarationPersistChoice` 3-kind (runtime-only / pending-user-review / persisted).
-- `mergeRuntimeIntoOverride` 4 시나리오 (empty-explicit / empty-all-skipped / present / undefined).
-- `extractSelfDeclaration` deterministic pattern matching (numbered/bullet list ≥ 5 items).
-- `section-index.ts` `headingPattern` `'standard-overview'` 추가 (한국어/영어 keyword 6 regex).
-- `shouldStage3ProposeRuntime` (4 분기: 신규/accepted/rejected/pending).
-- false positive guard (marketing keyword silent drop / component slug ≥ 5 chars).
-- baseline 690 → 711 PASS.
+### 5.4.2 Stage 2 — extraction graph suggestion (commit ce547ca, 2026-04-26 14:31, +20 cases)
 
-### 5.4.4 Stage 4 — cross-source convergence (commit 87969fa, +10 cases)
+**Plan**: `phase-5-todox-5.4-integration.md §3.2` (통합 plan v5 codex pre-impl Cycle #5 APPROVE / BUILD_BREAK_RISK LOW).
 
-- `ConvergedDecomposition` + `SourceMention` + `MentionCluster` (arbitration_method 'union' | 'llm' / arbitration_confidence 0~1 / arbitration_log).
-- `clusterMentionsAcrossSources` (cosine ≥ 0.75 agglomerative, post-impl Cycle #3 fix: singleton drop guard).
-- `arbitrate` (default 'union' arbitration_confidence=1.0 / 'llm' opt-in mock caller).
-- `mergeAllSources` (Stage 3 mergeRuntimeIntoOverride 재사용).
-- `runConvergencePass` precondition (≥ 3 표준 × 2 source = 6 instance).
-- `run-convergence-pass.mjs` entry-point + `scripts/reindex.sh` conditional hook (default off).
-- baseline 711 → 721 PASS.
+**구현 (5 신규 module + 4 수정 file, +1360/-2)**:
 
-### 5.4.5 통합 시나리오 integration test + 라이브 cycle smoke (commits bdc0773 → da42cef)
+- **`wikey-core/src/suggestion-storage.ts`** (신규): pure functions `addSuggestion(store, s)` (id 기반 filter + replace, dedup) / `updateSuggestionState(store, id, state)` (immutable map) / `rejectSuggestion(store, id, reason?)` (state 'rejected' + negativeCache append) / `isInNegativeCache(store, id)` / `emptyStore()`. SuggestionStore = `{ version: 1, suggestions, negativeCache }`. Spread immutable.
+- **`wikey-core/src/suggestion-detector.ts`** (신규):
+  - `detectCoOccurrence(ingest, minSiblings=3, minPrefixLen=5)` (line 65-103): 같은 source 안 N 개 concept 이 동일 prefix 길이 ≥ 5 chars 공유 시 후보. 예: `iso-27001-a-5/-6/-7` 3 sibling, prefix `iso-27001-a-` (12 chars).
+  - `detectSuffixCluster(history, minSources=2, suffixWhitelist=['-management', '-control', '-principle', '-domain', '-practice', '-area'])` (line 132-180): cross-source `-management` 같은 whitelisted suffix 가 ≥ 2 distinct source 등장 시 후보. umbrella_slug = `cluster-${suffix}` (post-impl Cycle #1 F1 fix 후 firstWord prefix 우선, follow-up §3.6).
+  - `computeConfidence(p)` (line 199): `0.4 * Math.min(p.support_count / 5, 1) + 0.3 * (p.unique_suffixes <= 1 ? 1.0 : 0.5) + 0.2 * Math.min(p.mention_count / 20, 1) + 0.1 * (p.overlapsWithBuiltin ? 0 : 1)`. 임계 ≥ 0.6 alpha (라이브 baseline calibration 의무 — line 14 주석).
+- **`wikey-core/src/schema-yaml-writer.ts`** (신규): `appendStandardDecomposition(wikiFS, suggestion, path?)` 6 분기 (a) round-trip validation (post-impl Cycle #1 F1) — umbrella_slug + components.slug 가 schema.ts:435 parser regex `/^[a-z][a-z0-9-]*$/` 일치 검증, 미일치 시 `invalid-slug` reject (b) idempotency — `umbrella_slug: <slug>` substring marker (c) `standard_decompositions:` top-level key 위치 line scan (d) header `[]` reject (`header-unsafe`, 사용자 명시 disable 의도 보호) (e) section 범위 결정 (다음 top-level alphabetic key 직전까지) (f) block insert. yaml lib 의존성 추가 X (minimal subset 정책).
+- **`wikey-core/src/suggestion-pipeline.ts`** (신규): `runSuggestionDetection({history, sourcePath, ingestedAt, canon, negativeCache})` — co-occurrence + suffix cluster detect → confidence ≥ 0.6 + signature 가 negativeCache 외 → Suggestion 생성. `ingestRecordFromCanon` (post-impl 라이브 cycle smoke fix: filename 의 `.md` 확장자 strip — slug suffix matching 정확).
+- **`wikey-core/src/suggestion-panel-builder.ts`** (신규): `buildSuggestionCardModel(suggestion)` HTML model (title, confidenceLabel, summary, componentSlugs, evidenceLines, actions) + `acceptSuggestion(store, id)` + `rejectSuggestionFromPanel(store, id)` DOM 액션 핸들러. 실 DOM 통합은 sidebar-chat.ts.
+- **`wikey-core/src/types.ts`** 확장 (+69 line 196-265): `IngestRecord` (source / ingestedAt / concepts / entities) / `CandidatePattern` (umbrella_slug / components / support_count / unique_suffixes / mention_count / overlapsWithBuiltin / evidence) / `SuggestionEvidence` / `SuggestionState` 4-kind union (pending / accepted with acceptedAt / rejected with rejectedAt + reason / edited with userEdits) / `Suggestion` (id sha1 + signature) / `SuggestionStore` / `SuggestionStorage*` interface.
+- **`wikey-core/src/index.ts`** barrel export +41 lines (Stage 2 신규 export 모두).
+- **`wikey-core/src/ingest-pipeline.ts`** finalize 단계 hook (+90 lines):
+  - line 506 canonResult 호이스팅 — FULL/SEGMENTED route 후 finalize 에서 read 가능.
+  - line 830 `runSuggestionFinalize(wikiFS, sourcePath, canonResult, log)` 신규 helper — ingest 완료 직후 `.wikey/mention-history.json` (raw `{ version, ingests: [...] }`) + `.wikey/suggestions.json` (raw `{ version, suggestions, negativeCache }`) 자동 누적. 동시성 보호 (sourcePath + ingestedAt dedup).
+- **`wikey-obsidian/src/sidebar-chat.ts`** Suggestions panel (+110 lines): PanelName 'suggestions' 추가, sidebar header button (post-impl Cycle #1 F2 fix 후 정상 노출), 카드 layout (h4 title + p confidence/summary + ul components + details evidence + actions: Accept/Edit/Reject).
 
-**통합 시나리오 7 cases** (bdc0773): Scenario 4.1~4.5 (mock fs + mock LLM in-memory).
+**의사결정 근거**:
+- minSiblings=3 vs 2: 2 면 false positive 多 (모든 표준의 단일 sub-section 도 후보). 3 이 alpha sweet spot.
+- suffixWhitelist 6 종: marketing 의 `-feature`, `-benefit` 차단. 표준 도메인 suffix 만 (PMBOK / ISO / ITIL / GDPR 패턴 분석).
+- confidence 공식 가중치 (0.4 / 0.3 / 0.2 / 0.1): cross-source support 가 가장 강한 신호 (사람이 봐도 신뢰). suffix homogeneity 가 표준다운 패턴. mention density 보조. builtin overlap 은 drop trigger.
+- 임계 ≥ 0.6: 4 가중치 weighted sum 의 mean (0.5 좀 위) 으로 marginal 후보 차단. 라이브 calibration 의무 (premature hardening 회피).
 
-**post-impl review codex 6 cycle**:
-- Cycle #1 NEEDS_REVISION (CRITICAL Stage 4 stub + HIGH Stage 2 round-trip + HIGH UI unreachable + MEDIUM AC21 fixture) → fix (31f3e28)
-- Cycle #2 NEEDS_REVISION (F4 alpha v1 wire 명시 + F2 lingering accept handler) → fix (c564cd3)
-- Cycle #3 NEEDS_REVISION (singleton cluster graceful skip 깨짐 + LOW stale) → fix (0296cc7)
-- Cycle #4 REJECT (LOW §3.4.2 stale) → fix (9d15ba5)
-- Cycle #5 REJECT (LOW §4.1 fresh ingest stale) → fix (d8f1c78)
-- Cycle #6 **APPROVE** (Findings: None / 731 PASS) — §5.4 코드 부분 종료
+**검증** (commit ce547ca):
+- 단위 회귀: 670 → **690 PASS** (+20: AC2 3 + AC3 4 + AC4 3 + AC5 3 + AC6 2 + AC7 3 + AC8 2). build 0 errors.
+- TDD RED→GREEN 매 AC 마다 (vitest verbose). RED: `Cannot find module '../suggestion-storage.js'` → GREEN: `Tests N passed`.
+- Karpathy 4원칙: yaml lib 신규 X (minimal subset writer) / 임계 hardening 안 함 (alpha calibration comment) / Stage 1 코드 무변경 surgical / TDD 정량 검증.
 
-**AC21 라이브 cycle smoke** (eb4b697): master 직접 6 fixture (PMBOK x2 + ISO 27001 x2 + ITIL 4 x2) ingest → Stage 1 BUILTIN 정상 + Stage 2 detector → 1 suggestion (cluster-management → fix 후 'project-management' UX 개선) → Accept round-trip → schema.yaml append.
-- 발견 bug fix: suggestion-pipeline slug `.md` 확장자 strip
-- UX 옵션 B: ingest panel 폴더 평탄화 + Suggestions header button 등장 검증
+### 5.4.3 Stage 3 — in-source self-declaration (commit c34b128, 2026-04-26 14:41, +21 cases)
 
-**follow-up 4 항목** (308bc72 + da42cef):
-- §3.5 Stage 3 inspect (COBIT 2019 fixture → `stage3 self-declarations — 1 runtime entries` log + 5 wiki/concepts/cobit-* 생성)
-- §3.6 Suggestions umbrella default UX (firstWord prefix → 의미있는 이름)
-- §3.7 classify-inbox.sh subfolder 평탄화
-- §3.8 Stage 4 라이브 alpha v1 wire mock embeddings 검증 (4 ConvergedDecomposition 생성)
+**Plan**: 통합 plan §3.3 (line 560-776).
 
-### 5.4.5.종결 회귀 + commits 통계
+**구현 (1 신규 module + 3 수정 file, +622/-1)**:
+
+- **`wikey-core/src/self-declaration.ts`** (신규, ~190 lines):
+  - **타입 (types.ts:267-310, +29 line)**:
+    - `SelfDeclaration` 11 필드 (umbrella_slug / umbrella_name / components / rule / require_explicit_mention / source / section_idx / section_title / extractor: 'pattern-matching' | 'llm' / extractedAt / persistChoice). 모두 readonly.
+    - `SelfDeclarationPersistChoice` 3-kind discriminated union: `{ kind: 'runtime-only' }` (default — 해당 ingest 세션만) / `{ kind: 'pending-user-review' }` (재 ingest 시 자동 elevation) / `{ kind: 'persisted'; persistedAt: string }` (Stage 2 writer append 후).
+  - **함수 5 export**:
+    - `mergeRuntimeIntoOverride(override, runtime)` 4 시나리오 (line 30-75): (1) `runtime.length === 0` → override 그대로 (early return) (2) `override === undefined` 또는 baseState `empty-all-skipped` → 새 SchemaOverride 생성 + runtime items 만 (BUILTIN 은 builder 가 add) (3) `empty-explicit` → override 그대로 (사용자 명시 disable 보존, runtime 무시) (4) `present` → BUILTIN + user yaml + runtime append.
+    - `extractSelfDeclaration(section, source, options)` (line 142-194): section.headingPattern !== 'standard-overview' guard (defensive null) → section.body 의 numbered (`/^\d+\.\s+/`) 또는 bullet (`/^-\s+/`) list 추출 → listItems ≥ 5 임계 → umbrella_slug 추론 (section.title 의 표준 이름 → canonicalizeSlug) → components map (slug + type 'methodology' default) → `SelfDeclaration` 생성 (extractor 'pattern-matching' / persistChoice 'runtime-only' default).
+    - `elevateToReview(declaration)` (line 200-205): `persistChoice: { kind: 'pending-user-review' }` 로 transition.
+    - `persistDeclaration(declaration, persistedAt)` (line 211-216): `persistChoice: { kind: 'persisted', persistedAt }` 로 transition.
+    - `shouldStage3ProposeRuntime(store, umbrella_slug)` 4 분기 (line 220-235): (1) 매칭 suggestion 없음 → true (신규) (2) accepted → false (이미 schema.yaml 에 있음) (3) rejected → false (negativeCache, 사용자 거부) (4) pending|edited → true (evidence 추가).
+- **`wikey-core/src/section-index.ts`** 갱신 (line 23 + 368-378):
+  - HeadingPattern union 7 종: 기존 `'toc' | 'appendix' | 'contact' | 'revision' | 'copyright' | 'normal'` + 신규 `'standard-overview'`.
+  - `classifyHeadingPattern(title)` 의 standard keyword 분기 (line 368-378): 한국어/영어 6 regex — `/개요|overview|introduction/`, `/구조|structure|architecture/`, `/구성|composition/`, `/영역|domain|area/`, `/지식체계|body of knowledge/`, `/knowledge\s+area/`. 매치 시 `'standard-overview'` 반환 (`'normal'` 분기 직전).
+- **`wikey-core/src/index.ts`** barrel export +12 lines (Stage 3 5 함수 + 2 타입).
+
+**테스트 (`__tests__/self-declaration.test.ts` +303 lines, 21 cases)**:
+- AC9 mergeRuntimeIntoOverride 5 cases (runtime 비어있음 early return / undefined 신규 생성 / empty-explicit 무시 / empty-all-skipped runtime 만 / present append)
+- AC10 classifyHeadingPattern 'standard-overview' 3 cases (한국어 "ISO 27001 개요" / 영어 "Body of Knowledge" / 미매치 "Project Plan")
+- AC11 extractSelfDeclaration 4 cases (정상 numbered list / bullet list / listItems < 5 / standard-overview 가 아니면 null)
+- AC12 persist transition 2 cases (elevateToReview → 'pending-user-review' / persistDeclaration → 'persisted' + persistedAt)
+- AC13 shouldStage3ProposeRuntime 5 cases (4 분기 시나리오 + edge case)
+- AC14 false positive guard 2 cases ("5 핵심 기능" marketing keyword silent drop / component slug < 5 chars 차단)
+
+**의사결정 근거**:
+- runtime-only default vs persist 자동: marketing 자료의 enumerate list 가 표준처럼 보일 위험 → 사용자 review modal 까지 시간 buffer. 자동 persist 는 false positive 누적.
+- 6 keyword regex (한/영): "지식체계" (Body of Knowledge) 같은 PMBOK 한국어 표현 + ISO "knowledge area" 같은 영어 표현 모두 cover.
+- 4-분기 shouldStage3ProposeRuntime: Stage 2 suggestion 과 redundancy 방지 (같은 umbrella_slug 가 양쪽 store 에 중복 X).
+
+**검증** (commit c34b128):
+- 단위 회귀: 690 → **711 PASS** (+21).  build 0 errors.
+- 의도된 RED phase 확인 (`Error: Cannot find module '../self-declaration.js'`) → GREEN.
+- 7-anchor self-check: (a) 시그니처 cross-file 일관 / (c) builder 4 분기 / (d) AC test ≥ 12 cases — 모두 PASS.
+
+### 5.4.4 Stage 4 — cross-source convergence (commit 87969fa, 2026-04-26 14:53, +10 cases)
+
+**Plan**: 통합 plan §3.4 (line 778-981). alpha / page-level-limited (mention-level granularity v2 deferral).
+
+**구현 (1 신규 module + 1 신규 script + 4 수정 file, +977/-1)**:
+
+- **`wikey-core/src/convergence.ts`** (신규):
+  - **타입 (types.ts:401-430, +37 line)**:
+    - `SourceMention` (source / mentioned_components / is_umbrella_only). 모두 readonly.
+    - `ConvergedDecomposition` (umbrella_slug / umbrella_name / converged_components / source_mentions / arbitration_method: `'union' | 'llm'` / **arbitration_confidence**: number 0~1 / arbitration_log? / convergedAt). 필드명 `arbitration_confidence` (NOT `confidence`) — codex Cycle #2 정정 명시 (line 405-407 주석).
+    - `MentionCluster` (cluster_id / mention_slugs / source_count / mention_count).
+  - **함수 5 export**:
+    - `clusterMentionsAcrossSources(history, embeddings)` (line 91-162): page-level alpha agglomerative clustering. cosine similarity ≥ `COSINE_THRESHOLD` (0.75 const). 알고리즘: 각 slug 가 자기 cluster 시작 → cosine ≥ 0.75 pair merge → 더 이상 merge 없을 때까지 반복. **post-impl Cycle #3 F4 fix** (line 142-161): `flatMap` 으로 singleton (mention_slugs.length < 2) cluster drop — empty embeddings 시 모든 cluster singleton → 빈 배열 → graceful skip. 이전엔 singleton 도 emit → source_count >= 2 면 union arbitration_confidence=1.0 으로 false output 생성.
+    - `arbitrate(cluster, method, tokenBudget, llmCaller?)` (line 165-260): default `'union'` (LLM 호출 0, arbitration_confidence=1.0, converged_components = mention_slugs map → StandardDecompositionComponent type 'methodology' default). `'llm'` opt-in: prompt 통합 plan §3.4.2 line 839-870 형식 → JSON parse → arbitration_confidence (LLM self-report) + arbitration_log (reasoning).
+    - `createConvergencePass(args)` (line 271-311): CLI args parse → ConvergencePassConfig (history / qmdDb / output / arbitration / tokenBudget / **embeddings?**). post-impl Cycle #2 F4 fix: `--embeddings <path>` optional 인자 추가 (alpha v1 wire — 외부 도구 inject).
+    - `mergeAllSources(baseOverride, runtimeSelfDeclarations)` (line 320-340): 우선순위 chain 1~6 (user-yaml > suggested > self-declared > converged > runtime > BUILTIN). 1~4 는 schema.yaml append 되어 baseOverride 통합. 6 만 별도 inject — Stage 3 mergeRuntimeIntoOverride 재사용 (delegation only, Karpathy §2 Simplicity).
+    - `runConvergencePass(history, options)` (line 360-410): precondition 검증 (≥ 3 표준 × 2 source = 6 instance, 통합 plan §3.4.4 line 940). 미달 시 `[]` + warn ("insufficient mention diversity for convergence: N standards × M sources, threshold 3 × 2"). 충족 시 cluster + arbitrate.
+- **`wikey-core/scripts/run-convergence-pass.mjs`** (신규, ~95 lines):
+  - Node.js entry point. args parse → mention-history JSON load (post-impl Cycle #2 F4 fix: `{ version, ingests: [...] }` schema 처리 + legacy bare array backward compat) → `--embeddings` JSON load (post-impl Cycle #2 F4 fix: 외부 도구 dump 한 `{ "<slug>": [vec...], ... }` → Map<slug, vec> inject. load 실패/미지정 시 빈 Map → graceful skip + warn).
+  - `runConvergencePass` 호출 + 결과 atomic write (`tmp + rename` 패턴) → `.wikey/converged-decompositions.json`.
+- **`scripts/reindex.sh`** cmd_reindex 끝 직전 conditional hook block (+15 line):
+  - `WIKEY_CONVERGENCE_ENABLED=true` 일 때만 trigger (default off).
+  - `dist/scripts/run-convergence-pass.mjs` 부재 시 `log_skip` graceful, 실패 시 `log_err` 후 계속 진행.
+  - `WIKEY_CONVERGENCE_EMBEDDINGS` env → `--embeddings` 자동 forward (alpha v1).
+- **`wikey-core/package.json`** build script 갱신: `cpSync('scripts','dist/scripts')` 추가 (mjs 산출물 보장).
+
+**테스트 (`__tests__/convergence.test.ts` +319 lines, 10 cases)**:
+- AC15 ConvergedDecomposition shape: 1 case (필드 존재 + JSON round-trip)
+- AC16 clusterMentionsAcrossSources: 2 cases (정상 cluster cosine ≥ 0.75 / post-impl Cycle #3 F4 fix 후 singleton drop)
+- AC17 arbitrate: 2 cases (Happy union arbitration_confidence=1.0 / Happy llm mock JSON 0.8)
+- AC18 createConvergencePass: 2 cases (defaults / `--embeddings` optional)
+- AC19 mergeAllSources: 2 cases (baseOverride + runtime inject / 같은 umbrella_slug 충돌 baseOverride 우선)
+- AC20 runConvergencePass: 3 cases (precondition 미달 빈 배열 + warn / 충족 시 union output / empty embeddings 시 빈 결과 — post-impl Cycle #3 F4 graceful skip)
+
+**의사결정 근거**:
+- COSINE_THRESHOLD 0.75: jina-v3 / Qwen3-Embedding 표준 의미 유사도 cluster 임계 (Anthropic Contextual Retrieval 가이드).
+- arbitration_method 'union' default: LLM 호출 0 → 비용 0. 'llm' opt-in 시만 LLM. mention slug 별 cluster 가 같은 표준의 다른 측면임을 검증할 때만 필요.
+- arbitration_confidence ≥ 0.7 modal trigger (line 909): false convergence 차단 (alpha 단계).
+- mention-history precondition ≥ 6 instance: cluster 형성 의미 있게 하려면 표준 ≥ 3 × source ≥ 2 = 6 최소 (Stage 1 v7 §4.3 와 일관).
+- alpha v1 wire (post-impl Cycle #2 F4 fix): qmd 직접 통합 (sqlite-vec extension load) 은 v2 → 외부 도구 (qmd vsearch / sqlite3 / Python helper / qmd MCP) JSON dump inject 인터페이스 만 제공.
+
+**end-to-end smoke** (commit 87969fa):
+- `node dist/scripts/run-convergence-pass.mjs --history empty.json ...` → "insufficient mention diversity" warn + exit 0 (precondition 미달 graceful skip 확증).
+- 단위 회귀: 711 → **721 PASS** (+10).  build 0 errors.
+
+### 5.4.5 통합 시나리오 integration test + post-impl review + AC21 라이브 + follow-up 4
+
+#### 5.4.5.1 통합 시나리오 integration test (commit bdc0773, 2026-04-26 14:58, +7 cases)
+
+**Plan**: 통합 plan §4 (line 985-1170) 5 시나리오.
+
+**테스트 (`wikey-core/src/__tests__/stage-integration.test.ts` +433 lines, 7 cases)** — mock fs + mock LLM (in-memory canonicalize):
+- **Scenario 4.1 Fresh ingest** (2 cases): 시점 0 (PMBOK 1 corpus, schema.yaml 미존재) → BUILTIN PMBOK 만 / 시점 1 (ISO 27001 추가) → SelfDeclaration runtime + BUILTIN + runtime ISO append.
+- **Scenario 4.2 Incremental** (1 case): mention-history 임계 충족 → suggestion 생성 → appendStandardDecomposition → 다음 ingest 의 loadSchemaOverride 가 user yaml 인식.
+- **Scenario 4.3 사용자 vault 수동 편집** (1 case): `standard_decompositions: []` → empty-explicit kind → buildStandardDecompositionBlock 빈 string + mergeRuntimeIntoOverride runtime 무시 (사용자 명시 disable 보존).
+- **Scenario 4.4 Stage 간 fallback** (2 cases): runConvergencePass mention-history < 6 instance → 빈 배열 + warn graceful / reindex.sh hook env unset → skip.
+- **Scenario 4.5 사용자 거부** (1 case): rejectSuggestion → negativeCache 등록 → isInNegativeCache silent drop / shouldStage3ProposeRuntime false.
+
+**RED sanity check** (Karpathy #4 Goal-Driven 증거): Scenario 4.1 (e) 의 `expect(block).toContain('PMBOK')` 를 `'NONEXISTENT-MARKER'` inversion → 1 fail 정확히 catch → 즉시 revert. assertion 빈 통과 아님 확증.
+
+**검증**: 721 → **728 PASS** (+7). build 0 errors.
+
+#### 5.4.5.2 post-impl review codex 6 cycle (commits 31f3e28 → dc1ee9a, 2026-04-26 15:04~15:31)
+
+cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rules.md §11.2). master 가 finding 별 동의/이견 판단 후 fix.
+
+**Cycle #1 NEEDS_REVISION** (4 finding: CRITICAL 1 + HIGH 2 + MEDIUM 1) — capture window 1500:
+- F1 HIGH Stage 2 round-trip violation: `suggestion-detector.ts:169` `umbrella_slug: \`*${suffix}\`` 가 schema.ts:435 parser regex `/^[a-z][a-z0-9-]*$/` 와 불일치 → accepted suggestion → schema.yaml append 후 다음 ingest 시 parser reject → suggestion 무용지물. **master fix** (commit 31f3e28): `cluster-${suffixBase}` 형식 + schema-yaml-writer 의 `appendStandardDecomposition` 진입에 round-trip validation 추가 (umbrella_slug + components.slug 검증, `'invalid-slug'` reason 추가, AppendResult.reason 3 → 4 union).
+- F2 HIGH UI Suggestions panel unreachable: `wikey-obsidian/src/sidebar-chat.ts:144` PanelName 'suggestions' 정의되어 있으나 `selectPanel('suggestions')` 호출 button 부재 → 사용자 액세스 불가 (AC6 user approval gate 사실상 비활성). **master fix**: line 144 `Suggestions` button 추가 (`makeHeaderBtn(actions, ICONS.question, 'Suggestions', () => this.selectPanel('suggestions'))`).
+- F3 (CRITICAL implicit) Stage 3 ingest-pipeline wiring 누락: developer 가 Stage 3 module 만 작성, ingest 흐름에 hook 안 됨 → Stage 3 코드가 deadcode 위험. **master fix**: `ingest-pipeline.ts:496-540` 에 sectionIndex.sections 의 'standard-overview' headingPattern section 마다 extractSelfDeclaration → mergeRuntimeIntoOverride → effectiveOverride. canonicalize 호출 site 2곳 (FULL line 544 + SEGMENTED line 604) 의 schemaOverride 인자 → effectiveOverride. `ingest-pipeline.ts` +90 lines.
+- F4 CRITICAL Stage 4 qmd vector stub: run-convergence-pass.mjs 가 항상 `new Map()` empty embeddings → cluster 0 → real execution 시 무의미. **master 이견**: alpha 단계 명시 잔존 (plan §3.4.2 line 833 "alpha / page-level-limited"). real qmd 통합은 v2 deferral (mention-level granularity v2). 본 v1 plan 안에서 stub 유지 + plan §8.6 변경 이력에 명시.
+- F5 MEDIUM AC21 fixture/live smoke absence: plan v5 가 fixture corpus 6 자료 + live cycle smoke gate 명시. **master 이견**: 사용자 영구 결정 (vault 변경 위험 + 별 세션 진행). plan §5.4.5 deferred 명확화 + agent-management.md §6 갱신 (라이브 1차 책임 = master).
+- 신규 case: `schema-yaml-writer.test.ts` invalid-slug round-trip safety 1 (728 → 729 PASS).
+
+**Cycle #2 NEEDS_REVISION** (CRITICAL F4 lingering + MEDIUM F2 lingering) — 2 finding:
+- F4 lingering: master 의 "alpha 단계 명시" 만으로는 wire 미흡. codex 가 alpha 명시 reject. **master 동의 + fix** (commit c564cd3): `convergence.ts:271-311` `ConvergencePassConfig.embeddings?` optional 추가 + `createConvergencePass` 가 `--embeddings <path>` parse. `run-convergence-pass.mjs:43-82` JSON load + Map<slug, vec> inject. load 실패/미지정 시 graceful skip + warn. `scripts/reindex.sh:212-228` `WIKEY_CONVERGENCE_EMBEDDINGS` env → `--embeddings` 자동 forward. plan §3.4.3 alpha v1 wire 명시 강화 (외부 도구 후보 4종: qmd vsearch / sqlite3 CLI / Python helper / qmd MCP server).
+- F2 lingering: `sidebar-chat.ts:653` acceptBtn handler 가 `appendStandardDecomposition` 의 `appended: false` 결과 무시하고 무조건 state transition → schema 미기록 항목이 panel 에서 lost. **master fix** (commit c564cd3): `appended: false` 면 state 전환 안 함 + 카드 보존 + reason 별 사용자 알림 (`invalid-slug` / `header-unsafe` / `already-exists` 별 친절 안내) + return early. 사용자 fix 후 재시도 가능.
+- 신규 case: AC18 `--embeddings` optional 1 (729 → 730 PASS).
+
+**Cycle #3 NEEDS_REVISION** (HIGH F4 singleton + LOW stale) — codex 가 직접 실행으로 confirm:
+- F4 singleton: codex 가 `node --input-type=module ...` 으로 empty embeddings + 3 slugs × 2 sources → 3 singleton ConvergedDecomposition 생성 confirm. `clusterMentionsAcrossSources` 가 singleton (mention_slugs.length < 2) 도 emit → source_count >= 2 면 union arbitration_confidence=1.0 으로 false output. **master 동의 + fix** (commit 0296cc7): `convergence.ts:142-161` flatMap 으로 singleton drop. empty embeddings → 모든 cluster singleton → 빈 배열 → graceful skip.
+- LOW stale: plan §3.4.3 pseudocode + convergence.ts:81-83 주석 의 `QmdIndexClient` (v0 표현) 잔존. **master fix**: alpha v1 외부 JSON inject 흐름 + singleton drop 명시로 갱신.
+- AC16 test 갱신 (cosine < 0.75 → 0 cluster expected) + AC20 신규 case 1 (empty embeddings + threshold-satisfied → 빈 결과). 730 → **731 PASS**.
+
+**Cycle #4 REJECT** (LOW §3.4.2 stale) — finding 1건만이지만 verdict REJECT. master 결정: LOW fix 적용 후 cycle #5.
+- plan §3.4.2 line 815-818 의 `clusterMentionsAcrossSources(history, qmdIndex: QmdIndexClient)` 잔존 (Cycle #3 fix 가 §3.4.3 만 갱신). **master fix** (commit 9d15ba5): `(history, embeddings: ReadonlyMap<string, readonly number[]>)` + singleton drop 명시.
+
+**Cycle #5 REJECT** (LOW §4.1 fresh ingest stale):
+- plan §4.1 line 1089 fresh ingest flow 시퀀스 다이어그램 안 `clusterMentionsAcrossSources(history, qmdIndex)` 잔존. **master fix** (commit d8f1c78): `(history, embeddings)` + singleton drop + `--embeddings <json>` 외부 inject 명시.
+
+**Cycle #6 APPROVE** (Findings: None / regression PASS):
+- 모든 stale + alpha v1 wire + singleton drop guard 일관. master 1차 검증 (grep) 결과: 활성 plan/code 안 `qmdIndex|QmdIndexClient` 0 건 (잔존 2 건은 §8.8/§8.9 history row only).
+- §5.4 코드 부분 종료 선언 (commit dc1ee9a): plan/phase-5-todo.md §5.4.5 의 6 cycle 결과 + `[x] §5.4 코드 부분 종료` 표기.
+
+#### 5.4.5.3 AC21 라이브 cycle smoke (commit eb4b697, 2026-04-26 16:30~17:50)
+
+**책임**: master 직접 (agent-management.md §6 갱신 — 라이브 1차 책임 = master, tester 는 코드/시뮬레이션 only).
+
+**환경 확인**:
+- Obsidian PID 63510 + CDP 9222 endpoint UP (Browser Chrome/142.0.7444.265, Protocol 1.3)
+- wikey-cdp.py 재작성 (`/tmp/wikey-cdp.py` reboot 으로 사라져서 master 직접 작성, ~80 lines, websocket-client + Runtime.evaluate)
+- plugin reload (`app.plugins.disablePlugin('wikey'); enablePlugin('wikey')`) 정상
+
+**fixture corpus 6 자료** (사용자 명령 옵션 B — 자연 ingest 흐름, master 작성, well-known 표준 구조 hallucination 없음):
+- `raw/0_inbox/integration-cycle-smoke/pmbok-overview.md` — PMBOK 7판 + 10 knowledge areas (project-{integration, scope, schedule, ...}-management)
+- `raw/0_inbox/integration-cycle-smoke/pmbok-knowledge-areas.md` — 같은 10 areas detail (cross-source ≥ 2 충족용)
+- `raw/0_inbox/integration-cycle-smoke/iso-27001-overview.md` — ISO/IEC 27001:2022 / 4 도메인 (organizational/people/physical/technological)
+- `raw/0_inbox/integration-cycle-smoke/iso-27001-annex-a-detail.md` — Annex A 93 controls
+- `raw/0_inbox/integration-cycle-smoke/itil-4-overview.md` — ITIL 4 / 4 dimensions + 7 guiding principles + Service Value Chain
+- `raw/0_inbox/integration-cycle-smoke/itil-4-practices.md` — ITIL 4 / 14 practices
+
+각 자료 `## 개요` (한국어) 또는 `## Overview` 헤더 + numbered/bullet list ≥ 5 items 포함 → Stage 3 self-declaration extractor trigger 가능.
+
+**6 file ingest cycle smoke**:
+| # | file | Brief click | Preview ready | Approve | wiki write |
+|---|------|-------------|---------------|---------|-----------|
+| 1 | pmbok-overview | Proceed | 90s | OK | wiki/concepts/project-* (10) + entities/PMI |
+| 2 | pmbok-knowledge-areas | Proceed | 90s | OK | concepts append |
+| 3 | iso-27001-overview | Proceed (master 직접 click — background loop sleep 6 timing fail) | 60s | OK | concepts (iso-27001-organizational-controls 등) + sources |
+| 4 | iso-27001-annex-a-detail | Brief 등장 X (PROCESSING 직행 — race) | 600s timeout | (state-machine driver fallback) | concepts append |
+| 5 | itil-4-overview | Proceed | 120s | OK | concepts (itil-4-* 등) + sources |
+| 6 | itil-4-practices | state-machine 5s 만 (PREVIEW 즉시 detect) | 5s | OK | concepts append |
+
+**총 6/6 file ingest 완료**, mention-history.json 누적 6 ingests, 43 신규 wiki/concepts pages.
+
+**발견 bug**:
+1. **CRITICAL `suggestion-pipeline.ts:91`** Stage 2 detector slug `.md` 확장자 포함: wiki page filename (`itil-4.md`, `service-level-agreement.md`) 의 `.md` 가 suffix matching `-management` 와 매치 fail → 0 suggestions. **master fix**: `stripMdExt(s)` helper 추가 + `ingestRecordFromCanon` concepts/entities slug 모두 strip. mention-history 의 기존 6 ingests slug 도 Python script 로 strip + node 직접 detector 재실행 → **1 suggestion (`cluster-management`, conf=0.66, support=2, mention=20)** 검출. 공식 정확히 일치: `0.4 * min(2/5,1) + 0.3 * 1.0 + 0.2 * min(20/20,1) + 0.1 * 0 (BUILTIN PMBOK overlap → drop) = 0.16 + 0.30 + 0.20 + 0.00 = 0.66`.
+2. **UX 옵션 B** Ingest panel 폴더 자체 표시 (사용자 영구 결정): `sidebar-chat.ts:1856` `listInboxFilesRaw()` `readdirSync(inboxDir)` top-level only → 폴더 entry + checkbox 등장 (의미 X). **master fix**: 재귀 walk + `-type f` 평탄화 + 폴더 자체 list 제외 + name 컬럼 basename + path line classify hint 만 (subfolder 정보 숨김).
+3. **F2 fix UI 등장**: plugin reload 후 Suggestions header button 정상 노출 (post-impl Cycle #1 F2 라이브 검증 통과).
+
+**Suggestions panel UI 검증**:
+- Click → "🔔 표준 분해 후보" panel + 1 card "cluster-management 패턴 감지" 표시
+- Card 본문: confidence 0.66 + 10 components (project-* PMBOK areas)
+- Accept button click → suggestions.json `state.kind: pending → accepted` + schema.yaml 신규 entry append (round-trip safety 검증):
+  ```yaml
+  standard_decompositions:
+    - name: cluster-management
+      umbrella_slug: cluster-management
+      rule: decompose
+      require_explicit_mention: true
+      origin: suggested
+      confidence: 0.66
+      components: [10 entries]
+  ```
+
+**검증**: 731 PASS / build 0 errors. 보조 문서: [`activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](./phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md) (전체 detail + Stage 3 inspect + Stage 4 alpha v1 wire 검증).
+
+#### 5.4.5.4 follow-up 4 항목 (commits 308bc72 + da42cef, 2026-04-26 18:00~18:30)
+
+**§3.5 항목 1 — Stage 3 SelfDeclaration runtime extraction inspect**:
+- 의도: ingest-pipeline wiring 만 검증된 상태 → 실 ingest 시 SelfDeclaration runtime 적용 evidence 확보.
+- fixture: `raw/0_inbox/test-stage3-cobit.md` (master 작성 — COBIT 2019 5 도메인 + 표준 개요 section + numbered list 5 items).
+- ingest 50s preview + Approve & Write. console log: `[Wikey ingest] schema override — entities=0, concepts=0` + `[Wikey ingest] stage3 self-declarations — 1 runtime entries`.
+- wiki/concepts 5 신규: cobit-2019 (umbrella) + cobit-{evaluate-direct-monitor, align-plan-organize, build-acquire-implement, monitor-evaluate-assess} (cobit-deliver-service-support 만 LLM 추출 누락 — 본 issue 별 영역).
+- autoMove 정상: raw/0_inbox/test-stage3-cobit.md → raw/3_resources/.
+
+**§3.6 항목 3 — Suggestions detector umbrella default UX**:
+- 의도: `cluster-${suffix}` default 가 의미 약함. components 의 first word (- 전) 가 모두 동일하면 prefix 사용.
+- fix (`suggestion-detector.ts:170-178`): firstWords 추출 + allFirstSame 검사 → prefix = firstWords[0] 또는 fallback 'cluster'. PMBOK 만 ingest → firstWords = ['project']*N → prefix 'project' → umbrella_slug `'project-management'` (의미있는 default). mixed (PMBOK + ITIL) → fallback 'cluster' (사용자 Edit modal 권장).
+- 신규 test 1 case + 기존 test 갱신 (ISO-27001 firstWord 'iso' → 'iso-management'). 731 → **732 PASS**.
+
+**§3.7 항목 4 — classify-inbox.sh subfolder 평탄화**:
+- 의도: `find -maxdepth 1` 라 폴더 안 file 미인식 → 사용자 영구 결정 옵션 B 와 일관.
+- fix (`scripts/classify-inbox.sh:42`): `-type f` 재귀 평탄화 + hidden 제외. dry-run 정상.
+- 자료 분류 race 1 case: itil-4-practices 가 inbox 잔존 → 시간 지나며 self-resolve (autoMove 자동 trigger), reproduce 못함. follow-up X (단발적).
+
+**§3.8 항목 2 — Stage 4 라이브 alpha v1 wire 검증**:
+- 의도: mock embeddings (sqlite-vec extension load macOS Python 제한, 실 qmd 통합은 v2 deferral) 로 alpha v1 wire 정상 동작 검증.
+- mock embeddings 생성: 59 slug × group axis 1.0 (1024-dim, project/iso/itil/cobit/other axis). `/tmp/mock-embeddings.json`.
+- mjs schema bug fix (`run-convergence-pass.mjs:43-58`): mention-history `{ version, ingests: [...] }` schema 처리 추가 (이전엔 bare array 만 expect).
+- run-convergence-pass.mjs 실행: `loaded 59 embeddings` + `wrote 4 ConvergedDecomposition(s)`:
+  | umbrella | components | sources | method | conf |
+  |---|---|---|---|---|
+  | project-management-body-of-knowledge | 12 | 2 | union | 1.0 |
+  | work-breakdown-structure | 28 | 7 | union | 1.0 |
+  | iso-iec-27001-2022 | 5 | 3 | union | 1.0 |
+  | itil-4 | 9 | 2 | union | 1.0 |
+- alpha v1 wire 정상 동작 확증. v2 통합 path 3 후보 (Python sqlite-vec / Node.js sqlite-vec wrapper / qmd CLI subprocess) 다음 세션 진입점.
+
+### 5.4.6 종결 회귀 + commits 통계
 
 - baseline: 670 → **732 PASS / 38 files / 0 fail**
 - build: wikey-core 0 errors / wikey-obsidian 0 errors
-- 신규 cases: 62 (Stage 2 20 + Stage 3 21 + Stage 4 10 + integration 7 + Cycle 후속 4)
-- Total commits push (15 commits): 9b7da21 → e749515
+- 신규 cases 합계: 62 (Stage 2 20 + Stage 3 21 + Stage 4 10 + integration 7 + Cycle 후속 4)
+- Total commits push (15 commits): 9b7da21 → e749515 (16번째 sync commit 15ff6ff 포함)
 - 보조 문서: [`activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](./phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md)
 
-### 5.4.6 v2 deferral (다음 세션 진입점, 사용자 영구 결정 2026-04-26)
+### 5.4.7 v2 deferral (다음 세션 진입점, 사용자 영구 결정 2026-04-26)
 
 | 우선순위 | 항목 | 가치 |
 |---|---|---|
