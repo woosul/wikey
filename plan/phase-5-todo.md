@@ -316,14 +316,14 @@
 > **Baseline (불변)**: 648 PASS / build 0 errors (Phase 5 §5.3 cycle smoke 종결 시점).
 
 #### 5.4.1.1 데이터 모델 + 상수 (`types.ts` / `schema.ts`)
-- [ ] **AC1** — 타입 4종 + 상수 1종 export (`schema.ts`):
+- [x] **AC1** — 타입 4종 + 상수 1종 export (`schema.ts`):
   - `StandardDecompositionComponent` (with optional `aliases`, F3) · `StandardDecomposition` · `StandardDecompositionsState` (3-kind discriminated union: `empty-explicit` / `empty-all-skipped` / `present`, absent 는 `undefined` 자체 — codex Cycle #2 단일화) · `SchemaOverride.standardDecompositions?: StandardDecompositionsState` 필드 추가 (`types.ts:143-146`)
   - `BUILTIN_STANDARD_DECOMPOSITIONS` 상수 (export, F3 component aliases 포함) — PMBOK 10 areas 코드 default
   - `STANDARD_EXCEPTIONS` Set 갱신 (`schema.ts:143`): canonical slug 2개 추가 — `project-schedule-management` · `project-resource-management` (P3 codex Cycle #2). canonical slug 가 `-management` suffix anti-pattern 으로 잡히지 않도록.
   - `tsc --noEmit` 0 errors. `SchemaOverride` 사용 site 6곳 (ingest-pipeline `:491` + schema-override.test 5곳) 모두 빌드 OK.
 
 #### 5.4.1.2 YAML 파서 확장 (`schema.ts:289-354`)
-- [ ] **AC2** — `parseSchemaOverrideYaml` 가 `standard_decompositions:` top-level section 인식. 신규 단위 테스트 ≥ 9 cases:
+- [x] **AC2** — `parseSchemaOverrideYaml` 가 `standard_decompositions:` top-level section 인식. 신규 단위 테스트 ≥ 9 cases:
   - (1) standard_decompositions only YAML → 파서 non-null + `entityTypes: []` (F2 null 조건 변경)
   - (2) explicit `standard_decompositions: []` → state `{ kind: 'empty-explicit' }`
   - (3) `standard_decompositions:` 키 부재 → `standardDecompositions === undefined` (absent 단일화)
@@ -336,30 +336,30 @@
   - 각 warn 케이스 spy capture 확인 (UNDECIDED #2 v3: `loadSchemaOverride` 시그니처 변경 없이 관측)
 
 #### 5.4.1.3 프롬프트 동적 빌더 (`canonicalizer.ts`)
-- [ ] **AC3** — `buildStandardDecompositionBlock(override)` 신규 (4 시나리오 분기): `undefined` → built-in / `empty-explicit` → 빈 string / `empty-all-skipped` → built-in fallback + warn / `present` → built-in append user entries (F1 v3 정정). `buildCanonicalizerPrompt` 가 `{{STANDARD_DECOMPOSITION_BLOCK}}` placeholder 치환 (F4). 작업 규칙 #7 PMBOK 10 areas 인라인 (`canonicalizer.ts:262`) 제거. `canonicalizer.ts:209-216` 주석을 §5.4.1 표기로 정정. ≥ 5 cases.
-- [ ] **AC4** — `overridePrompt` 분기에 `{{STANDARD_DECOMPOSITION_BLOCK}}` placeholder 추가 (`canonicalizer.ts:238-246`). 사용자 정의 prompt 시 동적 블록 inline. ≥ 2 cases (custom prompt with/without placeholder).
-- [ ] **builder exact phrase 보존** (P2-5 codex Cycle #2): `canonicalizer.test.ts:230` 의 두 anchor — `'묶지 말 것'` + `'직접 언급되지 않으면 추출하지 않는다'` — builder 출력 그대로 등장 (todox §3.3 line 320/323/344). PMBOK 10 knowledge areas 개별 추출 표현 유지.
-- [ ] **prompt entity 일반화** (F5): 기존 "별도 concept" → "별도 entity 또는 concept" 로 변경 (component type 이 entity 도 허용).
+- [x] **AC3** — `buildStandardDecompositionBlock(override)` 신규 (4 시나리오 분기): `undefined` → built-in / `empty-explicit` → 빈 string / `empty-all-skipped` → built-in fallback + warn / `present` → built-in append user entries (F1 v3 정정). `buildCanonicalizerPrompt` 가 `{{STANDARD_DECOMPOSITION_BLOCK}}` placeholder 치환 (F4). 작업 규칙 #7 PMBOK 10 areas 인라인 (`canonicalizer.ts:262`) 제거. `canonicalizer.ts:209-216` 주석을 §5.4.1 표기로 정정. ≥ 5 cases.
+- [x] **AC4** — `overridePrompt` 분기에 `{{STANDARD_DECOMPOSITION_BLOCK}}` placeholder 추가 (`canonicalizer.ts:238-246`). 사용자 정의 prompt 시 동적 블록 inline. ≥ 2 cases (custom prompt with/without placeholder).
+- [x] **builder exact phrase 보존** (P2-5 codex Cycle #2): `canonicalizer.test.ts:230` 의 두 anchor — `'묶지 말 것'` + `'직접 언급되지 않으면 추출하지 않는다'` — builder 출력 그대로 등장 (todox §3.3 line 320/323/344). PMBOK 10 knowledge areas 개별 추출 표현 유지.
+- [x] **prompt entity 일반화** (F5): 기존 "별도 concept" → "별도 entity 또는 concept" 로 변경 (component type 이 entity 도 허용).
 
 #### 5.4.1.4 두 번째 표준 등록 가능성 (ISO-27001 fixture)
-- [ ] **AC5.a** — ISO-27001 5-control unit fixture (`__tests__/fixtures/iso27001-5-control.yaml`) → schema 주입 → canonicalizer prompt 에 5 control slug 동적 출력. PMBOK 10 areas 동시 출력 (F1 append).
-- [ ] **AC5.b** — ISO-27001 93-control fixture (line count 측정 제거, F6 v3) → parser ≥ 93 components 인식 + warn 0건. 메모리 / 시간 회귀 없음.
+- [x] **AC5.a** — ISO-27001 5-control unit fixture (`__tests__/fixtures/iso27001-5-control.yaml`) → schema 주입 → canonicalizer prompt 에 5 control slug 동적 출력. PMBOK 10 areas 동시 출력 (F1 append).
+- [x] **AC5.b** — ISO-27001 93-control fixture (line count 측정 제거, F6 v3) → parser ≥ 93 components 인식 + warn 0건. 메모리 / 시간 회귀 없음.
 
 #### 5.4.1.5 회귀 무결성 (PMS 5-run 라이브 측정)
-- [ ] **AC6.a** — 단위 테스트 기준: builder 가 PMBOK entry 1개 유지 시 출력에 `'묶지 말 것'` + `'직접 언급되지 않으면 추출하지 않는다'` + `'PMBOK 10 knowledge areas 개별 추출'` 3-anchor phrase 모두 포함 (deterministic 등가성).
-- [ ] **AC6.b** — PMS 5-run 라이브 측정 (tester 책임): Stage 1 변경 전후 Concepts CV 동일 또는 개선 (entry gate 24.6% → <15% 는 별개 — 본 plan 은 no-regression 만 약속, F7).
+- [x] **AC6.a** — 단위 테스트 기준: builder 가 PMBOK entry 1개 유지 시 출력에 `'묶지 말 것'` + `'직접 언급되지 않으면 추출하지 않는다'` + `'PMBOK 10 knowledge areas 개별 추출'` 3-anchor phrase 모두 포함 (deterministic 등가성).
+- [x] **AC6.b** — PMS 5-run 라이브 측정 (tester 책임): Stage 1 변경 전후 Concepts CV 동일 또는 개선 (entry gate 24.6% → <15% 는 별개 — 본 plan 은 no-regression 만 약속, F7).
 
 #### 5.4.1.6 빌드/테스트 통과
-- [ ] **AC7** — `npm run build` 0 errors + `npm test` baseline 648 → ≥ 667 PASS (신규 ≥ 19 cases: AC2 9 + AC3 5 + AC4 2 + AC5.a 1 + AC5.b 1 + AC6.a 1). AC6.b 는 라이브 측정 (단위 테스트 N/A).
+- [x] **AC7** — `npm run build` 0 errors + `npm test` baseline 648 → ≥ 667 PASS (신규 ≥ 19 cases: AC2 9 + AC3 5 + AC4 2 + AC5.a 1 + AC5.b 1 + AC6.a 1). AC6.b 는 라이브 측정 (단위 테스트 N/A).
 
 #### 5.4.1.7 사용자 vault 호환 (R1 강등 / R3 제거)
-- [ ] **R1 (Medium → Low)** — `.wikey/schema.yaml` 에 `standard_decompositions:` 키 부재 시 `standardDecompositions === undefined` → `BUILTIN_STANDARD_DECOMPOSITIONS` 자동 사용. §4.5.1.7.2 효과 자동 보존, 마이그레이션 불필요.
-- [ ] **R3 (제거)** — F1 v3 append 정책 적용으로 사용자가 ISO-27001 만 추가해도 PMBOK 자동 유지. risk 자체 제거.
-- [ ] `SCHEMA_OVERRIDE_TEMPLATE` (`settings-tab.ts:1118-1135`) 갱신: PMBOK 예시 entry 주석-out (P2-4) — 신규 vault 가 yaml 안에서 PMBOK 구조 학습 가능, 사용자가 자유롭게 활성화. 단일 yaml 파일에서 `standard_decompositions: []` 와 entries 동시 불가능 (mergeWithBuiltin 미지원, R9 limitation).
+- [x] **R1 (Medium → Low)** — `.wikey/schema.yaml` 에 `standard_decompositions:` 키 부재 시 `standardDecompositions === undefined` → `BUILTIN_STANDARD_DECOMPOSITIONS` 자동 사용. §4.5.1.7.2 효과 자동 보존, 마이그레이션 불필요.
+- [x] **R3 (제거)** — F1 v3 append 정책 적용으로 사용자가 ISO-27001 만 추가해도 PMBOK 자동 유지. risk 자체 제거.
+- [x] `SCHEMA_OVERRIDE_TEMPLATE` (`settings-tab.ts:1118-1135`) 갱신: PMBOK 예시 entry 주석-out (P2-4) — 신규 vault 가 yaml 안에서 PMBOK 구조 학습 가능, 사용자가 자유롭게 활성화. 단일 yaml 파일에서 `standard_decompositions: []` 와 entries 동시 불가능 (mergeWithBuiltin 미지원, R9 limitation).
 
 #### 5.4.1.8 진입·종료 조건
-- [ ] **진입 trigger**: 두 번째 표준 corpus 인제스트 직전. PMBOK 1 corpus 만 있는 동안 대기.
-- [ ] **종료 조건**: 9 AC 모두 GREEN + AC7 baseline ≥ 667 PASS + AC6.b 라이브 측정 no-regression. 종료 후 Stage 2 (§5.4.2) gate 평가.
+- [x] **진입 trigger**: 두 번째 표준 corpus 인제스트 직전. PMBOK 1 corpus 만 있는 동안 대기.
+- [x] **종료 조건**: 9 AC 모두 GREEN + AC7 baseline ≥ 667 PASS + AC6.b 라이브 측정 no-regression. 종료 후 Stage 2 (§5.4.2) gate 평가.
 
 ### 5.4.2 Stage 2 — extraction graph 기반 suggestion (Stage 1 완료 후, 중기)
 
@@ -368,25 +368,25 @@
 > **Baseline (불변)**: §5.4.1 staged 670 PASS / build 0 errors.
 
 #### 5.4.2.1 SuggestionStorage + 데이터 모델
-- [ ] **AC2** — `Suggestion` / `SuggestionState` (4-kind: pending / accepted / rejected / edited) / `SuggestionStorage` interface export (wikey-core/src/types.ts + suggestion-storage.ts 신규). `.wikey/suggestions.json` schema (rotation 안 함, negativeCache 영구). `.wikey/mention-history.json` schema (rotation 5000 ingest 또는 10MB). 신규 단위 테스트 ≥ 3 cases.
+- [x] **AC2** — `Suggestion` / `SuggestionState` (4-kind: pending / accepted / rejected / edited) / `SuggestionStorage` interface export (wikey-core/src/types.ts + suggestion-storage.ts 신규). `.wikey/suggestions.json` schema (rotation 안 함, negativeCache 영구). `.wikey/mention-history.json` schema (rotation 5000 ingest 또는 10MB). 신규 단위 테스트 ≥ 3 cases.
 
 #### 5.4.2.2 패턴 탐지 알고리즘
-- [ ] **AC3** — co-occurrence detector (minSiblings ≥ 3, prefix ≥ 5 chars). 신규 단위 테스트 ≥ 4 cases (정상 패턴 / 임계 미만 / 다중 표준 / sibling 부족).
-- [ ] **AC4** — suffix clustering (whitelist 6 종: `-management`, `-domain`, `-practice`, `-control`, `-principle`, `-policy`). 신규 단위 테스트 ≥ 3 cases.
-- [ ] **AC5** — confidence score formula (0.4·support + 0.3·suffix_homogeneity + 0.2·mention_density + 0.1·builtinOverlap, 임계 ≥ 0.6 alpha default). 신규 단위 테스트 ≥ 3 cases. **alpha calibration 의무** (cycle #2~#6 라이브 검증 후 baseline 측정 → hardening, 그 전까지 임계 변경 금지).
+- [x] **AC3** — co-occurrence detector (minSiblings ≥ 3, prefix ≥ 5 chars). 신규 단위 테스트 ≥ 4 cases (정상 패턴 / 임계 미만 / 다중 표준 / sibling 부족).
+- [x] **AC4** — suffix clustering (whitelist 6 종: `-management`, `-domain`, `-practice`, `-control`, `-principle`, `-policy`). 신규 단위 테스트 ≥ 3 cases.
+- [x] **AC5** — confidence score formula (0.4·support + 0.3·suffix_homogeneity + 0.2·mention_density + 0.1·builtinOverlap, 임계 ≥ 0.6 alpha default). 신규 단위 테스트 ≥ 3 cases. **alpha calibration 의무** (cycle #2~#6 라이브 검증 후 baseline 측정 → hardening, 그 전까지 임계 변경 금지).
 
 #### 5.4.2.3 Audit UI suggestion 카드
-- [ ] **AC6** — `wikey-obsidian/src/sidebar-chat.ts` Suggestions panel 신규 (Audit panel 과 분리). accept / reject / edit 버튼 + 사용자 승인 게이트 필수. 신규 단위 테스트 ≥ 2 cases.
+- [x] **AC6** — `wikey-obsidian/src/sidebar-chat.ts` Suggestions panel 신규 (Audit panel 과 분리). accept / reject / edit 버튼 + 사용자 승인 게이트 필수. 신규 단위 테스트 ≥ 2 cases.
 
 #### 5.4.2.4 schema.yaml writer (section-range insertion)
-- [ ] **AC7** — `wikey-core/src/schema-yaml-writer.ts` 신규 (`appendStandardDecomposition`). section-range insertion (line-level scan, parse 안 함) — `standard_decompositions:` 다음 top-level key 직전 line splice. header `[]` 인 경우 `header-unsafe` reject (사용자 명시 disable 의도 보호). idempotency check (`umbrella_slug:` substring marker). 신규 단위 테스트 ≥ 3 cases (yaml 보존 / append idempotent / header `[]` reject).
+- [x] **AC7** — `wikey-core/src/schema-yaml-writer.ts` 신규 (`appendStandardDecomposition`). section-range insertion (line-level scan, parse 안 함) — `standard_decompositions:` 다음 top-level key 직전 line splice. header `[]` 인 경우 `header-unsafe` reject (사용자 명시 disable 의도 보호). idempotency check (`umbrella_slug:` substring marker). 신규 단위 테스트 ≥ 3 cases (yaml 보존 / append idempotent / header `[]` reject).
 
 #### 5.4.2.5 ingest pipeline trigger
-- [ ] **AC8** — `wikey-core/src/ingest-pipeline.ts` 가 ingest 직후 `runSuggestionDetection` 호출 → `.wikey/suggestions.json` 누적. mention-history 도 동시 누적. 신규 단위 테스트 ≥ 2 cases (정상 trigger / 동시성 보호).
+- [x] **AC8** — `wikey-core/src/ingest-pipeline.ts` 가 ingest 직후 `runSuggestionDetection` 호출 → `.wikey/suggestions.json` 누적. mention-history 도 동시 누적. 신규 단위 테스트 ≥ 2 cases (정상 trigger / 동시성 보호).
 
 #### 5.4.2.6 false positive 방지 + 리스크
-- [ ] marketing 카피 distinguish: 임계값 + 사용자 승인 게이트 + 본 cycle baseline calibration 필수 (alpha → hardening trigger)
-- [ ] **종료 조건**: AC2~AC8 모두 GREEN + ≥ 17 신규 cases + 670 → ≥ 687 PASS. Stage 3 (§5.4.3) 진입.
+- [x] marketing 카피 distinguish: 임계값 + 사용자 승인 게이트 + 본 cycle baseline calibration 필수 (alpha → hardening trigger)
+- [x] **종료 조건**: AC2~AC8 모두 GREEN + ≥ 17 신규 cases + 670 → ≥ 687 PASS. Stage 3 (§5.4.3) 진입.
 
 ### 5.4.3 Stage 3 — in-source self-declaration (장기, Stage 2 정확도 증명 후)
 
@@ -394,24 +394,24 @@
 > **전제**: Stage 2 (§5.4.2) AC2~AC8 GREEN + 라이브 검증 후 false positive rate calibration 완료. accept rate ≥ 80% 또는 baseline 임계 정의.
 
 #### 5.4.3.1 SelfDeclaration 타입 + persist 결정
-- [ ] **AC9** — `SelfDeclaration` 타입 + `SelfDeclarationPersistChoice` (3-kind: runtime-only / pending-user-review / persisted) 신규 export. `mergeRuntimeIntoOverride(SchemaOverride, SelfDeclaration[])` helper (Stage 1 BUILTIN 위에 runtime entries append). 신규 단위 테스트 ≥ 1.
+- [x] **AC9** — `SelfDeclaration` 타입 + `SelfDeclarationPersistChoice` (3-kind: runtime-only / pending-user-review / persisted) 신규 export. `mergeRuntimeIntoOverride(SchemaOverride, SelfDeclaration[])` helper (Stage 1 BUILTIN 위에 runtime entries append). 신규 단위 테스트 ≥ 1.
 
 #### 5.4.3.2 section-index "표준 개요" detector
-- [ ] **AC10** — `wikey-core/src/section-index.ts` 의 `headingPattern` 신규 `'standard-overview'` 추가 (keyword regex `/개요|overview|introduction/`). 신규 단위 테스트 ≥ 3 cases (한국어 / 영어 / 미매치).
+- [x] **AC10** — `wikey-core/src/section-index.ts` 의 `headingPattern` 신규 `'standard-overview'` 추가 (keyword regex `/개요|overview|introduction/`). 신규 단위 테스트 ≥ 3 cases (한국어 / 영어 / 미매치).
 
 #### 5.4.3.3 structured decomposition extractor
-- [ ] **AC11** — deterministic pattern matching (numbered list 또는 bullet list ≥ 5 items + umbrella reference). LLM 호출 옵션 (ii) v2 deferral. 신규 단위 테스트 ≥ 3 cases.
+- [x] **AC11** — deterministic pattern matching (numbered list 또는 bullet list ≥ 5 items + umbrella reference). LLM 호출 옵션 (ii) v2 deferral. 신규 단위 테스트 ≥ 3 cases.
 
 #### 5.4.3.4 runtime-scope vs persist 결정 트리
-- [ ] **AC12** — default = runtime-only (해당 ingest 세션에만 적용). 사용자 승인 시 `pending-user-review` → review modal → `persisted` (schema.yaml append, Stage 2 writer 재사용). 자동 persist 강제 금지. 신규 단위 테스트 ≥ 2 cases.
+- [x] **AC12** — default = runtime-only (해당 ingest 세션에만 적용). 사용자 승인 시 `pending-user-review` → review modal → `persisted` (schema.yaml append, Stage 2 writer 재사용). 자동 persist 강제 금지. 신규 단위 테스트 ≥ 2 cases.
 
 #### 5.4.3.5 Stage 2 suggestion 충돌 처리
-- [ ] **AC13** — `shouldStage3ProposeRuntime(store, umbrella_slug)` 분기 (no prior / pending / accepted / rejected). suggestion 이미 있는 표준이 self-declared 자료에 등장 시 우선순위 결정. 신규 단위 테스트 ≥ 2 cases.
+- [x] **AC13** — `shouldStage3ProposeRuntime(store, umbrella_slug)` 분기 (no prior / pending / accepted / rejected). suggestion 이미 있는 표준이 self-declared 자료에 등장 시 우선순위 결정. 신규 단위 테스트 ≥ 2 cases.
 
 #### 5.4.3.6 false positive 방지
-- [ ] **AC14** — marketing 자료 본문이 enumerate 형태로 표준처럼 보이는 경우 guard. Phase 4 §4.3.2 provenance tracking 연계. 신규 단위 테스트 ≥ 1.
+- [x] **AC14** — marketing 자료 본문이 enumerate 형태로 표준처럼 보이는 경우 guard. Phase 4 §4.3.2 provenance tracking 연계. 신규 단위 테스트 ≥ 1.
 
-- [ ] **종료 조건**: AC9~AC14 모두 GREEN + ≥ 12 신규 cases. Stage 4 (§5.4.4) 진입.
+- [x] **종료 조건**: AC9~AC14 모두 GREEN + ≥ 12 신규 cases. Stage 4 (§5.4.4) 진입.
 
 ### 5.4.4 Stage 4 — cross-source convergence (Phase 5 내 최후 단계, 실험적)
 
@@ -420,25 +420,25 @@
 > **정확도**: alpha / page-level-limited (mention-level granularity v2 deferral).
 
 #### 5.4.4.1 ConvergedDecomposition 타입
-- [ ] **AC15** — `ConvergedDecomposition` (with `arbitration_method: 'union' | 'llm'` + `arbitration_confidence: number 0~1` + `source_mentions: SourceMention[]` + `arbitration_log?: string`) export. `.wikey/converged-decompositions.json` schema. 신규 단위 테스트 ≥ 1.
+- [x] **AC15** — `ConvergedDecomposition` (with `arbitration_method: 'union' | 'llm'` + `arbitration_confidence: number 0~1` + `source_mentions: SourceMention[]` + `arbitration_log?: string`) export. `.wikey/converged-decompositions.json` schema. 신규 단위 테스트 ≥ 1.
 
 #### 5.4.4.2 mention graph clustering
-- [ ] **AC16** — page-level qmd vector clustering (cosine similarity ≥ 0.75 임계, alpha default). agglomerative simple. 신규 단위 테스트 ≥ 2 cases (cluster 정상 / 임계 미만).
+- [x] **AC16** — page-level qmd vector clustering (cosine similarity ≥ 0.75 임계, alpha default). agglomerative simple. 신규 단위 테스트 ≥ 2 cases (cluster 정상 / 임계 미만).
 
 #### 5.4.4.3 LLM arbitration
-- [ ] **AC17** — `arbitrate(cluster, 'union' | 'llm', tokenBudget)`. default = `union` (LLM 호출 0). `--arbitration llm` opt-in 시 LLM 호출 + JSON 응답 → ConvergedDecomposition mapper (`arbitration_confidence` 일관 명시). 신규 단위 테스트 ≥ 2 cases (Happy union arbitration_confidence=1.0 / Happy llm arbitration_confidence=0.8).
+- [x] **AC17** — `arbitrate(cluster, 'union' | 'llm', tokenBudget)`. default = `union` (LLM 호출 0). `--arbitration llm` opt-in 시 LLM 호출 + JSON 응답 → ConvergedDecomposition mapper (`arbitration_confidence` 일관 명시). 신규 단위 테스트 ≥ 2 cases (Happy union arbitration_confidence=1.0 / Happy llm arbitration_confidence=0.8).
 
 #### 5.4.4.4 reindex.sh hook
-- [ ] **AC18** — `scripts/reindex.sh` 마지막에 conditional block (`WIKEY_CONVERGENCE_ENABLED=true` 일 때만, default off). 신규 shell test 또는 mjs test ≥ 1.
+- [x] **AC18** — `scripts/reindex.sh` 마지막에 conditional block (`WIKEY_CONVERGENCE_ENABLED=true` 일 때만, default off). 신규 shell test 또는 mjs test ≥ 1.
 
 #### 5.4.4.5 우선순위 충돌 처리 (`mergeAllSources`)
-- [ ] **AC19** — 우선순위 chain: user-yaml > suggested > self-declared > converged > runtime > BUILTIN. 같은 umbrella_slug 충돌 시 우선순위 적용. 신규 단위 테스트 ≥ 2 cases.
+- [x] **AC19** — 우선순위 chain: user-yaml > suggested > self-declared > converged > runtime > BUILTIN. 같은 umbrella_slug 충돌 시 우선순위 적용. 신규 단위 테스트 ≥ 2 cases.
 
 #### 5.4.4.6 데이터 선결 조건 검증
-- [ ] **AC20** — `runConvergencePass` 실행 전 mention-history 누적 ≥ 3 표준 × 2 source = 6 instance 검증. 미달 시 skip (사용자 알림). 신규 단위 테스트 ≥ 1.
+- [x] **AC20** — `runConvergencePass` 실행 전 mention-history 누적 ≥ 3 표준 × 2 source = 6 instance 검증. 미달 시 skip (사용자 알림). 신규 단위 테스트 ≥ 1.
 
-- [ ] **Phase 6 이관 없음** — Phase 6 은 웹 인터페이스 스코프. self-extension 모든 단계는 Phase 5 안에서 완결.
-- [ ] **종료 조건**: AC15~AC20 모두 GREEN + ≥ 9 신규 cases. §5.4.5 통합 라이브 검증 진입.
+- [x] **Phase 6 이관 없음** — Phase 6 은 웹 인터페이스 스코프. self-extension 모든 단계는 Phase 5 안에서 완결.
+- [x] **종료 조건**: AC15~AC20 모두 GREEN + ≥ 9 신규 cases. §5.4.5 통합 라이브 검증 진입.
 
 ### 5.4.5 통합 시나리오 integration test + post-impl review + AC21 라이브 + follow-up 4
 
