@@ -117,6 +117,19 @@ git diff --name-only HEAD~5 -- wiki/
 
 wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`rules/obsidian-plugin.md`](./rules/obsidian-plugin.md)** 참조. npm 스크립트: `npm run build`, `npm test`, `npm run dev`.
 
+**사이드바 패널 6종** (sidebar-chat.ts):
+
+| 패널 | header icon | 용도 |
+|------|------|------|
+| Chat | chat | LLM 답변 + citation + 1-hop wikilink |
+| Dashboard | dashboard | wiki 통계 + tag ranking + recent queries |
+| Ingest | plus | 파일 인입 + brief / approve & write 흐름 |
+| Audit | audit | raw 파일별 ingest 상태 + retry / delay |
+| **Suggestions** | clipboard_check | **§5.4 표준 분해 그룹 조회 + Accept/Reject/Add/Edit** (2026-04-26 session 14 추가). schema.yaml 등록 안내 + "schema.yaml 확인 →" modal popup (도메인 tag cloud). 일반 사용자 거의 안 써도 됨 — 자동 탐지 결과 검토용. |
+| Help | question | guide 마크다운 |
+
+**§5.4 self-extending + §5.10 paradigm shift issue** (`wikey.schema.md §표준 분해 self-extending 구조` 참조): Stage 1~4 자동 후보 → Suggestions panel Accept → schema.yaml. 사용자 본질 비판 6 chain → §5.10 paradigm shift 4 옵션 (★D LLM-only Stage 1~4 deprecate 권장) 사용자 결정 대기.
+
 ## 활동 기록 문서 규칙
 
 `activity/phase-*-result.md` 작성·재구성 규칙은 **`result-doc-writer` 스킬**에 정의되어 있다. 해당 문서를 수정하거나 세션 결과를 기록할 때 그 스킬이 자동 트리거된다. (이전에 이 CLAUDE.md에 직접 기록하던 3원칙·번호체계·`#tag` 규칙은 2026-04-20에 스킬로 이관, 전역 토큰 절약.)
