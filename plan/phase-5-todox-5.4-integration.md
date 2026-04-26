@@ -1084,11 +1084,11 @@ reindex.sh
   ↓
 qmd update + embed
   ↓
-run-convergence-pass.mjs
+run-convergence-pass.mjs (--embeddings <json> 외부 inject — alpha v1 wire)
   ↓
-clusterMentionsAcrossSources(history, qmdIndex) → cluster 들 발견
+clusterMentionsAcrossSources(history, embeddings) → singleton drop + cluster 들 발견
   ↓
-각 cluster (≥ 3 source) → arbitrate(cluster, 'llm', 50K tokens)
+각 cluster (≥ 3 source, mention_slugs ≥ 2) → arbitrate(cluster, 'llm', 50K tokens)
   ↓
 ConvergedDecomposition 후보 (arbitration_confidence ≥ 0.7) → .wikey/converged-decompositions.json 저장
   ↓
@@ -1522,7 +1522,26 @@ Stage 4 fail (LLM down)
 
 ---
 
-## 8. 변경 이력 (v1 작성 → v2 → v3 → v4 → v5 master → v6 Cycle #1 → v7 Cycle #2 → v8 Cycle #3 → v9 Cycle #4 fix)
+## 8. 변경 이력 (v1 → v2 → v3 → v4 → v5 master → v6 Cycle #1 → v7 Cycle #2 → v8 Cycle #3 → v9 Cycle #4 → v10 Cycle #5 fix)
+
+### 8.10 v10 post-implementation Cycle #5 master 직접 fix (2026-04-26, codex Cycle #5 REJECT 후속 — §4.1 fresh ingest flow stale)
+
+**codex Cycle #5 발견 1 finding** (LOW):
+
+| Finding | severity | 위치 | master 결정 + fix |
+|---|---|---|---|
+| **§4.1 fresh ingest flow stale** | LOW | plan line 1089 | 동의. §3.4.2 + §3.4.3 + convergence.ts 모두 갱신했으나 §4.1 fresh ingest flow 의 시퀀스 다이어그램 안 `clusterMentionsAcrossSources(history, qmdIndex)` 잔존. fix: alpha v1 embeddings inject + singleton drop 흐름으로 갱신 (`(history, embeddings)` + `mention_slugs ≥ 2`) |
+
+**v10 self-check** (master 1차 검증 의무 + cross-check):
+- (a) ✅ 시그니처 cross-file 일관 — §3.4.2 + §3.4.3 + §4.1 + convergence.ts 모두 (history, embeddings)
+- (b) ✅ Union kind 무변경
+- (c) ✅ singleton drop guard 명시 §3.4.2 + §3.4.3 + §4.1 + convergence.ts 일관
+- (d) ✅ AC1~AC22 + 신규 cases 누적 731 PASS 보존
+- (e) ✅ stale 0: §4.1 fresh ingest flow 갱신, 잔존 grep hit (line 1533/1555) 은 history row only — 활성 finding 아님 (codex 도 확인)
+- (f) ✅ header v5 ↔ §8.10 v10 ↔ footer (post-impl Cycle #5)
+- (g) ✅ exact phrase 보존 + alpha v1 embeddings inject + singleton drop 표현 일관
+
+**baseline 보존**: 731 PASS / 0 build errors (코드 변경 없음 — plan 문서 수정만).
 
 ### 8.9 v9 post-implementation Cycle #4 master 직접 fix (2026-04-26, codex post-impl Cycle #4 REJECT 후속 — LOW lingering)
 
