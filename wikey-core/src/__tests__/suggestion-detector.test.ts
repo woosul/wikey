@@ -106,6 +106,9 @@ describe('detectSuffixCluster', () => {
     ]
     const out = detectSuffixCluster(history)
     expect(out.length).toBeGreaterThanOrEqual(1)
+    // mixed firstWord (risk/quality/cost/procurement) → fallback 'cluster' (의미있는
+    // 공통 prefix 없음). PMBOK 같은 단일 표준 corpus 면 firstWord 'project' → prefix
+    // 'project' → 'project-management' (의미있는 default).
     const mgmt = out.find((c) => c.umbrella_slug === 'cluster-management')
     expect(mgmt).toBeDefined()
     expect(mgmt!.support_count).toBe(2)
@@ -143,6 +146,37 @@ describe('detectSuffixCluster', () => {
       }),
     ]
     expect(detectSuffixCluster(history)).toHaveLength(0)
+  })
+
+  // §5.4 라이브 cycle smoke follow-up (2026-04-26 사용자 영구 결정): components 의
+  // first word (- 전) 가 모두 동일하면 그 prefix 사용 → 의미있는 default umbrella_slug.
+  // PMBOK only ingest 시 'project-{integration,scope,...}-management' → prefix 'project'
+  // → umbrella_slug 'project-management' (사용자 Edit 없이도 의미 명확).
+  it('uses common firstWord prefix as umbrella default when all components share it (PMBOK pattern)', () => {
+    const history: IngestRecord[] = [
+      ingest({
+        source: 'wiki/sources/source-pmbok-overview.md',
+        concepts: [
+          { slug: 'project-integration-management', type: 'methodology' },
+          { slug: 'project-scope-management', type: 'methodology' },
+          { slug: 'project-schedule-management', type: 'methodology' },
+        ],
+      }),
+      ingest({
+        source: 'wiki/sources/source-pmbok-areas.md',
+        concepts: [
+          { slug: 'project-cost-management', type: 'methodology' },
+          { slug: 'project-quality-management', type: 'methodology' },
+        ],
+      }),
+    ]
+    const out = detectSuffixCluster(history)
+    expect(out.length).toBeGreaterThanOrEqual(1)
+    const proj = out.find((c) => c.umbrella_slug === 'project-management')
+    expect(proj).toBeDefined()
+    expect(proj!.support_count).toBe(2)
+    // round-trip: parser regex 일치
+    expect(/^[a-z][a-z0-9-]*$/.test(proj!.umbrella_slug)).toBe(true)
   })
 })
 

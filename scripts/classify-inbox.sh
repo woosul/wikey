@@ -37,9 +37,11 @@ cmd_scan() {
   local dry_run="${1:-false}"
   local items=()
 
+  # 사용자 영구 결정 (2026-04-26): inbox 가 폴더 형태로 들어와도 분류 대상은
+  # 파일만 평탄화 (옵션 B). -type f + 모든 depth 재귀 + hidden 제외.
   while IFS= read -r -d '' item; do
     items+=("$item")
-  done < <(find "$INBOX_DIR" -mindepth 1 -maxdepth 1 -not -name '.DS_Store' -not -name '.*' -print0 2>/dev/null | sort -z)
+  done < <(find "$INBOX_DIR" -mindepth 1 -type f -not -name '.DS_Store' -not -name '.*' -print0 2>/dev/null | sort -z)
 
   if [ ${#items[@]} -eq 0 ]; then
     log_info "inbox 비어 있음. 분류할 항목이 없습니다."

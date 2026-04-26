@@ -171,5 +171,26 @@
     ],
     "tombstone": false,
     "last_action": "force"
+  },
+  "sha256:a19faedc58facc20": {
+    "vault_path": "raw/3_resources/60_note/000_computer_science/test-stage3-cobit.md",
+    "hash": "a19faedc58facc2096709fd6ff37f59dbd44248deed0d3e2417f8d2fb8769852",
+    "size": 847,
+    "first_seen": "2026-04-26T09:02:47.575Z",
+    "ingested_pages": [
+      "wiki/sources/source-cobit-2019-overview.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/test-stage3-cobit.md",
+        "at": "2026-04-26T09:02:47.575Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/000_computer_science/test-stage3-cobit.md",
+        "at": "2026-04-26T09:03:11.151Z"
+      }
+    ],
+    "tombstone": true,
+    "last_action": "force"
   }
 }

@@ -166,11 +166,17 @@ export function detectSuffixCluster(
       return { slug, type: t }
     })
 
-    // suffix cluster 의 umbrella_slug 는 parser regex /^[a-z][a-z0-9-]*$/ 와 일치해야 한다
-    // (schema.ts:435 isValidSlug). suffix '-management' → 'cluster-management' 형식.
+    // suffix cluster 의 umbrella_slug — 사용자 영구 결정 (2026-04-26 §5.4 follow-up):
+    // components 의 first word (- 전) 가 모두 같으면 그 prefix 사용 (예: PMBOK 만 ingest →
+    // 'project' + '-management' = 'project-management', 의미있는 default).
+    // mixed 인 경우 fallback 'cluster' (사용자가 Edit modal 로 변경 권장).
+    // parser regex /^[a-z][a-z0-9-]*$/ 일치 보장 (post-impl Cycle #1 F1 round-trip).
     const suffixBase = suffix.replace(/^-/, '')
+    const firstWords = uniqueSlugs.map((s) => s.split('-')[0])
+    const allFirstSame = firstWords.length > 0 && firstWords.every((w) => w === firstWords[0])
+    const prefix = allFirstSame ? firstWords[0] : 'cluster'
     out.push({
-      umbrella_slug: `cluster-${suffixBase}`,
+      umbrella_slug: `${prefix}-${suffixBase}`,
       components,
       support_count: sourcesWithSuffix.size,
       unique_suffixes: 1,                 // single suffix by construction

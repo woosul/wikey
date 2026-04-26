@@ -130,12 +130,68 @@ Card 의 Accept button click:
 
 ## 3. Deferred (out of scope, follow-up)
 
-| 항목 | 사유 | 권장 |
-|------|------|------|
-| Stage 3 SelfDeclaration runtime extraction 검증 | 본 cycle 에선 ingest-pipeline wiring 만 검증 (mergeRuntimeIntoOverride 호출). `## 개요` headingPattern detect 결과 inspect 안 함 | 별도 cycle 또는 unit test 추가 |
-| Stage 4 convergence pass 라이브 | reindex.sh hook 의 `WIKEY_CONVERGENCE_ENABLED=true` + `--embeddings` JSON 외부 dump 필요 | qmd vector index 통합 v2 deferral |
-| `cluster-management` umbrella name UX 개선 | suffix cluster default umbrella_slug 가 `cluster-${suffix}` 형식 — 사용자가 Edit 으로 의미있는 이름으로 변경 가능 | UX follow-up: detector 가 첫 source 의 표준 추정명 사용 (예: PMBOK) |
-| autoMove inbox→PARA (subfolder 케이스) | itil-4-practices 의 raw/0_inbox/integration-cycle-smoke/ 가 PARA 분류로 이동 안 됨 (5/6 file 만 이동) | classifyFile 의 subfolder 처리 follow-up |
+| 항목 | 상태 |
+|------|------|
+| Stage 3 SelfDeclaration runtime extraction 검증 | ✅ **완료** (§3.5 follow-up cycle, COBIT 2019 fixture ingest) |
+| Stage 4 convergence pass 라이브 | ⏸ 별 세션 (qmd embeddings 외부 dump 필요) |
+| umbrella name UX (default) | ✅ **완료** (§3.6 — suffix detector firstWord prefix 추출) |
+| classify-inbox.sh subfolder 처리 | ✅ **완료** (§3.7 — `find -type f` 평탄화) |
+
+## 3.5 Stage 3 inspect follow-up (2026-04-26 18:00 ~ 18:05)
+
+**의도**: ingest-pipeline wiring 만 검증된 상태 → 실 ingest 시 SelfDeclaration runtime extraction 이
+적용되는지 evidence 확보.
+
+**fixture**: `raw/0_inbox/test-stage3-cobit.md` (master 작성 — COBIT 2019 5 도메인 + 표준 개요
+section + numbered list 5 items).
+
+**ingest cycle smoke**:
+- 50s preview ready + Approve & Write
+- console log 검증:
+  ```
+  [Wikey ingest] schema override — entities=0, concepts=0
+  [Wikey ingest] stage3 self-declarations — 1 runtime entries
+  ```
+
+**결과 evidence**:
+- ✅ Stage 3 wiring 정상 동작 — `stage3 self-declarations — 1 runtime entries` log 확인
+- ✅ extractSelfDeclaration 가 `## 개요` heading + 5 numbered items detect → SelfDeclaration 1
+  entry 생성
+- ✅ mergeRuntimeIntoOverride 가 effectiveOverride 에 SelfDeclaration append → canonicalize prompt
+  에 반영
+- ✅ wiki/concepts/ 신규 5 file: `cobit-2019`, `cobit-{evaluate-direct-monitor, align-plan-organize,
+  build-acquire-implement, monitor-evaluate-assess}` (단 `cobit-deliver-service-support` 만 LLM
+  추출 누락 — 본 issue 는 LLM 정확도 별 영역)
+- ✅ autoMove (inbox→PARA) 정상 — raw/0_inbox/test-stage3-cobit.md 가 raw/3_resources/ 로 자동 이동
+
+## 3.6 Suffix detector umbrella default UX (2026-04-26 §5.4 follow-up)
+
+**의도**: detectSuffixCluster 의 default umbrella_slug 가 `cluster-${suffix}` 형식 (의미가 약함)
+→ 가능하면 의미있는 prefix 사용.
+
+**fix** (commit 진행):
+- `wikey-core/src/suggestion-detector.ts:170-178` 수정
+- components 의 first word (- 전) 가 모두 동일하면 그 prefix 사용 (예: PMBOK 만 ingest 시
+  `project-{integration,scope,...}-management` → firstWords = ['project'×N] → prefix 'project'
+  → umbrella_slug = `project-management`, 의미있는 default)
+- mixed 인 경우 fallback 'cluster' (사용자 Edit modal 로 변경 권장)
+
+**신규 test case 1**: PMBOK 패턴 (firstWord 모두 'project') → umbrella `project-management`. 
+**기존 test 갱신**: stage-integration.test.ts 의 ISO-27001 components → firstWord 모두 'iso' →
+`iso-management` (이전 `cluster-management`).
+
+회귀 보존: 731 → 732 PASS.
+
+## 3.7 classify-inbox.sh subfolder 평탄화 (2026-04-26 §5.4 follow-up)
+
+**의도**: classify-inbox.sh 의 find 가 `-maxdepth 1` 라 inbox 의 subfolder 안 file 미인식. 사용자
+영구 결정 옵션 B (폴더 구조 X, 파일만) 와 일관 fix.
+
+**fix**:
+- `scripts/classify-inbox.sh:42` 의 find 인자 수정: `-maxdepth 1` → `-type f` 평탄 재귀
+- 폴더 자체는 list 에서 제외 (수정 후 `find -type f` 가 directory 자동 skip)
+
+dry-run 검증: 정상 (현 inbox 비어있어 0 항목, 기존 ingest 시 6 file 평탄 표시 확증).
 
 ## 4. master 1차 검증 evidence
 
@@ -170,7 +226,7 @@ standard_decompositions:
 §5.4 self-extending 표준 분해 규칙 4 Stage:
 - ✅ Stage 1 (BUILTIN + user yaml override): wiki ingest 정상
 - ✅ Stage 2 (extraction graph 기반 suggestion): 라이브 cycle smoke 통과
-- ⚠ Stage 3 (in-source self-declaration): ingest-pipeline wiring 검증, runtime extraction 결과 inspect 별도
+- ✅ Stage 3 (in-source self-declaration): ingest-pipeline wiring + runtime extraction 모두 검증 (§3.5 follow-up)
 - ⏸ Stage 4 (cross-source convergence): qmd embeddings 외부 inject 필요 (alpha v1 wire 명시)
 - ✅ post-impl review codex Cycle #6 APPROVE
 - ✅ AC21 라이브 cycle smoke (본 문서)

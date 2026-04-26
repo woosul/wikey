@@ -230,9 +230,9 @@ describe('Scenario 4.2 — Incremental flow (Stage 2 suggestion accept → schem
       })
       expect(result.updatedHistory).toHaveLength(3)
 
-      // suffix-cluster detector 가 `cluster-management` umbrella 로 1+ 후보 emit (post-impl
+      // suffix-cluster detector 가 `iso-management` umbrella 로 1+ 후보 emit (post-impl
       // review HIGH fix — schema.ts:435 parser regex 와 round-trip 보장)
-      const suffixSugg = result.suggestions.find((s) => s.umbrella_slug === 'cluster-management')
+      const suffixSugg = result.suggestions.find((s) => s.umbrella_slug === 'iso-management')
       expect(suffixSugg).toBeDefined()
       expect(suffixSugg!.support_count).toBeGreaterThanOrEqual(3)
       expect(suffixSugg!.state.kind).toBe('pending')
@@ -252,7 +252,7 @@ describe('Scenario 4.2 — Incremental flow (Stage 2 suggestion accept → schem
       expect(append.appended).toBe(true)
       expect(fs._files['.wikey/schema.yaml']).toBeDefined()
       expect(fs._files['.wikey/schema.yaml']).toContain('standard_decompositions:')
-      expect(fs._files['.wikey/schema.yaml']).toContain('umbrella_slug: cluster-management')
+      expect(fs._files['.wikey/schema.yaml']).toContain('umbrella_slug: iso-management')
 
       // (d) round-trip — schema parser regex /^[a-z][a-z0-9-]*$/ 와 일치 확인. 다음 ingest
       // 의 loadSchemaOverride 가 user yaml 을 정상 인식 (post-impl review HIGH fix).
