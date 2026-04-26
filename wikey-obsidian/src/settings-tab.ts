@@ -482,7 +482,7 @@ export class WikeySettingTab extends PluginSettingTab {
         }),
       )
       .addButton((btn) => {
-        resetButton = btn.buttonEl
+        resetButton = btn.buttonEl as HTMLButtonElement
         btn.setButtonText('Reset').setDisabled(true).onClick(async () => {
           const hasCanonical = await vault.adapter.exists(opts.canonicalPath)
           const hasLegacy = opts.legacyPath ? await vault.adapter.exists(opts.legacyPath) : false
@@ -508,7 +508,7 @@ export class WikeySettingTab extends PluginSettingTab {
           : `Legacy override at ${opts.legacyPath}`
         : 'Bundled default'
       statusSpan.setText(`${opts.description} Status: ${label}.`)
-      if (resetButton) resetButton.disabled = !isCustom
+      if (resetButton) (resetButton as HTMLButtonElement).disabled = !isCustom
     })()
   }
 
@@ -547,7 +547,7 @@ export class WikeySettingTab extends PluginSettingTab {
         }),
       )
       .addButton((btn) => {
-        removeButton = btn.buttonEl
+        removeButton = btn.buttonEl as HTMLButtonElement
         btn.setButtonText('Remove').setDisabled(true).onClick(async () => {
           if (!(await vault.adapter.exists(path))) {
             new Notice('No schema override in use.')
@@ -565,7 +565,7 @@ export class WikeySettingTab extends PluginSettingTab {
       const exists = await vault.adapter.exists(path)
       if (!exists) {
         statusSpan.setText('Add domain-specific entity/concept types on top of the built-in 4+3. Status: Built-in only (no override).')
-        if (removeButton) removeButton.disabled = true
+        if (removeButton) (removeButton as HTMLButtonElement).disabled = true
         return
       }
       try {
@@ -580,7 +580,7 @@ export class WikeySettingTab extends PluginSettingTab {
       } catch (err) {
         statusSpan.setText(`Add domain-specific entity/concept types on top of the built-in 4+3. Status: parse error — ${(err as Error).message}`)
       }
-      if (removeButton) removeButton.disabled = false
+      if (removeButton) (removeButton as HTMLButtonElement).disabled = false
     })()
   }
 
