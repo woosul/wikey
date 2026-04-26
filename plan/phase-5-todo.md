@@ -478,11 +478,13 @@
 - [x] **Total commits push (16 commits)**: 9b7da21 → 7e6c2fb (5.4.1 → 5.4.7 + sync v8 정정)
 - [x] **보조 문서**: `activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md` (master 직접 라이브 cycle smoke 전체 detail).
 
-### 5.4.7 v2 deferral (다음 세션 진입점, 사용자 영구 결정 2026-04-26)
+### 5.4.7 v2 deferral — **다음 세션 첫 액션** (사용자 영구 결정 2026-04-26)
 
-- [ ] **1순위 — Stage 4 실 qmd embeddings 통합**: 다국어 / synonym 자동 통합 인식 (mock 만으로 미검증된 핵심 가치). 구현 path 3 후보 (Python sqlite-vec extension 권장 / Node.js wrapper / qmd CLI subprocess). 작업 단계: qmd schema 검증 → Python helper script (`scripts/qmd-embeddings-export.py`) → mention-history slug → embedding JSON dump → run-convergence-pass.mjs `--embeddings` inject → cluster 정확도 측정 (한/영 cluster 의미 유사도 ≥ 0.85 검증).
-- [ ] **2순위 — Suggestions panel UI 개선**: 카드 시각 디자인 (confidence bar / badge / icon) + Edit modal 구현 (umbrella_slug / umbrella_name / aliases / components 수정) + 정렬 / 필터 / negativeCache view + Stage 3 SelfDeclaration runtime / Stage 4 ConvergedDecomposition 통합 표시 + 빈 state UX + 반응형. ui-designer (gemini-panel) 위임 권장.
-- [ ] **3순위 — Stage 4 ConvergedDecomposition 사용자 review modal**: Stage 2 Suggestions panel 패턴 재사용 (Accept/Edit/Reject + writer 호출). 1순위 완료 후 진입 권장.
+> **fresh session 진입 즉시 첫 cycle 에서 1순위 + 2순위 (UI 수정) 동시 진행**. 3·4순위 는 1·2 완료 후 순차. 별 read 진입점: `plan/session-wrap-followups.md` 의 🎯 섹션 + 본 §5.4.7.
+
+- [ ] **1순위 (★ fresh session 첫 작업) — Stage 4 실 qmd embeddings 통합**: 다국어 / synonym 자동 통합 인식 (mock 만으로 미검증된 핵심 가치). 구현 path 3 후보 (Python sqlite-vec extension 권장 / Node.js wrapper / qmd CLI subprocess). 작업 단계: qmd schema 검증 → Python helper script (`scripts/qmd-embeddings-export.py`) → mention-history slug → embedding JSON dump → run-convergence-pass.mjs `--embeddings` inject → cluster 정확도 측정 (한/영 cluster 의미 유사도 ≥ 0.85 검증).
+- [ ] **2순위 (★ fresh session 첫 작업, UI 수정) — Suggestions panel UI 개선**: 카드 시각 디자인 (confidence bar / badge / icon) + Edit modal 구현 (umbrella_slug / umbrella_name / aliases / components 수정) + 정렬 / 필터 / negativeCache view + Stage 3 SelfDeclaration runtime / Stage 4 ConvergedDecomposition 통합 표시 + 빈 state UX + 반응형. ui-designer (gemini-panel) 위임 권장.
+- [ ] **3순위 — Stage 4 ConvergedDecomposition 사용자 review modal**: Stage 2 Suggestions panel 패턴 재사용 (Accept/Edit/Reject + writer 호출). 1·2순위 완료 후 진입 권장.
 - [ ] **4순위 — §5.4 minor follow-up**: 자료 자동 분류 race condition 1 case (재현 어려움 — self-resolve), Edit modal 검증 (2순위 통합).
 
 **연계**:

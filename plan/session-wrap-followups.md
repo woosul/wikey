@@ -7,6 +7,10 @@
 
 ## 🎯 다음 세션 첫 액션 (2026-04-26 session 13 종료 시점)
 
+> **사용자 영구 결정 (2026-04-26 session 13 종결 직후)**: 본 session 의 deferred 4 항목 (§5.4.7) 은 **다음 세션 진입 즉시 첫 작업** 으로 진행. 1순위 (Stage 4 실 qmd) + **2순위 (UI 수정, Suggestions panel) 모두 fresh session 첫 cycle 안에서 처리**. 3·4순위 는 1·2 완료 후 순차.
+>
+> **fresh session 진입 시 첫 read**: (1) `plan/session-wrap-followups.md` 본 섹션 → (2) `plan/phase-5-todo.md §5.4.7` (4 체크박스) → (3) `activity/phase-5-result.md §5.4.7` (deferral table) → (4) 작업 시작.
+
 ### 1순위 — Stage 4 실 qmd embeddings 통합 (사용자 영구 결정 2026-04-26)
 
 **의도 (사용자 강조)**: wikey 가 다국어 / 다른 표현 / synonym 자동 통합 인식. 본 세션 = mock embeddings 로 alpha v1 wire 만 검증, 실 의미 유사도 cluster 미검증.
@@ -31,7 +35,7 @@
 
 **선결 조건** (선택): 사용자 vault 에 한국어 + 영어 같은 표준 자료 ≥ 1쌍 (다국어 cluster 효과 측정). 본 cycle 의 6 fixture (영어 only) 만으로도 wire 검증 가능.
 
-### 2순위 — Suggestions panel UI 개선 (사용자 영구 결정 2026-04-26)
+### 2순위 — Suggestions panel UI 개선 (사용자 영구 결정 2026-04-26 — 1순위와 fresh session 첫 cycle 동시 진행)
 
 **의도**: 본 세션에서 Suggestions panel 신규 추가 (Header button + 카드 + Accept/Edit/Reject). minimal 구현 — UX 개선 필요.
 
