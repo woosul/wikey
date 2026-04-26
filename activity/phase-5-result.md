@@ -16,10 +16,12 @@
   - [`activity/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md`](./phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md) — Obsidian CDP UI 1-cycle smoke 실측 (NanoVNA 1 파일, master 직접)
 - **§5.3 보조 문서**:
   - [`plan/phase-5-todox-5.3.1-incremental-reingest.md`](../plan/phase-5-todox-5.3.1-incremental-reingest.md) — §5.3.1 + §5.3.2 결합 설계 (v11 codex Mode D **APPROVE_WITH_CHANGES**, 11 cycle 수렴 P1 0건)
-- **§5.4 보조 문서** (2026-04-26 session 13 종결):
-  - [`plan/phase-5-todox-5.4-integration.md`](../plan/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10, codex post-impl Cycle #6 APPROVE)
+- **§5.4 보조 문서** (2026-04-26 session 13 종결 + session 14 §10 / §11 보강):
+  - [`plan/phase-5-todox-5.4-integration.md`](../plan/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10, codex post-impl Cycle #6 APPROVE) + §10 v6 실 qmd embeddings 통합 + §11 v7 Suggestions panel UI 개선 (session 14)
   - [`plan/phase-5-todox-5.4.1-self-extending.md`](../plan/phase-5-todox-5.4.1-self-extending.md) — Stage 1 단독 plan (v7, codex Cycle #9 APPROVE)
   - [`activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](./phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md) — AC21 라이브 cycle smoke + Stage 3 inspect + Stage 4 alpha v1 wire 검증 (master 직접)
+- **§5.10 보조 문서** (2026-04-26 session 14 paradigm shift issue 등록):
+  - [`plan/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5-todox-5.10-graph-emergent-ontology.md) — graph emergent + LLM-only ontology paradigm shift 보조 plan (v1 신규, 4 옵션 detail spec + §9 정당성 검증)
 - **추후 보조 문서**: `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식 (`CLAUDE.md §문서 명명규칙·조직화` 참조).
 - **프로젝트 공통**: [`plan/decisions.md`](../plan/decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](../plan/plan_wikey-enterprise-kb.md).
 
@@ -1378,3 +1380,117 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 > **이전 번호**: `was §5.4`.
 
 (착수 전 — 2026-04-22 Phase 4 §4.5.1.7.1/.7.4/.7.6/.7.7 에서 이관. Phase 4 §4.5.1.7.2/7.3 실측으로 본체 CV <10% 확보 이후 선택적 diagnostic. 4-points ablation (all-off/determinism-only/canon-only/all-on) + SEGMENTED 10-run Ollama baseline + BOM 축 재분할 판단 + log_entry axis 불일치 cosmetic 수정.)
+
+---
+
+## 5.10 Graph emergent ontology — §5.4 paradigm shift (P1, ★ 사용자 본질 비판 정식 issue 등록 2026-04-26 session 14)
+> tag: #ontology, #architecture, #paradigm-shift, #self-extending, #graph
+
+> **issue 등록 commit**: 9220e14 (`docs(plan): §5.10 paradigm shift 정식 issue 등록 — graph emergent + LLM-only ontology 폐기`).
+>
+> **trigger**: §5.4.7 1/2/3/4순위 종결 후 modal tag cloud 라이브 검증 중 사용자 본질 비판 6 chain 명시. 본 cycle (panel UI) 안에서 panel 측 부분 반영 (Add/Edit secondary 약화 + intro 조회 톤 + tag cloud 친화 표시 + raw YAML 제거 + 이모지 제거 + h4 bold) + 본격 자동화 (ingest pipeline 변경) + panel 폐기 검토는 본 §5.10 으로 분리.
+
+### 5.10.1 사용자 본질 비판 chain (영구 기록, 2026-04-26 session 14)
+
+| # | 사용자 명시 (직접 발언) | 함의 |
+|---|----------------------|------|
+| 1 | "표준 분해 패턴을 왜 등록·관리해야 하나? 너무 엔지니어링적 사고." | panel 자체의 존재 가치 의문 |
+| 2 | "self-extending 인데 진짜는 자동 확장 ontology — 지금은 수동." | self-extending 명명의 약속 vs 현재 수동성 갭 |
+| 3 | "표준 분해 그룹 = 지식 그룹? — ⊂ 관계." | 개념 일반화 — knowledge group 으로 generalize |
+| 4 | "wiki 가장 많이 노출되는 게 중심 — 굳이 그룹으로 나눠 제한 두는 게 이상해." | graph emergent ontology — 그룹 abstraction 제거 |
+| 5 | "지식 분해하는 그룹이 왜 필요? 세상 수많은 지식을 어떻게 표준화?" | epistemology 비판 — 지식 분해 모델 자체의 한계 |
+| 6 | "굳이 어려운 말 써가면서 분류할 필요 없잖아. LLM 든든한 백 위에서 움직이는데." | LLM 시대의 ontology 시대착오. 옵션 D 정당화 |
+
+### 5.10.2 자동/수동 매트릭스 (현재 §5.4 구현 사실, chain break 식별)
+
+| 단계 | 동작 | 자동/수동 |
+|------|------|-----------|
+| ingest | 자료 → wiki/concepts·entities 페이지 생성 | ✅ 자동 |
+| mention 누적 | `.wikey/mention-history.json` | ✅ 자동 |
+| Stage 2 detector | mention graph → suggestion 후보 (`.wikey/suggestions.json` pending) | ✅ 자동 (후보까지) |
+| Stage 3 self-declaration | 소스 "표준 개요" 섹션 → runtime SelfDeclaration | ✅ 자동 (runtime, persist X) |
+| Stage 4 cluster | qmd embeddings cosine → ConvergedDecomposition | ✅ 자동 (alpha v1) |
+| **schema.yaml 영구 등록** | umbrella + components 등재 | ❌ **panel Accept 수동 (chain 끊는 user gate)** |
+| **alias 자동 merging** | "ISO 27001" / "iso-iec-27001-2022" / "ISMS" 한 wiki 페이지 통합 | ❌ **미구현** |
+| **wiki/concepts/<umbrella>.md** | 그룹 자체 wiki 페이지 자동 생성 | ❌ **미구현** |
+
+### 5.10.3 4 옵션 결정 분기 (사용자 다음 세션 명시)
+
+- **A. 점진** — §5.4 panel UI 유지 + 자동 등록 추가 + §5.5 graph 시각화 추가. schema.yaml 보조.
+- **B. paradigm shift (graph emergent)** — schema.yaml `standard_decompositions` 영역 deprecate. §5.5 graph 가 ontology source. canonicalizer (alias dedup) 만 보존. panel 폐기 또는 graph view 로 교체.
+- **C. 관망** — 본 §5.10 자체 보류. §5.4 본체만 사용.
+- **★ D. LLM-only (ontology layer 제거)** — §5.4 Stage 1~4 전체 deprecate. LLM + qmd embedding 백이 의미 처리 일임. wikey 는 raw → wiki organization + retrieval interface 만. **사용자 통찰 가장 정확 반영**.
+
+### 5.10.4 옵션 D detail (사용자 통찰 가장 정확 반영)
+
+**deprecate 대상** (옵션 D 채택 시):
+- §5.4 Stage 1~4 (self-extending 전체)
+- `standard_decompositions` schema 모델 + `.wikey/schema.yaml` 의 해당 영역 (alias / PII / custom-types 보존)
+- `.wikey/suggestions.json` / `.wikey/converged-decompositions.json` / `.wikey/mention-history.json` (graph 시각화 retain 시 보존)
+- panel Suggestions UI (header button + sidebar-chat.ts 의 §11 코드 + SchemaYamlModal)
+- canonicalizer.ts 의 Stage 1 schema override 로직 (BUILTIN_STANDARD_DECOMPOSITIONS 포함)
+
+**유지** (옵션 D 시 LLM-백 위 4 layer):
+1. raw → wiki organization (자료 인입 + classify + 페이지 생성)
+2. canonical slug normalization (minimal — file hash dedup, alias 다국어 / 동명이인 / 약어)
+3. LLM 자연 retrieval (qmd embedding + LLM 답변)
+4. 사용자 interface (chat / dashboard / search / settings)
+
+**migration cost** (옵션 D):
+- 약 30~50 file 변경 (Stage 1~4 코드 + test + plan + schema)
+- §5.4 cycle 의 732 PASS 중 ~100 test 폐기 또는 deprecate (Stage 1~4 unit + integration)
+- 회귀 risk 약함 (§5.4 가 §5.2 / §5.3 와 직접 dependency 적음)
+
+### 5.10.5 epistemology 비판 (영구 기록)
+
+§5.4 의 "표준 분해" = **외부 정형 표준에만 적용 가능한 reductionism**. 일반 지식 (잡지·메모·임의 자료) 에는 mismatch.
+
+| 가정 (§5.4) | 현실 (사용자 통찰) |
+|------------|------------------|
+| 지식 = decomposable (그룹 → components) | 지식 = relational (다차원 graph). 깔끔한 분해 불가능 |
+| 모든 지식이 PMBOK 같은 component 구조 | PMBOK / ISO 27001 / ITIL 같은 외부 정형 표준만 fit |
+| 표준화로 ontology 완성 | 세상 지식은 무한 차원·끝없이 다양 |
+| self-extending = 그룹 자동 추가 | 진짜 self-organizing = graph 자체가 emergent |
+
+⇒ **wikey 의 진정한 가치** = mention graph (relational) + 의미 search (LLM/embedding). 그룹 분해 X.
+
+### 5.10.6 정당성 검증 (사용자 명시 2026-04-26 — "§5.4 가 없으면 wikey 가 지식 관리 가능한가?")
+
+**결론**: §5.4 가 없어도 wikey 정상 작동. 핵심 기능 영향 없음.
+
+| 핵심 기능 | §5.4 의존? | §5.4 deprecate 시 영향 |
+|----------|-----------|---------------------|
+| raw → wiki ingest | ❌ 무관 | 영향 없음 |
+| wiki/concepts·entities 페이지 생성 | △ 약함 (~5%) | LLM 자율 추출 정상 |
+| alias normalization | △ 약함 (~10%) | canonicalizer minimal 보존 |
+| 검색 — qmd embedding + LLM 답변 | ❌ 무관 | 의미 매칭 정상 |
+| 답변 1-hop wikilink expansion | ❌ 무관 | 단순 wikilink 그래프 |
+| chat / dashboard / ingest UX | ❌ 무관 | 영향 없음 |
+| PII protection | ❌ 무관 | schema.yaml `pii_patterns` 보존 |
+| incremental reingest (§5.3) | ❌ 무관 | hash 기반 dedup |
+
+**§5.4 의 *유일한* 가치 영역**: PMBOK / ISO 27001 / ITIL 같은 **이미 정형화된 외부 표준** 자료 ingest 시 component 분해 정확도 +10~15% 보조. 일반 자료에는 가치 0.
+
+### 5.10.7 보조 plan + 산출
+
+- 보조 plan (신규): [`plan/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5-todox-5.10-graph-emergent-ontology.md) — 4 옵션 detail spec + 옵션 D migration script + 회귀 plan + 라이브 검증 + §9 정당성 검증 매트릭스
+- todo 단일 소스: `plan/phase-5-todo.md §5.10`
+- 코드 변경: 0 (issue 등록만)
+- 다음 진입점: 사용자 다음 세션 시작 시 옵션 A/B/C/D 명시 후 진입
+
+### 5.10.8 본 session 14 의 §5.10 등록 chain 요약
+
+1. §5.4.7 1순위 (실 qmd embeddings) 종결 (commit 9b7ddf9, §5.4.8)
+2. §5.4.7 2/3/4순위 (Suggestions panel UI 통합) 종결 (commit ca5394f, §5.4.9)
+3. UI 점검 fix 3건 (title 스타일 / providerBar 삭제 / source badge 삭제) + 라이브 14/14 PASS (40a04f7)
+4. schema.yaml 등록 안내 + 기등록 자동 필터 (8b82b77)
+5. schema.yaml link → modal popup (a9ab12c, dotted folder vault index 우회)
+6. UI 라이브 검증 11건 fix + §5.4.10 미처리 등록 (c9d8eb9)
+7. modal tag cloud + 도메인별 detail 분리 + raw YAML 제거 (f39f142)
+8. 사용자 본질 비판 chain 등장 → §5.4.10 보강 (7dde718)
+9. **§5.10 main subject 정식 issue 등록 (9220e14)** — 큰 작업 별 issue
+10. modal 이모지 제거 + h4 bold (7373279)
+
+→ **§5.10 = 본 session 14 의 가장 큰 산출 (paradigm shift issue 등록)**. 코드 변경 X, 다음 세션 사용자 결정 대기.
+
+**§5.4 자체는 클로즈** (4 Stage + integration + AC21 + follow-up + UI fix 모두 GREEN). §5.10 은 §5.4 의 미처리가 아닌 별 main subject. §5.4 미처리 0.
