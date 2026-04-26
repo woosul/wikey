@@ -2896,6 +2896,82 @@ class SchemaYamlModal extends Modal {
     super(app)
   }
 
+  // empty-all-skipped fallback — raw text 의 umbrella_slug / name / components 를
+  // 단순 line scan 으로 추출. parser invalid 인 경우에도 사용자가 등재 항목을
+  // 볼 수 있도록 함. (yaml lib 의존 X, Karpathy #2 단순)
+  private scanRawEntries(content: string): Array<{
+    umbrella_slug: string
+    name?: string
+    rule?: string
+    origin?: string
+    confidence?: number
+    components: Array<{ slug: string; type?: string }>
+  }> {
+    const lines = content.split('\n')
+    const entries: any[] = []
+    let cur: any = null
+    let inComponents = false
+    let curComp: any = null
+    for (const line of lines) {
+      const trimmed = line.replace(/^\s+/, '')
+      const indent = line.length - trimmed.length
+      if (/^standard_decompositions\s*:/.test(line)) continue
+      // top-level entry start (indent 2, "- ")
+      if (indent === 2 && trimmed.startsWith('- ')) {
+        if (cur) entries.push(cur)
+        cur = { umbrella_slug: '', components: [] }
+        inComponents = false
+        curComp = null
+        const rest = trimmed.slice(2).trim()
+        const m = /^([a-zA-Z_]+):\s*(.*)$/.exec(rest)
+        if (m) this.assignEntryField(cur, m[1], m[2])
+        continue
+      }
+      if (!cur) continue
+      // entry attribute (indent 4)
+      if (indent === 4 && !trimmed.startsWith('-')) {
+        const m = /^([a-zA-Z_]+):\s*(.*)$/.exec(trimmed)
+        if (m) {
+          if (m[1] === 'components') {
+            inComponents = true
+            curComp = null
+          } else {
+            inComponents = false
+            this.assignEntryField(cur, m[1], m[2])
+          }
+        }
+        continue
+      }
+      // component entry start (indent 6, "- " or "- slug:")
+      if (inComponents && indent === 6 && trimmed.startsWith('- ')) {
+        curComp = { slug: '' }
+        cur.components.push(curComp)
+        const rest = trimmed.slice(2).trim()
+        const m = /^([a-zA-Z_]+):\s*(.*)$/.exec(rest)
+        if (m && curComp) (curComp as any)[m[1]] = m[2]
+        continue
+      }
+      // component attribute (indent 8)
+      if (inComponents && indent === 8 && curComp) {
+        const m = /^([a-zA-Z_]+):\s*(.*)$/.exec(trimmed)
+        if (m) (curComp as any)[m[1]] = m[2]
+      }
+    }
+    if (cur) entries.push(cur)
+    return entries.filter((e) => e.umbrella_slug)
+  }
+
+  private assignEntryField(entry: any, key: string, value: string) {
+    if (key === 'name' || key === 'umbrella_slug' || key === 'rule' || key === 'origin') {
+      entry[key] = value
+    } else if (key === 'confidence') {
+      const n = Number(value)
+      if (!Number.isNaN(n)) entry.confidence = n
+    } else if (key === 'require_explicit_mention') {
+      entry.require_explicit_mention = value === 'true'
+    }
+  }
+
   private formatRule(rule: string): string {
     if (rule === 'decompose') return 'decompose (구성요소로 분해)'
     if (rule === 'bundle') return 'bundle (한 묶음으로 유지)'
@@ -2980,20 +3056,31 @@ class SchemaYamlModal extends Modal {
 
     const cardArea = contentEl.createDiv({ cls: 'wikey-schema-yaml-cards' })
 
-    if (!parsed || !sd || (sd.kind !== 'present' && sd.kind !== 'empty-all-skipped')) {
+    // empty-all-skipped 인 경우도 사용자에게 등록 사실 안내 — raw line scan 으로
+    // umbrella_slug + components 추출해 tag cloud + detail 동일 layout 으로 표시.
+    const isEmptyAllSkipped = sd?.kind === 'empty-all-skipped'
+    const itemsForDisplay: any[] = (sd && sd.kind === 'present')
+      ? [...sd.items]
+      : (isEmptyAllSkipped ? this.scanRawEntries(this.content) : [])
+
+    if (!parsed || !sd || (sd.kind !== 'present' && !isEmptyAllSkipped)) {
       const empty = cardArea.createDiv({ cls: 'wikey-schema-yaml-empty' })
       if (sd?.kind === 'empty-explicit') {
         empty.setText('명시 비활성화 상태 (`standard_decompositions: []`).')
       } else {
         empty.setText('등록된 표준 분해가 없습니다.')
       }
-    } else if (sd.kind === 'empty-all-skipped') {
+    } else if (isEmptyAllSkipped && itemsForDisplay.length === 0) {
       const warn = cardArea.createDiv({ cls: 'wikey-schema-yaml-warn' })
-      warn.setText(`${sd.skippedCount}건 등록되어 있으나 parser 가 모두 skip — slug 형식이 \`/^[a-z][a-z0-9-]*$/\` 와 일치하지 않습니다. 아래 raw YAML 에서 직접 확인 가능.`)
+      warn.setText(`${sd!.skippedCount}건 등록되어 있으나 parser invalid — slug 형식이 \`/^[a-z][a-z0-9-]*$/\` 와 일치하지 않습니다. schema.yaml 직접 확인 필요.`)
     } else {
-      // sd.kind === 'present' — 카드 형식 표시
+      if (isEmptyAllSkipped) {
+        const warn = cardArea.createDiv({ cls: 'wikey-schema-yaml-warn' })
+        warn.setText(`⚠ parser 가 ${sd!.skippedCount}건을 invalid 로 판정 (예: slug 형식 위반). 아래는 raw 스캔 결과 — wiki 자동 인식에 적용되지 않을 수 있습니다.`)
+      }
+      // 도메인 tag cloud + 하단 detail (스크롤). present + empty-all-skipped 모두 동일 layout.
       const intro2 = cardArea.createDiv({ cls: 'wikey-schema-yaml-cards-intro' })
-      intro2.setText(`등록된 ${sd.items.length}개 표준 ↓ (각 표준명/구성요소 클릭 시 wiki 페이지 열림)`)
+      intro2.setText(`등록된 ${itemsForDisplay.length}개 도메인 — 도메인 클릭 시 하단에 구성요소 표시`)
 
       const openWikiPage = async (slug: string) => {
         const candidates = [
@@ -3011,55 +3098,58 @@ class SchemaYamlModal extends Modal {
         new Notice(`wiki 페이지 없음: ${slug} — 아직 ingest 되지 않은 항목입니다.`)
       }
 
-      sd.items.forEach((item, idx) => {
-        const card = cardArea.createDiv({ cls: 'wikey-schema-yaml-card' })
+      // 가나다 / 알파벳 혼합 정렬 (locale 'ko' 가 한·영 혼합 처리)
+      const sortedItems = [...itemsForDisplay].sort((a, b) => {
+        const labelA = ((a as any).name ?? a.umbrella_slug) as string
+        const labelB = ((b as any).name ?? b.umbrella_slug) as string
+        return labelA.localeCompare(labelB, 'ko')
+      })
 
-        const titleRow = card.createDiv({ cls: 'wikey-schema-yaml-card-title-row' })
-        titleRow.createEl('span', { text: `${idx + 1}.`, cls: 'wikey-schema-yaml-card-idx' })
+      const layout = cardArea.createDiv({ cls: 'wikey-schema-yaml-layout' })
+      const tagCloud = layout.createDiv({ cls: 'wikey-schema-yaml-tags' })
+      const detailArea = layout.createDiv({ cls: 'wikey-schema-yaml-detail' })
+
+      const renderDetail = (item: any) => {
+        detailArea.empty()
+        const titleRow = detailArea.createDiv({ cls: 'wikey-schema-yaml-detail-title-row' })
         const nameLink = titleRow.createEl('a', {
-          text: (item as any).name ?? item.umbrella_slug,
-          cls: 'wikey-schema-yaml-card-name wikey-schema-yaml-link',
+          text: item.name ?? item.umbrella_slug,
+          cls: 'wikey-schema-yaml-detail-name wikey-schema-yaml-link',
           attr: { href: '#', title: 'wiki 페이지 열기' },
         })
         nameLink.addEventListener('click', (e) => {
           e.preventDefault()
           openWikiPage(item.umbrella_slug)
         })
-        titleRow.createEl('span', {
-          text: item.umbrella_slug,
-          cls: 'wikey-schema-yaml-card-slug',
-        })
+        titleRow.createEl('span', { text: item.umbrella_slug, cls: 'wikey-schema-yaml-detail-slug' })
 
-        const meta = card.createDiv({ cls: 'wikey-schema-yaml-card-meta' })
-        const ruleVal = (item as any).rule ?? 'decompose'
-        meta.createEl('span', { text: `규칙: ${this.formatRule(ruleVal)}` })
-        const originVal = (item as any).origin
-        meta.createEl('span', { text: `· 출처: ${this.formatOrigin(originVal)}` })
-        const conf = (item as any).confidence
-        if (typeof conf === 'number') {
-          meta.createEl('span', { text: `· 신뢰도: ${conf.toFixed(2)}` })
+        const meta = detailArea.createDiv({ cls: 'wikey-schema-yaml-detail-meta' })
+        meta.createEl('span', { text: `규칙: ${this.formatRule(item.rule ?? 'decompose')}` })
+        meta.createEl('span', { text: ` · 출처: ${this.formatOrigin(item.origin)}` })
+        if (typeof item.confidence === 'number') {
+          meta.createEl('span', { text: ` · 신뢰도: ${item.confidence.toFixed(2)}` })
         }
-        const rem = (item as any).require_explicit_mention
-        if (rem === true) meta.createEl('span', { text: '· 명시 mention 필수' })
+        if (item.require_explicit_mention === true) {
+          meta.createEl('span', { text: ' · 명시 mention 필수' })
+        }
 
-        const compsRow = card.createDiv({ cls: 'wikey-schema-yaml-card-comps' })
-        const components = (item as any).components ?? []
-        compsRow.createEl('strong', { text: `구성요소 (${components.length}건)` })
+        const compsRow = detailArea.createDiv({ cls: 'wikey-schema-yaml-detail-comps' })
+        const components = item.components ?? []
+        compsRow.createEl('strong', { text: `구성요소 (${components.length}건) — 클릭 시 wiki 페이지` })
         if (components.length > 0) {
-          const ul = compsRow.createEl('ul', { cls: 'wikey-schema-yaml-card-comps-list' })
+          const ul = compsRow.createEl('ul', { cls: 'wikey-schema-yaml-detail-comps-list' })
           for (const c of components) {
             const li = ul.createEl('li')
             const compLink = li.createEl('a', {
-              text: (c as any).slug,
+              text: c.slug,
               cls: 'wikey-schema-yaml-link wikey-schema-yaml-comp-slug',
               attr: { href: '#', title: 'wiki 페이지 열기' },
             })
             compLink.addEventListener('click', (e) => {
               e.preventDefault()
-              openWikiPage((c as any).slug)
+              openWikiPage(c.slug)
             })
-            const t = (c as any).type
-            if (t) li.createEl('span', { text: ` · ${t}`, cls: 'wikey-schema-yaml-comp-type' })
+            if (c.type) li.createEl('span', { text: ` · ${c.type}`, cls: 'wikey-schema-yaml-comp-type' })
           }
         } else {
           compsRow.createEl('div', {
@@ -3067,14 +3157,38 @@ class SchemaYamlModal extends Modal {
             cls: 'wikey-schema-yaml-comp-empty',
           })
         }
-      })
+      }
+
+      let activeTag: HTMLElement | null = null
+      for (const item of sortedItems) {
+        const label = ((item as any).name ?? item.umbrella_slug) as string
+        const compCount = (item as any).components?.length ?? 0
+        const tag = tagCloud.createEl('button', {
+          text: label,
+          cls: 'wikey-schema-yaml-tag',
+          attr: { title: `${item.umbrella_slug} · ${compCount} components — 클릭으로 상세 표시` },
+        })
+        tag.createEl('span', {
+          text: String(compCount),
+          cls: 'wikey-schema-yaml-tag-count',
+        })
+        tag.addEventListener('click', () => {
+          if (activeTag) activeTag.classList.remove('wikey-schema-yaml-tag-active')
+          tag.classList.add('wikey-schema-yaml-tag-active')
+          activeTag = tag
+          renderDetail(item)
+        })
+      }
+
+      // default: 첫 도메인 자동 선택
+      if (sortedItems.length > 0) {
+        const firstTag = tagCloud.firstElementChild as HTMLElement | null
+        firstTag?.classList.add('wikey-schema-yaml-tag-active')
+        activeTag = firstTag
+        renderDetail(sortedItems[0])
+      }
     }
 
-    // ── Raw YAML collapse (디버깅 / 직접 확인) ──
-    const rawDetails = contentEl.createEl('details', { cls: 'wikey-schema-yaml-raw' })
-    rawDetails.createEl('summary', { text: 'raw YAML 보기 (디버깅 용)' })
-    const pre = rawDetails.createEl('pre', { cls: 'wikey-schema-yaml-pre' })
-    pre.setText(this.content || '(empty)')
   }
 
   onClose() {

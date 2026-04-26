@@ -494,14 +494,20 @@
 - [x] **3순위 — Stage 4 ConvergedDecomposition 통합 표시** (2026-04-26 session 14, 2순위와 동일 cycle): 별도 review modal 없이 Suggestions panel 의 row 로 통합 (source badge `wiki`, sourceLabel `wiki (cluster, N sources)`). Accept 시 Stage 2 와 동일 `appendStandardDecomposition` writer 재사용 (Karpathy #2 Simplicity First).
 - [x] **4순위 — §5.4 minor follow-up** (2026-04-26 session 14, 2/3순위 통합 cycle): (a) Edit modal 검증 = inline edit 동작으로 자연 통합 / (b) 자료 분류 race = self-resolve scope 외 / (c) "alpha v1 wire components/sources 한계" = 사실 한계 아님 — 1순위 spot-check Python script field 명 오류로 인한 false negative, §5.4.8 정정 반영.
 
-### 5.4.10 미처리 후속 — ingest 자동 등록 + audit 컨셉 panel (2026-04-26 session 14 등록)
+### 5.4.10 미처리 후속 — 표준 분해 panel 의 가치 / 자동화 / audit 컨셉 (2026-04-26 session 14 등록)
 
 > **상태**: 미처리. 당장 사용 문제 없음 (현 §5.4.7 종결 panel UI 로 정상 동작). 나중에 또는 다음 세션에 진행 여부 결정.
 >
-> **사용자 design philosophy** (2026-04-26 session 14, panel UI 라이브 검증 중 명시): 표준 분해 등록은 ingest 시 자동이 본 흐름. panel 은 audit 컨셉 — low-confidence 또는 오류 케이스만 사용자 검토. Add/Edit/Accept/Reject 모두 예외. 일반 사용자는 panel 거의 안 써도 됨.
+> **사용자 본질 의문** (2026-04-26 session 14, modal tag cloud fix 직후 명시): "표준 분해 패턴을 왜 등록하고 관리해야 할까? 너무 엔지니어링적 사고. 내부에서 알아서 하면 되는데." → 본 §5.4.10 의 1순위 task = **panel 자체의 존재 가치 재검토**.
 >
-> **본 §5.4.10 의 trigger**: §5.4.7 1/2/3/4순위 종결 후 panel UI 라이브 검증 중 사용자가 design philosophy 제시. 본 cycle (panel UI) 안에서 panel 측 부분 반영 (Add/Edit secondary 약화 + intro 조회 톤) + 본격 자동화 (ingest pipeline 변경) 는 본 §5.4.10 으로 분리.
+> **사용자 design philosophy** (이전 단계, panel UI 라이브 검증 중 명시): 표준 분해 등록은 ingest 시 자동이 본 흐름. panel 은 audit 컨셉 — low-confidence 또는 오류 케이스만 사용자 검토. Add/Edit/Accept/Reject 모두 예외. 일반 사용자는 panel 거의 안 써도 됨.
+>
+> **본 §5.4.10 의 trigger**: §5.4.7 1/2/3/4순위 종결 후 panel UI 라이브 검증 중 사용자가 (a) audit 컨셉 design philosophy + (b) 표준 분해 panel 자체의 가치 의문 명시. 본 cycle (panel UI) 안에서 panel 측 부분 반영 (Add/Edit secondary 약화 + intro 조회 톤 + tag cloud 친화 표시 + raw YAML 제거) + 본격 자동화 (ingest pipeline 변경) + panel 폐기 검토는 본 §5.4.10 으로 분리.
 
+- [ ] **(★ 1순위 의문) panel 자체의 존재 가치 재검토**: 사용자 의문 — "표준 분해 패턴을 사용자가 왜 등록/관리해야 하는가? 너무 엔지니어링 사고, 내부 자동 처리만 있으면 됨." 결정 분기:
+  - **option A — panel 폐기**: 표준 분해는 internal infra 만. 사용자 노출 X. ingest pipeline 자동 등록 + audit log internal. panel UI / `.wikey/schema.yaml` 사용자 노출 X (또는 settings tab 안 advanced view 만). header button (clipboard_check) 도 제거.
+  - **option B — 조회 only panel 유지**: schema.yaml 등록 결과 사용자 조회 가치 인정 (debug / transparency). panel = read-only audit. Add/Edit/Accept/Reject 모두 제거. 자동 등록 결과 + 오류 케이스 표시만.
+  - **option C — 현재 유지 + audit 강화**: 본 §5.4.10 의 나머지 항목들 (ingest 자동 등록 + threshold split + audit log) 진행, panel 보조 도구로.
 - [ ] **ingest pipeline → schema.yaml 자동 등록 (high-confidence)**: 현재 Stage 2 detector → `.wikey/suggestions.json` (pending) → panel Accept 흐름. 사용자 의도 = ingest 단계에서 confidence ≥ threshold (예: 0.85) 후보를 schema.yaml 에 직접 append. 사용자 Accept 우회. `appendStandardDecomposition` 를 ingest pipeline 에서 직접 호출 path 추가.
 - [ ] **Confidence threshold split**: 두 단계 — high (자동 schema.yaml 등록) / low (panel 후보 표시 = 사용자 검토). user setting 으로 threshold 조정 가능 (`wikey.conf` 또는 plugin settings).
 - [ ] **자동 등록 audit log**: `.wikey/standard-audit.json` 신규. 자동 등록 이력 trace — 어떤 후보가 어떤 confidence 로 어떤 ingest event 에서 등록됐는지. 사용자가 추후 review 가능.
