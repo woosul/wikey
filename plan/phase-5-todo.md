@@ -494,15 +494,144 @@
 - [x] **3순위 — Stage 4 ConvergedDecomposition 통합 표시** (2026-04-26 session 14, 2순위와 동일 cycle): 별도 review modal 없이 Suggestions panel 의 row 로 통합 (source badge `wiki`, sourceLabel `wiki (cluster, N sources)`). Accept 시 Stage 2 와 동일 `appendStandardDecomposition` writer 재사용 (Karpathy #2 Simplicity First).
 - [x] **4순위 — §5.4 minor follow-up** (2026-04-26 session 14, 2/3순위 통합 cycle): (a) Edit modal 검증 = inline edit 동작으로 자연 통합 / (b) 자료 분류 race = self-resolve scope 외 / (c) "alpha v1 wire components/sources 한계" = 사실 한계 아님 — 1순위 spot-check Python script field 명 오류로 인한 false negative, §5.4.8 정정 반영.
 
-### 5.4.10 미처리 후속 — 표준 분해 panel 의 가치 / 자동화 / audit 컨셉 (2026-04-26 session 14 등록)
+### 5.4.10 미처리 후속 — self-extending 의 진짜 의미 (자동 ontology 확장) 회복 (2026-04-26 session 14 등록)
 
 > **상태**: 미처리. 당장 사용 문제 없음 (현 §5.4.7 종결 panel UI 로 정상 동작). 나중에 또는 다음 세션에 진행 여부 결정.
 >
-> **사용자 본질 의문** (2026-04-26 session 14, modal tag cloud fix 직후 명시): "표준 분해 패턴을 왜 등록하고 관리해야 할까? 너무 엔지니어링적 사고. 내부에서 알아서 하면 되는데." → 본 §5.4.10 의 1순위 task = **panel 자체의 존재 가치 재검토**.
+> **★ 사용자 본질 비판** (2026-04-26 session 14, modal tag cloud fix 직후 명시): **"§5.4 의 명명이 self-extending 인데, 진짜는 자동 확장 ontology 개념이어야지. 지금은 수동이잖아 — 표준 분해 그룹을 사용자가 왜 등록하고 관리해야 하는가?"**
 >
-> **사용자 design philosophy** (이전 단계, panel UI 라이브 검증 중 명시): 표준 분해 등록은 ingest 시 자동이 본 흐름. panel 은 audit 컨셉 — low-confidence 또는 오류 케이스만 사용자 검토. Add/Edit/Accept/Reject 모두 예외. 일반 사용자는 panel 거의 안 써도 됨.
->
-> **본 §5.4.10 의 trigger**: §5.4.7 1/2/3/4순위 종결 후 panel UI 라이브 검증 중 사용자가 (a) audit 컨셉 design philosophy + (b) 표준 분해 panel 자체의 가치 의문 명시. 본 cycle (panel UI) 안에서 panel 측 부분 반영 (Add/Edit secondary 약화 + intro 조회 톤 + tag cloud 친화 표시 + raw YAML 제거) + 본격 자동화 (ingest pipeline 변경) + panel 폐기 검토는 본 §5.4.10 으로 분리.
+> 이 비판은 §5.4 architecture 의 약속 (self-extending = 자동 확장) 과 현재 구현 (panel Accept 가 chain 끊음) 의 갭을 정확히 짚음. 사용자 눈에는 "ontology 가 자동 확장 안 하면 self-extending 이 아님" 이 정당.
+
+#### 5.4.10.1 자동/수동 매트릭스 (현재 구현 사실)
+
+| 단계 | 동작 | 자동/수동 |
+|------|------|-----------|
+| ingest | 자료 → wiki/concepts·entities 페이지 생성 | ✅ 자동 |
+| mention 누적 | `.wikey/mention-history.json` | ✅ 자동 |
+| Stage 2 detector | mention graph → suggestion 후보 (.wikey/suggestions.json pending) | ✅ 자동 (후보까지) |
+| Stage 3 self-declaration | 소스 "표준 개요" 섹션 → runtime SelfDeclaration | ✅ 자동 (runtime, persist X) |
+| Stage 4 cluster | qmd embeddings cosine → ConvergedDecomposition (.wikey/converged-decompositions.json) | ✅ 자동 (alpha v1) |
+| **schema.yaml 영구 등록** | umbrella + components 등재 | ❌ **panel Accept 수동 (chain 끊는 user gate)** |
+| **alias 자동 merging** | "ISO 27001" / "iso-iec-27001-2022" / "ISMS" 한 wiki 페이지 통합 | ❌ **미구현** (현재 각각 별 wiki 페이지) |
+| **wiki/concepts/<umbrella>.md** | 그룹 자체의 wiki 페이지 자동 생성 | ❌ **미구현** (component 만 wiki, umbrella 자체 X) |
+| **cross-link 자동** | entity ↔ concept ↔ standard 그래프 | △ 일부 (canonicalizer applyCrossLinks Stage 3) |
+
+⇒ schema.yaml 등록 + alias merging + umbrella wiki page = **3 chain break**. 진짜 self-extending 으로 회복 = 본 §5.4.10 의 핵심.
+
+#### 5.4.10.2 사용자 ideal — 자동 ontology
+
+- ingest → LLM 기반 자동 grouping (cluster 결정성 + 자동 등록) → schema.yaml 자동 update
+- 같은 ontology 의 다른 표기 자동 merging → 검색 시 통합 결과 (한 wiki 페이지)
+- umbrella 자체 wiki 페이지 자동 생성 (group level concept page)
+- schema.yaml = internal infra (사용자 노출 X 또는 debug only)
+- panel = (가능한 옵션) 폐기 / 조회 only audit / 현재 + audit 강화
+
+#### 5.4.10.3 결정 분기 (panel 자체의 존재 가치)
+
+> 본 §5.4.10 의 자동화 (5.4.10.4) 후 panel 의 의미 재검토.
+
+- **option A — panel 폐기**: 자동 ontology 가 schema.yaml 까지 흐른 후 panel UI 제거. header button (clipboard_check) 제거. schema.yaml 사용자 노출 X 또는 settings tab advanced view 만.
+- **option B — 조회 only panel**: schema.yaml 등록 결과 사용자 조회 가치 인정 (debug / transparency). panel = read-only audit. Add/Edit/Accept/Reject 모두 제거.
+- **option C — 현재 유지 + audit 강화**: 본 §5.4.10 자동화 + panel 보조 도구로 (오류 케이스 / low-confidence 검토만).
+
+#### 5.4.10.4 ★ 개념 일반화 — "표준 분해 그룹" → "지식 그룹 (knowledge group)" (2026-04-26 사용자 명시)
+
+> **사용자 본질 질문**: "표준 분해 그룹 = 지식 그룹이야?" — 정확히는 표준 분해 그룹 ⊂ 지식 그룹 (좁은 의미 ⊂ 넓은 의미).
+
+| 개념 | 범위 | 예시 |
+|------|------|------|
+| **표준 분해 그룹** (현재 구현, umbrella) | 외부 표준의 component 분해 — 좁은 의미 | PMBOK 10 areas, ISO 27001 Annex A, ITIL practices |
+| **지식 그룹** (사용자 ideal, knowledge group) | 의미적으로 묶이는 모든 지식 단위 — 넓은 의미 | 외부 표준 + 사용자 도메인 (사내 양식) + 자동 cluster (다국어/synonym) + 동일 인물·제품·이론 |
+
+**generalize 영향**:
+- schema 변경: `standard_decompositions` → `knowledge_groups` (또는 추가 type field). 외부 표준 / 사용자 도메인 / cluster / synonym 등 type 으로 분류.
+- ingest pipeline: 표준 분해 detector 만 아니라 entity dedup (동명이인 / 다국어 표기) / concept synonym (같은 이론 다른 이름) 도 자동 grouping.
+- wiki 구조: 그룹 자체의 wiki/concepts/<group>.md 페이지. 그룹 안 component 들이 backlink.
+- panel rename: `Suggestions` → `Knowledge groups` 또는 `지식 그룹` (panel 유지 시).
+
+**migration 영향**:
+- 기존 schema.yaml 의 `standard_decompositions` 는 호환 (type 미지정 시 default = 'standard-decomposition').
+- 사용자가 직접 작성한 schema.yaml 은 그대로 동작. 신규 type 항목은 자동 detector 가 생성.
+
+#### 5.4.10.5 ★★ 더 본질적 통찰 — graph emergent ontology (그룹 abstraction 제거) (2026-04-26 사용자 명시)
+
+> **사용자 본질 통찰**: "wiki 에서 가장 많이 노출되는 게 중심으로 가게 되어 있는데, 굳이 그룹으로 나누어서 제한을 두는게 이상해."
+
+이 통찰은 §5.4 architecture 자체에 대한 근본 비판:
+- wiki = mention graph (page = node, wikilink = edge)
+- 자연스럽게 mention 빈도 가장 높은 page = 중심 (no need to declare)
+- "umbrella" / "표준 분해 그룹" 같은 명시 abstraction = wiki 자연 graph 위 mounted 인위 layer
+- 자동 ontology = graph topology 자체에서 emergent — 그룹 명시 정의 불필요
+
+**대안 architecture (graph emergent ontology)**:
+
+| 측면 | 현재 (§5.4 인위 그룹) | 사용자 ideal (graph emergent) |
+|------|----------------------|------------------------------|
+| ontology 정의 | `.wikey/schema.yaml` 의 `standard_decompositions` 명시 (umbrella + components) | 정의 X — mention graph 자체 |
+| 중심 결정 | umbrella_slug 명시 선언 + Accept 흐름 | mention 빈도 / PageRank / community detection 자동 |
+| 그룹 형성 | Stage 2 detector + Stage 4 cluster → user Accept → schema 명시 | graph dense subgraph 자동 인식 (lazy, 검색 시점) |
+| alias 통합 | umbrella + components.slug 명시 | canonical slug normalization (graph node identity 만, canonicalizer 책임) |
+| 검색 | umbrella 매칭 + decompose 분기 | PageRank + 1-hop wikilink expansion (§5.2 에 이미 구현됨) |
+| 사용자 노출 | panel UI + schema.yaml | 검색·답변 결과만 (schema 자체 미존재 또는 internal heuristic) |
+
+**implication — §5.4 deprecation 검토**:
+- Stage 1 (BUILTIN PMBOK / schema.yaml 외부화) — 일부 보존 (사용자 명시 도메인 정의는 여전히 가치 있음. 사내 양식 / 부서 분류 등 명시적으로 hardcode 필요한 케이스).
+- Stage 2 (detector → suggestion) — graph community detection 으로 대체 가능. 별도 schema.yaml 등록 불필요.
+- Stage 3 (self-declaration) — graph wikilink 자체로 충분 (page 안 wikilink 가 그룹 신호).
+- Stage 4 (cluster) — alias canonicalizer (graph node identity) 로 충분. cluster 명시 schema 등록 불필요.
+- panel UI — 폐기 (graph view 가 자연 ontology 시각화) 또는 audit only.
+
+**migration path**:
+- 단기: 본 §5.4.7 panel UI 유지. schema.yaml 자동 등록 (5.4.10.5.4) 만 추가.
+- 중기: graph community detection 추가. schema.yaml 의 `standard_decompositions` 와 graph 자동 cluster 두 source 병행.
+- 장기: schema.yaml `standard_decompositions` deprecate. graph 자체가 ontology source. 사용자 명시 정의 영역만 별 schema (e.g. `aliases.yaml`).
+
+**연계**:
+- §5.5 지식 그래프 · 시각화 (NetworkX, Leiden 클러스터링, vis.js / Obsidian Graph View) — 본 §5.4.10.5 의 graph emergent ontology 의 inferred technical foundation. §5.5 진행 시 §5.4 deprecation path 자연 통합.
+- §5.2 검색 graph expansion (1-hop wikilink) — 이미 graph emergent 의 일부 구현.
+
+#### 5.4.10.6 ★★★ epistemology 비판 — 지식 분해 모델 자체의 한계 (2026-04-26 사용자 명시)
+
+> **사용자 본질 비판**: "지식을 분해하는 그룹이 글쎄 왜 필요할까? 세상의 수많은 지식을 도대체 어떻게 나누어서 표준화 할라고?"
+
+이 비판은 §5.4 architecture 의 epistemology 가정 자체에 대한 근본 회의:
+
+| 가정 (§5.4) | 현실 (사용자 통찰) |
+|------------|------------------|
+| 지식 = decomposable (그룹 → components) | 지식 = relational (다차원 graph). 깔끔한 분해 불가능 |
+| 모든 지식이 PMBOK 같은 component 구조 | PMBOK / ISO 27001 / ITIL 같은 **이미 그룹 정의된 외부 표준**에만 fit. 일반 자료 (잡지·메모·임의 PDF) 에는 부적절 |
+| 표준화로 ontology 완성 | 세상 지식은 무한 차원·끝없이 다양. 표준화는 부분 분류 — 모든 지식 cover 불가 |
+| self-extending = 그룹 자동 추가 | 진짜 self-organizing = graph 자체가 emergent. 그룹 명시 X |
+
+⇒ §5.4 의 "표준 분해" = **외부 정형 표준에만 적용 가능한 reductionism**. 일반 지식에는 mismatch.
+
+**wikey 의 진정한 가치 (사용자 통찰 기반)**:
+- mention graph (entity ↔ concept ↔ source 자연 wikilink) = relational ontology
+- 의미 search (LLM 답변 + qmd embedding) = 그룹 의존 없이 정확 retrieval
+- canonical slug normalization (alias dedup) = graph node identity 만 — *그룹화 X*
+- mention 빈도 / PageRank / community detection = lazy emergent center
+
+#### 5.4.10.7 paradigm shift 제안 — §5.4 → §5.5 graph
+
+| 폐기 / deprecate | 유지 / 강화 |
+|------------------|------------|
+| `standard_decompositions` schema.yaml 모델 (현재 §5.4 본체) | mention graph (entity ↔ concept ↔ source 자연 wikilink) |
+| umbrella + components 명시 분해 | canonical slug normalization (alias dedup 만, graph node identity) |
+| "self-extending" 명명 (오해 야기 — 그룹 자동 추가로 해석) | "self-organizing graph" 또는 "emergent ontology" |
+| panel Suggestions UI (현재) | (선택) graph view (Obsidian Graph View 또는 §5.5 NetworkX 시각화) |
+| Stage 2/3/4 schema.yaml 등록 chain | Stage 2/3/4 → graph community detection 자동 cluster (lazy, 검색 시점) |
+| 사용자 Accept gate | 자동 (graph 가 자연 형성, 명시 등록 X) |
+
+**migration 옵션**:
+- **A (점진)**: 본 §5.4.7 panel UI 유지 + §5.4.10.5 자동화 만 추가 + §5.5 graph 시각화 추가. schema.yaml 은 보조 (외부 표준 PMBOK 등 explicit case 만 hardcode).
+- **B (paradigm shift)**: schema.yaml `standard_decompositions` 영역 deprecate. §5.5 graph 가 ontology source. canonicalizer (alias dedup) 만 보존. panel 폐기.
+- **C (관망)**: 본 §5.4.10 자체 보류. 사용자가 §5.4 본체 (PMBOK 명시 분해) 만 사용. 일반 지식은 §5.2 검색 graph expansion + LLM 답변에 의존.
+
+**기록 책임 (epistemology 비판)**:
+- 본 §5.4.10.6/7 = 사용자 philosophy 의 정식 기록. §5.4 self-extending 의 fundamental gap 인정.
+- 진행 결정 = 다음 세션 사용자 명시. 옵션 A/B/C 중 선택 + 본 §5.4.10 진행 여부.
+
+#### 5.4.10.8 자동화 task (단기 — self-extending 의 chain break 부분 제거, 옵션 A 시)
 
 - [ ] **(★ 1순위 의문) panel 자체의 존재 가치 재검토**: 사용자 의문 — "표준 분해 패턴을 사용자가 왜 등록/관리해야 하는가? 너무 엔지니어링 사고, 내부 자동 처리만 있으면 됨." 결정 분기:
   - **option A — panel 폐기**: 표준 분해는 internal infra 만. 사용자 노출 X. ingest pipeline 자동 등록 + audit log internal. panel UI / `.wikey/schema.yaml` 사용자 노출 X (또는 settings tab 안 advanced view 만). header button (clipboard_check) 도 제거.
