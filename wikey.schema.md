@@ -10,9 +10,13 @@
 > 1. **모든 작업 / 계획 / 구현의 시작점**: master / analyst / developer / tester / reviewer 모든 에이전트는 작업 진입 시 본 파일을 첫 read 대상으로 삼는다.
 > 2. **계획서 작성 시 필수 참고**: `plan/phase-N-todo.md` / `plan/phase-N-todox-*.md` / 신규 issue 등록 / paradigm shift 검토 — 모든 plan 산출물은 본 파일의 4 원칙 (Explicit / Yours / File over app / BYOAI) + 3계층 + 워크플로우 + 페이지 컨벤션과 일치하는지 검증 후 작성.
 > 3. **architecture 결정의 단일 기준**: 코드 / schema / data model / UI 변경 시 본 파일과 충돌하면 본 파일이 우선. 본 파일 자체 수정은 사용자 승인 필수 (CLAUDE.md 쓰기 규칙).
-> 4. **README.md 의 source**: 향후 README.md 갱신 시 본 파일 + `plan/plan-full.md` + `CLAUDE.md` 3 핵심 문서가 source.
 >
 > Karpathy 의 핵심 통찰 4 가지 — 본 파일 §"LLM Wiki 개인화의 4가지 장점 (Karpathy)" 섹션 참조. 모든 architecture 결정의 epistemology base.
+>
+> **본 파일이 다루지 않는 것** (분리 원칙):
+> - 개발 단계 history / 진행 중 issue / phase 별 구현 상태 → `plan/plan-full.md`, `plan/phase-N-todo.md`, `activity/phase-N-result.md`
+> - 도구별 사용법 / 실행 체크리스트 → `CLAUDE.md`, `AGENTS.md`, `local-llm/system-prompt.md`
+> - 디자인 시스템 / CSS 토큰 → `DESIGN.md`
 
 ## 프로젝트 개요
 
@@ -176,46 +180,15 @@ raw 소스 **1개**는 wiki 페이지 **여러 개**(통상 5~15개)로 분해�
 
 > 상세: [`docs/ingest-decomposition.md`](docs/ingest-decomposition.md) — 예시, 흐름도, 운영 원칙
 
-## 표준 분해 self-extending 구조 (§5.4, 2026-04-26 session 13 종결, session 14 paradigm shift issue 등록)
+## 표준 분해 (외부 정형 표준 ingest 보조)
 
-> **현재 상태**: §5.4 Stage 1~4 모두 구현 종결 + §5.4.7 deferred 1/2/3/4순위 종결 (회귀 732 PASS). 다만 사용자 본질 비판 6 chain (panel 가치 / self-extending 명명 / 지식 그룹 ⊂ / graph emergent / 지식 분해 epistemology / LLM 백 시대착오) 으로 §5.10 paradigm shift issue 등록 — 4 옵션 (A 점진 / B graph / C 관망 / **★ D LLM-only Stage 1~4 deprecate**) 사용자 다음 세션 결정 대기. 본 섹션은 *현재 구현 상태* 의 사실 기록 (옵션 D 채택 시 deprecate 예정).
+PMBOK / ISO 27001 / ITIL 같이 component 가 정형화된 외부 표준 자료를 ingest 할 때, 표준의 그룹 (umbrella) + 하위 (components) 관계를 `.wikey/schema.yaml` 에 등재해 분해 정확도를 보조한다.
 
-**목적**: PMBOK / ISO 27001 / ITIL 같은 외부 정형 표준 자료 ingest 시 표준의 component 분해 정확도 보조. 그룹 (umbrella) + 하위 (components) 구조로 schema.yaml 에 등재.
+자동 후보 detection (mention graph / in-source self-declaration / cross-source embedding convergence) 으로 후보를 모으고, 사용자가 사이드바 **Suggestions 패널** 에서 Accept 시 schema.yaml 에 영구 등재된다. 후보 수집은 자동, 영구 등재는 수동 (chain break — 잘못된 표준이 자동 등재되어 분해를 오염시키는 것을 방지).
 
-**4 Stage** (자동 후보 → 사용자 검토 → schema.yaml 등록):
-
-| Stage | 동작 | store / 산출 |
-|-------|------|------------|
-| Stage 1 | BUILTIN PMBOK + `.wikey/schema.yaml` 명시 정의 (사용자 직접) | `.wikey/schema.yaml` standard_decompositions |
-| Stage 2 | mention graph detector (co-occurrence + suffix cluster + confidence ≥ 0.6) | `.wikey/suggestions.json` (pending) |
-| Stage 3 | in-source self-declaration (소스 본문 "표준 개요" 섹션 자동 추출) | runtime SelfDeclaration (persist X) |
-| Stage 4 | cross-source convergence (qmd embeddings cosine ≥ 0.75 cluster + arbitration) | `.wikey/converged-decompositions.json` |
-
-**사용자 접점 = Suggestions panel** (사이드바 chat 의 header 버튼 `clipboard_check`):
-- audit 그리드 (Select All + 멀티 row + 상단 그룹 식별자 + 하단 도메인 + 구성요소 preview)
-- 하단 고정 버튼: Accept (멀티) / Reject (멀티) / Add (in-line edit, 그룹 + 구성요소) / Edit (mode 토글)
-- schema.yaml 등록 안내문 + "schema.yaml 확인 →" link → modal popup (도메인 tag cloud + 도움말 + 구성요소 list, raw YAML 미노출)
-- 기등록 umbrella_slug 자동 필터 (panel 깔끔)
-
-**자동/수동 매트릭스** (chain break 식별):
-
-| 단계 | 동작 | 자동/수동 |
-|------|------|-----------|
-| ingest, mention 누적, Stage 2/3/4 detector | 후보까지 | ✅ 자동 |
-| schema.yaml 영구 등록 | umbrella + components 등재 | ❌ panel Accept 수동 (chain break) |
-| alias 자동 merging | 같은 표준의 다른 표기 통합 | ❌ 미구현 |
-
-**§5.10 paradigm shift issue** (사용자 본질 비판, 옵션 D 권장):
-- "표준 분해" = pre-LLM reductionism. 외부 정형 표준에만 fit, 일반 지식에 mismatch.
-- LLM 시대 = qmd embedding + LLM 답변이 의미 처리 자동. schema.yaml standard_decompositions 는 인위 layer.
-- 옵션 D (LLM-only) 채택 시 Stage 1~4 전체 deprecate, 본 §5.4 영역 삭제. 회귀 732 PASS → ~630 예상 (~100 test 폐기).
-- §5.4 가 없어도 wikey 정상 작동 (raw → wiki ingest / 검색 / 답변 / wikilink / PII / incremental reingest 모두 §5.4 무관).
-
-**상세 진입점**:
-- `plan/phase-5-todox-5.4-integration.md` — 4 Stage 통합 plan (v10, codex Cycle #6 APPROVE) + §10 실 qmd embeddings + §11 Suggestions UI
-- `plan/phase-5-todo.md §5.4 / §5.10` — todo + paradigm shift 4 옵션
-- `plan/phase-5-todox-5.10-graph-emergent-ontology.md` — paradigm shift 보조 plan
-- `activity/phase-5-result.md §5.4 / §5.10` — 진행 timeline + issue 등록 trace
+> 진행 상태 / Stage 별 구현 / paradigm shift 검토는 schema 가 다루지 않음. 진입점:
+> - `plan/phase-5-todo.md` §5.4 / §5.10 (todo + paradigm shift 옵션)
+> - `activity/phase-5-result.md` §5.4 / §5.10 (구현 timeline + issue 등록 trace)
 
 ## 시스템 워크플로우 (전체 흐름)
 
@@ -375,26 +348,9 @@ LLM: 해당 소스의 wiki/sources/source-{name}.md 확인
   └─► validate-wiki.sh → Git 커밋
 ```
 
-### 자동화 수준 (Phase별)
+### 자동화 진화
 
-| Phase | 인터페이스 | 인제스트 | 쿼리 | 린트 |
-|-------|----------|---------|------|------|
-| **Phase 1–2** (CLI) | 터미널 + LLM 세션 | llm-ingest.sh 또는 에이전트 세션 | wikey-query.sh 또는 에이전트 | 에이전트 세션 |
-| **Phase 3** (플러그인) | Obsidian 사이드바 | 드래그앤드롭 → 자동 | 채팅 패널 | 버튼 1클릭 |
-| **Phase 4** (웹) | 브라우저 | 파일 업로드 → 자동 | 웹 채팅 | API |
-| **Phase 5+** (기업) | 팀 서버 | API + 웹훅 | API + 웹 | 자동 스케줄 |
-
-**Phase 2 반자동 흐름:**
-```
-방법 1: LLM 에이전트 세션 (Claude Code / Codex)
-  사용자 → "이 소스를 인제스트해줘" → LLM이 위키 생성/수정
-
-방법 2: 스크립트 인제스트 (llm-ingest.sh)
-  사용자 → llm-ingest.sh raw/source.md → API 호출 → 위키 자동 생성
-
-방법 3: inbox 감시 (watch-inbox.sh)
-  fswatch가 raw/0_inbox/ 감시 → 알림 → 사용자 승인 → 인제스트
-```
+워크플로우 4종 (인제스트 / 쿼리 / 린트 / 소스 삭제) 은 동일한 핵심 코어 (LLM + raw → wiki) 를 공유하며, 인터페이스만 단계적으로 진화한다 — CLI 스크립트 → Obsidian 플러그인 → 웹 → 팀 서버. 각 단계의 구체 매트릭스 (Phase 별 인터페이스 / 자동화 수준) 와 진행 상태는 `plan/plan-full.md` 에 단일 source 로 기록.
 
 ### 검색/인덱스 확장 전략
 
@@ -417,25 +373,9 @@ LLM Wiki (우리 방식): LLM이 쿼리 확장 → 외부 검색 → LLM이 리�
 | 3. 리랭킹 | **LLM** | 후보의 실제 관련성 판단 | 30개만 평가 |
 | 4. 합성 | **LLM** | 최종 답변 생성, 교차참조, 모순 감지 | 상위 10개만 |
 
-### Phase별 검색 진화
+### 검색 코어의 안정성
 
-```
-Phase 1–2: qmd(검색 인프라) + LLM(지능 레이어) 분리, 한국어 특화
-           kiwipiepy 형태소 + Contextual Retrieval + Qwen3-Embedding
-           인터페이스: CLI (wikey-query.sh, llm-ingest.sh)
-           (300p까지 가능, vector Recall 97%)
-
-Phase 3:   Obsidian 플러그인 — 동일한 검색 코어를 GUI에서 사용
-           인터페이스: Obsidian 사이드바 채팅
-           (코어 동일, UI만 변경)
-
-Phase 4:   웹 인터페이스 — Next.js + 동일 코어
-           인터페이스: 브라우저 채팅/업로드
-           (코어 동일, UI만 변경)
-
-Phase 5+:  기업용 — vLLM 배치 처리 + 의도 분류 라우팅 + 팀 서버
-           (10,000p+ 가능)
-```
+검색 코어 = **qmd (검색 인프라: BM25 + 벡터 + RRF) + LLM (지능 레이어: 쿼리 확장 / 리랭킹 / 합성) + 한국어 특화 (kiwipiepy 형태소 + Contextual Retrieval + Qwen3-Embedding)**. 인터페이스가 진화 (CLI → Obsidian → 웹 → 팀 서버) 해도 코어는 동일하며, 단계별 capability 와 진행 상태는 `plan/plan-full.md` 참조.
 
 ### 참조 프로젝트의 검색 해법
 
@@ -473,19 +413,9 @@ wikey 파이프라인 (검색 인프라 + 지능 레이어 분리):
 | 300-3,000p | LLM 확장 → qmd → LLM 리랭킹 | ~2,500 | 95% | 양끝 참여 |
 | 3,000p+ | LLM 확장 → 하이브리드 → LLM 리랭킹 | ~1,500 | 97% | 양끝 참여 |
 
-### Phase 4 보조 메타데이터
+### 보조 메타데이터의 위치
 
-DB는 **린트 자동화 + 구조 분석용 보조 도구**로만 사용. 검색의 주체는 LLM.
-
-```sql
--- 린트용 메타데이터 (검색용이 아님)
-pages (id, path, title, type, created, updated, source_count)
-links (from_page_id, to_page_id)
-
--- 린트 자동화 예시
--- 고아 페이지: SELECT * FROM pages WHERE id NOT IN (SELECT to_page_id FROM links)
--- 오래된 페이지: SELECT * FROM pages WHERE updated < NOW() - INTERVAL '90 days'
-```
+DB / 인덱스 메타데이터는 **검색이 아닌 린트 자동화·구조 분석** 용으로만 사용한다 (고아 페이지·오래된 페이지·역링크 분석 등). 검색의 주체는 LLM 이라는 원칙이 흔들리지 않도록, 메타데이터는 wiki 본문이 아닌 별도 layer 에 둔다.
 
 ## 원시 소스 관리
 
@@ -746,16 +676,6 @@ obsidian backlinks file="overview"
 | 데이터 소유권(Yours) | 로컬 저장, 특정 업체 종속 없음 |
 | 파일 우선(File over app) | 마크다운 등 범용 포맷. Unix 도구·CLI 호환 |
 | AI 선택 자유(BYOAI) | Claude, Codex, Gemini 등 자유롭게 연결 |
-
-## Obsidian 볼트 구성 참고
-
-현재 wikey는 `~/Project/wikey/` (로컬)에 독립 볼트로 운영한다.
-기존 Obsidian 볼트(DENNY)는 iCloud에 위치한다.
-
-**향후 마이그레이션 옵션:**
-- iCloud 볼트로 이동 → 모바일 열람 가능, 다만 LLM 다중 파일 수정 시 동기화 충돌 주의
-- DENNY 볼트 서브폴더로 통합 → 기존 노트와 위키링크 연결 가능
-- 현재 로컬 유지 + Git 원격 저장소 → LLM 에이전트 연계 가장 단순
 
 ## 한국어 운영 참고
 
