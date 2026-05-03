@@ -8,10 +8,11 @@
 
 **모든 에이전트 (master / analyst / developer / tester / reviewer / ui-designer) 위임 시 wikey.schema.md 첫 read 의무**. 특히 **analyst (계획 수립)** 가 plan / todox / 신규 issue / paradigm shift 검토를 할 때 본 schema 의 4 원칙 (Explicit / Yours / File over app / BYOAI) + 3계층 + 워크플로우 + 페이지 컨벤션과 일치 여부 cross-check 필수. master 가 analyst 에게 task prompt 작성 시 schema 참고 의무를 명시.
 
-3 핵심 문서 (README.md 갱신 source):
+4 핵심 문서 (README.md 갱신 source):
 - [`wikey.schema.md`](./wikey.schema.md) — 마스터 스키마 (단일 진실 소스, Karpathy 철학)
 - [`plan/plan-full.md`](./plan/plan-full.md) — 전체 로드맵 + 각 Phase 목표·핵심 spec 상세
 - [`CLAUDE.md`](./CLAUDE.md) — 본 파일 (Claude Code 도구 사용 + 실행 체크리스트)
+- [`DESIGN.md`](./DESIGN.md) — 디자인 시스템 (`--wk-*` CSS 변수 토큰 + 6 패널 패턴 + `styles.css` 마이그레이션 계획)
 
 ## 쓰기 규칙
 
