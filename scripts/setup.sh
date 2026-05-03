@@ -83,7 +83,7 @@ if command -v ollama &>/dev/null; then
     fi
   fi
 else
-  fail "Ollama 미설치 — https://ollama.com 에서 설치"
+  fail "Ollama 미설치 — brew install ollama (또는 https://ollama.com)"
   ERRORS=$((ERRORS + 1))
 fi
 

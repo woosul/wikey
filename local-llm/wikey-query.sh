@@ -104,7 +104,7 @@ USAGE
 # --- 모델 확인 ---
 check_model() {
   if ! command -v ollama &>/dev/null; then
-    log_error "ollama가 설치되지 않았습니다. https://ollama.com 에서 설치하세요."
+    log_error "ollama가 설치되지 않았습니다. brew install ollama (또는 https://ollama.com)."
     exit 1
   fi
 
