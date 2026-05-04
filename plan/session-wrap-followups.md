@@ -1,29 +1,29 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-04 session 15 — §5.10 paradigm shift v5.4 종결 + SDD+TDD todo 변환 + 4 phase regroup 완료**. 8 cycle codex 누적 → plan v5.4 + SDD+TDD todo + 사용자 명령 regroup (§5.10 sub-section 우선순위 + 세션 단위 4 phase 재배치, §5.10.1~§5.10.4 implementation + §5.10.5 history). **다음 진입점 = §5.10.1.1 Entry baseline → §5.10.1.2 C5 Cleanup → §5.10.1.3 AC-C1.1 RED**.
+> 최신 갱신: **2026-05-04 session 16 — §5.10.1 Phase 1 unit/integration GREEN 완료**. 회귀 732 → **757 PASS (+25 신규)**, build 0 errors. 라이브 cycle smoke (PDF/HWP/DOCX 3 fixture) 와 §5.10.2 Phase 2 (C5 broken-link prevention) 가 다음 진입점.
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-05-04 session 15 regroup 후 시점)
+## 🎯 다음 세션 첫 액션 (2026-05-04 session 16 종료 시점)
 
-> **사용자 영구 결정** (2026-05-04 session 15 종결): §5.10 paradigm shift v5.4 + SDD+TDD todo + 4 phase regroup 모두 commit. 다음 세션 master 첫 명령 = `§5.10.1.1 Entry baseline` 부터 순서대로 진행:
+> **세션 16 종결**: §5.10.1 Phase 1 unit/integration GREEN. 다음 세션 master 첫 명령:
 >
-> **1. §5.10.1.1 Entry baseline 확보** (Pre-flight):
->    - `npm test` fresh re-run → 현 PASS 수 기록 (expected = 732). build 0 errors 확증.
->    - `git status` clean 확증.
->    - `.wikey/` 7 file snapshot.
->    - vault root 0-byte md `find . -maxdepth 1 -type f -name "*.md" -size 0c` snapshot (10 개 baseline; 2026-05-04 확인 시점 0건 가능).
+> **0. (선택, 사용자 환경 의존) §5.10.1.8 라이브 cycle smoke** — Obsidian + CDP 9222 기동 후 master 가 `obsidian-cdp` SKILL 따라 PDF + HWP + DOCX 3 fixture ingest cycle 진행. brief 정상 표시 + sidecar canonical write 정상 (vector PDF raw 보존 — 결함 b fix 확증) + Cancel vault write 0 확증. 사용자 환경 fallback 으로 master 직접 진행.
 >
-> **2. §5.10.1.2 C5 Cleanup** (사용자 승인 후 master 직접):
->    - "vault root 의 9 개 0-byte md (`Phase 4.md` / `Phase 5.md` / `PMBOK.md` / `Audit UI.md` / `cross-link.md` / `qmd embeddings.md` / `검색 graph expansion.md` / `운영 안전.md` / `증분 재인제스트.md`, **`Untitled.md` 제외**) 삭제해도 될까요?"
->    - 승인 후 `rm` 9개 → `find . -maxdepth 1 -size 0c -name "*.md"` = 1 (Untitled.md) 또는 0 (Untitled.md 도 삭제 결정 시) 확증
->    - 분기 C: 이미 삭제됨 (skip)
+> **1. §5.10.2 Phase 2 진입** — C5 broken-link prevention.
+>    - **Entry condition**: Phase 1 종료 회귀 baseline ≥ 751 (현재 757) GREEN. sidebar-chat.ts (Phase 2) 와 commands.ts (Phase 1) 다른 파일 → 충돌 0.
+>    - **Spec single source**: 보조 plan §14 (line 596~683) + AC-C5.1, C5.2, C5.4.
+>    - **첫 RED**: §5.10.2.1 AC-C5.1 (Prevention — query-pipeline 답변 prompt 정정). `wikey-core/src/__tests__/query-pipeline.test.ts` ≥ 3 cases 추가:
+>      - (1) 답변에 unresolved entity 가 있을 때 plain text 출력
+>      - (2) resolved entity 만 [[wikilink]]
+>      - (3) 1-hop wikilink read 실패 시 답변에 포함 안 됨
+>    - **GREEN**: `query-pipeline.ts buildSynthesisPrompt` 의 `[Available pages]` block 추가 + rule line 385/386 정정.
 >
-> **3. §5.10.1.3 AC-C1.1 RED 진입** (TDD RED phase):
->    - `wikey-core/src/__tests__/conversion.test.ts` 신규 작성, ≥ 10 cases 실패 확증
->    - 5 분기 (PDF / HWP / DOCX-Docling / PPTX-Docling / md/txt) happy + cache hit + pure 보장 (vault write 0)
->    - `npm test` 실행 → RED 확증 (실패 ≥ 10) → GREEN phase (`wikey-core/src/conversion.ts` 신규 export `convertSourceToMarkdown`) 진입
+> **2. §5.10.2.2 AC-C5.2 (Intercept — sidebar-chat broken link DOM)**:
+>    - `sidebar-chat.ts:2830~2858` 의 *기존 click handler 2 곳* 정정 (resolve-before-open).
+>    - `metadataCache.getFirstLinkpathDest` resolve 실패 시 `Notice('위키에 없는 페이지 — 자동 생성 차단')` + `wikey-broken-link` class.
+>    - 회귀 baseline ≥ 755 + 라이브 smoke 1 case.
 >
 > **4 Phase 그룹 매트릭스** (`plan/phase-5-todo.md §5.10` main intro):
 >

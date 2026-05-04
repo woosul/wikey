@@ -76,9 +76,24 @@ function keyToPath(key: string): string {
 }
 
 /**
- * 캐시 조회 — TTL 만료된 항목은 null 반환 + 파일 삭제.
+ * Phase 5 §5.10.1.9 AC-C1.7: cache file 의 새 schema.
+ *   - 변환 결과 markdown (`content`) + 선택적 sidecar 후보 (`sidecarCandidate`).
+ *   - vector PDF 면 sidecarCandidate 가 raw (이미지 포함) 으로 stripped 와 distinct.
+ *   - scan PDF / 비-PDF 면 sidecarCandidate 가 content 와 동일 또는 omit.
  */
-export function getCached(key: string, ttlDays = DEFAULT_TTL_DAYS): string | null {
+export interface CachedConversion {
+  readonly content: string
+  readonly sidecarCandidate?: string
+}
+
+/**
+ * 캐시 조회 — TTL 만료된 항목은 null 반환 + 파일 삭제.
+ *
+ * Phase 5 §5.10.1.9 AC-C1.7: return type `string` → `CachedConversion`.
+ * Backward compat: legacy file (string only, JSON.parse 실패) 은 `{ content: rawString,
+ * sidecarCandidate: rawString }` 으로 폴백 — 기존 cache 자동 호환.
+ */
+export function getCached(key: string, ttlDays = DEFAULT_TTL_DAYS): CachedConversion | null {
   const p = keyToPath(key)
   if (!existsSync(p)) return null
   try {
@@ -88,7 +103,24 @@ export function getCached(key: string, ttlDays = DEFAULT_TTL_DAYS): string | nul
       try { unlinkSync(p) } catch { /* ignore */ }
       return null
     }
-    return readFileSync(p, 'utf-8')
+    const raw = readFileSync(p, 'utf-8')
+    // Try new JSON schema first.
+    if (raw.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(raw) as Partial<CachedConversion>
+        if (typeof parsed.content === 'string') {
+          return {
+            content: parsed.content,
+            sidecarCandidate: typeof parsed.sidecarCandidate === 'string' ? parsed.sidecarCandidate : undefined,
+          }
+        }
+      } catch {
+        // fallthrough to legacy fallback
+      }
+    }
+    // Legacy string file (Phase 4 schema) — fallback. sidecarCandidate = rawString
+    // (caller 가 vector PDF 면 결함 b 가 발생; 새 cache write 후 자연 회복).
+    return { content: raw, sidecarCandidate: raw }
   } catch {
     return null
   }
@@ -96,21 +128,28 @@ export function getCached(key: string, ttlDays = DEFAULT_TTL_DAYS): string | nul
 
 /**
  * 캐시 저장 — index 도 함께 갱신.
+ *
+ * Phase 5 §5.10.1.9 AC-C1.7: meta 에 `sidecarCandidate` 추가. PDF vector 의 raw
+ * 이미지 보존 (결함 b fix). cache file = JSON `{ content, sidecarCandidate? }`.
  */
 export function setCached(
   key: string,
-  md: string,
-  meta: { readonly source: string; readonly converter: string },
+  content: string,
+  meta: { readonly source: string; readonly converter: string; readonly sidecarCandidate?: string },
 ): void {
   const p = keyToPath(key)
+  const payload: CachedConversion = meta.sidecarCandidate !== undefined
+    ? { content, sidecarCandidate: meta.sidecarCandidate }
+    : { content }
+  const serialized = JSON.stringify(payload)
   try {
-    writeFileSync(p, md)
+    writeFileSync(p, serialized)
     const idx = loadIndex()
     idx[key] = {
       source: meta.source,
       converter: meta.converter,
       writtenAt: Date.now(),
-      bytes: Buffer.byteLength(md, 'utf-8'),
+      bytes: Buffer.byteLength(serialized, 'utf-8'),
     }
     saveIndex(idx)
   } catch (err) {

@@ -185,6 +185,106 @@ describe('§5.3.1 ingest() — skip branch (hash-match)', () => {
   })
 })
 
+describe('§5.10.1.7 AC-C1.5 — preconverted does not break decideReingest + sidecar write timing (skip branches)', () => {
+  it('preconverted PDF + hash-match → SkippedIngestResult (skip path 진입, preconverted 무관, extract* 호출 없음)', async () => {
+    const fs = new MemoryFS()
+    const bytes = new TextEncoder().encode('preconverted-skip-payload')
+    const fullHash = computeFullHash(bytes)
+    const sidecarBody = '# Sidecar\nbody'
+    const sidecarHash = computeFullHash(new TextEncoder().encode(sidecarBody.normalize('NFC')))
+    const { id, record } = seed({
+      vault_path: 'raw/skip-pre.pdf',
+      hash: fullHash,
+      sidecar_hash: sidecarHash,
+    })
+    const reg: SourceRegistry = { [id]: record }
+    await fs.write(REGISTRY_PATH, JSON.stringify(reg, null, 2))
+    await fs.write('raw/skip-pre.pdf', new TextDecoder().decode(bytes))
+    await fs.write('raw/skip-pre.pdf.md', sidecarBody)
+
+    // preconverted 주입 — Step 1 분기 skip 가능. 단 decideReingest=skip 이라 그 전에 종료.
+    const result = await ingest('raw/skip-pre.pdf', fs, config, new ThrowingHttpClient(), undefined, {
+      preconverted: { content: '# pre PDF', sidecarCandidate: '# pre PDF', ext: 'pdf', converter: 'pdf:1-docling' },
+    })
+    expect('skipped' in result).toBe(true)
+    const skipped = result as SkippedIngestResult
+    expect(skipped.skipReason).toBe('hash-match')
+  })
+
+  it('preconverted HWP + skip-with-seed → seedSidecarHash, preconverted 무관 — sidecar_hash 시점 불변', async () => {
+    const fs = new MemoryFS()
+    const bytes = new TextEncoder().encode('preconverted-hwp-legacy')
+    const fullHash = computeFullHash(bytes)
+    const sidecarBody = '# legacy hwp sidecar'
+    const expectedSidecarHash = computeFullHash(new TextEncoder().encode(sidecarBody.normalize('NFC')))
+    const { id, record } = seed({
+      vault_path: 'raw/legacy.hwp',
+      hash: fullHash,
+      // sidecar_hash undefined — legacy
+    })
+    const reg: SourceRegistry = { [id]: record }
+    await fs.write(REGISTRY_PATH, JSON.stringify(reg, null, 2))
+    await fs.write('raw/legacy.hwp', new TextDecoder().decode(bytes))
+    await fs.write('raw/legacy.hwp.md', sidecarBody)
+
+    const result = await ingest('raw/legacy.hwp', fs, config, new ThrowingHttpClient(), undefined, {
+      preconverted: { content: sidecarBody, sidecarCandidate: sidecarBody, ext: 'hwp', converter: 'unhwp' },
+    })
+    expect('skipped' in result).toBe(true)
+    const skipped = result as SkippedIngestResult
+    expect(skipped.skipReason).toBe('hash-match-sidecar-seed')
+    expect(skipped.seededSidecarHash).toBe(true)
+
+    const fresh = await loadRegistry(fs)
+    expect(fresh[id]?.sidecar_hash).toBe(expectedSidecarHash)  // sidecar write 시점 불변 검증
+  })
+
+  it('preconverted DOCX + duplicate-hash-other-path → duplicateOfId set, preconverted 무관', async () => {
+    const fs = new MemoryFS()
+    const bytes = new TextEncoder().encode('preconverted-dup-docx')
+    const fullHash = computeFullHash(bytes)
+    const { id, record } = seed({
+      vault_path: 'raw/canonical.docx',
+      hash: fullHash,
+    })
+    const reg: SourceRegistry = { [id]: record }
+    await fs.write(REGISTRY_PATH, JSON.stringify(reg, null, 2))
+    await fs.write('raw/canonical.docx', new TextDecoder().decode(bytes))
+    await fs.write('raw/copy/canonical.docx', new TextDecoder().decode(bytes))
+
+    const result = await ingest('raw/copy/canonical.docx', fs, config, new ThrowingHttpClient(), undefined, {
+      preconverted: { content: '# pre docx', sidecarCandidate: '# pre docx', ext: 'docx', converter: 'docling-doc' },
+    })
+    expect('skipped' in result).toBe(true)
+    const skipped = result as SkippedIngestResult
+    expect(skipped.skipReason).toBe('duplicate-hash-other-path')
+    expect(skipped.duplicateOfId).toBe(id)
+  })
+
+  it('preconverted txt + hash-match-sidecar-edit-noted → skip path, preconverted 무관', async () => {
+    const fs = new MemoryFS()
+    const bytes = new TextEncoder().encode('preconverted-edit-noted-txt')
+    const fullHash = computeFullHash(bytes)
+    const oldSidecarHash = computeFullHash(new TextEncoder().encode('# old'.normalize('NFC')))
+    const { id, record } = seed({
+      vault_path: 'raw/notes.txt',
+      hash: fullHash,
+      sidecar_hash: oldSidecarHash,
+    })
+    const reg: SourceRegistry = { [id]: record }
+    await fs.write(REGISTRY_PATH, JSON.stringify(reg, null, 2))
+    await fs.write('raw/notes.txt', new TextDecoder().decode(bytes))
+    await fs.write('raw/notes.txt.md', '# user edited sidecar')
+
+    const result = await ingest('raw/notes.txt', fs, config, new ThrowingHttpClient(), undefined, {
+      preconverted: { content: 'pre txt', sidecarCandidate: null, ext: 'txt', converter: 'plain' },
+    })
+    expect('skipped' in result).toBe(true)
+    const skipped = result as SkippedIngestResult
+    expect(skipped.skipReason).toBe('hash-match-sidecar-edit-noted')
+  })
+})
+
 describe('§5.3.1 ingest() — forceReingest override', () => {
   it('forceReingest=true on hash-match would normally skip; override would force the full pipeline', async () => {
     // We assert decision-shape semantics by triggering the decision and asserting that

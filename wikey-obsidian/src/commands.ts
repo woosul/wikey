@@ -21,6 +21,8 @@ import {
   SETTINGS_MARKER,
   type ResetScope,
   reindexQuick,
+  convertSourceToMarkdown,
+  type ConversionResult,
 } from 'wikey-core'
 import { ConflictModal, type ConflictChoice } from './conflict-modal'
 import { WIKEY_CHAT_VIEW } from './sidebar-chat'
@@ -340,21 +342,39 @@ export async function runIngest(
   }
 
   // ── Stay-involved flow: unified modal (brief → processing → preview) ──
-  // Open the modal immediately with a loading state, then fetch the brief
-  // asynchronously so the user sees *something* within ~200ms instead of
-  // staring at a blank screen while Ollama spins up (10~30s).
+  // Phase 5 §5.10.1.3 AC-C1.3: conversion 1 회 보장. modal.open() 직후 단일 변환 entry
+  // (`convertSourceToMarkdown`) 호출 → brief + ingest 가 동일 결과 공유.
+  // Cancel 시 vault write 0 invariant (AC-C1.4): runIngestCore 호출 안 함. cache 만 ephemeral 보존.
   const modal = new IngestFlowModal(plugin.app, sourcePath, '', plugin.settings.verifyIngestResults)
   modal.open()
 
-  onProgress?.(1, 4, 'Generating brief...')
+  onProgress?.(1, 4, 'Converting source...')
+  const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
+  const ext = sourceFilename.toLowerCase().split('.').pop() ?? ''
+  let conversionResult: ConversionResult
+  try {
+    conversionResult = await convertSourceToMarkdown(sourcePath, ext, {
+      basePath,
+      execEnv: plugin.getExecEnv(),
+      config: plugin.buildConfig(),
+      wikiFS: plugin.wikiFS,
+    })
+  } catch (err) {
+    modal.setBrief(`(변환 실패: ${(err as Error)?.message ?? err})`)
+    // Wait for user acknowledgement (Cancel or Back) — vault write 0 invariant 보존.
+    const out = await modal.awaitBrief()
+    modal.close()
+    return { success: false, sourcePath, createdPages: [], cancelled: out.action === 'cancel' }
+  }
+
+  onProgress?.(2, 4, 'Generating brief...')
   generateBrief(
-    sourcePath,
-    plugin.wikiFS,
+    conversionResult.content,
+    sourceFilename,
     plugin.buildConfig(),
     plugin.httpClient,
     {
       basePath,
-      execEnv: plugin.getExecEnv(),
       // Phase 5 §5.8: brief 도 ingest 와 동일 PII 정책.
       piiGuardEnabled: plugin.settings.piiGuardEnabled,
     },
@@ -366,6 +386,8 @@ export async function runIngest(
   while (true) {
     const briefOutcome = await modal.awaitBrief()
     if (briefOutcome.action === 'cancel') {
+      // AC-C1.4: Cancel 시 vault write 0 invariant — runIngestCore 호출 안 함.
+      // conversionResult 는 휘발 (cache 는 ~/.cache/wikey/convert/ ephemeral 보존, 30일 TTL).
       modal.close()
       return { success: false, sourcePath, createdPages: [], cancelled: true }
     }
@@ -389,6 +411,7 @@ export async function runIngest(
         onProgress?.(step, total, message, subStep, subTotal)
       },
       autoMoveFromInbox: runOpts?.autoMoveFromInbox,
+      preconverted: conversionResult,
     })
 
     // If user hit [Back] during processing, the modal already flipped back to Brief.
@@ -415,6 +438,9 @@ async function runIngestCore(
     autoMoveFromInbox?: boolean
     forceReingest?: boolean
     onConflict?: (info: ConflictInfo) => Promise<ConflictChoice>
+    // Phase 5 §5.10.1.5 AC-C1.5: brief 단계에서 이미 변환된 결과를 ingest 에 전달.
+    // ingest() 가 Step 1 conversion 재호출 skip → cache hit (1 회) 도 회피.
+    preconverted?: ConversionResult
   },
 ): Promise<IngestRunResult> {
   // §5.3.1/§5.3.2 (plan v11 P2-3): default ConflictModal injection — silent auto-protect
@@ -437,6 +463,8 @@ async function runIngestCore(
         // §5.3.1/§5.3.2 — incremental reingest options.
         forceReingest: ctx.forceReingest,
         onConflict,
+        // Phase 5 §5.10.1.5 AC-C1.5: brief 가 미리 변환했으면 재변환 skip.
+        preconverted: ctx.preconverted,
         // Phase 4 D.0.c — PII 2-layer gate (settings 에서 제어).
         piiGuardEnabled: plugin.settings.piiGuardEnabled,
         allowPiiIngest: plugin.settings.allowPiiIngest,

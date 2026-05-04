@@ -1394,11 +1394,82 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 >
 > **현재 상태**: §5.10.1~§5.10.4 = implementation Phase 결과 placeholder (각 Phase 진입 시 채워짐). §5.10.5 = paradigm shift 등록 chain + 4 옵션 결정 + 8 cycle codex 누적 history (현 시점 산출 = 본 §5.10.5 만, 코드 산출 0).
 
-### 5.10.1 Phase 1 결과 (Session 1, TBD) — Pre-flight + C5 Cleanup + C1 conversion 통합
+### 5.10.1 Phase 1 결과 (Session 16, 2026-05-04) — Pre-flight + C5 Cleanup + C1 conversion 통합
 
-> **mirror**: `plan/phase-5-todo.md §5.10.1`. AC-C1.1~C1.7 + Cleanup (root 0-byte rm) + baseline 확보. 회귀 732 → ≥ 751.
+> **mirror**: `plan/phase-5-todo.md §5.10.1`. AC-C1.1~C1.7 + Cleanup (root 0-byte rm) + baseline 확보. 회귀 732 → **757 PASS (+25 신규)**.
 >
-> **현 상태**: Phase 1 미진입 (다음 세션 master 첫 액션 = §5.10.1.1 Entry baseline). Phase 1 완료 시 본 §5.10.1 에 timeline + AC 7 항목 evidence + commit hash + 라이브 smoke 결과 + 회귀 baseline 추가.
+> **현 상태**: **Phase 1 unit/integration GREEN 완료**. 라이브 smoke (PDF/HWP/DOCX 3 fixture) 는 사용자 환경 (Obsidian + CDP) 의존 → 별 단계.
+
+#### 5.10.1.1 Entry baseline (Pre-flight) — Confirmed
+
+- `npm test` baseline = **732 PASS** (spec expected 일치).
+- `npm run build` = 0 errors (warning 1: `import.meta` cjs — 기존 잔존, 본 cycle 변경 X).
+- `git status` clean (last commit `d9a8abc`).
+- `.wikey/` snapshot = 7 file (schema.yaml + suggestions.json + converged-decompositions.json + converged-decompositions.mock-baseline.json + mention-history.json + qmd-embeddings.json + source-registry.json) — 변경 0.
+- vault root 0-byte md = **0건** (분기 C, 이미 삭제됨 → C5 Cleanup skip).
+
+#### 5.10.1.2 C5 Cleanup — skipped (분기 C, 이미 삭제 상태)
+
+`find . -maxdepth 1 -type f -name "*.md" -size 0c` = 0. 이전 세션에서 사용자가 이미 정리. invariant 자연 충족.
+
+#### 5.10.1.3 AC-C1.1 — `convertSourceToMarkdown` 신규 entry (GREEN)
+
+- 신규 file: `wikey-core/src/conversion.ts` — pure conversion entry 5 분기 통합 (PDF / HWP·HWPX / DOCX·PPTX·HTML 등 Docling / md/txt) + cache layer.
+- ingest-pipeline.ts 의 helpers (`extractHwpText`, `extractPdfText`, `extractDocumentText`, `DOCLING_DOC_FORMATS`, `doclingMajorOptions`) export 추가 → `conversion.ts` 가 import.
+- `index.ts`: `convertSourceToMarkdown` + `ConversionResult`/`ConvertOpts` re-export.
+- 신규 test: `wikey-core/src/__tests__/conversion.test.ts` **12 cases** GREEN (5 분기 cache hit + md/txt passthrough + embedded image strip + pure invariant 2 + error 2). spec ≥ 10 cases 초과.
+- vault write 0 보장 검증: `wikiFS.write` mock spy 가 0 회 호출 확증.
+
+#### 5.10.1.4 AC-C1.2 — `generateBrief` 시그니처 변경 (GREEN)
+
+- 변경 전: `generateBrief(sourcePath, wikiFS, config, http, opts)` — 자체 `extractPdfText` (HWP/DOCX binary 누락).
+- 변경 후: `generateBrief(content, sourceFilename, config, http, opts)` — 변환 결과 직접 받음. **HWP/DOCX/PPTX/HTML 모두 brief 정상**.
+- conversion.test.ts 에 **5 cases** GREEN (PDF/HWP/DOCX/md/txt content passthrough + LLMClient.prototype.call spy 검증).
+
+#### 5.10.1.5 AC-C1.3 — UI commands.ts conversion 1 회 (GREEN)
+
+- `wikey-obsidian/src/commands.ts:346~363`:
+  - `modal.open() → convertSourceToMarkdown(sourcePath, ext, opts)` (1 회) → `generateBrief(content)` → user input → `runIngestCore({preconverted})`.
+- 변환 실패 시 modal Cancel 분기 → `runIngestCore` 호출 안 됨 (vault write 0 invariant 자연 보존).
+- contract 검증 = build 0 errors + 단위 unit test (AC-C1.1 12 cases + AC-C1.2 5 cases). 라이브 cycle smoke (extractPdfText 호출 ≤ 1) 은 별 단계.
+
+#### 5.10.1.6 AC-C1.4 — Cancel vault write 0 invariant (GREEN)
+
+- `commands.ts` Cancel 분기 명시: `if (briefOutcome.action === 'cancel') { modal.close(); return { success: false, ..., cancelled: true } }`.
+- `runIngestCore` 호출 안 됨 → `ingest()` 의 sidecar write / registry update 호출 0.
+- cache file 은 `~/.cache/wikey/convert/` ephemeral 보존 (vault 외부, 30일 TTL) — invariant 분리.
+
+#### 5.10.1.7 AC-C1.5 — `decideReingest` + sidecar write 시점 불변 (GREEN)
+
+- `IngestOptions.preconverted` optional 추가: 있으면 Step 1 분기 skip, 없으면 기존 흐름.
+- `ingest-pipeline-incremental.test.ts` 에 **4 cases** GREEN (PDF hash-match / HWP skip-with-seed / DOCX duplicate / txt edit-noted — preconverted 주입 시 모두 기존 동작 유지).
+- registry sidecar_hash 검증: skip-with-seed case 가 사이드카 hash 정확히 채움 — **시점 불변** 확증.
+
+#### 5.10.1.8 회귀 baseline (AC-C1.6) — Confirmed
+
+- `npm test` final = **757 PASS** (732 baseline + 25 신규). spec target ≥ 751 (+19) 초과 달성 (+25).
+- `npm run build` = 0 errors. fresh re-run 명시.
+- 라이브 cycle smoke (PDF + HWP + DOCX 3 fixture) = 사용자 환경 (Obsidian + CDP 9222) 의존 → 별 단계 진행 (master 직접).
+
+#### 5.10.1.9 AC-C1.7 — convert-cache schema + 3 callsite migration (GREEN)
+
+- `convert-cache.ts`: `setCached(key, content, meta {source, converter, sidecarCandidate?})` + `getCached(key) → CachedConversion {content, sidecarCandidate?} | null`.
+- file 형식 = JSON `{"content":"...","sidecarCandidate":"..."?}` (변경 전 = string).
+- backward compat: legacy string file → JSON.parse 실패 → `{ content: rawString, sidecarCandidate: rawString }` fallback.
+- 3 callsite atomic migrate:
+  - `ingest-pipeline.ts:1512` (extractHwpText cache hit) — `cached.content` 사용.
+  - `ingest-pipeline.ts:1576` (extractDocumentText cache hit) — 동일.
+  - `ingest-pipeline.ts:1790` (extractPdfText pre-cache lookup) — `{ stripped: cached.content, sidecarCandidate: cached.sidecarCandidate ?? cached.content }`.
+  - `ingest-pipeline.ts:1767` (PDF finalize() setCached) — sidecarCandidate 포함 저장 (vector PDF raw 보존).
+  - `conversion.ts:readPdfCacheTier` — return type 변경에 따라 `getCached(key) !== null`.
+- 기존 4 cases (저장/조회/invalidate/stats) 도 새 schema 반영 update.
+- 신규 test: `convert-cache.test.ts` **+4 cases** (vector PDF distinct sidecarCandidate / scan PDF fallback / legacy string compat / 3 callsite schema 호환).
+
+#### 5.10.1.10 Phase 1 Exit — Confirmed
+
+- 회귀 baseline: **757 PASS** + build 0 errors. fresh re-run 확증 (commit hash TBD — 본 result mirror commit 의 직전).
+- 라이브 cycle smoke 3 fixture = 사용자 환경 의존 → 별 단계 (Phase 1 implementation 종료 직후 master 가 환경 마련 후 진행).
+- commit 분리 권장 (RED/GREEN/REFACTOR/회귀) — 본 cycle 은 단일 통합 commit 으로 진행 (auto mode 효율).
 
 ### 5.10.2 Phase 2 결과 (Session 2, TBD) — C5 broken-link prevention
 

@@ -93,6 +93,9 @@ export type {
   PromptLoadResult,
   SkippedIngestResult,
 } from './ingest-pipeline.js'
+// Phase 5 §5.10.1 — pure conversion entry (PDF/HWP/DOCX/PPTX/md/txt 5 분기 통합).
+export { convertSourceToMarkdown } from './conversion.js'
+export type { ConversionResult, ConvertOpts } from './conversion.js'
 // §5.3.1/§5.3.2 — incremental reingest helpers + types.
 export {
   decideReingest,

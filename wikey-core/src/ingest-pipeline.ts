@@ -87,7 +87,7 @@ const MAX_JSON_RETRIES = 2
 
 // Docling 이 처리하는 PDF 외 포맷 (pdf 는 extractPdfText 로 별도 라우팅).
 // 확장자는 소문자로 비교.
-const DOCLING_DOC_FORMATS = new Set([
+export const DOCLING_DOC_FORMATS = new Set([
   'docx', 'pptx', 'xlsx',
   'html', 'htm',
   'png', 'jpg', 'jpeg', 'tiff', 'tif',
@@ -142,6 +142,13 @@ export interface IngestOptions {
    * 'overwrite' (force), 'preserve' (protect), or 'cancel' (throw IngestCancelledByUserError).
    */
   readonly onConflict?: (info: ConflictInfo) => Promise<'overwrite' | 'preserve' | 'cancel'>
+  /**
+   * Phase 5 §5.10.1.5 AC-C1.5: pre-converted source result (UI flow brief 단계 결과).
+   * 있으면 Step 1 의 분기 변환 (`convertSourceToMarkdown`) 호출 skip — content/sidecarCandidate
+   * 그대로 사용. **decideReingest / sidecar write / PII gate 시점은 모두 보존** (codex P1-1 invariant).
+   * 없으면 (CLI / 테스트 / forceReingest 케이스) 기존 흐름 그대로.
+   */
+  readonly preconverted?: import('./conversion.js').ConversionResult
 }
 
 /**
@@ -348,7 +355,18 @@ export async function ingest(
   //   sidecarCandidate 는 중앙 PII wrapper (§4.1.2) 통과 후 파일시스템에 저장된다. PDF 외 포맷은
   //   sourceContent 자체가 sidecar 본문이므로 이 변수는 null 유지.
   let pdfSidecarCandidate: string | null = null
-  if (ext === 'hwp' || ext === 'hwpx') {
+  if (opts?.preconverted) {
+    // Phase 5 §5.10.1.5 AC-C1.5: brief 단계 결과 재사용 (Step 1 분기 skip).
+    // decideReingest / sidecar write / PII gate 시점은 모두 보존 — preconverted 는 *문자열만* 주입.
+    onProgress?.({ step: 1, total: 4, message: 'Reading source (preconverted)...' })
+    sourceContent = opts.preconverted.content
+    if (ext === 'pdf') {
+      pdfSidecarCandidate = opts.preconverted.sidecarCandidate ?? sourceContent
+    }
+    if (!sourceContent || sourceContent.trim().length < 50) {
+      throw new Error(`Preconverted content too short: ${sourceFilename}`)
+    }
+  } else if (ext === 'hwp' || ext === 'hwpx') {
     onProgress?.({ step: 1, total: 4, message: 'Extracting (unhwp)...' })
     sourceContent = await extractHwpText(sourcePath, opts?.basePath, opts?.execEnv)
     if (!sourceContent || sourceContent.trim().length < 50) {
@@ -1193,32 +1211,22 @@ export class PlanRejectedError extends Error {
  * Generate a lightweight brief (200-300 chars, single LLM call) for Stage 1 modal.
  * Cheaper than full extraction — used only to show the user what the source is about
  * before they commit to guide direction.
+ *
+ * Phase 5 §5.10.1.4 AC-C1.2: 시그니처 변경 — `content` 를 직접 받는다 (변환 책임 X).
+ * 호출자 (commands.ts UI flow) 가 `convertSourceToMarkdown` 결과를 미리 전달.
+ * HWP/DOCX/PPTX/HTML 등 모든 포맷 brief 지원 (binary LLM 직접 전달 risk 해소).
  */
 export async function generateBrief(
-  sourcePath: string,
-  wikiFS: WikiFS,
+  content: string,
+  sourceFilename: string,
   config: WikeyConfig,
   httpClient: HttpClient,
   opts?: {
     basePath?: string
-    execEnv?: Record<string, string>
     // Phase 5 §5.8: brief 생성도 LLM 호출이므로 ingest 와 동일한 PII 정책을 따른다.
     piiGuardEnabled?: boolean
   },
 ): Promise<string> {
-  assertNotWikiPath(sourcePath, 'generateBrief')
-  const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
-  const isPdf = sourceFilename.toLowerCase().endsWith('.pdf')
-
-  let content: string
-  if (isPdf) {
-    // Brief 는 stripped 만 필요. sidecarCandidate 는 사용 안 함 (ingest() 가 저장 책임).
-    const { stripped } = await extractPdfText(sourcePath, opts?.basePath, opts?.execEnv, config)
-    content = stripped
-  } else {
-    content = await wikiFS.read(sourcePath)
-  }
-
   // Phase 5 §5.8: brief 의 LLM 입력 (filename + content sample) 에도 동일 PII 패턴 적용.
   // brief 결과는 사용자에게 시각적으로 노출되므로 mask 기본. guardEnabled=false 면 bypass.
   const guard = opts?.piiGuardEnabled ?? true
@@ -1479,7 +1487,7 @@ export function resolveOcrEndpoint(config?: WikeyConfig): OcrEndpoint {
 /**
  * HWP/HWPX → Markdown via unhwp (base64 embedded) → strip to placeholders.
  */
-async function extractHwpText(
+export async function extractHwpText(
   sourcePath: string,
   basePath?: string,
   execEnv?: Record<string, string>,
@@ -1503,8 +1511,8 @@ async function extractHwpText(
   const cacheKey = computeCacheKey({ sourceBytes, converter: 'unhwp' })
   const cached = getCached(cacheKey)
   if (cached != null) {
-    log(`cache hit — unhwp (${cached.length} chars)`)
-    return cached
+    log(`cache hit — unhwp (${cached.content.length} chars)`)
+    return cached.content
   }
 
   const scriptPath = join(cwd, 'scripts', 'vendored', 'unhwp-convert.py')
@@ -1537,7 +1545,7 @@ async function extractHwpText(
  * 일반 문서(DOCX/PPTX/XLSX/HTML/이미지/CSV) → Markdown via docling CLI.
  * PDF 는 extractPdfText 의 전체 tier 체인을 타고, 이 함수는 docling 단일 경로만 시도.
  */
-async function extractDocumentText(
+export async function extractDocumentText(
   sourcePath: string,
   basePath?: string,
   execEnv?: Record<string, string>,
@@ -1567,8 +1575,8 @@ async function extractDocumentText(
   const cacheKey = computeCacheKey({ sourceBytes, converter: 'docling', majorOptions })
   const cached = getCached(cacheKey)
   if (cached != null) {
-    log(`cache hit — docling (${cached.length} chars)`)
-    return cached
+    log(`cache hit — docling (${cached.content.length} chars)`)
+    return cached.content
   }
 
   const { mkdtempSync, rmSync } = require('node:fs') as typeof import('node:fs')
@@ -1640,7 +1648,7 @@ export function defaultOcrLangForEngine(engine: string): string {
 }
 
 /** docling 옵션 중 캐시 키에 포함할 것들 (결과 달라지는 옵션만). §4.1.3.1: `mode` 필드로 Tier 1/1a/1b 캐시 분리. */
-function doclingMajorOptions(config?: WikeyConfig, mode: DoclingMode = 'default'): Record<string, unknown> {
+export function doclingMajorOptions(config?: WikeyConfig, mode: DoclingMode = 'default'): Record<string, unknown> {
   const engine = config?.DOCLING_OCR_ENGINE || defaultOcrEngine()
   return {
     mode,
@@ -1720,7 +1728,7 @@ export interface PdfExtractResult {
   readonly sidecarCandidate: string
 }
 
-async function extractPdfText(
+export async function extractPdfText(
   sourcePath: string,
   basePath?: string,
   execEnv?: Record<string, string>,
@@ -1750,16 +1758,21 @@ async function extractPdfText(
     if (counts.dataUri || counts.externalUrl) {
       log(`image placeholder — data=${counts.dataUri}, url=${counts.externalUrl}, ${md.length}→${stripped.length} chars`)
     }
+    const useStripped = hasRedundantEmbeddedImages(md, stripped, pdfPageCount, tierKey)
+    const sidecarCandidate = useStripped ? stripped : md
     if (sourceBytes && stripped) {
       const cacheKey = computeCacheKey({
         sourceBytes,
         converter: `pdf:${tierKey}`,
         majorOptions: doclingMajorOptions(config),
       })
-      setCached(cacheKey, stripped, { source: sourcePath, converter: `pdf:${tierKey}` })
+      // Phase 5 §5.10.1.9 AC-C1.7: vector PDF 의 raw 이미지 보존 — sidecarCandidate 도 cache.
+      setCached(cacheKey, stripped, {
+        source: sourcePath,
+        converter: `pdf:${tierKey}`,
+        sidecarCandidate,
+      })
     }
-    const useStripped = hasRedundantEmbeddedImages(md, stripped, pdfPageCount, tierKey)
-    const sidecarCandidate = useStripped ? stripped : md
     log(`sidecar candidate ready (${useStripped ? 'stripped — scan/small-doc images redundant' : 'raw — vector PDF, images kept'}) — ${sidecarCandidate.length} chars, tier=${tierKey}`)
     return { stripped, sidecarCandidate }
   }
@@ -1781,9 +1794,13 @@ async function extractPdfText(
     })
     const cached = getCached(doclingKey)
     if (cached != null && !config?.DOCLING_DISABLE) {
-      log(`cache hit — pdf:1-docling (${cached.length} chars)`)
-      // Cache stores stripped text only — raw markdown 은 재계산 불가. 두 필드 모두 stripped 로.
-      return { stripped: cached, sidecarCandidate: cached }
+      log(`cache hit — pdf:1-docling (${cached.content.length} chars)`)
+      // Phase 5 §5.10.1.9 AC-C1.7: 새 schema 면 sidecarCandidate distinct (vector PDF raw 보존).
+      // legacy fallback 면 sidecarCandidate = content (결함 b 가 자연 회복될 때까지).
+      return {
+        stripped: cached.content,
+        sidecarCandidate: cached.sidecarCandidate ?? cached.content,
+      }
     }
   } catch (err) {
     warn(`read source for cache failed: ${errorMessage(err)}`)
