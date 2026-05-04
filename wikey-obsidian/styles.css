@@ -1283,6 +1283,15 @@
   text-decoration-style: solid;
 }
 
+/* Phase 5 §5.10.2.2 AC-C5.2: broken wikilink 클릭 시 시각 dim — root 자동 페이지 생성 차단 직후 표시. */
+.wikey-broken-link,
+a.internal-link.wikey-broken-link,
+.wikey-wikilink.wikey-broken-link {
+  opacity: 0.5;
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
 /* ══════════════════════════════
    Ingest Panel
    ══════════════════════════════ */

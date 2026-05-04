@@ -172,6 +172,30 @@ describe('buildSynthesisPrompt', () => {
     const prompt = buildSynthesisPrompt('ctx', 'q')
     expect(prompt).toMatch(/1-hop|직접 인용.*1-hop|1-hop.*참고/)
   })
+
+  // Phase 5 §5.10.2.1 AC-C5.1 — Prevention: broken wikilink 자동 페이지 생성 차단.
+  // LLM 이 *위키에 실제 존재하는* entity/concept 만 [[wikilink]] 로 표기. 없는 것은 plain text.
+  it('AC-C5.1 (1): context 의 page section 으로부터 [Available pages] block 자동 주입', () => {
+    const context = '--- esc.md ---\n# ESC\nspeed controller\n\n--- pwm.md ---\n# PWM\nmodulation\n'
+    const prompt = buildSynthesisPrompt(context, 'ESC와 PWM 차이?')
+    // [Available pages] block 명시 — LLM 이 명시 참조
+    expect(prompt).toMatch(/\[Available pages\]/)
+    expect(prompt).toContain('esc')
+    expect(prompt).toContain('pwm')
+  })
+
+  it('AC-C5.1 (2): rule 정정 — 답변에 등장한 entity/concept 중 페이지 base name 목록에 있는 것만 [[wikilink]]', () => {
+    const prompt = buildSynthesisPrompt('--- esc.md ---\n# ESC\n', 'q')
+    // rule line 386 정정 — 페이지 base name 목록 참조 + plain text 명시
+    expect(prompt).toMatch(/페이지 base name 목록.*있는 것만|목록에 있는 것만.*\[\[페이지명\]\]/)
+    expect(prompt).toMatch(/목록에 없는|존재하지 않는.*plain text|plain text.*표기/)
+  })
+
+  it('AC-C5.1 (3): rule 정정 — read 실패 (wiki/ 에 없는) wikilink 답변에 포함 안 함 instruction', () => {
+    const prompt = buildSynthesisPrompt('--- esc.md ---\n# ESC\n', 'q')
+    // rule line 385 정정 — read 실패 wikilink 답변 미포함
+    expect(prompt).toMatch(/read 실패|read 된 페이지의 정보만 활용|read 안.*포함하지 마|실제 read.*만/)
+  })
 })
 
 // ── §4.3.2 Part B: citations 구조화 ──

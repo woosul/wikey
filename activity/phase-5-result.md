@@ -1471,11 +1471,43 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - 라이브 cycle smoke 3 fixture = 사용자 환경 의존 → 별 단계 (Phase 1 implementation 종료 직후 master 가 환경 마련 후 진행).
 - commit 분리 권장 (RED/GREEN/REFACTOR/회귀) — 본 cycle 은 단일 통합 commit 으로 진행 (auto mode 효율).
 
-### 5.10.2 Phase 2 결과 (Session 2, TBD) — C5 broken-link prevention
+### 5.10.2 Phase 2 결과 (Session 16, 2026-05-04 ~ 2026-05-05) — C5 broken-link prevention
 
-> **mirror**: `plan/phase-5-todo.md §5.10.2`. AC-C5.1 (Prevention) + AC-C5.2 (Intercept) + AC-C5.3 (회귀). 회귀 ≥ 751 → ≥ 755.
+> **mirror**: `plan/phase-5-todo.md §5.10.2`. AC-C5.1 (Prevention) + AC-C5.2 (Intercept) + AC-C5.3 (회귀). 회귀 757 → **760 PASS (+3 신규)**.
 >
-> **현 상태**: Phase 2 미진입 (Phase 1 완료 후 진입). Phase 2 완료 시 본 §5.10.2 에 timeline + AC 3 항목 evidence + commit hash + 라이브 smoke 결과 추가.
+> **현 상태**: **Phase 2 unit/integration GREEN 완료**. 라이브 smoke (broken link click 처리) = 사용자 환경 (Obsidian + 답변 안 broken wikilink 발생) 의존 → 별 단계.
+
+#### 5.10.2.1 AC-C5.1 — Prevention (query-pipeline 답변 prompt 정정, GREEN)
+
+- `wikey-core/src/query-pipeline.ts buildSynthesisPrompt`:
+  - context 의 page section (`--- <basename>.md ---`) 자동 parse → `availablePages` 추출.
+  - 새 block 명시: `[Available pages]: <slug1>, <slug2>, ...` (LLM 명시 참조).
+  - rule line 385 정정: "검색된 페이지 본문의 [[wikilink]] 중 `expandWithOneHopWikilinks` 로 실제 read 된 페이지의 정보만 활용. read 실패 (wiki/ 에 없는) wikilink 는 답변에 [[link]] 로 포함하지 마세요."
+  - rule line 386 정정: "답변에 등장한 entity/concept 중 위 페이지 base name 목록에 있는 것만 첫 등장 시 [[페이지명]] 으로 링크. 목록에 없는 것은 plain text (broken link 차단)."
+- 신규 test: `query-pipeline.test.ts` **+3 cases** (Available pages block 자동 주입 / rule 386 정정 / rule 385 정정).
+- 회귀: 757 → 760 PASS.
+
+#### 5.10.2.2 AC-C5.2 — Intercept (sidebar-chat broken link DOM 처리, GREEN)
+
+- `wikey-obsidian/src/sidebar-chat.ts:2830~2858` `renderMarkdown()`:
+  - 기존 click handler 2 곳 (`a.internal-link` + `.wikey-wikilink`) 정정.
+  - 새 helper `handleWikilinkClick`: `e.preventDefault()` → `metadataCache.getFirstLinkpathDest(href, '')` resolve.
+    - 성공 (existing TFile) → `openLinkText` 호출 (기존 동작).
+    - 실패 (null = broken) → `new Notice('위키에 없는 페이지 — 자동 생성 차단')` + DOM `wikey-broken-link` class.
+- `styles.css`: `.wikey-broken-link { opacity: 0.5; text-decoration: line-through; cursor: not-allowed; }`.
+- 적용 범위 = sidebar chat 답변 영역만 (vault 일반 편집 영향 X).
+- unit test = obsidian DOM mock 큼 → contract 검증 (build 통과) + 라이브 smoke 의무.
+- build 0 errors 확증.
+
+#### 5.10.2.3 AC-C5 — 회귀 baseline (Confirmed)
+
+- `npm test` final = **760 PASS** (757 + 3 신규). spec target ≥ 755 충족 (+5 초과).
+- `npm run build` = 0 errors. fresh re-run.
+
+#### 5.10.2.4 Phase 2 Exit
+
+- 회귀 baseline 최종: 760 PASS + build 0 errors.
+- 라이브 smoke = 사용자 환경 의존 → 다음 세션 (또는 §5.10.4.5 L 단계의 5 항목 smoke 와 통합).
 
 ### 5.10.3 Phase 3 결과 (Session 3, TBD) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer)
 

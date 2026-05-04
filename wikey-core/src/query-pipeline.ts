@@ -373,6 +373,19 @@ export function parseQmdOutput(stdout: string): readonly SearchResult[] {
 }
 
 export function buildSynthesisPrompt(context: string, question: string): string {
+  // Phase 5 §5.10.2.1 AC-C5.1: context 의 page section (`--- <basename>.md ---`) 으로부터
+  // available page basename 자동 추출. LLM 이 *실제 존재* 페이지만 [[wikilink]] 처리 가능
+  // 하도록 명시 → broken wikilink 자동 페이지 생성 차단.
+  const PAGE_HEADER_RE = /^--- (.+?)\.md ---$/gm
+  const availablePages: string[] = []
+  for (const match of context.matchAll(PAGE_HEADER_RE)) {
+    const base = match[1].trim()
+    if (base && !availablePages.includes(base)) availablePages.push(base)
+  }
+  const availableBlock = availablePages.length > 0
+    ? `[Available pages]: ${availablePages.join(', ')}`
+    : '[Available pages]: (none)'
+
   return `당신은 wikey 위키 전문가입니다. 아래 위키 페이지 내용을 종합하여 확정적으로 답변하세요.
 
 핵심 규칙:
@@ -382,10 +395,12 @@ export function buildSynthesisPrompt(context: string, question: string): string 
 - 해요체(존댓말)를 사용하세요.
 - 답변 끝에 "참고: [[페이지명]], [[페이지명]]" 형식으로 출처를 나열하세요.
 - 위키에 해당 정보가 전혀 없을 때만 "위키에 아직 관련 내용이 없어요"라고 말하세요. 부분적으로라도 있으면 그 내용을 활용하세요.
-- 검색된 페이지 본문에 [[wikilink]] 로 언급된 다른 wiki 페이지가 있으면, 그 페이지의 정보도 가능한 활용해 답변에 포함하세요.
-- 답변에 등장한 모든 entity/concept 은 첫 등장 시 [[페이지명]] 으로 링크하세요.
+- 검색된 페이지 본문의 [[wikilink]] 중 \`expandWithOneHopWikilinks\` 로 실제 read 된 페이지의 정보만 활용하세요. read 실패 (wiki/ 에 없는) wikilink 는 답변에 [[link]] 로 포함하지 마세요.
+- 답변에 등장한 entity/concept 중 위 페이지 base name 목록에 있는 것만 첫 등장 시 [[페이지명]] 으로 링크하세요. 목록에 없는 entity/concept 은 plain text 로 표기하세요 (broken link 차단).
 - 답변 끝 "참고:" 블록에는 직접 인용한 페이지 + 1-hop link target 페이지를 모두 나열하세요.
 - 답변은 충분히 풍부하게 작성하세요. 단순 정의에 머무르지 말고 관련 개념·구성·용도·예시를 함께 설명해 한 단락 이상의 완성된 설명을 만드세요.
+
+${availableBlock}
 
 ---
 위키 페이지:

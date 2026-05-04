@@ -2830,12 +2830,23 @@ Click [[page name]] in answers to navigate to the wiki page.
   private renderMarkdown(content: string, el: HTMLElement) {
     MarkdownRenderer.render(this.app, content, el, '', this.plugin)
 
+    // Phase 5 §5.10.2.2 AC-C5.2: resolve-before-open — broken wikilink 클릭 시 root 자동 페이지
+    // 생성 차단. resolve 성공 → openLinkText 기존 동작. resolve 실패 → Notice + dim class.
+    const handleWikilinkClick = (link: HTMLAnchorElement) => (e: Event) => {
+      e.preventDefault()
+      const href = link.getAttribute('data-href')
+      if (!href) return
+      const dest = this.app.metadataCache.getFirstLinkpathDest(href, '')
+      if (dest) {
+        this.app.workspace.openLinkText(href, '')
+      } else {
+        new Notice('위키에 없는 페이지 — 자동 생성 차단')
+        link.classList.add('wikey-broken-link')
+      }
+    }
+
     el.querySelectorAll('a.internal-link').forEach((link) => {
-      link.addEventListener('click', (e: Event) => {
-        e.preventDefault()
-        const href = (link as HTMLAnchorElement).getAttribute('data-href')
-        if (href) this.app.workspace.openLinkText(href, '')
-      })
+      link.addEventListener('click', handleWikilinkClick(link as HTMLAnchorElement))
     })
 
     el.querySelectorAll('p, li, td').forEach((node) => {
@@ -2848,11 +2859,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       if (replaced !== html) {
         node.innerHTML = replaced
         node.querySelectorAll('.wikey-wikilink').forEach((link) => {
-          link.addEventListener('click', (e: Event) => {
-            e.preventDefault()
-            const href = (link as HTMLAnchorElement).getAttribute('data-href')
-            if (href) this.app.workspace.openLinkText(href, '')
-          })
+          link.addEventListener('click', handleWikilinkClick(link as HTMLAnchorElement))
         })
       }
     })

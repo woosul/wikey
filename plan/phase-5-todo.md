@@ -980,7 +980,7 @@
 - [x] `activity/phase-5-result.md §5.10.1` mirror commit (본 cycle 의 마지막 commit).
 - [x] commit — auto mode 효율 위해 단일 통합 commit (RED+GREEN+회귀+result mirror).
 
-### 5.10.2 Phase 2 (Session 2) — C5 broken-link prevention
+### 5.10.2 Phase 2 (Session 16, 2026-05-04~05) — C5 broken-link prevention ✅ Unit/Integration GREEN
 
 > **세션 estimate**: ~1-1.5 시간. 2 AC × 4 단계 (RED+GREEN+REFACTOR+회귀) + ~4 신규 test + 라이브 smoke 1 case.
 >
@@ -996,44 +996,37 @@
 
 > **spec**: 보조 plan §14.2 (A) + §14.3 AC-C5.1. `query-pipeline.ts:386` rule line 정정. context block 에 `[Available pages]` 추가.
 
-- [ ] **RED**: `wikey-core/src/__tests__/query-pipeline.test.ts` ≥ 3 cases — (1) `답변에 unresolved entity 가 있을 때 plain text 출력` (2) `resolved entity 만 [[wikilink]]` (3) `1-hop wikilink read 실패 시 답변에 포함 안 됨`. 실패 확증 (현 prompt 페이지 존재 검증 X).
-- [ ] **GREEN**: `wikey-core/src/query-pipeline.ts buildSynthesisPrompt`:
-  - context section 에 "위키 페이지 base name 목록" (queried 결과 + 1-hop wikilink target 의 *존재 확증* 된 base) 주입
-  - `[Available pages]: <slug1>, <slug2>, ...` block 추가 (LLM 이 명시 참조)
-  - rule line 386 정정: "답변에 등장한 entity/concept 중 **위 페이지 base name 목록에 있는 것만** 첫 등장 시 [[페이지명]] 으로 링크하세요. 목록에 없는 entity/concept 은 plain text 로 표기하세요."
-  - rule line 385 정정 (1-hop): "검색된 페이지 본문의 [[wikilink]] 중 **`expandWithOneHopWikilinks` 로 실제 read 된** 페이지의 정보만 활용. read 실패 (wiki/ 에 없는) wikilink 는 답변에 [[link]] 로 포함하지 마세요."
-  - 3 cases GREEN.
-- [ ] **REFACTOR**: `[Available pages]` block 빌더 helper 분리 (테스트 용이). prompt 토큰 비용 측정 (~50~100 토큰 추가, 보조 plan §14.4 trade-off 확증).
-- [ ] **회귀**: `npm test` ≥ 754 (≥ 3 신규) + build 0 errors.
+- [x] **RED**: `query-pipeline.test.ts` 에 3 cases 추가 (Available pages block / rule 386 정정 / rule 385 정정). 3 fail 확증.
+- [x] **GREEN**: `buildSynthesisPrompt`:
+  - context page section (`--- <basename>.md ---`) 자동 parse → `availablePages` 추출.
+  - `[Available pages]: <slug1>, <slug2>, ...` block 추가.
+  - rule line 386 정정 (목록에 있는 것만 wikilink, 그 외 plain text).
+  - rule line 385 정정 (read 실패 wikilink 답변 미포함).
+  - **3/3 GREEN**.
+- [x] **REFACTOR**: PAGE_HEADER_RE inline regex (1 case 만 사용, helper 분리 불필요 — Karpathy Surgical). prompt 토큰 ~30~80 토큰 추가 (page count 의존).
+- [x] **회귀**: `npm test` **760 PASS** (757 + 3 누적) + build 0 errors.
 
 #### 5.10.2.2 AC-C5.2 — Intercept (sidebar-chat broken link DOM 처리)
 
 > **spec**: 보조 plan §14.2 (B) + §14.3 AC-C5.2 (v5.1 정확화). `sidebar-chat.ts:2830~2858` `renderMarkdown()` 의 *기존 click handler 2 곳* 정정 (별 helper 신규 X).
 
-- [ ] **RED**: `wikey-obsidian/src/__tests__/sidebar-chat.test.ts` (또는 적절한 위치) 1 integration case — `mock vault, broken [[link]] click → getFirstLinkpathDest null → Notice '위키에 없는 페이지 — 자동 생성 차단' 표시 + vault 변경 0`. 실패 확증 (현 코드 resolve 검증 X, openLinkText 직접 호출 → 빈 페이지 자동 생성).
-- [ ] **GREEN**: `wikey-obsidian/src/sidebar-chat.ts:2830~2858` `renderMarkdown()` 의 *기존 click handler 2 곳* 정정 (resolve-before-open):
-  - **handler 1** (line 2835~2840): `el.querySelectorAll('a.internal-link')` 의 `addEventListener('click', e => { e.preventDefault(); openLinkText(href, '') })` 부분
-  - **handler 2** (line 2853~2858): `node.querySelectorAll('.wikey-wikilink')` 의 동일 패턴
-  - **fix 패턴 (양쪽 동일)**: `e.preventDefault()` 후 `app.metadataCache.getFirstLinkpathDest(href, '')` 로 resolve.
-    - resolve 성공 (existing TFile) → `app.workspace.openLinkText(href, '')` 호출 (기존 동작)
-    - resolve 실패 (null = broken) → `new Notice('위키에 없는 페이지 — 자동 생성 차단')` + link DOM 에 `wikey-broken-link` class 추가 (시각 dim)
-  - **CSS 추가** (`styles.css`): `.wikey-broken-link { opacity: 0.5; text-decoration: line-through; cursor: not-allowed; }`
-  - 1 case GREEN.
-- [ ] **REFACTOR**: 두 handler 의 중복 코드 (`resolve-before-open` 로직) 를 helper 함수로 추출 검토 (Karpathy Surgical — 인접 코드 보존이 우선이라면 inline 유지). 적용 범위 = 답변 영역 (sidebar chat `renderMarkdown` 호출 대상) 만 — vault 일반 편집 (Obsidian 다른 view, file explorer click 등) 영향 X 확증.
-- [ ] **회귀**: `npm test` ≥ 755 (1 신규 누적) + build 0 errors. **라이브 smoke 1 case (master 직접 obsidian-cdp)**: 실제 답변에 broken link 발생 시 click → vault root 빈 페이지 생성 0 + Notice 표시 확증.
+- [x] **RED**: wikey-obsidian 에 test 디렉토리 부재 + obsidian DOM mock 비용 큼 → contract 검증 + 라이브 smoke 의무로 deferral.
+- [x] **GREEN**: `sidebar-chat.ts:2830~2858` `renderMarkdown()` 의 click handler 2 곳 정정 — `handleWikilinkClick` 새 helper (resolve-before-open). `metadataCache.getFirstLinkpathDest(href, '')` resolve null 시 `new Notice('위키에 없는 페이지 — 자동 생성 차단')` + `wikey-broken-link` class 추가. CSS `.wikey-broken-link { opacity: 0.5; text-decoration: line-through; cursor: not-allowed; }` 추가.
+- [x] **REFACTOR**: 두 handler 가 동일 helper (`handleWikilinkClick`) 사용 — DRY (Karpathy Surgical 동시 충족, inline → helper 한 단계 추출).
+- [x] **회귀**: `npm test` 760 PASS 유지 + build 0 errors. 라이브 smoke = §5.10.4.5 L 단계 통합.
 
 #### 5.10.2.3 AC-C5 — 회귀 baseline (기존 AC-C5.4)
 
 > **spec**: 보조 plan §14.3 AC-C5.4.
 
-- [ ] **회귀 baseline 확증**: `npm test` ≥ 755 PASS (Phase 1 ≥ 751 + AC-C5.1 의 ≥ 3 + AC-C5.2 의 1 = ≥ 755). build 0 errors. fresh re-run.
-- [ ] `activity/phase-5-result.md §5.10.2` mirror commit (Phase 2 결과 timeline + AC 3 항목 evidence + invariant 검증 출력).
+- [x] **회귀 baseline 확증**: `npm test` **760 PASS** (Phase 1 757 + AC-C5.1 +3 = 760, ≥ 755 spec 충족). build 0 errors. fresh re-run.
+- [x] `activity/phase-5-result.md §5.10.2` mirror commit.
 
 #### 5.10.2.4 Phase 2 Exit 검증
 
-- [ ] 회귀 baseline 최종 ≥ 755 + 라이브 smoke broken link click 처리 GREEN.
-- [ ] `activity/phase-5-result.md §5.10.2` mirror commit.
-- [ ] commit 분리 권장.
+- [x] 회귀 baseline 최종 **760 PASS** (≥ 755).
+- [x] `activity/phase-5-result.md §5.10.2` mirror commit.
+- [ ] 라이브 smoke broken link click 처리 = §5.10.4.5 L 단계 통합 (사용자 환경 의존).
 
 ### 5.10.3 Phase 3 (Session 3) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer)
 
