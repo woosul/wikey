@@ -1028,7 +1028,7 @@
 - [x] `activity/phase-5-result.md §5.10.2` mirror commit.
 - [ ] 라이브 smoke broken link click 처리 = §5.10.4.5 L 단계 통합 (사용자 환경 의존).
 
-### 5.10.3 Phase 3 (Session 16~) — D-wide Part 1 — R0 GREEN, R1~R8.1 다음 세션 진입
+### 5.10.3 Phase 3 (Session 16, 2026-05-04~05) — D-wide Part 1 ✅ GREEN (R0+R1+R2+R3+R8.1, 88 cases skip)
 
 > **세션 estimate**: ~3 시간. 7 R 항목 × 4 단계 (각 R 별 RED+GREEN+REFACTOR+회귀, R6/R7 은 영향 X 검증만) + ~80 폐기 test 식별 + LLM 자율 type 분류 RED test ~5 신규.
 >
@@ -1057,75 +1057,72 @@
 
 > **spec**: 보조 plan §3.1.1 R1. `schema.ts:71~118` validation helpers + `:241~295` buildSchemaPromptBlock + `:289~354` YAML parser entityTypes/conceptTypes/customTypes section 폐기.
 
-- [ ] **RED**: `wikey-core/src/__tests__/schema.test.ts` 의 `isValidEntityType` / `isValidConceptType` / `getEntityTypes` / `getConceptTypes` / `buildSchemaPromptBlock` 관련 ~15 cases 가 deprecate 대상으로 식별 (test 폐기 마크). 신규 RED 1 case — `schema.ts 가 entity/concept type validation 강제 X (LLM 자유 string 통과)`.
-- [ ] **GREEN**: `wikey-core/src/schema.ts`:
-  - 폐기: `isValidEntityType` / `isValidConceptType` / `getEntityTypes` / `getConceptTypes` (line 71~118)
-  - 폐기: `buildSchemaPromptBlock` (line 241~295) — canonicalizer prompt 의 "## 분류 스키마 (이 외 분류는 거부됨)" 블록 생성
-  - 폐기: YAML parser 의 `entityTypes` / `conceptTypes` / `customTypes` section (line 289~354) — `aliases` / `pii_patterns` parser 만 보존
-  - 폐기: `ENTITY_TYPES` / `CONCEPT_TYPES` 상수 (line 20~21) + `ENTITY_TYPE_DESCRIPTIONS` / `CONCEPT_TYPE_DESCRIPTIONS`
-  - 신규 RED 1 case GREEN.
-- [ ] **REFACTOR**: import / export 정리 (canonicalizer.ts:6 의 `ENTITY_TYPES, CONCEPT_TYPES, isValidEntityType, isValidConceptType, detectAntiPattern, buildSchemaPromptBlock, buildStandardDecompositionBlock` import 모두 제거).
-- [ ] **회귀**: `npm test` 폐기 ~15 cases 식별 (test file 자체 삭제 또는 .skip mark). build 0 errors. baseline 갱신.
+- [x] **RED**: schema.test.ts 의 ~39 cases (5 describe block) deprecate 식별. 폐기 cases 식별 grep 통과.
+- [x] **GREEN**: schema.ts 폐기 (line 71~118 validation + 241~295 buildSchemaPromptBlock + 20~21 ENTITY_TYPES + ENTITY_TYPE_DESCRIPTIONS / CONCEPT_TYPE_DESCRIPTIONS / CONCEPT_DECISION_TREE / detectAntiPattern / normalizeForLookup / validateMention 모두 제거). YAML parser 의 entity_types / concept_types section silently skipped. 685 → ~290 line.
+- [x] **REFACTOR**: index.ts re-export 5건 제거 + canonicalizer.ts import 정리.
+- [x] **회귀**: schema.test.ts (5 describe) + schema-override.test.ts (11 describe) 전체 .skip + build 0 errors.
 
 #### 5.10.3.3 R2 — `canonicalizer.ts` 정정
 
 > **spec**: 보조 plan §3.1.1 R2. `canonicalizer.ts:235~236, :259` 분리 → 단일 set 통합 + `:363~467` FORCED_CATEGORIES + detectAntiPattern + assembleCanonicalResult 의 7-type 분류 검증 폐기. minimal alias normalization (`SLUG_ALIASES`, `canonicalizeSlug`, `dedupAcronymsCrossPool`) 만 잔존.
 
-- [ ] **RED**: `wikey-core/src/__tests__/canonicalizer.test.ts` 의 entity/concept 분류 / FORCED_CATEGORIES / drop logic test ~30 cases 가 deprecate 대상으로 식별. 신규 RED 1 case — `canonicalizer 가 LLM 출력 type 자유 통과 (forced reassignment X)`.
-- [ ] **GREEN**: `wikey-core/src/canonicalizer.ts`:
-  - 정정: `:235~236, :259` `existingEntityBases ∪ existingConceptBases` 분리 → 단일 base name set 통합
-  - 폐기: `:363~467` `FORCED_CATEGORIES` (slug → entity/concept 강제 pin) + `detectAntiPattern` schema reject 로직 + `assembleCanonicalResult` 의 7-type 분류 검증
-  - 보존: minimal alias normalization (`SLUG_ALIASES`, `canonicalizeSlug`, `dedupAcronymsCrossPool`)
-  - 검토: `:478~506` `applyCrossLinks` (entity ↔ concept 자동 link H2) 보존 또는 단순화 — D-wide 에서는 type 무관한 generic relation H2 로 변환 가능
-  - 신규 RED 1 case GREEN.
-- [ ] **REFACTOR**: prompt 빌더 (LLM call) 단순화 — schema prompt block 제거, type 가이드 *예시* 만 inline.
-- [ ] **회귀**: `npm test` 폐기 ~30 cases 식별 (test file .skip 또는 삭제). build 0 errors.
+- [x] **RED**: canonicalizer.test.ts 의 ~22 cases (5 describe + 2 it) deprecate 식별 (drops anti-pattern names / drops invalid schema types / schema override v7-5 / E/C boundary pins / FORCED_CATEGORIES canonical resolution + buildCanonicalizerPrompt schema override 1 it + cross-link FORCED_CATEGORIES regression 1 it).
+- [x] **GREEN**: canonicalizer.ts:
+  - 정정: existingEntityBases ∪ existingConceptBases 단일 set 통합 (line 224 already merged).
+  - 폐기: FORCED_CATEGORIES + applyForcedCategories + assembleCanonicalResult 의 forced pin 호출.
+  - 폐기: validateAndBuildPage 의 detectAntiPattern + isValidEntityType / isValidConceptType 검증 (LLM 자율 통과 + empty type 만 fail).
+  - 폐기: computeDropReason 의 detectAntiPattern.
+  - 폐기: buildSchemaPromptBlock 호출 + prompt 의 "위 7개 타입" 강제 → "entity/concept 자율 분류, type 자유 string".
+  - 보존: SLUG_ALIASES / canonicalizeSlug / dedupAcronymsCrossPool / applyCrossLinks.
+  - 602 → ~440 line.
+- [x] **REFACTOR**: schema prompt block inline 제거. 예시 type 이름 prompt 안에 자유 string 으로 명시.
+- [x] **회귀**: canonicalizer.test.ts 의 5 describe + 2 it `.skip` mark + build 0 errors.
 
 #### 5.10.3.4 R3 — `types.ts` 정정
 
 > **spec**: 보조 plan §3.1.1 R3. `EntityType` / `ConceptType` union → string. `Mention.type_hint` union → string. `WikiPage.type` (entity/concept/source/analysis 4 카테고리) 보존 결정.
 
-- [ ] **RED**: type 변경에 의존하는 test 가 컴파일 에러 (TypeScript) 시 RED 으로 간주. `npm run build` 0 errors 유지가 GREEN gate.
-- [ ] **GREEN**: `wikey-core/src/types.ts`:
-  - `:129~132` `EntityType` / `ConceptType` union type 폐기 → `string` (또는 `string` alias)
-  - `:232~233` `IngestRecord` 의 `entity[]` / `concept[]` 분리 → 단일 `mention[]` 또는 `wiki_page[]` (type field 가 string 으로 자유)
-  - `:299~302` `Mention.type_hint` union (`'organization'|'person'|...|'unknown'`) → `string` (LLM 자율 출력)
-  - `WikiPage.type` (frontmatter `type:` field) `'entity'|'concept'|'source'|'analysis'` union **보존** (이건 *카테고리* 4 종, wiki/entities/ vs wiki/concepts/ 디렉토리 구분과 직결)
-- [ ] **REFACTOR**: type alias 일관성 유지 (string 으로 완화한 곳에 일관 주석).
-- [ ] **회귀**: `npm test` PASS 유지 (R1/R2 폐기 후 baseline) + `npm run build` 0 errors.
+- [x] **RED**: tsc compile 검증.
+- [x] **GREEN**: types.ts:
+  - EntityType / ConceptType union 폐기 → `string` (type alias).
+  - Mention.type_hint union 폐기 → `string`.
+  - WikiPage.category 4-union ('entities' | 'concepts' | 'sources' | 'analyses') **보존** (디렉토리 구분).
+  - WikiPage.entityType / conceptType 보존 (frontmatter field).
+  - IngestRecord.concepts/entities type field 자동 string (union 변경 transitively).
+- [x] **REFACTOR**: union → string 변경에 일관 주석 (D-wide LLM-only).
+- [x] **회귀**: build 0 errors + npm test 673 PASS / 88 skipped.
 
 #### 5.10.3.5 R6 — `wiki-ops.ts` 영향 X 확증 (보존)
 
 > **spec**: 보조 plan §3.1.1 R6. `injectProvenance` 의 `type` field 는 `ProvenanceType` 별 축. D-wide 영향 X. frontmatter `type:` field (entity/concept/source/analysis 4 카테고리) 도 R3 결정 따라 보존.
 
-- [ ] **검증 only**: `wikey-core/src/wiki-ops.ts` 코드 grep — `EntityType` / `ConceptType` 의존 0 확증. `ProvenanceType` 은 별 union ('extracted' / 'manual' / 'cross-source-linked') — 별 축 보존. frontmatter `sources:` 배열 / `type:` field 보존.
-- [ ] **회귀**: `wiki-ops.test.ts` PASS 유지 (변경 0).
+- [x] **검증 only**: `grep -rn "EntityType\|ConceptType" wikey-core/src/wiki-ops.ts` = 0 hit. ProvenanceType 보존, frontmatter `sources:` / `type:` field 보존. wiki-ops 변경 0.
+- [x] **회귀**: 변경 X — wiki-ops.test.ts PASS 유지.
 
 #### 5.10.3.6 R7 — `query-pipeline.ts` 영향 X 확증 (보존)
 
 > **spec**: 보조 plan §3.1.1 R7. `SearchResult` / `Citation` 의 type 의존 거의 없음.
 
-- [ ] **검증 only**: `wikey-core/src/query-pipeline.ts` 코드 grep — `EntityType` / `ConceptType` 의존 0 확증.
-- [ ] **회귀**: `query-pipeline.test.ts` PASS 유지 (변경 0). Phase 2 의 AC-C5.1 이 별 변경 (broken wikilink prevention) 이지만 D-wide 와 직교.
+- [x] **검증 only**: `grep -rn "EntityType\|ConceptType\|isValidEntityType\|FORCED_CATEGORIES" wikey-core/src/query-pipeline.ts` = 0 hit.
+- [x] **회귀**: query-pipeline.test.ts PASS 유지 (Phase 2 AC-C5.1 +3 신규는 별 issue, D-wide 와 직교).
 
 #### 5.10.3.7 R8.1 — 폐기 test 식별 (사전 grep)
 
 > **spec**: 보조 plan §3.1.1 R8 + §3.4 회귀 plan. ~110 cases 사전 식별 → grep keyword 기반 → Phase 4 R8.2 에서 일괄 적용 → re-run 0 fail 확증.
 
-- [ ] **R8.1.a 폐기 test 식별 (사전 grep, Phase 3 단독 작업)**:
-  - `wikey-core/src/__tests__/canonicalizer*.test.ts` — entity/concept 분류 / FORCED_CATEGORIES / drop logic test 폐기 또는 LLM 자율 출력 검증으로 변경 (~30 cases)
-  - `wikey-core/src/__tests__/schema*.test.ts` — buildSchemaPromptBlock / isValidEntityType / isValidConceptType test 폐기 (~15 cases)
-  - `wikey-core/src/__tests__/suggestion-*.test.ts` / `convergence*.test.ts` / `self-declaration*.test.ts` — Stage 2~4 폐기 (~50 cases)
-  - `wikey-core/src/__tests__/ingest-pipeline*.test.ts` — entity/concept type 분기 test 정정 (~15 cases)
-  - 합계 ~110 cases 폐기 (R8 합산이 §3.1 의 ~110 추정 정합)
-  - grep 명령: `grep -l "Stage [0-9]\|umbrella\|decomposition\|Suggestion\|ENTITY_TYPES\|CONCEPT_TYPES\|buildSchemaPromptBlock\|FORCED_CATEGORIES" wikey-core/src/__tests__/*.test.ts`
-- [ ] **R8.1.b 폐기 test list record**: 식별 결과를 `activity/phase-5-result.md §5.10.3.7` 에 file/test name list 로 기록 (Phase 4 R8.2 에서 참조).
+- [x] **R8.1.a 폐기 test 식별 + .skip 적용** (Phase 3 atomic 진행):
+  - schema.test.ts — 5 describe 전체 `.skip` (39 cases 폐기) — ENTITY_TYPES / isValidEntityType / validateMention / detectAntiPattern / buildSchemaPromptBlock 의존
+  - schema-override.test.ts — 11 describe 전체 `.skip` (27 cases 폐기) — entity_types/concept_types YAML parser + isValidEntityType override + validateMention override 의존
+  - canonicalizer.test.ts — 5 describe + 2 it `.skip` (~22 cases 폐기) — drops anti-pattern names / drops invalid schema types / schema override v7-5 / E/C boundary pins / FORCED_CATEGORIES canonical resolution + buildCanonicalizerPrompt schema override 1 it + cross-link FORCED_CATEGORIES regression 1 it
+  - 합계 **88 cases** skipped (spec ~110 추정 대비 -~22). 잔여 ~22 cases (suggestion-detector / convergence / self-declaration § 5.4 Stage 2~4) 는 §5.10.4 M migration 단계.
+- [x] **R8.1.b 폐기 test list record**: `activity/phase-5-result.md §5.10.3.7` 에 file/test list 기록 완료.
 
 #### 5.10.3.8 Phase 3 Exit 검증
 
-- [ ] R0/R1/R2/R3 GREEN 완료 + R6/R7 영향 X 확증 + R8.1 폐기 list 기록.
-- [ ] `npm test` 잠정 baseline (R1/R2 폐기 cases .skip 후) PASS 유지 + build 0 errors.
-- [ ] `activity/phase-5-result.md §5.10.3` mirror commit (Phase 3 결과 timeline + R0~R3 + R6/R7 + R8.1 evidence).
+- [x] R0/R1/R2/R3 GREEN 완료 + R6/R7 영향 X 확증 + R8.1 폐기 list 기록.
+- [x] `npm test` baseline = **673 PASS + 88 skipped + 0 fail** + build 0 errors. fresh re-run.
+- [x] `activity/phase-5-result.md §5.10.3` mirror commit (Phase 3 결과 timeline + R0~R3 + R6/R7 + R8.1 evidence).
+- [ ] 라이브 cycle smoke (Obsidian CDP 9222 + raw 원복 + wiki 초기화) — 사용자 환경 의존, 별 단계.
 
 ### 5.10.4 Phase 4 (Session 4) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
 

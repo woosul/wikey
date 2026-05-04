@@ -22,14 +22,11 @@ export type {
   SchemaOverride,
 } from './types.js'
 
+// Phase 5 §5.10.3 R1 (D-wide): ENTITY_TYPES / CONCEPT_TYPES / getEntityTypes /
+// getConceptTypes / buildSchemaPromptBlock 폐기 (LLM 자율 type 분류).
 export {
-  ENTITY_TYPES,
-  CONCEPT_TYPES,
-  getEntityTypes,
-  getConceptTypes,
   parseSchemaOverrideYaml,
   loadSchemaOverride,
-  buildSchemaPromptBlock,
 } from './schema.js'
 
 export { parseWikeyConf, loadConfig, resolveProvider } from './config.js'

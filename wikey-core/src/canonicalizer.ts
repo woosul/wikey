@@ -1,11 +1,10 @@
 import type { LLMClient } from './llm-client.js'
 import type {
-  CanonicalizedResult, EntityType, ConceptType, Mention, SchemaOverride, WikiPage,
+  CanonicalizedResult, Mention, SchemaOverride, WikiPage,
 } from './types.js'
-import {
-  ENTITY_TYPES, CONCEPT_TYPES, isValidEntityType, isValidConceptType,
-  detectAntiPattern, buildSchemaPromptBlock, buildStandardDecompositionBlock,
-} from './schema.js'
+// Phase 5 §5.10.3 R1+R2 (D-wide): ENTITY_TYPES / CONCEPT_TYPES / isValidEntityType /
+// isValidConceptType / detectAntiPattern / buildSchemaPromptBlock 폐기. LLM 자율 type 분류.
+import { buildStandardDecompositionBlock } from './schema.js'
 import { normalizeBase } from './wiki-ops.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_ORG_ALIAS, EXAMPLE_ORG_KO, EXAMPLE_ORG_DESC_KO,
@@ -101,45 +100,10 @@ export function canonicalizeSlug(base: string): string {
   return SLUG_ALIASES[base] ?? base
 }
 
-/**
- * v7 §4.5.1.4: Entity/Concept boundary pins — overrides LLM's category choice
- * for slugs that oscillated between pools across runs.
- *
- * Pins: mqtt=entity (tool), restful-api=concept (standard), pms=entity (product).
- * `mqtt` is a protocol tool, `restful-api` is a named architectural standard,
- * `project-management-system` is a product category that LLM sometimes classified
- * as methodology.
- *
- * Applied AFTER schema validation as a post-processing step, not via schema
- * extension — the existing `.wikey/schema.yaml` only supports type vocabulary
- * extension, not per-instance classification.
- */
-export const FORCED_CATEGORIES: Readonly<Record<string, {
-  category: 'entity' | 'concept'
-  type: EntityType | ConceptType
-}>> = {
-  // §4.5.1.4 (original pins)
-  mqtt: { category: 'entity', type: 'tool' },
-  'restful-api': { category: 'concept', type: 'standard' },
-  'project-management-system': { category: 'entity', type: 'product' },
-
-  // §4.5.1.6.4 — 30-run PMS data (2026-04-22) showed the slugs below flipping
-  // between entity and concept pools across runs. All are industry-standard
-  // *categories* or *methodologies*, not specific products, so the canonical
-  // axis is concept; the `type` field matches schema sub-type conventions.
-  'enterprise-resource-planning': { category: 'concept', type: 'standard' },
-  'supply-chain-management': { category: 'concept', type: 'methodology' },
-  'manufacturing-execution-system': { category: 'concept', type: 'standard' },
-  'product-lifecycle-management': { category: 'concept', type: 'methodology' },
-  'advanced-planning-and-scheduling': { category: 'concept', type: 'methodology' },
-  'electronic-approval': { category: 'concept', type: 'methodology' },
-  // SSO-API stays entity/tool (schema: tool = "소프트웨어/프로토콜"); matches
-  // the §4.5.1.4 canonicalizer test where LLM emits `type: 'tool'`.
-  'single-sign-on-api': { category: 'entity', type: 'tool' },
-  'tcp-ip': { category: 'concept', type: 'standard' },
-  'virtual-private-network': { category: 'concept', type: 'standard' },
-  'bill-of-materials': { category: 'concept', type: 'standard' },
-}
+// Phase 5 §5.10.3 R2 (D-wide LLM-only ontology): FORCED_CATEGORIES 폐기.
+// 변경 전: 30-run PMS 측정 oscillation 안정화 위해 slug 별 entity/concept 강제 pin.
+// 변경 후: LLM 자율 분류. determinism 측정은 슬러그별 pin 이 아닌 LLM 자체 안정성 측정.
+// minimal alias normalization (SLUG_ALIASES, canonicalizeSlug, dedupAcronymsCrossPool) 만 잔존.
 
 export interface CanonicalizeArgs {
   readonly llm: LLMClient
@@ -232,14 +196,14 @@ export function buildCanonicalizerPrompt(args: PromptArgs): string {
     return `${i + 1}. \`${m.name}\` (hint: ${m.type_hint ?? 'unknown'}) — ${evidence}`
   }).join('\n')
 
-  const schemaBlock = buildSchemaPromptBlock(schemaOverride)
+  // Phase 5 §5.10.3 R2 (D-wide): schemaBlock 폐기. LLM 자율 type 분류.
   const decompositionBlock = buildStandardDecompositionBlock(schemaOverride)
 
   if (overridePrompt && overridePrompt.trim()) {
     return overridePrompt
       .replaceAll('{{SOURCE_FILENAME}}', sourceFilename)
       .replaceAll('{{GUIDE_BLOCK}}', guideBlock)
-      .replaceAll('{{SCHEMA_BLOCK}}', schemaBlock)
+      .replaceAll('{{SCHEMA_BLOCK}}', '')   // Phase 5 §5.10.3 R2: schema gate 폐기.
       .replaceAll('{{STANDARD_DECOMPOSITION_BLOCK}}', decompositionBlock)
       .replaceAll('{{EXISTING_BLOCK}}', existingBlock)
       .replaceAll('{{MENTIONS_BLOCK}}', mentionsBlock)
@@ -248,20 +212,19 @@ export function buildCanonicalizerPrompt(args: PromptArgs): string {
 
   const decompositionSection = decompositionBlock ? `\n${decompositionBlock}\n` : ''
 
-  return `당신은 wikey LLM Wiki의 canonicalizer입니다. chunk LLM이 추출한 mention 리스트를 받아 schema에 맞춰 분류하고 canonical filename으로 통합합니다.
+  // Phase 5 §5.10.3 R2 (D-wide): schema 7-type 강제 prompt 폐기. LLM 자율 type 분류.
+  return `당신은 wikey LLM Wiki의 canonicalizer입니다. chunk LLM이 추출한 mention 리스트를 받아 entity/concept 으로 분류하고 canonical filename 으로 통합합니다.
 
 Source: ${sourceFilename}
 ${guideBlock}
-${schemaBlock}
 
 ## 작업 규칙
 
-1. **분류**: 각 mention을 위 7개 타입 중 하나로 분류. 어디에도 안 맞으면 entities/concepts 출력에서 **제외** (자동 dropped 처리됨).
+1. **분류**: 각 mention 을 entity (조직·인물·제품·도구 등 고유명사) 또는 concept (이론·방법론·표준·문서유형 등 추상명사) 으로 자율 분류. type 필드는 자유 string (예: organization / person / product / tool / standard / methodology / document_type / algorithm / dataset / metric 등). 어디에도 안 맞으면 entities/concepts 출력에서 **제외**.
 2. **약어↔풀네임 통합**: \`pms\`와 \`project-management-system\`이 같은 mention이면 풀네임 1개만 출력 (약어는 \`aliases\`에).
 3. **기존 페이지 재사용**: 위 "기존 wiki 페이지" 목록과 매칭되면 filename은 기존 base 그대로 사용 (예: \`${EXAMPLE_ORG_BASE}\` 발견 → \`${EXAMPLE_ORG_ALIAS}\`로 새로 만들지 말 것).
-4. **거부 패턴 자동 제외**: 한국어 라벨, X-management/X-service 같은 단순 기능명, 비즈니스 객체(quotation/order 등)는 schema 위반이므로 제외.
-5. **filename 형식**: \`name\` 필드는 base name만 (소문자, 하이픈 구분, .md/디렉토리 prefix 금지).
-6. **description**: 1~2문장, 산업 표준 정의 위주 (기능 설명 X).
+4. **filename 형식**: \`name\` 필드는 base name만 (소문자, 하이픈 구분, .md/디렉토리 prefix 금지).
+5. **description**: 1~2문장, 의미 위주.
 ${decompositionSection}
 ## 입력 mention (${mentions.length}개)
 
@@ -320,12 +283,11 @@ function assembleCanonicalResult(
     for (const alias of c.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias)))
   }
 
-  // v7 §4.5.1.4: apply E/C boundary pins (after schema validation + dedup)
-  const pinnedRaw = applyForcedCategories(entities, concepts, sourceFilename, today)
+  // Phase 5 §5.10.3 R2 (D-wide): applyForcedCategories 폐기. LLM 분류 그대로 통과.
   // §5.2.1: inject `## 관련` cross-links between same-cycle entity ↔ concept pages.
   // Deterministic policy: every entity links to all concepts in the cycle (and vice versa).
   // Empty other-pool → no `## 관련` H2 (no empty section). Sorted alphabetically.
-  const pinned = applyCrossLinks(pinnedRaw.entities, pinnedRaw.concepts, sourceFilename, today)
+  const pinned = applyCrossLinks(entities, concepts, sourceFilename, today)
 
   // Track dropped mentions: anything in `mentions` whose canonical base didn't survive
   const pinnedBases = new Set<string>()
@@ -347,72 +309,8 @@ function assembleCanonicalResult(
   }
 }
 
-/**
- * v7 §4.5.1.4: Post-process entity/concept pools against FORCED_CATEGORIES.
- * If a pinned slug lands in the wrong pool, move it with its pinned type.
- * Also de-duplicates if same canonical already in the target pool.
- */
-function applyForcedCategories(
-  entities: WikiPage[], concepts: WikiPage[],
-  sourceFilename: string, today: string,
-): { entities: WikiPage[]; concepts: WikiPage[] } {
-  const outE: WikiPage[] = []
-  const outC: WikiPage[] = []
-  const targetBases = { entity: new Set<string>(), concept: new Set<string>() }
-
-  const placeIntoTarget = (page: WikiPage, forced: { category: 'entity' | 'concept'; type: EntityType | ConceptType }) => {
-    const base = normalizeBase(page.filename)
-    const pool = forced.category === 'entity' ? outE : outC
-    const seen = targetBases[forced.category]
-    if (seen.has(base)) return
-    seen.add(base)
-    // Rebuild with forced type so front-matter matches the new category
-    const isEntity = forced.category === 'entity'
-    const type = forced.type
-    const description = extractDescription(page.content)
-    const newPage: WikiPage = {
-      filename: page.filename,
-      category: isEntity ? 'entities' : 'concepts',
-      entityType: isEntity ? (type as EntityType) : undefined,
-      conceptType: !isEntity ? (type as ConceptType) : undefined,
-      content: buildPageContent({
-        name: base, type: type as string,
-        description: description || '(설명 없음)',
-        category: forced.category, sourceFilename, today,
-      }),
-    }
-    pool.push(newPage)
-  }
-
-  // Pass 1: entities pool → classify into outE (default) or outC (pinned concept)
-  for (const p of entities) {
-    const base = normalizeBase(p.filename)
-    const forced = FORCED_CATEGORIES[base]
-    if (forced) {
-      placeIntoTarget(p, forced)
-    } else {
-      if (targetBases.entity.has(base)) continue
-      targetBases.entity.add(base)
-      outE.push(p)
-    }
-  }
-  // Pass 2: concepts pool → classify into outC (default) or outE (pinned entity)
-  for (const p of concepts) {
-    const base = normalizeBase(p.filename)
-    // Skip if already placed by pin in entity pool
-    if (targetBases.entity.has(base)) continue
-    const forced = FORCED_CATEGORIES[base]
-    if (forced) {
-      placeIntoTarget(p, forced)
-    } else {
-      if (targetBases.concept.has(base)) continue
-      targetBases.concept.add(base)
-      outC.push(p)
-    }
-  }
-
-  return { entities: outE, concepts: outC }
-}
+// Phase 5 §5.10.3 R2 (D-wide): applyForcedCategories + FORCED_CATEGORIES 폐기. LLM 자율 분류 그대로 통과.
+// `mqtt`/`restful-api`/`pms` 같은 boundary pin 도 모두 폐기. 측정 안정성은 LLM 자체 안정성에 의존.
 
 function extractDescription(content: string): string {
   // Front-matter ends at the second '---'; description is the first non-empty paragraph after `# title`
@@ -433,37 +331,31 @@ function extractDescription(content: string): string {
 interface PageBuildOk { ok: true; page: WikiPage }
 interface PageBuildFail { ok: false; reason: string }
 
+// Phase 5 §5.10.3 R2 (D-wide): validateAndBuildPage 의 anti-pattern + type validation 폐기.
+// LLM 자율 출력 통과. minimal alias normalization (canonicalizeSlug) 만 잔존.
 function validateAndBuildPage(
   raw: { name?: string; type?: string; description?: string },
   category: 'entity' | 'concept',
   sourceFilename: string,
   today: string,
-  schemaOverride?: SchemaOverride,
+  _schemaOverride?: SchemaOverride,
 ): PageBuildOk | PageBuildFail {
   const name = (raw.name ?? '').trim()
   if (!name) return { ok: false, reason: 'empty name' }
 
-  // v7 §4.5.1.4: normalize LLM output through slug alias map BEFORE anti-pattern check,
-  // so variant spellings collapse to one canonical slug deterministically.
+  // alias normalization (variant spellings collapse to canonical slug, deterministic)
   const base = canonicalizeSlug(normalizeBase(name))
-  const antiPattern = detectAntiPattern(base)
-  if (antiPattern) return { ok: false, reason: antiPattern }
 
   const type = (raw.type ?? '').trim()
-  if (category === 'entity' && !isValidEntityType(type, schemaOverride)) {
-    return { ok: false, reason: `invalid entity type "${type}"` }
-  }
-  if (category === 'concept' && !isValidConceptType(type, schemaOverride)) {
-    return { ok: false, reason: `invalid concept type "${type}"` }
-  }
+  if (!type) return { ok: false, reason: 'empty type' }
 
   const description = (raw.description ?? '').trim() || '(설명 없음)'
 
   const page: WikiPage = {
     filename: `${base}.md`,
     category: category === 'entity' ? 'entities' : 'concepts',
-    entityType: category === 'entity' ? (type as EntityType) : undefined,
-    conceptType: category === 'concept' ? (type as ConceptType) : undefined,
+    entityType: category === 'entity' ? type : undefined,
+    conceptType: category === 'concept' ? type : undefined,
     content: buildPageContent({ name: base, type, description, category, sourceFilename, today }),
   }
   return { ok: true, page }
@@ -561,9 +453,7 @@ function applyCrossLinks(
 }
 
 function computeDropReason(mention: Mention): string {
-  const base = normalizeBase(mention.name)
-  const antiPattern = detectAntiPattern(base)
-  if (antiPattern) return antiPattern
+  // Phase 5 §5.10.3 R2 (D-wide): detectAntiPattern 폐기. LLM 자율 분류.
   if (!mention.type_hint || mention.type_hint === 'unknown') return 'no type_hint'
   return 'rejected by canonicalizer LLM'
 }

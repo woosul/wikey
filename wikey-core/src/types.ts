@@ -123,13 +123,17 @@ export interface WikiPage {
   readonly conceptType?: ConceptType
 }
 
-// ── Schema (Phase B v6: Schema-Guided Extraction) ──
+// ── Schema (Phase 5 §5.10.3 D-wide: LLM-only ontology) ──
 
-/** Allowed entity sub-types. LLM must classify each entity into one of these. */
-export type EntityType = 'organization' | 'person' | 'product' | 'tool'
+/**
+ * Phase 5 §5.10.3 R3: 7-type union 폐기 → 자유 string. LLM 이 자율적으로 type 결정.
+ * 기존 4 entity types ('organization' | 'person' | 'product' | 'tool') 와
+ * 3 concept types ('standard' | 'methodology' | 'document_type') 는 *예시* 로만 잔존.
+ * WikiPage.category (entities / concepts / sources / analyses) 4-union 은 디렉토리 구분으로 보존.
+ */
+export type EntityType = string
 
-/** Allowed concept sub-types. LLM must classify each concept into one of these. */
-export type ConceptType = 'standard' | 'methodology' | 'document_type'
+export type ConceptType = string
 
 /**
  * v7-5: user-defined schema extension loaded from `.wikey/schema.yaml`.
@@ -298,7 +302,8 @@ export interface SuggestionStorageWriter {
  */
 export interface Mention {
   readonly name: string
-  readonly type_hint?: EntityType | ConceptType | 'unknown'
+  // Phase 5 §5.10.3 R3 (D-wide LLM-only): type_hint 자유 string. union 폐기.
+  readonly type_hint?: string
   readonly evidence: string
   readonly source_section_idx?: number
 }

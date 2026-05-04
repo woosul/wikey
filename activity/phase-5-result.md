@@ -1509,28 +1509,74 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - 회귀 baseline 최종: 760 PASS + build 0 errors.
 - 라이브 smoke = 사용자 환경 의존 → 다음 세션 (또는 §5.10.4.5 L 단계의 5 항목 smoke 와 통합).
 
-### 5.10.3 Phase 3 결과 (Session 16, 2026-05-05 — 부분 진행) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer)
+### 5.10.3 Phase 3 결과 (Session 16, 2026-05-04~05) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer) ✅ GREEN
 
-> **mirror**: `plan/phase-5-todo.md §5.10.3`. R0/R1/R2/R3 + R6/R7 (영향 X 검증) + R8.1 (폐기 test 식별). 잠정 baseline + 폐기 list 기록.
+> **mirror**: `plan/phase-5-todo.md §5.10.3`. R0/R1/R2/R3 + R6/R7 (영향 X 검증) + R8.1 (폐기 test 식별).
 >
-> **현 상태**: **R0 (가장 작은 변경) GREEN 완료**. R1~R3 + R6/R7 + R8.1 = ~110 test 폐기 + ~35~55 file ripple (paradigm shift 큰 작업) → 별 큰 cycle 권장 (다음 세션 진입).
+> **현 상태**: **R0+R1+R2+R3 GREEN + R8.1 폐기 88 cases .skip 적용 완료**. 회귀 baseline 761 → **673 PASS + 88 skipped + 0 fail** + build 0 errors. atomic 단일 commit (build 깨짐 회피). 라이브 cycle smoke = 사용자 환경 의존 → 별 단계.
 
-#### 5.10.3.1 R0 — `BUNDLED_STAGE2_MENTION_PROMPT` type_hint 자유 string (GREEN)
+#### 5.10.3.1 R0 — `BUNDLED_STAGE2_MENTION_PROMPT` type_hint 자유 string (GREEN, 별 commit `a08cbd7`)
 
 - `wikey-core/src/ingest-pipeline.ts:937` `type_hint` 부분 정정: "다음 중 하나 또는 `unknown`" → "자유 string. 예시: organization, person, ..., 이 외도 자유 (예: algorithm, dataset, metric). 모르면 unknown."
 - 신규 test: `ingest-pipeline.test.ts` **+1 case** (R0 D-wide: type_hint 자유 string).
 - 회귀: 760 → **761 PASS**.
 
-#### 5.10.3.2~5.10.3.7 R1~R8.1 — Pending (다음 세션)
+#### 5.10.3.2 R1 — `schema.ts` validation/builder 폐기 (GREEN, atomic)
 
-큰 paradigm shift 작업 (~110 test 폐기 + ~35~55 file 변경, ~3시간 estimate):
-- R1 `schema.ts` validation/builder 폐기 (isValidEntityType/getEntityTypes/buildSchemaPromptBlock 등)
-- R2 `canonicalizer.ts` FORCED_CATEGORIES + detectAntiPattern 폐기
-- R3 `types.ts` EntityType/ConceptType union → string
-- R6/R7 `wiki-ops.ts` / `query-pipeline.ts` 영향 X 검증
-- R8.1 폐기 test 식별 (사전 grep, ~110 cases)
+- 폐기: `isValidEntityType` / `isValidConceptType` / `getEntityTypes` / `getConceptTypes` (line 71~118)
+- 폐기: `validateMention` + `ValidationOutcome` interface
+- 폐기: `buildSchemaPromptBlock` (line 241~295) + `CONCEPT_DECISION_TREE`
+- 폐기: `detectAntiPattern` + `normalizeForLookup` (Korean label / business object / UI label / DB column 차단)
+- 폐기: `ENTITY_TYPES` / `CONCEPT_TYPES` 상수 + `ENTITY_TYPE_DESCRIPTIONS` / `CONCEPT_TYPE_DESCRIPTIONS`
+- 폐기: YAML parser 의 `entity_types` / `concept_types` section parsing — silently skipped (D-wide LLM-only).
+- 보존: `BUILTIN_STANDARD_DECOMPOSITIONS` + `parseSchemaOverrideYaml` (standard_decompositions parser only) + `buildStandardDecompositionBlock` + `loadSchemaOverride` (§5.10.4 M migration 단계에서 별도 폐기).
+- schema.ts: 685 → ~290 line (~395 line 폐기).
+- index.ts: ENTITY_TYPES / CONCEPT_TYPES / getEntityTypes / getConceptTypes / buildSchemaPromptBlock re-export 제거.
 
-이유: ripple 큼 → 일괄 진행 + 단일 atomic commit 필수. 별 큰 cycle 진입 권장 (사용자 추가 검증 가능).
+#### 5.10.3.3 R2 — `canonicalizer.ts` FORCED_CATEGORIES + detectAntiPattern 폐기 (GREEN, atomic)
+
+- 폐기: `FORCED_CATEGORIES` 상수 (12 entries — mqtt/restful-api/erp/scm/mes/plm/aps/electronic-approval/sso-api/tcp-ip/vpn/bom)
+- 폐기: `applyForcedCategories` 함수 (E/C boundary pin postprocessing)
+- 폐기: `validateAndBuildPage` 의 `detectAntiPattern` + `isValidEntityType` / `isValidConceptType` 검증 (LLM 자율 통과)
+- 폐기: `computeDropReason` 의 `detectAntiPattern` 호출
+- 폐기: `buildSchemaPromptBlock(schemaOverride)` — `{{SCHEMA_BLOCK}}` 빈 문자열 치환
+- 폐기: prompt 내부 "위 7개 타입 중 하나로 분류" 강제 → "entity (조직·인물·제품·도구) 또는 concept (이론·방법론·표준·문서유형) 으로 자율 분류, type 필드는 자유 string"
+- 보존: `SLUG_ALIASES` / `canonicalizeSlug` / `dedupAcronymsCrossPool` (alias normalization, deterministic)
+- 보존: `applyCrossLinks` (§5.2.1 entity↔concept H2 링크)
+- canonicalizer.ts: 602 → ~440 line (~160 line 폐기).
+
+#### 5.10.3.4 R3 — `types.ts` union → string (GREEN, atomic)
+
+- `EntityType` union ('organization' | 'person' | 'product' | 'tool') → `string`
+- `ConceptType` union ('standard' | 'methodology' | 'document_type') → `string`
+- `Mention.type_hint?` union → `string` (LLM 자율 출력)
+- 보존: `WikiPage.category` 4-union ('entities' | 'concepts' | 'sources' | 'analyses') — 디렉토리 구분.
+- 보존: `WikiPage.entityType?` / `WikiPage.conceptType?` (frontmatter `entity_type:` / `concept_type:` field).
+
+#### 5.10.3.5 R6 — `wiki-ops.ts` 영향 X 확증 (보존)
+
+`grep -rn "EntityType\|ConceptType" wikey-core/src/wiki-ops.ts` = 0 hit. 본 layer 무영향.
+
+#### 5.10.3.6 R7 — `query-pipeline.ts` 영향 X 확증 (보존)
+
+`grep -rn "EntityType\|ConceptType\|isValidEntityType\|FORCED_CATEGORIES" wikey-core/src/query-pipeline.ts` = 0 hit. §5.2 검색 layer 무영향.
+
+#### 5.10.3.7 R8.1 — 폐기 test 식별 + .skip 적용 (88 cases)
+
+| File | 처리 | Cases |
+|------|------|-------|
+| `schema.test.ts` | 5 describe 전체 `.skip` (sed bulk) | 39 cases |
+| `schema-override.test.ts` | 11 describe 전체 `.skip` | 27 cases |
+| `canonicalizer.test.ts` | 5 describe + 2 it 폐기 마크 | ~22 cases |
+| **합계** | — | **88 cases skipped** |
+
+명시 keyword (`Stage [0-9]|umbrella|decomposition|Suggestion|ENTITY_TYPES|CONCEPT_TYPES|buildSchemaPromptBlock|FORCED_CATEGORIES`) 외에 `isValidEntityType` / `validateMention` / `detectAntiPattern` 의존 cases 도 모두 식별. spec 의 ~110 cases 추정 대비 88 cases — 잔여 ~22 cases 는 §5.10.4 M migration 단계 (suggestion-detector / convergence / self-declaration 등 §5.4 Stage 2~4 영역).
+
+#### 5.10.3.8 Phase 3 Exit 검증 (Confirmed)
+
+- 회귀 baseline 최종: `npm test` **673 PASS + 88 skipped + 0 fail** + build 0 errors. fresh re-run.
+- atomic single commit (build 깨짐 회피) — types.ts + schema.ts + canonicalizer.ts + index.ts + 3 test files 동시.
+- 라이브 cycle smoke = 사용자 환경 (Obsidian CDP 9222 재시작 + raw 원복 + wiki 초기화) 의존 → 별 단계.
 
 ### 5.10.4 Phase 4 결과 (Session 4, TBD) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
 

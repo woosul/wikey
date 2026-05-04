@@ -1,35 +1,34 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-04~05 session 16 — §5.10.1 Phase 1 + §5.10.2 Phase 2 + §5.10.3.1 R0 unit/integration GREEN 완료**. 회귀 732 → **761 PASS (+29 신규)**, build 0 errors. 다음 진입점 = §5.10.3 Phase 3 R1~R8.1 (D-wide 큰 ripple 작업) → §5.10.4 Phase 4 (UI/docs/migration/라이브/종결).
+> 최신 갱신: **2026-05-04~05 session 16 — §5.10.1 + §5.10.2 + §5.10.3 (R0+R1+R2+R3+R8.1 88 cases skip) GREEN**. 회귀 732 → **673 PASS + 88 skipped + 0 fail** + build 0 errors. 4 commit 진행. **다음 액션 = (1) Obsidian CDP 환경 준비 + raw 원복 + wiki 초기화 + 라이브 smoke 5 항목 → (2) §5.10.4 Phase 4 (R4/R5 + M + L + F 종결)**.
 > 생성일: 2026-04-10
 
 ---
 
 ## 🎯 다음 세션 첫 액션 (2026-05-05 session 16 종료 시점)
 
-> **세션 16 종결**: §5.10.1 + §5.10.2 + §5.10.3.1 R0 unit/integration GREEN. 다음 세션 master 첫 명령:
+> **세션 16 종결**: §5.10.1 + §5.10.2 + §5.10.3 (R0~R8.1) unit/integration GREEN. 결과 요약보고서 = `activity/phase-5-resultx-5.10-session16-summary-2026-05-05.md`. 다음 세션 master 첫 명령:
 >
-> **0. (선택, 사용자 환경 의존) 라이브 cycle smoke** — Obsidian + CDP 9222 기동 후 master 가 `obsidian-cdp` SKILL 따라:
->    - §5.10.1.8: PDF + HWP + DOCX 3 fixture ingest cycle (brief 정상 + sidecar canonical write 정상 + Cancel vault write 0)
->    - §5.10.2.4: 답변 안 broken wikilink click → root 페이지 자동 생성 0 + Notice 표시
+> **1. obsidian-cdp 라이브 cycle smoke 환경 준비** (사용자 명시 액션):
+>    - **Obsidian CDP 재시작**: 사용자가 Obsidian 종료 후 `--remote-debugging-port=9222 --remote-allow-origins=*` flag 로 재시작 (예: `~/.claude/skills/obsidian-cdp/SKILL.md` launcher 참조). `curl -s http://localhost:9222/json/version` 으로 가용성 확증.
+>    - **raw 원복** (사용자 명시 승인 후 master 진행): `find raw/3_resources -mindepth 3 -type f` 의 ingest 된 파일들 → `raw/0_inbox/`. raw/_delayed/ 의 placeholder 는 skip (delay-ingest 시스템 의도). raw/2_areas/ 도 동일.
+>    - **wiki/ 초기화** (사용자 명시 승인 후 master 진행): `rm -rf wiki/concepts/* wiki/entities/* wiki/sources/* wiki/analyses/* && truncate -s 0 wiki/index.md wiki/log.md wiki/overview.md wiki/.ingest-map.json`.
+>    - **.wikey/source-registry.json 초기화**: `echo '{}' > .wikey/source-registry.json`.
 >
-> **1. §5.10.3 Phase 3 R1~R8.1 진입** (D-wide 큰 ripple 작업, ~3시간 estimate, 사용자 추가 검증 권장):
->    - **Entry condition**: Phase 2 종료 회귀 baseline ≥ 755 (현재 761) GREEN. R0 GREEN.
->    - **Spec single source**: 보조 plan §3.1 (line 80~166) + §3.1.1 R1~R8.1.
->    - **R1 schema.ts**: validation helpers (`isValidEntityType`, `isValidConceptType`, `getEntityTypes`, `getConceptTypes`, `buildSchemaPromptBlock`) + `ENTITY_TYPES`/`CONCEPT_TYPES` 상수 + YAML parser `entityTypes`/`conceptTypes`/`customTypes` section 폐기. 신규 1 case + ~15 cases .skip.
->    - **R2 canonicalizer.ts**: `FORCED_CATEGORIES` + `detectAntiPattern` + `assembleCanonicalResult` 7-type 분류 검증 폐기. minimal alias normalization 보존. 신규 1 case + ~30 cases .skip.
->    - **R3 types.ts**: `EntityType`/`ConceptType` union → `string`. `Mention.type_hint` union → `string`. `WikiPage.type` 4 카테고리 union 보존.
->    - **R6 wiki-ops.ts / R7 query-pipeline.ts**: 영향 X 검증 only (변경 0).
->    - **R8.1 폐기 test 식별**: grep keyword (`Stage [0-9]|umbrella|decomposition|Suggestion|ENTITY_TYPES|CONCEPT_TYPES|buildSchemaPromptBlock|FORCED_CATEGORIES`) 으로 ~110 cases 식별. result `§5.10.3.7` 에 list 기록.
->    - **주의**: R1~R3 = ripple 큼. atomic 단일 commit 필수 (build 깨짐 회피). cycle 중간 fresh re-run 어려움.
+> **2. §5.10.3 라이브 cycle smoke 5 항목** (master 직접 obsidian-cdp):
+>    - **§5.10.1 (Phase 1) — PDF brief**: 1 PDF ingest → brief 정상 표시 (HWP/DOCX 도 binary 미전송 확증 — Phase 1 AC-C1.2 fix).
+>    - **§5.10.1 (Phase 1) — Cancel vault write 0**: brief 표시 → Cancel → `git status raw/ wiki/ .wikey/` clean. `~/.cache/wikey/convert/` 만 ephemeral 생성 (Phase 1 AC-C1.4).
+>    - **§5.10.1 (Phase 1) — vector PDF sidecar raw 보존**: vector PDF ingest → sidecar canonical write 시 raw 이미지 그대로 (결함 b fix 확증, Phase 1 AC-C1.7).
+>    - **§5.10.2 (Phase 2) — broken link click**: 답변 안 broken `[[link]]` click → root 빈 페이지 자동 생성 0 + Notice "위키에 없는 페이지 — 자동 생성 차단" + DOM dim.
+>    - **§5.10.3 (Phase 3) — D-wide LLM 자율 type**: PDF / HWP ingest → LLM 출력 entity/concept type 이 7-type 외 자유 string (예: `algorithm`, `regulation`) 생성 가능 → frontmatter 그대로 저장 → 분류 강제 X 확증.
 >
-> **2. §5.10.4 Phase 4 진입** (R4/R5/R8.2-3 + M migration + L 라이브 + F 종결):
->    - R4 settings-tab.ts schema sample 정정
+> **3. §5.10.4 Phase 4 진입** (사용자 결정 후) (R4/R5/R8.2-3 + M migration + L 라이브 + F 종결):
+>    - R4 settings-tab.ts schema sample 정정 (entity_types/concept_types 예시 제거)
 >    - R5 docs/wikey-ingest-pipeline.md 5 line spot 정정
->    - R8.2 잔여 test ~110 일괄 .skip → fresh re-run baseline ~622~~645 PASS
+>    - R8.2 잔여 ~22 cases 폐기 (suggestion-detector / convergence / self-declaration §5.4 Stage 2~4)
 >    - R8.3 §5.2 / §5.3 회귀 0 확증
->    - M migration script + UI 폐기 + store cleanup
->    - L 라이브 cycle smoke 5 항목 (master 직접 obsidian-cdp)
+>    - M migration script (`scripts/migrate-deprecate-standard-decompositions.sh`) + UI 폐기 (sidebar 6 패널 → 5 패널, Suggestions panel 폐기) + store cleanup (.wikey/suggestions.json / converged-decompositions.json 삭제)
+>    - L 라이브 cycle smoke 5 항목 통합 (master 직접)
 >    - F 3 cycle 통합 codex Mode D Panel post-impl review APPROVE → §5.10 전체 종결 mark
 >
 > **4 Phase 그룹 매트릭스** (`plan/phase-5-todo.md §5.10` main intro):

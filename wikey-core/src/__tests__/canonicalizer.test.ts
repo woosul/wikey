@@ -85,7 +85,8 @@ describe('canonicalize — valid responses build pages with schema types', () =>
   })
 })
 
-describe('canonicalize — drops anti-pattern names', () => {
+// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide LLM-only ontology (detectAntiPattern 폐기).
+describe.skip('canonicalize — drops anti-pattern names', () => {
   it('drops Korean labels even with valid type', async () => {
     const mentions: Mention[] = [
       { name: '회의실', type_hint: 'product', evidence: '회의실 예약 기능' },
@@ -127,7 +128,8 @@ describe('canonicalize — drops anti-pattern names', () => {
   })
 })
 
-describe('canonicalize — drops invalid schema types', () => {
+// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide LLM-only (isValidEntityType/ConceptType 폐기).
+describe.skip('canonicalize — drops invalid schema types', () => {
   it('drops entity with invalid type', async () => {
     const mentions: Mention[] = [
       { name: 'gantt-chart', type_hint: 'standard', evidence: '간트 차트 기반 일정 관리' },
@@ -240,22 +242,9 @@ describe('buildCanonicalizerPrompt', () => {
     expect(prompt).toContain('직접 언급되지 않으면 추출하지 않는다')
   })
 
-  it('includes schema override custom types in prompt (v7-5)', () => {
-    const prompt = buildCanonicalizerPrompt({
-      mentions: [{ name: 'x', evidence: 'y' }],
-      existingEntityBases: [],
-      existingConceptBases: [],
-      sourceFilename: 'test.pdf',
-      schemaOverride: {
-        entityTypes: [{ name: 'dataset', description: '공개된 데이터 모음' }],
-        conceptTypes: [{ name: 'regulation', description: '규제·법령' }],
-      },
-    })
-    expect(prompt).toContain('dataset')
-    expect(prompt).toContain('공개된 데이터 모음')
-    expect(prompt).toContain('regulation')
-    expect(prompt).toContain('Entity 타입 (5개)')  // 4 built-in + 1 custom
-    expect(prompt).toContain('Concept 타입 (4개)')
+  // Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (schemaOverride entityTypes/conceptTypes 폐기).
+  it.skip('includes schema override custom types in prompt (v7-5)', () => {
+    // (deprecated test body retained for history)
   })
 
   // §4.3.1: Stage 3 overridePrompt replaces bundled prompt entirely,
@@ -304,7 +293,8 @@ Mentions ({{MENTIONS_COUNT}}):
   })
 })
 
-describe('canonicalize — schema override (v7-5)', () => {
+// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (entity_types/concept_types schema.yaml override 폐기).
+describe.skip('canonicalize — schema override (v7-5)', () => {
   it('accepts custom entity type from override and builds page with entityType set', async () => {
     const mentions: Mention[] = [
       { name: 'imagenet', type_hint: 'dataset' as any, evidence: '이미지 분류 벤치마크' },
@@ -433,7 +423,8 @@ describe('canonicalize — §4.5.1.6.1 determinism flag', () => {
   })
 })
 
-describe('canonicalize — v7 §4.5.1.4 E/C boundary pins', () => {
+// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (FORCED_CATEGORIES 폐기).
+describe.skip('canonicalize — v7 §4.5.1.4 E/C boundary pins', () => {
   it('FORCED_CATEGORIES pins mqtt to entity/tool', () => {
     expect(FORCED_CATEGORIES['mqtt']).toEqual({ category: 'entity', type: 'tool' })
   })
@@ -570,7 +561,8 @@ describe('canonicalize — §4.5.1.6.3 SLUG_ALIASES 3rd expansion', () => {
   })
 })
 
-describe('canonicalize — §4.5.1.6.4 FORCED_CATEGORIES canonical resolution', () => {
+// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (FORCED_CATEGORIES 폐기).
+describe.skip('canonicalize — §4.5.1.6.4 FORCED_CATEGORIES canonical resolution', () => {
   it('pins enterprise-resource-planning to concept/standard', () => {
     expect(FORCED_CATEGORIES['enterprise-resource-planning']).toEqual(
       { category: 'concept', type: 'standard' }
@@ -788,7 +780,8 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
     expect(result.concepts[0].content).not.toContain('plain.txt.md')
   })
 
-  it('regression: cross-link is computed AFTER FORCED_CATEGORIES pin (restful-api → concept)', async () => {
+  // Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (FORCED_CATEGORIES 폐기).
+  it.skip('regression: cross-link is computed AFTER FORCED_CATEGORIES pin (restful-api → concept)', async () => {
     // restful-api is pinned to concept/standard via FORCED_CATEGORIES.
     // LLM mistakenly puts it in entities → pin moves to concept → cross-link must
     // see it in the concept pool when computing nanovna's related list.
