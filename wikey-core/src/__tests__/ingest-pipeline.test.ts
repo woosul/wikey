@@ -222,6 +222,15 @@ describe('loadEffectiveStage2Prompt', () => {
     expect(res.source).toBe('stage2')
     expect(res.prompt).toBe(content)
   })
+
+  // Phase 5 §5.10.3.1 R0 — D-wide LLM-only ontology: type_hint 는 7-type union 강제 X.
+  it('R0 (D-wide): BUNDLED_STAGE2_MENTION_PROMPT type_hint 는 자유 string (7-type union 강제 X)', () => {
+    // 변경 전 표현 (LLM 출력 7-type 강제): "다음 중 하나 또는 \`unknown\`" + "분류하지 마세요" 무시
+    // 변경 후: "예시" 또는 "자유" 명시. 7-type union 강제 X.
+    expect(BUNDLED_STAGE2_MENTION_PROMPT).not.toMatch(/다음 중 하나 또는 `unknown`/)
+    // type_hint 자유 — 예시 표현 또는 "이 외도" 같은 LLM 자율 통과 가능 명시
+    expect(BUNDLED_STAGE2_MENTION_PROMPT).toMatch(/예시|이 외|기타|자유|또는 자유/)
+  })
 })
 
 describe('loadEffectiveStage3Prompt', () => {

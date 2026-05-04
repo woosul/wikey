@@ -1,29 +1,36 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-04 session 16 — §5.10.1 Phase 1 unit/integration GREEN 완료**. 회귀 732 → **757 PASS (+25 신규)**, build 0 errors. 라이브 cycle smoke (PDF/HWP/DOCX 3 fixture) 와 §5.10.2 Phase 2 (C5 broken-link prevention) 가 다음 진입점.
+> 최신 갱신: **2026-05-04~05 session 16 — §5.10.1 Phase 1 + §5.10.2 Phase 2 + §5.10.3.1 R0 unit/integration GREEN 완료**. 회귀 732 → **761 PASS (+29 신규)**, build 0 errors. 다음 진입점 = §5.10.3 Phase 3 R1~R8.1 (D-wide 큰 ripple 작업) → §5.10.4 Phase 4 (UI/docs/migration/라이브/종결).
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-05-04 session 16 종료 시점)
+## 🎯 다음 세션 첫 액션 (2026-05-05 session 16 종료 시점)
 
-> **세션 16 종결**: §5.10.1 Phase 1 unit/integration GREEN. 다음 세션 master 첫 명령:
+> **세션 16 종결**: §5.10.1 + §5.10.2 + §5.10.3.1 R0 unit/integration GREEN. 다음 세션 master 첫 명령:
 >
-> **0. (선택, 사용자 환경 의존) §5.10.1.8 라이브 cycle smoke** — Obsidian + CDP 9222 기동 후 master 가 `obsidian-cdp` SKILL 따라 PDF + HWP + DOCX 3 fixture ingest cycle 진행. brief 정상 표시 + sidecar canonical write 정상 (vector PDF raw 보존 — 결함 b fix 확증) + Cancel vault write 0 확증. 사용자 환경 fallback 으로 master 직접 진행.
+> **0. (선택, 사용자 환경 의존) 라이브 cycle smoke** — Obsidian + CDP 9222 기동 후 master 가 `obsidian-cdp` SKILL 따라:
+>    - §5.10.1.8: PDF + HWP + DOCX 3 fixture ingest cycle (brief 정상 + sidecar canonical write 정상 + Cancel vault write 0)
+>    - §5.10.2.4: 답변 안 broken wikilink click → root 페이지 자동 생성 0 + Notice 표시
 >
-> **1. §5.10.2 Phase 2 진입** — C5 broken-link prevention.
->    - **Entry condition**: Phase 1 종료 회귀 baseline ≥ 751 (현재 757) GREEN. sidebar-chat.ts (Phase 2) 와 commands.ts (Phase 1) 다른 파일 → 충돌 0.
->    - **Spec single source**: 보조 plan §14 (line 596~683) + AC-C5.1, C5.2, C5.4.
->    - **첫 RED**: §5.10.2.1 AC-C5.1 (Prevention — query-pipeline 답변 prompt 정정). `wikey-core/src/__tests__/query-pipeline.test.ts` ≥ 3 cases 추가:
->      - (1) 답변에 unresolved entity 가 있을 때 plain text 출력
->      - (2) resolved entity 만 [[wikilink]]
->      - (3) 1-hop wikilink read 실패 시 답변에 포함 안 됨
->    - **GREEN**: `query-pipeline.ts buildSynthesisPrompt` 의 `[Available pages]` block 추가 + rule line 385/386 정정.
+> **1. §5.10.3 Phase 3 R1~R8.1 진입** (D-wide 큰 ripple 작업, ~3시간 estimate, 사용자 추가 검증 권장):
+>    - **Entry condition**: Phase 2 종료 회귀 baseline ≥ 755 (현재 761) GREEN. R0 GREEN.
+>    - **Spec single source**: 보조 plan §3.1 (line 80~166) + §3.1.1 R1~R8.1.
+>    - **R1 schema.ts**: validation helpers (`isValidEntityType`, `isValidConceptType`, `getEntityTypes`, `getConceptTypes`, `buildSchemaPromptBlock`) + `ENTITY_TYPES`/`CONCEPT_TYPES` 상수 + YAML parser `entityTypes`/`conceptTypes`/`customTypes` section 폐기. 신규 1 case + ~15 cases .skip.
+>    - **R2 canonicalizer.ts**: `FORCED_CATEGORIES` + `detectAntiPattern` + `assembleCanonicalResult` 7-type 분류 검증 폐기. minimal alias normalization 보존. 신규 1 case + ~30 cases .skip.
+>    - **R3 types.ts**: `EntityType`/`ConceptType` union → `string`. `Mention.type_hint` union → `string`. `WikiPage.type` 4 카테고리 union 보존.
+>    - **R6 wiki-ops.ts / R7 query-pipeline.ts**: 영향 X 검증 only (변경 0).
+>    - **R8.1 폐기 test 식별**: grep keyword (`Stage [0-9]|umbrella|decomposition|Suggestion|ENTITY_TYPES|CONCEPT_TYPES|buildSchemaPromptBlock|FORCED_CATEGORIES`) 으로 ~110 cases 식별. result `§5.10.3.7` 에 list 기록.
+>    - **주의**: R1~R3 = ripple 큼. atomic 단일 commit 필수 (build 깨짐 회피). cycle 중간 fresh re-run 어려움.
 >
-> **2. §5.10.2.2 AC-C5.2 (Intercept — sidebar-chat broken link DOM)**:
->    - `sidebar-chat.ts:2830~2858` 의 *기존 click handler 2 곳* 정정 (resolve-before-open).
->    - `metadataCache.getFirstLinkpathDest` resolve 실패 시 `Notice('위키에 없는 페이지 — 자동 생성 차단')` + `wikey-broken-link` class.
->    - 회귀 baseline ≥ 755 + 라이브 smoke 1 case.
+> **2. §5.10.4 Phase 4 진입** (R4/R5/R8.2-3 + M migration + L 라이브 + F 종결):
+>    - R4 settings-tab.ts schema sample 정정
+>    - R5 docs/wikey-ingest-pipeline.md 5 line spot 정정
+>    - R8.2 잔여 test ~110 일괄 .skip → fresh re-run baseline ~622~~645 PASS
+>    - R8.3 §5.2 / §5.3 회귀 0 확증
+>    - M migration script + UI 폐기 + store cleanup
+>    - L 라이브 cycle smoke 5 항목 (master 직접 obsidian-cdp)
+>    - F 3 cycle 통합 codex Mode D Panel post-impl review APPROVE → §5.10 전체 종결 mark
 >
 > **4 Phase 그룹 매트릭스** (`plan/phase-5-todo.md §5.10` main intro):
 >

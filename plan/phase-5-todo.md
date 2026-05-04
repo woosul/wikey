@@ -1028,7 +1028,7 @@
 - [x] `activity/phase-5-result.md §5.10.2` mirror commit.
 - [ ] 라이브 smoke broken link click 처리 = §5.10.4.5 L 단계 통합 (사용자 환경 의존).
 
-### 5.10.3 Phase 3 (Session 3) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer)
+### 5.10.3 Phase 3 (Session 16~) — D-wide Part 1 — R0 GREEN, R1~R8.1 다음 세션 진입
 
 > **세션 estimate**: ~3 시간. 7 R 항목 × 4 단계 (각 R 별 RED+GREEN+REFACTOR+회귀, R6/R7 은 영향 X 검증만) + ~80 폐기 test 식별 + LLM 자율 type 분류 RED test ~5 신규.
 >
@@ -1048,10 +1048,10 @@
 
 > **spec**: 보조 plan §3.1.1 R0 (v5 신규). `ingest-pipeline.ts:909~919` `BUNDLED_STAGE2_MENTION_PROMPT` `type_hint` 7-type union → string 자유.
 
-- [ ] **RED**: `wikey-core/src/__tests__/ingest-pipeline.test.ts` 1 case — `BUNDLED_STAGE2_MENTION_PROMPT type_hint 가 string 자유 출력 허용` (예: `algorithm` / `dataset` 같은 비-7-type LLM 출력도 통과). 실패 확증 (현 prompt 8 종 union 강제).
-- [ ] **GREEN**: `ingest-pipeline.ts:919` `type_hint: 'organization'|'person'|...|'unknown'` → `type_hint: string` (LLM 자유, prompt 가이드는 *예시* 만). 사용자 prompt 의 "❌ 분류하지 마세요" 유지. 1 case GREEN.
-- [ ] **REFACTOR**: prompt 텍스트 정리 (예시 type 4~6 개로 축소, "이 외도 자유" 명시).
-- [ ] **회귀**: `npm test` PASS 유지 + build 0 errors.
+- [x] **RED**: `ingest-pipeline.test.ts` 1 case (R0 D-wide). RED 시 `다음 중 하나 또는 unknown` 표현 매치 fail.
+- [x] **GREEN**: `ingest-pipeline.ts:937` `type_hint` 부분 정정 — "자유 string. 예시: organization/person/.../이 외도 자유 (algorithm, dataset, metric). 모르면 unknown".
+- [x] **REFACTOR**: 예시 type 7 종 inline 보존 + "이 외도 자유" 명시.
+- [x] **회귀**: `npm test` 760 → **761 PASS** + build 0 errors.
 
 #### 5.10.3.2 R1 — `schema.ts` 추가 폐기
 

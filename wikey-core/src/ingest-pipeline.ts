@@ -934,9 +934,7 @@ Source: {{SOURCE_FILENAME}}
 
 각 mention은 다음 정보를 가집니다:
 - \`name\`: 정규화된 base name (소문자 + 하이픈 구분, 예: \`${EXAMPLE_CONCEPT_ALIAS}\`, \`${EXAMPLE_ORG_BASE}\`)
-- \`type_hint\`: 다음 중 하나 또는 \`unknown\`
-  - **entity 후보**: \`organization\` (회사/기관), \`person\` (실명 인물), \`product\` (제품명), \`tool\` (소프트웨어/프로토콜)
-  - **concept 후보**: \`standard\` (산업표준/규격), \`methodology\` (방법론), \`document_type\` (문서종류)
+- \`type_hint\`: 자유 string. 예시: \`organization\` (회사/기관), \`person\` (실명 인물), \`product\` (제품명), \`tool\` (소프트웨어/프로토콜), \`standard\` (산업표준/규격), \`methodology\` (방법론), \`document_type\` (문서종류). 이 외도 자유 (예: \`algorithm\`, \`dataset\`, \`metric\`). 모르면 \`unknown\`.
 - \`evidence\`: 1문장 (어디 등장했는지, 200자 이내)
 
 ## 무엇을 mention으로 뽑을까

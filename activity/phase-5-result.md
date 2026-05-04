@@ -1509,11 +1509,28 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - 회귀 baseline 최종: 760 PASS + build 0 errors.
 - 라이브 smoke = 사용자 환경 의존 → 다음 세션 (또는 §5.10.4.5 L 단계의 5 항목 smoke 와 통합).
 
-### 5.10.3 Phase 3 결과 (Session 3, TBD) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer)
+### 5.10.3 Phase 3 결과 (Session 16, 2026-05-05 — 부분 진행) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer)
 
 > **mirror**: `plan/phase-5-todo.md §5.10.3`. R0/R1/R2/R3 + R6/R7 (영향 X 검증) + R8.1 (폐기 test 식별). 잠정 baseline + 폐기 list 기록.
 >
-> **현 상태**: Phase 3 미진입 (Phase 2 완료 후 진입). Phase 3 완료 시 본 §5.10.3 에 timeline + R 7 항목 evidence + R8.1 폐기 list + commit hash 추가.
+> **현 상태**: **R0 (가장 작은 변경) GREEN 완료**. R1~R3 + R6/R7 + R8.1 = ~110 test 폐기 + ~35~55 file ripple (paradigm shift 큰 작업) → 별 큰 cycle 권장 (다음 세션 진입).
+
+#### 5.10.3.1 R0 — `BUNDLED_STAGE2_MENTION_PROMPT` type_hint 자유 string (GREEN)
+
+- `wikey-core/src/ingest-pipeline.ts:937` `type_hint` 부분 정정: "다음 중 하나 또는 `unknown`" → "자유 string. 예시: organization, person, ..., 이 외도 자유 (예: algorithm, dataset, metric). 모르면 unknown."
+- 신규 test: `ingest-pipeline.test.ts` **+1 case** (R0 D-wide: type_hint 자유 string).
+- 회귀: 760 → **761 PASS**.
+
+#### 5.10.3.2~5.10.3.7 R1~R8.1 — Pending (다음 세션)
+
+큰 paradigm shift 작업 (~110 test 폐기 + ~35~55 file 변경, ~3시간 estimate):
+- R1 `schema.ts` validation/builder 폐기 (isValidEntityType/getEntityTypes/buildSchemaPromptBlock 등)
+- R2 `canonicalizer.ts` FORCED_CATEGORIES + detectAntiPattern 폐기
+- R3 `types.ts` EntityType/ConceptType union → string
+- R6/R7 `wiki-ops.ts` / `query-pipeline.ts` 영향 X 검증
+- R8.1 폐기 test 식별 (사전 grep, ~110 cases)
+
+이유: ripple 큼 → 일괄 진행 + 단일 atomic commit 필수. 별 큰 cycle 진입 권장 (사용자 추가 검증 가능).
 
 ### 5.10.4 Phase 4 결과 (Session 4, TBD) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
 
