@@ -850,21 +850,400 @@
 
 ---
 
-## 5.10 Graph emergent ontology — §5.4 paradigm shift (P1, ★ 사용자 본질 비판 2026-04-26 session 14)
+## 5.10 Graph emergent ontology — §5.4 paradigm shift (P1, ★ 사용자 본질 비판 2026-04-26 session 14, ★ 2026-05-04 session 15 SDD+TDD 세션 단위 regroup)
 > tag: #ontology, #architecture, #paradigm-shift, #self-extending, #graph
 
-> **★ 2026-05-04 갱신 (보조 plan v5.4 D-wide cycle #8 final + C5 신규)**: 사용자가 `docs/wikey-ingest-pipeline.md` 검토 후 5 concern raised (C1~C5) → 사용자 **D-wide 채택** + cycle #1~#7 master fix (cycle pattern 7 회 누적, 매번 minor stale 발견) → 사용자 cycle #8 마지막 시도 결정 → master fix v5.4 (§8 next action / §9.4 이득 / mirror 상단 v5.3 → v5.4 갱신). 보조 plan v5.4 = `plan/phase-5-todox-5.10-graph-emergent-ontology.md`. cycle 진화: v1→v2→v3(D-wide)→v4(ripple R1~R8)→v5(C5 신규)→v5.1(numbering)→v5.2(§14.2 본문)→v5.3(§7+mirror migration cost+panel-dispatch fix)→v5.4(§8 next action+§9.4+mirror 상단). codex cycle #8 검증 대기.
+> **★ 2026-05-04 session 15 regroup**: paradigm shift 종결 (옵션 D-wide 채택, 8 cycle codex 누적, plan v5.4 + SDD+TDD todo 변환 완료) 후 **사용자 명령으로 §5.10 sub-section 우선순위 + 세션 단위 regroup + renumber**. 한 그룹 = 한 세션 처리 단위 + SDD+TDD 사이클 (RED → GREEN → REFACTOR → 회귀) 자기완결 포함. §5.10.1~§5.10.4 순서대로 진행.
 >
-> **배경**: §5.4 self-extending 구현 (Stage 1~4) 완료 후 panel UI 라이브 검증 중 사용자가 §5.4 architecture 자체에 대한 본질 비판 5건 chain 명시. 본 §5.10 = 그 비판의 정식 이슈화 (큰 작업 main subject 격상). §5.4.10 (sub) 의 내용을 본 §5.10 으로 promote.
+> **SDD+TDD framework (모든 Phase 공통, 자기완결 의무)**: Entry baseline (npm test 회귀 + git status clean) → AC spec single source (보조 plan §X.Y line) → 매 AC 별 RED → GREEN → REFACTOR → 회귀 4 단계 (분리 commit 권장) → Exit 회귀 baseline + 라이브 smoke (해당 Phase 만) + result mirror commit. 80%+ coverage, Karpathy 4 원칙 (Simplicity / Surgical / Goal-Driven / Evidence-Based) cross-check.
 >
-> **사용자 본질 비판 chain**:
+> **보조 plan single source**: `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 (704 lines).
+>
+> **다음 세션 진입점**: §5.10.1.1 Entry baseline → §5.10.1.2 C5 Cleanup (사용자 승인 후 master 직접) → §5.10.1.3 AC-C1.1 RED 진입 (`wikey-core/src/__tests__/conversion.test.ts` 신규 작성).
+>
+> **Phase 그룹 매트릭스**:
+>
+> | Phase | 세션 | 내용 | AC/R | baseline 변동 | est |
+> |-------|------|------|------|--------------|-----|
+> | §5.10.1 | 1 | Pre-flight + C5 Cleanup + C1 conversion 통합 | AC-C1.1~C1.7 + Cleanup | 732 → ≥ 751 (~19 신규) | ~3-4h |
+> | §5.10.2 | 2 | C5 broken-link prevention | AC-C5.1, C5.2, 회귀 | ≥ 751 → ≥ 755 (~4 신규) | ~1-1.5h |
+> | §5.10.3 | 3 | D-wide Part 1 (코드 폐기 — schema/canonicalizer/types) | R0/R1/R2/R3 + R6/R7 + R8.1 | 잠정 (R8.1 식별만) | ~3h |
+> | §5.10.4 | 4 | D-wide Part 2 + Final (UI/docs/migration/라이브/종결) | R4/R5/R8.2-3 + M + L + F | ~622 (~110 폐기) | ~3h |
+>
+> **paradigm shift 배경 (issue 등록 chain + 4 옵션 결정 + 8 cycle codex 누적)**: §5.10.5 참조.
+
+### 5.10.1 Phase 1 (Session 1) — Pre-flight + C5 Cleanup + C1 conversion 통합
+
+> **세션 estimate**: ~3-4 시간. 1 pre-flight + 1 cleanup + 7 AC × 4 단계 (RED+GREEN+REFACTOR+회귀) + ~19 신규 test + 라이브 smoke 3 fixture (PDF/HWP/DOCX).
+>
+> **목표**: Step 2/3 conversion 중복 제거 (사용자 C1 concern 해결) + vault root broken-link artifact cleanup (C5 prerequisite). 회귀 baseline 732 → ≥ 751.
+>
+> **spec single source**: 보조 plan §10 (line 310~462) + AC-C1.1~C1.7 (§10.5) + §14.2 (C) + §14.3 AC-C5.3.
+>
+> **Entry condition**: §5.10.1.1 baseline 확보 (모든 후속 AC 진입 전 의무).
+>
+> **Exit condition**: §5.10.1.10 회귀 baseline ≥ 751 + 라이브 smoke 3 fixture GREEN + result `§5.10.1` mirror commit.
+>
+> **Karpathy 4 원칙 cross-check**: Simplicity (변환 1 곳 통합) / Surgical (5 file 변경 — conversion.ts 신규 + ingest-pipeline.ts 일부 + commands.ts 일부 + convert-cache.ts schema + conversion.test.ts 신규) / Goal-Driven (AC 7 정량 gate) / Evidence-Based (cache callsite 3 곳 atomic migrate 검증).
+
+#### 5.10.1.1 Entry baseline 확보 (Pre-flight)
+
+- [ ] `npm test` fresh re-run → 현 PASS 수 기록 (보조 plan v5.4 expected = 732). build 0 errors 확증.
+- [ ] `git status` clean 확증 (v5.4 plan 본문 commit 완료 상태).
+- [ ] `.wikey/` 현황 snapshot (`ls -la /Users/denny/Project/wikey/.wikey/` 7 file 보존: schema.yaml + suggestions.json + converged-decompositions.json + converged-decompositions.mock-baseline.json + mention-history.json + qmd-embeddings.json + source-registry.json).
+- [ ] vault root 0-byte md `find . -maxdepth 1 -type f -name "*.md" -size 0c` snapshot (10 개 baseline; 2026-05-04 확인 시점 0건 가능).
+
+#### 5.10.1.2 C5 Cleanup — root 0-byte md `rm` (사용자 승인 후 master 직접)
+
+> **spec**: 보조 plan §14.2 (C) + §14.3 AC-C5.3 (v5.2 root-only invariant). 라이브 smoke 직전 vault state 깨끗 보장.
+
+- [ ] 사용자 승인 받기 — master 가 사용자에게 명시: "vault root 의 9 개 0-byte md (Phase 4.md / Phase 5.md / PMBOK.md / Audit UI.md / cross-link.md / qmd embeddings.md / 검색 graph expansion.md / 운영 안전.md / 증분 재인제스트.md) 삭제해도 될까요? Untitled.md 는 Obsidian 'New note' 결과 가능성, 의도 확인 필요." → 분기 A (Untitled.md 보존, 9 개 삭제) / B (10 개 모두 삭제) / C (이미 삭제됨, skip).
+- [ ] `rm` 실행 (사용자 승인 후 master 직접):
+  - 분기 A: `cd /Users/denny/Project/wikey && rm "Phase 4.md" "Phase 5.md" "PMBOK.md" "Audit UI.md" "cross-link.md" "qmd embeddings.md" "검색 graph expansion.md" "운영 안전.md" "증분 재인제스트.md"`
+  - 분기 B: 위 + `rm "Untitled.md"`
+  - 분기 C: skip
+- [ ] invariant 검증 (root-only):
+  - 분기 A: `find . -maxdepth 1 -type f -name "*.md" -size 0c` = **1 (Untitled.md)** 확증
+  - 분기 B/C: `find . -maxdepth 1 -type f -name "*.md" -size 0c` = **0** 확증
+- [ ] 별도 full-vault audit (사용자 승인 필수, AC 범위 외): `find . -type f -name "*.md" -size 0c -not -path "./node_modules/*" -not -path "./.git/*"` 실행 시 `raw/_delayed/` 의 0-byte placeholder 5 개 (NanoVNA V2 / FPV / DJI O3 등 — delay-ingest 시스템 의도적 placeholder, broken-link X) 검출됨. **raw/ 영역의 0-byte 파일은 wikey 내부 시스템 placeholder 가능성 — 사용자 명시 승인 후 별도 cycle 로 정리. AC-C5.3 invariant 는 root-only**.
+
+#### 5.10.1.3 AC-C1.1 — `convertSourceToMarkdown` 신규 entry (pure conversion)
+
+> **spec**: 보조 plan §10.4 line 404 + §10.5 AC-C1.1 (v5 정확화). 5 분기 (PDF/HWP/DOCX-Docling/PPTX-Docling/md/txt) 통합. **vault write 0 보장** (mock fs spy).
+
+- [ ] **RED**: `wikey-core/src/__tests__/conversion.test.ts` 신규 — `convertSourceToMarkdown 5 분기 happy + cache hit + pure 보장` ≥ 10 cases. test naming 예시: `convertSourceToMarkdown returns ConversionResult for PDF` / `... for HWP` / `... for DOCX (Docling)` / `... for md` / `... for txt` / `cache hit returns same result without re-extraction` / `pure: vault write 0 (raw/wiki/.wikey 변경 0)` / `error on missing file` / `error on unsupported ext` / `cache write to ~/.cache/wikey/convert/ allowed`. 모두 실패 확증 (`npm test conversion.test.ts` → ≥ 10 fail, `convertSourceToMarkdown` 미정의).
+- [ ] **GREEN**: `wikey-core/src/conversion.ts` 신규 export `convertSourceToMarkdown(sourcePath, ext, opts) → ConversionResult { content, sidecarCandidate?, ext, converter }`. extractPdfText / extractHwpText / extractDocumentText / readMd 4 분기 흡수 (`ingest-pipeline.ts:357~375` 의 분기 코드 inline 흡수). cache layer 통합. **vault write 책임 0** (PII gate / sidecar write / registry diff 호출 X). 10 cases GREEN 확증.
+- [ ] **REFACTOR**: 중복 helper 정리 (Karpathy Surgical, 인접 코드 보존). `extractPdfText` / `extractHwpText` / `extractDocumentText` 자체는 `conversion.ts` 의 *내부 helper* 보존 (외부 export 도 보존, grep 으로 다른 consumer 확증 후 결정).
+- [ ] **회귀**: `npm test` baseline 732 → ≥ 742 (10 신규) + build 0 errors. fresh re-run + `git diff` 검증.
+
+#### 5.10.1.4 AC-C1.2 — `generateBrief` 시그니처 변경 (HWP/DOCX brief 변환 정상)
+
+> **spec**: 보조 plan §10.4 line 408~410 + §10.5 AC-C1.2.
+
+- [ ] **RED**: `conversion.test.ts` 또는 `ingest-pipeline.test.ts` 에 5 cases 추가 — `generateBrief receives content not sourcePath` / `generateBrief PDF brief works without extractPdfText call` / `generateBrief HWP brief works (no binary sent to LLM)` / `generateBrief DOCX brief works` / `generateBrief md/txt brief works`. 실패 확증 (현 시그니처 sourcePath 받음).
+- [ ] **GREEN**: `wikey-core/src/ingest-pipeline.ts:1197~1248` `generateBrief` 시그니처 변경 — `generateBrief(content, sourceFilename, config, http, opts)` (변환 결과 받음). `ingest-pipeline.ts:1216` 의 `extractPdfText` 호출 삭제. **HWP/DOCX/PPTX/HTML 등 모든 포맷 brief 지원** (P2 fix). 5 cases GREEN.
+- [ ] **REFACTOR**: brief PII gate (sample 6KB sanitize) 호출 위치 검토 — content 가 이미 변환된 markdown 이므로 sanitize 위치 변경 X.
+- [ ] **회귀**: `npm test` ≥ 747 (5 신규 누적) + build 0 errors. 라이브 smoke 1 case (master 직접 obsidian-cdp): HWP 1 brief → LLM 응답이 markdown 기반 정상 (binary 미전송 확증, 사용자 vault PHI 영향 0).
+
+#### 5.10.1.5 AC-C1.3 — UI commands.ts conversion 1 회 보장 (`extractPdfText` 호출 ≤ 1)
+
+> **spec**: 보조 plan §10.4 line 415~428 + §10.5 AC-C1.3.
+
+- [ ] **RED**: `wikey-obsidian/src/__tests__/commands.test.ts` (또는 integration test 위치) 1 case — `PDF ingest cycle: extractPdfText spy 호출 횟수 ≤ 1` (현 ≥ 2). `extractHwpText` ≤ 1 / `extractDocumentText` ≤ 1 도 별 case. 실패 확증.
+- [ ] **GREEN**: `wikey-obsidian/src/commands.ts:346~363` UI flow 수정 — `modal.open() → convertSourceToMarkdown() (1 회) → generateBrief(content) → user input → runIngestCore({preconverted})`. `runIngestCore`/`ingest()` 시그니처에 `preconverted?: ConversionResult` optional 추가 (`wikey-core/src/ingest-pipeline.ts:235~430`) — 있으면 Step 0 conversion 재호출 skip. 3 cases GREEN.
+- [ ] **REFACTOR**: `runIngestCore` 의 `preconverted` 처리 분기 정리. `decideReingest` 는 항상 raw bytes 기준 (preconverted 와 무관, registry hash invariant 보존).
+- [ ] **회귀**: `npm test` ≥ 750 (3 신규 누적) + build 0 errors.
+
+#### 5.10.1.6 AC-C1.4 — Cancel 시 vault write 0 invariant (cache write 는 ephemeral 허용)
+
+> **spec**: 보조 plan §10.5 AC-C1.4 (v4 정확화). codex P1-1 invariant.
+
+- [ ] **RED**: `commands.test.ts` 또는 integration test 1 case — `Cancel briefOutcome → vault hash diff 0` (`raw/` + `wiki/` + `.wikey/` 모두 변경 0). cache file 존재 가능 (ephemeral). 실패 확증 (현 코드 cancel 분기 미정의).
+- [ ] **GREEN**: `commands.ts` Cancel 분기 — `if (briefOutcome.action === 'cancel') { modal.close(); return { success: false, sourcePath, createdPages: [], cancelled: true } }`. `runIngestCore` 호출 안 됨 → vault write 0. cache file 은 `convertSourceToMarkdown` 단계에서 이미 ephemeral 저장 (`~/.cache/wikey/convert/`, vault 외부, 30일 TTL).
+- [ ] **REFACTOR**: cancel 후 modal cleanup / event listener detach 정리.
+- [ ] **회귀**: `npm test` ≥ 751 (1 신규) + build 0 errors. 라이브 smoke 1 case (master 직접): PDF brief 표시 → Cancel → `git status` vault clean + cache file 존재 확증.
+
+#### 5.10.1.7 AC-C1.5 — `decideReingest` + sidecar write 시점 불변
+
+> **spec**: 보조 plan §10.5 AC-C1.5 (codex P1-1 invariant). `ingest-pipeline.ts:235` decideReingest → `:421` sidecar write 흐름 그대로.
+
+- [ ] **RED**: `ingest-pipeline.test.ts` 4 시나리오 case — `force / protect / skip / skip-with-seed 4 시나리오 모두 기존 동작 유지` (preconverted 주입 시 sidecar write 시점 불변). 실패 확증 (현 코드 preconverted 미지원).
+- [ ] **GREEN**: `ingest-pipeline.ts:235~430` `ingest()` 의 `preconverted` 처리 분기에서 `decideReingest` 호출 시점 / sidecar write 시점 / PII gate 호출 시점 모두 보존. 4 시나리오 GREEN.
+- [ ] **REFACTOR**: 시나리오별 분기 코드 가독성 정리 (1 case 추가, 다른 분기 영향 X).
+- [ ] **회귀**: `npm test` ≥ 752 (1 신규 누적) + build 0 errors.
+
+#### 5.10.1.8 AC-C1.6 — 회귀 baseline + 라이브 cycle smoke (master 직접)
+
+> **spec**: 보조 plan §10.5 AC-C1.6 (v5 산술 정정). 회귀 732 → ≥ 751 + 라이브 smoke 3 분기.
+
+- [ ] **회귀 baseline 확증**: `npm test` ≥ 751 PASS (현 baseline 732 + AC-C1.1~C1.5/C1.7 합산 ≥ 19 신규) + build 0 errors. fresh re-run 명시 (rules.md §1 Evidence-Based).
+- [ ] **라이브 cycle smoke (master 직접 obsidian-cdp)**: 3 fixture (PDF + HWP + DOCX 각 1) ingest cycle 진행 — brief 정상 표시 + ingest 완료 + sidecar canonical write 정상 (vector PDF 면 raw 이미지 보존 — 결함 (b) sidecarCandidate fix 확증).
+- [ ] **결과 기록**: `activity/phase-5-result.md §5.10.1` AC 7 항목 evidence (test 출력 last line + build exit 0 + smoke screenshot 또는 log).
+
+#### 5.10.1.9 AC-C1.7 — convert-cache schema 갱신 + 모든 cache callsite migration
+
+> **spec**: 보조 plan §10.5 AC-C1.7 (v5 risk j 보강). cache schema `string → { content, sidecarCandidate? }` + 3 callsite atomic migrate.
+
+- [ ] **RED**: `convert-cache.test.ts` ≥ 2 cases — `vector PDF cache hit returns sidecarCandidate distinct from content` / `scan PDF cache hit returns sidecarCandidate=null`. cache callsite 3 곳 검증 1 case (`unhwp / docling / pdf-cache-hit 3 callsite 모두 새 schema 호환`). 실패 확증 (현 schema string 단독).
+- [ ] **GREEN — schema 갱신**: `convert-cache.ts` `setCached(key, content, sidecarCandidate?, meta)` + `getCached(key) → { content, sidecarCandidate? } | null`. cache file 형식 = JSON `{ content: string, sidecarCandidate?: string }` (단순 string → object).
+- [ ] **GREEN — cache callsite 3 곳 atomic migrate** (v5 risk j):
+  - `wikey-core/src/ingest-pipeline.ts:1504` (unhwp `getCached(cacheKey)`) — 신규 schema 따라 `{ content }` 받음, sidecarCandidate undefined 처리
+  - `wikey-core/src/ingest-pipeline.ts:1568` (docling-doc `getCached(cacheKey)`) — 동일
+  - `wikey-core/src/ingest-pipeline.ts:1782` (pdf-cache-hit `getCached(doclingKey)`) — `{ content, sidecarCandidate }` 모두 사용
+  - 3 callsite + `convert-cache.ts:setCached/getCached` 시그니처 변경 동시 (atomic commit)
+- [ ] **GREEN — backward compat**: 기존 cache file (string 형식, JSON.parse 실패) 은 `{ content: rawString, sidecarCandidate: rawString }` 폴백 (legacy 호환). 별 unit test 1 case.
+- [ ] **REFACTOR**: cache key generator (`computeCacheKey`) 영향 0 확증. version bump 검토 (cache schema breaking change).
+- [ ] **회귀**: `npm test` ≥ 751 (≥ 2 신규 + 3 migration 검증 누적) + build 0 errors. `~/.cache/wikey/convert/` 의 기존 cache file 자동 폴백 확증 (1 회 ingest cycle 후 호환 동작).
+
+#### 5.10.1.10 Phase 1 Exit 검증
+
+- [ ] 회귀 baseline 최종: `npm test` ≥ 751 PASS + build 0 errors. fresh re-run.
+- [ ] 라이브 smoke 3 fixture 결과 기록 (PDF + HWP + DOCX).
+- [ ] `activity/phase-5-result.md §5.10.1` mirror commit (Phase 1 결과 timeline + AC 7 항목 evidence).
+- [ ] commit 분리 권장 — RED commits / GREEN commits / REFACTOR commits / 회귀 commits.
+
+### 5.10.2 Phase 2 (Session 2) — C5 broken-link prevention
+
+> **세션 estimate**: ~1-1.5 시간. 2 AC × 4 단계 (RED+GREEN+REFACTOR+회귀) + ~4 신규 test + 라이브 smoke 1 case.
+>
+> **목표**: 답변 broken wikilink 클릭 → root 자동 페이지 생성 차단 (Prevention prompt 정정 + Intercept DOM 처리). 회귀 baseline (Phase 1 종료) ≥ 751 → ≥ 755.
+>
+> **spec single source**: 보조 plan §14 (line 596~683) + AC-C5.1, C5.2, C5.4.
+>
+> **Entry condition**: Phase 1 (§5.10.1) 의 회귀 baseline ≥ 751 GREEN + Cleanup invariant 확증. sidebar-chat.ts 변경 (Phase 2) 와 commands.ts 변경 (Phase 1) 다른 파일이라 충돌 0.
+>
+> **Exit condition**: §5.10.2.4 회귀 baseline ≥ 755 + 라이브 smoke broken link click 처리 GREEN + result `§5.10.2` mirror.
+
+#### 5.10.2.1 AC-C5.1 — Prevention (query-pipeline 답변 prompt 정정)
+
+> **spec**: 보조 plan §14.2 (A) + §14.3 AC-C5.1. `query-pipeline.ts:386` rule line 정정. context block 에 `[Available pages]` 추가.
+
+- [ ] **RED**: `wikey-core/src/__tests__/query-pipeline.test.ts` ≥ 3 cases — (1) `답변에 unresolved entity 가 있을 때 plain text 출력` (2) `resolved entity 만 [[wikilink]]` (3) `1-hop wikilink read 실패 시 답변에 포함 안 됨`. 실패 확증 (현 prompt 페이지 존재 검증 X).
+- [ ] **GREEN**: `wikey-core/src/query-pipeline.ts buildSynthesisPrompt`:
+  - context section 에 "위키 페이지 base name 목록" (queried 결과 + 1-hop wikilink target 의 *존재 확증* 된 base) 주입
+  - `[Available pages]: <slug1>, <slug2>, ...` block 추가 (LLM 이 명시 참조)
+  - rule line 386 정정: "답변에 등장한 entity/concept 중 **위 페이지 base name 목록에 있는 것만** 첫 등장 시 [[페이지명]] 으로 링크하세요. 목록에 없는 entity/concept 은 plain text 로 표기하세요."
+  - rule line 385 정정 (1-hop): "검색된 페이지 본문의 [[wikilink]] 중 **`expandWithOneHopWikilinks` 로 실제 read 된** 페이지의 정보만 활용. read 실패 (wiki/ 에 없는) wikilink 는 답변에 [[link]] 로 포함하지 마세요."
+  - 3 cases GREEN.
+- [ ] **REFACTOR**: `[Available pages]` block 빌더 helper 분리 (테스트 용이). prompt 토큰 비용 측정 (~50~100 토큰 추가, 보조 plan §14.4 trade-off 확증).
+- [ ] **회귀**: `npm test` ≥ 754 (≥ 3 신규) + build 0 errors.
+
+#### 5.10.2.2 AC-C5.2 — Intercept (sidebar-chat broken link DOM 처리)
+
+> **spec**: 보조 plan §14.2 (B) + §14.3 AC-C5.2 (v5.1 정확화). `sidebar-chat.ts:2830~2858` `renderMarkdown()` 의 *기존 click handler 2 곳* 정정 (별 helper 신규 X).
+
+- [ ] **RED**: `wikey-obsidian/src/__tests__/sidebar-chat.test.ts` (또는 적절한 위치) 1 integration case — `mock vault, broken [[link]] click → getFirstLinkpathDest null → Notice '위키에 없는 페이지 — 자동 생성 차단' 표시 + vault 변경 0`. 실패 확증 (현 코드 resolve 검증 X, openLinkText 직접 호출 → 빈 페이지 자동 생성).
+- [ ] **GREEN**: `wikey-obsidian/src/sidebar-chat.ts:2830~2858` `renderMarkdown()` 의 *기존 click handler 2 곳* 정정 (resolve-before-open):
+  - **handler 1** (line 2835~2840): `el.querySelectorAll('a.internal-link')` 의 `addEventListener('click', e => { e.preventDefault(); openLinkText(href, '') })` 부분
+  - **handler 2** (line 2853~2858): `node.querySelectorAll('.wikey-wikilink')` 의 동일 패턴
+  - **fix 패턴 (양쪽 동일)**: `e.preventDefault()` 후 `app.metadataCache.getFirstLinkpathDest(href, '')` 로 resolve.
+    - resolve 성공 (existing TFile) → `app.workspace.openLinkText(href, '')` 호출 (기존 동작)
+    - resolve 실패 (null = broken) → `new Notice('위키에 없는 페이지 — 자동 생성 차단')` + link DOM 에 `wikey-broken-link` class 추가 (시각 dim)
+  - **CSS 추가** (`styles.css`): `.wikey-broken-link { opacity: 0.5; text-decoration: line-through; cursor: not-allowed; }`
+  - 1 case GREEN.
+- [ ] **REFACTOR**: 두 handler 의 중복 코드 (`resolve-before-open` 로직) 를 helper 함수로 추출 검토 (Karpathy Surgical — 인접 코드 보존이 우선이라면 inline 유지). 적용 범위 = 답변 영역 (sidebar chat `renderMarkdown` 호출 대상) 만 — vault 일반 편집 (Obsidian 다른 view, file explorer click 등) 영향 X 확증.
+- [ ] **회귀**: `npm test` ≥ 755 (1 신규 누적) + build 0 errors. **라이브 smoke 1 case (master 직접 obsidian-cdp)**: 실제 답변에 broken link 발생 시 click → vault root 빈 페이지 생성 0 + Notice 표시 확증.
+
+#### 5.10.2.3 AC-C5 — 회귀 baseline (기존 AC-C5.4)
+
+> **spec**: 보조 plan §14.3 AC-C5.4.
+
+- [ ] **회귀 baseline 확증**: `npm test` ≥ 755 PASS (Phase 1 ≥ 751 + AC-C5.1 의 ≥ 3 + AC-C5.2 의 1 = ≥ 755). build 0 errors. fresh re-run.
+- [ ] `activity/phase-5-result.md §5.10.2` mirror commit (Phase 2 결과 timeline + AC 3 항목 evidence + invariant 검증 출력).
+
+#### 5.10.2.4 Phase 2 Exit 검증
+
+- [ ] 회귀 baseline 최종 ≥ 755 + 라이브 smoke broken link click 처리 GREEN.
+- [ ] `activity/phase-5-result.md §5.10.2` mirror commit.
+- [ ] commit 분리 권장.
+
+### 5.10.3 Phase 3 (Session 3) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer)
+
+> **세션 estimate**: ~3 시간. 7 R 항목 × 4 단계 (각 R 별 RED+GREEN+REFACTOR+회귀, R6/R7 은 영향 X 검증만) + ~80 폐기 test 식별 + LLM 자율 type 분류 RED test ~5 신규.
+>
+> **목표**: D-wide deprecation Part 1 — schema/canonicalizer/types 7-type schema gate 폐기. LLM 자율 type 분류 도입. 회귀 baseline (Phase 2 종료) ≥ 755 → 잠정 baseline (R8.1 폐기 식별만, 실 폐기 commit 은 Phase 4 R8.2 에서 일괄 .skip).
+>
+> **spec single source**: 보조 plan §3.1 (line 80~166) + §3.1.1 R0~R3, R6, R7, R8.1.
+>
+> **Entry condition**: Phase 2 (§5.10.2) 의 회귀 baseline ≥ 755 GREEN.
+>
+> **Exit condition**: §5.10.3.8 R0~R3 GREEN + R6/R7 영향 X 확증 + R8.1 폐기 list 기록 + 잠정 baseline PASS 유지 + result `§5.10.3` mirror.
+>
+> **Karpathy 4 원칙 cross-check**: Simplicity (~35~55 file 폐기 = 코드 단순화) / Surgical (Stage 1~4 + 7-type gate 만 폐기, alias normalization + PII 보존) / Goal-Driven (R0~R3 + R6/R7 + R8.1 정량 gate) / Evidence-Based (`grep -l` 폐기 file 식별).
+>
+> **사용자 D-wide 채택 근거**: `wikey.schema.md` 핵심 원칙 #2 ("위키는 LLM 이 소유한다") 의 정확한 코드 구현. 4+3 type 제한 자체가 비판 대상.
+
+#### 5.10.3.1 R0 — `ingest-pipeline.ts` Stage 2 mention extractor prompt 정정
+
+> **spec**: 보조 plan §3.1.1 R0 (v5 신규). `ingest-pipeline.ts:909~919` `BUNDLED_STAGE2_MENTION_PROMPT` `type_hint` 7-type union → string 자유.
+
+- [ ] **RED**: `wikey-core/src/__tests__/ingest-pipeline.test.ts` 1 case — `BUNDLED_STAGE2_MENTION_PROMPT type_hint 가 string 자유 출력 허용` (예: `algorithm` / `dataset` 같은 비-7-type LLM 출력도 통과). 실패 확증 (현 prompt 8 종 union 강제).
+- [ ] **GREEN**: `ingest-pipeline.ts:919` `type_hint: 'organization'|'person'|...|'unknown'` → `type_hint: string` (LLM 자유, prompt 가이드는 *예시* 만). 사용자 prompt 의 "❌ 분류하지 마세요" 유지. 1 case GREEN.
+- [ ] **REFACTOR**: prompt 텍스트 정리 (예시 type 4~6 개로 축소, "이 외도 자유" 명시).
+- [ ] **회귀**: `npm test` PASS 유지 + build 0 errors.
+
+#### 5.10.3.2 R1 — `schema.ts` 추가 폐기
+
+> **spec**: 보조 plan §3.1.1 R1. `schema.ts:71~118` validation helpers + `:241~295` buildSchemaPromptBlock + `:289~354` YAML parser entityTypes/conceptTypes/customTypes section 폐기.
+
+- [ ] **RED**: `wikey-core/src/__tests__/schema.test.ts` 의 `isValidEntityType` / `isValidConceptType` / `getEntityTypes` / `getConceptTypes` / `buildSchemaPromptBlock` 관련 ~15 cases 가 deprecate 대상으로 식별 (test 폐기 마크). 신규 RED 1 case — `schema.ts 가 entity/concept type validation 강제 X (LLM 자유 string 통과)`.
+- [ ] **GREEN**: `wikey-core/src/schema.ts`:
+  - 폐기: `isValidEntityType` / `isValidConceptType` / `getEntityTypes` / `getConceptTypes` (line 71~118)
+  - 폐기: `buildSchemaPromptBlock` (line 241~295) — canonicalizer prompt 의 "## 분류 스키마 (이 외 분류는 거부됨)" 블록 생성
+  - 폐기: YAML parser 의 `entityTypes` / `conceptTypes` / `customTypes` section (line 289~354) — `aliases` / `pii_patterns` parser 만 보존
+  - 폐기: `ENTITY_TYPES` / `CONCEPT_TYPES` 상수 (line 20~21) + `ENTITY_TYPE_DESCRIPTIONS` / `CONCEPT_TYPE_DESCRIPTIONS`
+  - 신규 RED 1 case GREEN.
+- [ ] **REFACTOR**: import / export 정리 (canonicalizer.ts:6 의 `ENTITY_TYPES, CONCEPT_TYPES, isValidEntityType, isValidConceptType, detectAntiPattern, buildSchemaPromptBlock, buildStandardDecompositionBlock` import 모두 제거).
+- [ ] **회귀**: `npm test` 폐기 ~15 cases 식별 (test file 자체 삭제 또는 .skip mark). build 0 errors. baseline 갱신.
+
+#### 5.10.3.3 R2 — `canonicalizer.ts` 정정
+
+> **spec**: 보조 plan §3.1.1 R2. `canonicalizer.ts:235~236, :259` 분리 → 단일 set 통합 + `:363~467` FORCED_CATEGORIES + detectAntiPattern + assembleCanonicalResult 의 7-type 분류 검증 폐기. minimal alias normalization (`SLUG_ALIASES`, `canonicalizeSlug`, `dedupAcronymsCrossPool`) 만 잔존.
+
+- [ ] **RED**: `wikey-core/src/__tests__/canonicalizer.test.ts` 의 entity/concept 분류 / FORCED_CATEGORIES / drop logic test ~30 cases 가 deprecate 대상으로 식별. 신규 RED 1 case — `canonicalizer 가 LLM 출력 type 자유 통과 (forced reassignment X)`.
+- [ ] **GREEN**: `wikey-core/src/canonicalizer.ts`:
+  - 정정: `:235~236, :259` `existingEntityBases ∪ existingConceptBases` 분리 → 단일 base name set 통합
+  - 폐기: `:363~467` `FORCED_CATEGORIES` (slug → entity/concept 강제 pin) + `detectAntiPattern` schema reject 로직 + `assembleCanonicalResult` 의 7-type 분류 검증
+  - 보존: minimal alias normalization (`SLUG_ALIASES`, `canonicalizeSlug`, `dedupAcronymsCrossPool`)
+  - 검토: `:478~506` `applyCrossLinks` (entity ↔ concept 자동 link H2) 보존 또는 단순화 — D-wide 에서는 type 무관한 generic relation H2 로 변환 가능
+  - 신규 RED 1 case GREEN.
+- [ ] **REFACTOR**: prompt 빌더 (LLM call) 단순화 — schema prompt block 제거, type 가이드 *예시* 만 inline.
+- [ ] **회귀**: `npm test` 폐기 ~30 cases 식별 (test file .skip 또는 삭제). build 0 errors.
+
+#### 5.10.3.4 R3 — `types.ts` 정정
+
+> **spec**: 보조 plan §3.1.1 R3. `EntityType` / `ConceptType` union → string. `Mention.type_hint` union → string. `WikiPage.type` (entity/concept/source/analysis 4 카테고리) 보존 결정.
+
+- [ ] **RED**: type 변경에 의존하는 test 가 컴파일 에러 (TypeScript) 시 RED 으로 간주. `npm run build` 0 errors 유지가 GREEN gate.
+- [ ] **GREEN**: `wikey-core/src/types.ts`:
+  - `:129~132` `EntityType` / `ConceptType` union type 폐기 → `string` (또는 `string` alias)
+  - `:232~233` `IngestRecord` 의 `entity[]` / `concept[]` 분리 → 단일 `mention[]` 또는 `wiki_page[]` (type field 가 string 으로 자유)
+  - `:299~302` `Mention.type_hint` union (`'organization'|'person'|...|'unknown'`) → `string` (LLM 자율 출력)
+  - `WikiPage.type` (frontmatter `type:` field) `'entity'|'concept'|'source'|'analysis'` union **보존** (이건 *카테고리* 4 종, wiki/entities/ vs wiki/concepts/ 디렉토리 구분과 직결)
+- [ ] **REFACTOR**: type alias 일관성 유지 (string 으로 완화한 곳에 일관 주석).
+- [ ] **회귀**: `npm test` PASS 유지 (R1/R2 폐기 후 baseline) + `npm run build` 0 errors.
+
+#### 5.10.3.5 R6 — `wiki-ops.ts` 영향 X 확증 (보존)
+
+> **spec**: 보조 plan §3.1.1 R6. `injectProvenance` 의 `type` field 는 `ProvenanceType` 별 축. D-wide 영향 X. frontmatter `type:` field (entity/concept/source/analysis 4 카테고리) 도 R3 결정 따라 보존.
+
+- [ ] **검증 only**: `wikey-core/src/wiki-ops.ts` 코드 grep — `EntityType` / `ConceptType` 의존 0 확증. `ProvenanceType` 은 별 union ('extracted' / 'manual' / 'cross-source-linked') — 별 축 보존. frontmatter `sources:` 배열 / `type:` field 보존.
+- [ ] **회귀**: `wiki-ops.test.ts` PASS 유지 (변경 0).
+
+#### 5.10.3.6 R7 — `query-pipeline.ts` 영향 X 확증 (보존)
+
+> **spec**: 보조 plan §3.1.1 R7. `SearchResult` / `Citation` 의 type 의존 거의 없음.
+
+- [ ] **검증 only**: `wikey-core/src/query-pipeline.ts` 코드 grep — `EntityType` / `ConceptType` 의존 0 확증.
+- [ ] **회귀**: `query-pipeline.test.ts` PASS 유지 (변경 0). Phase 2 의 AC-C5.1 이 별 변경 (broken wikilink prevention) 이지만 D-wide 와 직교.
+
+#### 5.10.3.7 R8.1 — 폐기 test 식별 (사전 grep)
+
+> **spec**: 보조 plan §3.1.1 R8 + §3.4 회귀 plan. ~110 cases 사전 식별 → grep keyword 기반 → Phase 4 R8.2 에서 일괄 적용 → re-run 0 fail 확증.
+
+- [ ] **R8.1.a 폐기 test 식별 (사전 grep, Phase 3 단독 작업)**:
+  - `wikey-core/src/__tests__/canonicalizer*.test.ts` — entity/concept 분류 / FORCED_CATEGORIES / drop logic test 폐기 또는 LLM 자율 출력 검증으로 변경 (~30 cases)
+  - `wikey-core/src/__tests__/schema*.test.ts` — buildSchemaPromptBlock / isValidEntityType / isValidConceptType test 폐기 (~15 cases)
+  - `wikey-core/src/__tests__/suggestion-*.test.ts` / `convergence*.test.ts` / `self-declaration*.test.ts` — Stage 2~4 폐기 (~50 cases)
+  - `wikey-core/src/__tests__/ingest-pipeline*.test.ts` — entity/concept type 분기 test 정정 (~15 cases)
+  - 합계 ~110 cases 폐기 (R8 합산이 §3.1 의 ~110 추정 정합)
+  - grep 명령: `grep -l "Stage [0-9]\|umbrella\|decomposition\|Suggestion\|ENTITY_TYPES\|CONCEPT_TYPES\|buildSchemaPromptBlock\|FORCED_CATEGORIES" wikey-core/src/__tests__/*.test.ts`
+- [ ] **R8.1.b 폐기 test list record**: 식별 결과를 `activity/phase-5-result.md §5.10.3.7` 에 file/test name list 로 기록 (Phase 4 R8.2 에서 참조).
+
+#### 5.10.3.8 Phase 3 Exit 검증
+
+- [ ] R0/R1/R2/R3 GREEN 완료 + R6/R7 영향 X 확증 + R8.1 폐기 list 기록.
+- [ ] `npm test` 잠정 baseline (R1/R2 폐기 cases .skip 후) PASS 유지 + build 0 errors.
+- [ ] `activity/phase-5-result.md §5.10.3` mirror commit (Phase 3 결과 timeline + R0~R3 + R6/R7 + R8.1 evidence).
+
+### 5.10.4 Phase 4 (Session 4) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
+
+> **세션 estimate**: ~3 시간. R4/R5 + R8.2-3 + M (migration script) + L (라이브 smoke) + F (종결 + 3 cycle 통합 codex review).
+>
+> **목표**: D-wide deprecation Part 2 — settings UI / docs / migration script / 라이브 검증 + 3 cycle (Phase 1 + Phase 2 + Phase 3+4) 통합 codex review. 최종 baseline ~622~~645 PASS (~110 폐기 후) + build 0 errors.
+>
+> **spec single source**: 보조 plan §3.1.1 R4~R5, R8.2~R8.3 + §3.3 migration script + §3.4 회귀 plan + §3.5 라이브 검증 + §6 종결.
+>
+> **Entry condition**: Phase 3 (§5.10.3) 의 R0~R3 GREEN + R6/R7 영향 X 확증 + R8.1 폐기 list 기록 완료.
+>
+> **Exit condition**: §5.10.4.7 회귀 baseline ~622~~645 PASS + 라이브 smoke 5 항목 GREEN + 3 cycle 통합 codex Mode D Panel post-impl review APPROVE + result `§5.10.4` mirror.
+
+#### 5.10.4.1 R4 — `wikey-obsidian/src/settings-tab.ts` 정정
+
+> **spec**: 보조 plan §3.1.1 R4. `settings-tab.ts:1126~1132` schema sample 의 `entity_types` / `concept_types` 예시 제거.
+
+- [ ] **RED**: `wikey-obsidian/src/__tests__/settings-tab.test.ts` (있으면) 1 case — `사용자 vault 의 .wikey/schema.yaml 초기 생성 시 entity_types/concept_types section 미생성 (aliases / pii_patterns 만)`. 실패 확증.
+- [ ] **GREEN**: `settings-tab.ts:1126~1132` schema sample 정정 — `entity_types` / `concept_types` 예시 제거. aliases / pii_patterns 만 sample 표시.
+- [ ] **REFACTOR**: sample 텍스트 가독성 정리 (aliases 예시 1~2 개, pii_patterns 예시 1~2 개).
+- [ ] **회귀**: `npm test` PASS + build 0 errors.
+
+#### 5.10.4.2 R5 — `docs/wikey-ingest-pipeline.md` 정정 (v5 보강)
+
+> **spec**: 보조 plan §3.1.1 R5. 5 line spot 정정.
+
+- [ ] **doc 정정**: `docs/wikey-ingest-pipeline.md`:
+  - `:323~366` Step 5/6 의 7 type 표 정정 — D-wide 후 LLM 자율 type 출력으로 변경
+  - `:369` 7-type 분류 설명 정정 — D-wide 후 LLM 자율
+  - `:398` FORCED_CATEGORIES 설명 정정 — D-wide 후 폐기, alias normalization 만 잔존
+  - `:712` 결정성 표 (FORCED_CATEGORIES) 정정 — D-wide 후 폐기
+  - `:140` Cancel 흐름 (raw 그대로 종료) 보존 (Phase 1 변경과 일치)
+- [ ] **검증**: 사용자 vault 영향 0 (doc 만 변경). doc-updater agent 위임 검토.
+
+#### 5.10.4.3 R8.2 / R8.3 — 잔여 test baseline 확보 + §5.2 / §5.3 회귀 0 확증
+
+> **spec**: 보조 plan §3.1.1 R8.2~R8.3 + §3.4 회귀 plan.
+
+- [ ] **R8.2 잔여 test baseline 확보**: Phase 3 R8.1 식별 list 의 ~110 cases 일괄 .skip 또는 삭제 → fresh re-run → 0 fail 확증. baseline ~622~~645 PASS (Phase 2 ≥ 755 - ~110 폐기).
+- [ ] **R8.3 §5.2 / §5.3 회귀 0 확증**:
+  - `query-pipeline.test.ts` (§5.2) PASS 유지
+  - `incremental-reingest.test.ts` (§5.3) PASS 유지
+
+#### 5.10.4.4 M — migration script + UI 폐기 + store cleanup
+
+> **spec**: 보조 plan §3.3 migration script outline.
+
+- [ ] **M.1** migration script 작성:
+  - `scripts/migrate-deprecate-standard-decompositions.sh` 신규 — 5 단계 (보조 plan §3.3):
+    1. `.wikey/schema.yaml` 의 `standard_decompositions` 영역만 → `.wikey/manual-overrides.yaml` 으로 분리
+    2. `.wikey/suggestions.json` / `converged-decompositions.json` / `converged-decompositions.mock-baseline.json` / `mention-history.json` / `qmd-embeddings.json` 백업 후 제거
+    3. `wiki/concepts/` 의 umbrella 자체 wiki page 가 component 로 분해되어 있으면 분해 정보 제거 (LLM 자동 작성 보존)
+    4. `.gitignore` 정리
+    5. Suggestions panel header button + sidebar-chat.ts §11 코드 제거 — UI dead-code 정리
+- [ ] **M.2** dry-run 검증:
+  - `bash scripts/migrate-deprecate-standard-decompositions.sh --dry-run` — 변경 file 목록 + 백업 위치 출력만, 실제 변경 X
+  - 사용자 승인 후 `--apply` 실행
+- [ ] **M.3** `wikey-obsidian/src/sidebar-chat.ts` UI 폐기:
+  - Suggestions panel header button (clipboard_check icon) 제거
+  - openSuggestionsPanel + SchemaYamlModal + helpers 제거
+  - sidebar 6 패널 → 5 패널 (Chat / Dashboard / Ingest / Audit / Help)
+- [ ] **M.4** store file 폐기 (사용자 승인 후 master 직접):
+  - `rm .wikey/suggestions.json .wikey/converged-decompositions.json .wikey/converged-decompositions.mock-baseline.json`
+  - 옵션: `rm .wikey/mention-history.json .wikey/qmd-embeddings.json` (graph 시각화 retain 결정 시 보존)
+  - 보존: `.wikey/source-registry.json` (§5.3 dependency)
+  - `.wikey/schema.yaml` 정정 (`aliases` / `pii_patterns` section 만 잔존)
+
+#### 5.10.4.5 L — 라이브 cycle smoke (master 직접 obsidian-cdp)
+
+> **spec**: 보조 plan §3.5 라이브 검증.
+
+- [ ] **L.1** ingest 1 fixture (PMBOK 같은 표준 자료) — `.wikey/schema.yaml` 자동 등록 X 확증 (D-wide 핵심 invariant)
+- [ ] **L.2** search 결과 — LLM 답변에 PMBOK / ISO 27001 등 표준 의미 매칭 정상 (qmd embedding + LLM 백)
+- [ ] **L.3** panel header button (clipboard_check) 미존재 확증 (UI 폐기 검증)
+- [ ] **L.4** canonicalizer alias normalization 정상 (lotus-pms / kim-myung-ho 같은 dedup) — 보존 layer 정상 동작 확증
+- [ ] **L.5** 라이브 smoke 결과 기록: `activity/phase-5-result.md §5.10.4` AC R0~R8 + M + L evidence (test 폐기 cases 수 + build exit 0 + smoke screenshot 또는 log + git diff stats `~35~55 file changed, +Y -Z`).
+
+#### 5.10.4.6 F — D-wide cycle 종결 + 3 cycle 통합 codex review
+
+- [ ] **F.1** 회귀 baseline 최종: `npm test` ~622~~645 PASS (~110 폐기 후) + build 0 errors. fresh re-run + `git diff` stats 명시.
+- [ ] **F.2** 3 cycle 통합 codex Mode D Panel post-impl review (보조 plan §6 종결):
+  - C1 (Phase 1) + C5 (Phase 2) + D-wide (Phase 3+4) 합산 review
+  - cmux 새 surface fresh-pick + close-after-cycle (rules.md §11.2)
+  - APPROVE 시 §5.10 전체 종결 mark.
+- [ ] **F.3** Phase 5 종결 검토 — §5.6 / §5.7 / §5.8 / §5.9 잔여 평가.
+
+#### 5.10.4.7 Phase 4 Exit 검증
+
+- [ ] 회귀 baseline 최종 ~622~~645 PASS + build 0 errors.
+- [ ] 라이브 smoke 5 항목 (L.1~L.5) GREEN.
+- [ ] 3 cycle 통합 codex review APPROVE.
+- [ ] `activity/phase-5-result.md §5.10.4` mirror commit + §5.10 전체 종결 mark.
+- [ ] commit 분리 권장 — R commits / M commits / L commits / F commits.
+
+### 5.10.5 History — paradigm shift 등록 chain + 4 옵션 결정 + 8 cycle codex 누적 (참조용)
+
+> 본 §5.10.5 = 2026-04-26 session 14 ~ 2026-05-04 session 15 의 issue 등록 + 4 옵션 결정 + 옵션 D-wide 채택 + 8 cycle codex 누적 history. 다음 세션 implementation cycle 진입 시 paradigm shift 배경 / 결정 근거 참조용. 코드 산출 0 (issue 등록 + plan 변환만).
+>
+> **상세 cycle 진행 timeline + commit hash + analyst/codex 위임 trace**: `activity/phase-5-result.md §5.10.5` (mirror).
+>
+> **사용자 본질 비판 chain (paradigm shift trigger)**:
 > 1. "표준 분해 패턴을 왜 등록·관리해야 하나? 너무 엔지니어링적 사고."
 > 2. "self-extending 인데 진짜는 자동 확장 ontology 개념이어야지. 지금은 수동."
 > 3. "표준 분해 그룹 = 지식 그룹? 표준 분해 그룹 ⊂ 지식 그룹."
 > 4. "wiki 가장 많이 노출되는 게 중심으로 — 굳이 그룹으로 나눠 제한 두는 게 이상해."
 > 5. "지식 분해하는 그룹이 왜 필요? 세상 수많은 지식을 어떻게 표준화?"
+> 6. "굳이 어려운 말 써가면서 지식을 분류할 필요 없잖아. LLM 이라는 든든한 백 위에서 움직이는 건데." (옵션 D 정당화)
 
-### 5.10.1 issue 요약 (정식 이슈화)
+#### 5.10.5.1 issue 요약 (정식 이슈화)
 
 | 측면 | 현 §5.4 self-extending | 사용자 ideal (graph emergent) |
 |------|----------------------|---------------------------|
@@ -874,16 +1253,16 @@
 | 등록 chain | 사용자 Accept gate (수동) | 자동 (graph 형성 자체) |
 | naming | "self-extending" (오해 야기) | "self-organizing graph" / "emergent ontology" |
 
-### 5.10.2 결정 분기 (다음 세션 사용자 명시)
+#### 5.10.5.2 4 옵션 결정 분기 (옵션 D-wide 채택)
 
-> **사용자 추가 통찰** (2026-04-26 session 14): "굳이 어려운 말 써가면서 지식을 분류할 필요 없잖아. LLM 이라는 든든한 백 위에서 움직이는 건데." → 옵션 D 추가. 가장 사용자 mental model 에 가까움.
+> **사용자 추가 통찰** (2026-04-26 session 14): "굳이 어려운 말 써가면서 지식을 분류할 필요 없잖아. LLM 이라는 든든한 백 위에서 움직이는 건데." → 옵션 D 추가. 가장 사용자 mental model 에 가까움. 2026-05-04 D-wide 확정.
 
-- **A (점진)**: 본 §5.4 panel UI 유지 + §5.10.3 자동화 만 추가 + §5.5 graph 시각화 추가. schema.yaml 보조 (외부 표준 명시 case 만).
-- **B (paradigm shift, graph emergent)**: schema.yaml `standard_decompositions` 영역 deprecate. §5.5 graph 가 ontology source. canonicalizer (alias dedup) 만 보존. panel 폐기 또는 graph view 로 교체.
-- **C (관망)**: 본 §5.10 자체 보류. §5.4 본체 (PMBOK 명시 분해) 만 사용.
-- **★ D (LLM-only, ontology layer 제거)**: §5.4 self-extending 전체 deprecate (Stage 1~4 모두). LLM + qmd embedding 백이 의미 처리 일임. wikey 는 raw → wiki organization + retrieval interface 만. 본 옵션이 사용자 통찰 가장 정확 반영.
+- **A (점진)**: 본 §5.4 panel UI 유지 + §5.10.5.4 (전 §5.10.3) 자동화 만 추가 + §5.5 graph 시각화 추가. schema.yaml 보조 (외부 표준 명시 case 만). **미채택**.
+- **B (paradigm shift, graph emergent)**: schema.yaml `standard_decompositions` 영역 deprecate. §5.5 graph 가 ontology source. canonicalizer (alias dedup) 만 보존. panel 폐기 또는 graph view 로 교체. **미채택** (D-wide 보다 보수적).
+- **C (관망)**: 본 §5.10 자체 보류. §5.4 본체 (PMBOK 명시 분해) 만 사용. **미채택**.
+- **★ D (LLM-only, ontology layer 제거)**: §5.4 self-extending 전체 deprecate (Stage 1~4 모두). LLM + qmd embedding 백이 의미 처리 일임. wikey 는 raw → wiki organization + retrieval interface 만. **채택 (D-wide, 7-type schema gate 까지 deprecate)**.
 
-#### 5.10.2.D 옵션 D 상세 (LLM-only architecture)
+#### 5.10.5.3 옵션 D-wide 상세 (LLM-only architecture)
 
 > **사용자 mental model**: LLM 시대의 ontology 시대착오. 전통 ontology (umbrella / decomposition / components / RDF / OWL / Schema.org) = pre-LLM (~2020) reductionist approach. LLM 시대 = 의미 추론 백에서 자동 (예: "ISO 27001" / "iso-iec-27001-2022" / "ISMS" 가 같은 개념임을 LLM 이 이미 인식). schema 명시 = 인위 layer.
 
@@ -930,7 +1309,7 @@
 - §5.5 (graph 시각화) — graph 가 ontology source 가 아니라 *시각화 도구* 로만 유지. 사용자가 wiki 관계 보는 보조 UI.
 - §5.6 / §5.7 / §5.8 / §5.9 — 영향 없음, 그대로 진행.
 
-### 5.10.3 작업 단위 (옵션 A 시 — 가장 가벼운 path)
+#### 5.10.5.4 옵션 A 작업 단위 (미채택, 참조용 — "점진" 경로)
 
 - [ ] **자동/수동 매트릭스 chain break 3 fix**:
   - schema.yaml 등록 자동화 (ingest 시 high-confidence 후보 직접 append, panel Accept 우회)
@@ -941,7 +1320,7 @@
 - [ ] **threshold split**: high-confidence 자동 / low-confidence panel review.
 - [ ] **자동 / 수동 구분 시각화**: schema.yaml `origin` 필드 (suggested / manual / converged / builtin / auto-ingested) 색상 / icon 구분.
 
-### 5.10.4 작업 단위 (옵션 B 시 — paradigm shift, 큰 작업)
+#### 5.10.5.5 옵션 B 작업 단위 (미채택, 참조용 — "graph emergent" 경로)
 
 - [ ] **§5.4 본체 deprecation 결정**: `standard_decompositions` schema 모델 폐기. 외부 표준 명시는 별 schema (`aliases.yaml` 또는 `manual-overrides.yaml`) 로 분리.
 - [ ] **§5.5 graph 시각화 → ontology source 격상**: NetworkX + Leiden community detection 이 자연 cluster 발견. mention graph 가 primary ontology.
@@ -951,355 +1330,65 @@
 - [ ] **migration script**: 기존 schema.yaml `standard_decompositions` → `manual-overrides.yaml` (외부 표준 명시 hardcode 만 보존).
 - [ ] **wiki/concepts/<umbrella>.md 자동 생성**: graph cluster center 가 자체 wiki 페이지 — 그룹 명시 schema 없이 graph 관계만으로.
 
-### 5.10.5 epistemology 비판 (영구 기록)
+#### 5.10.5.6 epistemology 비판 (영구 기록)
 
 > **사용자 명시**: "지식 분해하는 그룹이 왜 필요? 세상 수많은 지식을 어떻게 표준화?"
 
 §5.4 의 "표준 분해" = **외부 정형 표준에만 적용 가능한 reductionism**. 일반 지식 (잡지·메모·임의 자료) 에는 mismatch. wikey 의 *진정한* 가치 = mention graph (relational) + 의미 search (LLM/embedding) — 그룹 분해 X.
 
-본 §5.10 의 epistemology 정당화는 다음 세션 사용자 결정 (옵션 A/B/C) 시점에도 보존.
+본 §5.10 의 epistemology 정당화는 implementation cycle 진입 시점에도 보존.
 
-### 5.10.6 보조 plan 문서
+#### 5.10.5.7 보조 plan 문서
 
-- [ ] `plan/phase-5-todox-5.10-graph-emergent-ontology.md` — 본 §5.10 진입 시 detail spec. migration script + canonicalizer 강화 + graph community detection 알고리즘 + 검색 PageRank 통합 + panel rename / 폐기 결정 로직.
-- [ ] `activity/phase-5-result.md §5.10` — 진행 시 timeline + 결정 분기 (A/B/C) + 산출.
+- `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 — 본 §5.10 의 detail spec single source. migration script + canonicalizer 강화 + graph community detection 알고리즘 + 검색 PageRank 통합 + panel rename / 폐기 결정 로직.
+- `activity/phase-5-result.md §5.10.5` — paradigm shift 등록 chain + 8 cycle codex 누적 timeline + commit hash mirror.
 
-### 5.10.7 연계 / dependency
+#### 5.10.5.8 연계 / dependency
 
 - §5.5 지식 그래프 · 시각화 (NetworkX + Leiden + vis.js) — 본 §5.10 paradigm shift 의 inferred technical foundation. §5.10 진행 시 §5.5 와 통합.
-- §5.4 self-extending — 본 §5.10 의 deprecation 또는 보존 대상. 옵션 A/B/C 결정에 따라 §5.4 의 향후 위치 변동.
-- §5.2 검색 graph expansion (1-hop wikilink) — graph emergent 의 일부 구현. 본 §5.10 옵션 B 시 PageRank 까지 확장.
-- canonicalizer.ts — alias dedup 강화의 단일 진입점. 본 §5.10 옵션 B 의 핵심 수정 대상.
+- §5.4 self-extending — 본 §5.10 의 deprecation 대상. 옵션 D-wide 채택 → §5.10.3/§5.10.4 (Phase 3 + 4) 에서 일괄 폐기.
+- §5.2 검색 graph expansion (1-hop wikilink) — graph emergent 의 일부 구현. 본 §5.10 진행 후 PageRank 까지 확장 검토.
+- canonicalizer.ts — alias dedup 강화의 단일 진입점. 본 §5.10 Phase 3 (§5.10.3.3 R2) 의 핵심 수정 대상.
 
-### 5.10.8 진행 권장 시점
+#### 5.10.5.9 진행 권장 시점
 
-- ★ 2026-05-04 갱신 (보조 plan v5.4): 사용자 **D-wide 채택 결정** + codex cycle #8 검증 대기. cycle #8 APPROVE 시 본 §5.10.9 진입 가이드 따라 implementation cycle 개시. cycle #8 NEEDS_REVISION 시 사용자 명시 — 무조건 v5.4 보존 + 종료, minor stale 은 implementation cycle 진입 시 자연 정리.
-- 옵션 A/B/C 는 채택 안 됨 (history 보존). 진입점 = §5.10.9.
+- ★ 2026-05-04 session 15 갱신: 사용자 **D-wide 채택 + 8 cycle codex 누적 + plan v5.4 종결 + SDD+TDD todo 변환 + regroup** 모두 commit 완료. cycle #8 NEEDS_REVISION 잔존 minor stale 2건 (§7 self-check / plan-full.md cascade) 은 implementation cycle 진입 시 자연 정리.
+- 옵션 A/B/C 는 채택 안 됨 (§5.10.5.4/§5.10.5.5 history 보존). 진입점 = §5.10.1.1 Entry baseline.
 
-### 5.10.9 SDD+TDD implementation cycle 진입 가이드 (★ 2026-05-04 신규, v5.4 cycle #8 후 다음 세션 master 첫 액션)
+#### 5.10.5.10 SDD+TDD framework reference (기존 진입 가이드, 2026-05-04 작성, regroup 후 흡수)
 
-> **spec single source**: 보조 plan `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4. 본 §5.10.9~5.10.12 = SDD+TDD cycle 변환 (AC → RED test → GREEN impl → REFACTOR → 회귀).
+> **본 framework reference 는 §5.10.1~§5.10.4 의 모든 Phase 가 따르는 공통 SDD+TDD 사이클 정의**. 각 Phase 가 자체적으로 framework 를 references 하므로 본 §5.10.5.10 은 historical reference. 우선순위 표는 본 regroup (2026-05-04 session 15 후속) 으로 §5.10 main intro 매트릭스로 흡수.
+>
+> **spec single source**: 보조 plan `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4.
 >
 > **TDD 사이클 강제** (rules.md §2): 매 AC 별 RED → GREEN → REFACTOR → 회귀 4 단계 분리 commit 권장. 80%+ coverage gate 유지.
 >
 > **Karpathy 4 원칙**: Simplicity (최소 코드) / Surgical (필요 라인만) / Goal-Driven (각 AC 정량 gate) / Evidence-Based (fresh `npm test` + build 0 errors 매 commit).
 
-- [ ] **5.10.9.1** 진입 직전 baseline 확보:
-  - `npm test` fresh re-run → 현 PASS 수 기록 (보조 plan v5.4 expected = 732). build 0 errors 확증.
-  - `git status` clean 확증 (v5.4 plan 본문 commit 완료 상태).
-  - `.wikey/` 현황 snapshot (`ls -la /Users/denny/Project/wikey/.wikey/` 7 file 보존).
-  - vault root 0-byte md `find . -maxdepth 1 -type f -name "*.md" -size 0c` snapshot (10 개 — C5 cleanup baseline).
-- [ ] **5.10.9.2** 우선순위 + dependency 그래프 (다음 세션 master 결정):
+**진입 baseline 확보** (2026-05-04 작성, regroup 후 §5.10.1.1 로 흡수):
+- `npm test` fresh re-run → 현 PASS 수 기록 (보조 plan v5.4 expected = 732). build 0 errors 확증.
+- `git status` clean 확증 (v5.4 plan 본문 commit 완료 상태).
+- `.wikey/` 현황 snapshot (`ls -la /Users/denny/Project/wikey/.wikey/` 7 file 보존).
+- vault root 0-byte md `find . -maxdepth 1 -type f -name "*.md" -size 0c` snapshot (10 개 — C5 cleanup baseline).
+
+**우선순위 + dependency 그래프** (2026-05-04 작성, regroup 후 §5.10 main intro 매트릭스로 흡수):
+
+| 순서 (regroup 전) | cycle | 신규 § (regroup 후) | 이유 |
+|-----|-------|---------------------|------|
+| 1 | C5 (C) Cleanup — root 0-byte md `rm` | §5.10.1.2 (Phase 1 step 0) | 즉시 가능 (사용자 승인만). vault state 깨끗하게 시작 → 이후 cycle 의 라이브 smoke 노이즈 0 |
+| 2 | C1 — Step 2/3 conversion 통합 | §5.10.1.3~5.10.1.9 (Phase 1) | 단독 cycle 가능 (옵션 D-wide 와 직교). AC-C1.1~C1.7 정량 gate, ~19 신규 test. 회귀 baseline 732 → ≥ 751 |
+| 3 | C5 (A)+(B) Prevention + Intercept | §5.10.2 (Phase 2) | C5 cleanup 후 자연스러운 후속. query-pipeline + sidebar-chat 양쪽 정정. ≥ 4 신규 test |
+| 4 | D-wide implementation | §5.10.3 (Phase 3) + §5.10.4 (Phase 4) | 큰 작업. baseline 732 → ~622 (~110 폐기) + ~35~55 file 변경. R0~R8 + M + L + F |
+
+**다음 세션 master 첫 액션** (2026-05-04 작성, regroup 후 §5.10.1.1 + §5.10.1.2 로 흡수):
+- 첫 명령: master 가 §5.10.1.1 Entry baseline 확보 → §5.10.1.2 C5 cleanup 사용자 승인 ("vault root 의 9 개 0-byte md 삭제해도 될까요?") → 승인 후 rm + invariant 확증 → §5.10.1.3 AC-C1.1.RED 진입 (`wikey-core/src/__tests__/conversion.test.ts` 신규 작성, ≥ 10 cases 실패 확증).
+
+**각 Phase 완료 시 산출물** (2026-05-04 작성, regroup 후 각 Phase Exit 검증으로 흡수):
+- `activity/phase-5-result.md §5.10.{Phase N}` 결과 추가 (timeline + AC 별 evidence + commit hash + 회귀 baseline)
+- `wiki/log.md` 엔트리 (인제스트/lint 변동 시)
+- `plan/phase-5-todo.md §5.10.{Phase N}` 체크박스 갱신
+- 각 AC 별 commit 분리 (RED / GREEN / REFACTOR / 회귀 4 commit 권장 — Karpathy Surgical 추적 용이)
+
+**전체 cycle 종료 condition** (2026-05-04 작성, regroup 후 §5.10.4.6 F.2 로 흡수):
+- 4 Phase (§5.10.1~§5.10.4) 모두 GREEN 후 codex Mode D Panel post-impl review 1 회 통합. APPROVE 시 §5.10 전체 종결 mark + Phase 5 종결 검토 (§5.6/§5.7/§5.8/§5.9 잔여 평가).
 
-| 순서 | cycle | 이유 | 의존 |
-|------|-------|------|------|
-| 1 | **C5 (C) Cleanup — root 0-byte md 9~10 개 `rm`** (§5.10.11.AC-C5.3) | 즉시 가능 (사용자 승인만). vault state 깨끗하게 시작 → 이후 cycle 의 라이브 smoke 노이즈 0 | 사용자 Untitled.md 의도 확인만 |
-| 2 | **C1 — Step 2/3 conversion 통합** (§5.10.10) | 단독 cycle 가능 (옵션 D-wide 와 직교). AC-C1.1~C1.7 정량 gate, ~19 신규 test. 회귀 baseline 732 → ≥ 751 | 없음 (독립) |
-| 3 | **C5 (A)+(B) Prevention + Intercept** (§5.10.11.AC-C5.1, C5.2) | C5 cleanup 후 자연스러운 후속. query-pipeline + sidebar-chat 양쪽 정정. ≥ 4 신규 test | C1 완료 권장 (sidebar-chat 변경 충돌 회피, 같은 파일 다른 영역) |
-| 4 | **D-wide implementation** (§5.10.12) | 큰 작업. baseline 732 → ~622 (~110 폐기) + ~35~55 file 변경. R0~R8 ripple checklist 8 sub-cycle | C1/C5 완료 후 (test baseline 안정 후 폐기 측정 정확) |
-
-- [ ] **5.10.9.3** 다음 세션 master 첫 액션 (1~2 줄 명시):
-  - **첫 명령 예시**: `master 가 C5 cleanup 사용자 승인 받기 → "vault root 의 9 개 0-byte md (Untitled.md 제외) 삭제해도 될까요?" → 승인 후 rm 9 개 → §5.10.11.AC-C5.3 invariant 확증` 후 §5.10.10.AC-C1.1.RED 진입 (`wikey-core/src/__tests__/conversion.test.ts` 신규 작성, ≥ 10 cases 실패 확증).
-  - 또는 사용자가 우선순위 변경 요청 시 §5.10.9.2 표 따라 다른 cycle 진입 가능.
-- [ ] **5.10.9.4** 각 cycle 완료 시 산출물:
-  - `activity/phase-5-result.md §5.10.{N}` 결과 추가 (timeline + AC 별 evidence + commit hash + 회귀 baseline)
-  - `wiki/log.md` 엔트리 (인제스트/lint 변동 시)
-  - `plan/phase-5-todo.md §5.10.{10/11/12}` 체크박스 갱신
-  - 각 AC 별 commit 분리 (RED / GREEN / REFACTOR / 회귀 4 commit 권장 — Karpathy Surgical 추적 용이)
-- [ ] **5.10.9.5** cycle 종료 condition:
-  - 3 cycle (C1 / C5 / D-wide) 모두 GREEN 후 codex Mode D Panel post-impl review 1 회 통합. APPROVE 시 §5.10 전체 종결 mark + Phase 5 종결 검토 (§5.6/§5.7/§5.8/§5.9 잔여 평가).
-
-### 5.10.10 C1 implementation cycle — Step 2/3 conversion 통합 (★ 2026-05-04 신규, SDD+TDD)
-
-> **spec single source**: 보조 plan §10 (line 310~462) + AC-C1.1~C1.7 (§10.5)
->
-> **분류**: 옵션 D-wide 와 직교. 단독 cycle 가능. 어느 옵션 채택해도 적용.
->
-> **baseline**: 732 PASS → ≥ 751 (≥ 19 신규: AC-C1.1 의 10 + AC-C1.2 의 5 + AC-C1.4 의 1 + AC-C1.5 의 1 + AC-C1.7 의 ≥ 2). build 0 errors.
->
-> **Karpathy 4 원칙 cross-check**: Simplicity (변환 1 곳 통합) / Surgical (5 file 변경 — conversion.ts 신규 + ingest-pipeline.ts 일부 + commands.ts 일부 + convert-cache.ts schema + conversion.test.ts 신규) / Goal-Driven (AC 7 정량 gate) / Evidence-Based (cache callsite 3 곳 atomic migrate 검증).
-
-#### 5.10.10.AC-C1.1 — `convertSourceToMarkdown` 신규 entry (pure conversion)
-
-> **spec**: 보조 plan §10.4 line 404 + §10.5 AC-C1.1 (v5 정확화). 5 분기 (PDF/HWP/DOCX-Docling/PPTX-Docling/md/txt) 통합. **vault write 0 보장** (mock fs spy).
-
-- [ ] **RED**: `wikey-core/src/__tests__/conversion.test.ts` 신규 — `convertSourceToMarkdown 5 분기 happy + cache hit + pure 보장` ≥ 10 cases. test naming 예시: `convertSourceToMarkdown returns ConversionResult for PDF` / `... for HWP` / `... for DOCX (Docling)` / `... for md` / `... for txt` / `cache hit returns same result without re-extraction` / `pure: vault write 0 (raw/wiki/.wikey 변경 0)` / `error on missing file` / `error on unsupported ext` / `cache write to ~/.cache/wikey/convert/ allowed`. 모두 실패 확증 (`npm test conversion.test.ts` → ≥ 10 fail, `convertSourceToMarkdown` 미정의).
-- [ ] **GREEN**: `wikey-core/src/conversion.ts` 신규 export `convertSourceToMarkdown(sourcePath, ext, opts) → ConversionResult { content, sidecarCandidate?, ext, converter }`. extractPdfText / extractHwpText / extractDocumentText / readMd 4 분기 흡수 (`ingest-pipeline.ts:357~375` 의 분기 코드 inline 흡수). cache layer 통합. **vault write 책임 0** (PII gate / sidecar write / registry diff 호출 X). 10 cases GREEN 확증.
-- [ ] **REFACTOR**: 중복 helper 정리 (Karpathy Surgical, 인접 코드 보존). `extractPdfText` / `extractHwpText` / `extractDocumentText` 자체는 `conversion.ts` 의 *내부 helper* 보존 (외부 export 도 보존, grep 으로 다른 consumer 확증 후 결정).
-- [ ] **회귀**: `npm test` baseline 732 → ≥ 742 (10 신규) + build 0 errors. fresh re-run + `git diff` 검증.
-
-#### 5.10.10.AC-C1.2 — `generateBrief` 시그니처 변경 (HWP/DOCX brief 변환 정상)
-
-> **spec**: 보조 plan §10.4 line 408~410 + §10.5 AC-C1.2.
-
-- [ ] **RED**: `conversion.test.ts` 또는 `ingest-pipeline.test.ts` 에 5 cases 추가 — `generateBrief receives content not sourcePath` / `generateBrief PDF brief works without extractPdfText call` / `generateBrief HWP brief works (no binary sent to LLM)` / `generateBrief DOCX brief works` / `generateBrief md/txt brief works`. 실패 확증 (현 시그니처 sourcePath 받음).
-- [ ] **GREEN**: `wikey-core/src/ingest-pipeline.ts:1197~1248` `generateBrief` 시그니처 변경 — `generateBrief(content, sourceFilename, config, http, opts)` (변환 결과 받음). `ingest-pipeline.ts:1216` 의 `extractPdfText` 호출 삭제. **HWP/DOCX/PPTX/HTML 등 모든 포맷 brief 지원** (P2 fix). 5 cases GREEN.
-- [ ] **REFACTOR**: brief PII gate (sample 6KB sanitize) 호출 위치 검토 — content 가 이미 변환된 markdown 이므로 sanitize 위치 변경 X.
-- [ ] **회귀**: `npm test` ≥ 747 (5 신규 누적) + build 0 errors. 라이브 smoke 1 case (master 직접 obsidian-cdp): HWP 1 brief → LLM 응답이 markdown 기반 정상 (binary 미전송 확증, 사용자 vault PHI 영향 0).
-
-#### 5.10.10.AC-C1.3 — UI commands.ts conversion 1 회 보장 (`extractPdfText` 호출 ≤ 1)
-
-> **spec**: 보조 plan §10.4 line 415~428 + §10.5 AC-C1.3.
-
-- [ ] **RED**: `wikey-obsidian/src/__tests__/commands.test.ts` (또는 integration test 위치) 1 case — `PDF ingest cycle: extractPdfText spy 호출 횟수 ≤ 1` (현 ≥ 2). `extractHwpText` ≤ 1 / `extractDocumentText` ≤ 1 도 별 case. 실패 확증.
-- [ ] **GREEN**: `wikey-obsidian/src/commands.ts:346~363` UI flow 수정 — `modal.open() → convertSourceToMarkdown() (1 회) → generateBrief(content) → user input → runIngestCore({preconverted})`. `runIngestCore`/`ingest()` 시그니처에 `preconverted?: ConversionResult` optional 추가 (`wikey-core/src/ingest-pipeline.ts:235~430`) — 있으면 Step 0 conversion 재호출 skip. 3 cases GREEN.
-- [ ] **REFACTOR**: `runIngestCore` 의 `preconverted` 처리 분기 정리. `decideReingest` 는 항상 raw bytes 기준 (preconverted 와 무관, registry hash invariant 보존).
-- [ ] **회귀**: `npm test` ≥ 750 (3 신규 누적) + build 0 errors.
-
-#### 5.10.10.AC-C1.4 — Cancel 시 vault write 0 invariant (cache write 는 ephemeral 허용)
-
-> **spec**: 보조 plan §10.5 AC-C1.4 (v4 정확화). codex P1-1 invariant.
-
-- [ ] **RED**: `commands.test.ts` 또는 integration test 1 case — `Cancel briefOutcome → vault hash diff 0` (`raw/` + `wiki/` + `.wikey/` 모두 변경 0). cache file 존재 가능 (ephemeral). 실패 확증 (현 코드 cancel 분기 미정의).
-- [ ] **GREEN**: `commands.ts` Cancel 분기 — `if (briefOutcome.action === 'cancel') { modal.close(); return { success: false, sourcePath, createdPages: [], cancelled: true } }`. `runIngestCore` 호출 안 됨 → vault write 0. cache file 은 `convertSourceToMarkdown` 단계에서 이미 ephemeral 저장 (`~/.cache/wikey/convert/`, vault 외부, 30일 TTL).
-- [ ] **REFACTOR**: cancel 후 modal cleanup / event listener detach 정리.
-- [ ] **회귀**: `npm test` ≥ 751 (1 신규) + build 0 errors. 라이브 smoke 1 case (master 직접): PDF brief 표시 → Cancel → `git status` vault clean + cache file 존재 확증.
-
-#### 5.10.10.AC-C1.5 — `decideReingest` + sidecar write 시점 불변
-
-> **spec**: 보조 plan §10.5 AC-C1.5 (codex P1-1 invariant). `ingest-pipeline.ts:235` decideReingest → `:421` sidecar write 흐름 그대로.
-
-- [ ] **RED**: `ingest-pipeline.test.ts` 4 시나리오 case — `force / protect / skip / skip-with-seed 4 시나리오 모두 기존 동작 유지` (preconverted 주입 시 sidecar write 시점 불변). 실패 확증 (현 코드 preconverted 미지원).
-- [ ] **GREEN**: `ingest-pipeline.ts:235~430` `ingest()` 의 `preconverted` 처리 분기에서 `decideReingest` 호출 시점 / sidecar write 시점 / PII gate 호출 시점 모두 보존. 4 시나리오 GREEN.
-- [ ] **REFACTOR**: 시나리오별 분기 코드 가독성 정리 (1 case 추가, 다른 분기 영향 X).
-- [ ] **회귀**: `npm test` ≥ 752 (1 신규 누적) + build 0 errors.
-
-#### 5.10.10.AC-C1.6 — 회귀 baseline + 라이브 cycle smoke (master 직접)
-
-> **spec**: 보조 plan §10.5 AC-C1.6 (v5 산술 정정). 회귀 732 → ≥ 751 + 라이브 smoke 3 분기.
-
-- [ ] **회귀 baseline 확증**: `npm test` ≥ 751 PASS (현 baseline 732 + AC-C1.1~C1.5/C1.7 합산 ≥ 19 신규) + build 0 errors. fresh re-run 명시 (rules.md §1 Evidence-Based).
-- [ ] **라이브 cycle smoke (master 직접 obsidian-cdp)**: 3 fixture (PDF + HWP + DOCX 각 1) ingest cycle 진행 — brief 정상 표시 + ingest 완료 + sidecar canonical write 정상 (vector PDF 면 raw 이미지 보존 — 결함 (b) sidecarCandidate fix 확증).
-- [ ] **결과 기록**: `activity/phase-5-result.md §5.10.10` AC 7 항목 evidence (test 출력 last line + build exit 0 + smoke screenshot 또는 log).
-
-#### 5.10.10.AC-C1.7 — convert-cache schema 갱신 + 모든 cache callsite migration
-
-> **spec**: 보조 plan §10.5 AC-C1.7 (v5 risk j 보강). cache schema `string → { content, sidecarCandidate? }` + 3 callsite atomic migrate.
-
-- [ ] **RED**: `convert-cache.test.ts` ≥ 2 cases — `vector PDF cache hit returns sidecarCandidate distinct from content` / `scan PDF cache hit returns sidecarCandidate=null`. cache callsite 3 곳 검증 1 case (`unhwp / docling / pdf-cache-hit 3 callsite 모두 새 schema 호환`). 실패 확증 (현 schema string 단독).
-- [ ] **GREEN — schema 갱신**: `convert-cache.ts` `setCached(key, content, sidecarCandidate?, meta)` + `getCached(key) → { content, sidecarCandidate? } | null`. cache file 형식 = JSON `{ content: string, sidecarCandidate?: string }` (단순 string → object).
-- [ ] **GREEN — cache callsite 3 곳 atomic migrate** (v5 risk j):
-  - `wikey-core/src/ingest-pipeline.ts:1504` (unhwp `getCached(cacheKey)`) — 신규 schema 따라 `{ content }` 받음, sidecarCandidate undefined 처리
-  - `wikey-core/src/ingest-pipeline.ts:1568` (docling-doc `getCached(cacheKey)`) — 동일
-  - `wikey-core/src/ingest-pipeline.ts:1782` (pdf-cache-hit `getCached(doclingKey)`) — `{ content, sidecarCandidate }` 모두 사용
-  - 3 callsite + `convert-cache.ts:setCached/getCached` 시그니처 변경 동시 (atomic commit)
-- [ ] **GREEN — backward compat**: 기존 cache file (string 형식, JSON.parse 실패) 은 `{ content: rawString, sidecarCandidate: rawString }` 폴백 (legacy 호환). 별 unit test 1 case.
-- [ ] **REFACTOR**: cache key generator (`computeCacheKey`) 영향 0 확증. version bump 검토 (cache schema breaking change).
-- [ ] **회귀**: `npm test` ≥ 751 (≥ 2 신규 + 3 migration 검증 누적, AC-C1.1~C1.5 누적) + build 0 errors. `~/.cache/wikey/convert/` 의 기존 cache file 자동 폴백 확증 (1 회 ingest cycle 후 호환 동작).
-
-### 5.10.11 C5 implementation cycle — broken wikilink 차단 (★ 2026-05-04 신규, SDD+TDD)
-
-> **spec single source**: 보조 plan §14 (line 596~683) + AC-C5.1~C5.4
->
-> **분류**: 옵션 D-wide 와 직교. 단독 cycle 가능 (또는 C1 과 병합 cycle).
->
-> **baseline**: C1 cycle 종료 후 baseline (≥ 751) → ≥ 754 (AC-C5.1 의 ≥ 3 신규).
->
-> **3 단계 spec**: (A) Prevention (query-pipeline 답변 prompt 정정) + (B) Intercept (sidebar-chat broken link DOM 처리) + (C) Cleanup (root 0-byte md 9~10 개 rm).
-
-#### 5.10.11.AC-C5.1 — Prevention (query-pipeline 답변 prompt 정정)
-
-> **spec**: 보조 plan §14.2 (A) + §14.3 AC-C5.1. `query-pipeline.ts:386` rule line 정정. context block 에 `[Available pages]` 추가.
-
-- [ ] **RED**: `wikey-core/src/__tests__/query-pipeline.test.ts` ≥ 3 cases — (1) `답변에 unresolved entity 가 있을 때 plain text 출력` (2) `resolved entity 만 [[wikilink]]` (3) `1-hop wikilink read 실패 시 답변에 포함 안 됨`. 실패 확증 (현 prompt 페이지 존재 검증 X).
-- [ ] **GREEN**: `wikey-core/src/query-pipeline.ts buildSynthesisPrompt`:
-  - context section 에 "위키 페이지 base name 목록" (queried 결과 + 1-hop wikilink target 의 *존재 확증* 된 base) 주입
-  - `[Available pages]: <slug1>, <slug2>, ...` block 추가 (LLM 이 명시 참조)
-  - rule line 386 정정: "답변에 등장한 entity/concept 중 **위 페이지 base name 목록에 있는 것만** 첫 등장 시 [[페이지명]] 으로 링크하세요. 목록에 없는 entity/concept 은 plain text 로 표기하세요."
-  - rule line 385 정정 (1-hop): "검색된 페이지 본문의 [[wikilink]] 중 **`expandWithOneHopWikilinks` 로 실제 read 된** 페이지의 정보만 활용. read 실패 (wiki/ 에 없는) wikilink 는 답변에 [[link]] 로 포함하지 마세요."
-  - 3 cases GREEN.
-- [ ] **REFACTOR**: `[Available pages]` block 빌더 helper 분리 (테스트 용이). prompt 토큰 비용 측정 (~50~100 토큰 추가, 보조 plan §14.4 trade-off 확증).
-- [ ] **회귀**: `npm test` ≥ 754 (≥ 3 신규) + build 0 errors.
-
-#### 5.10.11.AC-C5.2 — Intercept (sidebar-chat broken link DOM 처리)
-
-> **spec**: 보조 plan §14.2 (B) + §14.3 AC-C5.2 (v5.1 정확화). `sidebar-chat.ts:2830~2858` `renderMarkdown()` 의 *기존 click handler 2 곳* 정정 (별 helper 신규 X).
-
-- [ ] **RED**: `wikey-obsidian/src/__tests__/sidebar-chat.test.ts` (또는 적절한 위치) 1 integration case — `mock vault, broken [[link]] click → getFirstLinkpathDest null → Notice '위키에 없는 페이지 — 자동 생성 차단' 표시 + vault 변경 0`. 실패 확증 (현 코드 resolve 검증 X, openLinkText 직접 호출 → 빈 페이지 자동 생성).
-- [ ] **GREEN**: `wikey-obsidian/src/sidebar-chat.ts:2830~2858` `renderMarkdown()` 의 *기존 click handler 2 곳* 정정 (resolve-before-open):
-  - **handler 1** (line 2835~2840): `el.querySelectorAll('a.internal-link')` 의 `addEventListener('click', e => { e.preventDefault(); openLinkText(href, '') })` 부분
-  - **handler 2** (line 2853~2858): `node.querySelectorAll('.wikey-wikilink')` 의 동일 패턴
-  - **fix 패턴 (양쪽 동일)**: `e.preventDefault()` 후 `app.metadataCache.getFirstLinkpathDest(href, '')` 로 resolve.
-    - resolve 성공 (existing TFile) → `app.workspace.openLinkText(href, '')` 호출 (기존 동작)
-    - resolve 실패 (null = broken) → `new Notice('위키에 없는 페이지 — 자동 생성 차단')` + link DOM 에 `wikey-broken-link` class 추가 (시각 dim)
-  - **CSS 추가** (`styles.css`): `.wikey-broken-link { opacity: 0.5; text-decoration: line-through; cursor: not-allowed; }`
-  - 1 case GREEN.
-- [ ] **REFACTOR**: 두 handler 의 중복 코드 (`resolve-before-open` 로직) 를 helper 함수로 추출 검토 (Karpathy Surgical — 인접 코드 보존이 우선이라면 inline 유지). 적용 범위 = 답변 영역 (sidebar chat `renderMarkdown` 호출 대상) 만 — vault 일반 편집 (Obsidian 다른 view, file explorer click 등) 영향 X 확증.
-- [ ] **회귀**: `npm test` ≥ 755 (1 신규 누적) + build 0 errors. **라이브 smoke 1 case (master 직접 obsidian-cdp)**: 실제 답변에 broken link 발생 시 click → vault root 빈 페이지 생성 0 + Notice 표시 확증.
-
-#### 5.10.11.AC-C5.3 — Cleanup (root 0-byte md 9~10 개 rm, 사용자 승인 후 master 직접)
-
-> **spec**: 보조 plan §14.2 (C) + §14.3 AC-C5.3 (v5.2 root-only invariant). vault root 의 0-byte broken-link artifact 일괄 삭제.
-
-- [ ] **5.10.11.AC-C5.3.1** — 사용자 승인 받기:
-  - master 가 사용자에게 명시: "vault root 의 9 개 0-byte md (Phase 4.md / Phase 5.md / PMBOK.md / Audit UI.md / cross-link.md / qmd embeddings.md / 검색 graph expansion.md / 운영 안전.md / 증분 재인제스트.md) 삭제해도 될까요? Untitled.md 는 Obsidian 'New note' 결과 가능성, 의도 확인 필요."
-  - 사용자 응답: 분기 A (Untitled.md 보존, 9 개 삭제) 또는 분기 B (10 개 모두 삭제).
-- [ ] **5.10.11.AC-C5.3.2** — `rm` 실행 (사용자 승인 후 master 직접):
-  - 분기 A 시: `cd /Users/denny/Project/wikey && rm "Phase 4.md" "Phase 5.md" "PMBOK.md" "Audit UI.md" "cross-link.md" "qmd embeddings.md" "검색 graph expansion.md" "운영 안전.md" "증분 재인제스트.md"`
-  - 분기 B 시: 위 + `rm "Untitled.md"`
-- [ ] **5.10.11.AC-C5.3.3** — invariant 검증 (root-only):
-  - 분기 A: `find . -maxdepth 1 -type f -name "*.md" -size 0c` = **1 (Untitled.md)** 확증
-  - 분기 B: `find . -maxdepth 1 -type f -name "*.md" -size 0c` = **0** 확증
-- [ ] **5.10.11.AC-C5.3.4** — 별도 full-vault audit (사용자 승인 필수, AC 범위 외):
-  - `find . -type f -name "*.md" -size 0c -not -path "./node_modules/*" -not -path "./.git/*"` 실행 시 `raw/_delayed/` 의 0-byte placeholder (NanoVNA V2 / FPV / DJI O3 등 5 개 — delay-ingest 시스템의 의도적 placeholder, broken-link X) 도 검출됨.
-  - **raw/ 영역의 0-byte 파일은 wikey 내부 시스템 placeholder 가능성 — 사용자 명시 승인 후 별도 cycle 로 정리. AC-C5.3 invariant 는 root-only**.
-
-#### 5.10.11.AC-C5.4 — 회귀 baseline
-
-> **spec**: 보조 plan §14.3 AC-C5.4.
-
-- [ ] **회귀 baseline 확증**: `npm test` ≥ 755 PASS (C5 cycle 종료 후 누적: C1 의 ≥ 751 + AC-C5.1 의 ≥ 3 + AC-C5.2 의 1 = ≥ 755). build 0 errors. fresh re-run.
-- [ ] **결과 기록**: `activity/phase-5-result.md §5.10.11` AC 4 항목 evidence (test 출력 last line + build exit 0 + smoke 결과 + invariant 검증 출력).
-
-### 5.10.12 D-wide implementation cycle — Stage 1~4 + 7-type schema gate deprecate (★ 2026-05-04 신규, SDD+TDD, 큰 작업)
-
-> **spec single source**: 보조 plan §3.1 (line 80~166) + §3.1.1 R0~R8 ripple checklist + §3.3 migration script + §3.4 회귀 plan + §3.5 라이브 검증
->
-> **baseline**: C1 + C5 cycle 종료 후 baseline (≥ 755) → ~622~~645 (~110~~133 폐기 — Stage 1~4 unit/integration + 7-type schema gate test). 회귀 risk: §5.2 / §5.3 dependency 약함 — 분리 가능 확증.
->
-> **Karpathy 4 원칙 cross-check**: Simplicity (~35~55 file 폐기 = 코드 단순화) / Surgical (Stage 1~4 + 7-type gate 만 폐기, alias normalization + PII 보존) / Goal-Driven (R0~R8 8 sub-cycle 정량 gate) / Evidence-Based (라이브 smoke PMBOK 같은 외부 표준 자료 ingest 시 schema.yaml 자동 등록 X 확증).
->
-> **사용자 D-wide 채택 결정 (2026-05-04, 보조 plan §0.1)**: 4+3 type 제한 자체가 비판 대상. D-narrow 미충족. D-wide 만 `wikey.schema.md` 핵심 원칙 #2 ("위키는 LLM 이 소유한다") 의 정확한 코드 구현.
-
-#### 5.10.12.R0 — `ingest-pipeline.ts` Stage 2 mention extractor prompt 정정
-
-> **spec**: 보조 plan §3.1.1 R0 (v5 신규). `ingest-pipeline.ts:909~919` `BUNDLED_STAGE2_MENTION_PROMPT` `type_hint` 7-type union → string 자유.
-
-- [ ] **RED**: `wikey-core/src/__tests__/ingest-pipeline.test.ts` 1 case — `BUNDLED_STAGE2_MENTION_PROMPT type_hint 가 string 자유 출력 허용` (예: `algorithm` / `dataset` 같은 비-7-type LLM 출력도 통과). 실패 확증 (현 prompt 8 종 union 강제).
-- [ ] **GREEN**: `ingest-pipeline.ts:919` `type_hint: 'organization'|'person'|...|'unknown'` → `type_hint: string` (LLM 자유, prompt 가이드는 *예시* 만). 사용자 prompt 의 "❌ 분류하지 마세요" 유지. 1 case GREEN.
-- [ ] **REFACTOR**: prompt 텍스트 정리 (예시 type 4~6 개로 축소, "이 외도 자유" 명시).
-- [ ] **회귀**: `npm test` PASS 유지 + build 0 errors.
-
-#### 5.10.12.R1 — `schema.ts` 추가 폐기
-
-> **spec**: 보조 plan §3.1.1 R1. `schema.ts:71~118` validation helpers + `:241~295` buildSchemaPromptBlock + `:289~354` YAML parser entityTypes/conceptTypes/customTypes section 폐기.
-
-- [ ] **RED**: `wikey-core/src/__tests__/schema.test.ts` 의 `isValidEntityType` / `isValidConceptType` / `getEntityTypes` / `getConceptTypes` / `buildSchemaPromptBlock` 관련 ~15 cases 가 deprecate 대상으로 식별 (test 폐기 마크). 신규 RED 1 case — `schema.ts 가 entity/concept type validation 강제 X (LLM 자유 string 통과)`.
-- [ ] **GREEN**: `wikey-core/src/schema.ts`:
-  - 폐기: `isValidEntityType` / `isValidConceptType` / `getEntityTypes` / `getConceptTypes` (line 71~118)
-  - 폐기: `buildSchemaPromptBlock` (line 241~295) — canonicalizer prompt 의 "## 분류 스키마 (이 외 분류는 거부됨)" 블록 생성
-  - 폐기: YAML parser 의 `entityTypes` / `conceptTypes` / `customTypes` section (line 289~354) — `aliases` / `pii_patterns` parser 만 보존
-  - 폐기: `ENTITY_TYPES` / `CONCEPT_TYPES` 상수 (line 20~21) + `ENTITY_TYPE_DESCRIPTIONS` / `CONCEPT_TYPE_DESCRIPTIONS`
-  - 신규 RED 1 case GREEN.
-- [ ] **REFACTOR**: import / export 정리 (canonicalizer.ts:6 의 `ENTITY_TYPES, CONCEPT_TYPES, isValidEntityType, isValidConceptType, detectAntiPattern, buildSchemaPromptBlock, buildStandardDecompositionBlock` import 모두 제거).
-- [ ] **회귀**: `npm test` 폐기 ~15 cases 식별 (test file 자체 삭제 또는 .skip mark). build 0 errors. baseline 갱신.
-
-#### 5.10.12.R2 — `canonicalizer.ts` 정정
-
-> **spec**: 보조 plan §3.1.1 R2. `canonicalizer.ts:235~236, :259` 분리 → 단일 set 통합 + `:363~467` FORCED_CATEGORIES + detectAntiPattern + assembleCanonicalResult 의 7-type 분류 검증 폐기. minimal alias normalization (`SLUG_ALIASES`, `canonicalizeSlug`, `dedupAcronymsCrossPool`) 만 잔존.
-
-- [ ] **RED**: `wikey-core/src/__tests__/canonicalizer.test.ts` 의 entity/concept 분류 / FORCED_CATEGORIES / drop logic test ~30 cases 가 deprecate 대상으로 식별. 신규 RED 1 case — `canonicalizer 가 LLM 출력 type 자유 통과 (forced reassignment X)`.
-- [ ] **GREEN**: `wikey-core/src/canonicalizer.ts`:
-  - 정정: `:235~236, :259` `existingEntityBases ∪ existingConceptBases` 분리 → 단일 base name set 통합
-  - 폐기: `:363~467` `FORCED_CATEGORIES` (slug → entity/concept 강제 pin) + `detectAntiPattern` schema reject 로직 + `assembleCanonicalResult` 의 7-type 분류 검증
-  - 보존: minimal alias normalization (`SLUG_ALIASES`, `canonicalizeSlug`, `dedupAcronymsCrossPool`)
-  - 검토: `:478~506` `applyCrossLinks` (entity ↔ concept 자동 link H2) 보존 또는 단순화 — D-wide 에서는 type 무관한 generic relation H2 로 변환 가능
-  - 신규 RED 1 case GREEN.
-- [ ] **REFACTOR**: prompt 빌더 (LLM call) 단순화 — schema prompt block 제거, type 가이드 *예시* 만 inline.
-- [ ] **회귀**: `npm test` 폐기 ~30 cases 식별 (test file .skip 또는 삭제). build 0 errors.
-
-#### 5.10.12.R3 — `types.ts` 정정
-
-> **spec**: 보조 plan §3.1.1 R3. `EntityType` / `ConceptType` union → string. `Mention.type_hint` union → string. `WikiPage.type` (entity/concept/source/analysis 4 카테고리) 보존 결정.
-
-- [ ] **RED**: type 변경에 의존하는 test 가 컴파일 에러 (TypeScript) 시 RED 으로 간주. `npm run build` 0 errors 유지가 GREEN gate.
-- [ ] **GREEN**: `wikey-core/src/types.ts`:
-  - `:129~132` `EntityType` / `ConceptType` union type 폐기 → `string` (또는 `string` alias)
-  - `:232~233` `IngestRecord` 의 `entity[]` / `concept[]` 분리 → 단일 `mention[]` 또는 `wiki_page[]` (type field 가 string 으로 자유)
-  - `:299~302` `Mention.type_hint` union (`'organization'|'person'|...|'unknown'`) → `string` (LLM 자율 출력)
-  - `WikiPage.type` (frontmatter `type:` field) `'entity'|'concept'|'source'|'analysis'` union **보존** (이건 *카테고리* 4 종, wiki/entities/ vs wiki/concepts/ 디렉토리 구분과 직결)
-- [ ] **REFACTOR**: type alias 일관성 유지 (string 으로 완화한 곳에 일관 주석).
-- [ ] **회귀**: `npm test` PASS 유지 (R1/R2 폐기 후 baseline) + `npm run build` 0 errors.
-
-#### 5.10.12.R4 — `wikey-obsidian/src/settings-tab.ts` 정정
-
-> **spec**: 보조 plan §3.1.1 R4. `settings-tab.ts:1126~1132` schema sample 의 `entity_types` / `concept_types` 예시 제거.
-
-- [ ] **RED**: `wikey-obsidian/src/__tests__/settings-tab.test.ts` (있으면) 1 case — `사용자 vault 의 .wikey/schema.yaml 초기 생성 시 entity_types/concept_types section 미생성 (aliases / pii_patterns 만)`. 실패 확증.
-- [ ] **GREEN**: `settings-tab.ts:1126~1132` schema sample 정정 — `entity_types` / `concept_types` 예시 제거. aliases / pii_patterns 만 sample 표시.
-- [ ] **REFACTOR**: sample 텍스트 가독성 정리 (aliases 예시 1~2 개, pii_patterns 예시 1~2 개).
-- [ ] **회귀**: `npm test` PASS + build 0 errors.
-
-#### 5.10.12.R5 — `docs/wikey-ingest-pipeline.md` 정정 (v5 보강)
-
-> **spec**: 보조 plan §3.1.1 R5. 5 line spot 정정.
-
-- [ ] **doc 정정**: `docs/wikey-ingest-pipeline.md`:
-  - `:323~366` Step 5/6 의 7 type 표 정정 — D-wide 후 LLM 자율 type 출력으로 변경
-  - `:369` 7-type 분류 설명 정정 — D-wide 후 LLM 자율
-  - `:398` FORCED_CATEGORIES 설명 정정 — D-wide 후 폐기, alias normalization 만 잔존
-  - `:712` 결정성 표 (FORCED_CATEGORIES) 정정 — D-wide 후 폐기
-  - `:140` Cancel 흐름 (raw 그대로 종료) 보존 (C1 변경과 일치)
-- [ ] **검증**: 사용자 vault 영향 0 (doc 만 변경). doc-updater agent 위임 검토.
-
-#### 5.10.12.R6 — `wiki-ops.ts` 영향 X 확증 (보존)
-
-> **spec**: 보조 plan §3.1.1 R6. `injectProvenance` 의 `type` field 는 `ProvenanceType` 별 축. D-wide 영향 X. frontmatter `type:` field (entity/concept/source/analysis 4 카테고리) 도 R3 결정 따라 보존.
-
-- [ ] **검증 only**: `wikey-core/src/wiki-ops.ts` 코드 grep — `EntityType` / `ConceptType` 의존 0 확증. `ProvenanceType` 은 별 union ('extracted' / 'manual' / 'cross-source-linked') — 별 축 보존. frontmatter `sources:` 배열 / `type:` field 보존.
-- [ ] **회귀**: `wiki-ops.test.ts` PASS 유지 (변경 0).
-
-#### 5.10.12.R7 — `query-pipeline.ts` 영향 X 확증 (보존)
-
-> **spec**: 보조 plan §3.1.1 R7. `SearchResult` / `Citation` 의 type 의존 거의 없음.
-
-- [ ] **검증 only**: `wikey-core/src/query-pipeline.ts` 코드 grep — `EntityType` / `ConceptType` 의존 0 확증.
-- [ ] **회귀**: `query-pipeline.test.ts` PASS 유지 (변경 0). C5 의 AC-C5.1 이 별 변경 (broken wikilink prevention) 이지만 D-wide 와 직교.
-
-#### 5.10.12.R8 — test 영향 ~110 cases 폐기 식별 + 회귀 baseline
-
-> **spec**: 보조 plan §3.1.1 R8 + §3.4 회귀 plan. ~110 cases 사전 식별 → grep keyword 기반 → migration 적용 → re-run 0 fail 확증.
-
-- [ ] **R8.1** 폐기 test 식별 (사전 grep):
-  - `wikey-core/src/__tests__/canonicalizer*.test.ts` — entity/concept 분류 / FORCED_CATEGORIES / drop logic test 폐기 또는 LLM 자율 출력 검증으로 변경 (~30 cases)
-  - `wikey-core/src/__tests__/schema*.test.ts` — buildSchemaPromptBlock / isValidEntityType / isValidConceptType test 폐기 (~15 cases)
-  - `wikey-core/src/__tests__/suggestion-*.test.ts` / `convergence*.test.ts` / `self-declaration*.test.ts` — Stage 2~4 폐기 (~50 cases)
-  - `wikey-core/src/__tests__/ingest-pipeline*.test.ts` — entity/concept type 분기 test 정정 (~15 cases)
-  - 합계 ~110 cases 폐기 (R8 합산이 §3.1 의 ~110 추정 정합)
-  - grep 명령: `grep -l "Stage [0-9]\|umbrella\|decomposition\|Suggestion\|ENTITY_TYPES\|CONCEPT_TYPES\|buildSchemaPromptBlock\|FORCED_CATEGORIES" wikey-core/src/__tests__/*.test.ts`
-- [ ] **R8.2** 잔여 test baseline 확보 (~622~~645 PASS 확증):
-  - C1 + C5 cycle 종료 후 baseline (≥ 755) - ~110 폐기 = ~645 (또는 ~755 - 130 = ~625, 폐기 cases 수 따라 변동)
-  - migration 적용 → fresh re-run → 0 fail 확증
-- [ ] **R8.3** §5.2 / §5.3 회귀 완전 0 확증 (dependency 분리 가능):
-  - `query-pipeline.test.ts` (§5.2) PASS 유지
-  - `incremental-reingest.test.ts` (§5.3) PASS 유지
-
-#### 5.10.12.M — migration script + store cleanup
-
-> **spec**: 보조 plan §3.3 migration script outline.
-
-- [ ] **5.10.12.M.1** migration script 작성:
-  - `scripts/migrate-deprecate-standard-decompositions.sh` 신규 — 5 단계 (보조 plan §3.3):
-    1. `.wikey/schema.yaml` 의 `standard_decompositions` 영역만 → `.wikey/manual-overrides.yaml` 으로 분리
-    2. `.wikey/suggestions.json` / `converged-decompositions.json` / `converged-decompositions.mock-baseline.json` / `mention-history.json` / `qmd-embeddings.json` 백업 후 제거
-    3. `wiki/concepts/` 의 umbrella 자체 wiki page 가 component 로 분해되어 있으면 분해 정보 제거 (LLM 자동 작성 보존)
-    4. `.gitignore` 정리
-    5. Suggestions panel header button + sidebar-chat.ts §11 코드 제거 — UI dead-code 정리
-- [ ] **5.10.12.M.2** dry-run 검증:
-  - `bash scripts/migrate-deprecate-standard-decompositions.sh --dry-run` — 변경 file 목록 + 백업 위치 출력만, 실제 변경 X
-  - 사용자 승인 후 `--apply` 실행
-- [ ] **5.10.12.M.3** `wikey-obsidian/src/sidebar-chat.ts` UI 폐기:
-  - Suggestions panel header button (clipboard_check icon) 제거
-  - openSuggestionsPanel + SchemaYamlModal + helpers 제거
-  - sidebar 6 패널 → 5 패널 (Chat / Dashboard / Ingest / Audit / Help)
-- [ ] **5.10.12.M.4** store file 폐기 (사용자 승인 후 master 직접):
-  - `rm .wikey/suggestions.json .wikey/converged-decompositions.json .wikey/converged-decompositions.mock-baseline.json`
-  - 옵션: `rm .wikey/mention-history.json .wikey/qmd-embeddings.json` (graph 시각화 retain 결정 시 보존)
-  - 보존: `.wikey/source-registry.json` (§5.3 dependency)
-  - `.wikey/schema.yaml` 정정 (`aliases` / `pii_patterns` section 만 잔존)
-
-#### 5.10.12.L — 라이브 cycle smoke (master 직접 obsidian-cdp)
-
-> **spec**: 보조 plan §3.5 라이브 검증.
-
-- [ ] **5.10.12.L.1** ingest 1 fixture (PMBOK 같은 표준 자료) — `.wikey/schema.yaml` 자동 등록 X 확증 (D-wide 핵심 invariant)
-- [ ] **5.10.12.L.2** search 결과 — LLM 답변에 PMBOK / ISO 27001 등 표준 의미 매칭 정상 (qmd embedding + LLM 백)
-- [ ] **5.10.12.L.3** panel header button (clipboard_check) 미존재 확증 (UI 폐기 검증)
-- [ ] **5.10.12.L.4** canonicalizer alias normalization 정상 (lotus-pms / kim-myung-ho 같은 dedup) — 보존 layer 정상 동작 확증
-- [ ] **5.10.12.L.5** 라이브 smoke 결과 기록: `activity/phase-5-result.md §5.10.12` AC R0~R8 + M + L evidence (test 폐기 cases 수 + build exit 0 + smoke screenshot 또는 log + git diff stats `~35~55 file changed, +Y -Z`).
-
-#### 5.10.12.F — D-wide cycle 종결 검증
-
-- [ ] **회귀 baseline 최종**: `npm test` ~622~~645 PASS (~110 폐기 후) + build 0 errors. fresh re-run + `git diff` stats 명시.
-- [ ] **3 cycle 통합 codex Mode D Panel post-impl review** (§5.10.9.5): C1 / C5 / D-wide 합산 review. APPROVE 시 §5.10 전체 종결 mark + Phase 5 종결 검토 (§5.6/§5.7/§5.8/§5.9 잔여 평가).
-- 본 §5.10 = main subject. §5.4.10 sub-section 의 내용 ⊂ 본 §5.10. §5.4.10 는 promote pointer 로 짧게 유지 또는 본 §5.10 으로 통합.

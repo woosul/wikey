@@ -1383,14 +1383,48 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 ---
 
-## 5.10 Graph emergent ontology — §5.4 paradigm shift (P1, ★ 사용자 본질 비판 정식 issue 등록 2026-04-26 session 14)
+## 5.10 Graph emergent ontology — §5.4 paradigm shift (P1, ★ 사용자 본질 비판 정식 issue 등록 2026-04-26 session 14, ★ 2026-05-04 session 15 SDD+TDD 세션 단위 regroup)
 > tag: #ontology, #architecture, #paradigm-shift, #self-extending, #graph
 
 > **issue 등록 commit**: 9220e14 (`docs(plan): §5.10 paradigm shift 정식 issue 등록 — graph emergent + LLM-only ontology 폐기`).
 >
-> **trigger**: §5.4.7 1/2/3/4순위 종결 후 modal tag cloud 라이브 검증 중 사용자 본질 비판 6 chain 명시. 본 cycle (panel UI) 안에서 panel 측 부분 반영 (Add/Edit secondary 약화 + intro 조회 톤 + tag cloud 친화 표시 + raw YAML 제거 + 이모지 제거 + h4 bold) + 본격 자동화 (ingest pipeline 변경) + panel 폐기 검토는 본 §5.10 으로 분리.
+> **trigger**: §5.4.7 1/2/3/4순위 종결 후 modal tag cloud 라이브 검증 중 사용자 본질 비판 6 chain 명시.
+>
+> **★ 2026-05-04 session 15 regroup mirror**: paradigm shift 종결 + 8 cycle codex 누적 + plan v5.4 종결 + SDD+TDD todo 변환 후 사용자 명령으로 §5.10 sub-section 우선순위 + 세션 단위 regroup. 본 result 문서는 todo 의 §5.10.1~§5.10.4 (4 phase implementation) 와 §5.10.5 (history) mirror.
+>
+> **현재 상태**: §5.10.1~§5.10.4 = implementation Phase 결과 placeholder (각 Phase 진입 시 채워짐). §5.10.5 = paradigm shift 등록 chain + 4 옵션 결정 + 8 cycle codex 누적 history (현 시점 산출 = 본 §5.10.5 만, 코드 산출 0).
 
-### 5.10.1 사용자 본질 비판 chain (영구 기록, 2026-04-26 session 14)
+### 5.10.1 Phase 1 결과 (Session 1, TBD) — Pre-flight + C5 Cleanup + C1 conversion 통합
+
+> **mirror**: `plan/phase-5-todo.md §5.10.1`. AC-C1.1~C1.7 + Cleanup (root 0-byte rm) + baseline 확보. 회귀 732 → ≥ 751.
+>
+> **현 상태**: Phase 1 미진입 (다음 세션 master 첫 액션 = §5.10.1.1 Entry baseline). Phase 1 완료 시 본 §5.10.1 에 timeline + AC 7 항목 evidence + commit hash + 라이브 smoke 결과 + 회귀 baseline 추가.
+
+### 5.10.2 Phase 2 결과 (Session 2, TBD) — C5 broken-link prevention
+
+> **mirror**: `plan/phase-5-todo.md §5.10.2`. AC-C5.1 (Prevention) + AC-C5.2 (Intercept) + AC-C5.3 (회귀). 회귀 ≥ 751 → ≥ 755.
+>
+> **현 상태**: Phase 2 미진입 (Phase 1 완료 후 진입). Phase 2 완료 시 본 §5.10.2 에 timeline + AC 3 항목 evidence + commit hash + 라이브 smoke 결과 추가.
+
+### 5.10.3 Phase 3 결과 (Session 3, TBD) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer)
+
+> **mirror**: `plan/phase-5-todo.md §5.10.3`. R0/R1/R2/R3 + R6/R7 (영향 X 검증) + R8.1 (폐기 test 식별). 잠정 baseline + 폐기 list 기록.
+>
+> **현 상태**: Phase 3 미진입 (Phase 2 완료 후 진입). Phase 3 완료 시 본 §5.10.3 에 timeline + R 7 항목 evidence + R8.1 폐기 list + commit hash 추가.
+
+### 5.10.4 Phase 4 결과 (Session 4, TBD) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
+
+> **mirror**: `plan/phase-5-todo.md §5.10.4`. R4/R5/R8.2-3 + M (migration script) + L (라이브) + F (종결 + 3 cycle 통합 codex review). 회귀 ~622~~645 PASS (~110 폐기).
+>
+> **현 상태**: Phase 4 미진입 (Phase 3 완료 후 진입). Phase 4 완료 시 본 §5.10.4 에 timeline + R 항목 + M/L/F evidence + 3 cycle 통합 codex verdict + 최종 회귀 baseline + git diff stats + §5.10 전체 종결 mark 추가.
+
+### 5.10.5 History — paradigm shift 등록 chain + 4 옵션 결정 + 8 cycle codex 누적 (참조용)
+
+> 본 §5.10.5 = 2026-04-26 session 14 ~ 2026-05-04 session 15 의 paradigm shift 정식 issue 등록 + 옵션 D-wide 채택 + plan v5.4 (8 cycle codex 누적) + SDD+TDD todo 변환 timeline. 다음 세션 implementation cycle 진입 시 paradigm shift 배경 / 결정 근거 / cycle pattern 참조용. 코드 산출 0 (issue 등록 + plan 변환만).
+>
+> **mirror**: `plan/phase-5-todo.md §5.10.5`.
+
+#### 5.10.5.1 사용자 본질 비판 chain (영구 기록, 2026-04-26 session 14)
 
 | # | 사용자 명시 (직접 발언) | 함의 |
 |---|----------------------|------|
@@ -1401,7 +1435,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 | 5 | "지식 분해하는 그룹이 왜 필요? 세상 수많은 지식을 어떻게 표준화?" | epistemology 비판 — 지식 분해 모델 자체의 한계 |
 | 6 | "굳이 어려운 말 써가면서 분류할 필요 없잖아. LLM 든든한 백 위에서 움직이는데." | LLM 시대의 ontology 시대착오. 옵션 D 정당화 |
 
-### 5.10.2 자동/수동 매트릭스 (현재 §5.4 구현 사실, chain break 식별)
+#### 5.10.5.2 자동/수동 매트릭스 (현재 §5.4 구현 사실, chain break 식별)
 
 | 단계 | 동작 | 자동/수동 |
 |------|------|-----------|
@@ -1414,14 +1448,14 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 | **alias 자동 merging** | "ISO 27001" / "iso-iec-27001-2022" / "ISMS" 한 wiki 페이지 통합 | ❌ **미구현** |
 | **wiki/concepts/<umbrella>.md** | 그룹 자체 wiki 페이지 자동 생성 | ❌ **미구현** |
 
-### 5.10.3 4 옵션 결정 분기 (사용자 다음 세션 명시)
+#### 5.10.5.3 4 옵션 결정 분기 (사용자 다음 세션 명시)
 
 - **A. 점진** — §5.4 panel UI 유지 + 자동 등록 추가 + §5.5 graph 시각화 추가. schema.yaml 보조.
 - **B. paradigm shift (graph emergent)** — schema.yaml `standard_decompositions` 영역 deprecate. §5.5 graph 가 ontology source. canonicalizer (alias dedup) 만 보존. panel 폐기 또는 graph view 로 교체.
 - **C. 관망** — 본 §5.10 자체 보류. §5.4 본체만 사용.
 - **★ D. LLM-only (ontology layer 제거)** — §5.4 Stage 1~4 전체 deprecate. LLM + qmd embedding 백이 의미 처리 일임. wikey 는 raw → wiki organization + retrieval interface 만. **사용자 통찰 가장 정확 반영**.
 
-### 5.10.4 옵션 D detail (사용자 통찰 가장 정확 반영)
+#### 5.10.5.4 옵션 D detail (사용자 통찰 가장 정확 반영)
 
 **deprecate 대상** (옵션 D — **D-wide v4 갱신** 2026-05-04):
 - §5.4 Stage 1~4 (self-extending 전체)
@@ -1442,7 +1476,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - §5.4 cycle 의 732 PASS 중 ~110 test 폐기 또는 deprecate (Stage 1~4 unit + integration + 7-type schema gate test 추가)
 - 회귀 risk 약함 (§5.4 가 §5.2 / §5.3 와 직접 dependency 적음)
 
-### 5.10.5 epistemology 비판 (영구 기록)
+#### 5.10.5.5 epistemology 비판 (영구 기록)
 
 §5.4 의 "표준 분해" = **외부 정형 표준에만 적용 가능한 reductionism**. 일반 지식 (잡지·메모·임의 자료) 에는 mismatch.
 
@@ -1455,7 +1489,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 ⇒ **wikey 의 진정한 가치** = mention graph (relational) + 의미 search (LLM/embedding). 그룹 분해 X.
 
-### 5.10.6 정당성 검증 (사용자 명시 2026-04-26 — "§5.4 가 없으면 wikey 가 지식 관리 가능한가?")
+#### 5.10.5.6 정당성 검증 (사용자 명시 2026-04-26 — "§5.4 가 없으면 wikey 가 지식 관리 가능한가?")
 
 **결론**: §5.4 가 없어도 wikey 정상 작동. 핵심 기능 영향 없음.
 
@@ -1472,14 +1506,14 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 **§5.4 의 *유일한* 가치 영역**: PMBOK / ISO 27001 / ITIL 같은 **이미 정형화된 외부 표준** 자료 ingest 시 component 분해 정확도 +10~15% 보조. 일반 자료에는 가치 0.
 
-### 5.10.7 보조 plan + 산출
+#### 5.10.5.7 보조 plan + 산출
 
 - 보조 plan (신규): [`plan/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5-todox-5.10-graph-emergent-ontology.md) — 4 옵션 detail spec + 옵션 D migration script + 회귀 plan + 라이브 검증 + §9 정당성 검증 매트릭스
 - todo 단일 소스: `plan/phase-5-todo.md §5.10`
 - 코드 변경: 0 (issue 등록만)
 - 다음 진입점: 사용자 다음 세션 시작 시 옵션 A/B/C/D 명시 후 진입
 
-### 5.10.8 본 session 14 의 §5.10 등록 chain 요약
+#### 5.10.5.8 본 session 14 의 §5.10 등록 chain 요약
 
 1. §5.4.7 1순위 (실 qmd embeddings) 종결 (commit 9b7ddf9, §5.4.8)
 2. §5.4.7 2/3/4순위 (Suggestions panel UI 통합) 종결 (commit ca5394f, §5.4.9)
@@ -1496,7 +1530,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 **§5.4 자체는 클로즈** (4 Stage + integration + AC21 + follow-up + UI fix 모두 GREEN). §5.10 은 §5.4 의 미처리가 아닌 별 main subject. §5.4 미처리 0.
 
-### 5.10.9 사용자 5 concern raise + plan v2 (2026-05-04, analyst 위임)
+#### 5.10.5.9 사용자 5 concern raise + plan v2 (2026-05-04, analyst 위임)
 
 **trigger** (2026-05-04, 사용자 직접 raise):
 - 사용자가 `docs/wikey-ingest-pipeline.md` (현 ingest 파이프라인 8 step 매트릭스, 737 lines) 전체 검토 후 4 concern raised:
@@ -1519,7 +1553,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - v1 본문 (§1~§9) 보존 확증 — Karpathy Surgical 적용
 - 검증 결과: 7-anchor 통과 → codex Mode D Panel cycle #1 송부 가능
 
-### 5.10.10 codex cycle #1 NEEDS_REVISION + 사용자 D-wide 결정 + master fix v3
+#### 5.10.5.10 codex cycle #1 NEEDS_REVISION + 사용자 D-wide 결정 + master fix v3
 
 **codex cycle #1** (2026-05-04, fresh panel surface:10, 이름 `codex: §5.10 v2 paradigm shift extended cycle #1`, 2분 27초 작업):
 - 4 finding (P1×2 + P2 + P3):
@@ -1548,7 +1582,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - mirror: `phase-5-todo §5.10` + `activity/phase-5-result.md:23` 짧은 v2/v3 등록 (codex P3 fix)
 - **plan v3 (565 lines, in-place 갱신)** — Karpathy Surgical 적용, v1/v2 본문 보존
 
-### 5.10.11 cycle #2~#3 ripple R0~R8 + cache callsite 신규 risk
+#### 5.10.5.11 cycle #2~#3 ripple R0~R8 + cache callsite 신규 risk
 
 **codex cycle #2** (2026-05-04, fresh panel surface:11, `cycle #2`, 2분 45초):
 - 5 finding (P1×3 + P2 + P3):
@@ -1585,7 +1619,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - 신규 risk (j) fix: AC-C1.7 보강 — cache callsite 3 곳 (`:1504/:1568/:1782`) atomic migration 명시 + backward compat read 처리
 - **plan v5** (~620 lines, in-place 갱신, R0~R8 ripple 완성)
 
-### 5.10.12 사용자 신규 issue C5 raise + cycle #4~#5 cleanup pattern
+#### 5.10.5.12 사용자 신규 issue C5 raise + cycle #4~#5 cleanup pattern
 
 **codex cycle #4** (2026-05-04, fresh panel surface:13, `cycle #4`, 2분 55초):
 - 4 minor finding (P2×3 + P3) — **5 항목 PASS / 3 항목 PARTIAL/NEEDS_REVISION**:
@@ -1626,7 +1660,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
   - P3: phase-5-todo:856 + activity:23 mirror 가 v5/cycle #4 pending — v5.1/cycle #5 갱신 안 됨
 - VERDICT: NEEDS_REVISION
 
-### 5.10.13 cycle #6~#8 final cleanup + panel-dispatch fix + SDD+TDD todo 변환
+#### 5.10.5.13 cycle #6~#8 final cleanup + panel-dispatch fix + SDD+TDD todo 변환
 
 **master fix v5.1 → v5.2** (cycle #5 3 finding 마무리, 사용자 cycle #6 결정):
 - §14.2 (B) intercept 본문 정정 — `renderMarkdown() (line 2830~2858) 의 *기존 click handler 2 곳*` 명시, attachCitationButtons / 별 helper 표현 제거
@@ -1713,6 +1747,32 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 **§5.10 종결 상태** (2026-05-04 session 15):
 - plan v5.4 + panel-dispatch fix + SDD+TDD todo 모두 commit 완료
-- 다음 세션 master 첫 액션 명시 (§5.10.9.3): "C5 cleanup 사용자 승인 받기 → vault root 의 9 개 0-byte md 삭제 → §5.10.10.AC-C1.1.RED 진입 (`wikey-core/src/__tests__/conversion.test.ts` 신규 작성)"
+- 다음 세션 master 첫 액션 명시 (regroup 전 §5.10.9.3 → regroup 후 §5.10.1.1): "Entry baseline 확보 → C5 Cleanup (사용자 승인) → AC-C1.1 RED 진입 (`wikey-core/src/__tests__/conversion.test.ts` 신규 작성)"
 - 핵심 spec 모두 PASS, implementation cycle 진입 가능 수준
 - 잔존 minor stale 2건은 implementation cycle 진입 시 자연 정리
+
+#### 5.10.5.14 사용자 명령 4 phase regroup (2026-05-04 session 15, SDD+TDD todo 변환 직후)
+
+**사용자 명령** (요지): "5.10 섹션 전체에 대해서 5.10.1...부터 순서대로 처리할 수 있도록 순서대로 regrouping+renumbering 해. 한 그룹 = 한 세션에서 모두 처리되는 기준. SDD+TDD 섹션 자기완결 포함. result 와 mirror."
+
+**regroup 매트릭스**:
+
+| 신규 § | 세션 | 흡수 출처 (regroup 전) | AC/R | 산출 |
+|--------|------|----------------------|------|------|
+| §5.10.1 Phase 1 | 1 | §5.10.9.1 baseline + §5.10.11.AC-C5.3 cleanup + §5.10.10.AC-C1.1~C1.7 | AC-C1.1~C1.7 + Cleanup | 732 → ≥ 751 (~19 신규) |
+| §5.10.2 Phase 2 | 2 | §5.10.11.AC-C5.1, C5.2, C5.4 | AC-C5.1, C5.2, 회귀 | ≥ 751 → ≥ 755 |
+| §5.10.3 Phase 3 | 3 | §5.10.12.R0/R1/R2/R3/R6/R7 + R8.1 | R0/R1/R2/R3 + R6/R7 + R8.1 | 잠정 (식별만) |
+| §5.10.4 Phase 4 | 4 | §5.10.12.R4/R5 + R8.2-3 + M + L + F | R4/R5/R8.2-3 + M + L + F | ~622 (~110 폐기) |
+| §5.10.5 History | — | §5.10.1~§5.10.9 (구 history) + §5.10.9~§5.10.13 (구 cycle log) | §5.10.5.1~§5.10.5.14 sub | 코드 산출 0 |
+
+**자기완결 SDD+TDD 구조** (각 Phase):
+- Entry baseline (npm test 회귀 + git status clean)
+- AC spec single source 명시 (보조 plan §X.Y line)
+- 매 AC 별 RED → GREEN → REFACTOR → 회귀 4 단계 분리 commit
+- Exit 회귀 baseline + 라이브 smoke (해당 Phase 만) + result mirror commit
+- 80%+ coverage + Karpathy 4 원칙 cross-check
+
+**산출**:
+- `plan/phase-5-todo.md §5.10` 전체 재구성: §5.10.1~§5.10.4 (implementation phases) + §5.10.5 (history). 기존 §5.10.10/11/12 (구 implementation) 제거 (내용은 phases 로 흡수).
+- `activity/phase-5-result.md §5.10` mirror: §5.10.1~§5.10.4 (Phase 결과 placeholder, TBD) + §5.10.5 (기존 §5.10.1~13 history 모두 흡수, §5.10.5.1~§5.10.5.14)
+- `plan/session-wrap-followups.md` + `plan/plan-full.md:170, :321, :5` + `MEMORY.md:15` + `project_phase5_status.md:267~296` mirror 갱신.

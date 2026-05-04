@@ -1,43 +1,49 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-04 session 15 — §5.10 paradigm shift v5.4 (D-wide + C5) 종결 + SDD+TDD todo 변환 완료**. 8 cycle codex Mode D Panel 누적 검증 (#1~#8, 모두 NEEDS_REVISION 패턴 — 핵심 spec 은 cycle #4 부터 PASS, minor stale propagation). 사용자 D-wide 결정 (7-type schema gate `ENTITY_TYPES`/`CONCEPT_TYPES`/`buildSchemaPromptBlock` 까지 deprecate, LLM 자율 type 분류 + ripple R0~R8). 사용자 신규 C5 raise (답변 broken wikilink → root 자동 페이지 생성, root 0-byte md 10개 발견). panel-dispatch.sh skill 영구 fix (글로벌, auto update-skip). plan v5.4 (704 lines) + SDD+TDD todo §5.10.9~12 (88 체크박스) + activity §5.10.9~13 (221 line insertion) commit 3건 (15591b6 + c6e9316 wikey + d80fbde claude-forge-custom). **다음 진입점 = §5.10.9.3 (C5 cleanup 사용자 승인 → §5.10.10.AC-C1.1.RED conversion.test.ts 신규)**.
+> 최신 갱신: **2026-05-04 session 15 — §5.10 paradigm shift v5.4 종결 + SDD+TDD todo 변환 + 4 phase regroup 완료**. 8 cycle codex 누적 → plan v5.4 + SDD+TDD todo + 사용자 명령 regroup (§5.10 sub-section 우선순위 + 세션 단위 4 phase 재배치, §5.10.1~§5.10.4 implementation + §5.10.5 history). **다음 진입점 = §5.10.1.1 Entry baseline → §5.10.1.2 C5 Cleanup → §5.10.1.3 AC-C1.1 RED**.
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-05-04 session 15 종료 시점)
+## 🎯 다음 세션 첫 액션 (2026-05-04 session 15 regroup 후 시점)
 
-> **사용자 영구 결정** (2026-05-04 session 15 종결): §5.10 paradigm shift v5.4 + SDD+TDD todo 모두 commit. 다음 세션 master 첫 명령 = `§5.10.9.3` 명시:
+> **사용자 영구 결정** (2026-05-04 session 15 종결): §5.10 paradigm shift v5.4 + SDD+TDD todo + 4 phase regroup 모두 commit. 다음 세션 master 첫 명령 = `§5.10.1.1 Entry baseline` 부터 순서대로 진행:
 >
-> **1. C5 cleanup 사용자 승인 받기** (즉시):
+> **1. §5.10.1.1 Entry baseline 확보** (Pre-flight):
+>    - `npm test` fresh re-run → 현 PASS 수 기록 (expected = 732). build 0 errors 확증.
+>    - `git status` clean 확증.
+>    - `.wikey/` 7 file snapshot.
+>    - vault root 0-byte md `find . -maxdepth 1 -type f -name "*.md" -size 0c` snapshot (10 개 baseline; 2026-05-04 확인 시점 0건 가능).
+>
+> **2. §5.10.1.2 C5 Cleanup** (사용자 승인 후 master 직접):
 >    - "vault root 의 9 개 0-byte md (`Phase 4.md` / `Phase 5.md` / `PMBOK.md` / `Audit UI.md` / `cross-link.md` / `qmd embeddings.md` / `검색 graph expansion.md` / `운영 안전.md` / `증분 재인제스트.md`, **`Untitled.md` 제외**) 삭제해도 될까요?"
 >    - 승인 후 `rm` 9개 → `find . -maxdepth 1 -size 0c -name "*.md"` = 1 (Untitled.md) 또는 0 (Untitled.md 도 삭제 결정 시) 확증
->    - §5.10.11.AC-C5.3 invariant satisfied
+>    - 분기 C: 이미 삭제됨 (skip)
 >
-> **2. §5.10.10.AC-C1.1.RED 진입** (TDD RED phase):
+> **3. §5.10.1.3 AC-C1.1 RED 진입** (TDD RED phase):
 >    - `wikey-core/src/__tests__/conversion.test.ts` 신규 작성, ≥ 10 cases 실패 확증
 >    - 5 분기 (PDF / HWP / DOCX-Docling / PPTX-Docling / md/txt) happy + cache hit + pure 보장 (vault write 0)
 >    - `npm test` 실행 → RED 확증 (실패 ≥ 10) → GREEN phase (`wikey-core/src/conversion.ts` 신규 export `convertSourceToMarkdown`) 진입
 >
-> **우선순위 권장** (`plan/phase-5-todo.md §5.10.9.2`):
+> **4 Phase 그룹 매트릭스** (`plan/phase-5-todo.md §5.10` main intro):
 >
-> | 순서 | cycle | spec | 회귀 baseline |
-> |------|-------|------|--------------|
-> | 1 | C5 (C) Cleanup — root 0-byte md `rm` | §5.10.11.AC-C5.3 | vault state 깨끗 |
-> | 2 | C1 — Step 2/3 conversion 통합 | §5.10.10 (AC-C1.1~C1.7) | 732 → ≥ 751 (~19 신규 test) |
-> | 3 | C5 (A)+(B) Prevention + Intercept | §5.10.11.AC-C5.1, C5.2 | ≥ 754 (~3 신규) |
-> | 4 | D-wide implementation (큰 작업) | §5.10.12 (R0~R8 + M + L + F) | ~622 (~110 폐기), ~35~55 file 변경 |
+> | Phase | 세션 | spec | 회귀 baseline |
+> |-------|------|------|--------------|
+> | §5.10.1 | 1 | Pre-flight + C5 Cleanup + C1 conversion (AC-C1.1~C1.7) | 732 → ≥ 751 (~19 신규 test) |
+> | §5.10.2 | 2 | C5 broken-link prevention (AC-C5.1, C5.2, 회귀) | ≥ 751 → ≥ 755 (~4 신규) |
+> | §5.10.3 | 3 | D-wide Part 1 (R0/R1/R2/R3 + R6/R7 + R8.1) | 잠정 (R8.1 식별만) |
+> | §5.10.4 | 4 | D-wide Part 2 + Final (R4/R5/R8.2-3 + M + L + F) | ~622 (~110 폐기), ~35~55 file 변경 |
 >
 > **fresh session 진입 시 첫 read 5단계**:
 > 1. `plan/session-wrap-followups.md` 본 섹션 (다음 세션 첫 액션)
-> 2. `plan/phase-5-todo.md §5.10.9~12` (SDD+TDD 진입 가이드 + C1/C5/D-wide 88 체크박스)
+> 2. `plan/phase-5-todo.md §5.10` main intro + §5.10.1 Phase 1 (Entry baseline + Cleanup + AC-C1.1 RED 까지)
 > 3. `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 (704 lines, 단일 spec source — AC-C1.1~C1.7 + AC-C5.1~C5.4 + R0~R8 ripple)
-> 4. `activity/phase-5-result.md §5.10.9~13` (8 cycle 진행 timeline 221 lines)
-> 5. C5 cleanup 사용자 승인 받고 즉시 RED test 작성 진입 (앞 명령 그대로)
+> 4. `activity/phase-5-result.md §5.10.5` (paradigm shift + 8 cycle codex 누적 history, 참조용)
+> 5. §5.10.1.1 baseline 부터 즉시 진입 (앞 명령 그대로)
 >
 > **잔존 minor stale 2건** (사용자 사전 결정 — 보존, implementation cycle 진입 시 자연 정리):
 > - `plan/phase-5-todox-5.10-graph-emergent-ontology.md:233/235/241/242` (§7 self-check v5.3 표기)
-> - `plan/plan-full.md:321` (~30~50 file / ~100 test cascade — D-wide implementation cycle §5.10.12.M migration script 작성 시 동기화)
+> - `plan/plan-full.md:321` (~30~50 file / ~100 test cascade — Phase 4 §5.10.4.4 M migration script 작성 시 동기화)
 
 ### 1순위 — Stage 4 실 qmd embeddings 통합 ✅ 종결 (2026-04-26 session 14)
 
