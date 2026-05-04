@@ -853,6 +853,8 @@
 ## 5.10 Graph emergent ontology — §5.4 paradigm shift (P1, ★ 사용자 본질 비판 2026-04-26 session 14)
 > tag: #ontology, #architecture, #paradigm-shift, #self-extending, #graph
 
+> **★ 2026-05-04 갱신 (보조 plan v5.4 D-wide cycle #8 final + C5 신규)**: 사용자가 `docs/wikey-ingest-pipeline.md` 검토 후 5 concern raised (C1~C5) → 사용자 **D-wide 채택** + cycle #1~#7 master fix (cycle pattern 7 회 누적, 매번 minor stale 발견) → 사용자 cycle #8 마지막 시도 결정 → master fix v5.4 (§8 next action / §9.4 이득 / mirror 상단 v5.3 → v5.4 갱신). 보조 plan v5.4 = `plan/phase-5-todox-5.10-graph-emergent-ontology.md`. cycle 진화: v1→v2→v3(D-wide)→v4(ripple R1~R8)→v5(C5 신규)→v5.1(numbering)→v5.2(§14.2 본문)→v5.3(§7+mirror migration cost+panel-dispatch fix)→v5.4(§8 next action+§9.4+mirror 상단). codex cycle #8 검증 대기.
+>
 > **배경**: §5.4 self-extending 구현 (Stage 1~4) 완료 후 panel UI 라이브 검증 중 사용자가 §5.4 architecture 자체에 대한 본질 비판 5건 chain 명시. 본 §5.10 = 그 비판의 정식 이슈화 (큰 작업 main subject 격상). §5.4.10 (sub) 의 내용을 본 §5.10 으로 promote.
 >
 > **사용자 본질 비판 chain**:
@@ -891,15 +893,19 @@
 3. LLM 자연 retrieval (qmd embedding + LLM 답변)
 4. 사용자 interface (chat / dashboard / search / settings)
 
-**deprecate 대상** (옵션 D):
+**deprecate 대상** (옵션 D — **D-wide v4 갱신** 2026-05-04, 보조 plan v4 §3.1 / §3.1.1 단일 소스):
 - §5.4 Stage 1~4 (self-extending 전체)
 - `standard_decompositions` schema 모델
-- `.wikey/schema.yaml` 의 standard_decompositions 영역 (alias / PII / custom-types 는 보존)
+- `.wikey/schema.yaml` 의 `standard_decompositions` + `entity_types` + `concept_types` + `custom_types` section 모두 (D-wide). **`aliases` / `pii_patterns` 만 보존**
+- `wikey-core/src/schema.ts:20~21` `ENTITY_TYPES` / `CONCEPT_TYPES` 상수 + `:241~` `buildSchemaPromptBlock` + `:71~118` validation helpers (D-wide v4 ripple, R1)
+- `wikey-core/src/canonicalizer.ts:363~467` `FORCED_CATEGORIES` + `detectAntiPattern` + 7-type 분류 검증 (D-wide v4 ripple, R2). minimal alias normalization 만 잔존
+- `wikey-core/src/types.ts:129~132` `EntityType` / `ConceptType` union (string 으로 완화) + `:299~302` `Mention.type_hint` 완화 (D-wide v4 ripple, R3)
 - `.wikey/suggestions.json` (Stage 2 store)
 - `.wikey/converged-decompositions.json` (Stage 4 store)
 - `.wikey/mention-history.json` (단 §5.5 graph 시각화 retention 시 보존)
 - panel Suggestions UI (header button + sidebar-chat.ts 의 §11 코드 모두 + SchemaYamlModal)
 - canonicalizer.ts 의 Stage 1 schema override 로직 (BUILTIN_STANDARD_DECOMPOSITIONS 포함)
+- `wikey-obsidian/src/settings-tab.ts:1126~1132` schema sample (entity_types/concept_types 예시 제거, D-wide v4 ripple R4)
 
 **유지** (옵션 D):
 - canonicalizer.ts 의 minimal alias normalization (slug → canonical-slug, 동명이인·다국어·약어)
@@ -908,9 +914,9 @@
 - raw → wiki organization (Stage 0 ingest pipeline 의 wiki write)
 - entity / concept 페이지 생성 (canonicalizer LLM 추출, schema 명시 없이)
 
-**migration cost** (옵션 D):
-- 약 30~50 file 변경 (Stage 1~4 코드 + test + plan + schema)
-- §5.4 cycle 의 732 PASS 중 ~100 test 폐기 또는 deprecate (Stage 1~4 unit + integration)
+**migration cost** (옵션 D-wide v5.3 갱신, 보조 plan §3.1.1 R1~R8 ripple 반영):
+- 약 35~55 file 변경 (Stage 1~4 코드 + test + plan + schema + 7-type schema gate ripple R1~R5)
+- §5.4 cycle 의 732 PASS 중 ~110 test 폐기 또는 deprecate (Stage 1~4 unit + integration + entity/concept type validation + buildSchemaPromptBlock + isValidEntityType + FORCED_CATEGORIES test 추가)
 - 회귀 risk: §5.4 가 §5.2 (canonicalizer cross-link) / §5.3 (incremental reingest) 와 직접 dependency 약함 — 분리 가능
 - migration script 1 회: 기존 schema.yaml standard_decompositions → `manual-overrides.yaml` (사용자 명시 hardcode 만 보존)
 

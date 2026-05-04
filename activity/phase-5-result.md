@@ -20,8 +20,8 @@
   - [`plan/phase-5-todox-5.4-integration.md`](../plan/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10, codex post-impl Cycle #6 APPROVE) + §10 v6 실 qmd embeddings 통합 + §11 v7 Suggestions panel UI 개선 (session 14)
   - [`plan/phase-5-todox-5.4.1-self-extending.md`](../plan/phase-5-todox-5.4.1-self-extending.md) — Stage 1 단독 plan (v7, codex Cycle #9 APPROVE)
   - [`activity/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](./phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md) — AC21 라이브 cycle smoke + Stage 3 inspect + Stage 4 alpha v1 wire 검증 (master 직접)
-- **§5.10 보조 문서** (2026-04-26 session 14 paradigm shift issue 등록):
-  - [`plan/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5-todox-5.10-graph-emergent-ontology.md) — graph emergent + LLM-only ontology paradigm shift 보조 plan (v1 신규, 4 옵션 detail spec + §9 정당성 검증)
+- **§5.10 보조 문서** (2026-04-26 session 14 paradigm shift issue 등록 + 2026-05-04 v2~v5.4 D-wide 채택 + cycle #1~#8 진행 + C5 신규):
+  - [`plan/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5-todox-5.10-graph-emergent-ontology.md) — graph emergent + LLM-only ontology paradigm shift 보조 plan. **v5.4 (2026-05-04, D-wide cycle #8 final + C5 신규)**: 사용자 5 concern (C1~C5) 추가 등록 + 사용자 D-wide 결정 (7-type schema gate `ENTITY_TYPES`/`CONCEPT_TYPES`/`buildSchemaPromptBlock` 까지 deprecate, LLM 자율 type 분류 + ripple R0~R8) + cycle #1~#7 master fix (7 cycle 누적, minor stale 패턴) + cycle #8 마지막 시도. codex cycle #8 검증 대기. **이력**: v1 (4 옵션) → v2 (C1~C4) → v3 (D-wide) → v4 (ripple R1~R8) → v5 (C5 신규) → v5.1 (numbering) → v5.2 (§14.2 본문) → v5.3 (§7+mirror migration cost+panel-dispatch fix) → v5.4 (§8 next action+§9.4+mirror 상단). **추가 fix (v5.3)**: panel-dispatch.sh `start_codex` update notification auto-skip 통합 (글로벌 skill 영구 fix).
 - **추후 보조 문서**: `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식 (`CLAUDE.md §문서 명명규칙·조직화` 참조).
 - **프로젝트 공통**: [`plan/decisions.md`](../plan/decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](../plan/plan_wikey-enterprise-kb.md).
 
@@ -1423,9 +1423,10 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 ### 5.10.4 옵션 D detail (사용자 통찰 가장 정확 반영)
 
-**deprecate 대상** (옵션 D 채택 시):
+**deprecate 대상** (옵션 D — **D-wide v4 갱신** 2026-05-04):
 - §5.4 Stage 1~4 (self-extending 전체)
-- `standard_decompositions` schema 모델 + `.wikey/schema.yaml` 의 해당 영역 (alias / PII / custom-types 보존)
+- `standard_decompositions` schema 모델 + `.wikey/schema.yaml` 의 `standard_decompositions` + `entity_types` + `concept_types` + `custom_types` section 모두 (D-wide). **`aliases` / `pii_patterns` 만 보존**
+- 7-type schema gate ripple (D-wide v4 R1~R5): `wikey-core/src/schema.ts:20~21, :71~118, :241~` + `canonicalizer.ts:363~467` + `types.ts:129~132, :299~302` + `wikey-obsidian/src/settings-tab.ts:1126~1132` + `docs/wikey-ingest-pipeline.md:323~366`
 - `.wikey/suggestions.json` / `.wikey/converged-decompositions.json` / `.wikey/mention-history.json` (graph 시각화 retain 시 보존)
 - panel Suggestions UI (header button + sidebar-chat.ts 의 §11 코드 + SchemaYamlModal)
 - canonicalizer.ts 의 Stage 1 schema override 로직 (BUILTIN_STANDARD_DECOMPOSITIONS 포함)
@@ -1436,9 +1437,9 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 3. LLM 자연 retrieval (qmd embedding + LLM 답변)
 4. 사용자 interface (chat / dashboard / search / settings)
 
-**migration cost** (옵션 D):
-- 약 30~50 file 변경 (Stage 1~4 코드 + test + plan + schema)
-- §5.4 cycle 의 732 PASS 중 ~100 test 폐기 또는 deprecate (Stage 1~4 unit + integration)
+**migration cost** (옵션 D-wide v5.3 갱신, 보조 plan §3.1.1 R1~R8 ripple 반영):
+- 약 35~55 file 변경 (Stage 1~4 코드 + test + plan + schema + 7-type schema gate ripple R1~R5)
+- §5.4 cycle 의 732 PASS 중 ~110 test 폐기 또는 deprecate (Stage 1~4 unit + integration + 7-type schema gate test 추가)
 - 회귀 risk 약함 (§5.4 가 §5.2 / §5.3 와 직접 dependency 적음)
 
 ### 5.10.5 epistemology 비판 (영구 기록)
