@@ -1,8 +1,8 @@
 # Wikey — 프로젝트 전체 계획 (plan-full)
 
 > **역할**: wikey 프로젝트의 전체 로드맵·운영 체제·기술 스택·문서 체계 + **각 Phase 의 목표·핵심 spec 상세** 를 단일 진입점으로 정리. README.md 갱신 시 본 문서 + `wikey.schema.md` + `CLAUDE.md` 3 핵심 문서를 source 로 사용.
-> **최종 개정**: 2026-04-26 (Phase 5 §5.4 종결 + §5.10 paradigm shift issue 등록)
-> **이력**: 2026-04-25 기존 Phase 3 설계서였던 `plan/plan-full.md` 를 `plan/phase-3-full.md` 로 분리하고, 본 파일을 전체 계획 문서로 신규 작성. 2026-04-26 session 14: §3 Phase 별 상세 spec 추가 + Phase 5 진행 반영.
+> **최종 개정**: 2026-05-04 (Phase 5 §5.10 paradigm shift v5.4 D-wide + C5 + SDD+TDD todo 종결, session 15)
+> **이력**: 2026-04-25 기존 Phase 3 설계서였던 `plan/plan-full.md` 를 `plan/phase-3-full.md` 로 분리하고, 본 파일을 전체 계획 문서로 신규 작성. 2026-04-26 session 14: §3 Phase 별 상세 spec 추가 + Phase 5 진행 반영. 2026-05-04 session 15: §5.10 paradigm shift v5.4 (D-wide + C5) 종결 + SDD+TDD todo 변환 (`phase-5-todo.md §5.10.9~12`, 88 체크박스). cascade stale (~30~50 file / ~100 test) 정정 (~35~55 / ~110, D-wide ripple R0~R8 반영).
 
 ## 1. 프로젝트 정체성
 
@@ -167,7 +167,7 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 | 5.7 | 운영 인프라 포팅 (bash → TS / qmd SDK import) | P4 | ⬜ 대기 |
 | 5.8 | Phase 4 D.0.l 잔여 (dedup / classify variance / reindex exit) | P4 | ⬜ 대기 |
 | 5.9 | Variance 기여도·diagnostic (4-points ablation / Ollama baseline) | P4 | ⬜ 대기 |
-| **5.10** | **Graph emergent ontology — §5.4 paradigm shift (사용자 본질 비판 6 chain)** | P1 | **issue 등록 (session 14, 2026-04-26)**, 4 옵션 결정 대기 |
+| **5.10** | **Graph emergent ontology — §5.4 paradigm shift (사용자 본질 비판 6 chain + 추가 5 concern)** | P1 | **plan v5.4 종결 (session 15, 2026-05-04)** — D-wide 채택 + C5 신규 + SDD+TDD todo (§5.10.9~12, 88 체크박스). implementation cycle 진입 가능. 다음: §5.10.9.3 (C5 cleanup → C1 RED test) |
 
 **§5.10 (★ session 14 신규 issue)**: 사용자 본질 비판 — "표준 분해 그룹은 PMBOK 류 외부 정형 표준에만 fit, 일반 지식에 mismatch. LLM 백 위에서 ontology 분류는 시대착오." 4 옵션:
 - A. 점진 (panel UI 유지 + 자동 등록 추가)
@@ -318,7 +318,7 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 
 **다음 진입점 후보** (사용자 우선순위 결정 필요):
 
-1. **★ §5.10 paradigm shift 결정** — 사용자 본질 비판 6 chain (`phase-5-todox-5.10-graph-emergent-ontology.md`). 4 옵션 (A 점진 / B graph emergent / C 관망 / **★ D LLM-only Stage 1~4 deprecate**). 옵션 D 는 §5.4 본체 deprecate + ~30~50 file 변경 + ~100 test 폐기 (732 → ~630). 사용자 통찰 가장 정확 반영.
+1. **★ §5.10 paradigm shift v5.4 종결** (2026-05-04 session 15) — 사용자 D-wide 채택 (`phase-5-todox-5.10-graph-emergent-ontology.md` v5.4, 704 lines). D-wide = §5.4 Stage 1~4 + 7-type schema gate (`schema.ts:20~21 ENTITY_TYPES/CONCEPT_TYPES` + `:241~ buildSchemaPromptBlock` + `types.ts EntityType/ConceptType union`) 모두 deprecate, LLM 자율 entity/concept type 분류. C5 추가 (답변 broken wikilink → root 자동 페이지 생성 차단, root 0-byte md 10개 발견). D-wide ripple R0~R8 (§3.1.1) — 약 ~35~55 file 변경 + ~110 test 폐기 (732 → ~622). SDD+TDD todo 변환 (`phase-5-todo.md §5.10.9~12`, 88 체크박스). 다음 액션: §5.10.9.3 (C5 cleanup 사용자 승인 → §5.10.10.AC-C1.1.RED conversion.test.ts 신규).
 2. **§5.5 지식 그래프 · 시각화** (P3) — NetworkX + Leiden 클러스터링 + vis.js / Obsidian Graph View. §5.10 옵션 B 의 inferred technical foundation.
 3. **§5.6 성능 · 엔진 확장** (P3) — Ollama vs llama.cpp 실측 gap + rapidocr Linux baseline.
 4. **§5.7~§5.9** (P4) — 운영 인프라 포팅 / Phase 4 D.0.l 잔여 / Variance diagnostic.

@@ -1495,3 +1495,224 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 → **§5.10 = 본 session 14 의 가장 큰 산출 (paradigm shift issue 등록)**. 코드 변경 X, 다음 세션 사용자 결정 대기.
 
 **§5.4 자체는 클로즈** (4 Stage + integration + AC21 + follow-up + UI fix 모두 GREEN). §5.10 은 §5.4 의 미처리가 아닌 별 main subject. §5.4 미처리 0.
+
+### 5.10.9 사용자 5 concern raise + plan v2 (2026-05-04, analyst 위임)
+
+**trigger** (2026-05-04, 사용자 직접 raise):
+- 사용자가 `docs/wikey-ingest-pipeline.md` (현 ingest 파이프라인 8 step 매트릭스, 737 lines) 전체 검토 후 4 concern raised:
+  - **C1**: "ingest summary를 별도의 extractPDFText(stripped만 사용)을 할게 아니라, step3에서 파일 유형에 따른 converting은 필수조건이므로 컨버팅을 1-step으로 진행하는게 바람직해 보임" (Step 2/3 conversion 중복)
+  - **C2**: "내부적으로 entities/concepts등의 개념을 LLM을 이용해서 충실하게 생성하고 확장할 수 있음에도 표준화라는 개념으로 후보풀, mention, canonicalization, schema.yaml, built-in-standard-decomposition(4entities+3concept type으로 제한) > 거부시의 프로세스 추가" (표준화 reductionism)
+  - **C2-부속**: ".wikey/schema.yaml, *.json들" 내부 기준 file 과다
+  - **C3**: "Self-extending에도 지식 자율 확장에 대한 정의만 필요하지, schema.yaml에 특정한 틀안으로 뭔가 지식을 꾸겨넣은듯 한 느낌이 있음" (자율 확장 정의)
+  - **C4**: "karpathy의 철학에서도 사용자는 wiki를 관리할 수 없다. > LLM을 활용해서 관리"
+- 비교 reference: `docs/graphify-pipeline.md` (사용자가 typo "graphigy" → "graphify" 정정한 파일, 16KB) — 코드 중심 graphify 와 문서 중심 wikey 의 architecture 비교
+
+**analyst 위임** (in-process Agent tool, agent-management.md §0 — claude-panel 폐기 정책):
+- 입력: wikey.schema.md (마스터 스키마, 첫 read 의무) + docs/wikey-ingest-pipeline.md + docs/graphify-analysis.md (실 file 명) + plan/phase-5-todo.md §5.10 + plan/phase-5-todox-5.10-graph-emergent-ontology.md (v1, 2026-04-26 session 14 등록) + ingest-pipeline.ts (line 357~375 / 1207~1228) + commands.ts (line 340~370)
+- 위임 4 항목 prompt (rules.md §11.1): (a) 검증 단계 5 / (b) 통과 기준 정량 ≥ 8 섹션 + AC + ≥ 30 file 검증 / (c) 산출 형식 (옵션 α 권장 — 기존 v1 in-place update, Karpathy Surgical) / (d) scope 한계 (코드 file 변경 X / commit X / wikey.schema.md 변경 X / timeout 25 분)
+- 산출 = plan v2 (478 lines, 옵션 α 채택): §0 4 concern 매핑 표 신규 + §10 C1 spec (Step 2/3 통합 신규) + §11 C2/C3/C4 옵션 D 보강 (4 layer 매핑) + §12 Karpathy 8 원칙 cross-check + §13 wikey.schema.md "핵심 원칙 #2: 위키는 LLM 이 소유한다" 일치 검증
+- 7-anchor self-check (rules.md §10): a/b/c/d ✅ / e/f ✅ / g pending (코드 진입 후) — analyst 산출 보고 자체에 명시
+
+**master 1차 검증** (codex 송부 전, rules.md §10 의무):
+- disk file ground truth: `ls -la /Users/denny/Project/wikey/.wikey/` → 7 file (schema.yaml 889B / suggestions.json 2762B / converged-decompositions.json 2095B / converged-decompositions.mock-baseline.json 10816B / mention-history.json 8430B / qmd-embeddings.json 1.46MB / source-registry.json 6655B)
+- 코드 line reference: `ingest-pipeline.ts:357~364` (Step 3 PDF) / `:1211~1220` (Step 2 brief PDF) / `:1786` (cache hit) / `commands.ts:346~363` (UI brief flow) — 모두 disk 코드와 정확 일치 확증
+- v1 본문 (§1~§9) 보존 확증 — Karpathy Surgical 적용
+- 검증 결과: 7-anchor 통과 → codex Mode D Panel cycle #1 송부 가능
+
+### 5.10.10 codex cycle #1 NEEDS_REVISION + 사용자 D-wide 결정 + master fix v3
+
+**codex cycle #1** (2026-05-04, fresh panel surface:10, 이름 `codex: §5.10 v2 paradigm shift extended cycle #1`, 2분 27초 작업):
+- 4 finding (P1×2 + P2 + P3):
+  - **P1-1** (CRITICAL): C1 변경 흐름 의 sidecar write 위치 부정합 — `phase-5-todox-5.10:262` v2 의사 흐름도가 sidecar write 를 brief 전에 배치 → `ingest-pipeline.ts:235` (decideReingest 먼저) + `:421` (sidecar write 는 protect 결정 후) 의 invariant 위반. Cancel 시 raw 그대로 종료해야 하는 docs 동작 (`docs/wikey-ingest-pipeline.md:140`) + Hook 1 sidecar protect 모드 깨짐.
+  - **P1-2** (CRITICAL, ★ 사용자 정책 결정 영역): 옵션 D 정의 모호 — `phase-5-todox-5.10:360` (§11.1) "BUILTIN 7 type 제약 없이 LLM 자율" vs `:389` (§11.3) "entity_types/concept_types 보존 + 7-type prompt guide 유지" 충돌. 실제 코드 = `schema.ts:17` (실제 :20) 4 entity + 3 concept type schema 제한 + `:245` "이 외 분류는 거부됨" prompt. C2/C3 핵심 concern 미해결 채 해결 선언.
+  - **P2**: §10.2 결함 (a) 진단 부정확 — "brief 흐름 vs ingest 흐름 모두 PDF/HWP/docling 분기 hardcoded" → 실제는 brief = PDF만 `extractPdfText`, HWP/DOCX 는 `wikiFS.read()` 직접 read (binary 그대로 LLM 입력 위험).
+  - **P3**: 상위 mirror 누락 — `phase-5-todo:856` + `activity/phase-5-result.md:23` v1/cycle #1 상태로 stale.
+- VERDICT: NEEDS_REVISION
+
+**사용자 D-wide 결정** (2026-05-04, codex cycle #1 verdict 수신 직후 직접 명시):
+- 옵션 D 의 두 정의 (D-narrow / D-wide) 중 **D-wide 채택**:
+  - D-narrow: `standard_decompositions` 만 deprecate, 7-type entity/concept gate 보존
+  - **D-wide (채택)**: 7-type schema gate 도 완화 — LLM 자율 entity/concept type 분류
+- 정당성 (사용자 직접): C2 원문 "BUILTIN_STANDARD_DECOMPOSITION (4 entities + 3 concept type 으로 제한)" — 4+3 type *제한* 자체가 비판 대상 → D-wide 가 정확 충족
+
+**master fix v2 → v3** (사용자 D-wide 결정 후):
+- §0.1 신규: D-narrow vs D-wide 결정 표 + 사용자 trace + Karpathy 4 원칙 cross-check + LLM 능력 (PMS 30-run 측정 안정 type 분류 evidence)
+- §2 옵션 D 행 → "D-wide" 명시 (file count ~35~55, test ~110)
+- §3.1 deprecate list 추가: `schema.ts:20~21 ENTITY_TYPES/CONCEPT_TYPES` + `:241~ buildSchemaPromptBlock` + `types.ts EntityType/ConceptType union`
+- §3.2 layer 2 정정: canonical slug normalization 만, 7-type guide 폐기
+- §10.2 결함 (a) 정확 진단 (brief HWP/DOCX binary 누락 명시)
+- §10.3/§10.4 의사 흐름도 정정: `convertSourceToMarkdown` = pure conversion only, sidecar/PII/registry 책임 ingest() 잔존, `preconverted?: ConversionResult` optional 주입 spec
+- §10.5 AC 보강: AC-C1.4 Cancel invariant + AC-C1.5 sidecar write 시점 불변 + HWP/DOCX brief 변환 추가
+- §11.1/§11.3 D-wide 매핑 정정: 7-type schema gate 자체 deprecate
+- §13 D-wide 행 추가 (D-narrow 85% / D-wide 100%)
+- mirror: `phase-5-todo §5.10` + `activity/phase-5-result.md:23` 짧은 v2/v3 등록 (codex P3 fix)
+- **plan v3 (565 lines, in-place 갱신)** — Karpathy Surgical 적용, v1/v2 본문 보존
+
+### 5.10.11 cycle #2~#3 ripple R0~R8 + cache callsite 신규 risk
+
+**codex cycle #2** (2026-05-04, fresh panel surface:11, `cycle #2`, 2분 45초):
+- 5 finding (P1×3 + P2 + P3):
+  - P1-1: §3.1 store 가 `entity_types/concept_types/custom-types 보존` 표현 잔존 → D-wide 정의와 모순 (`phase-5-todox-5.10:100`)
+  - P1-2: AC-C1.4 의 "Cancel disk write 0" → `convertSourceToMarkdown` cache 통합 시 cache write (= disk write) 와 모순. `convert-cache.ts:18~20 mkdir`, `:100~115 setCached` 가 실제 disk write
+  - P1-3: PDF sidecarCandidate cache-hit 결함 — `ingest-pipeline.ts:1786` `return { stripped: cached, sidecarCandidate: cached }` 결함 b 자동 해소 X. cache 가 stripped 만 저장
+  - P2: D-wide ripple list 부족 — schema.ts validation helpers (`:71~118`) / canonicalizer.ts FORCED_CATEGORIES (`:363~467`) / types.ts (`:129~132, :299~302`) / settings-tab.ts (`:1126~1132`) / docs/wikey-ingest-pipeline.md (`:323~366`) 모두 implementation checklist 누락
+  - P3: §3.4 / §7 anchor (f) / §12.2 / activity:24 stale
+- VERDICT: NEEDS_REVISION
+
+**master fix v3 → v4** (5 finding 모두 master 직접 fix):
+- P1-1: §3.1 store schema.yaml 보존 영역 → "aliases / pii_patterns 만" + mirror phase-5-todo §5.10.2.D + activity §5.10.4 동일 정정 (D-wide v4 일관)
+- P1-2: §10.5 AC-C1.4 → "Cancel 시 **vault write 0**" (cache write 는 ephemeral 허용, vault 외부)
+- P1-3: §10.5 AC-C1.7 신규 — convert-cache schema 갱신 (`{ content, sidecarCandidate? }` JSON, vector PDF cache hit 결함 fix, backward compat 폴백)
+- P2: §3.1.1 D-wide ripple checklist 신규 — R1 (schema.ts) / R2 (canonicalizer.ts:363~467) / R3 (types.ts) / R4 (settings-tab.ts) / R5 (docs) / R6 (wiki-ops 영향 X) / R7 (query-pipeline 영향 X) / R8 (test ~110 합산)
+- P3: §7 anchor (a) `schema.ts:17~18` → `:20~21` 정정 + §3.1 baseline 732→~622 + §12.2 stale 정정 (~30~50/~100 → ~35~55/~110)
+- **plan v4** (in-place 갱신)
+
+**codex cycle #3** (2026-05-04, fresh panel surface:12, `cycle #3`, 3분 10초):
+- 6 finding (P1×2 + P2×2 + P3 + 신규 risk j):
+  - P1-1: §11.2 본문 (line 484) entity_types/concept_types 보존 표현 잔존 (변경 이력 trace 외 본문)
+  - P1-2: §10.3 (line 346) + §10.4 (line 431) "disk write 0" 표현 잔존 → "vault write 0" 일관 정정 필요
+  - P2-1: AC-C1.6 산술 오류 — 신규 ≥15 명시인데 합계 ≥17 (10+5+1+1+2). AC-C1.2 ≥5 반영 시 ≥749
+  - P2-2: D-wide ripple coverage 부족 — `ingest-pipeline.ts:919` `BUNDLED_STAGE2_MENTION_PROMPT` `type_hint` 7-type union 폐기 누락 + docs:369/398/712 추가 line 누락
+  - P3: §3.4 (~100/~630) + §7 anchor (f) (header v3/cycle #2) + §12.2 (AC 4항목/732→740) + activity:24 (v3/cycle #2) stale 다수
+  - **신규 risk (j)**: `getCached()` object 반환 변경 시 cache callsite 3 곳 (`ingest-pipeline.ts:1504` unhwp, `:1568` docling, `:1782` pdf-cache-hit) atomic 변경 필요
+- VERDICT: NEEDS_REVISION
+
+**master fix v4 → v5** (사용자 cycle #4 결정 + C5 신규 raise 시점, 6 finding + C5 통합):
+- P1×2 fix: §11.2 entity_types/concept_types 보존 표현 정정 + "disk write 0" → "vault write 0" 일관
+- P2-1 fix: AC-C1.6 산술 정확화 (≥19 cases, 732→≥751)
+- P2-2 fix: §3.1.1 R0 신규 (`ingest-pipeline.ts:909~919` BUNDLED_STAGE2_MENTION_PROMPT type_hint 폐기) + R5 보강 (docs:369/398/712 추가)
+- P3 stale 다수 fix: §3.4/§7/§12.2/activity:24
+- 신규 risk (j) fix: AC-C1.7 보강 — cache callsite 3 곳 (`:1504/:1568/:1782`) atomic migration 명시 + backward compat read 처리
+- **plan v5** (~620 lines, in-place 갱신, R0~R8 ripple 완성)
+
+### 5.10.12 사용자 신규 issue C5 raise + cycle #4~#5 cleanup pattern
+
+**codex cycle #4** (2026-05-04, fresh panel surface:13, `cycle #4`, 2분 55초):
+- 4 minor finding (P2×3 + P3) — **5 항목 PASS / 3 항목 PARTIAL/NEEDS_REVISION**:
+  - PASS (a~f): schema.yaml aliases/pii_patterns / disk write 0 잔존 0 / AC-C1.6 산술 / R0/R5 disk 일치 / cache callsite 3 곳 disk 일치 / cache fallback 합리
+  - P2-1: C5 Intercept target 부정합 — `sidebar-chat.ts:532` 근처 helper 지목인데 실제 자동 페이지 생성 경로는 `:2830~2858` `renderMarkdown()` `openLinkText(href, '')` click handler
+  - P2-2: AC-C5.3 "9개 삭제 + Untitled.md 보존 vs vault 0-byte 0" 동시 만족 X — 분기 명시 필요
+  - P2-3: §7 self-check v5 미갱신 (R0/cache callsite/C5 anchor 누락)
+  - P3: C5 section numbering stale — §0 "4 concern" 잔존 + C5 row §15 매핑 (실제 §14) + 하위 heading `15.1~15.5`
+- VERDICT: NEEDS_REVISION
+
+**사용자 신규 issue C5 raise** (2026-05-04, cycle #4 진행 중):
+- "추가이슈 : 5.10의 이슈에 등록되었던 내용으로 빈페이지 생성과 관련.
+   1) 점검결과 : wiki/ 내부에 빈페이지는 생성되는게 없음
+   2) 질의/응답 결과 : 질의응답 결과의 본문에 페이지가 없는 링크가 있고, 이것을 선택하면 root폴더에 해당 페이지가 새롭게 생성되는 구조임.
+   - 단어 또는 명칭 등 어구가 페이지가 없는 곳에 링크는 필요없음
+   - 페이지가 없는 링크를 사용자가 선택해서 새로운 페이지를 생셩할 일이 없음"
+- 이어서: "현재의 root폴더에 그래서 생성된 빈페이지가 있음"
+- master 점검 결과: vault root 의 0-byte .md 10 개 발견 (`Phase 4.md` / `Phase 5.md` / `PMBOK.md` / `Audit UI.md` / `cross-link.md` / `qmd embeddings.md` / `검색 graph expansion.md` / `운영 안전.md` / `증분 재인제스트.md` / `Untitled.md`). raw/_delayed/ 의 0-byte placeholder 5 개 (`NanoVNA V2.md` / `NanoVNA V2 Plus4.md` / `벡터 네트워크 분석기 (VNA).md` / `FPV.md` / `DJI O3 Air Unit.md`) 별도 — wikey 내부 시스템 placeholder, broken-link X
+- root cause: `query-pipeline.ts:386` buildSynthesisPrompt rule "답변에 등장한 모든 entity/concept 은 첫 등장 시 [[페이지명]] 으로 링크하세요" — 위키 페이지 존재 여부 검증 X → Obsidian default 가 unresolved [[link]] 클릭 시 root 에 빈 파일 자동 생성
+
+**master fix v5 → v5.1** (cycle #4 4 finding + C5 신규 통합):
+- §0 제목 "4 concern" → "5 concern" + C5 row §15 → §14 정정
+- §14 (C5) 신규 sub-section 5 개:
+  - §14.1 root cause 분석 (master grep 2026-05-04 ground truth)
+  - §14.2 해결안 — 3 단계 (Prevention `query-pipeline.ts buildSynthesisPrompt` + Intercept `sidebar-chat.ts:2830~2858 renderMarkdown handler` + Cleanup `root 9~10개 rm`)
+  - §14.3 acceptance criteria (AC-C5.1~C5.4)
+  - §14.4 trade-off (5 항목)
+  - §14.5 cleanup 우선 진행
+- §14 (C5) 하위 heading 15.1~15.5 → 14.1~14.5 renumber (Python script)
+- AC-C5.2 정확화 — `renderMarkdown()` 의 *기존 click handler 2 곳* (line 2835~2840 + 2853~2858) `getFirstLinkpathDest` resolve-before-open
+- AC-C5.3 분기 명시 — Untitled.md 보존 (분기 A: 9 개 삭제) vs 삭제 (분기 B: 10 개 모두)
+- §7 self-check v5 갱신 — anchor (a)~(g) 모두 R0/cache callsite/C5 anchor 추가 cover
+
+**codex cycle #5** (2026-05-04, fresh panel surface:14, `cycle #5`, 1분 36초):
+- 3 minor finding (P2×2 + P3):
+  - P2-1: §14.2 본문 (line 629) 가 attachCitationButtons (line 532~) 또는 별 helper 지목 — AC-C5.2 의 renderMarkdown() target 와 일관 X
+  - P2-2: AC-C5.3 의 "vault 전체 0-byte md = 1 또는 0" invariant 가 raw/_delayed/ 의 0-byte 와 충돌. root cleanup 만으로 만족 X
+  - P3: phase-5-todo:856 + activity:23 mirror 가 v5/cycle #4 pending — v5.1/cycle #5 갱신 안 됨
+- VERDICT: NEEDS_REVISION
+
+### 5.10.13 cycle #6~#8 final cleanup + panel-dispatch fix + SDD+TDD todo 변환
+
+**master fix v5.1 → v5.2** (cycle #5 3 finding 마무리, 사용자 cycle #6 결정):
+- §14.2 (B) intercept 본문 정정 — `renderMarkdown() (line 2830~2858) 의 *기존 click handler 2 곳*` 명시, attachCitationButtons / 별 helper 표현 제거
+- AC-C5.3 root-only invariant 정확화 — `find . -maxdepth 1 -size 0c` 으로 좁힘. raw/_delayed/ 의 5 개 0-byte placeholder 별도 audit (사용자 승인 필수, AC 범위 외)
+- mirror v5.2/cycle #6 갱신
+- header v5.1 → v5.2 + 변경 이력 v5.2 row + 마지막 PLAN_FILE/VERDICT (cycle #6) 갱신
+
+**사용자 신규 발견 — codex panel "2" 송부 이슈** (2026-05-04, cycle #6 진행 중):
+- "codex를 호출하면서 '2'라는 텍스트를 불필요하게 전달하는 듯, 확인하고 프로세스 완료되면 수정"
+- 분석 결과: master 가 매 cycle 마다 `$DISPATCH send $SURFACE "2"` 강제 송부 (codex 0.125 update notification skip 의도) — ready 화면일 때 "2" 가 placeholder 입력 (`Implement {feature}` 위치) 으로 들어감
+- 해결: panel-dispatch.sh skill 영구 fix 결정
+
+**codex cycle #6** (2026-05-04, fresh panel surface:15→16 retry, 2분 50초):
+- 2 P3 minor finding:
+  - §7 self-check 표 v5.1/cycle #5 잔존 (header v5.2/cycle #6 충돌)
+  - parent (phase-5-todo:918) + activity (phase-5-result:1441) migration cost ~30~50 file / ~100 test 잔존 (보조 plan 본문 ~35~55/~110 와 불일치)
+- VERDICT: NEEDS_REVISION
+
+**master fix v5.2 → v5.3** (cycle #6 2 finding + panel-dispatch fix 통합):
+- panel-dispatch.sh skill 영구 fix (글로벌, `~/.claude/skills/codex/panel-dispatch.sh:114~125`):
+  - `start_codex` 함수 내 ready polling loop 안에 viewport capture 추가
+  - "Update available!" 패턴 detect 시만 자동 "2" 송부 + ready 재 polling
+  - master 의 cycle 시작 패턴 단순화 (수동 "2" 송부 제거 가능)
+- §7 self-check 표 v5.1 → v5.3 갱신 (제목/컬럼/(e)/(f) row 모두)
+- parent/activity migration cost ~30~50/~100 → ~35~55/~110 동기화
+- header v5.2 → v5.3 + 변경 이력 v5.3 row + 마지막 cycle #7 갱신
+
+**codex cycle #7** (2026-05-04, fresh panel surface:17, `cycle #7`, 1분 52초) — **panel-dispatch auto update-skip 동작 정상 확인** (codex 0.128.0 자동 update + ready 진입, master "2" 송부 X):
+- 3 P3 minor finding:
+  - §8 next master action v3/cycle #2 stale (`phase-5-todox-5.10:245`)
+  - §9.4 이득 항목 ~30~50 file stale (line 293)
+  - parent (phase-5-todo:856) + activity (phase-5-result:23) 상단 mirror v5.2/cycle #6 stale (방금 갱신 안 함)
+- VERDICT: NEEDS_REVISION
+
+**master fix v5.3 → v5.4** (사용자 cycle #8 마지막 시도 결정, 3 finding 모두 fix):
+- §8 next master action 갱신 — v3/cycle #2 → v5.4/cycle #8 + cycle #1~#7 누적 trace + cycle #8 NEEDS_REVISION 시 무조건 종료 명시
+- §9.4 이득 ~30~50 file → ~35~55 동기화
+- parent/activity 상단 mirror v5.4/cycle #8 갱신 + cycle 진화 history v1→v5.4 명시
+- header v5.3 → v5.4 + 변경 이력 v5.4 row + footer cycle #8 final
+- **사용자 사전 결정**: cycle #8 NEEDS_REVISION 시 무조건 v5.4 보존 + 종료 (cycle pattern 8 회 누적 인식)
+
+**codex cycle #8 final** (2026-05-04, fresh panel surface:18, `cycle #8 final`, 2분 37초):
+- 2 P3 minor finding:
+  - §7 self-check v5.3/cycle #7 잔존 (line 233/235/241/242)
+  - **plan/plan-full.md:321 신규 발견** — `~30~50 file / ~100 test` 상위 plan-full cascade stale
+- 4 항목 PASS: §9.4 ~35~55 / parent/activity 상단 v5.4 / header+footer v5.4 / panel-dispatch fix 동작 ✅
+- VERDICT: NEEDS_REVISION
+- 사용자 사전 결정 따라 추가 fix 진행 X. v5.4 보존 + 종료.
+
+**8 cycle 누적 패턴 분석** (2026-05-04 master 종합):
+
+| cycle | input plan | finding | severity |
+|-------|-----------|---------|---------|
+| #1 | v2 (analyst initial) | 4 (P1×2 + P2 + P3) | major |
+| #2 | v3 (D-wide 명확화) | 5 (P1×3 + P2 + P3) | major |
+| #3 | v4 (ripple R1~R8) | 6 (P1×2 + P2×2 + P3 + risk j) | major |
+| #4 | v5 (C5 신규) | 4 minor | minor |
+| #5 | v5.1 (numbering) | 3 minor | minor |
+| #6 | v5.2 (§14.2) | 2 P3 minor | very minor |
+| #7 | v5.3 (§7 + panel-dispatch) | 3 P3 minor | very minor |
+| #8 | v5.4 (§8 + §9.4 + mirror) | 2 P3 minor (plan-full.md cascade 신규) | very minor |
+
+핵심 spec PASS = cycle #4 부터 일관. cycle #5~#8 = 모두 *plan 700 lines 의 stale propagation* 구조적 패턴.
+
+**commit 산출**:
+- `15591b6 docs(plan): §5.10 paradigm shift v5.4 — D-wide + C5 (8 cycle codex 누적)` — wikey 3 file (plan v5.4 583+/60- + parent mirror + activity mirror)
+- `d80fbde fix(codex): start_codex auto update-skip (master '2' 강제 송부 폐기)` — claude-forge-custom 1 file (panel-dispatch.sh 10+)
+
+**잔존 (사용자 결정 영역)**:
+- `plan/phase-5-todox-5.10:233/235/241/242` (§7 self-check v5.3 표기) — 보존
+- `plan/plan-full.md:321` (~30~50 file / ~100 test cascade) — 보존
+- vault root 0-byte md 10 개 (broken-link artifact + Untitled.md) — C5 cleanup pending (사용자 승인 필수)
+
+**SDD+TDD todo 변환** (사용자 명시 "phase-5-todo.md를 SDD+TDD관점에서 todo를 업데이트 하고 다음 세션에서 바로 구현들어갈 수 있게 준비"):
+- analyst 위임 (in-process Agent tool, 위임 4 항목 prompt + 7-anchor 의무)
+- 산출 = phase-5-todo §5.10 의 §5.10.9~§5.10.12 신규 4 sub-section (329 insertions, in-place 갱신, 기존 §5.10.1~§5.10.8 본문 보존)
+  - **§5.10.9** SDD+TDD 진입 가이드 — baseline 확보 (npm test 732 / .wikey 7 file / vault root 0-byte 10개 snapshot) + 우선순위 표 (C5 cleanup 1 → C1 단독 cycle 2 → C5 prev/intercept 3 → D-wide 4) + 다음 세션 첫 액션 + cycle 종료 condition
+  - **§5.10.10** C1 implementation cycle — AC-C1.1~C1.7 each: RED test → GREEN impl → REFACTOR → 회귀 baseline 4 단계 체크박스. 회귀 732 → ≥ 751 (~19 신규 test)
+  - **§5.10.11** C5 implementation cycle — AC-C5.1 Prevention (`query-pipeline.ts buildSynthesisPrompt` + `[Available pages]` block) + AC-C5.2 Intercept (`sidebar-chat.ts:2830~2858 renderMarkdown handler getFirstLinkpathDest resolve-before-open`) + AC-C5.3 Cleanup (root 9~10개 rm 분기 A/B) + AC-C5.4 회귀
+  - **§5.10.12** D-wide implementation cycle (큰 작업) — R0~R8 ripple sub-cycle (R6/R7 영향 X 보존 검증) + M migration script (`scripts/migrate-deprecate-standard-decompositions.sh` dry-run + apply) + L 라이브 cycle smoke (master 직접 obsidian-cdp PMBOK ingest schema.yaml 자동 등록 X 확증) + F 종결 검증. baseline 732 → ~622 (~110 폐기), ~35~55 file 변경
+- 신규 체크박스 88 개 + file:line reference 18 곳 정확
+- master 7-anchor 검증 통과 + wikey 추가 anchor h/i/j ✅
+- commit `c6e9316 docs(plan): §5.10 SDD+TDD implementation todo 추가 (다음 세션 진입 준비)` — wikey 1 file (329 insertions)
+
+**§5.10 종결 상태** (2026-05-04 session 15):
+- plan v5.4 + panel-dispatch fix + SDD+TDD todo 모두 commit 완료
+- 다음 세션 master 첫 액션 명시 (§5.10.9.3): "C5 cleanup 사용자 승인 받기 → vault root 의 9 개 0-byte md 삭제 → §5.10.10.AC-C1.1.RED 진입 (`wikey-core/src/__tests__/conversion.test.ts` 신규 작성)"
+- 핵심 spec 모두 PASS, implementation cycle 진입 가능 수준
+- 잔존 minor stale 2건은 implementation cycle 진입 시 자연 정리
