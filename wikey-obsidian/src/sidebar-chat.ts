@@ -628,8 +628,9 @@ Click [[page name]] in answers to navigate to the wiki page.
       }
     }
 
-    // Meta skeleton (wiki/{index,log,overview}.md) 은 시스템 파일 — content 가 아니므로
+    // Meta skeleton (wiki/{index,log}.md) 은 시스템 파일 — content 가 아니므로
     // Total 및 stat card 에 포함하지 않음. reset 직후 Total=0 이 되도록.
+    // (§5.11 v2: wiki/overview.md 폐기 — index.md 로 통합)
     const totalWiki = Object.values(categories).reduce((a, b) => a + b, 0)
 
     const wikiGrid = wikiSection.createDiv({ cls: 'wikey-dashboard-grid' })

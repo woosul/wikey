@@ -1,81 +1,20 @@
 {
-  "sha256:dcbe5dd3f5325d4b": {
-    "vault_path": "raw/3_resources/20_report/500_technology/pms/PMS_제품소개_R10_20220815.pdf",
-    "sidecar_vault_path": "raw/3_resources/20_report/500_technology/pms/PMS_제품소개_R10_20220815.pdf.md",
-    "hash": "dcbe5dd3f5325d4b288b3bf5b65eba21dc3c63da7d3ed1093e4c9667792da8a3",
-    "size": 3634821,
-    "first_seen": "2026-05-05T03:15:47.890Z",
-    "ingested_pages": [
-      "wiki/sources/pms-product-introduction-r10-20220815.md"
-    ],
-    "path_history": [
-      {
-        "vault_path": "raw/0_inbox/PMS_제품소개_R10_20220815.pdf",
-        "at": "2026-05-05T03:15:47.890Z"
-      },
-      {
-        "vault_path": "raw/3_resources/20_report/500_technology/pms/PMS_제품소개_R10_20220815.pdf",
-        "at": "2026-05-05T03:16:12.580Z"
-      }
-    ],
-    "tombstone": false,
-    "last_action": "force",
-    "sidecar_hash": "d66c44b0c57a7513189986ed2144f8c95468c061677393886bb488d18fcccfda"
-  },
-  "sha256:b63bddfadc4cd812": {
-    "vault_path": "raw/0_inbox/스마트공장 보급확산 합동설명회 개최.hwp",
-    "sidecar_vault_path": "raw/0_inbox/스마트공장 보급확산 합동설명회 개최.hwp.md",
-    "hash": "b63bddfadc4cd812948d11e28e976e11b9a98b47dd5835531fa69424dac53cae",
-    "size": 16896,
-    "first_seen": "2026-05-05T03:24:37.391Z",
-    "ingested_pages": [
-      "wiki/sources/source-smart-factory-briefing.md"
-    ],
-    "path_history": [
-      {
-        "vault_path": "raw/0_inbox/스마트공장 보급확산 합동설명회 개최.hwp",
-        "at": "2026-05-05T03:24:37.391Z"
-      }
-    ],
-    "tombstone": false,
-    "last_action": "force",
-    "sidecar_hash": "d0e4a853e5c1cb802598aca048958d74589485d3c02b6f3b58ca783764cc8cc1"
-  },
-  "sha256:9d72a7a14fc5337b": {
-    "vault_path": "raw/0_inbox/Examples.hwpx",
-    "sidecar_vault_path": "raw/0_inbox/Examples.hwpx.md",
-    "hash": "9d72a7a14fc5337bcf7a99390168b795cffe562937e9f06925197028dc96749a",
-    "size": 1270312,
-    "first_seen": "2026-05-05T03:27:18.976Z",
-    "ingested_pages": [
-      "wiki/sources/source-examples.md"
-    ],
-    "path_history": [
-      {
-        "vault_path": "raw/0_inbox/Examples.hwpx",
-        "at": "2026-05-05T03:27:18.976Z"
-      }
-    ],
-    "tombstone": false,
-    "last_action": "force",
-    "sidecar_hash": "c87723fc268793201e9c30e08e9cebed2375b85504088944f496feb6e8186667"
-  },
   "sha256:3238149072ecd4c3": {
-    "vault_path": "raw/3_resources/60_note/200_social/pmbok-overview.md",
+    "vault_path": "raw/3_resources/60_note/200_social_sciences/pmbok-overview.md",
     "hash": "3238149072ecd4c30216322e45a7be750bc1006fc9d3ed1a5601022e7c24d824",
     "size": 2889,
-    "first_seen": "2026-05-05T05:05:06.011Z",
+    "first_seen": "2026-05-05T11:26:05.663Z",
     "ingested_pages": [
       "wiki/sources/source-pmbok-overview.md"
     ],
     "path_history": [
       {
         "vault_path": "raw/0_inbox/pmbok-overview.md",
-        "at": "2026-05-05T05:05:06.011Z"
+        "at": "2026-05-05T11:26:05.663Z"
       },
       {
-        "vault_path": "raw/3_resources/60_note/200_social/pmbok-overview.md",
-        "at": "2026-05-05T05:05:20.734Z"
+        "vault_path": "raw/3_resources/60_note/200_social_sciences/pmbok-overview.md",
+        "at": "2026-05-05T11:26:19.198Z"
       }
     ],
     "tombstone": false,
