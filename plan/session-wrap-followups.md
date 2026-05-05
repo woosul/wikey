@@ -1,15 +1,26 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-04~05 session 16 — §5.10.1 + §5.10.2 + §5.10.3 + 라이브 smoke 5/5 GREEN**. 회귀 732 → **673 PASS + 88 skipped + 0 fail** + build 0 errors. 5 commit 진행. **D-wide 라이브 확증** (LLM 자유 type 8 종 출현). **다음 액션 = §5.10.4 Phase 4 (R4/R5 + R8.2/8.3 + M migration + L 라이브 + F 3 cycle 통합 codex review)**.
+> 최신 갱신: **2026-05-04~05 session 16 — §5.10.1 + §5.10.2 + §5.10.3 GREEN + 라이브 smoke 부분 수행 (md 1 fixture)**. 회귀 732 → **673 PASS + 88 skipped + 0 fail** + build 0 errors. 6 commit 진행. **사용자 지적**: AC-C1.6 spec ("PDF + HWP + DOCX 각 1") 위반 — md 만 진행. vault 재정비 (raw/3_resources → 0_inbox 일괄 원복, wiki/registry 재초기화) 완료. **다음 액션 = (1) 다중 파일 유형 라이브 smoke (PDF + HWP + HWPX) → (2) §5.10.4 Phase 4**.
 > 생성일: 2026-04-10
 
 ---
 
 ## 🎯 다음 세션 첫 액션 (2026-05-05 session 16 종료 시점)
 
-> **세션 16 종결**: §5.10.1 + §5.10.2 + §5.10.3 + 라이브 smoke 5/5 GREEN. 결과 요약보고서 = `activity/phase-5-resultx-5.10-session16-summary-2026-05-05.md`. **D-wide 라이브 확증 — LLM 자유 type 8 종** (`component`, `product-line`, `software`, `calibration-method`, `concept`, `metric`, `standard-term`, `visualization-method`) 출현 — 변경 전이라면 모두 drop 됐을 mention 들이 정상 wiki 페이지로 저장됨. 다음 세션 master 첫 명령:
+> **세션 16 종결 (정정)**: §5.10.1 + §5.10.2 + §5.10.3 unit/integration GREEN + **라이브 smoke 부분 수행** (md 1 fixture 만, AC-C1.6 spec 위반 인정). vault 재정비 완료 (raw/0_inbox 21 files / wiki 0 / registry={}). 결과 요약보고서 = `activity/phase-5-resultx-5.10-session16-summary-2026-05-05.md`.
 >
-> **1. §5.10.4 Phase 4** (D-wide Part 2 + Final, R4/R5/R8.2-3 + M migration + L 라이브 + F 종결):
+> **D-wide 라이브 부분 확증** (md fixture): LLM 자유 type 8 종 (`component`, `product-line`, `software`, `calibration-method`, `concept`, `metric`, `standard-term`, `visualization-method`) 출현. 단 PDF/HWP/HWPX 변환 분기 라이브 검증은 다음 세션 의무.
+>
+> **다음 세션 master 첫 명령**:
+>
+> **1. 다중 파일 유형 라이브 smoke (master 직접 obsidian-cdp 스킬 §3 재시동)** — Phase 1 AC-C1.6 spec 충족:
+>    - obsidian-cdp 환경 재기동: `pkill -x Obsidian; sleep 3; /Applications/Obsidian.app/Contents/MacOS/Obsidian --remote-debugging-port=9222 --remote-allow-origins='*' > /tmp/obsidian-cdp.log 2>&1 & disown; sleep 5; curl -sf --max-time 3 http://localhost:9222/json/version`. plugin reload.
+>    - **PDF fixture**: `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` (vector PDF, docling tier 1). AC-C1.2 brief 정상 + AC-C1.7 sidecar raw 보존 (결함 b fix 라이브 확증) + ingest cycle 완료 + sidecar canonical write.
+>    - **HWP fixture**: `raw/0_inbox/스마트공장 보급확산 합동설명회 개최.hwp` (행사 안내, PII risk 낮음). AC-C1.2 brief 정상 (binary 미전송, unhwp 변환 후 markdown LLM 호출) + ingest cycle. PII 차단 시 brief 단계 까지만 진행해도 OK (binary 미전송 핵심 검증 충족).
+>    - **HWPX fixture**: `raw/0_inbox/Examples.hwpx` (DOCX 부재 대체, Docling 일반 분기 DOCLING_DOC_FORMATS). AC-C1.2 brief + ingest cycle.
+>    - 결과 evidence → `activity/phase-5-result.md §5.10.3.9` 보강.
+>
+> **2. §5.10.4 Phase 4** (다중 fixture smoke GREEN 후) (D-wide Part 2 + Final, R4/R5/R8.2-3 + M migration + L 종합 + F 3 cycle 통합 codex review):
 >    - R4 settings-tab.ts schema sample 정정 (entity_types/concept_types 예시 제거)
 >    - R5 docs/wikey-ingest-pipeline.md 5 line spot 정정
 >    - R8.2 잔여 ~22 cases 폐기 (suggestion-detector / convergence / self-declaration §5.4 Stage 2~4)

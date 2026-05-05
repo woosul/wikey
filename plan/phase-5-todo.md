@@ -1122,7 +1122,8 @@
 - [x] R0/R1/R2/R3 GREEN 완료 + R6/R7 영향 X 확증 + R8.1 폐기 list 기록.
 - [x] `npm test` baseline = **673 PASS + 88 skipped + 0 fail** + build 0 errors. fresh re-run.
 - [x] `activity/phase-5-result.md §5.10.3` mirror commit (Phase 3 결과 timeline + R0~R3 + R6/R7 + R8.1 evidence).
-- [x] **라이브 cycle smoke 5/5 GREEN** (master 직접 obsidian-cdp, 2026-05-05): brief + Cancel + full ingest + D-wide 자유 type 8 종 + broken link click 모두 통과. obsidian-cdp 스킬 §3 따라 master 가 pkill+CDP flag 재기동. /tmp/wikey-cdp.py 재작성 (websocket-client 1.9.0). vault 정비 (raw 9 파일 inbox 원복 + sidecar 5 파일 삭제 + wiki 초기화 + registry={}). 결과: activity/phase-5-result.md §5.10.3.9 + activity/phase-5-resultx-5.10-session16-summary-2026-05-05.md.
+- [⚠️] **라이브 cycle smoke 부분 수행** (md 1 fixture, 2026-05-05): brief + Cancel + full ingest + D-wide 자유 type 8 종 + broken link click 통과 — 단 **AC-C1.6 spec ("PDF + HWP + DOCX 각 1") 위반** (사용자 지적). 다음 세션 다중 fixture 라이브 smoke 의무.
+- [ ] **다중 파일 유형 라이브 smoke** (다음 세션, master 직접 obsidian-cdp 스킬 §3 재시동): PDF (PMS_제품소개_R10_20220815.pdf, vector PDF AC-C1.7) + HWP (스마트공장 보급확산, AC-C1.2) + HWPX (Examples.hwpx, Docling 일반 분기 — DOCX 부재 대체). 결과 evidence → `activity/phase-5-result.md §5.10.3.9` 보강.
 
 ### 5.10.4 Phase 4 (Session 4) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
 

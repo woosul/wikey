@@ -14,7 +14,9 @@
 | §5.10.2 | C5 broken-link prevention (AC-C5.1, C5.2) | ✅ Unit/Integration GREEN | 757 → **760 PASS (+3)** | `0f241a5` |
 | §5.10.3.1 R0 | Stage 2 mention prompt type_hint 자유 | ✅ GREEN | 760 → **761 PASS (+1)** | `a08cbd7` |
 | §5.10.3.2~7 R1~R8.1 | D-wide schema/canonicalizer/types 폐기 + 88 cases skip | ✅ GREEN (atomic) | 761 → **673 PASS + 88 skipped + 0 fail** | (이번 commit) |
-| §5.10.3.9 라이브 smoke | obsidian-cdp 라이브 cycle 5 항목 (master 직접) | ✅ ALL GREEN — D-wide 라이브 확증 (8 type 외 자유 string 출현) | — | (이번 commit) |
+| §5.10.3.9 라이브 smoke | obsidian-cdp 라이브 cycle 5 항목 (md 1 fixture) | ⚠️ 부분 수행 — md 만 검증, AC-C1.6 spec ("PDF+HWP+DOCX 각 1") 위반 | — | (이전 commit) |
+| §5.10.3.10 vault 재정비 | 사용자 지적 후 raw/3_resources → 0_inbox 일괄 원복 + wiki/registry 재초기화 | ✅ vault 깨끗 (inbox 21 / 3_resources 0 / wiki 0 / registry={}) | — | (이번 commit) |
+| §5.10.4 다중 fixture 라이브 smoke | PDF + HWP + HWPX 각 1 cycle (AC-C1.6/C1.7/C1.2 라이브 확증) | ⏸ **다음 세션 의무** (master 직접 obsidian-cdp 스킬 §3 재시동) | — | — |
 
 **총 누적 변경**: 732 → 673 PASS / 88 skipped / 0 fail. 회귀 0 (skip 처리 88 cases 외 모두 GREEN). build 0 errors fresh re-run.
 
@@ -152,13 +154,45 @@ D-wide Part 2 + Final:
 | 4 | D-wide LLM 자율 type | Phase 3 R2 | ✅ 7-type 외 자유 string 8 종 출현: entities `component`/`product-line`/`software`, concepts `calibration-method`/`concept`/`metric`/`standard-term`/`visualization-method` |
 | 5 | broken link click → 자동 생성 차단 | Phase 2 AC-C5.2 | ✅ `[[NanoVNA V2]]` (slug case mismatch) click → DOM `internal-link` → `internal-link wikey-broken-link` (dim) + Notice "위키에 없는 페이지 — 자동 생성 차단" + openLinkText 호출 0 (root 빈 페이지 자동 생성 0) |
 
-### 4.3 vector PDF sidecar raw 보존 (AC-C1.7) 라이브 — Phase 4 L 단계 deferral
+### 4.3 다중 파일 유형 spec 위반 인정 + 다음 세션 의무 (사용자 지적, 2026-05-05)
 
-본 cycle 의 fixture 가 md content 라 vector PDF sidecar raw 보존 (결함 b fix) 은 라이브 검증 안 됨. cache schema unit test (`convert-cache.test.ts` 4 cases) 로 contract 충족. PMS PDF 같은 vector PDF fixture 는 §5.10.4 L 단계 (5 항목 통합 라이브 smoke) 에서 검증.
+> 사용자: "phase 1에서 converting integration에서 당연히 다양한 파일 유형을 테스트하는 걸로 계획 잡혀있었는데, 넌 시도조차 하지 않네?"
+>
+> AC-C1.6 spec (보조 plan §10.5) = "라이브 cycle smoke (master 직접 obsidian-cdp): **3 fixture (PDF + HWP + DOCX 각 1)** ingest cycle 진행 — brief 정상 표시 + ingest 완료 + sidecar canonical write 정상 (vector PDF 면 raw 이미지 보존)". 본 cycle 은 md content 1 fixture (nanovna-v2-notes.md) 만 검증 — **Phase 1 spec 위반 인정**.
 
-### 4.4 D-wide 라이브 확증 의의
+**다음 세션 의무 (다중 fixture 라이브 smoke)**:
+
+| Fixture | AC 검증 |
+|---------|---------|
+| `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` (vector PDF) | AC-C1.7 sidecar raw 보존 (결함 b fix) + AC-C1.2 PDF brief 정상 |
+| `raw/0_inbox/스마트공장 보급확산 합동설명회 개최.hwp` | AC-C1.2 HWP brief markdown 변환 후 LLM 호출 (binary 미전송 확증) |
+| `raw/0_inbox/Examples.hwpx` (DOCX 부재 대체, Docling 일반 분기) | AC-C1.2 HWPX brief 정상 + Docling DOC 분기 cache 동작 |
+
+DOCX file 부재로 HWPX 로 대체 — Docling 같은 분기 (DOCLING_DOC_FORMATS) 라 변환 logic 검증 동등.
+
+### 4.4 vault 재정비 — 사용자 지적 후 (2026-05-05) ✅
+
+`raw/3_resources/` 안 모든 파일 → `raw/0_inbox/` 일괄 원복:
+- 신규 mv 3 file: `nanovna-v2-notes.md` (smoke 후 자동 분류된 것 원복) / `llm-wiki.md` / `사업자등록증C_*.pdf`
+- 동명 SKIP 3 file (inbox 에 이미 존재, sha256 IDENTICAL 확증 → raw/3_resources copy 삭제): `Examples.hwpx` / `스마트공장 보급확산 합동설명회 개최.hwp` / `C20260410_용역계약서_*.pdf`
+- raw/3_resources 빈 디렉토리 정리
+
+wiki/ 재초기화 + registry={} 재확증 (이전 smoke ingest 결과 1 source / 8 entities / 6 concepts 모두 삭제). safety backup `/tmp/wikey-smoke-backup-2026-05-05-v2/`.
+
+**최종 vault state** (다음 세션 시작 시점):
+- raw/0_inbox/: **21 files** (md 16 / pdf 3 / hwp 1 / hwpx 1) — 다음 세션 라이브 smoke fixture pool
+- raw/_delayed/: 21 files (보존)
+- raw/3_resources/: 0
+- wiki/{sources,entities,concepts,analyses}/: 0 / index/log/overview = 0 bytes
+- .wikey/source-registry.json: `{}`
+
+CDP Obsidian 종료 (skill §9 — pkill 우회). 일반 모드 재시작은 사용자가 추후 (또는 master 가 다음 세션 시작 시 CDP 모드로 재시동).
+
+### 4.5 D-wide 라이브 확증 의의 (md fixture 만 — 다중 fixture 검증은 다음 세션)
 
 기존 시스템 (Phase 5 §5.4 까지) 였다면 8 종 자유 type 모두 schema gate 에서 drop 됐을 것 (`isValidEntityType` / `isValidConceptType` reject). D-wide 후 모두 wiki 에 정상 저장 — 사용자 본질 비판 6 chain ("LLM 자율 분류, schema gate 폐기") 정확 구현 라이브 확증.
+
+**확증 범위 한계**: md fixture 1 cycle 만 진행 — PDF 의 docling 변환 + HWP 의 unhwp 변환 + DOCX/HWPX 의 docling-doc 분기는 다음 세션 라이브 검증 필요. 다중 fixture 라이브 smoke 까지 완료 후 §5.10.4 Phase 4 진입.
 
 ## 5. Karpathy 4 원칙 cross-check (전체 cycle)
 
@@ -171,9 +205,13 @@ D-wide Part 2 + Final:
 
 ## 6. 다음 세션 진입점
 
-(라이브 smoke 5/5 GREEN 완료 → §5.10.4 Phase 4 만 잔여)
+1. **다중 파일 유형 라이브 smoke (master 직접 obsidian-cdp 스킬 §3 재시동)** — Phase 1 AC-C1.6 spec 충족:
+   - PDF: `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` — vector PDF AC-C1.7 sidecar raw 보존 + AC-C1.2 brief
+   - HWP: `raw/0_inbox/스마트공장 보급확산 합동설명회 개최.hwp` — AC-C1.2 binary 미전송 + unhwp 변환
+   - HWPX (DOCX 대체): `raw/0_inbox/Examples.hwpx` — Docling 일반 분기 (DOCLING_DOC_FORMATS)
+2. 라이브 smoke GREEN 후 — §5.10.4 Phase 4 진입:
 
-1. **§5.10.4 Phase 4** (D-wide Part 2 + Final):
+3. **§5.10.4 Phase 4** (D-wide Part 2 + Final):
    - R4 settings-tab.ts schema sample 정정
    - R5 docs/wikey-ingest-pipeline.md 5 line spot 정정
    - R8.2 잔여 ~22 cases 폐기 (suggestion-detector / convergence / self-declaration)
