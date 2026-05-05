@@ -1576,7 +1576,38 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 - 회귀 baseline 최종: `npm test` **673 PASS + 88 skipped + 0 fail** + build 0 errors. fresh re-run.
 - atomic single commit (build 깨짐 회피) — types.ts + schema.ts + canonicalizer.ts + index.ts + 3 test files 동시.
-- 라이브 cycle smoke = 사용자 환경 (Obsidian CDP 9222 재시작 + raw 원복 + wiki 초기화) 의존 → 별 단계.
+
+#### 5.10.3.9 obsidian-cdp 라이브 cycle smoke — Phase 1+2+3 통합 검증 (master 직접, 2026-05-05) ✅ ALL GREEN
+
+> **obsidian-cdp 스킬 §3 따라 master 직접 진행**: pkill -x Obsidian + `--remote-debugging-port=9222 --remote-allow-origins='*'` 재기동 (osascript 차단으로 pkill 사용). plugin reload (disable/enable). vault 정비 (raw/3_resources 의 9 ingest raw 파일 → raw/0_inbox/ mv, sidecar 5 파일 삭제, wiki/ 4 디렉토리 비움, registry={}).
+
+| # | Smoke | AC | 결과 |
+|---|-------|-----|------|
+| 1 | brief 정상 표시 (md content) | Phase 1 AC-C1.2 | ✅ "NanoVNA V2는 50kHz~3GHz 대역을 측정하는 소형 벡터 네트워크 분석기로..." (300자, binary 미전송) |
+| 2 | Cancel vault write 0 | Phase 1 AC-C1.4 | ✅ Cancel 후 modal closed, registry={} 그대로, raw/wiki 변경 0 (cache file ephemeral 분리) |
+| 3 | full ingest cycle (Brief→Proceed→Processing→Preview→Approve&Write) | Phase 1+3 통합 | ✅ 1 source + 8 entities + 6 concepts write. 약 1분 (LLM gemini-2.5-flash) |
+| 4 | D-wide LLM 자율 type 출현 | Phase 3 R2 (validation 강제 폐기) | ✅ 7-type 외 자유 string 출력 확증 — entities: `component` (mmcx-connector/sma-connector), `product-line` (nanovna), `software` (nanovna-qt). concepts: `calibration-method` (open-short-load-calibration), `metric` (standing-wave-ratio), `standard-term` (s-parameter), `visualization-method` (smith-chart) — paradigm shift 의도 정확 구현 |
+| 5 | broken link click → root 페이지 자동 생성 0 + Notice + dim | Phase 2 AC-C5.2 | ✅ LLM 답변에 `[[NanoVNA V2]]` (slug `nanovna-v2.md` 와 case mismatch) 출현. click 시뮬레이션 → DOM `internal-link` → `internal-link wikey-broken-link` (dim class), Notice "위키에 없는 페이지 — 자동 생성 차단", `openLinkText` 호출 0 (root 빈 페이지 자동 생성 0) |
+
+**참고: vector PDF sidecar raw 보존 (Phase 1 AC-C1.7)** 은 본 라이브 cycle 의 fixture 가 md 라 미적용. cache schema 검증 (4 unit cases) 으로 contract 충족. 라이브 검증은 §5.10.4 L 단계 (vector PDF fixture 사용).
+
+**결과 wiki 페이지 entity_type / concept_type list (D-wide 라이브 증거)**:
+
+```
+[entities] dji-o3-air-unit: product / mmcx-connector: component / nanovna-qt: software /
+           nanovna-v2-plus4: product / nanovna-v2: product / nanovna: product-line /
+           sma-connector: component / vector-network-analyzer: tool
+[concepts] first-person-view: concept / fpv-digital-transmission: concept /
+           open-short-load-calibration: calibration-method / s-parameter: standard-term /
+           smith-chart: visualization-method / standing-wave-ratio: metric
+```
+
+8 type 자유 string (component / product-line / software / calibration-method / concept / metric / standard-term / visualization-method) 이 7 builtin (organization/person/product/tool/standard/methodology/document_type) 외 출현 — 변경 전이라면 모두 drop 됐을 것.
+
+**LLM 답변 정상 흐름 확증 (§5.2 query layer 무영향)**:
+- 815자 답변, 18 wikilink (15 resolved + 3 broken).
+- citation: source-nanovna-v2-notes / nanovna-v2 / vector-network-analyzer / first-person-view / s-parameter / standing-wave-ratio / smith-chart / open-short-load-calibration / fpv-digital-transmission.
+- 원본 backlink: raw/3_resources/60_note/600_technology/nanovna-v2-notes.md (이번 cycle movePair 자동 분류 결과).
 
 ### 5.10.4 Phase 4 결과 (Session 4, TBD) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
 

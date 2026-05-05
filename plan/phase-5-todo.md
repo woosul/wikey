@@ -1122,7 +1122,7 @@
 - [x] R0/R1/R2/R3 GREEN 완료 + R6/R7 영향 X 확증 + R8.1 폐기 list 기록.
 - [x] `npm test` baseline = **673 PASS + 88 skipped + 0 fail** + build 0 errors. fresh re-run.
 - [x] `activity/phase-5-result.md §5.10.3` mirror commit (Phase 3 결과 timeline + R0~R3 + R6/R7 + R8.1 evidence).
-- [ ] 라이브 cycle smoke (Obsidian CDP 9222 + raw 원복 + wiki 초기화) — 사용자 환경 의존, 별 단계.
+- [x] **라이브 cycle smoke 5/5 GREEN** (master 직접 obsidian-cdp, 2026-05-05): brief + Cancel + full ingest + D-wide 자유 type 8 종 + broken link click 모두 통과. obsidian-cdp 스킬 §3 따라 master 가 pkill+CDP flag 재기동. /tmp/wikey-cdp.py 재작성 (websocket-client 1.9.0). vault 정비 (raw 9 파일 inbox 원복 + sidecar 5 파일 삭제 + wiki 초기화 + registry={}). 결과: activity/phase-5-result.md §5.10.3.9 + activity/phase-5-resultx-5.10-session16-summary-2026-05-05.md.
 
 ### 5.10.4 Phase 4 (Session 4) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
 

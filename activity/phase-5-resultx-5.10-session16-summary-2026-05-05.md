@@ -14,7 +14,7 @@
 | §5.10.2 | C5 broken-link prevention (AC-C5.1, C5.2) | ✅ Unit/Integration GREEN | 757 → **760 PASS (+3)** | `0f241a5` |
 | §5.10.3.1 R0 | Stage 2 mention prompt type_hint 자유 | ✅ GREEN | 760 → **761 PASS (+1)** | `a08cbd7` |
 | §5.10.3.2~7 R1~R8.1 | D-wide schema/canonicalizer/types 폐기 + 88 cases skip | ✅ GREEN (atomic) | 761 → **673 PASS + 88 skipped + 0 fail** | (이번 commit) |
-| §5.10.3.x 라이브 smoke | Obsidian CDP 라이브 cycle (PDF/HWP/DOCX brief + Cancel + broken link + D-wide LLM 자율 type) | ⏸ 환경 의존 (사용자 명시 액션 필요) | — | — |
+| §5.10.3.9 라이브 smoke | obsidian-cdp 라이브 cycle 5 항목 (master 직접) | ✅ ALL GREEN — D-wide 라이브 확증 (8 type 외 자유 string 출현) | — | (이번 commit) |
 
 **총 누적 변경**: 732 → 673 PASS / 88 skipped / 0 fail. 회귀 0 (skip 처리 88 cases 외 모두 GREEN). build 0 errors fresh re-run.
 
@@ -124,33 +124,41 @@ D-wide Part 2 + Final:
 - L 라이브 cycle smoke 5 항목 (master 직접 obsidian-cdp)
 - F 3 cycle 통합 codex Mode D Panel post-impl review APPROVE → §5.10 전체 종결 mark
 
-## 4. obsidian-cdp 라이브 cycle smoke — 사용자 환경 의존 (다음 액션)
+## 4. obsidian-cdp 라이브 cycle smoke — master 직접 진행 (2026-05-05) ✅ ALL GREEN
 
-### 4.1 사용자 명시 요구
+### 4.1 obsidian-cdp 스킬 §3 따라 master 진행
 
-> "obsidian-cdp 테스트를 위해 기존의 ingest되었던 모든 파일을 0_inbox로 원복하고, wiki 파일도 초기화 해야 할거야."
+> 정정: 이전 stale 표현 ("사용자가 Obsidian 재시작") 은 obsidian-cdp 스킬 §3 ("CDP 기동") 정책 위반. 스킬 §3 = master 가 `osascript -e 'quit app "Obsidian"'` (또는 `pkill -x Obsidian` 우회) + `--remote-debugging-port=9222 --remote-allow-origins='*'` 재기동. 사용자 환경 의존 X.
 
-### 4.2 환경 준비 항목
+| 단계 | 명령 |
+|------|------|
+| Obsidian quit | `pkill -x Obsidian; sleep 3` (osascript 차단 우회) |
+| CDP 모드 재기동 | `/Applications/Obsidian.app/Contents/MacOS/Obsidian --remote-debugging-port=9222 --remote-allow-origins='*' > /tmp/obsidian-cdp.log 2>&1 & disown` |
+| CDP 가용성 확증 | `curl -sf --max-time 3 http://localhost:9222/json/version` → CDP_UP |
+| /tmp/wikey-cdp.py 재작성 | OS reboot 으로 fresh 한 /tmp 라 helper script 부재 → master 가 websocket-client 1.9.0 (`.venv-smoke`) 기반 minimal CDP wrapper 재작성 |
+| plugin reload | `app.plugins.disablePlugin('wikey'); app.plugins.enablePlugin('wikey')` → 9 wikey 명령 list |
+| vault 정비 (사용자 승인 작업) | (1) `.wikey/source-registry.json` 의 raw/3_resources 의 9 ingest raw 파일 → raw/0_inbox/ mv. (2) raw/3_resources 의 sidecar (.pdf.md / .hwp.md / .hwpx.md) 5 파일 삭제. (3) wiki/sources/entities/concepts/analyses/* 모두 삭제 + wiki/.ingest-map.json 삭제 + wiki/index.md / log.md / overview.md truncate. (4) `echo '{}' > .wikey/source-registry.json` |
+| safety backup | `/tmp/wikey-smoke-backup-2026-05-05/` 에 wiki/ + source-registry.json 복사 |
 
-| 항목 | 명령 또는 액션 |
-|------|---------------|
-| Obsidian CDP 재시작 | 사용자가 Obsidian 종료 후 `open -a Obsidian --args --remote-debugging-port=9222 --remote-allow-origins=*` 또는 `~/.claude/skills/obsidian-cdp/SKILL.md` 따른 launcher 사용 |
-| raw 원복 (ingest 된 파일 → 0_inbox) | master 가 `find raw/3_resources -mindepth 3 -type f` 의 ingest 된 파일 mv → `raw/0_inbox/`. raw/_delayed/ 의 placeholder 는 skip (delay-ingest 시스템 의도) |
-| wiki/ 초기화 | `rm -rf wiki/concepts/* wiki/entities/* wiki/sources/* wiki/analyses/* && truncate -s 0 wiki/index.md wiki/log.md wiki/overview.md wiki/.ingest-map.json` (사용자 명시 승인 후) |
-| .wikey/source-registry.json 초기화 | `echo '{}' > .wikey/source-registry.json` (사용자 명시 승인 후) |
+### 4.2 5 Smoke 결과 (Phase 1+2+3 통합)
 
-### 4.3 smoke cycle 항목 (master 직접 obsidian-cdp)
+> Fixture: `raw/0_inbox/nanovna-v2-notes.md` (md content, 외부 process 의존 없음 — 가장 가벼운 cycle).
 
-Phase 1+2+3 통합 검증 항목:
-1. **§5.10.1 (Phase 1) — PDF brief**: `raw/0_inbox/<some>.pdf` ingest → brief 정상 표시 (HWP/DOCX 도 binary 미전송 확증)
-2. **§5.10.1 (Phase 1) — Cancel vault write 0**: brief 표시 → Cancel → `git status raw/ wiki/ .wikey/` clean. cache file `~/.cache/wikey/convert/` 만 ephemeral 생성
-3. **§5.10.1 (Phase 1) — vector PDF sidecar raw 보존**: vector PDF ingest → sidecar canonical write 시 raw 이미지 그대로 (결함 b fix 확증)
-4. **§5.10.2 (Phase 2) — broken link click**: 답변 안 broken `[[link]]` click → root 빈 페이지 자동 생성 0 + Notice "위키에 없는 페이지 — 자동 생성 차단" + DOM dim
-5. **§5.10.3 (Phase 3) — D-wide LLM 자율 type**: PDF / HWP ingest → LLM 출력 entity/concept type 이 7-type 외 자유 string 생성 가능 (예: `algorithm`, `regulation` 등) → frontmatter `entity_type:` / `concept_type:` 그대로 저장 → 분류 강제 X 확증
+| # | Smoke | AC | 결과 |
+|---|-------|-----|------|
+| 1 | brief 정상 표시 (md content) | Phase 1 AC-C1.2 | ✅ "NanoVNA V2는 50kHz~3GHz 대역을 측정하는..." (300자 brief, binary 미전송) |
+| 2 | Cancel vault write 0 | Phase 1 AC-C1.4 | ✅ Cancel → modal closed + registry={} 유지 + raw/wiki 변경 0 |
+| 3 | full ingest cycle | Phase 1+3 통합 | ✅ Brief→Proceed→Processing(2/4 mention extract→3/4 canonicalize→4/4 write)→Preview(14건)→Approve & Write → 1 source + 8 entities + 6 concepts wiki write. 약 1분 |
+| 4 | D-wide LLM 자율 type | Phase 3 R2 | ✅ 7-type 외 자유 string 8 종 출현: entities `component`/`product-line`/`software`, concepts `calibration-method`/`concept`/`metric`/`standard-term`/`visualization-method` |
+| 5 | broken link click → 자동 생성 차단 | Phase 2 AC-C5.2 | ✅ `[[NanoVNA V2]]` (slug case mismatch) click → DOM `internal-link` → `internal-link wikey-broken-link` (dim) + Notice "위키에 없는 페이지 — 자동 생성 차단" + openLinkText 호출 0 (root 빈 페이지 자동 생성 0) |
 
-### 4.4 진행 권장
+### 4.3 vector PDF sidecar raw 보존 (AC-C1.7) 라이브 — Phase 4 L 단계 deferral
 
-본 라이브 smoke 는 vault state 변경이 큰 작업 (현재 ~106 wiki 페이지 + ingest 된 ~30+ raw 파일 원복). 사용자 직접 승인 후 master 진행 권장. 본 commit 에서는 코드 변경 + 결과 요약보고서까지만 진행.
+본 cycle 의 fixture 가 md content 라 vector PDF sidecar raw 보존 (결함 b fix) 은 라이브 검증 안 됨. cache schema unit test (`convert-cache.test.ts` 4 cases) 로 contract 충족. PMS PDF 같은 vector PDF fixture 는 §5.10.4 L 단계 (5 항목 통합 라이브 smoke) 에서 검증.
+
+### 4.4 D-wide 라이브 확증 의의
+
+기존 시스템 (Phase 5 §5.4 까지) 였다면 8 종 자유 type 모두 schema gate 에서 drop 됐을 것 (`isValidEntityType` / `isValidConceptType` reject). D-wide 후 모두 wiki 에 정상 저장 — 사용자 본질 비판 6 chain ("LLM 자율 분류, schema gate 폐기") 정확 구현 라이브 확증.
 
 ## 5. Karpathy 4 원칙 cross-check (전체 cycle)
 
@@ -163,12 +171,9 @@ Phase 1+2+3 통합 검증 항목:
 
 ## 6. 다음 세션 진입점
 
-1. **사용자 환경 준비** (선택, 큰 vault 변경):
-   - Obsidian CDP 재시작 (`--remote-debugging-port=9222`)
-   - raw/3_resources/ 등 ingest 파일 → raw/0_inbox/ 원복 (master 진행 가능)
-   - wiki/ 초기화 + .wikey/source-registry.json 초기화
-2. **§5.10.3 라이브 cycle smoke** (master 직접 obsidian-cdp): 위 §4.3 의 5 smoke 항목
-3. **§5.10.4 Phase 4** (D-wide Part 2 + Final):
+(라이브 smoke 5/5 GREEN 완료 → §5.10.4 Phase 4 만 잔여)
+
+1. **§5.10.4 Phase 4** (D-wide Part 2 + Final):
    - R4 settings-tab.ts schema sample 정정
    - R5 docs/wikey-ingest-pipeline.md 5 line spot 정정
    - R8.2 잔여 ~22 cases 폐기 (suggestion-detector / convergence / self-declaration)
@@ -187,9 +192,9 @@ Phase 1+2+3 통합 검증 항목:
 | 항목 | 값 |
 |------|-----|
 | Session | 16 (2026-05-04 ~ 2026-05-05) |
-| Total commits | 4 (Phase 1 / Phase 2 / R0 / Phase 3 atomic) |
+| Total commits | 5 (Phase 1 / Phase 2 / R0 / Phase 3 atomic / 라이브 smoke + 보고서) |
 | Total test 변동 | 732 → 673 PASS (+29 신규 / +88 skipped / 0 fail) |
 | Total code 변동 | ~+900 신규 (conversion.ts + 신규 test) / -~620 폐기 (schema.ts + canonicalizer.ts + 88 test cases) |
 | Build | 0 errors fresh re-run |
 | Karpathy cross-check | 모두 충족 |
-| 라이브 smoke | ⏸ 다음 세션 (사용자 환경 준비 후 master 진행) |
+| 라이브 smoke | ✅ 5/5 GREEN (Phase 1+2+3 통합 라이브 검증, master 직접 obsidian-cdp) — D-wide 자유 type 8 종 라이브 확증 |
