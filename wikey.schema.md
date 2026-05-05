@@ -187,13 +187,17 @@ PMBOK / ISO 27001 / ITIL 같이 component 가 정형화된 외부 표준 자료�
 > **2026-05-05 §5.10 paradigm shift 옵션 D-wide 채택 배경** (사용자 본질 비판 6 chain):
 > 1. "표준 분해 그룹 = 지식 그룹? 표준 분해 그룹 ⊂ 지식 그룹." → 표준 분해는 일반 지식의 부분집합, 별 layer 정당화 약함
 > 2. "굳이 어려운 말 써가면서 지식을 분류할 필요 없잖아. LLM 이라는 든든한 백 위에서 움직이는 건데."
-> → 결론: §5.4 Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion-detector / self-declaration / convergence) 모두 폐기. Suggestions panel UI 폐기 (sidebar 6→5 패널). schema.yaml 의 보존 영역은 **`aliases` (canonical slug normalization) + `pii_patterns` (custom PII regex)** 만.
+> → 결론: §5.4 Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion-detector / self-declaration / convergence) 모두 폐기. Suggestions panel UI 폐기 (sidebar 6→5 패널). schema.yaml 의 보존 영역은 **`aliases` (canonical slug normalization) 만**. PII custom rule 은 별도 file (`.wikey/pii-patterns.yaml` + `~/.config/wikey/pii-patterns.yaml`) 의 `patterns: - id/kind/mask` shape 으로 관리 (PII engine 별 layer).
 >
 > 이전 정책 (Phase 5 §5.4 self-extending) 의 history reference: `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 + `activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md`.
 
-`.wikey/schema.yaml` 보존 sections:
+`.wikey/schema.yaml` 보존 section:
 - `aliases:` — canonical slug variant mapping (다국어 / 동명이인 / 약어). `canonicalizer.canonicalizeSlug` 가 이를 SLUG_ALIASES 와 merge 하여 dedup.
-- `pii_patterns:` — custom PII regex. `pii-patterns.ts` 가 별 file (`.wikey/pii-patterns.yaml`) 에서 load.
+
+PII custom rule 은 본 schema.yaml 에 두지 **않음**. 별 file:
+- `<vault>/.wikey/pii-patterns.yaml` (프로젝트별)
+- `~/.config/wikey/pii-patterns.yaml` (전역)
+- shape: `patterns: - id: <name>\n  kind: regex|structural\n  ...`. 상세는 `wikey-core/src/pii-patterns.ts`.
 
 > 진행 상태 / 구현 commit / paradigm shift 검토는 schema 가 다루지 않음. 진입점:
 > - `plan/phase-5-todo.md` §5.10 (D-wide regroup Phase 1~4)

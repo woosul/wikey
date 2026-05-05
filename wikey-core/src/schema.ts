@@ -104,10 +104,16 @@ export function parseUserAliasesYaml(input: string): Readonly<Record<string, str
       continue
     }
     if (!inAliases) continue
-    const canonicalKey = stripped.match(/^[ \t]+(\S+)\s*:\s*$/)
-    if (canonicalKey) {
-      currentCanonical = normalizeAliasKey(canonicalKey[1])
-      continue
+    // §5.10.4 cycle #3 P2 — multi-word / quoted canonical key 지원.
+    // 형태: `  iso-27001:` / `  "ISO 27001":` / `  ISO 27001:` 모두 인식.
+    // variant item 은 dash 로 시작하므로 canonicalKey 검사를 dash 가 *아닌* 줄로 한정.
+    if (!/^[ \t]+-\s/.test(stripped)) {
+      const canonicalKey = stripped.match(/^[ \t]+(.+?)\s*:\s*$/)
+      if (canonicalKey) {
+        const rawKey = canonicalKey[1].trim().replace(/^["']|["']$/g, '')
+        currentCanonical = normalizeAliasKey(rawKey)
+        continue
+      }
     }
     const variantItem = stripped.match(/^[ \t]+-\s+(.+)$/)
     if (variantItem && currentCanonical) {

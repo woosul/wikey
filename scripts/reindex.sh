@@ -209,31 +209,10 @@ cmd_reindex() {
     fi
   fi
 
-  # §5.4.4 — convergence pass 훅 (default off, opt-in via env)
-  # spec: plan/phase-5-todox-5.4-integration.md §3.4.3 line 906-916
-  if [ "${WIKEY_CONVERGENCE_ENABLED:-false}" = "true" ]; then
-    echo -e "\n${BOLD}[+]${NC} ${BOLD}§5.4.4 convergence pass 실행${NC}"
-    local pass_script="${PROJECT_DIR}/wikey-core/dist/scripts/run-convergence-pass.mjs"
-    if [ ! -f "$pass_script" ]; then
-      log_skip "convergence pass: ${pass_script} 없음 (npm run build 필요)"
-    else
-      local wiki_dir="${WIKI_DIR:-${PROJECT_DIR}/wiki}"
-      # post-impl Cycle #2 F4 fix: --embeddings 외부 JSON inject 지원 (alpha v1).
-      # WIKEY_CONVERGENCE_EMBEDDINGS env 가 설정되어 있고 파일이 존재하면 forward.
-      local emb_args=()
-      if [ -n "${WIKEY_CONVERGENCE_EMBEDDINGS:-}" ] && [ -f "${WIKEY_CONVERGENCE_EMBEDDINGS}" ]; then
-        emb_args=(--embeddings "${WIKEY_CONVERGENCE_EMBEDDINGS}")
-      fi
-      node "$pass_script" \
-        --history "${wiki_dir}/.wikey/mention-history.json" \
-        --qmd-db "${HOME}/.cache/qmd/index.sqlite" \
-        --output "${wiki_dir}/.wikey/converged-decompositions.json" \
-        --arbitration "${WIKEY_ARBITRATION_METHOD:-union}" \
-        --token-budget "${WIKEY_CONVERGENCE_TOKEN_BUDGET:-50000}" \
-        "${emb_args[@]}" \
-        || log_err "convergence pass 실패 (계속 진행)"
-    fi
-  fi
+  # §5.10.4 D-wide: §5.4.4 convergence pass 폐기. WIKEY_CONVERGENCE_ENABLED env 지원
+  # 제거. .wikey/converged-decompositions.json 자동 생성 path 차단. self-extending
+  # 메커니즘 전체 D-wide 결정 일관 (run-convergence-pass.mjs script file 자체는 보존,
+  # CLI 직접 invoke 도 deprecated — 사용자 환경에 잔존 시 별 invoke 만 가능).
 
   # 타임스탬프 갱신
   mkdir -p "$(dirname "$STAMP_FILE")"

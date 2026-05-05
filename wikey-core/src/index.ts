@@ -18,14 +18,14 @@ export type {
   IngestPlanGate,
   QueryResult,
   SearchResult,
-  SchemaCustomType,
-  SchemaOverride,
 } from './types.js'
 
-// Phase 5 §5.10.3 R1 + §5.10.4 (D-wide): ENTITY_TYPES / CONCEPT_TYPES / getEntityTypes /
-// getConceptTypes / buildSchemaPromptBlock / parseSchemaOverrideYaml 모두 폐기.
-// loadSchemaOverride 는 stub 으로 보존 (항상 null 반환, P2-2 aliases parser 후속 entry).
-export { loadSchemaOverride } from './schema.js'
+// Phase 5 §5.10.3 R1 + §5.10.4 (D-wide): schema-override public surface 모두 폐기.
+// SchemaOverride / SchemaCustomType type, loadSchemaOverride / parseSchemaOverrideYaml /
+// buildStandardDecompositionBlock / ENTITY_TYPES / CONCEPT_TYPES / getEntityTypes /
+// getConceptTypes / buildSchemaPromptBlock 함수 모두 export 안 함. canonicalizer 내부
+// minimal alias normalization (SLUG_ALIASES + .wikey/schema.yaml `aliases:` parser) 만
+// 잔존 — public API 가 아니라 ingest-pipeline 내부 dependency.
 
 export { parseWikeyConf, loadConfig, resolveProvider } from './config.js'
 export { stripEmbeddedImages, countEmbeddedImages } from './rag-preprocess.js'
