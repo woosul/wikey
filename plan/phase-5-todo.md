@@ -19,7 +19,8 @@
   - [`plan/phase-5-todox-5.4.1-self-extending.md`](./phase-5-todox-5.4.1-self-extending.md) — §5.4.1 Stage 1 단독 plan (v7 codex Cycle #9 APPROVE)
   - [`plan/phase-5-todox-5.11-page-promotion-threshold.md`](./phase-5-todox-5.11-page-promotion-threshold.md) — §5.11 v2.5 의미·관련도 threshold + 원문 언어 alias + wiki 초기화 (5 codex cycle 누적, post-impl APPROVE_WITH_NOTES)
   - [`plan/phase-5-todox-5.12-source-wikilink-format.md`](./phase-5-todox-5.12-source-wikilink-format.md) — §5.12 v3 source wikilink format (canonicalizer sourcePageBase chain, 2 plan cycle + post-impl APPROVE)
-  - [`plan/phase-5-todox-5.13-residual-followups.md`](./phase-5-todox-5.13-residual-followups.md) — §5.13 잔존 follow-up 3 항목 (raw sidecar 부활 / validator find raw 패턴 / LLM source filename prefix), **draft / 미진행** 사용자 결정 후 착수
+  - [`plan/phase-5-todox-5.13-residual-followups.md`](./phase-5-todox-5.13-residual-followups.md) — §5.13 잔존 follow-up 3 항목 (raw sidecar 부활 / validator find raw 패턴 / LLM source filename prefix), **draft v0.1 (사용자 임시 A1+B2+C4)** §5.14 완료 후 착수
+  - [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](./phase-5-todox-5.14-retrospective-blue-refactor.md) — §5.14 Phase 5 retrospective TDD-BLUE refactor (§5.11 v2 + §5.12 GREEN 단계 BLUE 누락 보완), **draft v0 / P0 다음 세션 최우선**
 - **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
 
 ## 우선순위 가이드 (2026-04-24 재조정)
