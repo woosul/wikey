@@ -341,16 +341,21 @@ export async function runIngest(
     })
   }
 
-  // ── Stay-involved flow: unified modal (brief → processing → preview) ──
+  // ── Stay-involved flow: unified modal (converting → brief → processing → preview) ──
   // Phase 5 §5.10.1.3 AC-C1.3: conversion 1 회 보장. modal.open() 직후 단일 변환 entry
   // (`convertSourceToMarkdown`) 호출 → brief + ingest 가 동일 결과 공유.
+  // §5.10.3.10 옵션 C: stepper 4 단계 (Converting / Brief / Processing / Preview) — 변환 단계 시각화.
   // Cancel 시 vault write 0 invariant (AC-C1.4): runIngestCore 호출 안 함. cache 만 ephemeral 보존.
   const modal = new IngestFlowModal(plugin.app, sourcePath, '', plugin.settings.verifyIngestResults)
   modal.open()
 
-  onProgress?.(1, 4, 'Converting source...')
   const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
   const ext = sourceFilename.toLowerCase().split('.').pop() ?? ''
+  // md/txt 도 stepper 표시는 동일 4 단계. message 만 분기 ("Reading source" vs "Converting source").
+  const convertingMsg = ext === 'md' || ext === 'txt' ? 'Reading source...' : `Converting ${ext.toUpperCase()} → markdown...`
+  modal.showConverting(convertingMsg)
+  onProgress?.(1, 4, convertingMsg)
+
   let conversionResult: ConversionResult
   try {
     conversionResult = await convertSourceToMarkdown(sourcePath, ext, {
@@ -360,13 +365,15 @@ export async function runIngest(
       wikiFS: plugin.wikiFS,
     })
   } catch (err) {
-    modal.setBrief(`(변환 실패: ${(err as Error)?.message ?? err})`)
+    modal.showBrief()
+    modal.setBrief(`(Conversion failed: ${(err as Error)?.message ?? err})`)
     // Wait for user acknowledgement (Cancel or Back) — vault write 0 invariant 보존.
     const out = await modal.awaitBrief()
     modal.close()
     return { success: false, sourcePath, createdPages: [], cancelled: out.action === 'cancel' }
   }
 
+  modal.showBrief()
   onProgress?.(2, 4, 'Generating brief...')
   generateBrief(
     conversionResult.content,
@@ -380,7 +387,7 @@ export async function runIngest(
     },
   )
     .then((b) => modal.setBrief(b))
-    .catch((err) => modal.setBrief(`(brief 생성 실패: ${err?.message ?? err})`))
+    .catch((err) => modal.setBrief(`(Brief generation failed: ${err?.message ?? err})`))
 
   // Brief → Processing → (optional Preview) loop. Back from Processing returns to Brief.
   while (true) {
@@ -648,11 +655,13 @@ function normalizeRawPath(p: string): string {
 export class IngestFileSuggestModal extends FuzzySuggestModal<TFile> {
   constructor(private readonly plugin: WikeyPlugin) {
     super(plugin.app)
-    this.setPlaceholder('인제스트할 파일을 선택하세요...')
+    this.setPlaceholder('Select a file to ingest...')
   }
 
   getItems(): TFile[] {
-    return this.plugin.app.vault.getMarkdownFiles().filter(
+    // §5.10.3.10 옵션 C: md 외 모든 ingest 가능 file 포함 (HWP/PDF/DOCX/PPTX/XLSX/HTML/HWPX 등).
+    // wiki/ + .obsidian/ + .wikey/ 같은 system 영역은 제외.
+    return this.plugin.app.vault.getFiles().filter(
       (f) => !f.path.startsWith('wiki/') && !f.path.startsWith('.'),
     )
   }

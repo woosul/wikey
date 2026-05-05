@@ -121,6 +121,78 @@ UI 요소의 상태 변화를 부드럽게 표현하기 위한 전환 효과입�
 | `--wk-motion-duration` | `0.15s` | 빠른 상호작용(호버, 클릭)의 전환 속도 |
 | `--wk-motion-easing` | `ease` | 기본 이징 함수 |
 
+## 모달 컴포넌트 표준
+
+Wikey 의 모든 모달 (Ingest flow / Conflict / Reset / Delete impact 등) 은 다음 표준을 따릅니다 (Phase 5 §5.10.3.10 옵션 C 영구 결정).
+
+### 1. 언어 — 모든 text 영어 (한국어/영어 병기 금지)
+
+- 모달 제목, 본문 라벨, 버튼 라벨, placeholder, hint, fallback message — **모두 영어**.
+- 사용자 시스템 언어 무관 일관성 우선. (한국어 i18n 은 별 phase 에서 다국어 시스템 도입 시 검토.)
+- 버튼 라벨 단일 단어 권장: `Proceed` · `Cancel` · `Approve & Write` · `Back` · `Preserve` · `Overwrite`. 부연 `(discard)` 같은 병기 금지.
+- 한국어/영어 병기 (예: `'사용자 수정 보존 (preserve)'`) 금지. 영어 단일 (`'Preserve'`).
+
+### 2. 사이즈 — 적응형 + init 1 회
+
+- `applyModalSize()` 에서 width / height 모두 init 1 회 설정 (예: `760 × 672`, viewport 0.92/0.82 cap).
+- `min-height` / `max-height` 절대값 금지 — 사용자 resize 핸들 동작 깨짐.
+- 사용자 resize 시 `modalEl.style.height` 갱신 (init 값 override). 갱신값 우선.
+- 모든 phase rerender 시 modal 자체 height 변경 X (contents 만 변경) → 깜빡임 차단.
+
+### 3. Layout — 적응형 보장
+
+- modal contentEl: `display: flex; flex-direction: column; height: 100%; max-height: 100%;`
+- body (`.wikey-modal-body`): `flex: 1 1 auto; overflow-y: auto;` — 작은 창에서도 contents scroll 가능.
+- Button row (`.wikey-modal-button-row-bottom`): `position: sticky; bottom: 0; background: var(--background-primary);` — overflow body 에서도 button 안 가려짐.
+- Progress bar / progress group: button row 위에 sticky 또는 `margin-top: auto` (flex spacer) — 항상 button 바로 위에 위치.
+
+### 4. Multi-phase stepper
+
+- 다단계 모달 (Ingest flow 등) 은 stepper UI 로 phase 시각화.
+- Stepper labels 와 `progressTotal` 일치 (예: 4-phase = 4 labels, `progressTotal: 4`).
+- Phase 전환 시 stepper active label 만 갱신 (modal 크기 그대로).
+- 비-md → md 변환 등 phase 별 분기 — stepper 자체는 동일 (label 통일), body message 만 분기 ("Reading source..." vs "Converting PDF → markdown...").
+
+### 5. Stage indicator + progress bar
+
+- `wikey-modal-progress-msg`: `{step}/{total} · {message}` 형식.
+- `wikey-modal-progress-pct`: `{N}%`.
+- Progress bar fill = `{step / total}` 또는 sub-step interpolation.
+- Spinner: 회전 애니메이션 (CSS @keyframes wikey-spin).
+
+### 6. File label (변환 모달 전용)
+
+- `wikey-modal-file-label`: `{original.ext} → {converted.md}` (비-md 만 → 표시).
+- md / txt 는 → 표시 없음 (변환 없음).
+
+### 7. Drag / Resize
+
+- Title bar `drag-handle` — modal 위치 이동.
+- 우하단 `resize-handle` — 사이즈 조절. min 480 × 360, max viewport 40px 안쪽.
+- 사용자 resize 결과 (modalEl.style.height/width) 가 phase 전환 후에도 보존.
+
+### 8. Close 보호
+
+- backdrop click + ESC 차단 (mousedown/click capture).
+- Close button (`.modal-close-button`): converting/processing phase 에서 confirm dialog (`'Ingest in progress. Close anyway?'`).
+
+### 9. Body scroll behavior
+
+- 큰 contents (Preview plan list 30+ entries) 시 body `overflow-y: auto` 로 자동 scroll.
+- Sticky button row 가 scroll 영역 위에 항상 보임.
+
+### 10. 색상 / 토큰
+
+- `--background-primary` (modal background, sticky button row).
+- `--interactive-accent` (file-original, accent button).
+- `--text-faint` (file-sep), `--text-muted` (file-converted, hints).
+- `--background-modifier-border` (spinner border), `--font-monospace` (file-converted).
+
+### 위반 사례 (영구 등록)
+
+- 2026-05-05 §5.10.3.10 cycle: `min-height: 480px / 560px` 절대값 추가 → 사용자 resize 작아짐 시 progress/button 모달 영역 밖. 정정: min-height 제거 + applyModalSize() init height + button row sticky bottom.
+- 2026-05-05 §5.10.3.10 cycle: 모달 한국어 텍스트 (`'활성 스키마: '`, `'생성/업데이트될 페이지'`, `'사용자 수정 보존 (preserve)'`) 잔재. 정정: 모든 user-facing text 영어 일괄 변환.
+
 ## 패널 패턴
 
 Wikey 사이드바의 6개 패널은 고유한 레이아웃과 토큰 조합을 가집니다.

@@ -1125,6 +1125,39 @@
 - [⚠️] **라이브 cycle smoke 부분 수행** (md 1 fixture, 2026-05-05): brief + Cancel + full ingest + D-wide 자유 type 8 종 + broken link click 통과 — 단 **AC-C1.6 spec ("PDF + HWP + DOCX 각 1") 위반** (사용자 지적). 다음 세션 다중 fixture 라이브 smoke 의무.
 - [ ] **다중 파일 유형 라이브 smoke** (다음 세션, master 직접 obsidian-cdp 스킬 §3 재시동): PDF (PMS_제품소개_R10_20220815.pdf, vector PDF AC-C1.7) + HWP (스마트공장 보급확산, AC-C1.2) + HWPX (Examples.hwpx, Docling 일반 분기 — DOCX 부재 대체). 결과 evidence → `activity/phase-5-result.md §5.10.3.9` 보강.
 
+### 5.10.3.10 (Session 16 보강) — Modal UX 옵션 C + 영어 일관 + 다중 fixture 라이브 smoke ✅
+
+> **trigger**: 2026-05-05 PDF 라이브 smoke 진행 중 사용자 본질 비판 다수 — (1) 모달 stepper 3 단계인데 progress 4 단계 inconsistent + Converting 시각화 부재, (2) 모달 깜빡임 (phase 별 height 변동), (3) Processing file label `원본.ext → sidecar.md` 표시가 변환 중 처럼 보임, (4) spinner 위치 file label 바로 아래, (5) min-height 절대값 → 사용자 resize 시 progress/btn 가려짐, (6) 모달 한국어/영어 혼재, (7) sidecar conflict (Cancel 후 inbox 잔재), (8) DESIGN.md 모달 표준 부재, (9) ingest 시간 단순 분류 대비 과대.
+>
+> **결정**: 옵션 C (항상 4 단계 + Converting 의무 표시) + α 진행 (1+2+3 전부 + 모달 영어 일관 spec 추가).
+>
+> **결과** (3 fixture 라이브 smoke):
+> - PDF (PMS_제품소개_R10) 47KB chars → Processing ~360s, source+6 entities+30 concepts, raw/3_resources/ movePair ✓, sidecar 보존 ✓
+> - HWP (스마트공장 보급확산) 748 chars → Processing 61s, source+4+1, raw/0_inbox/ sidecar ✓
+> - HWPX (Examples.hwpx) 544 chars → Processing 63s, source+2+1, raw/0_inbox/ sidecar ✓
+> - **AC-C1.6 + AC-C1.7 + AC-C1.2 + AC-C1.3 모두 충족** (3 fixture 라이브 검증)
+> - **사용자 spec 4 모두 충족** (a) Processing file label sidecar only, (b) spinner 중앙, (c) modal 4 phase 동일 (760×672 / body 510), (d) 시간 분석 결과 = mention extraction chunk sequential 원인.
+
+- [x] Modal stepper 4 단계 + FlowPhase union ('converting' 추가) — `wikey-obsidian/src/ingest-modals.ts`
+- [x] showConverting() / showBrief() 메서드 + setBrief 자동 phase 전환 — fallback 보장
+- [x] applyModalSize() init height + maxHeight 1 회 — 모든 phase 동일 modal 크기 유지
+- [x] body min-height / modal min-height 제거 — 사용자 resize 적응형 보존
+- [x] button-row-bottom sticky bottom — 작은 창에서도 안 가려짐
+- [x] spinner-center wrap (flex:1) — file label 과 progress bar 사이 중앙
+- [x] Processing renderProcessingPhase: file label sidecar.md only (`wikey-modal-file-converted` only, 원본 미표시)
+- [x] 모달 영어 일관 — ingest-modals.ts (LLM brief, auto summary, Active schema, Focus / direction, Pages to create / update, Cancel, Writing..., update/new, etc) + conflict-modal.ts (Wikey — Ingest conflict detected, Preserve/Overwrite/Cancel) + commands.ts (Conversion failed / Brief generation failed / Select a file to ingest...)
+- [x] IngestFileSuggestModal getItems(): vault.getFiles() (binary file 포함) + placeholder 영어
+- [x] DESIGN.md 모달 컴포넌트 표준 섹션 추가 (10 항목 — 언어/사이즈/Layout/stepper/progress/file label/drag-resize/close 보호/scroll/색상)
+- [x] sidecar 잔재 즉시 fix (raw/0_inbox/PMS_제품소개_R10_20220815.pdf.md 삭제)
+- [x] 라이브 smoke 3 fixture (PDF + HWP + HWPX) GREEN — AC-C1.6 spec 충족
+- [ ] **잔여 §5.10.4 등록 issues**:
+  - `autoMove` 누락 (protocol handler `obsidian://wikey?ingest=` 가 autoMoveFromInbox=true 안 넘김 → HWP/HWPX 가 raw/0_inbox/ 잔존)
+  - mention extraction 병렬화 (PDF 6분 → 1~2분 단축 가능, gemini-2.5-flash 1M context 활용)
+  - picker fuzzy 한국어 path 매치 약함 (vault.getFiles() 결과 정상이지만 한국어 search 결과 0)
+  - AC-C1.4 보강 의심 — 이번 cycle 의 sidecar 잔재가 1차 Cancel 후 잔존 (raw/0_inbox/<file>.<ext>.md). sidecar write 시점 검토 필요 (Approve 전 write 발생 시 spec 위반)
+  - Preview 큰 plan list (PDF 37+) modal 자체 변동 — maxHeight init 보강 후 PDF 재 cycle 검증 필요
+- [ ] reset-modals.ts 영어화 (본 cycle 무관 — §5.10.4 처리)
+
 ### 5.10.4 Phase 4 (Session 4) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
 
 > **세션 estimate**: ~3 시간. R4/R5 + R8.2-3 + M (migration script) + L (라이브 smoke) + F (종결 + 3 cycle 통합 codex review).

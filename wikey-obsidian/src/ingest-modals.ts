@@ -4,16 +4,17 @@ import type { IngestPlan } from 'wikey-core'
 /**
  * Unified Ingest Flow Modal (llm-wiki.md "stay involved" UX).
  *
- * One modal, three phases:
- *   1. brief       — LLM brief + user guide input + verify toggle
- *   2. processing  — spinner + live progress (extract runs in background)
- *   3. preview     — extraction plan + approve/cancel
+ * One modal, four phases:
+ *   1. converting — spinner + progress (source → markdown 변환; md/txt 도 read 단계 표시)
+ *   2. brief       — LLM brief + user guide input + verify toggle
+ *   3. processing  — spinner + live progress (extract runs in background)
+ *   4. preview     — extraction plan + approve/cancel
  *
- * If verify toggle is OFF, modal auto-closes after phase 2.
+ * If verify toggle is OFF, modal auto-closes after phase 3.
  * If user closes the modal mid-flow, the current phase resolves as cancel.
  */
 
-export type FlowPhase = 'brief' | 'processing' | 'preview' | 'done'
+export type FlowPhase = 'converting' | 'brief' | 'processing' | 'preview' | 'done'
 
 export interface BriefOutcome {
   readonly action: 'proceed' | 'skip-session' | 'cancel'
@@ -22,18 +23,19 @@ export interface BriefOutcome {
 }
 
 const STEP_LABELS: ReadonlyArray<{ key: FlowPhase; label: string }> = [
+  { key: 'converting', label: 'Converting' },
   { key: 'brief', label: 'Brief' },
   { key: 'processing', label: 'Processing' },
   { key: 'preview', label: 'Preview' },
 ]
 
 export class IngestFlowModal extends Modal {
-  private phase: FlowPhase = 'brief'
+  private phase: FlowPhase = 'converting'
   private guideHint = ''
   private verifyResults: boolean
   private plan: IngestPlan | null = null
-  private progressMessage = 'Extracting...'
-  private progressStep = 0
+  private progressMessage = 'Converting source...'
+  private progressStep = 1
   private progressTotal = 4
   private progressSubStep: number | undefined
   private progressSubTotal: number | undefined
@@ -80,7 +82,32 @@ export class IngestFlowModal extends Modal {
   setBrief(brief: string) {
     this.brief = brief
     this.briefLoading = false
-    if (this.phase === 'brief') this.rerender()
+    // 변환 단계에서 brief 결과 도착 시 자동 'brief' 전환 (옵션 C 4단계 stepper).
+    if (this.phase === 'converting' || this.phase === 'brief') {
+      this.phase = 'brief'
+      this.progressStep = 2
+      this.rerender()
+    }
+  }
+
+  /** Switch to converting phase; called immediately after modal.open() so user sees progress. */
+  showConverting(message = 'Converting source...') {
+    this.phase = 'converting'
+    this.progressMessage = message
+    this.progressStep = 1
+    this.progressTotal = 4
+    this.briefLoading = true
+    this.rerender()
+  }
+
+  /** Switch to brief phase; called once conversion completes (LLM brief still loading). */
+  showBrief(message = 'Generating brief...') {
+    this.phase = 'brief'
+    this.progressMessage = message
+    this.progressStep = 2
+    this.progressTotal = 4
+    if (!this.brief) this.briefLoading = true
+    this.rerender()
   }
 
   /** Returns once the user acts on the Brief phase (or closes the modal). */
@@ -94,7 +121,7 @@ export class IngestFlowModal extends Modal {
   showProcessing(message = 'Extracting with LLM...') {
     this.phase = 'processing'
     this.progressMessage = message
-    this.progressStep = 1
+    this.progressStep = 3
     this.progressTotal = 4
     this.rerender()
   }
@@ -106,7 +133,7 @@ export class IngestFlowModal extends Modal {
     this.progressMessage = message
     this.progressSubStep = subStep
     this.progressSubTotal = subTotal
-    if (this.phase === 'processing') this.patchProgress()
+    if (this.phase === 'processing' || this.phase === 'converting') this.patchProgress()
   }
 
   private computeFractionPct(): number {
@@ -197,8 +224,8 @@ export class IngestFlowModal extends Modal {
     const closeBtn = modalEl.querySelector('.modal-close-button') as HTMLElement | null
     if (closeBtn) {
       const closeGuard = (e: MouseEvent) => {
-        if (this.phase === 'processing') {
-          const ok = window.confirm('Ingest 진행 중입니다. 정말 닫으시겠습니까?')
+        if (this.phase === 'processing' || this.phase === 'converting') {
+          const ok = window.confirm('Ingest in progress. Close anyway?')
           if (!ok) {
             e.stopPropagation()
             e.preventDefault()
@@ -243,8 +270,16 @@ export class IngestFlowModal extends Modal {
     this.modalEl.style.setProperty('--dialog-max-width', `${targetW}px`)
     this.modalEl.style.setProperty('--dialog-width', `${targetW}px`)
     this.modalEl.style.width = `${targetW}px`
-    // 높이는 Obsidian 기본 centering + contentEl 자연 확장에 맡긴다.
-    // (maxHeight 직접 설정 시 centering과 충돌해 content가 0 크기로 축소되는 이슈 있음)
+    // §5.10.3.10 옵션 C: init height + maxHeight 1 회 설정 — 모든 phase (converting/brief/
+    // processing/preview) 동일 modal 크기 유지 + Preview 의 큰 plan list 도 modal 자체
+    // 변동 X (body overflow scroll 흡수). 사용자 resize 시 wireDragAndResize 의 onMove
+    // 가 갱신해 우선. body overflow-y:auto + button row sticky bottom 으로 progress/button
+    // 안 가려짐. init 시 1 회만 — 이미 height 가 set 돼있으면 skip.
+    if (!this.modalEl.style.height) {
+      const targetH = Math.min(672, Math.floor(window.innerHeight * 0.82))
+      this.modalEl.style.height = `${targetH}px`
+      this.modalEl.style.maxHeight = `${targetH}px`
+    }
   }
 
   private wireDragAndResize(dragHandle: HTMLElement, resizeHandle: HTMLElement) {
@@ -311,6 +346,9 @@ export class IngestFlowModal extends Modal {
     this.renderStepper()
     this.bodyEl.empty()
     switch (this.phase) {
+      case 'converting':
+        this.renderConvertingPhase()
+        break
       case 'brief':
         this.renderBriefPhase()
         break
@@ -323,6 +361,51 @@ export class IngestFlowModal extends Modal {
       case 'done':
         break
     }
+  }
+
+  private renderConvertingPhase() {
+    const wrap = this.bodyEl.createDiv({ cls: 'wikey-modal-converting' })
+
+    // Converting 단계: 원본.ext → sidecar.md (변환 진행 indicator).
+    const fileName = this.sourcePath.split('/').pop() ?? this.sourcePath
+    const ext = fileName.includes('.') ? fileName.split('.').pop()!.toLowerCase() : ''
+    const fileLabel = wrap.createDiv({ cls: 'wikey-modal-file-label' })
+    fileLabel.createEl('span', { cls: 'wikey-modal-file-original', text: fileName })
+    if (ext && ext !== 'md' && ext !== 'txt') {
+      const convertedName = `${fileName}.md`
+      fileLabel.createEl('span', { cls: 'wikey-modal-file-sep', text: '→' })
+      fileLabel.createEl('span', { cls: 'wikey-modal-file-converted', text: convertedName })
+    }
+
+    // §5.10.3.10 옵션 C 보강: spinner 를 file label 과 progress bar 사이 중앙 배치.
+    const spinnerCenter = wrap.createDiv({ cls: 'wikey-modal-spinner-center' })
+    spinnerCenter.createDiv({ cls: 'wikey-modal-spinner' })
+
+    const pct = this.computeFractionPct()
+    const progressGroup = wrap.createDiv({ cls: 'wikey-modal-progress-group' })
+    const msgLine = progressGroup.createDiv({ cls: 'wikey-modal-progress-line' })
+    msgLine.createEl('span', {
+      cls: 'wikey-modal-progress-msg',
+      text: `${this.progressStep}/${this.progressTotal} · ${this.progressMessage}`,
+    })
+    msgLine.createEl('span', { cls: 'wikey-modal-progress-pct', text: `${pct}%` })
+    const barOuter = progressGroup.createDiv({ cls: 'wikey-modal-progress-bar' })
+    const barFill = barOuter.createDiv({ cls: 'wikey-modal-progress-fill' })
+    barFill.style.width = `${pct}%`
+
+    // Cancel only — converting 단계에서 Back 으로 돌아갈 phase 없음.
+    const btnRow = this.bodyEl.createDiv({ cls: 'wikey-modal-button-row wikey-modal-button-row-bottom' })
+    const cancelBtn = btnRow.createEl('button', { text: 'Cancel' })
+    cancelBtn.addEventListener('click', () => {
+      // briefResolver 가 아직 set 되기 전이면 close 만 호출 (commands.ts 의 awaitBrief 가 onClose 의
+      // null briefResolver fallback 으로 cancel resolve). set 됐으면 명시 cancel resolve.
+      if (this.briefResolver) {
+        const r = this.briefResolver
+        this.briefResolver = null
+        r({ action: 'cancel', guideHint: this.guideHint, verifyResults: this.verifyResults })
+      }
+      this.close()
+    })
   }
 
   private renderStepper() {
@@ -345,29 +428,29 @@ export class IngestFlowModal extends Modal {
 
   private renderBriefPhase() {
     const briefLabel = this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: 'LLM brief' })
-    briefLabel.createEl('span', { cls: 'wikey-modal-hint', text: ' (자율 요약)' })
+    briefLabel.createEl('span', { cls: 'wikey-modal-hint', text: ' (auto summary)' })
     const briefBox = this.bodyEl.createDiv({ cls: 'wikey-modal-brief' })
     if (this.briefLoading) {
       briefBox.addClass('wikey-modal-brief-loading')
       briefBox.empty()
       const spinner = briefBox.createSpan({ cls: 'wikey-modal-inline-spinner' })
-      briefBox.createSpan({ text: ' LLM이 요약을 생성 중입니다... (보통 10~30초)' })
+      briefBox.createSpan({ text: ' LLM is generating brief... (usually 10–30s)' })
     } else {
-      briefBox.setText(this.brief || '(brief 미생성 — 네트워크 또는 LLM 오류)')
+      briefBox.setText(this.brief || '(brief unavailable — network or LLM error)')
     }
 
-    // v6 Phase D: schema preview line — 사용자에게 활성 분류 스키마 표시 (Karpathy "stay involved")
+    // v6 Phase D: schema preview line — show active classification schema (Karpathy "stay involved")
     const schemaLine = this.bodyEl.createDiv({ cls: 'wikey-modal-schema-line' })
-    schemaLine.createSpan({ cls: 'wikey-modal-schema-label', text: '활성 스키마: ' })
+    schemaLine.createSpan({ cls: 'wikey-modal-schema-label', text: 'Active schema: ' })
     schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: '4 entity (organization · person · product · tool)' })
     schemaLine.createSpan({ cls: 'wikey-modal-schema-sep', text: ' / ' })
     schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: '3 concept (standard · methodology · document_type)' })
 
-    const guideLabel = this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: '강조할 점 / 방향' })
-    guideLabel.createEl('span', { cls: 'wikey-modal-hint', text: ' (선택, 비워도 됨)' })
+    const guideLabel = this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: 'Focus / direction' })
+    guideLabel.createEl('span', { cls: 'wikey-modal-hint', text: ' (optional)' })
     const textarea = this.bodyEl.createEl('textarea', { cls: 'wikey-modal-textarea' })
     textarea.rows = 4
-    textarea.placeholder = '예: "SiC MOSFET 중 트렌치 구조에 집중. 측정 데이터는 엔티티로 분리하지 말 것."'
+    textarea.placeholder = 'e.g. "Focus on trench-structure SiC MOSFETs. Don\'t split measurement data into separate entities."'
     textarea.value = this.guideHint
     textarea.addEventListener('input', () => {
       this.guideHint = textarea.value
@@ -376,7 +459,7 @@ export class IngestFlowModal extends Modal {
 
     new Setting(this.bodyEl)
       .setName('Verify results before writing')
-      .setDesc('추출 완료 후 생성될 페이지 목록을 확인하고 승인 (Step 3).')
+      .setDesc('Review the list of pages to create after extraction (Step 3).')
       .addToggle((t) =>
         t.setValue(this.verifyResults).onChange((v) => {
           this.verifyResults = v
@@ -395,26 +478,22 @@ export class IngestFlowModal extends Modal {
   private renderProcessingPhase() {
     const wrap = this.bodyEl.createDiv({ cls: 'wikey-modal-processing' })
 
-    // Phase 4 D.0.i (v6 §4.5.3 + §4.5.4): fileLabel (original.ext | converted.md).
-    // DOM 순서: fileLabel → spinner → progress-line → progress-bar → (guide-echo) → button.
-    // 하단 button 은 `margin-top: auto` 로 모달 바닥에 붙도록 styles.css 에서 처리.
+    // §5.10.3.10 옵션 C 보강: Processing 단계는 변환 끝났으므로 sidecar.md (= 처리 대상 markdown)
+    // 만 accent 표시. 원본.ext 는 미표시 — "또 변환 중인가?" 사용자 혼란 방지.
     const fileName = this.sourcePath.split('/').pop() ?? this.sourcePath
     const ext = fileName.includes('.') ? fileName.split('.').pop()!.toLowerCase() : ''
+    const processedName = ext && ext !== 'md' && ext !== 'txt' ? `${fileName}.md` : fileName
     const fileLabel = wrap.createDiv({ cls: 'wikey-modal-file-label' })
-    fileLabel.createEl('span', { cls: 'wikey-modal-file-original', text: fileName })
-    if (ext && ext !== 'md' && ext !== 'txt') {
-      // 변환 대상 (pdf/hwp/docx/...) 은 converted.md 보조 표기.
-      const convertedName = `${fileName}.md`
-      fileLabel.createEl('span', { cls: 'wikey-modal-file-sep', text: '→' })
-      fileLabel.createEl('span', { cls: 'wikey-modal-file-converted', text: convertedName })
-    }
+    fileLabel.createEl('span', { cls: 'wikey-modal-file-converted', text: processedName })
 
-    wrap.createDiv({ cls: 'wikey-modal-spinner' })
+    // Spinner 를 file label 과 progress bar 사이 중앙 배치 (§5.10.3.10 spec).
+    const spinnerCenter = wrap.createDiv({ cls: 'wikey-modal-spinner-center' })
+    spinnerCenter.createDiv({ cls: 'wikey-modal-spinner' })
 
     // 사용자 가이드 (있으면) 는 spinner 직후, progress 위.
     if (this.guideHint.trim()) {
       const guideEcho = wrap.createDiv({ cls: 'wikey-modal-guide-echo' })
-      guideEcho.createEl('div', { cls: 'wikey-modal-label', text: '적용된 가이드' })
+      guideEcho.createEl('div', { cls: 'wikey-modal-label', text: 'Applied guide' })
       const box = guideEcho.createDiv({ cls: 'wikey-modal-brief' })
       box.setText(this.guideHint.trim())
     }
@@ -447,12 +526,12 @@ export class IngestFlowModal extends Modal {
     if (!this.plan) return
 
     if (this.plan.guideReflection) {
-      this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: 'Guide 반영' })
+      this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: 'Guide reflection' })
       const reflBox = this.bodyEl.createDiv({ cls: 'wikey-modal-reflection' })
       reflBox.setText(this.plan.guideReflection)
     }
 
-    this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: '생성/업데이트될 페이지' })
+    this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: 'Pages to create / update' })
     const list = this.bodyEl.createDiv({ cls: 'wikey-modal-plan-list' })
     this.renderPlanItem(list, this.plan.sourcePage.filename, this.plan.sourcePage.existed)
 
@@ -467,12 +546,12 @@ export class IngestFlowModal extends Modal {
 
     const metaRow = this.bodyEl.createDiv({ cls: 'wikey-modal-meta' })
     metaRow.setText(
-      `index.md ${this.plan.indexAdditions}건 추가 · log.md ${this.plan.hasLogEntry ? '1건 추가' : '추가 없음'}`,
+      `index.md +${this.plan.indexAdditions} entries · log.md ${this.plan.hasLogEntry ? '+1 entry' : 'no change'}`,
     )
 
     const btnRow = this.bodyEl.createDiv({ cls: 'wikey-modal-button-row' })
     const approveBtn = btnRow.createEl('button', { text: 'Approve & Write', cls: 'mod-cta' })
-    const cancelBtn = btnRow.createEl('button', { text: 'Cancel (discard)' })
+    const cancelBtn = btnRow.createEl('button', { text: 'Cancel' })
     // §5.3 follow-up — 사용자가 클릭 후 가시 피드백 부재로 반복 클릭하는 문제 차단:
     //   1) 두 버튼 즉시 disable (race 방지)
     //   2) Approve 라벨을 "Writing..." 으로 변경 + spinner-aware class 추가
@@ -481,7 +560,7 @@ export class IngestFlowModal extends Modal {
       if (approveBtn.disabled) return
       approveBtn.disabled = true
       cancelBtn.disabled = true
-      approveBtn.setText('Writing… (please wait)')
+      approveBtn.setText('Writing...')
       approveBtn.addClass('wikey-modal-btn-busy')
       this.resolvePreview(true)
     })
@@ -499,7 +578,7 @@ export class IngestFlowModal extends Modal {
     row.createEl('span', { cls: 'wikey-modal-plan-name', text: filename })
     row.createEl('span', {
       cls: existed ? 'wikey-modal-plan-badge wikey-modal-plan-update' : 'wikey-modal-plan-badge wikey-modal-plan-new',
-      text: existed ? '업데이트' : '신규',
+      text: existed ? 'update' : 'new',
     })
   }
 

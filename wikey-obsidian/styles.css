@@ -1841,12 +1841,23 @@ a.internal-link.wikey-broken-link,
 }
 
 .wikey-ingest-flow-modal .wikey-modal-body {
-  min-height: 240px;
-  /* Stretch + scroll so the button row (margin-top: auto) sits at the bottom */
+  /* §5.10.3.10 옵션 C: modal 자체 height 가 applyModalSize() 에서 init 1 회 설정 + 사용자
+     resize 핸들 보존. body 는 flex:1 로 modal 의 남은 공간 채움 — phase 깜빡임 차단 +
+     작은 창에서도 progress/button 안 가려짐 (button row sticky bottom 처리). */
   flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+}
+
+/* button-row-bottom 도 sticky bottom 처리 — 작은 창 / overflow body 에서 안 가려짐. */
+.wikey-ingest-flow-modal .wikey-modal-body > .wikey-modal-button-row-bottom {
+  position: sticky;
+  bottom: 0;
+  background: var(--background-primary);
+  padding-top: 10px;
+  padding-bottom: 2px;
+  flex-shrink: 0;
 }
 
 /* Pin the button row to the bottom of the body, regardless of content length */
@@ -2140,7 +2151,8 @@ a.internal-link.wikey-broken-link,
   border-color: var(--interactive-accent);
 }
 
-.wikey-modal-processing {
+.wikey-modal-processing,
+.wikey-modal-converting {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2189,10 +2201,10 @@ a.internal-link.wikey-broken-link,
 }
 
 /* Phase 4 D.0.i (v6 §4.5.4): processing phase 의 button row 를 모달 바닥으로 push.
-   §5.2.0 v2 (2026-04-25): wrap (.wikey-modal-processing) 가 flex:1 로 다 차지하므로
-   margin-top: auto 가 효과 없어도 (push 할 공간 없음) btnRow 는 자연스럽게 wrap
-   바로 아래 = bodyEl 바닥에 위치. Back 버튼 위치는 이전 fix 와 동일하게 유지. */
-.wikey-ingest-flow-modal .wikey-modal-body > .wikey-modal-button-row-bottom {
+   §5.10.3.10 옵션 C: sticky 처리는 위 (line ~1854) 의 button-row-bottom rule 로 통합 —
+   작은 창 / overflow body 에서도 button 안 가려짐. margin-top: auto 는 flex column
+   의 spacer 효과 (wrap 안 button 이 wrap 자체 바닥) 로 별도 의미. */
+.wikey-modal-body > .wikey-modal-button-row-bottom {
   margin-top: auto;
 }
 
@@ -2203,6 +2215,16 @@ a.internal-link.wikey-broken-link,
   border-top-color: var(--interactive-accent);
   border-radius: 50%;
   animation: wikey-spin 0.8s linear infinite;
+}
+
+/* §5.10.3.10 옵션 C: spinner 를 file label 과 progress bar 사이 중앙 배치 (flex spacer). */
+.wikey-modal-spinner-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  /* progress group 의 margin-top: auto 와 충돌 방지 — flex:1 이 빈공간 흡수. */
 }
 
 @keyframes wikey-spin {

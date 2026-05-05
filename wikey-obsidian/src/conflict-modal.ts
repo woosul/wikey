@@ -35,15 +35,15 @@ export class ConflictModal extends Modal {
   onOpen(): void {
     const { contentEl } = this
     contentEl.empty()
-    contentEl.createEl('h3', { text: 'Wikey — 인제스트 충돌 감지' })
+    contentEl.createEl('h3', { text: 'Wikey — Ingest conflict detected' })
 
     const conflicts = this.info.decision.conflicts.join(', ')
     const reason = this.info.decision.reason
     contentEl.createEl('p', {
-      text: `충돌 종류: ${conflicts}`,
+      text: `Conflict: ${conflicts}`,
       cls: 'wikey-conflict-summary',
     })
-    contentEl.createEl('p', { text: `사유: ${reason}` })
+    contentEl.createEl('p', { text: `Reason: ${reason}` })
 
     if (this.info.diff?.sidecar) {
       const pre = contentEl.createEl('pre', {
@@ -59,13 +59,13 @@ export class ConflictModal extends Modal {
     buttonRow.style.gap = '0.5em'
     buttonRow.style.marginTop = '1em'
 
-    const preserveBtn = buttonRow.createEl('button', { text: '사용자 수정 보존 (preserve)' })
+    const preserveBtn = buttonRow.createEl('button', { text: 'Preserve' })
     preserveBtn.addEventListener('click', () => this.choose('preserve'))
 
-    const overwriteBtn = buttonRow.createEl('button', { text: '덮어쓰기 (overwrite)' })
+    const overwriteBtn = buttonRow.createEl('button', { text: 'Overwrite' })
     overwriteBtn.addEventListener('click', () => this.choose('overwrite'))
 
-    const cancelBtn = buttonRow.createEl('button', { text: '취소 (cancel)' })
+    const cancelBtn = buttonRow.createEl('button', { text: 'Cancel' })
     cancelBtn.addEventListener('click', () => this.choose('cancel'))
   }
 

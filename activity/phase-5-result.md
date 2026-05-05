@@ -1642,6 +1642,107 @@ CDP Obsidian 종료 (skill §9 — pkill 우회). 일반 모드 재시작은 사
    - HWPX: `Examples.hwpx` (Docling 일반 분기 검증, DOCX 부재 대체)
 3. 라이브 smoke GREEN 후 §5.10.4 Phase 4 진입 (R4/R5/R8.2-3 + M migration + L 종합 + F 3 cycle codex review)
 
+### 5.10.3.10 (Session 16 보강, 2026-05-05) — Modal UX 옵션 C + 영어 일관 + 다중 fixture 라이브 smoke ✅
+
+> **mirror**: `plan/phase-5-todo.md §5.10.3.10`.
+>
+> **trigger**: 2026-05-05 PDF 라이브 smoke 진행 중 사용자 본질 비판 9 항목 — modal stepper 3 단계 vs progress 4 단계 inconsistent + Converting 시각화 부재 / phase 별 깜빡임 / Processing file label 부적절 / spinner 위치 / min-height 적응형 깨짐 / 모달 한국어 잔재 / sidecar conflict / DESIGN.md 모달 표준 부재 / ingest 시간 과대.
+>
+> **결정**: 옵션 C (4 단계 stepper + Converting 의무 표시) + α (1+2+3 전부 + 모달 영어 일관 spec 추가).
+
+#### 5.10.3.10 timeline
+
+| 시점 | 사용자 비판 | master 대응 |
+|------|--------------|--------------|
+| 1차 PDF cycle Brief 도달 | "요약보고서 먼저 뜨고 docling 변환이 나중처럼 보임" | 코드 spec (commands.ts 348-386) + 라이브 로그 cross-check → spec 정상, master timeline 보고 부실 인정 |
+| Brief 도달 후 | "stepper 3 단계 / progress 4 단계 inconsistent + Converting 시각화 부재" | 옵션 A/B/C 제안 → 사용자 옵션 C 채택 |
+| 옵션 C 보강 1차 | "progress bar 위치 중간으로 올라감" | wikey-modal-converting cls styles.css 미정의 → grouped selector 추가 |
+| Brief 도달 측정 | "창크기 phase 간 변동 (깜빡임)" | body min-height 480 추가 (1차) → 사용자 resize 적응형 깨짐 → 제거 + applyModalSize init height 1회 (2차) |
+| Preview 도달 | "Wikey 충돌감지 모달 — 새 파일인데 이상" | sidecar 잔재 (raw/0_inbox/PMS_*.pdf.md, mtime=11:27 = 1차 cycle 흔적) 발견. 즉시 fix (rm) + AC-C1.4 보강 의심 issue 등록 |
+| 4 spec 종합 | "모달창 모두 English + button 영어/한글 병기 X" | ingest-modals.ts + conflict-modal.ts + commands.ts 일괄 영어화 |
+| 2차 PDF cycle 완료 | "Processing 단계 file label 부적절 + spinner 위치" | renderProcessingPhase 의 file label sidecar.md only + spinner-center wrap (flex:1) 추가 |
+| HWP/HWPX cycle | "ingest 시간 분석" | mention extraction chunk sequential 원인 — §5.10.4 issue 등록 |
+
+#### 5.10.3.10 변경 사항
+
+**코드** (`wikey-obsidian/src/`):
+- `ingest-modals.ts`:
+  - FlowPhase union: `'converting' | 'brief' | 'processing' | 'preview' | 'done'` (5 union)
+  - STEP_LABELS 4 entries (Converting / Brief / Processing / Preview)
+  - 초기 phase = `'converting'` (기존 `'brief'`)
+  - showConverting() / showBrief() 메서드 신규
+  - setBrief() 자동 phase 전환 (converting/brief → brief)
+  - applyModalSize(): init height + maxHeight 1 회 (672px) — 사용자 resize 시 갱신, phase 전환 시 변동 X
+  - renderConvertingPhase() 신규 + spinner-center wrap
+  - renderProcessingPhase() — file label sidecar.md only (`wikey-modal-file-converted` only) + spinner-center wrap
+  - 영어 일관: 'LLM brief (auto summary)', 'LLM is generating brief... (usually 10–30s)', '(brief unavailable — network or LLM error)', 'Active schema: ', 'Focus / direction (optional)', placeholder 영어, 'Verify results before writing' / 'Review the list of pages to create after extraction (Step 3).', 'Applied guide', 'Guide reflection', 'Pages to create / update', `index.md +N entries · log.md +1 entry / no change`, 'update' / 'new', 'Cancel' (discard 부연 X), 'Writing...', 'Ingest in progress. Close anyway?'
+- `commands.ts`:
+  - modal.showConverting(msg) + modal.showBrief() 호출 추가 (변환 분기 시각화)
+  - 영어 fallback: '(Conversion failed: ...)' / '(Brief generation failed: ...)'
+  - IngestFileSuggestModal: getItems() = vault.getFiles() (binary 포함) + placeholder 'Select a file to ingest...'
+- `conflict-modal.ts`:
+  - 'Wikey — Ingest conflict detected' / 'Conflict: ...' / 'Reason: ...' / Preserve / Overwrite / Cancel (한국어 부연 X)
+
+**스타일** (`wikey-obsidian/styles.css`):
+- `.wikey-ingest-flow-modal`: min-height 제거 (적응형 보존)
+- `.wikey-modal-body`: min-height 제거 + flex:1 + overflow-y:auto
+- `.wikey-modal-button-row-bottom`: position:sticky + bottom:0 + background — 작은 창 / scroll body 에서 안 가려짐
+- `.wikey-modal-spinner-center` 신규: flex:1 + align/justify center — file label 과 progress 중앙 spinner
+- `.wikey-modal-processing, .wikey-modal-converting` grouped selector — flex:1 layout 동일
+
+**문서**:
+- `DESIGN.md`: "모달 컴포넌트 표준" 섹션 신규 (10 항목 — 언어/사이즈/Layout/stepper/progress/file label/drag-resize/close 보호/scroll/색상)
+
+**vault state**:
+- `raw/0_inbox/PMS_*.pdf.md` 잔재 sidecar 삭제 (이슈 2 즉시 fix)
+
+#### 5.10.3.10 라이브 smoke 결과
+
+| fixture | chars | Processing | wiki 페이지 | sidecar | 분기 검증 |
+|---------|-------|-----------|-------------|---------|-----------|
+| PDF (PMS_제품소개_R10_20220815) | 47KB (placeholder 후) | ~360s | source + 6 entities + 30 concepts (37 items) | raw/3_resources/20_report/500_technology/pms/PMS_*.pdf.md (movePair ✓) | docling tier 1 + tier 1a (image-ocr-pollution → no-ocr) |
+| HWP (스마트공장 보급확산 합동설명회 개최) | 748 | 61s | source + 4 entities + 1 concept | raw/0_inbox/*.hwp.md | unhwp (binary 미전송 ✓) |
+| HWPX (Examples) | 544 | 63s | source + 2 entities + 1 concept | raw/0_inbox/*.hwpx.md | Docling 일반 (DOCLING_DOC_FORMATS) |
+
+→ **AC-C1.6 (PDF + HWP + DOCX 각 1) 충족** (HWPX = DOCX 부재 대체).
+→ **AC-C1.7 sidecar raw 보존** 3/3 ✓
+→ **AC-C1.2 brief 정상** 3/3 ✓ (binary 미전송 — HWP/HWPX 도 unhwp/Docling 변환 후 markdown LLM 호출)
+→ **AC-C1.3 conversion 1 회** ✓ (cache hit 로그 — 재 ingest 시 변환 skip)
+
+#### 5.10.3.10 modal layout 측정 (HWP cycle)
+
+| 측정점 | 값 |
+|--------|---|
+| modalWrap 4 phase 동일 | 760×672 (Converting / Brief / Processing / Preview 모두) ✓ |
+| body 4 phase 동일 | 510 ✓ |
+| Processing fileLabel midY | 399 |
+| Processing spinner midY | 599 |
+| Processing progress midY | 805 |
+| fileLabel→spinner 거리 | 200 |
+| spinner→progress 거리 | 206 |
+| **spinner 중앙 배치** | ±3% 오차 (200 vs 206) ✓ |
+| Processing file label 자식 | `wikey-modal-file-converted` only (1 child) ✓ |
+
+#### 5.10.3.10 시간 분석 (사용자 spec d)
+
+LLM call 시간:
+- gemini-2.5-flash 평균 응답 ~30~60s/call
+- mention extraction stage 가 chunk 분할 sequential 호출 — 큰 source 비례 증가
+- PDF 47KB (image placeholder 후) → 6 chunk × ~60s = ~360s (= 6분)
+- HWP 748 chars → 1 chunk × ~30s = ~30s
+- HWPX 544 chars → 1 chunk × ~30s = ~30s
+
+→ **§5.10.4 신규 issue 등록** (mention extraction 병렬화 / chunk 확대 — gemini-2.5-flash 1M context 활용).
+
+#### 5.10.3.10 잔여 issues (§5.10.4 등록)
+
+1. **autoMove 누락**: protocol handler `obsidian://wikey?ingest=` 가 `autoMoveFromInbox=true` 안 넘김 → HWP/HWPX 가 raw/0_inbox/ 잔존. fix: commands.ts protocol handler 에 autoMove 인자 추가.
+2. **mention extraction 병렬화**: PDF 6분 — sequential chunk LLM 호출 원인. 병렬화 또는 chunk 확대로 1~2분 단축 가능.
+3. **picker fuzzy 한국어 path 약함**: vault.getFiles() 결과 정상 (44 raw file) 이지만 한국어 'raw/0_inbox/스마트공장' search 매치 0. fuzzy algorithm 개선 또는 별 매칭 layer.
+4. **AC-C1.4 보강 의심**: 1차 cycle Cancel 후 sidecar (raw/0_inbox/<file>.<ext>.md) 잔존. sidecar write 시점 검토 필요 (Approve 전 write 발생 시 spec 위반).
+5. **Preview 큰 plan list (37+) 변동**: maxHeight init 보강 후 PDF 재 cycle 검증 필요 (HWP/HWPX 는 작은 plan 이라 미발생).
+6. **reset-modals.ts 영어화** (본 cycle 무관 — §5.10.4 처리).
+
 ### 5.10.4 Phase 4 결과 (Session 4, TBD) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
 
 > **mirror**: `plan/phase-5-todo.md §5.10.4`. R4/R5/R8.2-3 + M (migration script) + L (라이브) + F (종결 + 3 cycle 통합 codex review). 회귀 ~622~~645 PASS (~110 폐기).
