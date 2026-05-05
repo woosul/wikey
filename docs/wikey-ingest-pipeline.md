@@ -4,7 +4,7 @@
 >
 > Karpathy 의 4 원칙 (Explicit / Yours / File over app / BYOAI) 이 어느 step 에 어떻게 박혀 있는지, 각 step 에서 LLM 이 *언제·왜·어떤 입력으로* 호출되는지, 그리고 *분류·생성·수정* 의 결정 기준이 무엇인지를 추적할 수 있도록 설계되어 있다.
 >
-> 작성 기준 코드: 2026-04-28 master (commit `c28b8e6` 시점). Phase 5 §5.4 Stage 1~4 통합 완료, §5.10 paradigm shift issue 등록 상태.
+> 작성 기준 코드: 2026-05-05 master (Phase 5 §5.10.4 D-wide cycle). §5.10 paradigm shift 옵션 D-wide 채택 — §5.4 self-extending (Stage 1~4) + 7-type schema gate (`ENTITY_TYPES`/`CONCEPT_TYPES` union, `FORCED_CATEGORIES`, `BUILTIN_STANDARD_DECOMPOSITIONS`) 모두 폐기. canonicalizer 는 alias normalization (slug dedup) 만 잔존, type 분류는 LLM 자율.
 
 ---
 
@@ -34,9 +34,9 @@ raw 파일 1 개가 wiki 페이지 N 개로 분해되기까지의 8 단계.
 | **3** | 변환 (Conversion) | brief 후 "Proceed" 클릭 | binary/markdown source | 결정적 (외부 도구 fork) | **LLM 미개입** (Docling/markitdown/PyMuPDF/unhwp) | unified markdown + paired sidecar `<src>.md` | File over app |
 | **4** | PII gate + Reingest 결정 | 변환 직후 | markdown + raw bytes | 결정적 (regex + sha256) | **LLM 미개입** | redacted markdown + force/protect/skip action | Yours (로컬 차단) |
 | **5** | 추출 (Stage 1+2) | 변환 OK + reingest=force | markdown sections | LLM N+1 콜 (summary 1 + mention N) | summary-LLM, mention-LLM | source_page md + Mention[] | Explicit |
-| **6** | 표준화 (Stage 3 Canonicalize) | mentions 수집 후 | Mention[] + 기존 wiki page list + schema.yaml | LLM 1콜 (doc-global) | canonicalizer-LLM (큰 prompt, schema-guided) | entities[] / concepts[] / dropped[] | Explicit, BYOAI |
+| **6** | 표준화 (Canonicalize) | mentions 수집 후 | Mention[] + 기존 wiki page list + alias overrides | LLM 1콜 (doc-global) | canonicalizer-LLM (LLM 자율 type 출력) | entities[] / concepts[] / dropped[] | Explicit, BYOAI |
 | **7** | 페이지 write + 인덱스 갱신 | canonicalize 결과 | WikiPage[] | 결정적 (idempotent createPage) | **LLM 미개입** | `wiki/sources/`, `wiki/entities/`, `wiki/concepts/`, `index.md`, `log.md` | File over app |
-| **8** | Self-extending + 자율 증분 | ingest 완료 직후 | mention history + qmd embeddings | 결정적 (Stage 2/3) + LLM 선택 (Stage 4 arbitration) | Stage 4 arbitration-LLM (mock 가능, default `union`) | `.wikey/suggestions.json`, `converged-decompositions.json` | Yours, Explicit |
+| ~~**8**~~ | ~~Self-extending~~ | **D-wide 폐기 (2026-05-05)** — Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion / convergence / self-declaration) 모두 제거. LLM 자연 의미 매칭 + qmd embedding cluster 가 대체. | — | — | — | — | — |
 | **Q** | 쿼리 (별도 트리거) | 사용자 질문 | 자연어 | LLM 2~3콜 (cross-lingual 확장 + 합성) | 영문 키워드 추출 (Ollama 우선), 답변 합성 | answer + citations + 1-hop wikilink expansion | LLM 양끝 참여 (RAG ≠ wikey) |
 
 각 step 의 상세는 §2 부터 다룬다. **LLM 콜 횟수 합계**: 1 raw → brief 1 + summary 1 + mention N (route=FULL 이면 N=1) + canonical 1 + (선택) classify 1 + (선택) Stage 4 arbitration N. 평균 4~5 콜.
@@ -318,9 +318,9 @@ const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
 ```
 
 - **콜 횟수**: FULL=1, SEGMENTED=N (core/support priority 섹션 수).
-- **prompt 의 핵심** (BUNDLED_STAGE2_MENTION_PROMPT):
+- **prompt 의 핵심** (BUNDLED_STAGE2_MENTION_PROMPT, D-wide 갱신):
   - "분류하지 마세요. 페이지를 만들지 마세요. 단지 wiki 후보를 짧게 나열만 하세요."
-  - 출력: `{name, type_hint, evidence}`. `type_hint ∈ {organization|person|product|tool|standard|methodology|document_type|unknown}`.
+  - 출력: `{name, type_hint, evidence}`. `type_hint` 는 LLM 자율 출력 (string, 자유 형식). 예시 가이드: `organization` / `person` / `methodology` / `algorithm` / `dataset` / `event` / `regulation` 등 — 강제 union 없음.
   - 명시 거부 패턴: UI 라벨, 기능명 (X-management), 비즈니스 객체 (quotation/order), 한국어 일반 명사.
   - "청크당 0~15 개. 모르는 것보다 빠뜨리는 게 낫습니다."
 - **SEGMENTED 의 peer context**: `formatPeerContext(sectionIndex, currentIdx, 300)` — DOC_OVERVIEW + GLOBAL_REPEATERS + prev/next 섹션 1줄 요약 → 섹션 LLM 이 *문서 전체* 를 일부라도 보게 보장.
@@ -340,12 +340,12 @@ const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
 
 ---
 
-## 7. Step 6 — 표준화 (Stage 3 Canonicalize)
+## 7. Step 6 — 표준화 (Canonicalize, D-wide 갱신)
 
 ### 7.1 위치
 
 - 코드: `wikey-core/src/canonicalizer.ts`
-- 데이터: `wikey-core/src/schema.ts` (BUILTIN 4 entity + 3 concept type) + `.wikey/schema.yaml` (사용자 확장) + `BUILTIN_STANDARD_DECOMPOSITIONS` (PMBOK 등)
+- 데이터: `.wikey/schema.yaml` (사용자 alias / pii_patterns 만 — `entity_types` / `concept_types` / `standard_decompositions` 모두 D-wide 폐기)
 
 ### 7.2 LLM 개입 포인트 — doc-global 1 콜
 
@@ -359,58 +359,30 @@ return assembleCanonicalResult(raw, mentions, sourceFilename, today, schemaOverr
 ```
 
 - **provider/model**: ingest 와 동일 (single-doc-global 한 콜이라 quality 우선 — Gemini 2.5 Pro 권장).
-- **prompt 입력**:
+- **prompt 입력** (D-wide 갱신):
   1. 기존 wiki 페이지 base name 목록 (`existingEntityBases ∪ existingConceptBases`, 최대 80 개) → *재사용 우선*.
   2. mention 리스트 (Stage 2 산출, evidence 200 자 이내).
-  3. `schemaBlock` — 7 type 정의 + 거부 패턴.
-  4. `decompositionBlock` — `BUILTIN_STANDARD_DECOMPOSITIONS` (PMBOK 10 영역 등) + `.wikey/schema.yaml` user 확장.
-  5. `guideBlock` — 사용자 강조 지시.
+  3. `aliasBlock` — `.wikey/schema.yaml` 의 `aliases` (canonical slug normalization). 7-type schema gate / standard_decompositions block 폐기.
+  4. `guideBlock` — 사용자 강조 지시.
 
-### 7.3 분류 (canonicalizer 의 의사결정 트리)
+### 7.3 분류 (D-wide 갱신 — LLM 자율)
 
-#### (a) 1차: 7 type 분류
+D-wide 채택 후 entity/concept *type* 분류는 LLM 자율. 7-type union (organization/person/product/tool/standard/methodology/document_type) + `CONCEPT_DECISION_TREE` + `FORCED_CATEGORIES` 강제 pin 모두 폐기.
 
-| Pool | Type | 예시 |
-|------|------|------|
-| entities | `organization` | 회사·기관 (samsung-electronics) |
-| entities | `person` | 실명 인물 (andrej-karpathy) |
-| entities | `product` | 구체 제품명 (mariadb) |
-| entities | `tool` | SW 도구·프로토콜 (apache-tomcat, mqtt) |
-| concepts | `standard` | 공식 규격·프레임워크 (pmbok, iso-13320) |
-| concepts | `methodology` | 절차·접근법 (agile, scrum) |
-| concepts | `document_type` | 양식 (business-registration-certificate) |
+| 영역 | D-wide 동작 |
+|------|------------|
+| entity / concept *카테고리* (대분류) | wiki/entities/ vs wiki/concepts/ 디렉토리 구분으로 보존 (자연 구조). LLM 이 카테고리만 결정 |
+| entity / concept *type* (세분류) | LLM 자율 string 출력. 도메인별 자유 (예: PMBOK ingest → `process` / `knowledge_area`. 잡지 → `event` / `trend`) |
+| alias 정규화 | `canonicalizeSlug` + `.wikey/schema.yaml` `aliases` (다국어 / 동명이인 / 약어) — 결정적 |
+| dedup | 같은 slug entity ↔ concept 동시 등장 시 concept keep (보존 layer) |
 
-`schema.ts::CONCEPT_DECISION_TREE` 가 결정 트리를 prompt 에 박음 — concept CV (변동성) 낮추기 위함.
+#### alias 자동 정규화 (결정적, LLM 후처리)
 
-#### (b) 2차: SLUG_ALIASES 자동 정규화 (결정적, LLM 후처리)
+`canonicalizeSlug(normalizeBase(name))` 가 LLM 출력 base name 을 정규화. `.wikey/schema.yaml` 의 `aliases` 영역이 사용자 추가 매핑 layer. 다국어·동명이인·약어 통합 보존 — D-wide 와 직교.
 
-```ts
-SLUG_ALIASES = {
-  allimtok: 'alimtalk',
-  'sso-api': 'single-sign-on-api',
-  'erp-system': 'enterprise-resource-planning',
-  ...
-}
-```
+### 7.4 거부·dropped 추적 (D-wide 갱신)
 
-LLM 출력의 base name 을 `canonicalizeSlug(normalizeBase(name))` 로 후처리 — 30-run 측정에서 관측된 *이름 표기 변동* (transliteration drift, abbreviation flip-flop) 강제 통합.
-
-#### (c) 3차: FORCED_CATEGORIES 후처리 (결정적)
-
-```ts
-FORCED_CATEGORIES = {
-  mqtt: { category: 'entity', type: 'tool' },
-  'restful-api': { category: 'concept', type: 'standard' },
-  'project-management-system': { category: 'entity', type: 'product' },
-  ...
-}
-```
-
-특정 slug 가 entity↔concept 사이를 oscillate 한 30-run 측정 결과 → 강제 pin. LLM 의 자유 분류 위에 *결정적 안정 layer*.
-
-### 7.4 거부·dropped 추적
-
-`detectAntiPattern(base)` 가 schema 거부 패턴 매치 시 즉시 drop. `assembleCanonicalResult` 가 *모든 mention* 을 살펴서 살아남지 못한 것을 `dropped[]` 에 기록 + reason (`computeDropReason`) 부여 → log 에 노출.
+mention extraction 단계에서 LLM 자체가 거부 가이드 (UI 라벨, 기능명, 비즈니스 객체, 한국어 일반 명사) 적용. canonicalizer 의 `detectAntiPattern` schema-reject 로직은 D-wide 폐기 — assembleCanonicalResult 의 dropped[] 추적은 빈 description / 중복 감지 위주로만 유지.
 
 ### 7.5 dedup·alias 통합
 
@@ -435,9 +407,9 @@ FORCED_CATEGORIES = {
 | **수정 (overwrite)** | 같은 slug 가 다시 mention 됨 → `createPage` 멱등 write (frontmatter 의 sources 배열 누적은 wiki-ops 의 `## 출처` block 갱신으로) |
 | **drop** | schema 위반, anti-pattern, 빈 description, invalid type |
 
-### 7.8 schema.yaml self-extending (§5.4 4 Stage 통합)
+### 7.8 schema.yaml — D-wide 갱신 (§5.4 4 Stage 폐기)
 
-`.wikey/schema.yaml` 에 사용자가 정의한 entity/concept type 확장이 `SchemaOverride` 로 prompt 에 주입 → 도메인별 wiki 가 점진 진화. Stage 1 BUILTIN + user yaml + Stage 3 runtime SelfDeclaration + Stage 4 converged decomposition 까지 *4 layer* merge (`mergeRuntimeIntoOverride`, `mergeAllSources`).
+`.wikey/schema.yaml` 의 D-wide 보존 영역은 **`aliases` + `pii_patterns`** 두 section 뿐. `entity_types` / `concept_types` / `standard_decompositions` / `custom_types` 는 §5.10 D-wide 결정으로 모두 폐기 — Stage 1 BUILTIN_STANDARD_DECOMPOSITIONS / Stage 2 suggestion / Stage 3 self-declaration / Stage 4 converged decomposition 의 4 layer self-extending 메커니즘 전체 제거. 도메인 type 진화는 LLM 자연 의미 매칭 + qmd embedding cluster 가 대체.
 
 ---
 
@@ -487,9 +459,9 @@ FORCED_CATEGORIES = {
 
 ---
 
-## 9. Step 8 — Self-Extending + 자율 지식 증분 (§5.4 4 Stage)
+## 9. Step 8 — Self-Extending + 자율 지식 증분 (§5.4 4 Stage) — **D-wide 폐기 (2026-05-05)**
 
-> wikey.schema.md "표준 분해 self-extending 구조" §. 사용자 본질 비판 (§5.10) 으로 paradigm shift issue 등록 — 옵션 D (LLM-only 폐기) 채택 시 본 step 전체 deprecate.
+> ⚠️ **D-wide 결정으로 본 §9 전체 deprecated**. Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion-detector / self-declaration / convergence) 모두 제거. 본 섹션은 *historical reference* 로만 보존 — 사용자 본질 비판 6 chain (§5.10) 으로 옵션 D-wide 채택, LLM 자연 의미 매칭 + qmd embedding cluster 가 self-extending 가치 대체.
 
 ### 9.1 위치
 
@@ -708,11 +680,11 @@ const rawAnswer = await llm.call(prompt, { provider, model })
 |----------|------|------|
 | `WIKEY_EXTRACTION_DETERMINISM=1` | ingest-pipeline.ts:475 | summary/mention/canonicalize LLM 에 `temperature=0 + seed=42` 주입 → CV <15% |
 | `JSON parse retry × 2` | callLLMWithRetry:1012 | 형식 깨짐 자동 복구 |
-| `SLUG_ALIASES` | canonicalizer.ts:55 | 30-run 측정 표기 변동 → canonical 강제 |
-| `FORCED_CATEGORIES` | canonicalizer.ts:117 | entity↔concept oscillation 강제 pin |
+| `SLUG_ALIASES` + `.wikey/schema.yaml` `aliases` | canonicalizer.ts:55 + schema.ts | 30-run 측정 표기 변동 → canonical 강제 (D-wide 잔존 alias layer) |
+| ~~`FORCED_CATEGORIES`~~ | ~~canonicalizer.ts:117~~ | **D-wide 폐기 (2026-05-05)** — LLM 자율 type 분류로 대체 |
 | `convert-cache.ts` | computeCacheKey | 같은 source bytes → 같은 markdown 보장 |
 | `section-index.ts` (deterministic parse) | parseSections | LLM-free 섹션 트리 — Route 판정·peer context 안정 |
-| Stage 2 suffix detector + Stage 4 union arbitration | suggestion/convergence | 결정적 detector → LLM 비용 0 의 후보 생성 |
+| ~~Stage 2 suffix detector + Stage 4 union arbitration~~ | ~~suggestion/convergence~~ | **D-wide 폐기 (2026-05-05)** — self-extending 메커니즘 전체 제거 |
 | Hook 1/2 (sidecar/source-page protect) | incremental-reingest.ts | 사용자 수정 보호 → ingest 재현성과 사용자 작업 양립 |
 
 ---
@@ -734,4 +706,4 @@ const rawAnswer = await llm.call(prompt, { provider, model })
 
 > **wikey 의 ingest 파이프라인은 "결정적 코드 + LLM 의 전략적 개입" 의 7:3 혼합.** 변환·PII gate·hash diff·페이지 write·인덱스 갱신은 모두 결정적이며, LLM 은 *분류 fallback (Step 1) → brief (Step 2) → summary + mention (Step 5) → canonicalize (Step 6) → 답변 합성 (Step Q)* 의 5 지점에만 개입한다. 이 분리가 곧 Karpathy 의 4 원칙 — *Explicit (LLM 행위는 모두 frontmatter + log 로 가시화), Yours (PII gate + sidecar 로컬), File over app (markdown + git), BYOAI (provider 교체 자유)* — 의 코드 구현이다.
 >
-> §5.10 paradigm shift issue 가 *"표준 분해 self-extending 가 LLM 시대 reductionism 의 잔재인가"* 를 묻고 있어 옵션 D 채택 시 Step 8 의 Stage 1~4 폐기 가능성. 단, Step 1~7 + Step Q 는 무관 — wikey 의 본질 (raw → wiki 자동 누적, 멱등 갱신, 검색·합성 양끝 LLM 참여) 은 유지된다.
+> §5.10 paradigm shift 옵션 D-wide 채택 (2026-05-05) — Step 8 의 Stage 1~4 self-extending + Step 6 의 7-type schema gate / FORCED_CATEGORIES 폐기 완료. 단, Step 1~7 (alias normalization 잔존) + Step Q 는 무관 — wikey 의 본질 (raw → wiki 자동 누적, 멱등 갱신, 검색·합성 양끝 LLM 참여) 은 유지된다.

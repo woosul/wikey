@@ -1,4 +1,10 @@
 /**
+ * @deprecated §5.10 D-wide (2026-05-05) — §5.4 self-extending Stage 1~4 폐기.
+ * 본 파일의 모든 describe 가 .skip 으로 deprecated. canonicalizer / schema / types 의
+ * D-wide ripple R1~R3 가 해당 코드 path 를 제거 — test 만 보존 (historical reference).
+ */
+
+/**
  * §5.4 Stage 4 — cross-source convergence tests (AC15~AC20).
  *
  * spec: plan/phase-5-todox-5.4-integration.md §3.4 (line 778-981)
@@ -25,7 +31,7 @@ import {
 
 // ── AC15 — ConvergedDecomposition shape ────────────────────────────────────
 
-describe('AC15 — ConvergedDecomposition / SourceMention shape', () => {
+describe.skip('AC15 — ConvergedDecomposition / SourceMention shape', () => {
   it('serializes round-trip with arbitration_confidence (NOT confidence) field name', () => {
     const cd: ConvergedDecomposition = {
       umbrella_slug: 'iso-27001',
@@ -87,7 +93,7 @@ function buildHistory(
   }))
 }
 
-describe('AC16 — clusterMentionsAcrossSources', () => {
+describe.skip('AC16 — clusterMentionsAcrossSources', () => {
   it('groups mentions whose embeddings have cosine similarity ≥ 0.75 into the same cluster', () => {
     const history = buildHistory([
       {
@@ -147,7 +153,7 @@ describe('AC16 — clusterMentionsAcrossSources', () => {
 
 // ── AC17 — arbitrate ────────────────────────────────────────────────────────
 
-describe('AC17 — arbitrate', () => {
+describe.skip('AC17 — arbitrate', () => {
   it("'union' (default) returns a deterministic ConvergedDecomposition with confidence 1.0 and arbitration_method 'union'", async () => {
     const cluster: MentionCluster = {
       cluster_id: 'c1',
@@ -204,7 +210,7 @@ describe('AC17 — arbitrate', () => {
 
 // ── AC18 — createConvergencePass entry-point factory ───────────────────────
 
-describe('AC18 — createConvergencePass (run-convergence-pass.mjs entry)', () => {
+describe.skip('AC18 — createConvergencePass (run-convergence-pass.mjs entry)', () => {
   it('parses CLI-style args and returns a runnable pass with defaults', () => {
     const pass = createConvergencePass([
       '--history', '/tmp/h.json',
@@ -236,7 +242,7 @@ describe('AC18 — createConvergencePass (run-convergence-pass.mjs entry)', () =
 
 // ── AC19 — mergeAllSources ─────────────────────────────────────────────────
 
-describe('AC19 — mergeAllSources', () => {
+describe.skip('AC19 — mergeAllSources', () => {
   it('inject runtime declarations on top of baseOverride that already contains user-yaml + accepted-suggestion entries', () => {
     const baseComp: StandardDecompositionComponent = {
       slug: 'pmbok-scope',
@@ -339,7 +345,7 @@ describe('AC19 — mergeAllSources', () => {
 
 // ── AC20 — runConvergencePass precondition ─────────────────────────────────
 
-describe('AC20 — runConvergencePass insufficient-mention precondition', () => {
+describe.skip('AC20 — runConvergencePass insufficient-mention precondition', () => {
   it('returns [] and logs a warning when history is below the 3 standards × 2 sources threshold', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
 

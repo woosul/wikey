@@ -1,4 +1,10 @@
 /**
+ * @deprecated §5.10 D-wide (2026-05-05) — §5.4 self-extending Stage 1~4 폐기.
+ * 본 파일의 모든 describe 가 .skip 으로 deprecated. canonicalizer / schema / types 의
+ * D-wide ripple R1~R3 가 해당 코드 path 를 제거 — test 만 보존 (historical reference).
+ */
+
+/**
  * §5.4.5 — Stage 1+2+3+4 통합 시나리오 integration tests.
  *
  * 5 시나리오 (plan/phase-5-todox-5.4-integration.md §4 line 985-1170):
@@ -95,7 +101,7 @@ function pendingSuggestion(
 
 // ── 4.1 Fresh ingest flow ──────────────────────────────────────────────────
 
-describe('Scenario 4.1 — Fresh ingest flow (vault 처음)', () => {
+describe.skip('Scenario 4.1 — Fresh ingest flow (vault 처음)', () => {
   it(
     '시점 0: schema.yaml 미존재 → loadSchemaOverride null → buildBlock = BUILTIN PMBOK only',
     async () => {
@@ -196,7 +202,7 @@ describe('Scenario 4.1 — Fresh ingest flow (vault 처음)', () => {
 
 // ── 4.2 Incremental flow ───────────────────────────────────────────────────
 
-describe('Scenario 4.2 — Incremental flow (Stage 2 suggestion accept → schema.yaml 영속화)', () => {
+describe.skip('Scenario 4.2 — Incremental flow (Stage 2 suggestion accept → schema.yaml 영속화)', () => {
   it(
     'mention history 누적 → suggestion pending → user accept → appendStandardDecomposition → 다음 ingest loadSchemaOverride 가 인식',
     async () => {
@@ -266,7 +272,7 @@ describe('Scenario 4.2 — Incremental flow (Stage 2 suggestion accept → schem
 
 // ── 4.3 사용자 vault 수동 편집 흐름 ────────────────────────────────────────
 
-describe('Scenario 4.3 — 사용자 vault 수동 편집 (empty-explicit 가 runtime 무시)', () => {
+describe.skip('Scenario 4.3 — 사용자 vault 수동 편집 (empty-explicit 가 runtime 무시)', () => {
   it(
     'standard_decompositions: [] (PMBOK disable) → buildBlock 빈 string + runtime 도 무시',
     async () => {
@@ -316,7 +322,7 @@ describe('Scenario 4.3 — 사용자 vault 수동 편집 (empty-explicit 가 run
 
 // ── 4.4 Stage 간 fallback (precondition 미충족 + reindex hook 조건문) ─────
 
-describe('Scenario 4.4 — Stage 간 fallback (insufficient mention diversity + reindex hook 조건문)', () => {
+describe.skip('Scenario 4.4 — Stage 간 fallback (insufficient mention diversity + reindex hook 조건문)', () => {
   it(
     'runConvergencePass: history < 3 standards × 2 sources → 빈 배열 + warn (Stage 4 graceful)',
     async () => {
@@ -361,7 +367,7 @@ describe('Scenario 4.4 — Stage 간 fallback (insufficient mention diversity + 
 
 // ── 4.5 사용자 거부 (reject) 흐름 ──────────────────────────────────────────
 
-describe('Scenario 4.5 — reject → negativeCache → Stage 2 silent drop + Stage 3 propose=false', () => {
+describe.skip('Scenario 4.5 — reject → negativeCache → Stage 2 silent drop + Stage 3 propose=false', () => {
   it(
     'rejectSuggestion → negativeCache → 같은 signature suggestion 재생성 시 silent drop + Stage 3 propose=false',
     () => {

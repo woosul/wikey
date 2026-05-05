@@ -1,3 +1,9 @@
+/**
+ * @deprecated §5.10 D-wide (2026-05-05) — §5.4 self-extending Stage 1~4 폐기.
+ * 본 파일의 모든 describe 가 .skip 으로 deprecated. canonicalizer / schema / types 의
+ * D-wide ripple R1~R3 가 해당 코드 path 를 제거 — test 만 보존 (historical reference).
+ */
+
 import { describe, it, expect } from 'vitest'
 import { runSuggestionDetection, appendIngestHistory } from '../suggestion-pipeline.js'
 import type { CanonicalizedResult, IngestRecord } from '../types.js'
@@ -18,7 +24,7 @@ const canon = (concepts: ReadonlyArray<{ slug: string; type: 'standard' | 'metho
   dropped: [],
 })
 
-describe('runSuggestionDetection — pipeline trigger', () => {
+describe.skip('runSuggestionDetection — pipeline trigger', () => {
   it('produces suggestions and an updated history when ingest finalize fires', () => {
     // History already holds two sources — adding a third pushes co-occurrence
     // for 'iso-27001-a-' over the 0.6 alpha cutoff (support_count=3,

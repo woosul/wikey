@@ -1,3 +1,9 @@
+/**
+ * @deprecated §5.10 D-wide (2026-05-05) — §5.4 self-extending Stage 1~4 폐기.
+ * 본 파일의 모든 describe 가 .skip 으로 deprecated. canonicalizer / schema / types 의
+ * D-wide ripple R1~R3 가 해당 코드 path 를 제거 — test 만 보존 (historical reference).
+ */
+
 import { describe, it, expect } from 'vitest'
 import {
   addSuggestion,
@@ -39,7 +45,7 @@ const sample = (overrides: Partial<Suggestion> = {}): Suggestion => ({
   ...overrides,
 })
 
-describe('SuggestionStorage — addSuggestion', () => {
+describe.skip('SuggestionStorage — addSuggestion', () => {
   it('returns a new immutable store with the suggestion appended; original unchanged', () => {
     const store = emptyStore()
     const s = sample()
@@ -59,7 +65,7 @@ describe('SuggestionStorage — addSuggestion', () => {
   })
 })
 
-describe('SuggestionStorage — updateSuggestionState', () => {
+describe.skip('SuggestionStorage — updateSuggestionState', () => {
   it('transitions a pending suggestion to accepted (immutable)', () => {
     const initial = addSuggestion(emptyStore(), sample())
     const acceptedState = { kind: 'accepted' as const, acceptedAt: '2026-05-02T08:00:00Z' }
@@ -77,7 +83,7 @@ describe('SuggestionStorage — updateSuggestionState', () => {
   })
 })
 
-describe('SuggestionStorage — rejectSuggestion', () => {
+describe.skip('SuggestionStorage — rejectSuggestion', () => {
   it('marks state rejected, preserves reason, and registers negativeCache id', () => {
     const initial = addSuggestion(emptyStore(), sample({ id: 'sha1-reject-me' }))
     const next = rejectSuggestion(initial, 'sha1-reject-me', 'too marketing-y')

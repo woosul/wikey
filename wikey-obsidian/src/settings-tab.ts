@@ -520,13 +520,13 @@ export class WikeySettingTab extends PluginSettingTab {
     const path = '.wikey/schema.yaml'
     const descEl = containerEl.createDiv({ cls: 'wikey-settings-status-desc' })
     const statusSpan = descEl.createSpan({
-      text: 'Add domain-specific entity/concept types on top of the built-in 4+3. Status: …',
+      text: 'Customize aliases (canonical slug folds) and pii_patterns. Status: …',
     })
 
     let removeButton: HTMLButtonElement | null = null
     new Setting(containerEl)
       .setName('Edit schema.yaml')
-      .setDesc('Extend canonicalizer with user-defined types (e.g. dataset, regulation). Built-in types always stay active.')
+      .setDesc('Define aliases (variant labels collapsing into one slug) and pii_patterns (custom PII regexes).')
       .addButton((btn) =>
         btn.setButtonText('Edit').onClick(async () => {
           try {
@@ -1115,67 +1115,30 @@ class IngestPromptEditModal extends Modal {
   }
 }
 
-const SCHEMA_OVERRIDE_TEMPLATE = `# wikey schema override — .wikey/schema.yaml (v7-5)
+const SCHEMA_OVERRIDE_TEMPLATE = `# wikey schema override — .wikey/schema.yaml (D-wide)
 #
-# Add domain-specific entity/concept types on top of the built-in 4+3.
-# Built-in types (organization/person/product/tool · standard/methodology/document_type)
-# always stay active and cannot be overridden here.
+# Two sections are honored: \`aliases\` (canonical slug normalization) and
+# \`pii_patterns\` (custom PII detection). Other sections are ignored.
 #
-# Remove this file to revert to built-in types only.
+# Remove this file to disable user overrides.
 
-entity_types:
-  - name: dataset
-    description: Public structured datasets (e.g. imagenet, kaggle-titanic)
-  - name: location
-    description: Geographic places or facilities (e.g. seoul, leverkusen)
+aliases:
+  # Each entry maps a canonical slug to a list of variant strings the
+  # canonicalizer should fold into it (case-insensitive). Useful for
+  # multilingual labels, abbreviations, or namesakes.
+  # Example:
+  # iso-27001:
+  #   - ISO 27001
+  #   - ISO/IEC 27001
+  #   - ISMS
 
-concept_types:
-  - name: regulation
-    description: Regulations or laws of a country or agency (e.g. gdpr, k-fda-guidelines)
-
-# Standard decomposition rules (§5.4.1 Stage 1)
-# - Omit this key entirely → the built-in PMBOK decomposition applies (default).
-# - Set \`standard_decompositions: []\` to explicitly disable PMBOK.
-# - Add new entries (ISO-27001, ITIL 4, ...) below in the same shape; user entries
-#   are APPENDED on top of built-in (PMBOK stays active alongside).
-# - The PMBOK YAML below is the **built-in shape for reference** — code applies it
-#   automatically, do NOT uncomment. v4 does not yet support replacing built-in PMBOK
-#   with a user definition (mergeWithBuiltin: 'replace' is a future option); to turn
-#   PMBOK off, use \`standard_decompositions: []\`.
-#
-# standard_decompositions:
-#   - name: PMBOK
-#     umbrella_slug: project-management-body-of-knowledge
-#     rule: decompose
-#     require_explicit_mention: true
-#     aliases:
-#       - Project Management Body of Knowledge
-#       - 프로젝트 관리 지식체계
-#     components:
-#       - slug: project-integration-management
-#         type: methodology
-#       - slug: project-scope-management
-#         type: methodology
-#       - slug: project-schedule-management
-#         type: methodology
-#         aliases:
-#           - project-time-management
-#       - slug: project-cost-management
-#         type: methodology
-#       - slug: project-quality-management
-#         type: methodology
-#       - slug: project-resource-management
-#         type: methodology
-#         aliases:
-#           - project-human-resource-management
-#       - slug: project-communications-management
-#         type: methodology
-#       - slug: project-risk-management
-#         type: methodology
-#       - slug: project-procurement-management
-#         type: methodology
-#       - slug: project-stakeholder-management
-#         type: methodology
+pii_patterns:
+  # Custom PII regex patterns layered on top of built-in detection.
+  # Each entry: { name, regex, redaction }.
+  # Example:
+  # - name: employee-id
+  #   regex: '\\\\bEMP-\\\\d{6}\\\\b'
+  #   redaction: '[EMP-ID]'
 `
 
 /**
@@ -1197,7 +1160,7 @@ class SchemaOverrideEditModal extends Modal {
     modalEl.addClass('wikey-ingest-prompt-modal')
     contentEl.createEl('h2', { text: 'Edit Schema Override' })
     contentEl.createEl('p', {
-      text: 'Define additional entity/concept types for the canonicalizer. Built-in types (organization/person/product/tool · standard/methodology/document_type) are always active and cannot be overridden here.',
+      text: 'Customize the canonicalizer with aliases (variant labels collapsing into one slug) and pii_patterns (custom PII regexes). Other sections are ignored.',
       cls: 'wikey-ingest-prompt-help',
     })
     this.textarea = contentEl.createEl('textarea', {

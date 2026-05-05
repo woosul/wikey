@@ -1,3 +1,9 @@
+/**
+ * @deprecated §5.10 D-wide (2026-05-05) — §5.4 self-extending Stage 1~4 폐기.
+ * 본 파일의 모든 describe 가 .skip 으로 deprecated. canonicalizer / schema / types 의
+ * D-wide ripple R1~R3 가 해당 코드 path 를 제거 — test 만 보존 (historical reference).
+ */
+
 import { describe, it, expect } from 'vitest'
 import {
   detectCoOccurrence,
@@ -20,7 +26,7 @@ const ingest = (overrides: Partial<IngestRecord> & { source: string }): IngestRe
 
 // ── AC3 — co-occurrence detector ──────────────────────────────────────────────
 
-describe('detectCoOccurrence', () => {
+describe.skip('detectCoOccurrence', () => {
   it('returns one candidate when ≥3 sibling concepts share a long prefix in one source', () => {
     const r = ingest({
       source: 'wiki/sources/source-iso-27001-overview.md',
@@ -86,7 +92,7 @@ describe('detectCoOccurrence', () => {
 
 // ── AC4 — suffix clustering ───────────────────────────────────────────────────
 
-describe('detectSuffixCluster', () => {
+describe.skip('detectSuffixCluster', () => {
   it('detects a whitelisted suffix shared across ≥2 sources', () => {
     const history: IngestRecord[] = [
       ingest({
@@ -193,7 +199,7 @@ const candidate = (overrides: Partial<CandidatePattern> = {}): CandidatePattern 
   ...overrides,
 })
 
-describe('computeConfidence', () => {
+describe.skip('computeConfidence', () => {
   it('returns 1.0 at full saturation (5 sources, single suffix, 20 mentions, no builtin)', () => {
     const c = candidate({ support_count: 5, unique_suffixes: 1, mention_count: 20, overlapsWithBuiltin: false })
     expect(computeConfidence(c)).toBeCloseTo(1.0, 5)

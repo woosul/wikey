@@ -1,4 +1,10 @@
 /**
+ * @deprecated §5.10 D-wide (2026-05-05) — §5.4 self-extending Stage 1~4 폐기.
+ * 본 파일의 모든 describe 가 .skip 으로 deprecated. canonicalizer / schema / types 의
+ * D-wide ripple R1~R3 가 해당 코드 path 를 제거 — test 만 보존 (historical reference).
+ */
+
+/**
  * §5.4 Stage 3 — in-source self-declaration.
  *
  * AC9  SelfDeclaration 타입 + persist 결정 (mergeRuntimeIntoOverride)
@@ -81,7 +87,7 @@ function makeSuggestion(slug: string, kind: 'pending' | 'accepted' | 'rejected' 
 
 // ── AC9 — mergeRuntimeIntoOverride ───────────────────────────────────────────
 
-describe('AC9 — mergeRuntimeIntoOverride (4 시나리오)', () => {
+describe.skip('AC9 — mergeRuntimeIntoOverride (4 시나리오)', () => {
   it('runtime 비어있으면 override 그대로 반환 (early return)', () => {
     const override: SchemaOverride = {
       entityTypes: [],
@@ -155,7 +161,7 @@ describe('AC9 — mergeRuntimeIntoOverride (4 시나리오)', () => {
 
 // ── AC10 — section-index "표준 개요" detector ────────────────────────────────
 
-describe('AC10 — section-index headingPattern standard-overview', () => {
+describe.skip('AC10 — section-index headingPattern standard-overview', () => {
   it('한국어 표준 keyword ("PMBOK 개요", "ISO 27001 영역") → standard-overview', () => {
     const md = `# Document\n\n## PMBOK 개요\n\nbody1\n\n## ISO 27001 영역\n\nbody2\n`
     const sections = parseSections(md)
@@ -186,7 +192,7 @@ describe('AC10 — section-index headingPattern standard-overview', () => {
 
 // ── AC11 — structured decomposition extractor ────────────────────────────────
 
-describe('AC11 — extractSelfDeclaration (deterministic)', () => {
+describe.skip('AC11 — extractSelfDeclaration (deterministic)', () => {
   it('numbered list 5+ items + standard-overview → SelfDeclaration', () => {
     const md = `## ISO 27001 개요\n\n표준은 다음을 포함한다:\n\n1. Information Security Policies\n2. Asset Management\n3. Access Control\n4. Cryptography\n5. Physical Security\n6. Operations Security\n`
     const sections = parseSections(md)
@@ -235,7 +241,7 @@ describe('AC11 — extractSelfDeclaration (deterministic)', () => {
 
 // ── AC12 — runtime-scope vs persist ──────────────────────────────────────────
 
-describe('AC12 — persistChoice transitions', () => {
+describe.skip('AC12 — persistChoice transitions', () => {
   it('elevateToReview → kind pending-user-review', () => {
     const sd = makeRuntime('iso-27001', 'ISO 27001', ['c1', 'c2', 'c3', 'c4', 'c5'])
     const elevated = elevateToReview(sd)
@@ -258,7 +264,7 @@ describe('AC12 — persistChoice transitions', () => {
 
 // ── AC13 — Stage 2 suggestion 충돌 처리 ──────────────────────────────────────
 
-describe('AC13 — shouldStage3ProposeRuntime', () => {
+describe.skip('AC13 — shouldStage3ProposeRuntime', () => {
   it('matching 없음 (신규) → true', () => {
     const store: SuggestionStore = emptyStore()
     expect(shouldStage3ProposeRuntime(store, 'iso-27001')).toBe(true)
@@ -303,7 +309,7 @@ describe('AC13 — shouldStage3ProposeRuntime', () => {
 
 // ── AC14 — false positive guard ──────────────────────────────────────────────
 
-describe('AC14 — false positive guard (marketing keyword)', () => {
+describe.skip('AC14 — false positive guard (marketing keyword)', () => {
   it('marketing keyword 본문 (핵심 기능) → silent drop (null)', () => {
     // section title 은 standard-overview 매치되지만 본문에 marketing 패턴
     const md = `## 제품 개요\n\n핵심 기능 5가지:\n\n1. 빠른 속도\n2. 쉬운 사용\n3. 강력한 성능\n4. 우수한 보안\n5. 합리적 가격\n6. 무료 지원\n`

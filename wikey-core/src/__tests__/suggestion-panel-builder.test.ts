@@ -1,3 +1,9 @@
+/**
+ * @deprecated §5.10 D-wide (2026-05-05) — §5.4 self-extending Stage 1~4 폐기.
+ * 본 파일의 모든 describe 가 .skip 으로 deprecated. canonicalizer / schema / types 의
+ * D-wide ripple R1~R3 가 해당 코드 path 를 제거 — test 만 보존 (historical reference).
+ */
+
 import { describe, it, expect } from 'vitest'
 import {
   buildSuggestionCardModel,
@@ -37,7 +43,7 @@ const sample: Suggestion = {
   updatedAt: '2026-05-01T12:00:00Z',
 }
 
-describe('buildSuggestionCardModel', () => {
+describe.skip('buildSuggestionCardModel', () => {
   it('exposes confidence + umbrella name + components + evidence summary for the card', () => {
     const model = buildSuggestionCardModel(sample)
     expect(model.title).toContain('ISO 27001')
@@ -54,7 +60,7 @@ describe('buildSuggestionCardModel', () => {
   })
 })
 
-describe('acceptSuggestion', () => {
+describe.skip('acceptSuggestion', () => {
   it('transitions state pending → accepted via storage updater (immutable)', () => {
     const store = addSuggestion(emptyStore(), sample)
     const next = acceptSuggestion(store, sample.id, '2026-05-02T08:00:00Z')
