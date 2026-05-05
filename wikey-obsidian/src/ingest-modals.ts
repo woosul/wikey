@@ -46,6 +46,15 @@ export class IngestFlowModal extends Modal {
   /** Set by processing-phase [Back] click. runIngest checks this to decide whether to loop back. */
   backRequested = false
 
+  /**
+   * 사용자 명시 dismissal 만 통과시키는 gate. 사용자 보고 (2026-05-05): backdrop click /
+   * 외부 dismissal 으로 modal 사라지면 caller (ingestSelectedInboxFiles 등) 가 button
+   * disabled 상태로 잠긴 채 멈춤. close() override 가 본 flag 가 true 일 때만 super.close()
+   * 통과. 정상 close path (Cancel / X button confirm OK / approve+finish / 외부 dispose)
+   * 는 allowClose 를 set 후 close().
+   */
+  private allowClose = false
+
   private briefResolver: ((o: BriefOutcome) => void) | null = null
   private previewResolver: ((approved: boolean) => void) | null = null
 
@@ -178,7 +187,26 @@ export class IngestFlowModal extends Modal {
   /** Mark flow as done and close (success path with verify=OFF or after approve+write). */
   finish() {
     this.phase = 'done'
-    this.close()
+    this.allowClose = true
+    super.close()
+  }
+
+  /**
+   * 외부 caller 가 명시적 dismissal 시 사용 (conversion 실패 acknowledgement,
+   * 외부 cancel 결정 등). close() override 의 backdrop/ESC 차단을 우회한다.
+   */
+  dispose() {
+    this.allowClose = true
+    super.close()
+  }
+
+  /**
+   * close() override — 사용자 명시 dismissal 만 통과. backdrop click / ESC 등
+   * 외부 dismiss 시도는 무시. 명시 close path 는 allowClose 를 set 후 호출.
+   */
+  close(): void {
+    if (!this.allowClose) return
+    super.close()
   }
 
   // ── Rendering ──
@@ -230,8 +258,11 @@ export class IngestFlowModal extends Modal {
             e.stopPropagation()
             e.preventDefault()
             e.stopImmediatePropagation()
+            return
           }
         }
+        // 사용자 명시 close — close() override gate 통과 허용
+        this.allowClose = true
       }
       closeBtn.addEventListener('click', closeGuard, true)
       this.cleanups.push(() => closeBtn.removeEventListener('click', closeGuard, true))
@@ -404,7 +435,7 @@ export class IngestFlowModal extends Modal {
         this.briefResolver = null
         r({ action: 'cancel', guideHint: this.guideHint, verifyResults: this.verifyResults })
       }
-      this.close()
+      this.dispose()
     })
   }
 
@@ -588,7 +619,7 @@ export class IngestFlowModal extends Modal {
     const r = this.briefResolver
     this.briefResolver = null
     r({ action, guideHint: this.guideHint, verifyResults: this.verifyResults })
-    if (action === 'cancel') this.close()
+    if (action === 'cancel') this.dispose()
     // proceed/skip-session: modal stays open; caller will transition to processing phase
   }
 
@@ -597,7 +628,7 @@ export class IngestFlowModal extends Modal {
     const r = this.previewResolver
     this.previewResolver = null
     r(approved)
-    if (!approved) this.close()
+    if (!approved) this.dispose()
     // approved: caller will call finish() after writes complete
   }
 

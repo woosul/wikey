@@ -369,7 +369,7 @@ export async function runIngest(
     modal.setBrief(`(Conversion failed: ${(err as Error)?.message ?? err})`)
     // Wait for user acknowledgement (Cancel or Back) — vault write 0 invariant 보존.
     const out = await modal.awaitBrief()
-    modal.close()
+    modal.dispose()
     return { success: false, sourcePath, createdPages: [], cancelled: out.action === 'cancel' }
   }
 
@@ -395,7 +395,7 @@ export async function runIngest(
     if (briefOutcome.action === 'cancel') {
       // AC-C1.4: Cancel 시 vault write 0 invariant — runIngestCore 호출 안 함.
       // conversionResult 는 휘발 (cache 는 ~/.cache/wikey/convert/ ephemeral 보존, 30일 TTL).
-      modal.close()
+      modal.dispose()
       return { success: false, sourcePath, createdPages: [], cancelled: true }
     }
     if (briefOutcome.action === 'skip-session') {

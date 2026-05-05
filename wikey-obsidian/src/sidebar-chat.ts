@@ -1798,52 +1798,58 @@ Click [[page name]] in answers to navigate to the wiki page.
     let done = 0
     let failed = 0
 
-    for (const f of selected) {
-      const row = this.inboxRowMap.get(f)
-      if (row) {
-        row.removeClass('wikey-audit-row-done')
-        row.addClass('wikey-audit-row-active')
-        row.style.setProperty('--progress', '0%')
-        row.scrollIntoView({ block: 'nearest' })
-      }
-
-      if (summaryEl) {
-        summaryEl.empty()
-        summaryEl.createEl('span', { text: `${done + 1}/${selected.length}`, cls: 'wikey-stat-number-white' })
-        summaryEl.createEl('span', { text: ' processing...' })
-      }
-
-      const result = await runIngest(this.plugin, `raw/0_inbox/${f}`, (step, _total, _msg, subStep, subTotal) => {
+    try {
+      for (const f of selected) {
+        const row = this.inboxRowMap.get(f)
         if (row) {
-          const pct = computeRowPct(step, subStep, subTotal)
-          row.style.setProperty('--progress', `${pct}%`)
+          row.removeClass('wikey-audit-row-done')
+          row.addClass('wikey-audit-row-active')
+          row.style.setProperty('--progress', '0%')
+          row.scrollIntoView({ block: 'nearest' })
         }
-      })
 
-      if (row) {
-        row.removeClass('wikey-audit-row-active')
-        row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
-        row.style.removeProperty('--progress')
-
-        if (!result.success && result.error) {
-          const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
-          const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
-          errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
+        if (summaryEl) {
+          summaryEl.empty()
+          summaryEl.createEl('span', { text: `${done + 1}/${selected.length}`, cls: 'wikey-stat-number-white' })
+          summaryEl.createEl('span', { text: ' processing...' })
         }
+
+        const result = await runIngest(this.plugin, `raw/0_inbox/${f}`, (step, _total, _msg, subStep, subTotal) => {
+          if (row) {
+            const pct = computeRowPct(step, subStep, subTotal)
+            row.style.setProperty('--progress', `${pct}%`)
+          }
+        })
+
+        if (row) {
+          row.removeClass('wikey-audit-row-active')
+          row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
+          row.style.removeProperty('--progress')
+
+          if (!result.success && result.error) {
+            const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
+            const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
+            errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
+          }
+        }
+
+        if (result.success) done++
+        else failed++
       }
 
-      if (result.success) done++
-      else failed++
+      const msg = failed > 0
+        ? `Done ${done} / Failed ${failed}`
+        : `${done} files ingested`
+      if (summaryEl) { summaryEl.empty(); summaryEl.setText(msg) }
+      new Notice(msg)
+    } finally {
+      // 안전망: ingest 도중 throw / await 깨짐 / modal dismiss 등 어떤 path 로든 종료 시
+      // button re-enable 보장. 사용자 보고 (2026-05-05): modal dismiss 후 button 잠긴 채 멈춤.
+      if (moveBtn) moveBtn.removeAttribute('disabled')
+      if (ingestBtn) ingestBtn.removeAttribute('disabled')
+      this.inboxSelections = new Set()
+      setTimeout(() => this.renderInboxStatus(), 2000)
     }
-
-    const msg = failed > 0
-      ? `Done ${done} / Failed ${failed}`
-      : `${done} files ingested`
-    if (summaryEl) { summaryEl.empty(); summaryEl.setText(msg) }
-    new Notice(msg)
-
-    this.inboxSelections = new Set()
-    setTimeout(() => this.renderInboxStatus(), 2000)
   }
 
   private renderInboxStatus() {
