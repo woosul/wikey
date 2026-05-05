@@ -1,18 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-import { dirname, join } from 'node:path'
 import {
   canonicalize, buildCanonicalizerPrompt,
-  canonicalizeSlug, SLUG_ALIASES, FORCED_CATEGORIES,
+  canonicalizeSlug, SLUG_ALIASES,
 } from '../canonicalizer.js'
-import { parseSchemaOverrideYaml, buildStandardDecompositionBlock } from '../schema.js'
 import { EXAMPLE_ORG_BASE } from '../example-placeholders.js'
-import type { Mention, SchemaOverride } from '../types.js'
+import type { Mention } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const fixturePath = (name: string): string => join(__dirname, 'fixtures', name)
 
 /**
  * Mock LLMClient that returns a canned JSON response.
@@ -82,64 +75,6 @@ describe('canonicalize — valid responses build pages with schema types', () =>
     expect(result.concepts[0].conceptType).toBe('standard')
     expect(result.concepts[0].filename).toBe('project-management-body-of-knowledge.md')
     expect(result.concepts[0].content).toContain('concept_type: standard')
-  })
-})
-
-// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide LLM-only ontology (detectAntiPattern 폐기).
-describe.skip('canonicalize — drops anti-pattern names', () => {
-  it('drops Korean labels even with valid type', async () => {
-    const mentions: Mention[] = [
-      { name: '회의실', type_hint: 'product', evidence: '회의실 예약 기능' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{ name: '회의실', type: 'product', description: '회의실 관리 기능' }],
-      concepts: [],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(0)  // dropped
-    expect(result.dropped.length).toBeGreaterThan(0)
-    expect(result.dropped[0].reason).toContain('Korean label')
-  })
-
-  it('drops X-management functional suffix names', async () => {
-    const mentions: Mention[] = [
-      { name: 'license-management', type_hint: 'standard', evidence: '라이선스 관리 화면' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [],
-      concepts: [{ name: 'license-management', type: 'standard', description: '라이선스 관리' }],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.concepts).toHaveLength(0)  // dropped by anti-pattern check
-    expect(result.dropped[0].reason).toContain('-management')
-  })
-
-  it('drops business object names', async () => {
-    const mentions: Mention[] = [
-      { name: 'tax-invoice', type_hint: 'document_type', evidence: '거래명세서' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [],
-      concepts: [{ name: 'tax-invoice', type: 'document_type', description: '세금계산서' }],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.concepts).toHaveLength(0)
-    expect(result.dropped[0].reason).toContain('business object')
-  })
-})
-
-// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide LLM-only (isValidEntityType/ConceptType 폐기).
-describe.skip('canonicalize — drops invalid schema types', () => {
-  it('drops entity with invalid type', async () => {
-    const mentions: Mention[] = [
-      { name: 'gantt-chart', type_hint: 'standard', evidence: '간트 차트 기반 일정 관리' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{ name: 'gantt-chart', type: 'business_object', description: '간트차트' }],  // invalid type
-      concepts: [],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(0)
   })
 })
 
@@ -293,46 +228,6 @@ Mentions ({{MENTIONS_COUNT}}):
   })
 })
 
-// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (entity_types/concept_types schema.yaml override 폐기).
-describe.skip('canonicalize — schema override (v7-5)', () => {
-  it('accepts custom entity type from override and builds page with entityType set', async () => {
-    const mentions: Mention[] = [
-      { name: 'imagenet', type_hint: 'dataset' as any, evidence: '이미지 분류 벤치마크' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{
-        name: 'imagenet', type: 'dataset',
-        description: 'Stanford ImageNet 이미지 분류 벤치마크.',
-      }],
-      concepts: [],
-    }))
-    const result = await canonicalize({
-      ...baseArgs, llm, mentions,
-      schemaOverride: {
-        entityTypes: [{ name: 'dataset', description: 'X' }],
-        conceptTypes: [],
-      },
-    })
-    expect(result.entities).toHaveLength(1)
-    expect(result.entities[0].filename).toBe('imagenet.md')
-    expect(result.entities[0].entityType as any).toBe('dataset')
-    expect(result.entities[0].content).toContain('entity_type: dataset')
-  })
-
-  it('drops same custom type without override', async () => {
-    const mentions: Mention[] = [
-      { name: 'imagenet', type_hint: 'dataset' as any, evidence: '벤치마크' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{ name: 'imagenet', type: 'dataset', description: 'X' }],
-      concepts: [],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(0)
-    expect(result.dropped).toHaveLength(1)
-  })
-})
-
 describe('canonicalize — v7 §4.5.1.4 slug aliases', () => {
   it('canonicalizeSlug() maps known aliases to canonical form', () => {
     expect(canonicalizeSlug('allimtok')).toBe('alimtalk')
@@ -423,88 +318,6 @@ describe('canonicalize — §4.5.1.6.1 determinism flag', () => {
   })
 })
 
-// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (FORCED_CATEGORIES 폐기).
-describe.skip('canonicalize — v7 §4.5.1.4 E/C boundary pins', () => {
-  it('FORCED_CATEGORIES pins mqtt to entity/tool', () => {
-    expect(FORCED_CATEGORIES['mqtt']).toEqual({ category: 'entity', type: 'tool' })
-  })
-
-  it('FORCED_CATEGORIES pins restful-api to concept/standard', () => {
-    expect(FORCED_CATEGORIES['restful-api']).toEqual({ category: 'concept', type: 'standard' })
-  })
-
-  it('moves pinned entity out of concept pool (mqtt)', async () => {
-    const mentions: Mention[] = [
-      { name: 'MQTT', type_hint: 'methodology', evidence: '경량 pub/sub 프로토콜' },
-    ]
-    // LLM mistakenly classifies mqtt as concept/methodology
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [],
-      concepts: [{
-        name: 'mqtt', type: 'methodology',
-        description: '경량 메시지 pub/sub 프로토콜.',
-      }],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(1)
-    expect(result.entities[0].filename).toBe('mqtt.md')
-    expect(result.entities[0].entityType).toBe('tool')
-    expect(result.entities[0].content).toContain('entity_type: tool')
-    expect(result.concepts).toHaveLength(0)
-  })
-
-  it('moves pinned concept out of entity pool (restful-api)', async () => {
-    const mentions: Mention[] = [
-      { name: 'RESTful API', type_hint: 'tool', evidence: 'HTTP 기반 웹 서비스' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{
-        name: 'restful-api', type: 'tool',
-        description: 'HTTP 기반 자원 지향 웹 서비스 아키텍처.',
-      }],
-      concepts: [],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(0)
-    expect(result.concepts).toHaveLength(1)
-    expect(result.concepts[0].filename).toBe('restful-api.md')
-    expect(result.concepts[0].conceptType).toBe('standard')
-    expect(result.concepts[0].content).toContain('concept_type: standard')
-  })
-
-  it('keeps pinned entity in entity pool (mqtt classified correctly)', async () => {
-    const mentions: Mention[] = [
-      { name: 'MQTT', type_hint: 'tool', evidence: '프로토콜' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{
-        name: 'mqtt', type: 'tool',
-        description: '경량 pub/sub 프로토콜.',
-      }],
-      concepts: [],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(1)
-    expect(result.entities[0].filename).toBe('mqtt.md')
-    expect(result.entities[0].entityType).toBe('tool')
-  })
-
-  it('dedupes when same pinned slug appears in both pools (entity wins)', async () => {
-    // Edge case: LLM emits mqtt in both pools. Entity pool runs first; second
-    // occurrence must be dropped, not double-counted.
-    const mentions: Mention[] = [
-      { name: 'mqtt', type_hint: 'tool', evidence: 'x' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{ name: 'mqtt', type: 'tool', description: 'A' }],
-      concepts: [{ name: 'mqtt', type: 'methodology', description: 'B' }],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(1)
-    expect(result.concepts).toHaveLength(0)
-  })
-})
-
 describe('canonicalize — §4.5.1.6.3 SLUG_ALIASES 3rd expansion', () => {
   it('collapses alimtalk 4-variant (allim-talk/allimtalk/kakao-alimtalk/allimtok → alimtalk)', () => {
     expect(canonicalizeSlug('allim-talk')).toBe('alimtalk')
@@ -558,75 +371,6 @@ describe('canonicalize — §4.5.1.6.3 SLUG_ALIASES 3rd expansion', () => {
     for (const target of Object.values(SLUG_ALIASES)) {
       expect(SLUG_ALIASES).not.toHaveProperty(target)
     }
-  })
-})
-
-// Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (FORCED_CATEGORIES 폐기).
-describe.skip('canonicalize — §4.5.1.6.4 FORCED_CATEGORIES canonical resolution', () => {
-  it('pins enterprise-resource-planning to concept/standard', () => {
-    expect(FORCED_CATEGORIES['enterprise-resource-planning']).toEqual(
-      { category: 'concept', type: 'standard' }
-    )
-  })
-
-  it('pins supply-chain-management to concept/methodology', () => {
-    expect(FORCED_CATEGORIES['supply-chain-management']).toEqual(
-      { category: 'concept', type: 'methodology' }
-    )
-  })
-
-  it('pins tcp-ip and virtual-private-network to concept/standard', () => {
-    expect(FORCED_CATEGORIES['tcp-ip']).toEqual({ category: 'concept', type: 'standard' })
-    expect(FORCED_CATEGORIES['virtual-private-network']).toEqual({ category: 'concept', type: 'standard' })
-  })
-
-  it('moves aliased entity (erp-system) out of entity pool via pin (ERP is concept)', async () => {
-    // LLM emits `erp-system` classified as entity/product.
-    // Alias maps to `enterprise-resource-planning`; pin forces concept/standard.
-    const mentions: Mention[] = [
-      { name: 'ERP', type_hint: 'product', evidence: 'ERP 시스템' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{ name: 'erp-system', type: 'product', description: 'ERP' }],
-      concepts: [],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(0)
-    expect(result.concepts).toHaveLength(1)
-    expect(result.concepts[0].filename).toBe('enterprise-resource-planning.md')
-    expect(result.concepts[0].conceptType).toBe('standard')
-  })
-
-  it('preserves pin when slug appears in both pools after alias (enterprise-resource-planning)', async () => {
-    // LLM emits same canonical in both pools via different aliases.
-    const mentions: Mention[] = [
-      { name: 'ERP', type_hint: 'standard', evidence: 'x' },
-    ]
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [{ name: 'enterprise-resource-planning-system', type: 'product', description: 'A' }],
-      concepts: [{ name: 'enterprise-resource-planning', type: 'standard', description: 'B' }],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.entities).toHaveLength(0)
-    expect(result.concepts).toHaveLength(1)
-    expect(result.concepts[0].filename).toBe('enterprise-resource-planning.md')
-  })
-
-  it('collapses BOM variants to single concept via alias + pin', async () => {
-    const mentions: Mention[] = [
-      { name: 'BOM', type_hint: 'standard', evidence: '자재명세서' },
-    ]
-    // Simulate LLM emitting two BOM variants that would both alias to bill-of-materials.
-    const llm = makeMockLLM(JSON.stringify({
-      entities: [],
-      concepts: [
-        { name: 'engineering-bill-of-materials', type: 'standard', description: 'eBOM' },
-        { name: 'bill-of-materials', type: 'standard', description: 'BOM 표준' },
-      ],
-    }))
-    const result = await canonicalize({ ...baseArgs, llm, mentions })
-    expect(result.concepts).toHaveLength(1)
-    expect(result.concepts[0].filename).toBe('bill-of-materials.md')
   })
 })
 
@@ -877,135 +621,3 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
   })
 })
 
-// ── §5.4.1 Stage 1: standard decomposition prompt integration (AC4 + AC5 + AC6.a) ──
-// §5.10.4 D-wide deprecated: standard decomposition 전체 폐기. describe.skip 처리.
-
-describe.skip('buildCanonicalizerPrompt — §5.4.1 standard decomposition [§5.10.4 D-wide deprecated]', () => {
-  // AC4 (i) — default path: built-in PMBOK block + marker auto-included.
-  it('AC4(i) default path (no schemaOverride) → built-in PMBOK block + marker', () => {
-    const prompt = buildCanonicalizerPrompt({
-      mentions: [{ name: 'pms', evidence: 'PMS' }],
-      existingEntityBases: [],
-      existingConceptBases: [],
-      sourceFilename: 'test.pdf',
-    })
-    expect(prompt).toContain('PMBOK 10 knowledge areas 개별 추출')
-    expect(prompt).toContain('project-integration-management')
-    expect(prompt).toContain('project-stakeholder-management')
-  })
-
-  // AC4 (ii) — overridePrompt branch: {{STANDARD_DECOMPOSITION_BLOCK}} placeholder substitution.
-  it('AC4(ii) overridePrompt with {{STANDARD_DECOMPOSITION_BLOCK}} → built-in PMBOK substituted', () => {
-    const override = `CUSTOM-OVERRIDE
-Source: {{SOURCE_FILENAME}}
-{{SCHEMA_BLOCK}}
-{{STANDARD_DECOMPOSITION_BLOCK}}
-Mentions ({{MENTIONS_COUNT}}):
-{{MENTIONS_BLOCK}}
-`
-    const prompt = buildCanonicalizerPrompt({
-      mentions: [{ name: 'pmbok', type_hint: 'standard', evidence: 'X' }],
-      existingEntityBases: [],
-      existingConceptBases: [],
-      sourceFilename: 'pms.pdf',
-      overridePrompt: override,
-    })
-    expect(prompt).toContain('CUSTOM-OVERRIDE')
-    expect(prompt).toContain('PMBOK 10 knowledge areas 개별 추출')
-    expect(prompt).toContain('project-integration-management')
-  })
-
-  // AC4 (ii.b) — overridePrompt without placeholder → no decomposition block leaked into output.
-  it('AC4(ii.b) overridePrompt without placeholder → no decomposition block in output', () => {
-    const override = `MINIMAL-OVERRIDE
-Source: {{SOURCE_FILENAME}}
-Mentions ({{MENTIONS_COUNT}}):
-{{MENTIONS_BLOCK}}
-`
-    const prompt = buildCanonicalizerPrompt({
-      mentions: [{ name: 'x', evidence: 'y' }],
-      existingEntityBases: [],
-      existingConceptBases: [],
-      sourceFilename: 'test.pdf',
-      overridePrompt: override,
-    })
-    expect(prompt.startsWith('MINIMAL-OVERRIDE')).toBe(true)
-    expect(prompt).not.toContain('PMBOK 10 knowledge areas')
-    expect(prompt).not.toContain('project-integration-management')
-  })
-
-  // AC5.a — ISO-27001 5-control fixture: built-in PMBOK + ISO both rendered (F1 append).
-  it('AC5.a (5-control) → prompt contains BOTH built-in PMBOK and ISO-27001 sections', () => {
-    const yaml = readFileSync(fixturePath('iso27001-5-control.yaml'), 'utf-8')
-    const override = parseSchemaOverrideYaml(yaml)
-    expect(override).not.toBeNull()
-    expect(override!.standardDecompositions?.kind).toBe('present')
-    const prompt = buildCanonicalizerPrompt({
-      mentions: [{ name: 'iso27001', type_hint: 'standard', evidence: 'X' }],
-      existingEntityBases: [],
-      existingConceptBases: [],
-      sourceFilename: 'iso.pdf',
-      schemaOverride: override!,
-    })
-    // built-in PMBOK still present (F1 append, not replace)
-    expect(prompt).toContain('PMBOK')
-    expect(prompt).toContain('project-integration-management')
-    // ISO-27001 + 5 control slugs present
-    expect(prompt).toContain('ISO-27001')
-    expect(prompt).toContain('a-5-organizational-controls')
-    expect(prompt).toContain('a-6-people-controls')
-    expect(prompt).toContain('a-7-physical-controls')
-    expect(prompt).toContain('a-8-technological-controls')
-    expect(prompt).toContain('a-9-supplier-relationships')
-  })
-
-  // AC5.b — 93-control fixture: parser accepts all 93 + builder runs in <100ms (smoke).
-  it('AC5.b (93-control) → parser accepts all 93 + builder <100ms', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    const yaml = readFileSync(fixturePath('iso27001-93-control.yaml'), 'utf-8')
-    const override = parseSchemaOverrideYaml(yaml)
-    expect(override).not.toBeNull()
-    expect(override!.standardDecompositions?.kind).toBe('present')
-    if (override!.standardDecompositions?.kind === 'present') {
-      const items = override!.standardDecompositions.items
-      expect(items).toHaveLength(1)
-      expect(items[0].components).toHaveLength(93)
-    }
-    expect(warnSpy).not.toHaveBeenCalled()
-    const t0 = performance.now()
-    const block = buildStandardDecompositionBlock(override!)
-    const elapsedMs = performance.now() - t0
-    expect(elapsedMs).toBeLessThan(100)
-    // spot-check substring matches across all 4 control families
-    expect(block).toContain('a-5-1-organizational-control')
-    expect(block).toContain('a-5-37-organizational-control')
-    expect(block).toContain('a-6-1-people-control')
-    expect(block).toContain('a-7-14-physical-control')
-    expect(block).toContain('a-8-34-technological-control')
-    warnSpy.mockRestore()
-  })
-
-  // AC6.a — 3-anchor (marker + 10 main slugs + 2 alternate slugs) preserved in default builder.
-  it('AC6.a 3-anchor: marker + 10 PMBOK slugs + 2 alternate slugs', () => {
-    const block = buildStandardDecompositionBlock(undefined)
-    // (i) marker phrase
-    expect(block).toContain('PMBOK 10 knowledge areas 개별 추출')
-    // (ii) 10 main PMBOK slugs
-    const mainSlugs = [
-      'project-integration-management',
-      'project-scope-management',
-      'project-schedule-management',
-      'project-cost-management',
-      'project-quality-management',
-      'project-resource-management',
-      'project-communications-management',
-      'project-risk-management',
-      'project-procurement-management',
-      'project-stakeholder-management',
-    ]
-    for (const slug of mainSlugs) expect(block).toContain(slug)
-    // (iii) 2 alternate slugs (legacy anchor)
-    expect(block).toContain('project-time-management')
-    expect(block).toContain('project-human-resource-management')
-  })
-})

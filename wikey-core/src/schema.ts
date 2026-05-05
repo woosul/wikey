@@ -1,37 +1,15 @@
-import type { SchemaOverride, StandardDecomposition, WikiFS } from './types.js'
+import type { WikiFS } from './types.js'
 
 /**
- * Phase 5 §5.10.3 + §5.10.4 (D-wide LLM-only ontology): schema gate 전부 폐기.
+ * Phase 5 §5.10.3 + §5.10.4 D-wide (LLM-only ontology): schema gate 전부 폐기.
  *
- * 변경 history:
- * - ~Phase 5 §5.4: 4 entity + 3 concept type union 강제 + standard_decompositions
- *   (BUILTIN PMBOK 등) + Stage 3 self-declaration runtime merge.
- * - §5.10.3 D-wide: ENTITY_TYPES / CONCEPT_TYPES / isValidEntityType /
- *   isValidConceptType / detectAntiPattern / buildSchemaPromptBlock 폐기. LLM 자율 type.
- * - §5.10.4 D-wide completion: BUILTIN_STANDARD_DECOMPOSITIONS / parseSchemaOverrideYaml /
- *   buildStandardDecompositionBlock / loadSchemaOverride 모두 폐기. canonicalizer 가
- *   schemaOverride 받지 않고 LLM 자율 type 분류 + alias normalization (canonicalizer.ts
- *   내부 SLUG_ALIASES) 으로 동작.
+ * 보존 영역 = `aliases` (canonical slug normalization) 단독. canonicalizer.ts 의
+ * SLUG_ALIASES + 본 file 의 loadUserAliases 가 .wikey/schema.yaml `aliases:` 블록을
+ * variant → canonical map 으로 merge.
  *
- * 보존 (별 layer):
- * - canonicalizer.ts SLUG_ALIASES (canonical slug normalization, deterministic)
- * - .wikey/pii-patterns.yaml + ~/.config/wikey/pii-patterns.yaml (PII engine 의 별 file,
- *   shape: `patterns: - id/kind/mask/...`. 본 schema.yaml 과 무관.)
- *
- * §5.10.4 P2-2 (codex follow-up): .wikey/schema.yaml 의 aliases 영역을 SLUG_ALIASES
- * 와 merge 하는 minimal parser 도입 (loadUserAliases / parseUserAliasesYaml).
- *
- * 사용자 본질 비판 6 chain (wikey.schema.md 핵심 원칙 #2 "위키는 LLM 이 소유한다") 의
- * 정확한 코드 구현.
+ * PII custom rule 은 별 file 로 분리 (`.wikey/pii-patterns.yaml` + `~/.config/wikey/pii-patterns.yaml`,
+ * shape: `patterns: - id/kind/mask/...` — `pii-patterns.ts` 참조).
  */
-
-/** D-wide stub — schema override 폐기 후 항상 null 반환. */
-export async function loadSchemaOverride(
-  _wikiFS: WikiFS,
-  _path = '.wikey/schema.yaml',
-): Promise<SchemaOverride | null> {
-  return null
-}
 
 /**
  * §5.10.4 P2-2 (codex follow-up): minimal `.wikey/schema.yaml` aliases parser.
@@ -124,9 +102,3 @@ export function parseUserAliasesYaml(input: string): Readonly<Record<string, str
   return out
 }
 
-/**
- * D-wide stub — empty array. 보존 이유: deprecated `suggestion-detector.ts` 가 import
- * (해당 module 의 test 는 §5.10.4 R8.2 에서 .skip 처리, runtime 호출 사이트는 ingest-pipeline
- * 에서 §5.10.4 P1-2 으로 제거). 본 stub 은 build green 만 보장.
- */
-export const BUILTIN_STANDARD_DECOMPOSITIONS: readonly StandardDecomposition[] = []

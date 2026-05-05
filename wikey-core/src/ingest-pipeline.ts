@@ -48,7 +48,6 @@ import {
 } from './incremental-reingest.js'
 import { canonicalize } from './canonicalizer.js'
 import { loadUserAliases } from './schema.js'
-import type { IngestRecord } from './types.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
 } from './example-placeholders.js'
@@ -534,7 +533,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride: undefined, userAliases, deterministic, overridePrompt: stage3OverridePrompt,
+      userAliases, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
 
@@ -593,7 +592,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride: undefined, userAliases, deterministic, overridePrompt: stage3OverridePrompt,
+      userAliases, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     if (canon.dropped.length > 0) {
@@ -2280,7 +2279,5 @@ async function runReindexAndWait(
   }
 }
 
-// §5.10.4 D-wide: Stage 2 suggestion finalization (runSuggestionFinalize +
-// loadMentionHistory + loadSuggestionStore + SUGGESTIONS_PATH + MENTION_HISTORY_PATH +
-// appendIngestHistoryRecord) 모두 폐기. .wikey/suggestions.json + mention-history.json
-// 자동 재생성 차단. self-extending 메커니즘 전체 제거.
+// §5.10.4 D-wide: Stage 2 self-extending suggestion finalization 폐기 (runSuggestionFinalize +
+// .wikey/suggestions.json + mention-history.json 메커니즘 모두 제거).

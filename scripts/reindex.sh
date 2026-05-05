@@ -209,11 +209,6 @@ cmd_reindex() {
     fi
   fi
 
-  # §5.10.4 D-wide: §5.4.4 convergence pass 폐기. WIKEY_CONVERGENCE_ENABLED env 지원
-  # 제거. .wikey/converged-decompositions.json 자동 생성 path 차단. self-extending
-  # 메커니즘 전체 D-wide 결정 일관 (run-convergence-pass.mjs script file 자체는 보존,
-  # CLI 직접 invoke 도 deprecated — 사용자 환경에 잔존 시 별 invoke 만 가능).
-
   # 타임스탬프 갱신
   mkdir -p "$(dirname "$STAMP_FILE")"
   touch "$STAMP_FILE"

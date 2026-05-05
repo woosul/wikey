@@ -1,10 +1,10 @@
 import type { LLMClient } from './llm-client.js'
 import type {
-  CanonicalizedResult, Mention, SchemaOverride, WikiPage,
+  CanonicalizedResult, Mention, WikiPage,
 } from './types.js'
-// Phase 5 §5.10.3 R1+R2 + §5.10.4 (D-wide): ENTITY_TYPES / CONCEPT_TYPES /
-// isValidEntityType / isValidConceptType / detectAntiPattern / buildSchemaPromptBlock /
-// buildStandardDecompositionBlock 모두 폐기. LLM 자율 type 분류 + alias normalization 잔존.
+// Phase 5 §5.10.3 + §5.10.4 D-wide: schema gate (entity/concept type union, anti-pattern
+// detector, standard decomposition block) 모두 폐기. canonicalizer = LLM 자율 type 분류
+// + canonicalizeSlug alias normalization 만.
 import { normalizeBase } from './wiki-ops.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_ORG_ALIAS, EXAMPLE_ORG_KO, EXAMPLE_ORG_DESC_KO,
@@ -121,8 +121,6 @@ export interface CanonicalizeArgs {
   readonly guideHint?: string
   readonly provider: string
   readonly model: string
-  /** v7-5: user-defined schema extension from `.wikey/schema.yaml` (D-wide stub — always undefined). */
-  readonly schemaOverride?: SchemaOverride
   /** §5.10.4 P2-2: user-defined aliases from `.wikey/schema.yaml` `aliases:` block. */
   readonly userAliases?: Readonly<Record<string, string>>
   /**
@@ -150,7 +148,7 @@ interface RawCanonical {
 
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
-          sourceFilename, today, guideHint, provider, model, schemaOverride, userAliases,
+          sourceFilename, today, guideHint, provider, model, userAliases,
           deterministic, overridePrompt } = args
 
   if (mentions.length === 0) {
@@ -159,11 +157,11 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
 
   const prompt = buildCanonicalizerPrompt({
     mentions, existingEntityBases, existingConceptBases,
-    sourceFilename, guideHint, schemaOverride, overridePrompt,
+    sourceFilename, guideHint, overridePrompt,
   })
 
   const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
-  return assembleCanonicalResult(raw, mentions, sourceFilename, today, schemaOverride, userAliases)
+  return assembleCanonicalResult(raw, mentions, sourceFilename, today, userAliases)
 }
 
 // ── Prompt construction ──
@@ -174,18 +172,16 @@ interface PromptArgs {
   existingConceptBases: readonly string[]
   sourceFilename: string
   guideHint?: string
-  schemaOverride?: SchemaOverride
   /** §4.3.1: optional Stage 3 full prompt override. Variables substituted as documented above. */
   overridePrompt?: string
 }
 
 /**
- * §5.10.4 D-wide: standard decomposition prompt block 폐기 (BUILTIN_STANDARD_DECOMPOSITIONS
- * + .wikey/schema.yaml standard_decompositions parser 모두 제거). LLM 자율 type 분류로 전환.
- * canonicalizer prompt 는 mention list + 기존 wiki page list + alias guide 만 받음.
+ * §5.10.4 D-wide: schema gate 폐기. canonicalizer prompt 는 mention list + 기존 wiki
+ * page list + alias guide 만 받음. LLM 이 type 자율 분류.
  */
 export function buildCanonicalizerPrompt(args: PromptArgs): string {
-  const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint, schemaOverride, overridePrompt } = args
+  const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint, overridePrompt } = args
 
   const guideBlock = guideHint?.trim()
     ? `\n## 사용자 강조 지시 (우선 준수)\n\n> ${guideHint.trim()}\n`
@@ -265,7 +261,6 @@ function assembleCanonicalResult(
   mentions: readonly Mention[],
   sourceFilename: string,
   today: string,
-  schemaOverride?: SchemaOverride,
   userAliases?: Readonly<Record<string, string>>,
 ): CanonicalizedResult {
   const dropped: Array<{ mention: Mention; reason: string }> = []
@@ -274,7 +269,7 @@ function assembleCanonicalResult(
   const concepts: WikiPage[] = []
 
   for (const e of raw.entities ?? []) {
-    const result = validateAndBuildPage(e, 'entity', sourceFilename, today, schemaOverride, userAliases)
+    const result = validateAndBuildPage(e, 'entity', sourceFilename, today, userAliases)
     if (!result.ok) continue
     entities.push(result.page)
     keptBases.add(normalizeBase(result.page.filename))
@@ -282,7 +277,7 @@ function assembleCanonicalResult(
   }
 
   for (const c of raw.concepts ?? []) {
-    const result = validateAndBuildPage(c, 'concept', sourceFilename, today, schemaOverride, userAliases)
+    const result = validateAndBuildPage(c, 'concept', sourceFilename, today, userAliases)
     if (!result.ok) continue
     // Cross-pool dedup: if entity with same base already kept, skip concept
     if (keptBases.has(normalizeBase(result.page.filename))) continue
@@ -346,7 +341,6 @@ function validateAndBuildPage(
   category: 'entity' | 'concept',
   sourceFilename: string,
   today: string,
-  _schemaOverride?: SchemaOverride,
   userAliases?: Readonly<Record<string, string>>,
 ): PageBuildOk | PageBuildFail {
   const name = (raw.name ?? '').trim()

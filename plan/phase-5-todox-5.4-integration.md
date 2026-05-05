@@ -1,4 +1,6 @@
-# Phase 5 §5.4 self-extending **통합 개발 계획서** v5
+# Phase 5 §5.4 self-extending **통합 개발 계획서** v5 (ARCHIVED — §5.10.4 D-wide 폐기)
+
+> **2026-05-05 ARCHIVE**: §5.10 paradigm shift D-wide (LLM-only ontology) 채택 (commit b9130f5 `§5.10.4 D-wide cycle #8 APPROVE`). 본 plan 의 Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion-detector / self-declaration / convergence) 모두 폐기. 본 세션 (2026-05-05) 에서 dead module 7 file + test 10 file + 관련 type 12+ 모두 삭제. 본 plan 은 history reference 로만 보존. 활성 정책: `wikey.schema.md §"분해 정책 (D-wide LLM-only ontology, §5.10.4)"`.
 
 > **상위 문서**: [`plan/phase-5-todo.md §5.4`](./phase-5-todo.md#54-표준-분해-규칙-self-extending-구조-p2) · [`activity/phase-5-result.md`](../activity/phase-5-result.md)
 > **자매 보조**: [`plan/phase-5-todox-5.4.1-self-extending.md`](./phase-5-todox-5.4.1-self-extending.md) v7 (codex Cycle #9 APPROVE 2026-04-26) — Stage 1 단독 plan, 본 통합 plan 의 §3.1 reference 단일 소스

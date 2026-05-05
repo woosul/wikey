@@ -20,12 +20,8 @@ export type {
   SearchResult,
 } from './types.js'
 
-// Phase 5 §5.10.3 R1 + §5.10.4 (D-wide): schema-override public surface 모두 폐기.
-// SchemaOverride / SchemaCustomType type, loadSchemaOverride / parseSchemaOverrideYaml /
-// buildStandardDecompositionBlock / ENTITY_TYPES / CONCEPT_TYPES / getEntityTypes /
-// getConceptTypes / buildSchemaPromptBlock 함수 모두 export 안 함. canonicalizer 내부
-// minimal alias normalization (SLUG_ALIASES + .wikey/schema.yaml `aliases:` parser) 만
-// 잔존 — public API 가 아니라 ingest-pipeline 내부 dependency.
+// Phase 5 §5.10.3 + §5.10.4 D-wide: schema gate public surface 폐기. canonicalizer 내부
+// alias normalization (SLUG_ALIASES + .wikey/schema.yaml `aliases:` parser) 만 잔존.
 
 export { parseWikeyConf, loadConfig, resolveProvider } from './config.js'
 export { stripEmbeddedImages, countEmbeddedImages } from './rag-preprocess.js'
@@ -153,13 +149,7 @@ export {
 } from './wiki-ops.js'
 export type { SourceFrontmatter } from './wiki-ops.js'
 export type { Citation, ProvenanceType, ProvenanceEntry } from './types.js'
-// §5.10.4 D-wide: §5.4 Stage 2/3/4 self-extending public API 모두 폐기.
-// suggestion-storage / suggestion-detector / suggestion-pipeline / schema-yaml-writer /
-// suggestion-panel-builder / self-declaration / convergence module 의 export 제거 —
-// runtime call site 전부 제거 완료 (sidebar-chat.ts + ingest-pipeline.ts). deprecated
-// test file 들이 직접 module file 에서 import 하므로 module file 자체는 보존, 단
-// public API surface 에서는 분리. IngestRecord 만 공용 type 으로 보존.
-export type { IngestRecord } from './types.js'
+// §5.10.4 D-wide: §5.4 self-extending (suggestion / self-declaration / convergence) 메커니즘 폐기.
 export {
   RenameGuard,
   reconcileExternalRename,

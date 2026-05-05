@@ -1,4 +1,6 @@
-# Phase 5 §5.4.1 Stage 1 self-extending 구현계획 v7
+# Phase 5 §5.4.1 Stage 1 self-extending 구현계획 v7 (ARCHIVED — §5.10.4 D-wide 폐기)
+
+> **2026-05-05 ARCHIVE**: §5.10 paradigm shift D-wide (LLM-only ontology) 채택. Stage 1 (BUILTIN_STANDARD_DECOMPOSITIONS PMBOK + ISO + .wikey/schema.yaml standard_decompositions parser) 폐기. 본 세션 (2026-05-05) 에서 dead 모듈/테스트 모두 삭제. 본 plan 은 history reference 로만 보존. 활성 정책: `wikey.schema.md §"분해 정책 (D-wide LLM-only ontology, §5.10.4)"`.
 
 > **상위 문서**: [`plan/phase-5-todo.md §5.4.1`](./phase-5-todo.md#541-stage-1--static-wikeyschemayaml-override-가까운-후속-두-번째-표준-등장-시-즉시-착수) · [`plan/phase-5-todox-5.4-integration.md`](./phase-5-todox-5.4-integration.md) (§5.4 통합 plan, Stage 1~4 모두 포괄) · [`activity/phase-5-result.md`](../activity/phase-5-result.md) — 본 문서는 **§5.4.1 Stage 1 한정** 보조 자료. file rename 2026-04-26 사용자 명명 정책 (기존 `phase-5-todox-5.4-self-extending.md` → `phase-5-todox-5.4.1-self-extending.md` — 5.4 자체는 통합 plan 으로 별 파일). 명명규칙: `phase-N-todox-<section>-<topic>.md` ([`rules/docs-organization.md`](../rules/docs-organization.md) 참조).
 >
