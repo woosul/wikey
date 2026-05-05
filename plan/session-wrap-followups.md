@@ -1,6 +1,6 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-05 session 17 — §5.10.4 D-wide Phase 4 종결 + 8 cycle codex review APPROVE**. §5.10 paradigm shift D-wide implementation 완료 (R/M/L/F 모두 GREEN). commit `89cb96a` 시점 codex cycle #8 APPROVE. **다음 액션 = §5.10 종결 mark + Phase 5 잔여 (§5.6~§5.9) 평가** 또는 **§5.10.4 follow-up issues** (Issue B 페이지 생성 threshold + Phase 5 §5.10.2 broken-link-prevention 잔여).
+> 최신 갱신: **2026-05-05 session 17 — §5.10.4 D-wide Phase 4 종결 + 8 cycle codex review APPROVE + push (b9130f5)**. §5.10 paradigm shift D-wide implementation 완료. **다음 세션 최우선 (사용자 명시) = (1) §5.4 잔여 dead code 완전 제거 + (2) Issue B (페이지 생성 threshold) 정식 plan 등록 + 구현**.
 > 생성일: 2026-04-10
 
 ---
@@ -43,11 +43,55 @@
 > **§5.10.4 외 잔재** (codex cycle #7 P2 — scope 외):
 > - wiki/overview.md / index.md / log.md frontmatter 누락 + broken source links (e.g. `[[pmbok-overview.md]]` vs `wiki/sources/source-pmbok-overview.md`) — Phase 5 §5.10.2 broken-link-prevention 잔여 후속.
 >
-> **다음 세션 master 첫 명령 — Phase 5 잔여 평가**:
-> 1. `activity/phase-5-result.md` 의 §5.6 / §5.7 / §5.8 / §5.9 우선순위 평가
-> 2. Issue B (페이지 생성 threshold) 정식 plan 등록 검토
-> 3. Phase 5 §5.10.2 broken-link-prevention 잔여 (validate-wiki 57 errors) 처리 결정
-> 4. wiki 본체의 broken source links 일괄 정정 (별 small cycle 가능)
+> **다음 세션 master 첫 명령 — 최우선 2 항목** (사용자 명시 2026-05-05 session 17 종결 직후):
+>
+> ### 1순위 — §5.4 잔여 dead code 완전 제거 (D-wide cleanup phase 2)
+>
+> **배경**: §5.10.4 D-wide cycle 에서 `convergence.ts` / `self-declaration.ts` / `suggestion-detector.ts` / `suggestion-pipeline.ts` / `suggestion-storage.ts` / `suggestion-panel-builder.ts` / `schema-yaml-writer.ts` 모듈 file 자체는 historical reference 로 보존. public API (index.ts) 는 이미 제거됨, runtime path 도 모두 dead. 그러나 **dead module file + 관련 type 선언 (Suggestion / SuggestionStore / SchemaCustomType / SelfDeclaration / ConvergedDecomposition / StandardDecomposition / StandardDecompositionsState / etc) + skipped test file + BUILTIN_STANDARD_DECOMPOSITIONS empty stub** 모두 잔존. codex cycle #7 P3 finding ("module headers active 처럼") 에 D-wide banner 만 추가했지만 코드 자체는 삭제 안 함.
+>
+> **Scope**:
+> - `wikey-core/src/`: convergence.ts / self-declaration.ts / suggestion-detector.ts / suggestion-pipeline.ts / suggestion-storage.ts / suggestion-panel-builder.ts / schema-yaml-writer.ts 7 file 삭제
+> - `wikey-core/src/types.ts`: §5.4 전용 type 12+ (Suggestion / SuggestionStore / SuggestionState / SuggestionEvidence / CandidatePattern / IngestRecord (재평가) / SchemaCustomType / SchemaOverride / SelfDeclaration / SelfDeclarationPersistChoice / ConvergedDecomposition / SourceMention / MentionCluster / StandardDecomposition / StandardDecompositionComponent / StandardDecompositionsState 등) 제거
+> - `wikey-core/src/__tests__/`: convergence.test.ts / self-declaration.test.ts / suggestion-*.test.ts / stage-integration.test.ts / schema-yaml-writer.test.ts / schema-override.test.ts (40 cases) / canonicalizer.test.ts 의 `§5.4.1 standard decomposition` describe.skip 부분 — 7 file + 1 partial 제거
+> - `wikey-core/src/schema.ts`: BUILTIN_STANDARD_DECOMPOSITIONS empty array stub 제거 (suggestion-detector import 도 사라지므로 stub 도 dead)
+> - `wikey-core/scripts/run-convergence-pass.mjs`: deprecation banner 가 아니라 file 자체 삭제
+> - `scripts/qmd-embeddings-export.mjs`: deprecation banner — 본 script 는 mention-history.json export 가 dead 라 의미 없음. 삭제 검토
+> - `wikey-core/src/index.ts`: IngestRecord type export 도 §5.4 mention-history 외 사용처 grep 후 정리
+> - `plan/phase-5-todox-5.4-integration.md` + `plan/phase-5-todox-5.4.1-self-extending.md`: archive note 추가
+>
+> **검증**: npm test 604 PASS 유지 (skipped 157 → 7 file × ~10 case 제거 후 새 baseline). build 0 errors. master 직접 라이브 smoke (1 fixture ingest cycle) 회귀 0 확증.
+>
+> **이유**: codex cycle #7~#8 도 broad surface 잔재로 verdict 가 NEEDS_REVISION. 본 cleanup 은 §5.4 완전 archive — module file 자체 삭제로 codex 가 더 이상 발견할 surface 0 (cosmetic 잔재 0).
+>
+> **estimate**: ~2-3 시간. 단일 atomic commit (Karpathy Surgical) 또는 (a) test/file 삭제 (b) types.ts 정리 (c) index.ts/schema.ts/scripts 정리 3 commit 분리.
+>
+> ### 2순위 — Issue B 정식 plan 등록 + 구현
+>
+> **Background** (사용자 raise 2026-05-05 session 17 + 첨부 image 분석):
+> "wiki 생성이 <15인거는 알겠는데, 생성조건이 궁금할 정도임. '전라남도 테크노파크' 같은 고유명사는 일단 생성하고 보는건지? 전체 내용에서 의미가 있는 내용이 아닌 단순 출처 정도인데 굿이 wiki페이지로 생성되어야 하는지 궁금할 정도."
+>
+> **Root cause** (`activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md §10.2`):
+> 현재 mention extractor + canonicalizer 가 mention 1회 + evidence 1 문장만 있어도 LLM 이 entity/concept 으로 promote. 명시 거부 패턴은 UI 라벨 / 기능명 / 비즈니스 객체 / 한국어 일반 명사. 그러나 *고유명사* 는 거부 안 됨 → 단순 행사 장소 / 출처 (jeonnam-technopark 같은) 도 자체 wiki 페이지 생성.
+>
+> **개선 방향 후보** (정식 plan 에서 evaluation):
+> 1. **Promotion threshold**: mention count ≥ 2 (cross-source) OR single-source 내 reference 빈도 ≥ 3 일 때만 wiki 페이지 생성. 이외는 source 본문 내 inline reference (link 없음).
+> 2. **Evidence quality gate**: evidence 가 단순 출처 ("개최 장소: ...") vs 의미 (action / property / relation) 인지 LLM self-judgment.
+> 3. **Tombstone 기능**: 사용자가 "이 page 는 의미 없음" mark → 다음 ingest cycle 에서 자동 dedup 또는 redirect alias 강등.
+> 4. **Karpathy 통찰 정합**: "사용자가 wiki 관리 X" → 자동 정정 가능한 안 (1 promotion threshold 또는 2 evidence gate) 우선.
+>
+> **선결 조건**:
+> - §5.4 잔여 cleanup 완료 후 (1순위) — Issue B 의 promotion 로직이 canonicalizer 내부에 들어가는데 §5.4 dead code 정리 안 끝나면 충돌 가능.
+> - 라이브 smoke 환경 (Obsidian + CDP 9222) — 사용자 vault 가 한국어 source (스마트공장 같은) 보유 → 실측 가능.
+>
+> **estimate**: ~3-4 시간 (1 spec + 2 코드 + 1 test + 1 라이브 smoke). 별 plan/phase-5-todox-5.x-page-promotion-threshold.md 작성 후 진입.
+>
+> ### 3순위 (보류) — Phase 5 §5.10.2 broken-link 잔재
+>
+> wiki/overview.md / index.md / log.md frontmatter 누락 + broken source links (e.g. `[[pmbok-overview.md]]` vs `wiki/sources/source-pmbok-overview.md`) — codex cycle #7 P2 finding (validate-wiki.sh 57 errors). §5.10.4 scope 외. 1+2 우선순위 종결 후 검토.
+>
+> ### 4순위 (보류) — Phase 5 잔여 평가 (§5.6 / §5.7 / §5.8 / §5.9)
+>
+> Issue B + §5.4 cleanup + broken-link 종결 후 Phase 5 본체 잔여 subject 우선순위 재평가.
 
 ### 1순위 — Stage 4 실 qmd embeddings 통합 ✅ 종결 (2026-04-26 session 14)
 
