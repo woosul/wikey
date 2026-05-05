@@ -29,7 +29,14 @@
 >
 > **§5.12 본질**: §5.3 follow-up #11 의 raw sidecar `<base>.<ext>.md` 매칭 자체가 validate-wiki.sh resolver 와 mismatch — 폐기. wiki/sources/source-<base>.md 단일 진실 소스로 전환. canonicalizer 5 함수 sourcePageBase chain + ingest-pipeline 양 route derive (FULL line 540 + SEGMENTED line 612). validate-wiki.sh 12 broken → 0.
 >
-> **다음 세션 첫 액션** = 사용자 신규 issue 또는 잔존 작업 (raw sidecar 매칭 의도 부활 / validate-wiki.sh `find raw` 패턴 개선 / LLM source_page.filename prefix 강제 — 모두 scope 외, 사용자 요구 시 별 issue).
+> **다음 세션 첫 액션** = 사용자 신규 issue 또는 §5.13 잔존 follow-up 3 항목.
+>
+> **§5.13 정식 등록** (2026-05-06): `plan/phase-5-todox-5.13-residual-followups.md` (draft / 미진행). 자세한 본질 + 현재 동작 → 변경 예상 형태 + 옵션 비교 기록.
+> - **항목 A** (LOW): raw sidecar 매칭 부활 (concept/entity → raw 직접 jump, 옵션 A1/A2/A3)
+> - **항목 B** (LOW): validate-wiki.sh `find raw -name "${link}.*"` 패턴 개선 (옵션 B1/B2/B3)
+> - **항목 C** (MEDIUM): LLM source_page.filename emit prefix 강제 (옵션 C1/C2/C3/C4)
+>
+> 사용자 결정 (어느 항목 / 어느 옵션 / 진행 시점) 시 §5.13 todox 갱신 v0 → v1 + Phase 0 부터 시작.
 
 ## 🎯 이전 첫 액션 (2026-05-05 session 17 §5.10.4 종결 직후)
 
