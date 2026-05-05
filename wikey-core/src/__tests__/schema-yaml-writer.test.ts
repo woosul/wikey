@@ -46,7 +46,9 @@ const sample = (overrides: Partial<Suggestion> = {}): Suggestion => ({
   ...overrides,
 })
 
-describe('appendStandardDecomposition — schema.yaml writer', () => {
+// §5.10.4 D-wide deprecated — appendStandardDecomposition writer 폐기 (Suggestions
+// panel UI 제거 + ingest-pipeline self-extending 호출 제거 후 dead writer).
+describe.skip('appendStandardDecomposition — schema.yaml writer [§5.10.4 D-wide deprecated]', () => {
   it('creates a new standard_decompositions section at EOF when key is absent (preserves prior content)', async () => {
     const fs = makeFS({
       '.wikey/schema.yaml':

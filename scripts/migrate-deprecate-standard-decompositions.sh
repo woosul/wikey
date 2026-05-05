@@ -56,7 +56,7 @@ MANUAL_OVERRIDES="$WIKEY_DIR/manual-overrides.yaml"
 if [[ -f "$SCHEMA_YAML" ]]; then
   echo "[1] schema.yaml: $SCHEMA_YAML"
   echo "    → backup: $BACKUP_DIR/schema.yaml.original"
-  echo "    → split deprecated sections (standard_decompositions / entity_types / concept_types / custom_types)"
+  echo "    → split deprecated sections (standard_decompositions / entity_types / concept_types / custom_types / pii_patterns)"
   echo "      → $MANUAL_OVERRIDES (보존, 사용자 수동 정정 reference)"
   echo "    → rewrite: aliases 만 잔존 (PII 는 별 file)"
   if [[ "$MODE" == "--apply" ]]; then

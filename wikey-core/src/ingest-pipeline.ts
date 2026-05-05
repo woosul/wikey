@@ -48,7 +48,7 @@ import {
 } from './incremental-reingest.js'
 import { canonicalize } from './canonicalizer.js'
 import { loadUserAliases } from './schema.js'
-import type { CanonicalizedResult, IngestRecord } from './types.js'
+import type { IngestRecord } from './types.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
 } from './example-placeholders.js'
@@ -517,10 +517,6 @@ export async function ingest(
 
   const today = formatLocalDate(new Date())
 
-  // §5.4.2 AC8: capture the canonicalized result so the suggestion-detection
-  // trigger downstream can read concept/entity types (parsed.* loses sub-types).
-  let canonResult: CanonicalizedResult | null = null
-
   // ── §4.5.1.5 v2 라우터 — FULL / SEGMENTED ──
   // FULL: summary + 1 extractMentions(full-doc) + canonicalize. LLM 이 전체 문서를 읽는 독자 모델.
   // SEGMENTED: summary + N extractMentions(core 섹션 + peer context) + canonicalize. Ollama / 초대형.
@@ -541,7 +537,6 @@ export async function ingest(
       schemaOverride: undefined, userAliases, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
-    canonResult = canon
 
     parsed = {
       source_page: summaryParsed.source_page,
@@ -605,7 +600,6 @@ export async function ingest(
       const droppedSummary = canon.dropped.slice(0, 10).map((d) => `${d.mention.name} (${d.reason})`).join(', ')
       log(`dropped sample: ${droppedSummary}${canon.dropped.length > 10 ? `, +${canon.dropped.length - 10} more` : ''}`)
     }
-    canonResult = canon
 
     parsed = {
       source_page: summaryParsed.source_page,
@@ -820,7 +814,7 @@ export async function ingest(
   await appendLog(wikiFS, entry, writtenPages)
   log(`log.md prepended`)
 
-  // §5.10.4 D-wide: Stage 2 suggestion finalization 폐기. canonResult 는 wiki write 직후 종결,
+  // §5.10.4 D-wide: Stage 2 suggestion finalization 폐기. canonicalize 결과는 wiki write 직후 종결,
   // .wikey/suggestions.json / mention-history.json 자동 재생성 0.
 
   // Step 4: Reindex (Phase 4 D.0.f / v6 §4.4)

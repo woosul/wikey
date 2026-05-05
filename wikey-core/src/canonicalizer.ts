@@ -70,7 +70,7 @@ export const SLUG_ALIASES: Readonly<Record<string, string>> = {
   'kakao-alimtalk': 'alimtalk',
 
   // ERP/SCM: drop trailing `-system` so the canonical slug is the methodology name.
-  // (Pool axis is pinned in FORCED_CATEGORIES; see §4.5.1.6.4.)
+  // (§5.10.4 D-wide: pool axis pinning — FORCED_CATEGORIES 폐기. LLM 자율 type.)
   'erp-system': 'enterprise-resource-planning',
   'enterprise-resource-planning-system': 'enterprise-resource-planning',
   'supply-chain-management-system': 'supply-chain-management',
@@ -180,11 +180,9 @@ interface PromptArgs {
 }
 
 /**
- * §4.5.1.7.2 PMBOK 10 knowledge areas 결정화 (작업 규칙 #7) 는 §5.4.1 Stage 1 진입과
- * 함께 schema.yaml 로 이전됨 — `BUILTIN_STANDARD_DECOMPOSITIONS` 가 코드 default 로
- * PMBOK 을 자동 적용하고, `.wikey/schema.yaml` 의 `standard_decompositions:` entry 가
- * built-in append (F1) 또는 `[]` explicit disable. 다음 표준 (ISO/ITIL/GDPR 등) 은
- * 사용자가 vault yaml 에 entry 만 추가하면 자동 통합 — 여기 블록을 더 추가하지 말 것.
+ * §5.10.4 D-wide: standard decomposition prompt block 폐기 (BUILTIN_STANDARD_DECOMPOSITIONS
+ * + .wikey/schema.yaml standard_decompositions parser 모두 제거). LLM 자율 type 분류로 전환.
+ * canonicalizer prompt 는 mention list + 기존 wiki page list + alias guide 만 받음.
  */
 export function buildCanonicalizerPrompt(args: PromptArgs): string {
   const { mentions, existingEntityBases, existingConceptBases, sourceFilename, guideHint, schemaOverride, overridePrompt } = args

@@ -2,6 +2,10 @@
 /**
  * qmd-embeddings-export.mjs — Phase 5 §5.4.7 1순위 (실 qmd embeddings 통합).
  *
+ * **§5.10.4 D-wide 폐기 (2026-05-05)** — run-convergence-pass.mjs 자체가 deprecated
+ * (reindex.sh 자동 hook 제거됨). 본 script 는 historical reference + 사용자 direct
+ * invoke 시 stale snapshot 만 산출.
+ *
  * Plan: plan/phase-5-todox-5.4-integration.md §10
  *
  * Read-only export of qmd vector store embeddings keyed by mention slug, for

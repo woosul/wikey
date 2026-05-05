@@ -224,7 +224,131 @@ project-integration-management📄, ..., project-risk-management📄
 
 ## 7. F — D-wide cycle 종결 + 3 cycle 통합 codex review
 
-[F 단계 진입 시 갱신]
+### 7.1 Cycle #1 (surface:19, closed) — verdict NEEDS_REVISION
+
+- 시점: 2026-05-05 14:08, codex Mode D Panel (gpt-5.5 xhigh, 9m 04s)
+- prompt: 3-cycle integrated review (Phase 1 C1 + Phase 2 C5 + Phase 3+4 D-wide)
+- finding: 2 P1 + 4 P2 + 1 P3
+  - **[P1-1]** D-wide deprecation incomplete — `ingest-pipeline.ts:517` schema override + Stage 3 self-declaration extract / canonicalizer.ts:200 buildStandardDecompositionBlock / schema.ts:36/293/328 standardDecompositions parser + builder 잔존
+  - **[P1-2]** Stage 2 suggestion finalization 잔존 — `ingest-pipeline.ts:848` runSuggestionFinalize 매 ingest 후 호출, hidden D-wide-retired stores 재생성
+  - **[P2-1]** `canonicalizer.ts:453` applyCrossLinks() rebuild 시 d8e37dd display_name + aliases lost
+  - **[P2-2]** `schema.ts:66` parser 가 aliases 미인식 (advertise no-op)
+  - **[P2-3]** migration script step 1 spec 와 동작 불일치 (backup only, split X)
+  - **[P2-4]** `settings-tab.ts:423/567` stale "built-in 4+3" / "domain-specific entity/concept types"
+  - **[P3]** wikey.schema.md:183 master schema 가 standard decomposition + Suggestions panel 을 live 명시
+- master 1차 cross-check: 모두 사실 확증
+- master 결정: NEEDS_REVISION 동의 → 7 finding 모두 fix 진행
+
+### 7.2 Cycle #1 fix — commit `bf08cdc` (8 files, +231/-528)
+
+| Finding | Fix 위치 |
+|---------|---------|
+| P1-1 D-wide completion | ingest-pipeline.ts:50-58 imports + 517-537 block 제거 / canonicalizer.ts:7,200-213 / schema.ts (~388 lines 삭제, BUILTIN_STANDARD_DECOMPOSITIONS empty stub + loadSchemaOverride stub 만 잔존) / index.ts parseSchemaOverrideYaml export 제거 |
+| P1-2 Stage 2 폐기 | ingest-pipeline.ts:819 call + 2281-2354 함수 본체 + loadMentionHistory + loadSuggestionStore 제거 |
+| P2-1 applyCrossLinks | extractFrontmatterScalar + extractFrontmatterList helpers 신규, buildPageContent 호출 시 preservedTitle/preservedAliases 전달 |
+| P2-2 aliases parser | schema.ts loadUserAliases + parseUserAliasesYaml 신규, canonicalize 에 userAliases plumbing (5 callsite user-aware) |
+| P2-3 migration script | step 1 awk split, manual-overrides.yaml 보호, schema.yaml rewrite |
+| P2-4 settings-tab stale | 4 statusSpan 라인 정정, loadSchemaOverride import 제거 |
+| P3 wikey.schema.md | §183 D-wide 채택 배경 + 보존 sections 명시 |
+
+추가: canonicalizer.test.ts 7 cases skip (PMBOK + standard decomposition tests).
+baseline 615 PASS → **608 PASS + 153 skipped**.
+
+### 7.3 Cycle #2 (surface:20, closed) — verdict NEEDS_REVISION
+
+- 시점: 2026-05-05 15:00, codex Mode D Panel (30m 04s)
+- prompt: cycle #1 7 finding fix verification
+- finding: 1 P1 + 2 P2
+  - **[P1]** `settings-tab.ts:1125` PII guidance 결함 — engine 은 .wikey/pii-patterns.yaml + ~/.config/wikey/pii-patterns.yaml 만 load (shape `patterns: - id/kind/mask`), template 은 `pii_patterns: - name/regex/redaction`. 사용자가 따라하면 PII rule 무시 → privacy guard 누락 위험
+  - **[P2]** `schema.ts:92` parseUserAliasesYaml 가 variant key 를 raw 보존 → canonicalizeSlug normalizeBase("iso-27001") lookup 매치 실패. 사용자 입력 대부분 (template "ISO 27001" 등) 에서 alias layer non-functional
+  - **[P2]** `index.ts:181` Stage 2/3/4 deprecated public API 잔존 export (`appendStandardDecomposition` 등). loadSchemaOverride 항상 null이라 consumer mutate runtime ignore — naming inconsistency
+- master 1차 cross-check: 모두 사실 확증
+- master 결정: NEEDS_REVISION 동의 → 3 finding 모두 fix
+
+### 7.4 Cycle #2 fix — commit `b36a5c6` (3 files, +49/-94)
+
+| Finding | Fix 위치 |
+|---------|---------|
+| P1 PII guidance | settings-tab.ts SCHEMA_OVERRIDE_TEMPLATE 에서 pii_patterns 안내 제거. PII 안내는 .wikey/pii-patterns.yaml redirect. SchemaOverrideEditModal description / status text / Setting desc / schema.ts header comment 모두 정정 |
+| P2 alias normalize | schema.ts normalizeAliasKey() 신규 (lowercase + 따옴표 strip + non-alnum→space + space/underscore→hyphen + multi-hyphen collapse). parseUserAliasesYaml canonical/variant key 모두 적용 |
+| P2 dead exports | index.ts §5.4 Stage 2/3/4 export block 전부 제거 (-66 lines). IngestRecord type 만 보존 |
+
+baseline 유지: **608 PASS + 153 skipped + build 0 errors**.
+
+### 7.5 Cycle #3 (surface:21, closed) — verdict NEEDS_REVISION
+
+- 시점: 2026-05-05 15:20, codex Mode D Panel (5m 29s)
+- finding: 1 P1 + 3 P2
+  - **[P1]** `wikey.schema.md:194` 단일 진실 소스가 여전히 ".wikey/schema.yaml 보존: aliases + pii_patterns" 명시 — engine 별 file 과 mismatch (cycle #2 P3 fix 누락)
+  - **[P2]** `schema.ts:107` parseUserAliasesYaml multi-word/quoted canonical key (`ISO 27001:` / `"ISO 27001":`) 매치 실패 — regex `\S+` 단어 1개만
+  - **[P2]** `scripts/reindex.sh:212` Stage 4 convergence pass 잔존 (WIKEY_CONVERGENCE_ENABLED=true 로 .wikey/converged-decompositions.json 재생성 가능)
+  - **[P2]** `index.ts:21` SchemaCustomType / SchemaOverride type + loadSchemaOverride 함수 export 잔존 — naming inconsistency
+- master 1차 cross-check: 모두 사실 확증
+- master 결정: NEEDS_REVISION 동의 → 4 finding 모두 fix
+
+### 7.6 Cycle #3 fix — commit `2829645` (4 files, +27/-38)
+
+| Finding | Fix 위치 |
+|---------|---------|
+| P1 schema md PII | wikey.schema.md §190+§194 — 보존 영역 aliases 단독 명시, PII 안내 별 file redirect |
+| P2 multi-word key | schema.ts parseUserAliasesYaml regex 갱신 (`\S+` → `.+?`), dash 줄 검사 분기 |
+| P2 reindex stage 4 | scripts/reindex.sh §5.4.4 convergence pass block 전부 제거 (env 지원 종결) |
+| P2 schema-override surface | index.ts SchemaCustomType + SchemaOverride type + loadSchemaOverride 함수 export 모두 제거 |
+
+baseline 유지: **608 PASS + 153 skipped + build 0 errors**.
+
+### 7.7 Cycle #4 (surface:22, closed) — verdict NEEDS_REVISION (severity 급감)
+
+- 시점: 2026-05-05 15:45, codex Mode D Panel (3m 10s)
+- finding: 1 P2 + 2 P3 (**0 P1** — D-wide 본질 deprecation 완료, surface cosmetic)
+  - **[P2]** `migrate-deprecate-standard-decompositions.sh:96` schema.yaml 의 pii_patterns 도 deprecated section 으로 처리 안 함 — migrated vault 가 inactive PII rule keep
+  - **[P3]** `schema.ts:39` JSDoc "보존 = aliases + pii_patterns" 잔재 (cycle #3 P1 fix 의 stale comment)
+  - **[P3]** `docs/wikey-ingest-pipeline.md` operational docs 잔재 (line 348/412 보존 영역 + 652-654 Step 8 active call-flow + 333 "Stage 3 도 다시 거름")
+
+### 7.8 Cycle #4 fix — commit `d377785` (4 files, +26/-18)
+
+| Finding | Fix 위치 |
+|---------|---------|
+| P2 migration pii | scripts/migrate-deprecate-standard-decompositions.sh awk regex 에 pii_patterns 추가 (extract + rewrite). manual-overrides.yaml header redirect 안내 (PII → 별 file shape) |
+| P3 schema JSDoc | wikey-core/src/schema.ts:39 + settings-tab.ts:563 comment 동시 정정 |
+| P3 docs operational | docs/wikey-ingest-pipeline.md §7.1/§7.8/§11 active flow strikethrough + D-wide 폐기 mark + §6.4 implicit Stage 3 reference 정정 |
+
+baseline 유지: **608 PASS + 153 skipped + build 0 errors**.
+
+| Cycle | Finding |
+|-------|---------|
+| #1 | 7 (2 P1 + 4 P2 + 1 P3) — 본질 결함 |
+| #2 | 3 (1 P1 + 2 P2) |
+| #3 | 4 (1 P1 + 3 P2) |
+| #4 | 3 (**0 P1** + 1 P2 + 2 P3) — surface only |
+
+severity 추세 = D-wide 본질 deprecation 완료 확증.
+
+### 7.9 Cycle #5 (surface:23, closed) — verdict NEEDS_REVISION (severity 0 P1 + 0 P2 + 4 P3)
+
+- 시점: 2026-05-05 16:00, codex Mode D Panel (5m 24s)
+- finding: 0 P1 + 0 P2 + **4 P3 (모두 cosmetic)** — D-wide 본질 deprecation 완료 확증
+  - **[P3]** migrate-deprecate-standard-decompositions.sh:118 placeholder 가 schema empty 시 still pii_patterns 보존 안내
+  - **[P3]** docs/wikey-ingest-pipeline.md:42 §1 matrix LLM call count "선택 Stage 4 arbitration N" 잔재
+  - **[P3]** docs/wikey-ingest-pipeline.md:405 §7.7 schema 통과/위반 + anti-pattern + invalid type stale
+  - **[P3]** wikey-core/src/canonicalizer.ts:14 module JSDoc "schema constraints" / "anti-pattern check" 잔재
+- **Migration fixture smoke (codex 직접 mktemp 검증) positive** — pii_patterns split 정상, inactive PII rule 잔존 risk 0 (cycle #4 P2 fix 검증됨)
+- master 결정: NEEDS_REVISION 동의 → 4 P3 모두 fix
+
+### 7.10 Cycle #5 fix — commit `605fb8d` (3 files, +18/-13)
+
+| Finding | Fix 위치 |
+|---------|---------|
+| P3 placeholder | migrate script empty placeholder 갱신 — 보존 section aliases 단독 + 폐기 list 에 pii_patterns 추가 + PII 별 file redirect |
+| P3 §1 matrix | docs §1 LLM call count 에서 Stage 4 arbitration 제거 + D-wide 폐기 annotation |
+| P3 §7.7 | docs §7.7 D-wide 갱신 — schema gate 폐기, drop 기준 = empty name/type 만 |
+| P3 canonicalizer JSDoc | module JSDoc Stage 3 (formerly Stage 2) + LLM 자율 type + minimal alias normalization 명시 |
+
+baseline 유지: **608 PASS + 153 skipped + build 0 errors**.
+
+### 7.11 Cycle #6 (surface:24) — 진행 중 (APPROVE 임계 검증)
+
+[verdict 도착 후 갱신 — 종결 결정]
 
 ## 8. AC 매핑 (R0~R8 + M + L)
 

@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 /**
- * §5.4.4 — convergence pass entry-point (run from reindex.sh hook).
+ * §5.4.4 — convergence pass entry-point. **§5.10.4 D-wide 폐기 (2026-05-05)**.
  *
- * 호출: scripts/reindex.sh 가 WIKEY_CONVERGENCE_ENABLED=true 일 때만.
- * spec: plan/phase-5-todox-5.4-integration.md §3.4.3 (line 919-935)
+ * 본 script 는 historical reference 로만 보존 — scripts/reindex.sh 의 자동 호출 hook
+ * 도 cycle #3 에서 제거됨. 사용자가 direct CLI invoke 하면 still 동작 (mention-history.json
+ * 이 vault 에 잔존하는 한정 환경) 하지만, ingest pipeline 은 더 이상 mention-history.json
+ * 을 자동 갱신하지 않으므로 stale snapshot 기반 결과만 산출.
+ *
+ * spec: plan/phase-5-todox-5.4-integration.md §3.4.3 (line 919-935) — historical
  *
  * Args (createConvergencePass 가 parse):
  *   --history       <path>   .wikey/mention-history.json

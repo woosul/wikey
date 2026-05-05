@@ -116,7 +116,7 @@ ${relatedSection}## 출처
 ```
 각 mention은 다음 정보를 가집니다:
 - name: 정규화된 base name
-- type_hint: organization/person/product/tool/standard/methodology/document_type/unknown
+- type_hint: 자유 string (LLM 자율; 예 organization/person/methodology/algorithm/dataset/event 등; §5.10.4 D-wide 후 7-type union 폐기)
 - evidence: 1문장 (어디 등장했는지, 200자 이내)
 ```
 
@@ -143,9 +143,9 @@ wiki/concepts/<name>.md                              ← description 1 문장 + 
 
 | 조건 | 값 |
 |------|-----|
-| mention 통과 | name + type_hint ∈ 7 type ∪ 사용자 yaml ext 만 (`unknown` 제외) |
-| canonicalizer 분류 통과 | schema 7 type 매칭, anti-pattern 미매치, slug ≥ 1 char |
-| dropped 회피 | acronym dedup, FORCED_CATEGORIES pin 후 잔존 |
+| mention 통과 | name + type_hint (자유 string, LLM 자율; §5.10.4 D-wide 후 7-type union 폐기) |
+| canonicalizer 분류 통과 | LLM 자율 type 분류 + slug ≥ 1 char (§5.10.4 D-wide 후 schema gate / anti-pattern / FORCED_CATEGORIES 모두 폐기) |
+| dropped 회피 | acronym dedup + minimal alias normalization (SLUG_ALIASES + .wikey/schema.yaml `aliases:`) 후 잔존 |
 | 페이지 write | `createPage` 멱등 — exists 면 overwrite |
 | 본문 길이 | description 1~2 문장 (LLM 자율 — 일반적으로 50~150 자) |
 | frontmatter | sources: [현재 source 1 개] (배열 누적 X — §3.2 참조) |
