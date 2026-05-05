@@ -15,10 +15,11 @@ import type { SchemaOverride, StandardDecomposition, WikiFS } from './types.js'
  *
  * 보존 (별 layer):
  * - canonicalizer.ts SLUG_ALIASES (canonical slug normalization, deterministic)
- * - .wikey/pii-patterns.yaml (별 file 에서 pii-patterns.ts 가 load)
+ * - .wikey/pii-patterns.yaml + ~/.config/wikey/pii-patterns.yaml (PII engine 의 별 file,
+ *   shape: `patterns: - id/kind/mask/...`. 본 schema.yaml 과 무관.)
  *
- * §5.10.4 P2-2 (codex finding) 후속: .wikey/schema.yaml 의 aliases 영역을 SLUG_ALIASES
- * 와 merge 하는 minimal parser 신규 도입 예정 — 본 stub 가 그 entry point.
+ * §5.10.4 P2-2 (codex follow-up): .wikey/schema.yaml 의 aliases 영역을 SLUG_ALIASES
+ * 와 merge 하는 minimal parser 도입 (loadUserAliases / parseUserAliasesYaml).
  *
  * 사용자 본질 비판 6 chain (wikey.schema.md 핵심 원칙 #2 "위키는 LLM 이 소유한다") 의
  * 정확한 코드 구현.
@@ -63,6 +64,27 @@ export async function loadUserAliases(
   return parseUserAliasesYaml(raw)
 }
 
+/**
+ * Normalize an alias variant or canonical key into the slug shape that
+ * `canonicalizer.canonicalizeSlug` will look up. Mirrors the shape of
+ * `wiki-ops.normalizeBase` plus space-to-hyphen + punctuation strip so
+ * human-readable variants like `"ISO 27001"` or `"ISO/IEC 27001"` reduce
+ * to the same `iso-27001` key the canonicalizer pipeline produces.
+ *
+ * §5.10.4 cycle #2 P2 (codex finding): without this, parseUserAliasesYaml
+ * stored raw strings whose lookup keys never matched the normalized base
+ * names produced by the LLM → user-defined aliases were effectively no-op.
+ */
+function normalizeAliasKey(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/['"]/g, '')
+    .replace(/[^a-z0-9가-힣\s\-_]/g, ' ')
+    .trim()
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+}
+
 export function parseUserAliasesYaml(input: string): Readonly<Record<string, string>> {
   const out: Record<string, string> = {}
   if (!input.trim()) return out
@@ -82,15 +104,15 @@ export function parseUserAliasesYaml(input: string): Readonly<Record<string, str
       continue
     }
     if (!inAliases) continue
-    const canonicalKey = stripped.match(/^[ \t]+([a-zA-Z0-9_-]+)\s*:\s*$/)
+    const canonicalKey = stripped.match(/^[ \t]+(\S+)\s*:\s*$/)
     if (canonicalKey) {
-      currentCanonical = canonicalKey[1].trim()
+      currentCanonical = normalizeAliasKey(canonicalKey[1])
       continue
     }
     const variantItem = stripped.match(/^[ \t]+-\s+(.+)$/)
     if (variantItem && currentCanonical) {
-      const variant = variantItem[1].trim().replace(/^["']|["']$/g, '')
-      if (variant) out[variant] = currentCanonical
+      const normalized = normalizeAliasKey(variantItem[1])
+      if (normalized) out[normalized] = currentCanonical
     }
   }
   return out

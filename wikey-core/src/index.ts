@@ -153,75 +153,13 @@ export {
 } from './wiki-ops.js'
 export type { SourceFrontmatter } from './wiki-ops.js'
 export type { Citation, ProvenanceType, ProvenanceEntry } from './types.js'
-// §5.4.2 Stage 2 — extraction-graph driven suggestions
-export type {
-  IngestRecord,
-  CandidatePattern,
-  SuggestionEvidence,
-  SuggestionState,
-  Suggestion,
-  SuggestionStore,
-  SuggestionStorageReader,
-  SuggestionStorageWriter,
-  StandardDecompositionComponent,
-  StandardDecomposition,
-} from './types.js'
-export {
-  emptyStore,
-  addSuggestion,
-  updateSuggestionState,
-  rejectSuggestion,
-  isInNegativeCache,
-} from './suggestion-storage.js'
-export {
-  detectCoOccurrence,
-  detectSuffixCluster,
-  computeConfidence,
-} from './suggestion-detector.js'
-export {
-  runSuggestionDetection,
-  appendIngestHistory,
-} from './suggestion-pipeline.js'
-export type {
-  RunSuggestionDetectionInput,
-  RunSuggestionDetectionResult,
-} from './suggestion-pipeline.js'
-export {
-  appendStandardDecomposition,
-} from './schema-yaml-writer.js'
-export type { AppendResult as AppendStandardDecompositionResult } from './schema-yaml-writer.js'
-export {
-  buildSuggestionCardModel,
-  acceptSuggestion,
-  rejectSuggestionFromPanel,
-} from './suggestion-panel-builder.js'
-export type { SuggestionCardModel } from './suggestion-panel-builder.js'
-// §5.4 Stage 3 — in-source self-declaration
-export type { SelfDeclaration, SelfDeclarationPersistChoice } from './types.js'
-export {
-  mergeRuntimeIntoOverride,
-  extractSelfDeclaration,
-  elevateToReview,
-  persistDeclaration,
-  shouldStage3ProposeRuntime,
-} from './self-declaration.js'
-// §5.4 Stage 4 — cross-source convergence
-export type {
-  ConvergedDecomposition,
-  SourceMention,
-  MentionCluster,
-} from './types.js'
-export {
-  clusterMentionsAcrossSources,
-  arbitrate,
-  createConvergencePass,
-  mergeAllSources,
-  runConvergencePass,
-} from './convergence.js'
-export type {
-  ConvergencePassConfig,
-  RunConvergencePassOptions,
-} from './convergence.js'
+// §5.10.4 D-wide: §5.4 Stage 2/3/4 self-extending public API 모두 폐기.
+// suggestion-storage / suggestion-detector / suggestion-pipeline / schema-yaml-writer /
+// suggestion-panel-builder / self-declaration / convergence module 의 export 제거 —
+// runtime call site 전부 제거 완료 (sidebar-chat.ts + ingest-pipeline.ts). deprecated
+// test file 들이 직접 module file 에서 import 하므로 module file 자체는 보존, 단
+// public API surface 에서는 분리. IngestRecord 만 공용 type 으로 보존.
+export type { IngestRecord } from './types.js'
 export {
   RenameGuard,
   reconcileExternalRename,

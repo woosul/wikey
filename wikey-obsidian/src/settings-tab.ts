@@ -520,13 +520,13 @@ export class WikeySettingTab extends PluginSettingTab {
     const path = '.wikey/schema.yaml'
     const descEl = containerEl.createDiv({ cls: 'wikey-settings-status-desc' })
     const statusSpan = descEl.createSpan({
-      text: 'Customize aliases (canonical slug folds) and pii_patterns. Status: …',
+      text: 'Customize aliases (canonical slug folds). Status: …',
     })
 
     let removeButton: HTMLButtonElement | null = null
     new Setting(containerEl)
       .setName('Edit schema.yaml')
-      .setDesc('Define aliases (variant labels collapsing into one slug) and pii_patterns (custom PII regexes).')
+      .setDesc('Define aliases (variant labels collapsing into one slug). Custom PII regexes go in .wikey/pii-patterns.yaml (separate file).')
       .addButton((btn) =>
         btn.setButtonText('Edit').onClick(async () => {
           try {
@@ -565,11 +565,11 @@ export class WikeySettingTab extends PluginSettingTab {
     void (async () => {
       const exists = await vault.adapter.exists(path)
       if (!exists) {
-        statusSpan.setText('Customize aliases (canonical slug folds) and pii_patterns. Status: no override file.')
+        statusSpan.setText('Customize aliases (canonical slug folds). Status: no override file.')
         if (removeButton) (removeButton as HTMLButtonElement).disabled = true
         return
       }
-      statusSpan.setText(`Customize aliases (canonical slug folds) and pii_patterns. Status: override file exists at ${path}.`)
+      statusSpan.setText(`Customize aliases (canonical slug folds). Status: override file exists at ${path}.`)
       if (removeButton) (removeButton as HTMLButtonElement).disabled = false
     })()
   }
@@ -1107,28 +1107,23 @@ class IngestPromptEditModal extends Modal {
 
 const SCHEMA_OVERRIDE_TEMPLATE = `# wikey schema override — .wikey/schema.yaml (D-wide)
 #
-# Two sections are honored: \`aliases\` (canonical slug normalization) and
-# \`pii_patterns\` (custom PII detection). Other sections are ignored.
+# Honored section: \`aliases\` (canonical slug normalization). Other sections are ignored.
 #
-# Remove this file to disable user overrides.
+# Custom PII regex rules go to a separate file: .wikey/pii-patterns.yaml
+# (or ~/.config/wikey/pii-patterns.yaml for global). See pii-patterns engine docs.
+#
+# Remove this file to disable alias overrides.
 
 aliases:
   # Each entry maps a canonical slug to a list of variant strings the
-  # canonicalizer should fold into it (case-insensitive). Useful for
-  # multilingual labels, abbreviations, or namesakes.
+  # canonicalizer should fold into it. Variant matching is case-insensitive
+  # and applied after the LLM name is normalized to a hyphenated slug, so
+  # both human-readable forms and slug forms are accepted.
   # Example:
   # iso-27001:
   #   - ISO 27001
   #   - ISO/IEC 27001
   #   - ISMS
-
-pii_patterns:
-  # Custom PII regex patterns layered on top of built-in detection.
-  # Each entry: { name, regex, redaction }.
-  # Example:
-  # - name: employee-id
-  #   regex: '\\\\bEMP-\\\\d{6}\\\\b'
-  #   redaction: '[EMP-ID]'
 `
 
 /**
@@ -1150,7 +1145,7 @@ class SchemaOverrideEditModal extends Modal {
     modalEl.addClass('wikey-ingest-prompt-modal')
     contentEl.createEl('h2', { text: 'Edit Schema Override' })
     contentEl.createEl('p', {
-      text: 'Customize the canonicalizer with aliases (variant labels collapsing into one slug) and pii_patterns (custom PII regexes). Other sections are ignored.',
+      text: 'Customize the canonicalizer with aliases (variant labels collapsing into one slug). Custom PII rules belong in .wikey/pii-patterns.yaml (separate file).',
       cls: 'wikey-ingest-prompt-help',
     })
     this.textarea = contentEl.createEl('textarea', {
