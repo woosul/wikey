@@ -225,6 +225,7 @@ ${guideBlock}
 3. **기존 페이지 재사용**: 위 "기존 wiki 페이지" 목록과 매칭되면 filename은 기존 base 그대로 사용 (예: \`${EXAMPLE_ORG_BASE}\` 발견 → \`${EXAMPLE_ORG_ALIAS}\`로 새로 만들지 말 것).
 4. **filename 형식**: \`name\` 필드는 base name만 (소문자, 하이픈 구분, .md/디렉토리 prefix 금지).
 5. **description**: 1~2문장, 의미 위주.
+6. **다국어 alias 의무**: mention evidence 가 비-영문 표기 (한국어 / 일본어 / 중국어 등) 로 등장하면 그 원문 표기를 \`aliases\` 배열에 **반드시** 포함. 영문 slug 으로 정규화한 \`name\` 외에도 evidence 에 등장한 한국어/원문 표기를 alias 로 등록 — 후속 wikilink rendering 이 anchor display 로 활용. 영문이 본문에 같이 등장하면 영문 alias 도 추가 가능.
 ${decompositionSection}
 ## 입력 mention (${mentions.length}개)
 

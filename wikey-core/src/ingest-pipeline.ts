@@ -1392,6 +1392,7 @@ tags: [태그1, 태그2]
 - \`[[page-name]]\` 형식
 - 이미 존재하는 페이지와 연결하세요
 - 생성한 모든 entity/concept를 source 페이지 본문에서 최소 1회 \`[[wikilink]]\`로 참조하세요 (고아 페이지 방지)
+- **언어 보존**: filename 은 영문 slug (소문자·하이픈) 이지만, 본문 wikilink 의 anchor display 는 **원문 본문에 등장한 표기 그대로** 사용하세요. 한국어/일본어/중국어 등 비-영문 표기로 본문에 등장하면 \`[[english-slug|한국어 표기]]\` 형식으로 alias display 를 명시. 영문이 본문에 같이 등장하면 영문 anchor 가능. 본문 언어와 다른 언어로 anchor 를 강제 변환하지 마세요.
 
 ### 현재 인덱스 (이미 존재하는 페이지)
 {{INDEX_CONTENT}}
