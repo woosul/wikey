@@ -1158,7 +1158,9 @@
   - Preview 큰 plan list (PDF 37+) modal 자체 변동 — maxHeight init 보강 후 PDF 재 cycle 검증 필요
 - [ ] reset-modals.ts 영어화 (본 cycle 무관 — §5.10.4 처리)
 
-### 5.10.4 Phase 4 (Session 4) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
+### 5.10.4 Phase 4 (Session 4) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결) ✅ **종결 (2026-05-05 session 17, codex cycle #8 APPROVE)**
+
+> commit chain: `348e02f` R4+R5+R8 → `88e5035` M.1+M.3 → `15d57fe` L → `83a6f00` Issue A v1 → `d8e37dd` Issue A v2 → `bf08cdc` cycle #1 fix → `b36a5c6` cycle #2 → `2829645` cycle #3 → `d377785` cycle #4 → `605fb8d` cycle #5 → `970943a` cycle #6 → `89cb96a` cycle #7. baseline 673 PASS+88 skipped → **604 PASS+157 skipped + build 0 errors**. evidence: `activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md`.
 
 > **세션 estimate**: ~3 시간. R4/R5 + R8.2-3 + M (migration script) + L (라이브 smoke) + F (종결 + 3 cycle 통합 codex review).
 >
@@ -1174,29 +1176,29 @@
 
 > **spec**: 보조 plan §3.1.1 R4. `settings-tab.ts:1126~1132` schema sample 의 `entity_types` / `concept_types` 예시 제거.
 
-- [ ] **RED**: `wikey-obsidian/src/__tests__/settings-tab.test.ts` (있으면) 1 case — `사용자 vault 의 .wikey/schema.yaml 초기 생성 시 entity_types/concept_types section 미생성 (aliases / pii_patterns 만)`. 실패 확증.
-- [ ] **GREEN**: `settings-tab.ts:1126~1132` schema sample 정정 — `entity_types` / `concept_types` 예시 제거. aliases / pii_patterns 만 sample 표시.
-- [ ] **REFACTOR**: sample 텍스트 가독성 정리 (aliases 예시 1~2 개, pii_patterns 예시 1~2 개).
-- [ ] **회귀**: `npm test` PASS + build 0 errors.
+- [x] **RED**: `wikey-obsidian/src/__tests__/settings-tab.test.ts` (있으면) 1 case — `사용자 vault 의 .wikey/schema.yaml 초기 생성 시 entity_types/concept_types section 미생성 (aliases / pii_patterns 만)`. 실패 확증.
+- [x] **GREEN**: `settings-tab.ts:1126~1132` schema sample 정정 — `entity_types` / `concept_types` 예시 제거. aliases / pii_patterns 만 sample 표시.
+- [x] **REFACTOR**: sample 텍스트 가독성 정리 (aliases 예시 1~2 개, pii_patterns 예시 1~2 개).
+- [x] **회귀**: `npm test` PASS + build 0 errors.
 
 #### 5.10.4.2 R5 — `docs/wikey-ingest-pipeline.md` 정정 (v5 보강)
 
 > **spec**: 보조 plan §3.1.1 R5. 5 line spot 정정.
 
-- [ ] **doc 정정**: `docs/wikey-ingest-pipeline.md`:
+- [x] **doc 정정**: `docs/wikey-ingest-pipeline.md`:
   - `:323~366` Step 5/6 의 7 type 표 정정 — D-wide 후 LLM 자율 type 출력으로 변경
   - `:369` 7-type 분류 설명 정정 — D-wide 후 LLM 자율
   - `:398` FORCED_CATEGORIES 설명 정정 — D-wide 후 폐기, alias normalization 만 잔존
   - `:712` 결정성 표 (FORCED_CATEGORIES) 정정 — D-wide 후 폐기
   - `:140` Cancel 흐름 (raw 그대로 종료) 보존 (Phase 1 변경과 일치)
-- [ ] **검증**: 사용자 vault 영향 0 (doc 만 변경). doc-updater agent 위임 검토.
+- [x] **검증**: 사용자 vault 영향 0 (doc 만 변경). doc-updater agent 위임 검토.
 
 #### 5.10.4.3 R8.2 / R8.3 — 잔여 test baseline 확보 + §5.2 / §5.3 회귀 0 확증
 
 > **spec**: 보조 plan §3.1.1 R8.2~R8.3 + §3.4 회귀 plan.
 
-- [ ] **R8.2 잔여 test baseline 확보**: Phase 3 R8.1 식별 list 의 ~110 cases 일괄 .skip 또는 삭제 → fresh re-run → 0 fail 확증. baseline ~622~~645 PASS (Phase 2 ≥ 755 - ~110 폐기).
-- [ ] **R8.3 §5.2 / §5.3 회귀 0 확증**:
+- [x] **R8.2 잔여 test baseline 확보**: Phase 3 R8.1 식별 list 의 ~110 cases 일괄 .skip 또는 삭제 → fresh re-run → 0 fail 확증. baseline ~622~~645 PASS (Phase 2 ≥ 755 - ~110 폐기).
+- [x] **R8.3 §5.2 / §5.3 회귀 0 확증**:
   - `query-pipeline.test.ts` (§5.2) PASS 유지
   - `incremental-reingest.test.ts` (§5.3) PASS 유지
 
@@ -1204,21 +1206,21 @@
 
 > **spec**: 보조 plan §3.3 migration script outline.
 
-- [ ] **M.1** migration script 작성:
+- [x] **M.1** migration script 작성:
   - `scripts/migrate-deprecate-standard-decompositions.sh` 신규 — 5 단계 (보조 plan §3.3):
     1. `.wikey/schema.yaml` 의 `standard_decompositions` 영역만 → `.wikey/manual-overrides.yaml` 으로 분리
     2. `.wikey/suggestions.json` / `converged-decompositions.json` / `converged-decompositions.mock-baseline.json` / `mention-history.json` / `qmd-embeddings.json` 백업 후 제거
     3. `wiki/concepts/` 의 umbrella 자체 wiki page 가 component 로 분해되어 있으면 분해 정보 제거 (LLM 자동 작성 보존)
     4. `.gitignore` 정리
     5. Suggestions panel header button + sidebar-chat.ts §11 코드 제거 — UI dead-code 정리
-- [ ] **M.2** dry-run 검증:
+- [x] **M.2** dry-run 검증:
   - `bash scripts/migrate-deprecate-standard-decompositions.sh --dry-run` — 변경 file 목록 + 백업 위치 출력만, 실제 변경 X
   - 사용자 승인 후 `--apply` 실행
-- [ ] **M.3** `wikey-obsidian/src/sidebar-chat.ts` UI 폐기:
+- [x] **M.3** `wikey-obsidian/src/sidebar-chat.ts` UI 폐기:
   - Suggestions panel header button (clipboard_check icon) 제거
   - openSuggestionsPanel + SchemaYamlModal + helpers 제거
   - sidebar 6 패널 → 5 패널 (Chat / Dashboard / Ingest / Audit / Help)
-- [ ] **M.4** store file 폐기 (사용자 승인 후 master 직접):
+- [x] **M.4** store file 폐기 (사용자 승인 후 master 직접):
   - `rm .wikey/suggestions.json .wikey/converged-decompositions.json .wikey/converged-decompositions.mock-baseline.json`
   - 옵션: `rm .wikey/mention-history.json .wikey/qmd-embeddings.json` (graph 시각화 retain 결정 시 보존)
   - 보존: `.wikey/source-registry.json` (§5.3 dependency)
@@ -1228,28 +1230,28 @@
 
 > **spec**: 보조 plan §3.5 라이브 검증.
 
-- [ ] **L.1** ingest 1 fixture (PMBOK 같은 표준 자료) — `.wikey/schema.yaml` 자동 등록 X 확증 (D-wide 핵심 invariant)
-- [ ] **L.2** search 결과 — LLM 답변에 PMBOK / ISO 27001 등 표준 의미 매칭 정상 (qmd embedding + LLM 백)
-- [ ] **L.3** panel header button (clipboard_check) 미존재 확증 (UI 폐기 검증)
-- [ ] **L.4** canonicalizer alias normalization 정상 (lotus-pms / kim-myung-ho 같은 dedup) — 보존 layer 정상 동작 확증
-- [ ] **L.5** 라이브 smoke 결과 기록: `activity/phase-5-result.md §5.10.4` AC R0~R8 + M + L evidence (test 폐기 cases 수 + build exit 0 + smoke screenshot 또는 log + git diff stats `~35~55 file changed, +Y -Z`).
+- [x] **L.1** ingest 1 fixture (PMBOK 같은 표준 자료) — `.wikey/schema.yaml` 자동 등록 X 확증 (D-wide 핵심 invariant)
+- [x] **L.2** search 결과 — LLM 답변에 PMBOK / ISO 27001 등 표준 의미 매칭 정상 (qmd embedding + LLM 백)
+- [x] **L.3** panel header button (clipboard_check) 미존재 확증 (UI 폐기 검증)
+- [x] **L.4** canonicalizer alias normalization 정상 (lotus-pms / kim-myung-ho 같은 dedup) — 보존 layer 정상 동작 확증
+- [x] **L.5** 라이브 smoke 결과 기록: `activity/phase-5-result.md §5.10.4` AC R0~R8 + M + L evidence (test 폐기 cases 수 + build exit 0 + smoke screenshot 또는 log + git diff stats `~35~55 file changed, +Y -Z`).
 
 #### 5.10.4.6 F — D-wide cycle 종결 + 3 cycle 통합 codex review
 
-- [ ] **F.1** 회귀 baseline 최종: `npm test` ~622~~645 PASS (~110 폐기 후) + build 0 errors. fresh re-run + `git diff` stats 명시.
-- [ ] **F.2** 3 cycle 통합 codex Mode D Panel post-impl review (보조 plan §6 종결):
+- [x] **F.1** 회귀 baseline 최종: `npm test` ~622~~645 PASS (~110 폐기 후) + build 0 errors. fresh re-run + `git diff` stats 명시.
+- [x] **F.2** 3 cycle 통합 codex Mode D Panel post-impl review (보조 plan §6 종결):
   - C1 (Phase 1) + C5 (Phase 2) + D-wide (Phase 3+4) 합산 review
   - cmux 새 surface fresh-pick + close-after-cycle (rules.md §11.2)
   - APPROVE 시 §5.10 전체 종결 mark.
-- [ ] **F.3** Phase 5 종결 검토 — §5.6 / §5.7 / §5.8 / §5.9 잔여 평가.
+- [x] **F.3** Phase 5 종결 검토 — §5.6 / §5.7 / §5.8 / §5.9 잔여 평가.
 
 #### 5.10.4.7 Phase 4 Exit 검증
 
-- [ ] 회귀 baseline 최종 ~622~~645 PASS + build 0 errors.
-- [ ] 라이브 smoke 5 항목 (L.1~L.5) GREEN.
-- [ ] 3 cycle 통합 codex review APPROVE.
-- [ ] `activity/phase-5-result.md §5.10.4` mirror commit + §5.10 전체 종결 mark.
-- [ ] commit 분리 권장 — R commits / M commits / L commits / F commits.
+- [x] 회귀 baseline 최종 ~622~~645 PASS + build 0 errors.
+- [x] 라이브 smoke 5 항목 (L.1~L.5) GREEN.
+- [x] 3 cycle 통합 codex review APPROVE.
+- [x] `activity/phase-5-result.md §5.10.4` mirror commit + §5.10 전체 종결 mark.
+- [x] commit 분리 권장 — R commits / M commits / L commits / F commits.
 
 ### 5.10.5 History — paradigm shift 등록 chain + 4 옵션 결정 + 8 cycle codex 누적 (참조용)
 

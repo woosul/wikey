@@ -233,16 +233,9 @@ Wikey 사이드바의 6개 패널은 고유한 레이아웃과 토큰 조합을 
     - `spacing`: `--wk-spacing-2`, `--wk-spacing-4` (목록 아이템 내부)
     - `radius`: `--wk-radius-full` (상태 필터링 칩)
 
-### 5. Suggestions 패널
+### 5. Help 패널
 
-- **특징:** Audit 패널과 유사한 체크박스 목록 기반 레이아웃. 표준 분해 후보를 검토하고 적용.
-- **주요 클래스:** `.wikey-suggestions-panel`, `.wikey-suggestion-row`, `.wikey-audit-apply-btn` (재사용)
-- **사용 토큰:**
-    - `color`: `--wk-color-accent` (Accept 버튼), `--wk-color-border`
-    - `spacing`: `--wk-spacing-4`
-    - `radius`: `--wk-radius-s` (버튼)
-
-### 6. Help 패널
+> §5.10.4 D-wide (2026-05-05): Suggestions 패널 (이전 5번) 제거 후 sidebar 5종 패널 = Chat / Dashboard / Ingest / Audit / Help.
 
 - **특징:** 마크다운으로 렌더링된 정적인 가이드 문서.
 - **주요 클래스:** `.wikey-chat-help`

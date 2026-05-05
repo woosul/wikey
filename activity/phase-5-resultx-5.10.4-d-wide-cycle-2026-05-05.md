@@ -2,7 +2,10 @@
 phase: 5.10.4
 session: 17 (D-wide Phase 4 — UI/docs/migration/라이브/종결)
 date: 2026-05-05
-status: in_progress
+status: completed
+codex_review: APPROVE (cycle #8, 2026-05-05)
+commits: 348e02f / 88e5035 / 15d57fe / 83a6f00 / d8e37dd / bf08cdc / b36a5c6 / 2829645 / d377785 / 605fb8d / 970943a / 89cb96a
+baseline: 604 PASS + 157 skipped + build 0 errors
 ---
 
 # §5.10.4 Phase 4 — D-wide cycle (UI/docs/migration/라이브/종결) 결과
@@ -346,9 +349,75 @@ severity 추세 = D-wide 본질 deprecation 완료 확증.
 
 baseline 유지: **608 PASS + 153 skipped + build 0 errors**.
 
-### 7.11 Cycle #6 (surface:24) — 진행 중 (APPROVE 임계 검증)
+### 7.11 Cycle #6 (surface:24, closed) — verdict NEEDS_REVISION (broad surface 발견)
 
-[verdict 도착 후 갱신 — 종결 결정]
+- 시점: 2026-05-05 16:00, codex Mode D Panel (5m 04s)
+- finding: 0 P1 + 1 P2 + 7 P3 (codex search 깊이 확장으로 broad surface)
+  - **[P2]** vault `.wikey/schema.yaml` PII guidance 잔재
+  - **[P3]** `.wikey/suggestions.json` 재발생 (P1-2 fix 이전 ingest 잔재)
+  - **[P3]** migrate dry-run output / docs/condition-of-wiki-page-creation.md / ingest-pipeline canonResult unused / canonicalizer FORCED_CATEGORIES comment / convergence script header / schema-yaml-writer test
+- master 결정: NEEDS_REVISION 동의 → 8 finding fix
+
+### 7.12 Cycle #6 fix — commit `970943a` (8 files, +150/-24)
+
+baseline: **608 → 604 PASS + 153 → 157 skipped** (4 cases schema-yaml-writer skip 추가)
+
+### 7.13 Cycle #7 (surface:25, closed) — verdict NEEDS_REVISION (UI / docs / styles 신규 area)
+
+- 시점: 2026-05-05 16:20, codex Mode D Panel (~6m, validate-wiki.sh 권한 요청 포함)
+- finding: 0 P1 + 2 P2 + 5 P3
+  - **[P2]** ingest-modals.ts:444 "Active schema" 4+3 type 강제 표시 (사용자 UI 직접)
+  - **[P2]** wiki/overview.md validate 57 errors (broken source links — §5.10.4 scope 외, Phase 5 §5.10.2 잔여)
+  - **[P3]** CLAUDE.md sidebar 6/Suggestions/D-wide pending 잔재
+  - **[P3]** docs/wikey-ingest-pipeline.md §9.7 D option awaiting decision
+  - **[P3]** docs/step8-self-extending-analysis.md banner missing
+  - **[P3]** wikey-obsidian/styles.css orphan Suggestions + SchemaYamlModal CSS (524 lines)
+  - **[P3]** convergence/self-declaration/suggestion-*/schema-yaml-writer module headers active처럼
+
+### 7.14 Cycle #7 fix — commit `89cb96a` (10 files, +31/-553)
+
+baseline 유지: **604 PASS + 157 skipped + build 0 errors**.
+
+### 7.15 Cycle #8 (surface:26, closed) — **verdict APPROVE** (4m 42s) 🟢
+
+- 시점: 2026-05-05 16:30, codex Mode D Panel
+- finding: 0 P1 + 0 P2 + 4 P3 (모두 historical/orphan/cosmetic)
+  - DESIGN.md Suggestions 패널 docs / run-convergence-pass.mjs orphan import / session-wrap-followups historical / parent result mirror TBD
+
+> **codex cycle #8 verdict 종결 권고**:
+> "Cycle assessment: P1/P2 active-surface findings: 0. Runtime/public D-wide invariant holds: sidebar is 5 panels, Suggestions UI is gone, ingest no longer writes suggestion/mention stores, reindex no longer runs convergence, schema.yaml runtime use is aliases-only, and Stage 2/3/4 APIs are not exported from wikey-core. §5.10.4 종결 권고: APPROVE. 남은 항목은 모두 historical/orphan/cosmetic이고, 본질 D-wide deprecation 및 npm test/build 기준은 충족했다."
+
+### 7.16 Final cosmetic cleanup — commit `<TBD>` (cycle #8 P3 4건)
+
+| Finding | Fix 위치 |
+|---------|---------|
+| DESIGN.md:236 Suggestions 패널 docs | section 5/6 renumber → Help 패널 5번 + D-wide note |
+| run-convergence-pass.mjs:40 orphan import | early-exit deprecation banner + exit 2 |
+| session-wrap-followups stale next action | §5.10.4 종결 + Phase 5 잔여 평가 redirect |
+| parent activity mirror TBD | 본 result file 종결 mark + commit chain reference |
+
+### 7.17 Cycle 누적 종합 — D-wide 종결 검증 (rules.md §7.2 master verdict 결정)
+
+| Cycle | Finding 합계 | P1 | P2 | P3 | Master 결정 |
+|-------|------|----|----|----|------|
+| #1 | 7 | 2 | 4 | 1 | NEEDS_REVISION 동의 — 7 finding 모두 fix |
+| #2 | 3 | 1 | 2 | 0 | NEEDS_REVISION 동의 — 3 finding 모두 fix |
+| #3 | 4 | 1 | 3 | 0 | NEEDS_REVISION 동의 — 4 finding 모두 fix |
+| #4 | 3 | 0 | 1 | 2 | NEEDS_REVISION 동의 — 3 finding 모두 fix |
+| #5 | 4 | 0 | 0 | 4 | NEEDS_REVISION 동의 (cosmetic but consistent) — 4 finding 모두 fix |
+| #6 | 8 | 0 | 1 | 7 | NEEDS_REVISION 동의 — 8 finding 모두 fix |
+| #7 | 7 | 0 | 2 | 5 | NEEDS_REVISION 동의 — 7 finding fix (1 P2 scope 외) |
+| #8 | 4 | 0 | 0 | 4 | **APPROVE 동의 + master verdict 종결** — 4 P3 cosmetic cleanup 후 §5.10.4 mark |
+
+총 finding 누적: 40 (4 P1 + 13 P2 + 23 P3). Cycle #5 시점부터 P1 0 (**4 cycle 째**). 본질 D-wide invariant 4 cycle 연속 유지 → **§5.10.4 종결 안전**.
+
+## 11. session-wrap followups (after L+F)
+
+- §5.10.4 종결 mark commit (본 cycle, plan/phase-5-todo.md §5.10.4 [x] 일괄)
+- session-wrap-followups.md 갱신 — Phase 5 잔여 (§5.6/§5.7/§5.8/§5.9) 평가 redirect
+- Issue A (한국어 wikilink/title) — fix 완료, 차기 ingest 부터 자연 적용
+- Issue B (페이지 생성 threshold) — 별 plan 등록 (향후 §5.6 검토 시점)
+- Phase 5 §5.10.2 broken-link-prevention 잔여 (validate-wiki 57 errors) — 별 small cycle 또는 §5.10.2 보강 후속
 
 ## 8. AC 매핑 (R0~R8 + M + L)
 

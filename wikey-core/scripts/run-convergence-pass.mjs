@@ -28,18 +28,26 @@
  *   - --embeddings 미지정 또는 load 실패 → 빈 Map → cluster 0 → graceful skip + warn
  */
 
+// §5.10.4 D-wide deprecated — short-circuit on direct invocation.
+// 본 script 는 cycle #3 에서 reindex.sh 자동 hook 제거됨 + cycle #2 에서 index.ts
+// public export (createConvergencePass / runConvergencePass) 모두 제거됨. dynamic
+// import 를 통해 직접 module file (`../convergence.js`) 에서 가져오면 동작 가능하지만
+// 본 entry 는 사용자에게 deprecation 명시 후 종료.
+console.error('[run-convergence-pass] §5.10.4 D-wide 폐기 (2026-05-05). 본 script 는 historical reference 입니다.')
+console.error('  Stage 4 convergence 자동 path: scripts/reindex.sh 의 hook 제거됨.')
+console.error('  Stage 4 convergence public API: wikey-core/src/index.ts 에서 export 제거됨.')
+console.error('  사용자가 본 logic 을 다시 활용하려면 ../convergence.js 의 함수를 직접 import 해야 합니다.')
+process.exit(2)
+
+// (legacy entry point preserved below for historical reference — unreachable)
+/* eslint-disable */
 import { promises as fs } from 'node:fs'
 import { dirname } from 'node:path'
 
-// Resolved against the *runtime* location: this file is copied to
-// `wikey-core/dist/scripts/run-convergence-pass.mjs` by the build, so
-// `../index.js` points at `wikey-core/dist/index.js`. (Running directly from
-// `wikey-core/scripts/run-convergence-pass.mjs` is unsupported — reindex.sh
-// only invokes the dist copy.)
 import {
   createConvergencePass,
   runConvergencePass,
-} from '../index.js'
+} from '../convergence.js'
 
 async function main() {
   const config = createConvergencePass(process.argv.slice(2))

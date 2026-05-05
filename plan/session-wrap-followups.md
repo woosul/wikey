@@ -1,62 +1,53 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-05 session 16 (확장) — §5.10.3.10 Modal UX 옵션 C + 영어 일관 + 다중 fixture 라이브 smoke GREEN**. 다중 파일 유형 (PDF + HWP + HWPX) AC-C1.6 충족. commit `08d443d` (8 files, +441/−63). **다음 액션 = §5.10.4 Phase 4** (잔여 6 issues + R/M/L/F).
+> 최신 갱신: **2026-05-05 session 17 — §5.10.4 D-wide Phase 4 종결 + 8 cycle codex review APPROVE**. §5.10 paradigm shift D-wide implementation 완료 (R/M/L/F 모두 GREEN). commit `89cb96a` 시점 codex cycle #8 APPROVE. **다음 액션 = §5.10 종결 mark + Phase 5 잔여 (§5.6~§5.9) 평가** 또는 **§5.10.4 follow-up issues** (Issue B 페이지 생성 threshold + Phase 5 §5.10.2 broken-link-prevention 잔여).
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-05-05 session 16 확장 종료 시점)
+## 🎯 다음 세션 첫 액션 (2026-05-05 session 17 §5.10.4 종결 직후)
 
-> **세션 16 확장 종결**: §5.10.3.10 Modal UX 옵션 C + α 진행. 사용자 본질 비판 9 항목 + 추가 spec 4 (영어 / stepper 4단계 / Processing file label / spinner 중앙) + 다중 fixture 라이브 smoke 3/3 GREEN.
+> **세션 17 종결**: §5.10.4 D-wide Phase 4 implementation + 8 codex review cycle 누적 후 APPROVE.
 >
-> **§5.10.3.10 결과** (commit `08d443d`):
-> - **모달 spec 보강**: stepper 4 단계 (Converting/Brief/Processing/Preview) + applyModalSize init height/maxHeight + body/modal min-height 제거 + button-row sticky bottom + spinner-center wrap + Processing file label sidecar.md only
-> - **모달 영어 일관**: ingest-modals + conflict-modal + commands 모두 영어 (한국어 잔재 0)
-> - **DESIGN.md 모달 컴포넌트 표준** 신규 섹션 (10 항목)
-> - **라이브 smoke 3/3 GREEN** (AC-C1.6 + AC-C1.7 + AC-C1.2 + AC-C1.3):
->   - PDF (PMS_제품소개_R10) 47KB → docling tier 1+1a, raw/3_resources/ movePair, 37 wiki pages
->   - HWP (스마트공장 보급확산) 748 chars → unhwp (binary 미전송 ✓), 6 wiki pages
->   - HWPX (Examples) 544 chars → Docling 일반 분기, 4 wiki pages
-> - **시간 분석**: PDF 6분 vs HWP/HWPX 1분 = mention extraction chunk sequential 원인. § 5.10.4 등록.
+> **§5.10.4 commit chain (12 commits)**:
+> 1. `348e02f` R4+R5+R8 atomic — settings-tab schema sample / docs ripple / 58 test deprecate
+> 2. `88e5035` M.1+M.3 — migration script + Suggestions UI 폐기 (sidebar 6→5)
+> 3. `15d57fe` L — 라이브 cycle smoke (PMBOK 81s + query 30s, 16 wiki page)
+> 4. `83a6f00` Issue A v1 — wikilink anchor 보존 (한국어 source)
+> 5. `d8e37dd` Issue A v2 — title 원문 보존 + aliases frontmatter
+> 6. `bf08cdc` cycle #1 7 finding fix — D-wide 완전 폐기
+> 7. `b36a5c6` cycle #2 3 finding fix — PII guidance + alias normalize + dead exports
+> 8. `2829645` cycle #3 4 finding fix — master schema / multi-word key / reindex / surface
+> 9. `d377785` cycle #4 3 finding fix — migration pii / JSDoc / docs stale
+> 10. `605fb8d` cycle #5 4 P3 cosmetic fix
+> 11. `970943a` cycle #6 8 finding fix — broad surface (vault state + scripts + module)
+> 12. `89cb96a` cycle #7 7 finding fix — UI / docs / styles / module headers
 >
-> **다음 세션 master 첫 명령 — §5.10.4 Phase 4 진입**:
+> **codex cycle severity 추세**:
+> - #1: 7 (2 P1 + 4 P2 + 1 P3) — 본질 결함
+> - #2~#4: P1/P2 점진 감소
+> - #5: 4 (0 P1 + 0 P2 + 4 P3) — 본질 deprecation 완료 시점
+> - #6/#7: 7-8 P3 (codex search 깊이 확장으로 broad surface 발견)
+> - #8: **APPROVE** (P1/P2 active surface 0, runtime/public D-wide invariant holds)
 >
-> **§5.10.4 Phase 4** (D-wide Part 2 + Final, ~3시간 estimate):
->    - R4 settings-tab.ts schema sample 정정 (entity_types/concept_types 예시 제거)
->    - R5 docs/wikey-ingest-pipeline.md 5 line spot 정정
->    - R8.2 잔여 ~22 cases 폐기 (suggestion-detector / convergence / self-declaration §5.4 Stage 2~4)
->    - R8.3 §5.2 / §5.3 회귀 0 확증
->    - M migration script (`scripts/migrate-deprecate-standard-decompositions.sh`) + UI 폐기 (sidebar 6 패널 → 5 패널, Suggestions panel 폐기) + store cleanup
->    - L 라이브 cycle smoke (다중 fixture 추가 ingest 또는 query smoke)
->    - F 3 cycle 통합 codex Mode D Panel post-impl review APPROVE → §5.10 전체 종결 mark
+> **§5.10.4 cycle #8 APPROVE 후 잔재 P3** (cosmetic, 차기 검토):
+> - DESIGN.md Suggestions 패널 — fix 완료
+> - run-convergence-pass.mjs orphan import — fix 완료 (D-wide deprecation banner + exit)
+> - parent activity/phase-5-result.md §5.10.4 mirror — 본 cycle 에서 갱신
+> - 본 session-wrap-followups historical entries — 본 갱신
 >
-> **§5.10.3.10 잔여 6 issues** (§5.10.4 통합 처리):
-> 1. protocol handler `obsidian://wikey?ingest=` autoMove 누락 (HWP/HWPX 가 raw/0_inbox/ 잔존). fix: commands.ts protocol handler 에 autoMoveFromInbox 인자 추가.
-> 2. mention extraction 병렬화 (PDF 6분 → 1~2분 단축, gemini-2.5-flash 1M context 활용)
-> 3. picker fuzzy 한국어 path 매치 약함 (vault.getFiles() 결과 정상 44 raw file 인데 한국어 'raw/0_inbox/스마트공장' search 매치 0)
-> 4. AC-C1.4 보강 의심 — 1차 cycle Cancel 후 sidecar (raw/0_inbox/<file>.<ext>.md) 잔존 발견. sidecar write 시점 검토 필요 (Approve 전 write 발생 시 spec 위반)
-> 5. Preview 큰 plan list (PDF 37+) modal 자체 변동 — maxHeight init 보강 후 PDF 재 cycle 검증 필요
-> 6. reset-modals.ts 영어화 (본 cycle 무관)
+> **§5.10.4 cycle 중 사용자 raise 신규 issue** (D-wide 직교, 후속 plan 등록):
+> - **Issue A — 한국어 source wikilink/title 보존** (fix 완료: 83a6f00 + d8e37dd, 차기 ingest 부터 적용)
+> - **Issue B — wiki 페이지 생성 threshold** (단순 출처/장소 mention 도 페이지 생성 — 향후 §5.6 검토 시점)
 >
-> **4 Phase 그룹 매트릭스** (`plan/phase-5-todo.md §5.10` main intro):
+> **§5.10.4 외 잔재** (codex cycle #7 P2 — scope 외):
+> - wiki/overview.md / index.md / log.md frontmatter 누락 + broken source links (e.g. `[[pmbok-overview.md]]` vs `wiki/sources/source-pmbok-overview.md`) — Phase 5 §5.10.2 broken-link-prevention 잔여 후속.
 >
-> | Phase | 세션 | spec | 회귀 baseline |
-> |-------|------|------|--------------|
-> | §5.10.1 | 1 | Pre-flight + C5 Cleanup + C1 conversion (AC-C1.1~C1.7) | 732 → ≥ 751 (~19 신규 test) |
-> | §5.10.2 | 2 | C5 broken-link prevention (AC-C5.1, C5.2, 회귀) | ≥ 751 → ≥ 755 (~4 신규) |
-> | §5.10.3 | 3 | D-wide Part 1 (R0/R1/R2/R3 + R6/R7 + R8.1) | 잠정 (R8.1 식별만) |
-> | §5.10.4 | 4 | D-wide Part 2 + Final (R4/R5/R8.2-3 + M + L + F) | ~622 (~110 폐기), ~35~55 file 변경 |
->
-> **fresh session 진입 시 첫 read 5단계**:
-> 1. `plan/session-wrap-followups.md` 본 섹션 (다음 세션 첫 액션)
-> 2. `plan/phase-5-todo.md §5.10` main intro + §5.10.1 Phase 1 (Entry baseline + Cleanup + AC-C1.1 RED 까지)
-> 3. `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 (704 lines, 단일 spec source — AC-C1.1~C1.7 + AC-C5.1~C5.4 + R0~R8 ripple)
-> 4. `activity/phase-5-result.md §5.10.5` (paradigm shift + 8 cycle codex 누적 history, 참조용)
-> 5. §5.10.1.1 baseline 부터 즉시 진입 (앞 명령 그대로)
->
-> **잔존 minor stale 2건** (사용자 사전 결정 — 보존, implementation cycle 진입 시 자연 정리):
-> - `plan/phase-5-todox-5.10-graph-emergent-ontology.md:233/235/241/242` (§7 self-check v5.3 표기)
-> - `plan/plan-full.md:321` (~30~50 file / ~100 test cascade — Phase 4 §5.10.4.4 M migration script 작성 시 동기화)
+> **다음 세션 master 첫 명령 — Phase 5 잔여 평가**:
+> 1. `activity/phase-5-result.md` 의 §5.6 / §5.7 / §5.8 / §5.9 우선순위 평가
+> 2. Issue B (페이지 생성 threshold) 정식 plan 등록 검토
+> 3. Phase 5 §5.10.2 broken-link-prevention 잔여 (validate-wiki 57 errors) 처리 결정
+> 4. wiki 본체의 broken source links 일괄 정정 (별 small cycle 가능)
 
 ### 1순위 — Stage 4 실 qmd embeddings 통합 ✅ 종결 (2026-04-26 session 14)
 

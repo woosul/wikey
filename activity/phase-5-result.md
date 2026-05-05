@@ -1743,11 +1743,29 @@ LLM call 시간:
 5. **Preview 큰 plan list (37+) 변동**: maxHeight init 보강 후 PDF 재 cycle 검증 필요 (HWP/HWPX 는 작은 plan 이라 미발생).
 6. **reset-modals.ts 영어화** (본 cycle 무관 — §5.10.4 처리).
 
-### 5.10.4 Phase 4 결과 (Session 4, TBD) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결)
+### 5.10.4 Phase 4 결과 (Session 17, 2026-05-05) ✅ **종결 — codex cycle #8 APPROVE** (D-wide Part 2 + Final)
 
-> **mirror**: `plan/phase-5-todo.md §5.10.4`. R4/R5/R8.2-3 + M (migration script) + L (라이브) + F (종결 + 3 cycle 통합 codex review). 회귀 ~622~~645 PASS (~110 폐기).
+> **mirror**: `plan/phase-5-todo.md §5.10.4` + 상세 evidence: `activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md`.
 >
-> **현 상태**: Phase 4 미진입 (Phase 3 완료 후 진입). Phase 4 완료 시 본 §5.10.4 에 timeline + R 항목 + M/L/F evidence + 3 cycle 통합 codex verdict + 최종 회귀 baseline + git diff stats + §5.10 전체 종결 mark 추가.
+> **종결 commit chain (12 commits)**: `348e02f` R4+R5+R8 → `88e5035` M.1+M.3 → `15d57fe` L → `83a6f00` Issue A v1 → `d8e37dd` Issue A v2 → `bf08cdc` cycle #1 fix (D-wide 완전 폐기) → `b36a5c6` cycle #2 → `2829645` cycle #3 → `d377785` cycle #4 → `605fb8d` cycle #5 → `970943a` cycle #6 → `89cb96a` cycle #7 → final cosmetic cleanup.
+>
+> **회귀 baseline**: 673 PASS + 88 skipped (Phase 3 종료) → **604 PASS + 157 skipped + build 0 errors** (-69 PASS / +69 skipped = §5.4 Stage 2~4 + canonicalizer PMBOK + schema-yaml-writer test 폐기). Phase 5 §5.2 query-pipeline 38/38 + §5.3 incremental-reingest 28/28 회귀 0 확증.
+>
+> **codex 누적 cycle 추세** (P1 4 cycle 째 0 = 본질 deprecation 완료):
+> - #1: 7 (2 P1 + 4 P2 + 1 P3) — 본질 결함
+> - #2~#3: 본질 fix (P1 1 / P2 2~3)
+> - #4: 0 P1 + 1 P2 + 2 P3 — 본질 완료 시점
+> - #5~#7: cosmetic broad surface (codex search 깊이 확장으로 신규 area 발견)
+> - #8: **APPROVE** — runtime/public D-wide invariant holds, 잔재 P3 4건 모두 historical/orphan/cosmetic
+>
+> **사용자 raise 신규 issue** (D-wide 직교):
+> - **Issue A — 한국어 source wikilink/title 보존** ✅ fix 완료 (commits `83a6f00` + `d8e37dd`, 차기 ingest 부터 적용)
+> - **Issue B — wiki 페이지 생성 threshold** (단순 출처/장소 mention 도 page 생성) — 향후 §5.6 검토 시점
+>
+> **§5.10.4 외 잔재** (cycle #7 P2 — scope 외):
+> - wiki/overview.md / index.md / log.md frontmatter 누락 + broken source links — Phase 5 §5.10.2 broken-link-prevention 잔여 후속.
+>
+> **§5.10 전체 종결 mark**: 본 §5.10.4 종결로 §5.10 paradigm shift D-wide implementation 완료.
 
 ### 5.10.5 History — paradigm shift 등록 chain + 4 옵션 결정 + 8 cycle codex 누적 (참조용)
 
