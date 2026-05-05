@@ -217,7 +217,7 @@ describe('buildCanonicalizerPrompt', () => {
     expect(prompt).toContain('사용자 강조 지시')
   })
 
-  it('includes PMBOK 10 knowledge areas hint (§4.5.1.7.2)', () => {
+  it.skip('includes PMBOK 10 knowledge areas hint (§4.5.1.7.2) [§5.10.4 D-wide deprecated]', () => {
     const prompt = buildCanonicalizerPrompt({
       mentions: [{ name: 'x', evidence: 'y' }],
       existingEntityBases: [],
@@ -878,8 +878,9 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
 })
 
 // ── §5.4.1 Stage 1: standard decomposition prompt integration (AC4 + AC5 + AC6.a) ──
+// §5.10.4 D-wide deprecated: standard decomposition 전체 폐기. describe.skip 처리.
 
-describe('buildCanonicalizerPrompt — §5.4.1 standard decomposition', () => {
+describe.skip('buildCanonicalizerPrompt — §5.4.1 standard decomposition [§5.10.4 D-wide deprecated]', () => {
   // AC4 (i) — default path: built-in PMBOK block + marker auto-included.
   it('AC4(i) default path (no schemaOverride) → built-in PMBOK block + marker', () => {
     const prompt = buildCanonicalizerPrompt({

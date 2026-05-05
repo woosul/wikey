@@ -2,9 +2,9 @@ import type { LLMClient } from './llm-client.js'
 import type {
   CanonicalizedResult, Mention, SchemaOverride, WikiPage,
 } from './types.js'
-// Phase 5 §5.10.3 R1+R2 (D-wide): ENTITY_TYPES / CONCEPT_TYPES / isValidEntityType /
-// isValidConceptType / detectAntiPattern / buildSchemaPromptBlock 폐기. LLM 자율 type 분류.
-import { buildStandardDecompositionBlock } from './schema.js'
+// Phase 5 §5.10.3 R1+R2 + §5.10.4 (D-wide): ENTITY_TYPES / CONCEPT_TYPES /
+// isValidEntityType / isValidConceptType / detectAntiPattern / buildSchemaPromptBlock /
+// buildStandardDecompositionBlock 모두 폐기. LLM 자율 type 분류 + alias normalization 잔존.
 import { normalizeBase } from './wiki-ops.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_ORG_ALIAS, EXAMPLE_ORG_KO, EXAMPLE_ORG_DESC_KO,
@@ -96,7 +96,11 @@ export const SLUG_ALIASES: Readonly<Record<string, string>> = {
   'message-queuing-telemetry-transport': 'mqtt',
 }
 
-export function canonicalizeSlug(base: string): string {
+export function canonicalizeSlug(base: string, userAliases?: Readonly<Record<string, string>>): string {
+  // §5.10.4 P2-2: user-defined aliases (.wikey/schema.yaml `aliases:`) check first,
+  // built-in SLUG_ALIASES second, then identity. Variant lookup is by exact base —
+  // canonicalizer's normalizeBase() runs before this.
+  if (userAliases && userAliases[base]) return userAliases[base]
   return SLUG_ALIASES[base] ?? base
 }
 
@@ -115,8 +119,10 @@ export interface CanonicalizeArgs {
   readonly guideHint?: string
   readonly provider: string
   readonly model: string
-  /** v7-5: user-defined schema extension from `.wikey/schema.yaml`. */
+  /** v7-5: user-defined schema extension from `.wikey/schema.yaml` (D-wide stub — always undefined). */
   readonly schemaOverride?: SchemaOverride
+  /** §5.10.4 P2-2: user-defined aliases from `.wikey/schema.yaml` `aliases:` block. */
+  readonly userAliases?: Readonly<Record<string, string>>
   /**
    * §4.5.1.6.1: inject temperature=0 + seed=42 into canonicalizer LLM calls when true.
    * Mirrors the flag plumbed through ingest-pipeline extraction calls.
@@ -142,7 +148,8 @@ interface RawCanonical {
 
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
-          sourceFilename, today, guideHint, provider, model, schemaOverride, deterministic, overridePrompt } = args
+          sourceFilename, today, guideHint, provider, model, schemaOverride, userAliases,
+          deterministic, overridePrompt } = args
 
   if (mentions.length === 0) {
     return { entities: [], concepts: [], dropped: [] }
@@ -154,7 +161,7 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
   })
 
   const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
-  return assembleCanonicalResult(raw, mentions, sourceFilename, today, schemaOverride)
+  return assembleCanonicalResult(raw, mentions, sourceFilename, today, schemaOverride, userAliases)
 }
 
 // ── Prompt construction ──
@@ -196,21 +203,19 @@ export function buildCanonicalizerPrompt(args: PromptArgs): string {
     return `${i + 1}. \`${m.name}\` (hint: ${m.type_hint ?? 'unknown'}) — ${evidence}`
   }).join('\n')
 
-  // Phase 5 §5.10.3 R2 (D-wide): schemaBlock 폐기. LLM 자율 type 분류.
-  const decompositionBlock = buildStandardDecompositionBlock(schemaOverride)
-
+  // Phase 5 §5.10.3 R2 + §5.10.4 (D-wide): schemaBlock + standardDecompositionBlock 모두 폐기. LLM 자율 type 분류.
   if (overridePrompt && overridePrompt.trim()) {
     return overridePrompt
       .replaceAll('{{SOURCE_FILENAME}}', sourceFilename)
       .replaceAll('{{GUIDE_BLOCK}}', guideBlock)
       .replaceAll('{{SCHEMA_BLOCK}}', '')   // Phase 5 §5.10.3 R2: schema gate 폐기.
-      .replaceAll('{{STANDARD_DECOMPOSITION_BLOCK}}', decompositionBlock)
+      .replaceAll('{{STANDARD_DECOMPOSITION_BLOCK}}', '')   // §5.10.4: standard decomposition 폐기.
       .replaceAll('{{EXISTING_BLOCK}}', existingBlock)
       .replaceAll('{{MENTIONS_BLOCK}}', mentionsBlock)
       .replaceAll('{{MENTIONS_COUNT}}', String(mentions.length))
   }
 
-  const decompositionSection = decompositionBlock ? `\n${decompositionBlock}\n` : ''
+  const decompositionSection = ''
 
   // Phase 5 §5.10.3 R2 (D-wide): schema 7-type 강제 prompt 폐기. LLM 자율 type 분류.
   return `당신은 wikey LLM Wiki의 canonicalizer입니다. chunk LLM이 추출한 mention 리스트를 받아 entity/concept 으로 분류하고 canonical filename 으로 통합합니다.
@@ -261,6 +266,7 @@ function assembleCanonicalResult(
   sourceFilename: string,
   today: string,
   schemaOverride?: SchemaOverride,
+  userAliases?: Readonly<Record<string, string>>,
 ): CanonicalizedResult {
   const dropped: Array<{ mention: Mention; reason: string }> = []
   const keptBases = new Set<string>()
@@ -268,21 +274,21 @@ function assembleCanonicalResult(
   const concepts: WikiPage[] = []
 
   for (const e of raw.entities ?? []) {
-    const result = validateAndBuildPage(e, 'entity', sourceFilename, today, schemaOverride)
+    const result = validateAndBuildPage(e, 'entity', sourceFilename, today, schemaOverride, userAliases)
     if (!result.ok) continue
     entities.push(result.page)
     keptBases.add(normalizeBase(result.page.filename))
-    for (const alias of e.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias)))
+    for (const alias of e.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias), userAliases))
   }
 
   for (const c of raw.concepts ?? []) {
-    const result = validateAndBuildPage(c, 'concept', sourceFilename, today, schemaOverride)
+    const result = validateAndBuildPage(c, 'concept', sourceFilename, today, schemaOverride, userAliases)
     if (!result.ok) continue
     // Cross-pool dedup: if entity with same base already kept, skip concept
     if (keptBases.has(normalizeBase(result.page.filename))) continue
     concepts.push(result.page)
     keptBases.add(normalizeBase(result.page.filename))
-    for (const alias of c.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias)))
+    for (const alias of c.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias), userAliases))
   }
 
   // Phase 5 §5.10.3 R2 (D-wide): applyForcedCategories 폐기. LLM 분류 그대로 통과.
@@ -296,7 +302,7 @@ function assembleCanonicalResult(
   for (const p of pinned.entities) pinnedBases.add(normalizeBase(p.filename))
   for (const p of pinned.concepts) pinnedBases.add(normalizeBase(p.filename))
   for (const m of mentions) {
-    const base = canonicalizeSlug(normalizeBase(m.name))
+    const base = canonicalizeSlug(normalizeBase(m.name), userAliases)
     if (pinnedBases.has(base)) continue
     const reason = computeDropReason(m)
     dropped.push({ mention: m, reason })
@@ -341,12 +347,14 @@ function validateAndBuildPage(
   sourceFilename: string,
   today: string,
   _schemaOverride?: SchemaOverride,
+  userAliases?: Readonly<Record<string, string>>,
 ): PageBuildOk | PageBuildFail {
   const name = (raw.name ?? '').trim()
   if (!name) return { ok: false, reason: 'empty name' }
 
   // alias normalization (variant spellings collapse to canonical slug, deterministic)
-  const base = canonicalizeSlug(normalizeBase(name))
+  // §5.10.4 P2-2: user-defined aliases (.wikey/schema.yaml `aliases:`) take precedence.
+  const base = canonicalizeSlug(normalizeBase(name), userAliases)
 
   const type = (raw.type ?? '').trim()
   if (!type) return { ok: false, reason: 'empty type' }
@@ -458,10 +466,16 @@ function applyCrossLinks(
     const isEntity = page.category === 'entities'
     const type = isEntity ? page.entityType : page.conceptType
     if (!type) return page
+    // §5.10.4 P2-1 fix: rebuild 시 frontmatter 의 title + aliases 보존 (d8e37dd 의
+    // display_name 원문 보존이 cross-link 단계에서 영문 slug 으로 회귀하지 않도록).
+    const preservedTitle = extractFrontmatterScalar(page.content, 'title')
+    const preservedAliases = extractFrontmatterList(page.content, 'aliases')
     return {
       ...page,
       content: buildPageContent({
         name: ownBase,
+        title: preservedTitle,
+        aliases: preservedAliases,
         type: type as string,
         description: extractDescription(page.content) || '(설명 없음)',
         category: isEntity ? 'entity' : 'concept',
@@ -475,6 +489,24 @@ function applyCrossLinks(
     entities: entities.map((p) => rebuild(p, conceptBases)),
     concepts: concepts.map((p) => rebuild(p, entityBases)),
   }
+}
+
+/** Extract a scalar frontmatter field. Naive single-line parser (no anchors / multiline). */
+function extractFrontmatterScalar(content: string, key: string): string | undefined {
+  const re = new RegExp(`^${key}:[ \\t]+(.+)$`, 'm')
+  const m = content.match(re)
+  return m ? m[1].trim().replace(/^["']|["']$/g, '') : undefined
+}
+
+/** Extract a flow-style list field: `aliases: ["a", "b"]` or `aliases: [a, b]`. */
+function extractFrontmatterList(content: string, key: string): readonly string[] {
+  const re = new RegExp(`^${key}:[ \\t]+\\[(.*)\\]$`, 'm')
+  const m = content.match(re)
+  if (!m) return []
+  return m[1]
+    .split(',')
+    .map((s) => s.trim().replace(/^["']|["']$/g, ''))
+    .filter(Boolean)
 }
 
 function computeDropReason(mention: Mention): string {

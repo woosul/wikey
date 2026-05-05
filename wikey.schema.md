@@ -180,15 +180,24 @@ raw 소스 **1개**는 wiki 페이지 **여러 개**(통상 5~15개)로 분해�
 
 > 상세: [`docs/ingest-decomposition.md`](docs/ingest-decomposition.md) — 예시, 흐름도, 운영 원칙
 
-## 표준 분해 (외부 정형 표준 ingest 보조)
+## 분해 정책 (D-wide LLM-only ontology, §5.10.4)
 
-PMBOK / ISO 27001 / ITIL 같이 component 가 정형화된 외부 표준 자료를 ingest 할 때, 표준의 그룹 (umbrella) + 하위 (components) 관계를 `.wikey/schema.yaml` 에 등재해 분해 정확도를 보조한다.
+PMBOK / ISO 27001 / ITIL 같이 component 가 정형화된 외부 표준 자료의 분해는 **LLM 자율 처리**. canonicalizer 는 schema gate 없이 LLM 의 type 분류 + canonical slug normalization (alias dedup) 만 수행. 사용자가 schema 명시 등록할 layer 0.
 
-자동 후보 detection (mention graph / in-source self-declaration / cross-source embedding convergence) 으로 후보를 모으고, 사용자가 사이드바 **Suggestions 패널** 에서 Accept 시 schema.yaml 에 영구 등재된다. 후보 수집은 자동, 영구 등재는 수동 (chain break — 잘못된 표준이 자동 등재되어 분해를 오염시키는 것을 방지).
+> **2026-05-05 §5.10 paradigm shift 옵션 D-wide 채택 배경** (사용자 본질 비판 6 chain):
+> 1. "표준 분해 그룹 = 지식 그룹? 표준 분해 그룹 ⊂ 지식 그룹." → 표준 분해는 일반 지식의 부분집합, 별 layer 정당화 약함
+> 2. "굳이 어려운 말 써가면서 지식을 분류할 필요 없잖아. LLM 이라는 든든한 백 위에서 움직이는 건데."
+> → 결론: §5.4 Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion-detector / self-declaration / convergence) 모두 폐기. Suggestions panel UI 폐기 (sidebar 6→5 패널). schema.yaml 의 보존 영역은 **`aliases` (canonical slug normalization) + `pii_patterns` (custom PII regex)** 만.
+>
+> 이전 정책 (Phase 5 §5.4 self-extending) 의 history reference: `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 + `activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md`.
 
-> 진행 상태 / Stage 별 구현 / paradigm shift 검토는 schema 가 다루지 않음. 진입점:
-> - `plan/phase-5-todo.md` §5.4 / §5.10 (todo + paradigm shift 옵션)
-> - `activity/phase-5-result.md` §5.4 / §5.10 (구현 timeline + issue 등록 trace)
+`.wikey/schema.yaml` 보존 sections:
+- `aliases:` — canonical slug variant mapping (다국어 / 동명이인 / 약어). `canonicalizer.canonicalizeSlug` 가 이를 SLUG_ALIASES 와 merge 하여 dedup.
+- `pii_patterns:` — custom PII regex. `pii-patterns.ts` 가 별 file (`.wikey/pii-patterns.yaml`) 에서 load.
+
+> 진행 상태 / 구현 commit / paradigm shift 검토는 schema 가 다루지 않음. 진입점:
+> - `plan/phase-5-todo.md` §5.10 (D-wide regroup Phase 1~4)
+> - `activity/phase-5-result.md` §5.10 + `activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md` (D-wide cycle evidence)
 
 ## 시스템 워크플로우 (전체 흐름)
 

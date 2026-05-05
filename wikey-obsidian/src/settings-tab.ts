@@ -4,7 +4,7 @@ import {
   INGEST_PROMPT_PATH, STAGE1_SUMMARY_PROMPT_PATH, STAGE2_MENTION_PROMPT_PATH, STAGE3_CANONICALIZE_PROMPT_PATH,
   BUNDLED_INGEST_PROMPT, BUNDLED_STAGE2_MENTION_PROMPT,
   loadEffectiveIngestPrompt, loadEffectiveStage2Prompt, loadEffectiveStage3Prompt,
-  loadSchemaOverride, fetchModelList, ANTHROPIC_PING_MODEL,
+  fetchModelList, ANTHROPIC_PING_MODEL,
   previewReset,
 } from 'wikey-core'
 import type { LLMProvider, ResetScope } from 'wikey-core'
@@ -555,31 +555,21 @@ export class WikeySettingTab extends PluginSettingTab {
           }
           if (!confirm(`Remove schema override? This deletes ${path}.`)) return
           await vault.adapter.remove(path)
-          new Notice('Schema override removed — back to built-in types only.')
+          new Notice('Schema override removed.')
           this.display()
         })
       })
 
-    // Async status update — reflect parsed override (type counts) so users see it took effect
+    // Async status update — schema.yaml 보존 영역 (aliases / pii_patterns) 존재 여부.
+    // §5.10.4 D-wide: entity_types / concept_types / standard_decompositions 모두 폐기.
     void (async () => {
       const exists = await vault.adapter.exists(path)
       if (!exists) {
-        statusSpan.setText('Add domain-specific entity/concept types on top of the built-in 4+3. Status: Built-in only (no override).')
+        statusSpan.setText('Customize aliases (canonical slug folds) and pii_patterns. Status: no override file.')
         if (removeButton) (removeButton as HTMLButtonElement).disabled = true
         return
       }
-      try {
-        const parsed = await loadSchemaOverride(this.plugin.wikiFS)
-        if (!parsed) {
-          statusSpan.setText(`Add domain-specific entity/concept types on top of the built-in 4+3. Status: File exists at ${path} but parses to no valid types.`)
-        } else {
-          statusSpan.setText(
-            `Add domain-specific entity/concept types on top of the built-in 4+3. Status: +${parsed.entityTypes.length} entity, +${parsed.conceptTypes.length} concept from ${path}.`,
-          )
-        }
-      } catch (err) {
-        statusSpan.setText(`Add domain-specific entity/concept types on top of the built-in 4+3. Status: parse error — ${(err as Error).message}`)
-      }
+      statusSpan.setText(`Customize aliases (canonical slug folds) and pii_patterns. Status: override file exists at ${path}.`)
       if (removeButton) (removeButton as HTMLButtonElement).disabled = false
     })()
   }

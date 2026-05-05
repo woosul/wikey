@@ -22,12 +22,10 @@ export type {
   SchemaOverride,
 } from './types.js'
 
-// Phase 5 §5.10.3 R1 (D-wide): ENTITY_TYPES / CONCEPT_TYPES / getEntityTypes /
-// getConceptTypes / buildSchemaPromptBlock 폐기 (LLM 자율 type 분류).
-export {
-  parseSchemaOverrideYaml,
-  loadSchemaOverride,
-} from './schema.js'
+// Phase 5 §5.10.3 R1 + §5.10.4 (D-wide): ENTITY_TYPES / CONCEPT_TYPES / getEntityTypes /
+// getConceptTypes / buildSchemaPromptBlock / parseSchemaOverrideYaml 모두 폐기.
+// loadSchemaOverride 는 stub 으로 보존 (항상 null 반환, P2-2 aliases parser 후속 entry).
+export { loadSchemaOverride } from './schema.js'
 
 export { parseWikeyConf, loadConfig, resolveProvider } from './config.js'
 export { stripEmbeddedImages, countEmbeddedImages } from './rag-preprocess.js'

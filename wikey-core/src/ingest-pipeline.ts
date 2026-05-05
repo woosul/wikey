@@ -47,15 +47,8 @@ import {
   type ConflictInfo,
 } from './incremental-reingest.js'
 import { canonicalize } from './canonicalizer.js'
-import { loadSchemaOverride } from './schema.js'
-import { extractSelfDeclaration, mergeRuntimeIntoOverride } from './self-declaration.js'
-import type { SelfDeclaration } from './types.js'
-import {
-  runSuggestionDetection,
-  appendIngestHistory as appendIngestHistoryRecord,
-} from './suggestion-pipeline.js'
-import { addSuggestion, emptyStore } from './suggestion-storage.js'
-import type { CanonicalizedResult, IngestRecord, SuggestionStore } from './types.js'
+import { loadUserAliases } from './schema.js'
+import type { CanonicalizedResult, IngestRecord } from './types.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
 } from './example-placeholders.js'
@@ -513,27 +506,13 @@ export async function ingest(
     .map((f) => f.replace(/\.md$/i, ''))
   log(`existing wiki — entities=${existingEntityBases.length}, concepts=${existingConceptBases.length}`)
 
-  // v7-5: load .wikey/schema.yaml extension (if any) — feeds into canonicalizer
-  const schemaOverride = await loadSchemaOverride(wikiFS).catch(() => null) ?? undefined
-  if (schemaOverride) {
-    log(`schema override — entities=${schemaOverride.entityTypes.length}, concepts=${schemaOverride.conceptTypes.length}`)
-  }
-
-  // §5.4.3 Stage 3: collect runtime self-declarations from 'standard-overview' sections.
-  // Each section that classifies as a standard overview (Korean/English keywords) and contains
-  // a numbered/bullet list of ≥ 5 components yields a runtime SelfDeclaration. Merged on top of
-  // schemaOverride before canonicalize so the prompt sees BUILTIN + user yaml + runtime entries.
-  const runtimeSelfDeclarations: SelfDeclaration[] = []
-  for (const section of sectionIndex.sections) {
-    if (section.headingPattern !== 'standard-overview') continue
-    const sd = extractSelfDeclaration(section, llmSourceFilename, {})
-    if (sd) runtimeSelfDeclarations.push(sd)
-  }
-  const effectiveOverride = runtimeSelfDeclarations.length > 0
-    ? (mergeRuntimeIntoOverride(schemaOverride, runtimeSelfDeclarations) ?? schemaOverride)
-    : schemaOverride
-  if (runtimeSelfDeclarations.length > 0) {
-    log(`stage3 self-declarations — ${runtimeSelfDeclarations.length} runtime entries`)
+  // §5.10.4 D-wide: schema overrides + Stage 3 self-declarations 폐기. canonicalizer 가
+  // schemaOverride 없이 LLM 자율 type 분류 수행.
+  // §5.10.4 P2-2: .wikey/schema.yaml 의 `aliases:` block 만 read 하여 canonicalize 에 전달
+  // (canonical slug normalization layer 의 사용자 정의 확장).
+  const userAliases = await loadUserAliases(wikiFS).catch(() => ({} as Record<string, string>))
+  if (Object.keys(userAliases).length > 0) {
+    log(`user aliases loaded — ${Object.keys(userAliases).length} variant→canonical mappings`)
   }
 
   const today = formatLocalDate(new Date())
@@ -559,7 +538,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride: effectiveOverride, deterministic, overridePrompt: stage3OverridePrompt,
+      schemaOverride: undefined, userAliases, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     canonResult = canon
@@ -619,7 +598,7 @@ export async function ingest(
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
-      schemaOverride: effectiveOverride, deterministic, overridePrompt: stage3OverridePrompt,
+      schemaOverride: undefined, userAliases, deterministic, overridePrompt: stage3OverridePrompt,
     })
     log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     if (canon.dropped.length > 0) {
@@ -841,15 +820,8 @@ export async function ingest(
   await appendLog(wikiFS, entry, writtenPages)
   log(`log.md prepended`)
 
-  // §5.4.2 AC8: run Stage 2 suggestion detection on accumulated mention history.
-  // Pipeline stays best-effort — any failure is logged and ingest proceeds.
-  if (canonResult) {
-    try {
-      await runSuggestionFinalize(wikiFS, sourcePath, canonResult, log)
-    } catch (err) {
-      log(`suggestion finalize failed: ${(err as Error).message}`)
-    }
-  }
+  // §5.10.4 D-wide: Stage 2 suggestion finalization 폐기. canonResult 는 wiki write 직후 종결,
+  // .wikey/suggestions.json / mention-history.json 자동 재생성 0.
 
   // Step 4: Reindex (Phase 4 D.0.f / v6 §4.4)
   //   - `reindexQuick` 동기 실행 (throw on failure)
@@ -2314,70 +2286,7 @@ async function runReindexAndWait(
   }
 }
 
-// §5.4.2 AC8 — Stage 2 suggestion detection finalize step.
-// Reads `.wikey/mention-history.json` + `.wikey/suggestions.json`, runs the
-// detector, persists both updated stores. Non-blocking: caller wraps in try/catch.
-const SUGGESTIONS_PATH = '.wikey/suggestions.json'
-const MENTION_HISTORY_PATH = '.wikey/mention-history.json'
-
-async function runSuggestionFinalize(
-  wikiFS: WikiFS,
-  sourcePath: string,
-  canon: CanonicalizedResult,
-  log: (msg: string, ...rest: unknown[]) => void,
-): Promise<void> {
-  const ingestedAt = new Date().toISOString()
-
-  const history = await loadMentionHistory(wikiFS)
-  const store = await loadSuggestionStore(wikiFS)
-
-  const result = runSuggestionDetection({
-    history,
-    sourcePath,
-    ingestedAt,
-    canon,
-    negativeCache: store.negativeCache,
-  })
-
-  let nextStore: SuggestionStore = store
-  for (const s of result.suggestions) nextStore = addSuggestion(nextStore, s)
-
-  await wikiFS.write(MENTION_HISTORY_PATH, JSON.stringify({
-    version: 1,
-    ingests: result.updatedHistory,
-  }, null, 2) + '\n')
-  await wikiFS.write(SUGGESTIONS_PATH, JSON.stringify(nextStore, null, 2) + '\n')
-
-  log(`suggestion finalize — history=${result.updatedHistory.length}, new suggestions=${result.suggestions.length}`)
-}
-
-async function loadMentionHistory(wikiFS: WikiFS): Promise<readonly IngestRecord[]> {
-  if (!(await wikiFS.exists(MENTION_HISTORY_PATH).catch(() => false))) return []
-  try {
-    const raw = await wikiFS.read(MENTION_HISTORY_PATH)
-    const parsed = JSON.parse(raw) as { ingests?: IngestRecord[] }
-    return Array.isArray(parsed.ingests) ? parsed.ingests : []
-  } catch {
-    return []
-  }
-}
-
-async function loadSuggestionStore(wikiFS: WikiFS): Promise<SuggestionStore> {
-  if (!(await wikiFS.exists(SUGGESTIONS_PATH).catch(() => false))) return emptyStore()
-  try {
-    const raw = await wikiFS.read(SUGGESTIONS_PATH)
-    const parsed = JSON.parse(raw) as Partial<SuggestionStore>
-    if (parsed.version !== 1) return emptyStore()
-    return {
-      version: 1,
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
-      negativeCache: Array.isArray(parsed.negativeCache) ? parsed.negativeCache : [],
-    }
-  } catch {
-    return emptyStore()
-  }
-}
-
-// suppress unused-import warning for a helper kept for callers that compose
-// runSuggestionDetection themselves (e.g. CLI scripts).
-void appendIngestHistoryRecord
+// §5.10.4 D-wide: Stage 2 suggestion finalization (runSuggestionFinalize +
+// loadMentionHistory + loadSuggestionStore + SUGGESTIONS_PATH + MENTION_HISTORY_PATH +
+// appendIngestHistoryRecord) 모두 폐기. .wikey/suggestions.json + mention-history.json
+// 자동 재생성 차단. self-extending 메커니즘 전체 제거.

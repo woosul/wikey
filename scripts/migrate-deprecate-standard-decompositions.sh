@@ -50,27 +50,74 @@ echo "Root: $ROOT"
 echo "Wikey dir: $WIKEY_DIR"
 echo
 
-# ── Step 1 — schema.yaml split ─────────────────────────────────────────
+# ── Step 1 — schema.yaml split (deprecated sections → manual-overrides.yaml) ──
 SCHEMA_YAML="$WIKEY_DIR/schema.yaml"
+MANUAL_OVERRIDES="$WIKEY_DIR/manual-overrides.yaml"
 if [[ -f "$SCHEMA_YAML" ]]; then
   echo "[1] schema.yaml: $SCHEMA_YAML"
   echo "    → backup: $BACKUP_DIR/schema.yaml.original"
-  echo "    → split: $WIKEY_DIR/manual-overrides.yaml (deprecated sections)"
-  echo "    → rewrite: aliases / pii_patterns 만 보존"
+  echo "    → split deprecated sections (standard_decompositions / entity_types / concept_types / custom_types)"
+  echo "      → $MANUAL_OVERRIDES (보존, 사용자 수동 정정 reference)"
+  echo "    → rewrite: aliases / pii_patterns 만 잔존"
   if [[ "$MODE" == "--apply" ]]; then
     mkdir -p "$BACKUP_DIR"
     cp "$SCHEMA_YAML" "$BACKUP_DIR/schema.yaml.original"
-    # 백업으로만 두고 사용자가 manual-overrides.yaml 로 옮기도록 안내
-    # (자동 split 은 YAML parser 의존 — bash 만으로 안전 split 어려움)
-    cat > "$WIKEY_DIR/manual-overrides.yaml" <<'EOF_NOTICE'
+    # P2-3 fix: existing manual-overrides.yaml 보호 — overwrite 전 backup
+    if [[ -f "$MANUAL_OVERRIDES" ]]; then
+      cp "$MANUAL_OVERRIDES" "$BACKUP_DIR/manual-overrides.yaml.original"
+      echo "      (existing manual-overrides.yaml backed up)"
+    fi
+    # awk 로 deprecated sections (top-level keys + 그 indented children) 만 추출.
+    # YAML 의 단순 indent 기반 — anchors / multiline scalars 미지원 (wikey schema 규칙 일치).
+    awk '
+      BEGIN { skip = 0; section = "" }
+      /^standard_decompositions[ \t]*:/ || /^entity_types[ \t]*:/ || /^concept_types[ \t]*:/ || /^custom_types[ \t]*:/ {
+        skip = 1; section = $0; print "# --- section: " section " ---"; print; next
+      }
+      /^[a-zA-Z_]/ { skip = 0 }
+      skip == 1 { print }
+    ' "$SCHEMA_YAML" > "$MANUAL_OVERRIDES.tmp"
+    if [[ -s "$MANUAL_OVERRIDES.tmp" ]]; then
+      cat > "$MANUAL_OVERRIDES" <<'EOF_HEADER'
 # §5.10.4 M migration — D-wide 채택 (2026-05-05)
-# 본 file 은 schema.yaml 의 deprecated sections 백업.
+#
+# 본 file 은 schema.yaml 에서 분리된 deprecated sections.
 # standard_decompositions / entity_types / concept_types / custom_types 모두 D-wide 폐기.
-# 사용자 hardcoded 정의가 있으면 manual-overrides.yaml 로 옮긴 뒤
-# 본 script 의 schema.yaml 갱신을 수동 검토 후 apply 하세요.
-EOF_NOTICE
-    echo "    ⚠ schema.yaml 자동 rewrite 는 안전하지 않아 skip — backup 만 수행."
-    echo "      $BACKUP_DIR/schema.yaml.original 참조 후 사용자 수동 정정 필요."
+# canonicalizer 가 더 이상 본 정의를 읽지 않습니다.
+#
+# 사용자가 wiki page 의 alias / type 통제를 원하면 .wikey/schema.yaml 의
+# `aliases:` 섹션을 사용하세요 (canonical slug normalization).
+
+EOF_HEADER
+      cat "$MANUAL_OVERRIDES.tmp" >> "$MANUAL_OVERRIDES"
+      echo "      ✓ deprecated sections → $MANUAL_OVERRIDES"
+    fi
+    rm -f "$MANUAL_OVERRIDES.tmp"
+    # schema.yaml rewrite — deprecated sections 제거, aliases / pii_patterns 만 잔존.
+    awk '
+      BEGIN { skip = 0 }
+      /^standard_decompositions[ \t]*:/ || /^entity_types[ \t]*:/ || /^concept_types[ \t]*:/ || /^custom_types[ \t]*:/ {
+        skip = 1; next
+      }
+      /^[a-zA-Z_]/ { skip = 0 }
+      skip == 0 { print }
+    ' "$BACKUP_DIR/schema.yaml.original" > "$SCHEMA_YAML"
+    # 결과가 빈 file 이면 D-wide 보존 영역 placeholder 만 남김.
+    if [[ ! -s "$SCHEMA_YAML" ]]; then
+      cat > "$SCHEMA_YAML" <<'EOF_PLACEHOLDER'
+# wikey schema override — .wikey/schema.yaml (D-wide, §5.10.4)
+#
+# 보존 sections: aliases (canonical slug normalization), pii_patterns (custom PII regex).
+# 폐기: standard_decompositions / entity_types / concept_types / custom_types.
+
+# 예시:
+# aliases:
+#   iso-27001:
+#     - ISO 27001
+#     - ISO/IEC 27001
+EOF_PLACEHOLDER
+    fi
+    echo "      ✓ schema.yaml 정정 (aliases / pii_patterns 만 잔존)"
   fi
 else
   echo "[1] schema.yaml: 없음 → skip"
