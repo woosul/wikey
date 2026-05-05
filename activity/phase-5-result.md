@@ -2180,3 +2180,36 @@ LLM call 시간:
 - **Surgical Changes**: canonicalizer.ts + ingest-pipeline.ts 만 수정. 다른 file 영향 0. test 추가 1 describe (4 cases).
 - **Goal-Driven**: 매 AC 정량 gate (단일 substring count + reason exact phrase). 라이브 smoke 도 정량 (dropped log 확인).
 - **Think Before Coding**: 보조 plan v1 self-check 7-anchor 통과 후 implementation 진입.
+
+## 5.11 Page Promotion Threshold v2 — Session 19 (2026-05-05) ✅ Live Smoke Done
+
+> mirror: [`plan/phase-5-todox-5.11-page-promotion-threshold.md`](../plan/phase-5-todox-5.11-page-promotion-threshold.md) v2.5 · 상세: [`activity/phase-5-resultx-5.11-v2-2026-05-05.md`](./phase-5-resultx-5.11-v2-2026-05-05.md)
+
+세션 19 에서 §5.11 v1 (occurrence ≥ 2 gate) 의 한계를 사용자 6 chain raise 로 확장: 의미·관련도 기반 promotion + 원문 언어 중심 alias + wiki/raw/cache 완전 초기화 + log.md 의미 재정의 + overview.md 폐기. SDD+TDD Phase 0~9, codex 5 cycle (4 plan + 1 post-impl) 누적 검증, 17 finding 처리 (12 fix + 5 dispute, sourceBody 인자 추가 거부 — Karpathy Simplicity 정합).
+
+### 5.11 v2 핵심 변경
+- canonicalizer rule 8 v2 (의미·관련도 promotion + 단순 출처/장소/단편 사실 ❌ + 1~3개 OK)
+- canonicalizer rule 9 신규 (원문 언어 중심 + 반대 언어 alias)
+- canonicalizer countOccurrences 하이픈/공백 normalize (한국어 base 본문 매치)
+- ingest-pipeline B1 — BUNDLED_STAGE2_MENTION_PROMPT "0~15개" cap 제거 + ❌ list (단순 출처/단순 장소/단편 사실)
+- ingest-pipeline B6 — FULL route dropped sample log helper (SEGMENTED mirror)
+- wikey.schema.md — overview.md 폐기 + log.md 의미 재정의 (지식/문서 log only)
+- 환경 완전 초기화: raw 분류 파일 0_inbox 원복 + sidecar 3 삭제 + wiki content 58 삭제 + skeleton frontmatter 보존 + .wikey/source-registry/mention-history `{}` + qmd cache reset
+
+### 5.11 v2 회귀 + 라이브 smoke
+- 회귀: 613 PASS / 3 skipped / 0 errors / build OK (608 → 613)
+- 라이브 smoke (한국어 source PMBOK FULL route gemini-2.5-flash):
+  - 14 mentions → 12 promoted / 4 dropped (의미·관련도 작동, LLM 자율 reject)
+  - B6 FULL route dropped sample log 출력 ✓
+  - rule 9 한국어 alias 보존 ✓ (frontmatter `aliases: ["pmi", "프로젝트관리협회", ...]`)
+  - rule 9 한국어 base partial: LLM 의 영문 약어 prior 강함, 사용자 옵션 1 수용 (alias 한국어 보존으로 충분)
+- audit panel "Ingested 4" stale → cache reset + plugin reload 후 "Ingested 1" 정상화
+
+### 5.11 v2 후속 (별 issue)
+- §5.12 (가칭) — `wiki/concepts/*.md` 의 `## 출처` wikilink `[[<base>.md]]` 형식 vs validate-wiki.sh resolution mismatch (canonicalizer.ts:489). pre-existing latent bug, §5.11 v2 regression 아님. wiki/ 가 .gitignore → commit 영향 없음. 사용자 결정 후 진행.
+
+### 5.11 v2 Karpathy 4원칙 정합
+- Think Before Coding: 사용자 6 chain + 5 codex cycle 누적 검증
+- Simplicity First: 코드 추가 ~30 LOC, 새 file 0, sourceBody 인자 추가 두 번 거부
+- Surgical Changes: prompt + helper + 주석만 수정, P1-#ω pre-existing 별 issue 분리
+- Goal-Driven: 14 AC + 5 case 정량 + 라이브 smoke evidence + codex 5 cycle

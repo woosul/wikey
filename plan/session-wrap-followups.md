@@ -1,11 +1,34 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-05 session 18 — 본체 implementation 잔재 모두 처리 완료**. (1) §5.4 dead code 완전 제거 (b1fac99, -5715/+35) + (2) modal dismiss 버그 fix (4ead74d) + (3) ingest 시간 instrumentation (d1fd772) + (4) §5.10.2 broken-link wiki body fix (validate-wiki 58→0, .gitignore 라 commit X) + (5) Issue B Page Promotion Threshold 구현 (608 PASS, +4 신규). 다음 = §5.5~§5.9 확장 평가 또는 사용자 신규 issue.
+> 최신 갱신: **2026-05-05 session 19 — §5.11 v2 의미·관련도 promotion threshold + 원문 언어 alias + wiki 완전 초기화 완료**. plan v1 → v2.5 (5 codex cycle 누적 검증, 17 finding 처리: 12 fix + 5 dispute). 환경 완전 초기화 (raw 원복 + sidecar 삭제 + wiki content 58 삭제 + skeleton frontmatter 보존 + .wikey/qmd cache reset) + canonicalizer rule 8 v2 + rule 9 + countOccurrences 하이픈/공백 normalize + ingest-pipeline B1 cap 제거 + B6 FULL route dropped sample helper + overview.md 폐기. 단위 613 PASS / 0 errors / build OK. 라이브 smoke 1 source (한국어 PMBOK FULL route) — 14 mentions → 12 promoted / 4 dropped, B6 log 출력, alias 한국어 보존 ✓. 다음 = §5.12 (pre-existing latent bug) 또는 사용자 신규 issue.
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-05-05 session 17 §5.10.4 종결 직후)
+## 🎯 다음 세션 첫 액션 (2026-05-05 session 19 §5.11 v2 종결 직후)
+
+> **세션 19 종결**: §5.11 v2 (Page Promotion Threshold + 원문 언어 alias + wiki 완전 초기화) — 5 codex cycle (4 plan + 1 post-impl) 누적 검증 후 APPROVE_WITH_NOTES.
+>
+> **§5.11 v2 commit chain (4 commit 예정)**:
+> 1. `chore(reset): wiki 완전 초기화 + raw/sidecar/cache reset (local vault state, .gitignore wiki/raw)`
+> 2. `feat(§5.11 v2): canonicalizer rule 8 v2 + rule 9 + countOccurrences normalize + B1/B6 prompt 강화`
+> 3. `refactor(overview.md 폐기): sidebar-chat / status-bar 주석 + wikey.schema.md 갱신`
+> 4. `docs(sync): §5.11 v2 result + todox v2.5 + session-wrap-followups`
+>
+> **codex cycle severity 추세**:
+> - cycle #1 (v2.1): 6 finding (3 P1 + 2 P2 + 1 P3) — Phase 1 안전 가드 + AC test 시그니처 본질
+> - cycle #2 (v2.2): 3 finding (2 P1 + 1 P3) — narrow
+> - cycle #3 (v2.3): 5 finding (2 P1 + 2 P2 + 1 P3) — codex 자체가 dispute reasonable 인정
+> - cycle #4 (v2.4): 1 finding (P1 narrow) — A0 backup path mismatch
+> - post-impl (v2.5): 2 finding (1 P1 pre-existing + 1 P2 false positive) — APPROVE_WITH_NOTES
+> - 누적: 17 finding 중 12 fix + 5 dispute (sourceBody 인자 추가 거부 — Karpathy Simplicity 정합)
+>
+> **사용자 옵션 1 결정** (한국어 source base name): 영어 base + 한국어 alias frontmatter 수용 (PMI/PMBOK 같은 글로벌 표준 영문 약어는 영어 base 가 자연스러움). rule 9 alias 보존으로 충분.
+>
+> **§5.12 (가칭) — 차기 issue, 사용자 결정 후 진행**:
+> - canonicalizer.ts:489 의 `## 출처` 섹션 wikilink `[[<base>.md]]` 형식이 validate-wiki.sh 와 mismatch. pre-existing latent bug (§5.11 v2 regression 아님). wiki/ 가 .gitignore 라 commit 영향 없음. 사용자 결정 (즉시 fix vs deferred): TBD.
+
+## 🎯 이전 첫 액션 (2026-05-05 session 17 §5.10.4 종결 직후)
 
 > **세션 17 종결**: §5.10.4 D-wide Phase 4 implementation + 8 codex review cycle 누적 후 APPROVE.
 >
