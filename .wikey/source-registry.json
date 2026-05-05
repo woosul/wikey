@@ -59,5 +59,26 @@
     "tombstone": false,
     "last_action": "force",
     "sidecar_hash": "c87723fc268793201e9c30e08e9cebed2375b85504088944f496feb6e8186667"
+  },
+  "sha256:3238149072ecd4c3": {
+    "vault_path": "raw/3_resources/60_note/200_social/pmbok-overview.md",
+    "hash": "3238149072ecd4c30216322e45a7be750bc1006fc9d3ed1a5601022e7c24d824",
+    "size": 2889,
+    "first_seen": "2026-05-05T05:05:06.011Z",
+    "ingested_pages": [
+      "wiki/sources/source-pmbok-overview.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/pmbok-overview.md",
+        "at": "2026-05-05T05:05:06.011Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/200_social/pmbok-overview.md",
+        "at": "2026-05-05T05:05:20.734Z"
+      }
+    ],
+    "tombstone": true,
+    "last_action": "force"
   }
 }
