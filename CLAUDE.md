@@ -98,6 +98,27 @@ git diff --name-only HEAD~5 -- wiki/
 
 5개 세션 유형 (인제스트·쿼리·린트·소스 삭제·분류) + 대용량 소스 2단계 처리 절차는 **[`rules/session-checklists.md`](./rules/session-checklists.md)** 에 정리. 각 유형의 순차 단계·scripts 호출 순서를 필요 시 참조.
 
+## SDD+TDD 흐름 — Phase 3a/3b 분리 의무 (2026-05-06 영구 등록)
+
+모든 비-사소 SDD+TDD cycle 의 **Phase 3 는 두 단계로 분리**:
+
+- **Phase 3a — 회귀 검증**: `npm test` + `npm run build` + `./scripts/validate-wiki.sh`. 결과 PASS 확증.
+- **Phase 3b — BLUE refactor (명시)**: 코드 quality 개선
+  - 함수 분해 (50+ LOC 함수 — extract 후보 결정)
+  - Naming consistency (변수 / 함수 의미 mapping)
+  - 중복 패턴 제거 (DRY, extract or 의도적 유지 + 근거)
+  - 주석 quality (TODO/FIXME 0 / historical context 압축 / deprecation marker cleanup)
+  - 가독성 (nested arrow / magic number)
+  - 회귀 검증 반복 (각 refactor 후 PASS)
+
+**배경**: wikey §5.11 v2 + §5.12 (2026-05-05 session 19) 진행 시 Phase 3 가 회귀 검증으로만 그치고 BLUE refactor 가 사실상 누락됨 (사용자 raise 2026-05-06). retrospective 보강을 §5.14 로 정식 등록 + 향후 모든 cycle 에 본 정책 의무 적용.
+
+**예외**: 사소한 작업 (오타 1-line / config 1줄 / dependency bump) 은 master 판단으로 BLUE 생략 가능.
+
+**Global 정책 단일 소스**: `claude-forge-custom/rules/testing.md` (모든 프로젝트 적용). 본 wikey CLAUDE.md 는 project-specific mirror.
+
+**위반 시정**: 사용자 지적 시 즉시 retrospective BLUE cycle 진행. codex post-impl 검토에서 BLUE 누락이 finding 으로 raise 될 수 있음.
+
 ## 설정 체계
 
 단일 소스 원칙: `wikey.conf`(공유 설정) + `credentials.json`(API 키) + `data.json`(플러그인 상태).

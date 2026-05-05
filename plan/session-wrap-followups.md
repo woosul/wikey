@@ -29,23 +29,30 @@
 >
 > **§5.12 본질**: §5.3 follow-up #11 의 raw sidecar `<base>.<ext>.md` 매칭 자체가 validate-wiki.sh resolver 와 mismatch — 폐기. wiki/sources/source-<base>.md 단일 진실 소스로 전환. canonicalizer 5 함수 sourcePageBase chain + ingest-pipeline 양 route derive (FULL line 540 + SEGMENTED line 612). validate-wiki.sh 12 broken → 0.
 >
-> **다음 세션 첫 액션 (P0 최우선)** = **§5.14 Phase 5 retrospective TDD-BLUE refactor** (사용자 결정 2026-05-06).
+> **다음 세션 첫 액션 (P0 최우선)** = **§5.14 Phase 5 retrospective TDD-BLUE refactor (Tier 2 권고)** (사용자 결정 2026-05-06).
 >
-> **§5.14 신규 등록** (2026-05-06): `plan/phase-5-todox-5.14-retrospective-blue-refactor.md` v0 / P0.
-> - **본질**: §5.11 v2 + §5.12 SDD+TDD 진행 시 RED + GREEN 명시 진행했으나 **BLUE (Refactor) 누락** (Phase 3 가 회귀 검증으로만 그침). retrospective 으로 BLUE 단계 별도 cycle 보강.
-> - **1차 scope (narrow start)**: canonicalizer.ts (§5.11 v2 + §5.12 변경) + ingest-pipeline.ts + canonicalizer.test.ts
-> - **검토 차원** (master 사전 진단):
->   - 함수 분해 (assembleCanonicalResult ~100 LOC, applyCrossLinks.rebuild, buildPageContent, FULL+SEGMENTED route stage 2)
->   - Naming (sourceFilename / sourcePageBase / sourceBase / sourceDisplay / llmSourceFilename 의미 mapping)
->   - 중복 패턴 (FULL + SEGMENTED route 의 거의 동일한 후반부 — `runCanonicalizeAndMerge` extract 후보)
->   - 주석 quality (historical context 압축, TODO/FIXME)
->   - Test fixture / 명명 (§5.12 정합)
-> - **AC**: 회귀 0 (615 PASS / 3 skipped 유지) + build 0 + validate-wiki.sh PASS + 코드 quality metric (LOC / 함수 길이 / naming grep)
-> - **2차 scope (옵션, §5.14 1차 완료 후)**: §5.1 ~ §5.10 retrospective sampling
+> **§5.14 v1 갱신** (2026-05-06, 사용자 raise "전체 코드 refactoring 필요할 수도" → master 사전 진단 후 scope 4 tier 확장).
 >
-> **§5.13 (A1+B2+C4)** 는 §5.14 완료 후 착수 (P0 → P1).
+> **master 코드 health 진단 (2026-05-06)**:
+> - 거대 파일: `ingest-pipeline.ts` 2319 LOC / `sidebar-chat.ts` 2300 / `settings-tab.ts` 1175 / `main.ts` 782 / `commands.ts` 676 / `query-pipeline.ts` 661 / `ingest-modals.ts` 655 / `classify.ts` 647 / `canonicalizer.ts` 626 / `wiki-ops.ts` 529 / `pii-redact.ts` 517
+> - TODO/FIXME: 0 ✓ / console.*: 51 / § historical 주석: ingest-pipeline 67 + canonicalizer 37 + sidebar-chat 13 / deprecation marker: **179건**
+> - 결론: narrow scope (§5.11 v2 + §5.12) 만으로는 underscope. Tier 2 시작 권고.
 >
-> **TDD-BLUE 누락 보완 정책** (2026-05-06 사용자 raise): 향후 모든 SDD+TDD cycle 의 Phase 3 를 분리 — Phase 3a (회귀 검증 = npm test + build) + **Phase 3b (BLUE refactor 명시: 함수 분해 / naming / dedup / 주석 / 가독성)**. §5.14 부터 적용 (본 §5.14 자체가 retrospective BLUE 의 시범). CLAUDE.md / claude-forge-custom rules 영구 등록은 §5.14 결과 검토 후 사용자 별 결정.
+> **§5.14 scope 4 tier**:
+> - Tier 1 (narrow): §5.11 v2 + §5.12 변경 영역만 (~150 LOC, 1 cycle)
+> - **Tier 2 (★ 추천 시작)**: Phase 5 핵심 5 파일 — canonicalizer / ingest-pipeline / wiki-ops / pii-redact / query-pipeline (~4600 LOC, 3~5 cycle)
+> - Tier 3: + wikey-obsidian UI (sidebar-chat / settings-tab / main / commands / ingest-modals, ~5588 추가)
+> - Tier 4: 전체 codebase sampling (~13000 LOC)
+>
+> **Tier 2 sub-cycle 분리 권고**: §5.14.A canonicalizer / §5.14.B ingest-pipeline / §5.14.C wiki-ops / §5.14.D pii-redact / §5.14.E query-pipeline. 각 독립 RED→GREEN→BLUE→post-impl→commit.
+>
+> **§5.13 (A1+B2+C4)** 는 본 §5.14 완료 후 착수 (P0 → P1).
+>
+> **TDD-BLUE Phase 3a/3b 분리 정책 영구 등록** (2026-05-06 사용자 결정):
+> - `claude-forge-custom/rules/testing.md` (global, 모든 프로젝트 master 적용) — 갱신 완료
+> - `wikey/CLAUDE.md` (project-specific mirror) — 갱신 완료
+> - 모든 비-사소 SDD+TDD cycle 의 Phase 3 = Phase 3a (회귀 검증) + Phase 3b (BLUE refactor 명시) 분리 의무.
+> - 사소한 작업 (오타 / 1-line) 은 master 판단으로 생략 가능.
 
 ## 🎯 이전 첫 액션 (2026-05-05 session 17 §5.10.4 종결 직후)
 
