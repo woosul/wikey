@@ -1,33 +1,42 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-04~05 session 16 — §5.10.1 + §5.10.2 + §5.10.3 GREEN + 라이브 smoke 부분 수행 (md 1 fixture)**. 회귀 732 → **673 PASS + 88 skipped + 0 fail** + build 0 errors. 6 commit 진행. **사용자 지적**: AC-C1.6 spec ("PDF + HWP + DOCX 각 1") 위반 — md 만 진행. vault 재정비 (raw/3_resources → 0_inbox 일괄 원복, wiki/registry 재초기화) 완료. **다음 액션 = (1) 다중 파일 유형 라이브 smoke (PDF + HWP + HWPX) → (2) §5.10.4 Phase 4**.
+> 최신 갱신: **2026-05-05 session 16 (확장) — §5.10.3.10 Modal UX 옵션 C + 영어 일관 + 다중 fixture 라이브 smoke GREEN**. 다중 파일 유형 (PDF + HWP + HWPX) AC-C1.6 충족. commit `08d443d` (8 files, +441/−63). **다음 액션 = §5.10.4 Phase 4** (잔여 6 issues + R/M/L/F).
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-05-05 session 16 종료 시점)
+## 🎯 다음 세션 첫 액션 (2026-05-05 session 16 확장 종료 시점)
 
-> **세션 16 종결 (정정)**: §5.10.1 + §5.10.2 + §5.10.3 unit/integration GREEN + **라이브 smoke 부분 수행** (md 1 fixture 만, AC-C1.6 spec 위반 인정). vault 재정비 완료 (raw/0_inbox 21 files / wiki 0 / registry={}). 결과 요약보고서 = `activity/phase-5-resultx-5.10-session16-summary-2026-05-05.md`.
+> **세션 16 확장 종결**: §5.10.3.10 Modal UX 옵션 C + α 진행. 사용자 본질 비판 9 항목 + 추가 spec 4 (영어 / stepper 4단계 / Processing file label / spinner 중앙) + 다중 fixture 라이브 smoke 3/3 GREEN.
 >
-> **D-wide 라이브 부분 확증** (md fixture): LLM 자유 type 8 종 (`component`, `product-line`, `software`, `calibration-method`, `concept`, `metric`, `standard-term`, `visualization-method`) 출현. 단 PDF/HWP/HWPX 변환 분기 라이브 검증은 다음 세션 의무.
+> **§5.10.3.10 결과** (commit `08d443d`):
+> - **모달 spec 보강**: stepper 4 단계 (Converting/Brief/Processing/Preview) + applyModalSize init height/maxHeight + body/modal min-height 제거 + button-row sticky bottom + spinner-center wrap + Processing file label sidecar.md only
+> - **모달 영어 일관**: ingest-modals + conflict-modal + commands 모두 영어 (한국어 잔재 0)
+> - **DESIGN.md 모달 컴포넌트 표준** 신규 섹션 (10 항목)
+> - **라이브 smoke 3/3 GREEN** (AC-C1.6 + AC-C1.7 + AC-C1.2 + AC-C1.3):
+>   - PDF (PMS_제품소개_R10) 47KB → docling tier 1+1a, raw/3_resources/ movePair, 37 wiki pages
+>   - HWP (스마트공장 보급확산) 748 chars → unhwp (binary 미전송 ✓), 6 wiki pages
+>   - HWPX (Examples) 544 chars → Docling 일반 분기, 4 wiki pages
+> - **시간 분석**: PDF 6분 vs HWP/HWPX 1분 = mention extraction chunk sequential 원인. § 5.10.4 등록.
 >
-> **다음 세션 master 첫 명령**:
+> **다음 세션 master 첫 명령 — §5.10.4 Phase 4 진입**:
 >
-> **1. 다중 파일 유형 라이브 smoke (master 직접 obsidian-cdp 스킬 §3 재시동)** — Phase 1 AC-C1.6 spec 충족:
->    - obsidian-cdp 환경 재기동: `pkill -x Obsidian; sleep 3; /Applications/Obsidian.app/Contents/MacOS/Obsidian --remote-debugging-port=9222 --remote-allow-origins='*' > /tmp/obsidian-cdp.log 2>&1 & disown; sleep 5; curl -sf --max-time 3 http://localhost:9222/json/version`. plugin reload.
->    - **PDF fixture**: `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` (vector PDF, docling tier 1). AC-C1.2 brief 정상 + AC-C1.7 sidecar raw 보존 (결함 b fix 라이브 확증) + ingest cycle 완료 + sidecar canonical write.
->    - **HWP fixture**: `raw/0_inbox/스마트공장 보급확산 합동설명회 개최.hwp` (행사 안내, PII risk 낮음). AC-C1.2 brief 정상 (binary 미전송, unhwp 변환 후 markdown LLM 호출) + ingest cycle. PII 차단 시 brief 단계 까지만 진행해도 OK (binary 미전송 핵심 검증 충족).
->    - **HWPX fixture**: `raw/0_inbox/Examples.hwpx` (DOCX 부재 대체, Docling 일반 분기 DOCLING_DOC_FORMATS). AC-C1.2 brief + ingest cycle.
->    - 결과 evidence → `activity/phase-5-result.md §5.10.3.9` 보강.
->
-> **2. §5.10.4 Phase 4** (다중 fixture smoke GREEN 후) (D-wide Part 2 + Final, R4/R5/R8.2-3 + M migration + L 종합 + F 3 cycle 통합 codex review):
+> **§5.10.4 Phase 4** (D-wide Part 2 + Final, ~3시간 estimate):
 >    - R4 settings-tab.ts schema sample 정정 (entity_types/concept_types 예시 제거)
 >    - R5 docs/wikey-ingest-pipeline.md 5 line spot 정정
 >    - R8.2 잔여 ~22 cases 폐기 (suggestion-detector / convergence / self-declaration §5.4 Stage 2~4)
 >    - R8.3 §5.2 / §5.3 회귀 0 확증
->    - M migration script (`scripts/migrate-deprecate-standard-decompositions.sh`) + UI 폐기 (sidebar 6 패널 → 5 패널, Suggestions panel 폐기) + store cleanup (.wikey/suggestions.json / converged-decompositions.json 삭제)
->    - L 라이브 cycle smoke (vector PDF sidecar raw 보존 AC-C1.7 — md fixture 만 검증된 §5.10.3.9 보강. PMS PDF 같은 vector PDF + HWP/DOCX 추가 fixture)
+>    - M migration script (`scripts/migrate-deprecate-standard-decompositions.sh`) + UI 폐기 (sidebar 6 패널 → 5 패널, Suggestions panel 폐기) + store cleanup
+>    - L 라이브 cycle smoke (다중 fixture 추가 ingest 또는 query smoke)
 >    - F 3 cycle 통합 codex Mode D Panel post-impl review APPROVE → §5.10 전체 종결 mark
+>
+> **§5.10.3.10 잔여 6 issues** (§5.10.4 통합 처리):
+> 1. protocol handler `obsidian://wikey?ingest=` autoMove 누락 (HWP/HWPX 가 raw/0_inbox/ 잔존). fix: commands.ts protocol handler 에 autoMoveFromInbox 인자 추가.
+> 2. mention extraction 병렬화 (PDF 6분 → 1~2분 단축, gemini-2.5-flash 1M context 활용)
+> 3. picker fuzzy 한국어 path 매치 약함 (vault.getFiles() 결과 정상 44 raw file 인데 한국어 'raw/0_inbox/스마트공장' search 매치 0)
+> 4. AC-C1.4 보강 의심 — 1차 cycle Cancel 후 sidecar (raw/0_inbox/<file>.<ext>.md) 잔존 발견. sidecar write 시점 검토 필요 (Approve 전 write 발생 시 spec 위반)
+> 5. Preview 큰 plan list (PDF 37+) modal 자체 변동 — maxHeight init 보강 후 PDF 재 cycle 검증 필요
+> 6. reset-modals.ts 영어화 (본 cycle 무관)
 >
 > **4 Phase 그룹 매트릭스** (`plan/phase-5-todo.md §5.10` main intro):
 >
