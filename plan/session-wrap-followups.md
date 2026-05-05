@@ -43,7 +43,11 @@
 > **§5.10.4 외 잔재** (codex cycle #7 P2 — scope 외):
 > - wiki/overview.md / index.md / log.md frontmatter 누락 + broken source links (e.g. `[[pmbok-overview.md]]` vs `wiki/sources/source-pmbok-overview.md`) — Phase 5 §5.10.2 broken-link-prevention 잔여 후속.
 >
-> **다음 세션 master 첫 명령 — 최우선 2 항목** (사용자 명시 2026-05-05 session 17 종결 직후):
+> **다음 세션 master 첫 명령 — 본체 implementation 잔재 모두 처리** (사용자 명시 2026-05-05 session 17):
+>
+> "5.4 잔여부분과 Issue B를 다음 세션 최우선으로 해줘" + "5.10.2도 포함해서 기존 구현단계에서 미처리된것을을 모아서 다음 세션에서 처리하자. 나머지는 다 확장버전들이잖아?"
+>
+> **본체 (§5.1~§5.4 + §5.10) implementation 잔재 vs 확장 (§5.5~§5.9) 분리** — 다음 세션은 본체 잔재 모두 처리. §5.5~§5.9 (graph 시각화 / 성능·엔진 / 운영 인프라 포팅 / Phase 4 D.0.l / variance diagnostic) 는 확장으로 후순위.
 >
 > ### 1순위 — §5.4 잔여 dead code 완전 제거 (D-wide cleanup phase 2)
 >
@@ -85,13 +89,39 @@
 >
 > **estimate**: ~3-4 시간 (1 spec + 2 코드 + 1 test + 1 라이브 smoke). 별 plan/phase-5-todox-5.x-page-promotion-threshold.md 작성 후 진입.
 >
-> ### 3순위 (보류) — Phase 5 §5.10.2 broken-link 잔재
+> ### 3순위 — §5.10.2 broken-link 잔재 (사용자 명시 본체 잔재 포함)
 >
-> wiki/overview.md / index.md / log.md frontmatter 누락 + broken source links (e.g. `[[pmbok-overview.md]]` vs `wiki/sources/source-pmbok-overview.md`) — codex cycle #7 P2 finding (validate-wiki.sh 57 errors). §5.10.4 scope 외. 1+2 우선순위 종결 후 검토.
+> **codex cycle #7 P2 finding**: `wiki/overview.md` / `wiki/index.md` / `wiki/log.md` frontmatter 누락 + broken source links (e.g. `[[pmbok-overview.md]]` vs 실제 `wiki/sources/source-pmbok-overview.md`) — `./scripts/validate-wiki.sh` 57 errors. 본 잔재는 §5.10.2 broken-link-prevention 의 implementation 단계에서 wiki 본체 정합 fix 가 누락된 것. §5.10.4 scope 외였지만 본체 잔재이므로 다음 세션 처리.
 >
-> ### 4순위 (보류) — Phase 5 잔여 평가 (§5.6 / §5.7 / §5.8 / §5.9)
+> **Scope**:
+> - root pages (overview.md / index.md / log.md) frontmatter 추가
+> - source link 정정: `[[<basename>]]` → `[[wiki/sources/source-<basename>|<basename>]]` 형식 일관 (canonicalizer 가 §5.3 follow-up #11 commit `f108e0c` 에서 이미 entity/concept 페이지 정정했지만 wiki 본체 자체는 안 됨)
+> - validate-wiki.sh 57 errors → 0 (또는 명시 false-positive 만 잔존)
+> - 라이브 smoke 1 cycle (validate-wiki + ingest 1 fixture + query 1) 회귀 0 확증
 >
-> Issue B + §5.4 cleanup + broken-link 종결 후 Phase 5 본체 잔여 subject 우선순위 재평가.
+> **관련 commit / spec**:
+> - §5.3 follow-up #11 (commit `f108e0c`) — entity/concept '## 출처' wikilink 표준화 (canonicalizer.ts buildPageContent)
+> - §5.10.2 (commit `0f241a5`) — broken-link Prevention + Intercept (query-pipeline + sidebar-chat handleWikilinkClick)
+> - 본 잔재는 위 두 fix 의 *과거 ingest 산출 페이지* 에 retroactive 적용 안 된 것
+>
+> **estimate**: 1.5-2 시간 (root frontmatter 추가 + source link 일괄 정정 script + validate-wiki 0 errors 확증).
+>
+> ### 4순위 — Phase 5 본체 §5.2.6 / §5.4.7 잔재 검토
+>
+> 다른 본체 미처리 항목들 (`plan/phase-5-todo.md` grep 78 unchecked):
+> - **§5.2.6 H2 섹션 의미 활용** (line 162-167) — wikey 페이지의 표준 H2 (`## 출처` / `## 관련` / `## 분류`) 가 검색·답변에 의미적으로 활용되는지 탐구. 1 unchecked.
+> - **§5.4.10 미처리 후속** (self-extending 의 진짜 의미 — 자동 ontology 확장) — D-wide 채택으로 archived. 본 §5.4 cleanup 1순위 와 함께 archive note 추가.
+> - **§5.4.7 v2 deferral** — 다음 세션 첫 액션 표시. D-wide 채택으로 archived (Stage 4 실 qmd embeddings 통합 등은 Stage 4 자체 폐기로 무관).
+> - 위 모두 §5.4 cleanup 1순위 의 archive 단계에서 함께 정리 권장.
+>
+> ### 5순위 (확장 — 후순위) — §5.5~§5.9 평가
+>
+> 사용자 명시 분류: "나머지는 다 확장버전". 본체 4 항목 (§5.4 cleanup + Issue B + §5.10.2 잔재 + 본체 §5.2.6/§5.4.10) 종결 후 평가.
+> - §5.5 graph 시각화 (NetworkX + AST)
+> - §5.6 성능·엔진 확장 (llama.cpp / rapidocr Linux)
+> - §5.7 운영 인프라 포팅 (bash→TS)
+> - §5.8 Phase 4 D.0.l 잔여 (dedup / classify variance / reindex exit=1)
+> - §5.9 Variance 기여도·diagnostic
 
 ### 1순위 — Stage 4 실 qmd embeddings 통합 ✅ 종결 (2026-04-26 session 14)
 
