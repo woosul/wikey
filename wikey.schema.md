@@ -134,7 +134,7 @@ wikey/
 ├── wiki/                # LLM이 생성·유지하는 위키
 │   ├── index.md         # 콘텐츠 인덱스 (카테고리별)
 │   ├── log.md           # 시간순 활동 로그
-│   ├── overview.md      # 위키 전체 개요/종합 분석
+│   ├── (overview.md 폐기 §5.11 v2 — index.md 로 통합)
 │   ├── entities/        # 엔티티 페이지 (인물, 조직, 도구 등)
 │   ├── concepts/        # 개념 페이지 (이론, 방법론 등)
 │   ├── sources/         # 소스별 요약 페이지
@@ -280,7 +280,7 @@ LLM: 소스 읽기
   │
   ├─► wiki/log.md 에 항목 추가 (날짜, 타입, 영향 페이지, 토큰)
   │
-  ├─► wiki/overview.md 갱신 (필요시)
+  ├─► (overview.md 폐기 §5.11 v2 — index.md 로 통합)
   │
   ├─► validate-wiki.sh 실행
   │     ├─ 통과 → Git 커밋
@@ -289,7 +289,7 @@ LLM: 소스 읽기
   └─► Obsidian이 실시간으로 변경 반영 (사용자가 브라우징)
 ```
 
-**하나의 인제스트가 건드리는 파일**: 10–15개 (소스 요약 1 + 엔티티/개념 N + index + log + overview)
+**하나의 인제스트가 건드리는 파일**: 페이지 의도·관련도에 비례 (§5.11 v2 — 단순 출처/장소/단편 사실은 mention 제외, 1~3개만 생성되어도 OK). 소스 요약 1 + 엔티티/개념 N (의미 비례) + index + log.
 
 ### 워크플로우 2: 쿼리 (질문 → 답변 → 선택적 저장)
 
@@ -517,7 +517,7 @@ ls wiki/sources/
 3. `wiki/index.md` 업데이트
 4. 관련 엔티티/개념 페이지 업데이트 또는 생성
 5. `wiki/log.md`에 항목 추가 (토큰 사용량 포함)
-6. 필요시 `wiki/overview.md` 업데이트
+6. (overview.md 폐기 §5.11 v2 — index.md 로 통합)
 7. `validate-wiki.sh` 실행 → 통과 시 Git 커밋
 
 **대용량 소스 — 2단계 인제스트** (20페이지+ PDF, 2시간+ 회의록):
@@ -620,21 +620,19 @@ tags: [태그1, 태그2]
 - [[analysis-name]] — 한 줄 설명 (날짜)
 ```
 
-### log.md 형식
+### log.md 형식 (§5.11 v2 의미 재정의)
+
+**작업 log 가 아니라 문서/지식 log only** (사용자 영구 결정 2026-05-05). lint / query 같은 "작업 행위" 는 log 대상 X. ingest 시 어떤 source 로부터 어떤 페이지(지식) 가 생성·업데이트됐는지만 기록 (지식의 생성·진화 추적).
 
 ```markdown
 ## [2026-04-10] ingest | 소스 제목
 - 요약 페이지 생성: [[source-name]]
-- 업데이트: [[entity-a]], [[concept-b]]
-- 신규 페이지: [[entity-c]]
-
-## [2026-04-10] query | 질문 요약
-- 답변 저장: [[analysis-name]]
-
-## [2026-04-10] lint | 정기 점검
-- 모순 발견: [[page-a]] vs [[page-b]]
-- 고아 페이지: [[orphan-page]]
+- 신규 엔티티: [[entity-a]], [[entity-b]]
+- 신규 개념: [[concept-a]]
+- 업데이트: [[entity-c]] (소스 추가)
 ```
+
+`query` (답변만 conversational, wiki 변경 X) / `lint` (검사 행위) 는 log.md 에 기록하지 않음. lint 결과로 wiki 페이지가 변경되면 그 변경 자체를 ingest 항목과 동일 형식으로 기록.
 
 ## 도구
 
