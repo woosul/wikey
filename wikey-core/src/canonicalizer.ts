@@ -12,18 +12,20 @@ import {
 } from './example-placeholders.js'
 
 /**
- * Phase C v6: Stage 2 Canonicalizer.
+ * Phase C v6 + §5.10.4 D-wide: Stage 3 (formerly Stage 2) Canonicalizer.
  *
  * Single document-global LLM call that:
- *   1. Takes all mentions from chunk LLMs (Stage 1) + existing wiki page list
- *   2. Maps each mention to canonical entity/concept under schema constraints
+ *   1. Takes all mentions from chunk LLMs (Stage 2) + existing wiki page list
+ *   2. Maps each mention to canonical entity/concept under LLM 자율 type 분류
+ *      (D-wide: 7-type schema gate / standard_decompositions / anti-pattern 검증 모두 폐기)
  *   3. Resolves abbreviation↔fullname pairs and existing-page reuse
- *   4. Drops mentions that violate schema or anti-patterns
+ *   4. Drops only on empty name or empty type (LLM 자체가 거부 가이드 적용)
  *
- * Key invariants:
+ * Key invariants (D-wide 갱신):
  *   - Output filenames are normalized base names (no path, no .md → wiki-ops adds .md)
- *   - Each kept page has an explicit entityType or conceptType
- *   - Schema validation + anti-pattern check both apply (defense in depth)
+ *   - Each kept page has an explicit entityType or conceptType (free string, LLM 자율)
+ *   - Minimal alias normalization (SLUG_ALIASES + .wikey/schema.yaml `aliases:` parser
+ *     via loadUserAliases) for canonical slug dedup. type 분류 강제 검증 0.
  */
 
 const MAX_JSON_RETRIES = 2

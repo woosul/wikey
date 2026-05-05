@@ -115,8 +115,11 @@ EOF_HEADER
       cat > "$SCHEMA_YAML" <<'EOF_PLACEHOLDER'
 # wikey schema override — .wikey/schema.yaml (D-wide, §5.10.4)
 #
-# 보존 sections: aliases (canonical slug normalization), pii_patterns (custom PII regex).
-# 폐기: standard_decompositions / entity_types / concept_types / custom_types.
+# 보존 section: aliases (canonical slug normalization) 단독.
+# 폐기: standard_decompositions / entity_types / concept_types / custom_types / pii_patterns.
+#
+# PII custom rule 은 별 file: .wikey/pii-patterns.yaml (또는 ~/.config/wikey/pii-patterns.yaml)
+# shape "patterns: - id/kind/mask". 자세한 shape: wikey-core/src/pii-patterns.ts.
 
 # 예시:
 # aliases:

@@ -39,7 +39,7 @@ raw 파일 1 개가 wiki 페이지 N 개로 분해되기까지의 8 단계.
 | ~~**8**~~ | ~~Self-extending~~ | **D-wide 폐기 (2026-05-05)** — Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion / convergence / self-declaration) 모두 제거. LLM 자연 의미 매칭 + qmd embedding cluster 가 대체. | — | — | — | — | — |
 | **Q** | 쿼리 (별도 트리거) | 사용자 질문 | 자연어 | LLM 2~3콜 (cross-lingual 확장 + 합성) | 영문 키워드 추출 (Ollama 우선), 답변 합성 | answer + citations + 1-hop wikilink expansion | LLM 양끝 참여 (RAG ≠ wikey) |
 
-각 step 의 상세는 §2 부터 다룬다. **LLM 콜 횟수 합계**: 1 raw → brief 1 + summary 1 + mention N (route=FULL 이면 N=1) + canonical 1 + (선택) classify 1 + (선택) Stage 4 arbitration N. 평균 4~5 콜.
+각 step 의 상세는 §2 부터 다룬다. **LLM 콜 횟수 합계**: 1 raw → brief 1 + summary 1 + mention N (route=FULL 이면 N=1) + canonical 1 + (선택) classify 1. 평균 4~5 콜. (Step 8 Stage 4 arbitration 은 §5.10.4 D-wide 폐기.)
 
 ---
 
@@ -398,14 +398,14 @@ mention extraction 단계에서 LLM 자체가 거부 가이드 (UI 라벨, 기�
 
 > wikey.schema.md "상호 참조" §: "관련 항목 섹션으로 페이지 하단에 정리". §5.2.1 (관련 H2 sandwich).
 
-### 7.7 분류·생성·수정 기준
+### 7.7 분류·생성·수정 기준 (D-wide 갱신)
 
 | 행위 | 기준 |
 |------|------|
-| **새 페이지 생성** | mention → canonical slug 가 기존 wiki page 목록에 없음 + schema 통과 |
+| **새 페이지 생성** | mention → canonical slug 가 기존 wiki page 목록에 없음. LLM 자율 type 분류 통과 (D-wide 후 schema gate 폐기) |
 | **기존 페이지 재사용** | LLM prompt 의 "기존 wiki 페이지" 목록과 base 매칭 → filename 그대로 재사용 |
 | **수정 (overwrite)** | 같은 slug 가 다시 mention 됨 → `createPage` 멱등 write (frontmatter 의 sources 배열 누적은 wiki-ops 의 `## 출처` block 갱신으로) |
-| **drop** | schema 위반, anti-pattern, 빈 description, invalid type |
+| **drop** | empty name 또는 empty type (D-wide 후 schema-gate / anti-pattern / type union 검증 모두 폐기 — LLM 자체 거부 + canonicalizer minimal validation 만) |
 
 ### 7.8 schema.yaml — D-wide 갱신 (§5.4 4 Stage 폐기)
 
