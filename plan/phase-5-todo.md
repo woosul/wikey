@@ -1416,3 +1416,16 @@
 **전체 cycle 종료 condition** (2026-05-04 작성, regroup 후 §5.10.4.6 F.2 로 흡수):
 - 4 Phase (§5.10.1~§5.10.4) 모두 GREEN 후 codex Mode D Panel post-impl review 1 회 통합. APPROVE 시 §5.10 전체 종결 mark + Phase 5 종결 검토 (§5.6/§5.7/§5.8/§5.9 잔여 평가).
 
+## 5.11 Page Promotion Threshold (Issue B) — 2026-05-05 session 18 ✅ Unit GREEN
+
+> **상위 plan**: [`plan/phase-5-todox-5.11-page-promotion-threshold.md`](./phase-5-todox-5.11-page-promotion-threshold.md)
+> **이슈 출처**: 사용자 raise 2026-05-05 session 17 — 단순 출처 / 1회 mention 만 있는 고유명사 (예: '전라남도 테크노파크') 도 자체 wiki 페이지 생성되는 noise 문제.
+
+- [x] 보조 plan v1 작성 (`plan/phase-5-todox-5.11-page-promotion-threshold.md`)
+- [x] **Layer 1 (LLM 자율, prompt-level)**: `canonicalizer.ts::buildCanonicalizerPrompt` 작업 규칙 8 추가 — promotion threshold guidance (≥ 2회 의미 등장 또는 hub 역할 시만 promote, 단순 출처 제외).
+- [x] **Layer 2 (deterministic, code gate)**: `canonicalizer.ts::assembleCanonicalResult` 의 `countOccurrences()` + `PROMOTION_THRESHOLD = 2` substring count gate. `CanonicalizeArgs.sourceBody?: string` 추가 (optional, backward compatible). `dropped[].reason` 에 `single-mention (N occurrence) — not promoted to page` 명시.
+- [x] **ingest-pipeline 통합**: FULL route + SEGMENTED route 양쪽 `canonicalize({ ..., sourceBody })` 전달.
+- [x] **test ≥ 4 신규**: AC1 (sourceBody 미전달 backward) / AC2 (single-mention dropped) / AC3 (multi-occurrence promoted) / AC4 (alias 합산 promoted). 결과: **608 PASS** (이전 604 + 4 신규).
+- [ ] 라이브 cycle smoke (사용자 vault, 다음 ingest cycle): 신규 ingest 시 `console` 에 `[Wikey ingest] dropped sample: X (single-mention 1 occurrence)` 로그 확인 + 단순 출처 page 신규 생성 0.
+- [ ] 기존 vault 의 single-mention page (jeonnam-technopark 등) cleanup = 별 cycle (re-ingest 시 자동 정리되거나 사용자 명시 삭제).
+

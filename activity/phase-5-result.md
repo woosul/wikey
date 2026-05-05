@@ -1509,6 +1509,17 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 - 회귀 baseline 최종: 760 PASS + build 0 errors.
 - 라이브 smoke = 사용자 환경 의존 → 다음 세션 (또는 §5.10.4.5 L 단계의 5 항목 smoke 와 통합).
 
+#### 5.10.2.5 잔여 vault body broken-link cleanup (Session 18, 2026-05-05) — Closed
+
+- **상황**: §5.10.2 Phase 2 의 unit/integration GREEN 완료 후에도 *과거 ingest 산출물* 의 wiki 본체 broken link 잔재 (validate-wiki.sh 58 errors). codex cycle #7 P2 finding 으로 식별된 후속.
+- **scope**: 4 종 broken link basename → 실 source page basename 일괄 mapping + root pages frontmatter 추가.
+  - `[[PMS_제품소개_R10_20220815.pdf.md]]` → `[[pms-product-introduction-r10-20220815|LOTUS PMS 제품소개서]]`
+  - `[[pmbok-overview.md]]` → `[[source-pmbok-overview|PMBOK 7판 개요]]`
+  - `[[Examples.hwpx.md]]` → `[[source-examples|골목 이미지 수집 및 분류 기준]]`
+  - `[[스마트공장 보급확산 합동설명회 개최.hwp.md]]` → `[[source-smart-factory-briefing|스마트공장 보급확산 합동설명회]]`
+  - `wiki/overview.md` / `wiki/index.md` / `wiki/log.md` frontmatter 추가 (title/type/created/updated)
+- **결과**: `bash scripts/validate-wiki.sh` 58 errors → **0 PASS**. wiki/ 는 `.gitignore` 라 commit 대상 아님 — vault 직접 fix.
+
 ### 5.10.3 Phase 3 결과 (Session 16, 2026-05-04~05) — D-wide Part 1 (코드 폐기 — schema/canonicalizer/types layer) ✅ GREEN
 
 > **mirror**: `plan/phase-5-todo.md §5.10.3`. R0/R1/R2/R3 + R6/R7 (영향 X 검증) + R8.1 (폐기 test 식별).
@@ -2125,3 +2136,47 @@ LLM call 시간:
 - `plan/phase-5-todo.md §5.10` 전체 재구성: §5.10.1~§5.10.4 (implementation phases) + §5.10.5 (history). 기존 §5.10.10/11/12 (구 implementation) 제거 (내용은 phases 로 흡수).
 - `activity/phase-5-result.md §5.10` mirror: §5.10.1~§5.10.4 (Phase 결과 placeholder, TBD) + §5.10.5 (기존 §5.10.1~13 history 모두 흡수, §5.10.5.1~§5.10.5.14)
 - `plan/session-wrap-followups.md` + `plan/plan-full.md:170, :321, :5` + `MEMORY.md:15` + `project_phase5_status.md:267~296` mirror 갱신.
+
+## 5.11 Page Promotion Threshold (Issue B) — Session 18 (2026-05-05) ✅ Unit GREEN
+
+> mirror: [`plan/phase-5-todo.md §5.11`](../plan/phase-5-todo.md#511-page-promotion-threshold-issue-b--2026-05-05-session-18--unit-green) · 보조 plan: [`plan/phase-5-todox-5.11-page-promotion-threshold.md`](../plan/phase-5-todox-5.11-page-promotion-threshold.md)
+
+### 5.11.1 배경
+
+사용자 보고 (D-wide cycle 종결 직후): 단순 출처 / 단순 행사 장소 / 1회 mention 고유명사 ('전라남도 테크노파크' 등) 가 자체 wiki 페이지로 생성되어 wiki/ 의 noise 증가.
+
+### 5.11.2 채택 path: 2-Layer promotion gate
+
+1. **Layer 1 (LLM 자율, prompt-level)** — `canonicalizer.ts::buildCanonicalizerPrompt` 작업 규칙 8 추가:
+   > "promotion threshold (§5.11): 본문 전체에서 의미 있는 등장 (action / property / relation 서술) 이 2회 이상이거나 다른 mention 이 cross-reference 하는 hub 역할일 때만 entity/concept 으로 출력. 단순 출처 (예: '개최 장소: X', '출처: Y'), 단순 인용, 1회 mention 만 있는 고유명사는 entities/concepts 에서 **제외**. 본문 의미에 비례한 promotion 만 — wiki noise 방지."
+
+2. **Layer 2 (deterministic, code gate)** — `canonicalizer.ts::assembleCanonicalResult` 의 substring count gate (`PROMOTION_THRESHOLD = 2`).
+   - `CanonicalizeArgs.sourceBody?: string` optional 추가 — backward compatible (미전달 시 gate skip).
+   - `countOccurrences(name, aliases, sourceBody)` — name + alias 의 case-insensitive substring 등장 합산. length ≤ 1 candidate 제외 (false positive 방지).
+   - LLM 출력 entity/concept 의 occurrence < 2 → drop + `dropped[].reason = "single-mention (N occurrence) — not promoted to page"`.
+   - `promotionDrops` Map 으로 정확한 reason 보존 (computeDropReason fallback 의 generic "rejected by canonicalizer LLM" 메시지 우선시).
+
+3. **ingest-pipeline 통합** — FULL route 의 `content` (`isLocal ? truncateSource(sourceContent) : sourceContent`) 와 SEGMENTED route 의 `sourceContent` 양쪽 `canonicalize({ ..., sourceBody })` 전달.
+
+### 5.11.3 Test 결과
+
+신규 4 cases (canonicalizer.test.ts §5.11 promotion threshold):
+- AC1 backward: sourceBody 미전달 → gate 미적용 (모든 entity 통과) ✅
+- AC2: single-mention entity with sourceBody → dropped (`reason` contains "single-mention") ✅
+- AC3: multi-occurrence entity with sourceBody → promoted ✅
+- AC4: alias 합산 occurrence (alias 가 본문에 ≥ 2 회) → promoted ✅
+
+회귀: **604 PASS → 608 PASS** (이전 604 + 4 신규). build 0 errors.
+
+### 5.11.4 후속
+
+- 라이브 cycle smoke (사용자 vault) 시 console 의 `[Wikey ingest] dropped sample: X (single-mention 1 occurrence)` 확인. 단순 출처 page 신규 생성 0 검증.
+- 기존 vault 의 single-mention page (jeonnam-technopark 등) cleanup = 별 cycle. re-ingest 시 자동 정리되지 않음 (canonicalizer 가 같은 sourceBody 입력으로 동일 drop 결정 → 새 page 생성 0, 기존 page 는 보존). 사용자 명시 삭제 필요 시 별 task.
+- promotion threshold 값 (2) 은 hardcode. 향후 `wikey.conf` 에 `pagePromotionThreshold: 2` 노출 검토 (별 cycle).
+
+### 5.11.5 Karpathy 4원칙 cross-check
+
+- **Simplicity First**: Layer 1 (prompt 1 line) + Layer 2 (`countOccurrences` 14 line + assemble 분기 12 line ×2 + args type 7 line). 새 file 0.
+- **Surgical Changes**: canonicalizer.ts + ingest-pipeline.ts 만 수정. 다른 file 영향 0. test 추가 1 describe (4 cases).
+- **Goal-Driven**: 매 AC 정량 gate (단일 substring count + reason exact phrase). 라이브 smoke 도 정량 (dropped log 확인).
+- **Think Before Coding**: 보조 plan v1 self-check 7-anchor 통과 후 implementation 진입.

@@ -540,6 +540,8 @@ export async function ingest(
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
       userAliases, deterministic, overridePrompt: stage3OverridePrompt,
+      // §5.11 promotion threshold: deterministic Layer 2 gate (substring count ≥ 2 in body).
+      sourceBody: content,
     })
     log(`stage 2.3 canonicalize done in ${Date.now() - tCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
 
@@ -602,6 +604,9 @@ export async function ingest(
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
       userAliases, deterministic, overridePrompt: stage3OverridePrompt,
+      // §5.11 promotion threshold: SEGMENTED route 의 sourceBody 는 전체 sourceContent
+      // (per-section 합산 대신 본문 전체 — substring count 의 ground truth).
+      sourceBody: sourceContent,
     })
     log(`stage 2.3 canonicalize done in ${Date.now() - tSegCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     if (canon.dropped.length > 0) {

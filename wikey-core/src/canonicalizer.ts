@@ -137,6 +137,13 @@ export interface CanonicalizeArgs {
    * `entities/concepts/index_additions/log_entry` top-level keys.
    */
   readonly overridePrompt?: string
+  /**
+   * §5.11 page promotion threshold: full source body for deterministic occurrence
+   * count gate. When provided, entity/concept whose name + alias substring count
+   * < PROMOTION_THRESHOLD in this body is dropped (single-mention noise filter).
+   * Optional — when absent, gate is skipped (backward compatible with existing tests).
+   */
+  readonly sourceBody?: string
 }
 
 interface RawCanonical {
@@ -149,7 +156,7 @@ interface RawCanonical {
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
           sourceFilename, today, guideHint, provider, model, userAliases,
-          deterministic, overridePrompt } = args
+          deterministic, overridePrompt, sourceBody } = args
 
   if (mentions.length === 0) {
     return { entities: [], concepts: [], dropped: [] }
@@ -161,7 +168,7 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
   })
 
   const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
-  return assembleCanonicalResult(raw, mentions, sourceFilename, today, userAliases)
+  return assembleCanonicalResult(raw, mentions, sourceFilename, today, userAliases, sourceBody)
 }
 
 // ── Prompt construction ──
@@ -228,6 +235,7 @@ ${guideBlock}
 5. **description**: 1~2문장, 의미 위주.
 6. **display_name (원문 표기)**: \`display_name\` 필드는 **mention evidence 의 원문에 등장한 표기 그대로** (한국어 / 일본어 / 중국어 / 영문 — 본문 언어 따라). 페이지 frontmatter \`title\` 과 H1 으로 사용됨. evidence 가 한국어면 한국어 표기, 영문이면 영문 표기. 빈 값이면 \`name\` (영문 slug) fallback.
 7. **다국어 alias**: \`aliases\` 배열에 **다른 언어 / 다른 표기** 명시. evidence 가 한국어면 영문 표기를 alias 로 (없으면 base name 자동 등록). 영문이면 한국어 표기 alias 로. 약어·풀네임 변형도 모두 alias.
+8. **promotion threshold (§5.11)**: 본문 전체에서 의미 있는 등장 (action / property / relation 서술) 이 **2회 이상**이거나 다른 mention 이 cross-reference 하는 hub 역할일 때만 entity/concept 으로 출력. 단순 출처 (예: "개최 장소: X", "출처: Y"), 단순 인용, 1회 mention 만 있는 고유명사는 entities/concepts 에서 **제외**. 본문 의미에 비례한 promotion 만 — wiki noise 방지.
 ${decompositionSection}
 ## 입력 mention (${mentions.length}개)
 
@@ -256,19 +264,60 @@ JSON only:
 
 // ── Response assembly ──
 
+/**
+ * §5.11 page promotion threshold — Layer 2 deterministic gate. mention name +
+ * alias 의 sourceBody substring 등장 횟수가 PROMOTION_THRESHOLD 미만이면 drop.
+ * length ≤ 1 candidate (예: "a" / "x" 같은 단일 문자) 는 false positive 방지로 제외.
+ * sourceBody 미전달 시 gate skip (backward compatible).
+ */
+const PROMOTION_THRESHOLD = 2
+
+function countOccurrences(name: string, aliases: readonly string[], sourceBody: string): number {
+  const candidates = [name, ...aliases].map((s) => s.trim()).filter((s) => s.length > 1)
+  const haystack = sourceBody.toLowerCase()
+  let total = 0
+  for (const c of candidates) {
+    const needle = c.toLowerCase()
+    if (!needle) continue
+    let idx = 0
+    while ((idx = haystack.indexOf(needle, idx)) !== -1) {
+      total++
+      idx += needle.length
+    }
+  }
+  return total
+}
+
 function assembleCanonicalResult(
   raw: RawCanonical,
   mentions: readonly Mention[],
   sourceFilename: string,
   today: string,
   userAliases?: Readonly<Record<string, string>>,
+  sourceBody?: string,
 ): CanonicalizedResult {
   const dropped: Array<{ mention: Mention; reason: string }> = []
   const keptBases = new Set<string>()
   const entities: WikiPage[] = []
   const concepts: WikiPage[] = []
+  // §5.11 promotion-threshold drops captured here so caller's diagnostic surface
+  // (`canon.dropped`) reports the exact reason. Without this, computeDropReason()
+  // (LLM-omitted fallback) would label single-mention drops as "not in LLM output".
+  const promotionDrops = new Map<string, string>()
 
   for (const e of raw.entities ?? []) {
+    if (sourceBody !== undefined) {
+      const occ = countOccurrences(e.name ?? '', e.aliases ?? [], sourceBody)
+      if (occ < PROMOTION_THRESHOLD) {
+        const reason = `single-mention (${occ} occurrence) — not promoted to page`
+        const base = canonicalizeSlug(normalizeBase(e.name ?? ''), userAliases)
+        promotionDrops.set(base, reason)
+        for (const alias of e.aliases ?? []) {
+          promotionDrops.set(canonicalizeSlug(normalizeBase(alias), userAliases), reason)
+        }
+        continue
+      }
+    }
     const result = validateAndBuildPage(e, 'entity', sourceFilename, today, userAliases)
     if (!result.ok) continue
     entities.push(result.page)
@@ -277,6 +326,18 @@ function assembleCanonicalResult(
   }
 
   for (const c of raw.concepts ?? []) {
+    if (sourceBody !== undefined) {
+      const occ = countOccurrences(c.name ?? '', c.aliases ?? [], sourceBody)
+      if (occ < PROMOTION_THRESHOLD) {
+        const reason = `single-mention (${occ} occurrence) — not promoted to page`
+        const base = canonicalizeSlug(normalizeBase(c.name ?? ''), userAliases)
+        promotionDrops.set(base, reason)
+        for (const alias of c.aliases ?? []) {
+          promotionDrops.set(canonicalizeSlug(normalizeBase(alias), userAliases), reason)
+        }
+        continue
+      }
+    }
     const result = validateAndBuildPage(c, 'concept', sourceFilename, today, userAliases)
     if (!result.ok) continue
     // Cross-pool dedup: if entity with same base already kept, skip concept
@@ -299,7 +360,8 @@ function assembleCanonicalResult(
   for (const m of mentions) {
     const base = canonicalizeSlug(normalizeBase(m.name), userAliases)
     if (pinnedBases.has(base)) continue
-    const reason = computeDropReason(m)
+    // §5.11: prefer the precise promotion-threshold reason over the generic fallback.
+    const reason = promotionDrops.get(base) ?? computeDropReason(m)
     dropped.push({ mention: m, reason })
   }
 

@@ -1,6 +1,6 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-05 session 17 — §5.10.4 D-wide Phase 4 종결 + 8 cycle codex review APPROVE + push (b9130f5)**. §5.10 paradigm shift D-wide implementation 완료. **다음 세션 최우선 (사용자 명시) = (1) §5.4 잔여 dead code 완전 제거 + (2) Issue B (페이지 생성 threshold) 정식 plan 등록 + 구현**.
+> 최신 갱신: **2026-05-05 session 18 — 본체 implementation 잔재 모두 처리 완료**. (1) §5.4 dead code 완전 제거 (b1fac99, -5715/+35) + (2) modal dismiss 버그 fix (4ead74d) + (3) ingest 시간 instrumentation (d1fd772) + (4) §5.10.2 broken-link wiki body fix (validate-wiki 58→0, .gitignore 라 commit X) + (5) Issue B Page Promotion Threshold 구현 (608 PASS, +4 신규). 다음 = §5.5~§5.9 확장 평가 또는 사용자 신규 issue.
 > 생성일: 2026-04-10
 
 ---

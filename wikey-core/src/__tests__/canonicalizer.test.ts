@@ -621,3 +621,79 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
   })
 })
 
+// §5.11 Page Promotion Threshold (Issue B) — Layer 2 deterministic gate
+describe('canonicalize — §5.11 promotion threshold', () => {
+  it('AC2: single-mention entity with sourceBody → dropped', async () => {
+    const mentions: Mention[] = [
+      { name: 'jeonnam-technopark', type_hint: 'organization', evidence: '개최 장소: 전라남도 테크노파크' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'jeonnam-technopark', display_name: '전라남도 테크노파크', type: 'organization',
+        description: '행사 개최 장소.', aliases: ['전라남도 테크노파크'],
+      }],
+      concepts: [],
+    }))
+    // 본문에 한국어 'jeonnam-technopark' 0회 + alias '전라남도 테크노파크' 1회 = 1 회 → drop
+    const sourceBody = '스마트공장 보급확산 합동설명회 개최. 일시: 11월 1일. 개최 장소: 전라남도 테크노파크 본관 1층 강당. 주관: 중소벤처기업부.'
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    expect(result.entities).toHaveLength(0)
+    expect(result.dropped).toHaveLength(1)
+    expect(result.dropped[0].reason).toContain('single-mention')
+  })
+
+  it('AC3: multi-occurrence entity with sourceBody → promoted', async () => {
+    const mentions: Mention[] = [
+      { name: 'lotus-pms', type_hint: 'product', evidence: 'PMS 제품 소개' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'lotus-pms', display_name: 'LOTUS PMS', type: 'product',
+        description: '프로젝트 관리 시스템.', aliases: ['PMS'],
+      }],
+      concepts: [],
+    }))
+    const sourceBody = 'LOTUS PMS 제품 소개. PMS 의 핵심 기능은 일정 관리. PMS 의 license 관리도 포함.'
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('lotus-pms.md')
+    expect(result.dropped).toHaveLength(0)
+  })
+
+  it('AC4: alias 합산 occurrence → promoted', async () => {
+    const mentions: Mention[] = [
+      { name: 'enterprise-resource-planning', type_hint: 'standard', evidence: 'ERP 시스템' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [],
+      concepts: [{
+        name: 'enterprise-resource-planning', display_name: 'ERP', type: 'standard',
+        description: 'Enterprise resource planning.', aliases: ['ERP'],
+      }],
+    }))
+    // 본문에 'enterprise-resource-planning' 0회 + 'ERP' 1회 = 1회 → dropped
+    // → alias 가 본문에 ≥ 2회 등장하면 promoted
+    const sourceBody = 'ERP 시스템 도입. ERP 의 도입 효과는 큼. enterprise-resource-planning 표준 채택.'
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    expect(result.concepts).toHaveLength(1)
+    expect(result.concepts[0].filename).toBe('enterprise-resource-planning.md')
+  })
+
+  it('AC1 backward: sourceBody 미전달 → gate 미적용 (모든 entity 통과)', async () => {
+    const mentions: Mention[] = [
+      { name: '단일-mention', type_hint: 'organization', evidence: '한 번만 언급된 조직' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'single-mention-org', type: 'organization',
+        description: 'Only mentioned once.',
+      }],
+      concepts: [],
+    }))
+    // sourceBody 미전달 → gate skip → entity 통과
+    const result = await canonicalize({ ...baseArgs, llm, mentions })
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('single-mention-org.md')
+  })
+})
+
