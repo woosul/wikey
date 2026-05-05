@@ -536,9 +536,12 @@ export async function ingest(
 
     onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
     const tCanon0 = Date.now()
+    // §5.12 — wiki/sources/<sourcePageBase>.md 단일 진실 소스 base 주입 (LLM emit drift 방어).
+    const sourcePageBase = normalizeBase(summaryParsed.source_page.filename)
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
-      sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
+      sourceFilename: llmSourceFilename, sourcePageBase, today,
+      guideHint: opts?.guideHint, provider, model,
       userAliases, deterministic, overridePrompt: stage3OverridePrompt,
       // §5.11 promotion threshold: deterministic Layer 2 gate (substring count ≥ 2 in body).
       sourceBody: content,
@@ -605,9 +608,12 @@ export async function ingest(
       message: `Canonicalizing (${model}) [SEGMENTED ${targetSections.length + 1}/${totalSteps}]`,
     })
     const tSegCanon0 = Date.now()
+    // §5.12 — FULL route 와 동일 invariant.
+    const sourcePageBase = normalizeBase(summaryParsed.source_page.filename)
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
-      sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
+      sourceFilename: llmSourceFilename, sourcePageBase, today,
+      guideHint: opts?.guideHint, provider, model,
       userAliases, deterministic, overridePrompt: stage3OverridePrompt,
       // §5.11 promotion threshold: SEGMENTED route 의 sourceBody 는 전체 sourceContent
       // (per-section 합산 대신 본문 전체 — substring count 의 ground truth).

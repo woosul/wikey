@@ -117,6 +117,12 @@ export interface CanonicalizeArgs {
   readonly existingEntityBases: readonly string[]
   readonly existingConceptBases: readonly string[]
   readonly sourceFilename: string
+  /**
+   * §5.12: wiki/sources/<sourcePageBase>.md 단일 진실 소스 base. ingest-pipeline 이
+   * `normalizeBase(summaryParsed.source_page.filename)` derive 후 주입. canonicalizer
+   * 는 raw sourceFilename 기반 derive 안 함 — 받은 base 그대로 사용 (LLM emit drift 방어).
+   */
+  readonly sourcePageBase: string
   readonly today: string
   readonly guideHint?: string
   readonly provider: string
@@ -155,7 +161,7 @@ interface RawCanonical {
 
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
-          sourceFilename, today, guideHint, provider, model, userAliases,
+          sourceFilename, sourcePageBase, today, guideHint, provider, model, userAliases,
           deterministic, overridePrompt, sourceBody } = args
 
   if (mentions.length === 0) {
@@ -168,7 +174,7 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
   })
 
   const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
-  return assembleCanonicalResult(raw, mentions, sourceFilename, today, userAliases, sourceBody)
+  return assembleCanonicalResult(raw, mentions, sourceFilename, sourcePageBase, today, userAliases, sourceBody)
 }
 
 // ── Prompt construction ──
@@ -305,6 +311,7 @@ function assembleCanonicalResult(
   raw: RawCanonical,
   mentions: readonly Mention[],
   sourceFilename: string,
+  sourcePageBase: string,
   today: string,
   userAliases?: Readonly<Record<string, string>>,
   sourceBody?: string,
@@ -331,7 +338,7 @@ function assembleCanonicalResult(
         continue
       }
     }
-    const result = validateAndBuildPage(e, 'entity', sourceFilename, today, userAliases)
+    const result = validateAndBuildPage(e, 'entity', sourceFilename, sourcePageBase, today, userAliases)
     if (!result.ok) continue
     entities.push(result.page)
     keptBases.add(normalizeBase(result.page.filename))
@@ -351,7 +358,7 @@ function assembleCanonicalResult(
         continue
       }
     }
-    const result = validateAndBuildPage(c, 'concept', sourceFilename, today, userAliases)
+    const result = validateAndBuildPage(c, 'concept', sourceFilename, sourcePageBase, today, userAliases)
     if (!result.ok) continue
     // Cross-pool dedup: if entity with same base already kept, skip concept
     if (keptBases.has(normalizeBase(result.page.filename))) continue
@@ -364,7 +371,7 @@ function assembleCanonicalResult(
   // §5.2.1: inject `## 관련` cross-links between same-cycle entity ↔ concept pages.
   // Deterministic policy: every entity links to all concepts in the cycle (and vice versa).
   // Empty other-pool → no `## 관련` H2 (no empty section). Sorted alphabetically.
-  const pinned = applyCrossLinks(entities, concepts, sourceFilename, today)
+  const pinned = applyCrossLinks(entities, concepts, sourceFilename, sourcePageBase, today)
 
   // Track dropped mentions: anything in `mentions` whose canonical base didn't survive
   const pinnedBases = new Set<string>()
@@ -415,6 +422,7 @@ function validateAndBuildPage(
   raw: { name?: string; display_name?: string; type?: string; description?: string; aliases?: string[] },
   category: 'entity' | 'concept',
   sourceFilename: string,
+  sourcePageBase: string,
   today: string,
   userAliases?: Readonly<Record<string, string>>,
 ): PageBuildOk | PageBuildFail {
@@ -452,6 +460,7 @@ function validateAndBuildPage(
       description,
       category,
       sourceFilename,
+      sourcePageBase,
       today,
     }),
   }
@@ -461,10 +470,10 @@ function validateAndBuildPage(
 function buildPageContent(args: {
   name: string; title?: string; aliases?: readonly string[];
   type: string; description: string;
-  category: 'entity' | 'concept'; sourceFilename: string; today: string;
+  category: 'entity' | 'concept'; sourceFilename: string; sourcePageBase: string; today: string;
   relatedLinks?: readonly string[];
 }): string {
-  const { name, type, description, category, sourceFilename, today, relatedLinks } = args
+  const { name, type, description, category, sourceFilename, sourcePageBase, today, relatedLinks } = args
   const titleValue = (args.title ?? name).trim() || name
   const aliasesField = args.aliases && args.aliases.length > 0
     ? `aliases: [${args.aliases.map((a) => JSON.stringify(a)).join(', ')}]\n`
@@ -479,17 +488,14 @@ ${relatedLinks.map((b) => `- [[${b}]]`).join('\n')}
 
 `
     : ''
-  // §5.3 follow-up #11 — entity/concept '## 출처' wikilink 표준화.
-  // 이전: [[<basename without ext>]] 형식 — Obsidian wikilink resolver 가 .md 파일만 매칭하므로
-  //       paired pdf/hwp 등의 sidecar (`<base>.<ext>.md`) basename 과 안 맞아 unresolved.
-  // 변경: alias `[[<sidecar path>|<basename without ext>]]` — sidecar 파일 규칙 derive
-  //       (`.md`/`.txt` 자체, 그 외 `<base>.<ext>.md`). sidecar 가 vault 에 있으면 resolve OK,
-  //       화면 display 는 raw basename 으로 짧게.
-  const lowerSrc = sourceFilename.toLowerCase()
-  const sidecarRef =
-    lowerSrc.endsWith('.md') || lowerSrc.endsWith('.txt')
-      ? sourceFilename
-      : `${sourceFilename}.md`
+  // §5.12 — `## 출처` wikilink 가 wiki/sources/<sourcePageBase>.md 단일 진실 소스 매칭.
+  // 이전 (§5.3 follow-up #11): raw sidecar `<base>.<ext>.md` 매칭 — validate-wiki.sh resolver
+  //   (`find wiki -name "${link}.md"` + `find raw -name "${link}.*"`) 와 mismatch 였음 (broken link
+  //   상시 발생, wiki/ 가 .gitignore 라 발견 안 됐음). 폐기.
+  // 신규: ingest-pipeline 이 normalizeBase(summaryParsed.source_page.filename) 로 derive 한
+  //   sourcePageBase 그대로 사용. wiki/sources/<sourcePageBase>.md 가 source page 의 단일 위치.
+  //   Obsidian basename matcher + validate-wiki.sh `find wiki -name "<link>.md"` 양쪽 PASS.
+  //   raw sourceFilename 은 display 용 (사람이 읽을 short 이름) 만.
   const sourceDisplay = sourceFilename.replace(/\.[^.]+$/, '')
   return `---
 title: ${titleValue}
@@ -507,7 +513,7 @@ ${description}
 
 ${relatedSection}## 출처
 
-- [[${sidecarRef}|${sourceDisplay}]]
+- [[${sourcePageBase}|${sourceDisplay}]]
 `
 }
 
@@ -523,6 +529,7 @@ function applyCrossLinks(
   entities: WikiPage[],
   concepts: WikiPage[],
   sourceFilename: string,
+  sourcePageBase: string,
   today: string,
 ): { entities: WikiPage[]; concepts: WikiPage[] } {
   const entityBases = entities.map((p) => normalizeBase(p.filename)).sort()
@@ -549,6 +556,7 @@ function applyCrossLinks(
         description: extractDescription(page.content) || '(설명 없음)',
         category: isEntity ? 'entity' : 'concept',
         sourceFilename,
+        sourcePageBase,
         today,
         relatedLinks: filtered,
       }),

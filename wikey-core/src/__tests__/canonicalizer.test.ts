@@ -22,6 +22,9 @@ const baseArgs = {
   existingEntityBases: [],
   existingConceptBases: [],
   sourceFilename: 'PMS_test.pdf',
+  // §5.12 — wiki/sources/<sourcePageBase>.md 단일 진실 소스. canonicalize 호출 ~10곳에서 default 사용,
+  // source-link 검증 case 만 override.
+  sourcePageBase: 'source-PMS_test',
   today: '2026-04-19',
   provider: 'gemini',
   model: 'gemini-2.5-flash',
@@ -445,8 +448,9 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
     }
   })
 
-  // §5.3 follow-up #11 — entity/concept '## 출처' wikilink alias 형식 (broken link 방지)
-  it('## 출처 — paired pdf source: alias 형식 [[<base>.pdf.md|<base>]]', async () => {
+  // §5.12 — entity/concept '## 출처' wikilink 가 wiki/sources/<sourcePageBase>.md 단일 진실 소스 매칭.
+  // §5.3 follow-up #11 의 raw sidecar `<base>.<ext>.md` 매칭은 validate-wiki.sh resolver 와 mismatch 였음 — 폐기.
+  it('## 출처 — paired pdf source: [[source-<base>|<base>]]', async () => {
     const mentions: Mention[] = [{ name: 'lotus-pms', type_hint: 'product', evidence: 'p' }]
     const llm = makeMockLLM(
       JSON.stringify({
@@ -459,18 +463,18 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
       llm,
       mentions,
       sourceFilename: 'PMS_제품소개_R10_20220815.pdf',
+      sourcePageBase: 'source-PMS_제품소개_R10_20220815',
     })
     const lotus = result.entities[0].content
-    // alias: link target = sidecar md (paired), display = raw basename
     expect(lotus).toContain('## 출처')
     expect(lotus).toContain(
-      '[[PMS_제품소개_R10_20220815.pdf.md|PMS_제품소개_R10_20220815]]',
+      '[[source-PMS_제품소개_R10_20220815|PMS_제품소개_R10_20220815]]',
     )
-    // 이전 broken 형식이 잔존하지 않아야 (basename only without alias)
-    expect(lotus).not.toMatch(/\[\[PMS_제품소개_R10_20220815\]\]/)
+    // 이전 §5.3 raw sidecar 형식이 잔존하지 않아야
+    expect(lotus).not.toMatch(/\[\[PMS_제품소개_R10_20220815\.pdf/)
   })
 
-  it('## 출처 — 단독 md source: alias 형식 [[note.md|note]] (단독 md 자체)', async () => {
+  it('## 출처 — 단독 md source: [[source-note|note]]', async () => {
     const mentions: Mention[] = [{ name: 'topic', type_hint: 'standard', evidence: 't' }]
     const llm = makeMockLLM(
       JSON.stringify({
@@ -483,14 +487,15 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
       llm,
       mentions,
       sourceFilename: 'note.md',
+      sourcePageBase: 'source-note',
     })
     const topic = result.concepts[0].content
-    expect(topic).toContain('[[note.md|note]]')
-    // 단독 md 는 .md.md 가 되지 않아야 함
-    expect(topic).not.toContain('note.md.md')
+    expect(topic).toContain('[[source-note|note]]')
+    // 이전 §5.3 형식 (`[[note.md|note]]`) 0건
+    expect(topic).not.toContain('[[note.md|')
   })
 
-  it('## 출처 — hwp source: alias 형식 [[doc.hwp.md|doc]]', async () => {
+  it('## 출처 — hwp source: [[source-doc|doc]]', async () => {
     const mentions: Mention[] = [{ name: 'foo', type_hint: 'standard', evidence: 'e' }]
     const llm = makeMockLLM(
       JSON.stringify({
@@ -503,11 +508,13 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
       llm,
       mentions,
       sourceFilename: 'doc.hwp',
+      sourcePageBase: 'source-doc',
     })
-    expect(result.concepts[0].content).toContain('[[doc.hwp.md|doc]]')
+    expect(result.concepts[0].content).toContain('[[source-doc|doc]]')
+    expect(result.concepts[0].content).not.toContain('[[doc.hwp')
   })
 
-  it('## 출처 — txt source: alias 형식 [[plain.txt|plain]] (txt 자체, sidecar 미생성 정책 정합)', async () => {
+  it('## 출처 — txt source: [[source-plain|plain]]', async () => {
     const mentions: Mention[] = [{ name: 'bar', type_hint: 'standard', evidence: 'e' }]
     const llm = makeMockLLM(
       JSON.stringify({
@@ -520,9 +527,51 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
       llm,
       mentions,
       sourceFilename: 'plain.txt',
+      sourcePageBase: 'source-plain',
     })
-    expect(result.concepts[0].content).toContain('[[plain.txt|plain]]')
-    expect(result.concepts[0].content).not.toContain('plain.txt.md')
+    expect(result.concepts[0].content).toContain('[[source-plain|plain]]')
+    expect(result.concepts[0].content).not.toContain('[[plain.txt')
+  })
+
+  // §5.12 신규 — sourcePageBase invariant + LLM emit drift 방어
+  it('§5.12 AC-5a: sourcePageBase 그대로 사용 (raw sourceFilename 무관)', async () => {
+    const mentions: Mention[] = [{ name: 'pmi', type_hint: 'organization', evidence: 'PMI' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [{ name: 'pmi', type: 'organization', description: 'PMI.' }],
+        concepts: [],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'pmbok-overview.md',
+      sourcePageBase: 'source-pmbok-overview',
+    })
+    const pmi = result.entities[0].content
+    expect(pmi).toMatch(/- \[\[source-pmbok-overview\|pmbok-overview\]\]/)
+    expect(pmi).not.toMatch(/\[\[pmbok-overview\.md/)
+  })
+
+  it('§5.12 AC-5b: LLM emit drift 방어 — sourcePageBase prefix 없는 case 도 그대로 사용', async () => {
+    const mentions: Mention[] = [{ name: 'topic-x', type_hint: 'standard', evidence: 'e' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{ name: 'topic-x', type: 'standard', description: 'X.' }],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'pmbok-overview.md',
+      // LLM 이 source_page.filename = 'pmbok-overview.md' (no prefix) emit 한 시나리오
+      sourcePageBase: 'pmbok-overview',
+    })
+    const topic = result.concepts[0].content
+    expect(topic).toMatch(/- \[\[pmbok-overview\|pmbok-overview\]\]/)
   })
 
   // Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (FORCED_CATEGORIES 폐기).
