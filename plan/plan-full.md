@@ -1,7 +1,7 @@
 # Wikey — 프로젝트 전체 계획 (plan-full)
 
 > **역할**: wikey 프로젝트의 전체 로드맵·운영 체제·기술 스택·문서 체계 + **각 Phase 의 목표·핵심 spec 상세** 를 단일 진입점으로 정리. README.md 갱신 시 본 문서 + `wikey.schema.md` + `CLAUDE.md` 3 핵심 문서를 source 로 사용.
-> **최종 개정**: 2026-05-05 (session 18 — 본체 implementation 잔재 모두 처리: §5.4 dead code 완전 제거 / modal dismiss fix / ingest timing instrumentation / §5.10.2 broken-link wiki body fix / §5.11 Page Promotion Threshold 구현)
+> **최종 개정**: 2026-05-06 (session 19 — §5.11 v2 의미·관련도 promotion + 원문 언어 alias + wiki 완전 초기화 / §5.12 canonicalizer sourcePageBase chain — wiki/sources/source-<base>.md 단일 진실 소스 / §5.13 잔존 follow-up 3 항목 draft (A1+B2+C4) / §5.14 retrospective TDD-BLUE refactor draft P0 + Phase 3a/3b 분리 영구 정책 등록)
 > **이력**: 2026-04-25 기존 Phase 3 설계서였던 `plan/plan-full.md` 를 `plan/phase-3-full.md` 로 분리하고, 본 파일을 전체 계획 문서로 신규 작성. 2026-04-26 session 14: §3 Phase 별 상세 spec 추가 + Phase 5 진행 반영. 2026-05-04 session 15: §5.10 paradigm shift v5.4 (D-wide + C5) 종결 + SDD+TDD todo 변환 + 4 phase regroup. 2026-05-05 session 17: §5.10.4 Phase 4 D-wide implementation 종결 (codex cycle #8 APPROVE, b9130f5). 2026-05-05 session 18: 본체 implementation 잔재 모두 처리 (4 atomic commit b1fac99 → c311561) + §5.11 Issue B 구현.
 
 ## 1. 프로젝트 정체성
@@ -168,7 +168,10 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 | 5.8 | Phase 4 D.0.l 잔여 (dedup / classify variance / reindex exit) | P4 | ⬜ 대기 |
 | 5.9 | Variance 기여도·diagnostic (4-points ablation / Ollama baseline) | P4 | ⬜ 대기 |
 | **5.10** | **Graph emergent ontology — §5.4 paradigm shift D-wide** | P1 | ✅ **종결** (session 17~18, 2026-05-05). §5.10.1~§5.10.4 4 Phase 모두 GREEN + codex cycle #8 APPROVE (b9130f5) + session 18 본체 잔재 모두 처리 (§5.4 dead code 완전 제거, broken-link wiki body fix, modal dismiss + timing instrumentation). canonicalizer = LLM 자율 type 분류 + alias normalization 만 잔존. |
-| **5.11** | **Page Promotion Threshold (Issue B)** — 단순 출처 / 1회 mention 고유명사 wiki 페이지 noise 차단 | P2 | ✅ **Unit GREEN** (session 18, 2026-05-05, c311561). 2-Layer gate: Layer 1 prompt rule + Layer 2 deterministic countOccurrences (PROMOTION_THRESHOLD = 2). 608 PASS (+4 신규). 라이브 cycle smoke 후속. |
+| **5.11** | **Page Promotion Threshold (Issue B)** — 단순 출처 / 1회 mention 고유명사 wiki 페이지 noise 차단 | P2 | ✅ **v2 종결** (session 19, 2026-05-05, 4 commit chain 7320c4d→be5449c). v1 Unit GREEN (c311561) 후 사용자 6 chain raise → v2 의미·관련도 promotion + 원문 언어 alias + wiki/raw/cache 완전 초기화. canonicalizer rule 8 v2 + rule 9 + countOccurrences normalize + ingest-pipeline B1 cap 제거 + B6 dropped sample. 5 codex cycle 누적, 17 finding (12 fix + 5 dispute). 라이브 PMBOK 14 mentions → 12 promoted / 4 dropped + 한국어 alias 보존. 613 PASS. |
+| **5.12** | **Source Wikilink Format** — `## 출처` wikilink wiki/sources/source-<base>.md 매칭 (canonicalizer sourcePageBase chain) | P1 | ✅ **종결** (session 19, 2026-05-05, 2 commit 1199284 / 12f2085). §5.3 follow-up #11 raw sidecar 매칭이 validate-wiki.sh resolver 와 mismatch 였음 확증. canonicalizer 시그니처 chain 5 함수 + ingest-pipeline FULL+SEGMENTED 양 route normalizeBase(summaryParsed.source_page.filename) derive (LLM emit drift 방어). codex 2 plan + post-impl APPROVE. 615 PASS / validate-wiki.sh 12 broken → 0. |
+| **5.13** | **잔존 follow-up 3 항목** — raw sidecar 부활 / validator find raw 패턴 / LLM source filename prefix | P1 | 📋 **draft v0.1** (session 19, 2026-05-06, c13723d / a78a18b). 사용자 임시 결정 **A1 + B2 + C4** (착수 직전 최종 confirm). §5.14 완료 후 착수. |
+| **5.14** | **retrospective TDD-BLUE refactor — codebase wide** | **P0 ★** | 📋 **draft v1 / 다음 세션 최우선** (session 19, 2026-05-06, cd3750f / eccf98a). §5.11 v2 + §5.12 BLUE 누락 retrospective. master 진단: 거대 파일 (ingest-pipeline 2319 / sidebar-chat 2300) + deprecation 179 + § 주석 누적. **Tier 2 권고** (Phase 5 핵심 5 파일 sub-cycle §5.14.A~E). TDD-BLUE Phase 3a/3b 분리 영구 정책 등록 (claude-forge-custom rules 0cb2e06 + wikey CLAUDE.md eccf98a). |
 
 **§5.10 (★ session 14 신규 issue)**: 사용자 본질 비판 — "표준 분해 그룹은 PMBOK 류 외부 정형 표준에만 fit, 일반 지식에 mismatch. LLM 백 위에서 ontology 분류는 시대착오." 4 옵션:
 - A. 점진 (panel UI 유지 + 자동 등록 추가)

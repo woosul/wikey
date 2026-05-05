@@ -2213,3 +2213,88 @@ LLM call 시간:
 - Simplicity First: 코드 추가 ~30 LOC, 새 file 0, sourceBody 인자 추가 두 번 거부
 - Surgical Changes: prompt + helper + 주석만 수정, P1-#ω pre-existing 별 issue 분리
 - Goal-Driven: 14 AC + 5 case 정량 + 라이브 smoke evidence + codex 5 cycle
+
+---
+
+## 5.12 Source Wikilink Format — `## 출처` wikilink wiki/sources/source-<base>.md 매칭 (Session 19, 2026-05-05) ✅ 완료
+
+> mirror: [`plan/phase-5-todox-5.12-source-wikilink-format.md`](../plan/phase-5-todox-5.12-source-wikilink-format.md) v3 · 상세: [`activity/phase-5-resultx-5.12-source-wikilink-format-2026-05-05.md`](./phase-5-resultx-5.12-source-wikilink-format-2026-05-05.md)
+
+§5.11 v2 post-impl codex P1-#ω 가 분리 등록한 pre-existing latent bug 해결. canonicalizer.ts:489 의 `## 출처` wikilink (`[[<base>.md]]`) 가 validate-wiki.sh resolver 와 mismatch — 12 broken links 상시 발생 (wiki/ .gitignore 라 발견 안 됨). §5.3 follow-up #11 의 raw sidecar 매칭 의도 자체가 validator 와 mismatch 였음 확증 → 폐기.
+
+### 5.12 핵심 변경
+- canonicalizer.ts: 시그니처 chain 5 함수 (canonicalize / assembleCanonicalResult / validateAndBuildPage / applyCrossLinks / buildPageContent) 모두 `sourcePageBase: string` 인자 추가
+- buildPageContent: `lowerSrc / sidecarRef` 분기 제거 → 단일 derive `[[${sourcePageBase}|${sourceDisplay}]]`
+- ingest-pipeline.ts: FULL (line 540) + SEGMENTED (line 612) 양 route `normalizeBase(summaryParsed.source_page.filename)` derive 후 canonicalize 호출 시 주입 (LLM emit drift 방어)
+- canonicalizer.test.ts: baseArgs 에 `sourcePageBase: 'source-PMS_test'` default + 기존 §5.3 4 case (`[[*.pdf.md|...]]` 등) 를 §5.12 기대값 (`[[source-<base>|<base>]]`) 으로 replace + 신규 2 case (AC-5a invariant + AC-5b drift 방어)
+
+### 5.12 회귀 + 라이브 검증
+- 회귀: 615 PASS / 3 skipped / 0 errors / build OK (608 + 5 §5.11 v2 + 2 §5.12 = 615)
+- 라이브: sed 일괄 fix → wiki/concepts (11) + wiki/entities (1) 12 페이지 변환 + log/index 2 추가 = 14 wikilink 모두 `[[source-pmbok-overview|...]]` 형식
+- `./scripts/validate-wiki.sh` PASS (12 broken → 0)
+- codex 2 plan cycle (NEEDS_REVISION → P1 0건 narrow → master 직접 fix + cycle skip) + post-impl APPROVE
+
+### 5.12 commit chain
+- `1199284` feat(§5.12): canonicalizer sourcePageBase chain
+- `12f2085` docs(sync): §5.12 plan v3 + result + handoff 삭제
+
+### 5.12 Karpathy 4원칙 정합
+- Think Before Coding: §5.3 follow-up #11 자체가 validator 와 mismatch 였음 확증, codex cycle #1 P1-#2 LLM emit drift 인정 → dependency flow 자연화
+- Simplicity First: ~25 LOC (시그니처 5 함수 + ingest-pipeline 6 + 주석 5), 새 file 0, 분기 제거
+- Surgical Changes: canonicalizer 5 함수 + ingest-pipeline 양 route + test 4 replace + 2 신규
+- Goal-Driven: 9 AC + validate-wiki.sh PASS + LLM emit drift 양 시나리오 cover
+
+---
+
+## 5.13 잔존 follow-up 3 항목 — 사용자 임시 결정 A1+B2+C4 (Session 19, 2026-05-06) draft / 미진행
+
+> mirror: [`plan/phase-5-todox-5.13-residual-followups.md`](../plan/phase-5-todox-5.13-residual-followups.md) v0.1 · status: draft
+
+§5.12 종결 시 scope 외 분리한 3 항목을 정식 todox 등록 (자세한 본질 + 현재 → 변경 예상 + 옵션 비교). 사용자 임시 결정 (2026-05-06): **A1 + B2 + C4** (착수 직전 최종 confirm 필요). 진행 우선순위 P1 — §5.14 완료 후 착수.
+
+### 5.13 항목 요약
+- **A1 (LOW)**: concept/entity `## 출처` 에 `[[source-...]]` (요약) + `[raw](raw/...)` (원문) 양 link 병기 (1 클릭 raw jump 복구)
+- **B2 (LOW)**: validate-wiki.sh `find raw -name "${link}"` (자체) + `find raw -name "${link}.*"` (fallback) 양방 시도 (`.md` 자체 link 매칭)
+- **C4 (MEDIUM)**: LLM prompt `source-` prefix 명시 강제 + ingest-pipeline normalize 안전망 (defense in depth, LLM drift 방어)
+
+### 5.13 commit
+- `c13723d` docs(§5.13): 잔존 follow-up 3 항목 정식 todox 등록 (draft)
+- `a78a18b` docs(§5.13): 사용자 임시 결정 A1+B2+C4 등록 + TDD-BLUE 누락 보완 정책
+
+---
+
+## 5.14 retrospective TDD-BLUE refactor — codebase wide (Session 19, 2026-05-06) draft / P0 다음 세션 최우선
+
+> mirror: [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](../plan/phase-5-todox-5.14-retrospective-blue-refactor.md) v1 · status: draft / P0
+
+§5.11 v2 + §5.12 SDD+TDD 진행 시 RED + GREEN 명시 진행했으나 **BLUE (Refactor) 누락** (Phase 3 가 회귀 검증으로만 그침). 사용자 raise 2026-05-06 후 retrospective 보강 정식 todox + 영구 정책 등록.
+
+### 5.14 master 사전 진단 (2026-05-06)
+- 거대 파일: `ingest-pipeline.ts` 2319 LOC / `sidebar-chat.ts` 2300 / `settings-tab.ts` 1175 / 7+ 파일 600+ LOC
+- TODO/FIXME 0 ✓ / console.* 51 / § historical 주석 누적 (ingest-pipeline 67 + canonicalizer 37)
+- deprecated/legacy/폐기 marker **179건** — Phase 폐기 후 cleanup 미진행
+- 결론: narrow scope (§5.11 v2 + §5.12) underscope → Tier 2 시작 권고
+
+### 5.14 scope 4 tier
+- Tier 1 (narrow): §5.11 v2 + §5.12 변경 영역만 (~150 LOC, 1 cycle)
+- **Tier 2 (★ 추천 시작)**: Phase 5 핵심 5 파일 — canonicalizer / ingest-pipeline / wiki-ops / pii-redact / query-pipeline (~4600 LOC, 3~5 cycle, sub-cycle 5개 분리: §5.14.A ~ E)
+- Tier 3: + wikey-obsidian UI (sidebar-chat / settings-tab / main / commands / ingest-modals, ~5588 추가)
+- Tier 4: 전체 codebase sampling (~13000 LOC)
+
+### 5.14 검토 차원
+- 함수 분해 (assembleCanonicalResult ~100 LOC, applyCrossLinks.rebuild, buildPageContent, FULL+SEGMENTED stage 2 ~80 LOC)
+- Naming consistency (sourceFilename / sourcePageBase / sourceBase / sourceDisplay / llmSourceFilename 5 변수 mapping)
+- 중복 패턴 (FULL + SEGMENTED route → `runCanonicalizeAndMerge` extract)
+- 주석 quality (historical 압축, deprecation marker cleanup)
+- Test fixture / 명명 (§5.12 정합)
+
+### 5.14 영구 정책 등록 (사용자 결정 2026-05-06)
+**TDD-BLUE Phase 3a/3b 분리 의무**:
+- `claude-forge-custom/rules/testing.md` (global, commit `0cb2e06`)
+- `wikey/CLAUDE.md` (project-specific mirror, commit `eccf98a`)
+- 모든 비-사소 SDD+TDD cycle 의 Phase 3 = Phase 3a (회귀 검증) + Phase 3b (BLUE refactor 명시) 분리
+- 예외: 사소 작업 (오타 / 1-line / config / dependency bump)
+
+### 5.14 commit
+- `cd3750f` docs(§5.14): retrospective TDD-BLUE refactor 등록 (P0)
+- `eccf98a` docs(§5.14 v1 + policy): scope 4 tier 확장 + TDD-BLUE 분리 영구 등록

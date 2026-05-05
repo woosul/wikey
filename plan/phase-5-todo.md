@@ -1433,3 +1433,79 @@
 - [ ] 라이브 cycle smoke (사용자 vault, 다음 ingest cycle): 신규 ingest 시 `console` 에 `[Wikey ingest] dropped sample: X (single-mention 1 occurrence)` 로그 확인 + 단순 출처 page 신규 생성 0.
 - [ ] 기존 vault 의 single-mention page (jeonnam-technopark 등) cleanup = 별 cycle (re-ingest 시 자동 정리되거나 사용자 명시 삭제).
 
+
+---
+
+## 5.11 v2 의미·관련도 promotion threshold + 원문 언어 alias + wiki 완전 초기화 — 2026-05-05 session 19 ✅ 완료
+
+> **상위 plan**: [`plan/phase-5-todox-5.11-page-promotion-threshold.md`](./phase-5-todox-5.11-page-promotion-threshold.md) v2.5
+> mirror: [`activity/phase-5-result.md §5.11 v2`](../activity/phase-5-result.md) · 상세: [`activity/phase-5-resultx-5.11-v2-2026-05-05.md`](../activity/phase-5-resultx-5.11-v2-2026-05-05.md)
+
+- [x] codex 5 cycle (4 plan + 1 post-impl) 누적 검증 — 17 finding 처리 (12 fix + 5 dispute)
+- [x] 환경 완전 초기화 (raw 분류 0_inbox 원복 + sidecar 3 삭제 + wiki content 58 삭제 + skeleton frontmatter 보존 + .wikey/qmd cache reset)
+- [x] canonicalizer rule 8 v2 (의미·관련도 + 단순 출처/장소 ❌ + 1~3개 OK)
+- [x] canonicalizer rule 9 신규 (원문 언어 중심 + 반대 언어 alias)
+- [x] canonicalizer countOccurrences 하이픈/공백 normalize
+- [x] ingest-pipeline B1 cap 제거 + B6 FULL route dropped sample log
+- [x] wikey.schema.md overview.md 폐기 + log.md 의미 재정의
+- [x] 회귀 613 PASS / 0 errors / build OK
+- [x] 라이브 smoke 1 source (한국어 PMBOK FULL route): 14 mentions → 12 promoted / 4 dropped, alias 한국어 보존 ✓
+- [x] commit chain (4): `7320c4d` / `dab00f7` / `d1330b8` / `be5449c`
+
+---
+
+## 5.12 Source Wikilink Format — `## 출처` wikilink wiki/sources/source-<base>.md 매칭 — 2026-05-05 session 19 ✅ 완료
+
+> **상위 plan**: [`plan/phase-5-todox-5.12-source-wikilink-format.md`](./phase-5-todox-5.12-source-wikilink-format.md) v3
+> mirror: [`activity/phase-5-result.md §5.12`](../activity/phase-5-result.md) · 상세: [`activity/phase-5-resultx-5.12-source-wikilink-format-2026-05-05.md`](../activity/phase-5-resultx-5.12-source-wikilink-format-2026-05-05.md)
+
+- [x] codex 2 plan cycle (NEEDS_REVISION → P1 0건 narrow → master 직접 fix + cycle skip) + post-impl APPROVE
+- [x] canonicalizer.ts 시그니처 chain 5 함수 (canonicalize / assembleCanonicalResult / validateAndBuildPage / applyCrossLinks / buildPageContent) sourcePageBase 인자 추가
+- [x] buildPageContent lowerSrc/sidecarRef 분기 제거 → 단일 derive
+- [x] ingest-pipeline.ts FULL (line 540) + SEGMENTED (line 612) 양 route normalizeBase(summaryParsed.source_page.filename) derive
+- [x] canonicalizer.test.ts baseArgs default + §5.3 4 case replace + §5.12 신규 2 case
+- [x] 회귀 615 PASS / 3 skipped / 0 errors / build OK
+- [x] 라이브 sed fix → validate-wiki.sh PASS (12 broken → 0)
+- [x] commit chain (2): `1199284` / `12f2085`
+
+---
+
+## 5.13 잔존 follow-up 3 항목 — 2026-05-06 session 19 draft (P1, §5.14 완료 후)
+
+> **상위 plan**: [`plan/phase-5-todox-5.13-residual-followups.md`](./phase-5-todox-5.13-residual-followups.md) v0.1
+> 상태: draft / 사용자 임시 결정 A1+B2+C4 (착수 직전 최종 confirm)
+
+- [ ] **A1 (LOW)**: concept/entity `## 출처` 에 `[[source-...]]` + `[raw](raw/...)` 양 link 병기 — canonicalizer.ts:498-510 buildPageContent 의 `## 출처` 렌더 + sourcePageRawPath 인자 추가 또는 source-registry mapping
+- [ ] **B2 (LOW)**: validate-wiki.sh `find raw -name "${link}"` (자체) + `find raw -name "${link}.*"` (fallback) — scripts/validate-wiki.sh:46 일대 + shell test fixture
+- [ ] **C4 (MEDIUM)**: LLM prompt `source-` prefix 강제 + ingest-pipeline normalize 안전망 — ingest-pipeline.ts:1366-1413 prompt + line 673 직전 normalize + unit/라이브 test
+- [ ] §5.14 완료 후 v0.1 → v1 갱신 (옵션 별 AC + 구현 details + LOC 추정 구체화)
+- [ ] 착수 직전 사용자 최종 confirm
+
+---
+
+## 5.14 retrospective TDD-BLUE refactor — codebase wide — 2026-05-06 session 19 draft / **P0 다음 세션 최우선**
+
+> **상위 plan**: [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](./phase-5-todox-5.14-retrospective-blue-refactor.md) v1
+> 상태: draft / P0 — §5.11 v2 + §5.12 의 BLUE 누락 보완
+
+- [ ] master 사전 진단 재확증 (LOC / 함수 길이 / deprecation marker / TODO 등 metric 갱신)
+- [ ] Tier 결정 (Tier 2 권고 — Phase 5 핵심 5 파일, sub-cycle 5개)
+- [ ] §5.14.A canonicalizer.ts BLUE refactor (시작 권고)
+  - [ ] codex Mode D Panel cycle (BLUE plan v1 — extract / naming / dedup 결정)
+  - [ ] Phase 1 RED — 신규 test 필요 시만 (대부분 회귀 안전망)
+  - [ ] Phase 2 GREEN — refactor 적용
+  - [ ] Phase 3a 회귀 검증 (npm test + build + validate-wiki.sh)
+  - [ ] Phase 3b BLUE refactor (명시 분리)
+  - [ ] Phase 5 codex post-impl
+  - [ ] commit + result 문서
+- [ ] §5.14.B ingest-pipeline.ts (거대 2319 LOC, 가장 큰 영향)
+- [ ] §5.14.C wiki-ops.ts
+- [ ] §5.14.D pii-redact.ts
+- [ ] §5.14.E query-pipeline.ts
+- [ ] AC 검증: 회귀 0 (615 PASS 유지) + build 0 + validator PASS + 라이브 smoke + LOC/함수길이/naming metric
+- [ ] Tier 3 / 4 진행 결정 (Tier 2 결과 검토 후 사용자 별)
+
+### 5.14 영구 정책 등록 ✅ 완료
+- [x] `claude-forge-custom/rules/testing.md` Phase 3a/3b 분리 의무 (commit `0cb2e06`)
+- [x] `wikey/CLAUDE.md` project-specific mirror (commit `eccf98a`)
+- [x] §5.14 todox v0 → v1 (scope 4 tier 확장, commit `eccf98a`)
