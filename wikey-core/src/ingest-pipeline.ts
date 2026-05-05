@@ -342,6 +342,7 @@ export async function ingest(
   const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
   const ext = (sourceFilename.toLowerCase().split('.').pop() ?? '')
 
+  const tStep1_0 = Date.now()
   let sourceContent: string
   // §4.1.3 (D.0.b): PDF 는 LLM 투입용 `stripped` 과 sidecar 저장용 `sidecarCandidate` 를 분리한다.
   //   sidecarCandidate 는 중앙 PII wrapper (§4.1.2) 통과 후 파일시스템에 저장된다. PDF 외 포맷은
@@ -383,6 +384,7 @@ export async function ingest(
     const raw = await wikiFS.read(sourcePath)
     sourceContent = stripEmbeddedImages(raw)
   }
+  log(`step 1 source read done in ${Date.now() - tStep1_0}ms (ext=${ext}, ${sourceContent.length} chars${opts?.preconverted ? ', preconverted' : ''})`)
 
   // ── Phase 4 D.0.c (v6 §4.1.2) + Phase 5 §5.8 (2026-04-24): PII 2-layer gate + 패턴 엔진 ──
   // 변환 후 (PDF/HWP/... 모두 markdown 으로 통일된 뒤) 에 한 번만 실행.
@@ -523,19 +525,23 @@ export async function ingest(
     const content = isLocal ? truncateSource(sourceContent) : sourceContent
     onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: 3, message: `Summary (${model}) [FULL]` })
     // Phase 5 §5.8.1: LLM prompt 로 전달되는 filename 은 sanitize 된 버전 사용.
+    const tSummary0 = Date.now()
     const summaryParsed = await callLLMForSummary(llm, content, llmSourceFilename, indexContent, provider, model, promptTemplate, deterministic)
+    log(`stage 2.1 summary done in ${Date.now() - tSummary0}ms (FULL, ${content.length} chars)`)
 
     onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model}) [FULL]` })
+    const tMentions0 = Date.now()
     const mentions = await extractMentions(llm, content, llmSourceFilename, provider, model, undefined, deterministic, stage2Template)
-    log(`route=FULL — mentions=${mentions.length}`)
+    log(`stage 2.2 mention extraction done in ${Date.now() - tMentions0}ms (FULL, ${mentions.length} mentions)`)
 
     onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
+    const tCanon0 = Date.now()
     const canon = await canonicalize({
       llm, mentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
       userAliases, deterministic, overridePrompt: stage3OverridePrompt,
     })
-    log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
+    log(`stage 2.3 canonicalize done in ${Date.now() - tCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
 
     parsed = {
       source_page: summaryParsed.source_page,
@@ -559,11 +565,13 @@ export async function ingest(
     onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: totalSteps, message: `Summary (${model}) [SEGMENTED 1/${totalSteps}]` })
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
     // Phase 5 §5.8.1: LLM prompt 로 전달되는 filename 은 sanitize 된 버전 사용.
+    const tSegSummary0 = Date.now()
     const summaryParsed = await callLLMForSummary(llm, summaryContent, llmSourceFilename, indexContent, provider, model, promptTemplate, deterministic)
-    log(`summary done — index_additions=${summaryParsed.index_additions?.length ?? 0}, log_entry=${summaryParsed.log_entry ? 'yes' : 'no'}`)
+    log(`stage 2.1 summary done in ${Date.now() - tSegSummary0}ms (SEGMENTED) — index_additions=${summaryParsed.index_additions?.length ?? 0}`)
 
     const allMentions: Mention[] = []
     let sectionOk = 0, sectionFail = 0
+    const tSegMentions0 = Date.now()
     for (let i = 0; i < targetSections.length; i++) {
       const section = targetSections[i]
       onProgress?.({
@@ -582,19 +590,20 @@ export async function ingest(
         console.warn(`[Wikey ingest] section §${section.idx} "${section.title}" failed:`, (err as Error).message)
       }
     }
-    log(`route=SEGMENTED — sections ok=${sectionOk}, failed=${sectionFail}, mentions=${allMentions.length}`)
+    log(`stage 2.2 mention extraction done in ${Date.now() - tSegMentions0}ms (SEGMENTED, ${targetSections.length} sections, ok=${sectionOk}/fail=${sectionFail}, ${allMentions.length} mentions)`)
 
     onProgress?.({
       step: 2, total: 4,
       subStep: targetSections.length + 1, subTotal: totalSteps,
       message: `Canonicalizing (${model}) [SEGMENTED ${targetSections.length + 1}/${totalSteps}]`,
     })
+    const tSegCanon0 = Date.now()
     const canon = await canonicalize({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
       sourceFilename: llmSourceFilename, today, guideHint: opts?.guideHint, provider, model,
       userAliases, deterministic, overridePrompt: stage3OverridePrompt,
     })
-    log(`canonicalize done — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
+    log(`stage 2.3 canonicalize done in ${Date.now() - tSegCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
     if (canon.dropped.length > 0) {
       const droppedSummary = canon.dropped.slice(0, 10).map((d) => `${d.mention.name} (${d.reason})`).join(', ')
       log(`dropped sample: ${droppedSummary}${canon.dropped.length > 10 ? `, +${canon.dropped.length - 10} more` : ''}`)
@@ -639,6 +648,7 @@ export async function ingest(
   // Step 3: Create/update wiki pages
   onProgress?.({ step: 3, total: 4, message: 'Creating pages...' })
   log(`writing pages — source=${parsed.source_page.filename}, entities=${(parsed.entities ?? []).length}, concepts=${(parsed.concepts ?? []).length}`)
+  const tStep3_0 = Date.now()
   const createdPages: string[] = []
   const updatedPages: string[] = []
 
@@ -812,6 +822,7 @@ export async function ingest(
   const entry = llmBody ? `${entryHeader}\n\n${llmBody}` : `${entryHeader}\n`
   await appendLog(wikiFS, entry, writtenPages)
   log(`log.md prepended`)
+  log(`step 3 page write done in ${Date.now() - tStep3_0}ms (${createdPages.length} created, ${updatedPages.length} updated)`)
 
   // §5.10.4 D-wide: Stage 2 suggestion finalization 폐기. canonicalize 결과는 wiki write 직후 종결,
   // .wikey/suggestions.json / mention-history.json 자동 재생성 0.
@@ -823,7 +834,9 @@ export async function ingest(
   //     이미 성공했으므로 throw 하지 않되, 사용자는 Notice 로 stale 상태를 인지해야 한다
   //     (plan v6 §4.4.6 "지연 — 잠시 후 검색 가능").
   onProgress?.({ step: 4, total: 4, message: 'Indexing...' })
+  const tStep4_0 = Date.now()
   await runReindexAndWait(opts?.basePath, opts?.execEnv, log, opts?.onFreshnessIssue, opts?.onFreshnessOk)
+  log(`step 4 reindex done in ${Date.now() - tStep4_0}ms`)
   log(`done: ${sourcePath}`)
 
   return {
