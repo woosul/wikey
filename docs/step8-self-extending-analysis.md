@@ -1,8 +1,12 @@
-# Step 8 — Self-extending + 자율 증분 분석
+# Step 8 — Self-extending + 자율 증분 분석 ⚠️ **D-wide 폐기 (2026-05-05, §5.10.4)** — historical reference
 
-> **본 문서의 위치**: `docs/wikey-ingest-pipeline.md §9` (Step 8) 의 *기능 분석 + 폐기 가능성* 단독 검토. §5.10 paradigm shift issue 의 사용자 결정 (옵션 A~D) 입력 자료.
+> **상태**: §5.10 paradigm shift 옵션 D-wide 채택 완료 (2026-05-05 §5.10.4 cycle). Step 8 (Stage 1~4 self-extending) 전체 deprecated. 본 문서는 *historical decision-input* 으로만 보존 — 결정 근거 trace.
 >
-> 결론 요약: Step 8 은 **외부 정형 표준 (PMBOK / ISO 27001 / ITIL) ingest 시 component 분해 정확도 보조** 라는 좁은 가치만 제공한다. wikey 의 *본질 6 기능* (raw → wiki 분해 / 누적 / 멱등 갱신 / 검색 / 답변 합성 / 그래프) 은 모두 Step 1~7 + Step Q 에 위치하므로 **Step 8 전체 폐기 후에도 wikey 는 100% 작동한다**. 회귀 테스트 영향: 732 PASS → ~630 (수치 ~100 test 폐기 — §5.4 전용).
+> **본 문서의 원래 위치**: `docs/wikey-ingest-pipeline.md §9` (Step 8) 의 *기능 분석 + 폐기 가능성* 단독 검토. §5.10 paradigm shift issue 의 사용자 결정 (옵션 A~D) 입력 자료.
+>
+> 결론 요약 (당시 분석): Step 8 은 **외부 정형 표준 (PMBOK / ISO 27001 / ITIL) ingest 시 component 분해 정확도 보조** 라는 좁은 가치만 제공한다. wikey 의 *본질 6 기능* (raw → wiki 분해 / 누적 / 멱등 갱신 / 검색 / 답변 합성 / 그래프) 은 모두 Step 1~7 + Step Q 에 위치하므로 **Step 8 전체 폐기 후에도 wikey 는 100% 작동한다**. 회귀 테스트 영향: 732 PASS → ~604 (실측 폐기 후, ~110 cases 폐기/skip — §5.4 전용 + schema-yaml-writer).
+>
+> **D-wide 채택 후 실측**: 본 문서의 모든 가설 (Stage 1~4 폐기 안전, 본질 6 기능 영향 0) 이 §5.10.4 라이브 cycle smoke 로 확증됨. PMBOK 10 knowledge areas 가 schema 명시 없이도 LLM 자율로 정확히 10/10 분해 (activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md §6.2 L.1 evidence).
 
 ---
 

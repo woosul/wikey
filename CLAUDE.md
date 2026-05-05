@@ -12,7 +12,7 @@
 - [`wikey.schema.md`](./wikey.schema.md) — 마스터 스키마 (단일 진실 소스, Karpathy 철학)
 - [`plan/plan-full.md`](./plan/plan-full.md) — 전체 로드맵 + 각 Phase 목표·핵심 spec 상세
 - [`CLAUDE.md`](./CLAUDE.md) — 본 파일 (Claude Code 도구 사용 + 실행 체크리스트)
-- [`DESIGN.md`](./DESIGN.md) — 디자인 시스템 (`--wk-*` CSS 변수 토큰 + 6 패널 패턴 + `styles.css` 마이그레이션 계획)
+- [`DESIGN.md`](./DESIGN.md) — 디자인 시스템 (`--wk-*` CSS 변수 토큰 + 5 패널 패턴 + `styles.css` 마이그레이션 계획)
 
 ## 쓰기 규칙
 
@@ -125,7 +125,7 @@ git diff --name-only HEAD~5 -- wiki/
 
 wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`rules/obsidian-plugin.md`](./rules/obsidian-plugin.md)** 참조. npm 스크립트: `npm run build`, `npm test`, `npm run dev`.
 
-**사이드바 패널 6종** (sidebar-chat.ts):
+**사이드바 패널 5종** (sidebar-chat.ts, §5.10.4 D-wide 후 Suggestions 폐기):
 
 | 패널 | header icon | 용도 |
 |------|------|------|
@@ -133,10 +133,9 @@ wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`
 | Dashboard | dashboard | wiki 통계 + tag ranking + recent queries |
 | Ingest | plus | 파일 인입 + brief / approve & write 흐름 |
 | Audit | audit | raw 파일별 ingest 상태 + retry / delay |
-| **Suggestions** | clipboard_check | **§5.4 표준 분해 그룹 조회 + Accept/Reject/Add/Edit** (2026-04-26 session 14 추가). schema.yaml 등록 안내 + "schema.yaml 확인 →" modal popup (도메인 tag cloud). 일반 사용자 거의 안 써도 됨 — 자동 탐지 결과 검토용. |
 | Help | question | guide 마크다운 |
 
-**§5.4 self-extending + §5.10 paradigm shift issue** (`wikey.schema.md §표준 분해 self-extending 구조` 참조): Stage 1~4 자동 후보 → Suggestions panel Accept → schema.yaml. 사용자 본질 비판 6 chain → §5.10 paradigm shift 4 옵션 (★D LLM-only Stage 1~4 deprecate 권장) 사용자 결정 대기.
+**§5.10 paradigm shift D-wide 채택 (2026-05-05 session 17, §5.10.4)**: 사용자 본질 비판 6 chain → 옵션 D-wide (LLM-only ontology) 채택 + 구현 완료. §5.4 self-extending Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion-detector / self-declaration / convergence) + 7-type schema gate (`ENTITY_TYPES` / `CONCEPT_TYPES` / `FORCED_CATEGORIES` / `buildSchemaPromptBlock`) 모두 폐기. canonicalizer 는 LLM 자율 type 분류 + minimal alias normalization (SLUG_ALIASES + `.wikey/schema.yaml` `aliases:`) 만 잔존. Suggestions panel UI 폐기 (sidebar 6→5 패널).
 
 ## 활동 기록 문서 규칙
 

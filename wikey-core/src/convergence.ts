@@ -1,6 +1,10 @@
 /**
  * §5.4 Stage 4 — cross-source convergence.
  *
+ * ⚠️ **§5.10.4 D-wide 폐기 (2026-05-05)** — 본 module 의 public API 제거 (index.ts),
+ * runtime hook (reindex.sh + ingest-pipeline) 모두 제거. test (.skip) 와 본 file
+ * 자체는 historical reference 로만 보존.
+ *
  * 여러 source 가 같은 표준의 다른 컴포넌트를 mention 할 때 wiki 전체 mention
  * graph 를 batch 분석하여 canonical decomposition 을 도출한다. Stage 1+2+3
  * 결정 위에 cross-source 통합 layer.

@@ -16,9 +16,9 @@ import {
 /**
  * §5.4.2 AC8 — pipeline glue called from `ingest-pipeline.ts` finalize step.
  *
- * Pure-function surface so it remains easy to unit-test without spinning up
- * a full ingest. Side-effects (writing `.wikey/suggestions.json` /
- * `.wikey/mention-history.json`) are the caller's responsibility.
+ * ⚠️ **§5.10.4 D-wide 폐기 (2026-05-05)** — public API 제거 (index.ts), ingest-pipeline
+ * runtime hook (runSuggestionFinalize call) 제거. test (.skip) + 본 file 은 historical
+ * reference. 더 이상 .wikey/suggestions.json / mention-history.json 자동 갱신 안 됨.
  */
 
 const DEFAULT_CONFIDENCE_CUTOFF = 0.6

@@ -4,10 +4,8 @@ import { updateSuggestionState, rejectSuggestion as rejectInStore } from './sugg
 /**
  * §5.4.2 AC6 — pure helpers for the Audit Suggestions panel.
  *
- * Why pure (no DOM): wikey-obsidian has no test infra; isolating the data
- * shape + accept/reject transitions here lets vitest exercise them.
- * `wikey-obsidian/src/sidebar-chat.ts` consumes `buildSuggestionCardModel`
- * and renders the returned model into Obsidian DOM.
+ * ⚠️ **§5.10.4 D-wide 폐기 (2026-05-05)** — Suggestions panel UI (sidebar-chat.ts) 제거,
+ * public API 제거 (index.ts). test (.skip) + 본 file 은 historical reference.
  */
 
 export interface SuggestionCardModel {

@@ -515,9 +515,9 @@ mention extraction 단계에서 LLM 자체가 거부 가이드 (UI 라벨, 기�
 | `.wikey/schema.yaml` 영구 등록 (umbrella + components) | — | ❌ panel Accept (chain break — 사용자 검토 의무) |
 | alias 자동 merging | — | ❌ 미구현 (v2 deferral) |
 
-### 9.7 §5.10 paradigm shift issue 요약
+### 9.7 §5.10 paradigm shift — 옵션 D-wide 채택 + 구현 완료 (2026-05-05)
 
-사용자 본질 비판 6 chain (panel 가치 / self-extending 명명 / 지식 그룹 ⊂ / graph emergent / 지식 분해 epistemology / LLM 백 시대착오) 으로 Stage 1~4 의 *pre-LLM reductionism* 가정을 의문. 4 옵션 (A 점진 / B graph / C 관망 / **★ D LLM-only deprecate**) 사용자 다음 세션 결정 대기. D 채택 시 본 step 폐기 + qmd embedding + LLM 답변이 의미 처리 자동 담당.
+사용자 본질 비판 6 chain (panel 가치 / self-extending 명명 / 지식 그룹 ⊂ / graph emergent / 지식 분해 epistemology / LLM 백 시대착오) 으로 Stage 1~4 의 *pre-LLM reductionism* 가정을 의문. 4 옵션 (A 점진 / B graph / C 관망 / **★ D LLM-only deprecate**) 중 **D-wide 채택** (§5.10.4 cycle 종결). Stage 1~4 코드 + Suggestions panel UI + reindex.sh convergence hook 모두 폐기. qmd embedding + LLM 답변이 의미 처리 자동 담당.
 
 ---
 

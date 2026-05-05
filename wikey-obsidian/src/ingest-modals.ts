@@ -439,12 +439,11 @@ export class IngestFlowModal extends Modal {
       briefBox.setText(this.brief || '(brief unavailable — network or LLM error)')
     }
 
-    // v6 Phase D: schema preview line — show active classification schema (Karpathy "stay involved")
+    // §5.10.4 D-wide: "Active schema" 4+3 type 강제 표시 폐기. LLM 자율 type 분류로 전환 후
+    // 고정된 7-type union 이 아니라 도메인별 자유 string. UX 안내는 "LLM 자율 type" 명시로 단순화.
     const schemaLine = this.bodyEl.createDiv({ cls: 'wikey-modal-schema-line' })
-    schemaLine.createSpan({ cls: 'wikey-modal-schema-label', text: 'Active schema: ' })
-    schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: '4 entity (organization · person · product · tool)' })
-    schemaLine.createSpan({ cls: 'wikey-modal-schema-sep', text: ' / ' })
-    schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: '3 concept (standard · methodology · document_type)' })
+    schemaLine.createSpan({ cls: 'wikey-modal-schema-label', text: 'Type classification: ' })
+    schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: 'LLM 자율 (예: organization / person / methodology / algorithm / dataset / event 등)' })
 
     const guideLabel = this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: 'Focus / direction' })
     guideLabel.createEl('span', { cls: 'wikey-modal-hint', text: ' (optional)' })

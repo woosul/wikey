@@ -3,9 +3,9 @@ import type { Suggestion, WikiFS } from './types.js'
 /**
  * §5.4.2 AC7 — section-range insertion writer for `.wikey/schema.yaml`.
  *
- * Strategy: line-level scan, no YAML parser. Stage 1 v7 §3.2 mandates the
- * "minimal YAML subset" policy, so we never pull in a yaml lib. Plan §3.2.5
- * lists the six branches (a)..(f).
+ * ⚠️ **§5.10.4 D-wide 폐기 (2026-05-05)** — appendStandardDecomposition 호출 사이트
+ * 모두 제거 (Suggestions panel UI + ingest-pipeline). public API 제거 (index.ts).
+ * test (.skip) + 본 file 은 historical reference.
  */
 
 const SCHEMA_YAML_PATH = '.wikey/schema.yaml'

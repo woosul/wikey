@@ -1,6 +1,9 @@
 /**
  * §5.4 Stage 3 — in-source self-declaration.
  *
+ * ⚠️ **§5.10.4 D-wide 폐기 (2026-05-05)** — public API 제거 (index.ts), ingest-pipeline
+ * runtime hook 제거. test (.skip) + 본 file 은 historical reference 로만 보존.
+ *
  * 소스 본문이 "이 표준은 다음 N 영역을 갖습니다: A, B, C..." 같이 enumerate 하면
  * section-index.ts 의 `headingPattern === 'standard-overview'` 섹션을 감지 →
  * deterministic structured decomposition extraction → runtime-scope (해당 ingest
