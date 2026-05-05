@@ -5,7 +5,7 @@ title: §5.12 잔존 follow-up 3 항목 — raw sidecar 부활 + validator find 
 status: draft
 created: 2026-05-06
 updated: 2026-05-06
-version: v0
+version: v0.1
 ---
 
 # Phase 5 §5.13 — §5.12 잔존 follow-up 3 항목 (정식 todox)
@@ -15,6 +15,13 @@ version: v0
 > **이슈 출처**: §5.12 종결 시 scope 외 분리 항목 3개. `phase-5-resultx-5.12-...md §5` + `phase-5-todox-5.12-...md §9` + `session-wrap-followups.md` 다음 세션 액션 마지막 줄에 분산 기록 → 본 §5.13 으로 정식 등록 (사용자 요청 2026-05-06).
 >
 > **상태**: **draft / 미진행**. 사용자 결정 후 착수. 각 항목은 독립적으로 진행 가능 (본 §5.13 안에서도 sub-section 별 분리 가능).
+>
+> **사용자 임시 결정** (2026-05-06): **옵션 A1 + B2 + C4** 채택 (변경 가능, 진행 직전 최종 confirm 필요).
+> - A1 = concept/entity 페이지 `## 출처` 에 raw link 병기 (요약 + 원문 1 클릭씩)
+> - B2 = validator link 자체 매칭 + extension fallback 양방 시도
+> - C4 = LLM prompt 강제 + ingest-pipeline normalize 결합 (defense in depth)
+>
+> 진행 흐름은 §종결부 "진행 흐름" 참조. 본 v0.1 은 옵션 fix 만 등록 — 본문 §A.3 / §B.3 / §C.3 옵션 비교 보존 (변경 시 사용자 재결정 위해).
 
 ---
 
@@ -251,23 +258,108 @@ LLM 응답 schema 검증 (`source_page.filename` 이 `^source-` 매치 필수) �
 
 ---
 
-## 진행 흐름 (사용자 결정 후 착수 시)
+## 진행 흐름 (사용자 결정 후 착수 시 — 옵션 A1+B2+C4 고정)
 
-1. **사용자 raise** → 어느 항목 (A / B / C 또는 복합) + 어느 옵션
-2. **본 §5.13 todox 갱신** (선택 옵션 명시 + AC 구체화)
-3. **codex Mode D Panel cycle 검증** (각 항목 narrow scope 라 1 cycle 충분 예상)
-4. **TDD RED → GREEN → REFACTOR**
-5. **라이브 검증** (B 는 validate-wiki.sh shell test, C 는 라이브 ingest 1 source)
-6. **codex post-impl**
-7. **commit + push + result 문서**
+1. ~~**사용자 raise**~~ → 사용자 임시 결정 등록 완료 (A1+B2+C4, v0.1).
+2. **착수 직전 최종 confirm** (사용자 의사 변경 가능: 항목 skip / 옵션 변경 / 우선순위 조정)
+3. **본 §5.13 todox 갱신 v0.1 → v1** (각 옵션 별 AC + 구현 details 구체화 + 코드 위치 + LOC 추정)
+4. **codex Mode D Panel cycle 검증** (각 항목 narrow scope 라 1 cycle 충분 예상)
+5. **TDD RED → GREEN → REFACTOR (BLUE 명시)** — Phase 3 를 회귀 검증 + BLUE refactor 두 단계로 분리 (TDD-BLUE 누락 보완 — 2026-05-06 사용자 raise)
+6. **라이브 검증**:
+   - 항목 A: 라이브 ingest 1 source → concept 페이지 `## 출처` 에 raw link 병기 확증
+   - 항목 B: validate-wiki.sh shell test (.md 자체 link 매칭 + 기존 케이스 회귀 0)
+   - 항목 C: 라이브 ingest 1 source → wiki/sources/ filename 이 항상 `source-` prefix 확증 + LLM drift mock test
+7. **codex post-impl**
+8. **commit + push + result 문서**
 
-각 항목 독립 진행 가능. 모두 §5.12 paradigm 의 보강 (단일 진실 소스 명확화 / validator robust / LLM drift 방어).
+각 항목 독립 진행 가능 (§5.13.A / §5.13.B / §5.13.C 분할 또는 일괄). 모두 §5.12 paradigm 의 보강 (단일 진실 소스 명확화 / validator robust / LLM drift 방어).
+
+### 옵션 별 구현 윤곽 (착수 시 v1 상세화)
+
+#### A1 — concept/entity 페이지 `## 출처` 에 raw link 병기
+
+**현재 동작**:
+```markdown
+## 출처
+
+- [[source-pmbok-overview|pmbok-overview]]
+```
+
+**변경 예상**:
+```markdown
+## 출처
+
+- [[source-pmbok-overview|pmbok-overview]]  (요약)
+- [pmbok-overview.md](raw/3_resources/pmbok-overview.md)  (원문)
+```
+
+**구현 위치**: `wikey-core/src/canonicalizer.ts:498-510` `buildPageContent` 의 `## 출처` 렌더 부.
+
+**필요 정보**:
+- raw 파일의 vault path (`raw/<bucket>/<filename>`) — ingest-pipeline 의 source-registry 또는 sourceFilename + bucket 정보 필요
+- canonicalize 호출 시 `sourcePageRawPath: string` 인자 추가 또는 `sourcePageBase` + `sourceBucket` 분리
+
+**잠재 risk**: raw 파일 이동 (movePair 4_archive → 3_resources 등) 시 link stale. mitigation = source-registry 의 vault_path 동기화 trigger 필요.
+
+#### B2 — validator link 자체 + extension fallback 양방 시도
+
+**현재 동작** (`scripts/validate-wiki.sh:46`):
+```bash
+found=$(find raw -name "${link}.*" -print -quit 2>/dev/null)
+```
+
+**변경 예상**:
+```bash
+# 1. link 자체 (extension 포함된 경우)
+found=$(find raw -name "${link}" -print -quit 2>/dev/null)
+# 2. fallback: link.* (extension 없는 경우)
+[ -z "$found" ] && found=$(find raw -name "${link}.*" -print -quit 2>/dev/null)
+```
+
+**구현 위치**: `scripts/validate-wiki.sh:46` 일대.
+
+**테스트**: shell-based fixture test (각 케이스 fixture raw 파일 + 예상 PASS/FAIL). `bats` 도구 또는 간단 bash spec.
+
+#### C4 — LLM prompt 강제 + ingest-pipeline normalize 결합
+
+**현재 동작**:
+- prompt example (ingest-pipeline.ts:1366/1379/1413): `"filename": "source-example.md"` 만 example
+- LLM 응답: 자율 (prefix 누락 가능)
+- ingest-pipeline.ts:673: `wiki/sources/${parsed.source_page.filename}` 그대로
+
+**변경 예상**:
+
+(a) prompt 명시 강제 (ingest-pipeline.ts 의 stage 1 summary prompt template):
+```
+### "source_page.filename" 규칙 (필수)
+- 반드시 `source-` 로 시작
+- 예: `source-pmbok-overview.md`
+- 다른 prefix (e.g., `raw-`, `archive-`) 또는 prefix 없음 → 무효
+```
+
+(b) ingest-pipeline.ts 의 wiki write 직전 normalize:
+```typescript
+// line 673 직전, summary parse 직후
+const filename = parsed.source_page.filename
+if (!filename.startsWith('source-')) {
+  console.warn(`[Wikey ingest] LLM emit drift — auto-normalizing source_page.filename: ${filename} → source-${filename}`)
+  parsed.source_page.filename = `source-${filename}`
+}
+```
+
+**구현 위치**:
+- prompt: `wikey-core/src/ingest-pipeline.ts:1366-1413` 근방 (stage 1 summary prompt template)
+- normalize: `wikey-core/src/ingest-pipeline.ts:673` 직전
+
+**테스트**:
+- unit: ingest-pipeline mock 으로 LLM 이 prefix 없는 filename emit → wiki write 시 prefix 추가 확증
+- 라이브: 다양한 source 형식 (영어 .md, 한국어 .md, .pdf, .hwp, .hwpx) 1개씩 ingest → wiki/sources/ 결과 모두 `source-` prefix
 
 ---
 
 ## 메모
 
-- 본 §5.13 은 **draft / 미진행** 상태. todox 등록만 하고 사용자 결정 대기.
+- 본 §5.13 은 **draft v0.1 / 미진행** 상태. 사용자 임시 결정 (A1+B2+C4) 등록 완료 — 착수 직전 최종 confirm 필수.
 - §5.13 진행 결정 시 본 문서를 v1 으로 갱신 + Phase 0 (codex plan cycle) 부터 시작.
 - 항목별 독립이므로 §5.13.A / §5.13.B / §5.13.C 분할 진행도 가능.
-- 우선순위 추정 (LOW / LOW / MEDIUM) — 사용자 사용 패턴에 따라 변동 가능.
+- TDD-BLUE 누락 보완 — 2026-05-06 사용자 raise 후 향후 모든 SDD+TDD cycle 에 Phase 3a (회귀 검증) + Phase 3b (BLUE refactor 명시) 분리 적용 예정.

@@ -31,12 +31,15 @@
 >
 > **다음 세션 첫 액션** = 사용자 신규 issue 또는 §5.13 잔존 follow-up 3 항목.
 >
-> **§5.13 정식 등록** (2026-05-06): `plan/phase-5-todox-5.13-residual-followups.md` (draft / 미진행). 자세한 본질 + 현재 동작 → 변경 예상 형태 + 옵션 비교 기록.
-> - **항목 A** (LOW): raw sidecar 매칭 부활 (concept/entity → raw 직접 jump, 옵션 A1/A2/A3)
-> - **항목 B** (LOW): validate-wiki.sh `find raw -name "${link}.*"` 패턴 개선 (옵션 B1/B2/B3)
-> - **항목 C** (MEDIUM): LLM source_page.filename emit prefix 강제 (옵션 C1/C2/C3/C4)
+> **§5.13 정식 등록** (2026-05-06): `plan/phase-5-todox-5.13-residual-followups.md` v0.1.
+> - **사용자 임시 결정 (2026-05-06)**: **A1 + B2 + C4** 채택 (착수 직전 최종 confirm 필요).
+> - **항목 A1**: concept/entity `## 출처` 에 `[[source-...]]` (요약) + `[raw](raw/...)` (원문) 양 link 병기
+> - **항목 B2**: validate-wiki.sh `find raw -name "${link}"` (자체) + `find raw -name "${link}.*"` (fallback) 양방 시도
+> - **항목 C4**: LLM prompt `source-` prefix 명시 강제 + ingest-pipeline normalize 안전망 (defense in depth)
 >
-> 사용자 결정 (어느 항목 / 어느 옵션 / 진행 시점) 시 §5.13 todox 갱신 v0 → v1 + Phase 0 부터 시작.
+> 진행 시 §5.13 todox v0.1 → v1 갱신 + Phase 0 (codex plan cycle) 부터 시작.
+>
+> **TDD-BLUE 누락 보완 정책** (2026-05-06 사용자 raise): 향후 모든 SDD+TDD cycle 의 Phase 3 를 분리 — Phase 3a (회귀 검증 = npm test + build) + Phase 3b (BLUE refactor 명시: 함수 분해 / naming / dedup / 주석 / 가독성). §5.13 부터 적용. CLAUDE.md / claude-forge-custom rules 영구 등록은 사용자 별 결정 후.
 
 ## 🎯 이전 첫 액션 (2026-05-05 session 17 §5.10.4 종결 직후)
 
