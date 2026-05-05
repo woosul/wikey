@@ -1364,14 +1364,20 @@ export const BUNDLED_INGEST_PROMPT = `당신은 wikey LLM Wiki의 인제스트 �
 ### 프론트매터 (모든 페이지 필수)
 \`\`\`yaml
 ---
-title: 페이지 제목
+title: 페이지 제목 (원문 표기 — 본문 언어 그대로)
 type: entity | concept | source
 created: {{TODAY}}
 updated: {{TODAY}}
 sources: [source-name.md]
+aliases: [영문 slug, 다른 언어 표기, 약어]
 tags: [태그1, 태그2]
 ---
 \`\`\`
+
+**title 원문 보존 규칙** (필수):
+- \`title\` 은 **소스 본문에 등장한 표기 그대로** (한국어 / 일본어 / 중국어 / 영문). 본문이 한국어면 한국어 title, 영문이면 영문 title.
+- \`aliases\` 에 다른 언어 표기 (한국어 본문이면 영문 slug + 영어 표기 alias / 영문 본문이면 한국어 표기 alias) + 약어 + 풀네임 변형 모두 포함.
+- 한국어 source 의 entity / concept page title 이 영문 slug 으로 영문화되지 않도록 — 영문 slug 은 filename 만, title 은 원문.
 
 ### 파일명 규칙
 - 소문자, 하이픈 구분 (예: my-page-name.md)

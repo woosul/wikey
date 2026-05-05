@@ -134,8 +134,8 @@ export interface CanonicalizeArgs {
 }
 
 interface RawCanonical {
-  entities?: Array<{ name?: string; type?: string; description?: string; aliases?: string[] }>
-  concepts?: Array<{ name?: string; type?: string; description?: string; aliases?: string[] }>
+  entities?: Array<{ name?: string; display_name?: string; type?: string; description?: string; aliases?: string[] }>
+  concepts?: Array<{ name?: string; display_name?: string; type?: string; description?: string; aliases?: string[] }>
   index_additions?: string[]
   log_entry?: string
 }
@@ -225,7 +225,8 @@ ${guideBlock}
 3. **기존 페이지 재사용**: 위 "기존 wiki 페이지" 목록과 매칭되면 filename은 기존 base 그대로 사용 (예: \`${EXAMPLE_ORG_BASE}\` 발견 → \`${EXAMPLE_ORG_ALIAS}\`로 새로 만들지 말 것).
 4. **filename 형식**: \`name\` 필드는 base name만 (소문자, 하이픈 구분, .md/디렉토리 prefix 금지).
 5. **description**: 1~2문장, 의미 위주.
-6. **다국어 alias 의무**: mention evidence 가 비-영문 표기 (한국어 / 일본어 / 중국어 등) 로 등장하면 그 원문 표기를 \`aliases\` 배열에 **반드시** 포함. 영문 slug 으로 정규화한 \`name\` 외에도 evidence 에 등장한 한국어/원문 표기를 alias 로 등록 — 후속 wikilink rendering 이 anchor display 로 활용. 영문이 본문에 같이 등장하면 영문 alias 도 추가 가능.
+6. **display_name (원문 표기)**: \`display_name\` 필드는 **mention evidence 의 원문에 등장한 표기 그대로** (한국어 / 일본어 / 중국어 / 영문 — 본문 언어 따라). 페이지 frontmatter \`title\` 과 H1 으로 사용됨. evidence 가 한국어면 한국어 표기, 영문이면 영문 표기. 빈 값이면 \`name\` (영문 slug) fallback.
+7. **다국어 alias**: \`aliases\` 배열에 **다른 언어 / 다른 표기** 명시. evidence 가 한국어면 영문 표기를 alias 로 (없으면 base name 자동 등록). 영문이면 한국어 표기 alias 로. 약어·풀네임 변형도 모두 alias.
 ${decompositionSection}
 ## 입력 mention (${mentions.length}개)
 
@@ -237,10 +238,10 @@ JSON only:
 \`\`\`json
 {
   "entities": [
-    {"name": "${EXAMPLE_ORG_BASE}", "type": "organization", "description": "${EXAMPLE_ORG_DESC_KO}", "aliases": ["${EXAMPLE_ORG_ALIAS}"]}
+    {"name": "${EXAMPLE_ORG_BASE}", "display_name": "${EXAMPLE_ORG_KO}", "type": "organization", "description": "${EXAMPLE_ORG_DESC_KO}", "aliases": ["${EXAMPLE_ORG_ALIAS}"]}
   ],
   "concepts": [
-    {"name": "${EXAMPLE_CONCEPT_BASE}", "type": "standard", "description": "PMI가 제정한 프로젝트 관리 표준 지식체계.", "aliases": ["${EXAMPLE_CONCEPT_ALIAS}"]}
+    {"name": "${EXAMPLE_CONCEPT_BASE}", "display_name": "PMBOK", "type": "standard", "description": "PMI가 제정한 프로젝트 관리 표준 지식체계.", "aliases": ["${EXAMPLE_CONCEPT_ALIAS}", "프로젝트 관리 지식체계"]}
   ],
   "index_additions": [
     "- [[${EXAMPLE_ORG_BASE}]] — ${EXAMPLE_ORG_KO} (소스: 1개)"
@@ -335,7 +336,7 @@ interface PageBuildFail { ok: false; reason: string }
 // Phase 5 §5.10.3 R2 (D-wide): validateAndBuildPage 의 anti-pattern + type validation 폐기.
 // LLM 자율 출력 통과. minimal alias normalization (canonicalizeSlug) 만 잔존.
 function validateAndBuildPage(
-  raw: { name?: string; type?: string; description?: string },
+  raw: { name?: string; display_name?: string; type?: string; description?: string; aliases?: string[] },
   category: 'entity' | 'concept',
   sourceFilename: string,
   today: string,
@@ -352,22 +353,45 @@ function validateAndBuildPage(
 
   const description = (raw.description ?? '').trim() || '(설명 없음)'
 
+  // §5.10.4 follow-up — title 원문 보존 (사용자 지시 2026-05-05).
+  // display_name 이 있으면 그 표기 (원문 본문에 등장한 표기) 를 frontmatter title 로.
+  // 없으면 base (영문 slug) fallback. aliases 는 raw.aliases 그대로 + base 자동 추가.
+  const displayTitle = (raw.display_name ?? '').trim() || base
+  const aliases = Array.from(new Set([
+    ...(raw.aliases ?? []).map((a) => a.trim()).filter(Boolean),
+    base,
+  ].filter((a) => a !== displayTitle)))
+
   const page: WikiPage = {
     filename: `${base}.md`,
     category: category === 'entity' ? 'entities' : 'concepts',
     entityType: category === 'entity' ? type : undefined,
     conceptType: category === 'concept' ? type : undefined,
-    content: buildPageContent({ name: base, type, description, category, sourceFilename, today }),
+    content: buildPageContent({
+      name: base,
+      title: displayTitle,
+      aliases,
+      type,
+      description,
+      category,
+      sourceFilename,
+      today,
+    }),
   }
   return { ok: true, page }
 }
 
 function buildPageContent(args: {
-  name: string; type: string; description: string;
+  name: string; title?: string; aliases?: readonly string[];
+  type: string; description: string;
   category: 'entity' | 'concept'; sourceFilename: string; today: string;
   relatedLinks?: readonly string[];
 }): string {
   const { name, type, description, category, sourceFilename, today, relatedLinks } = args
+  const titleValue = (args.title ?? name).trim() || name
+  const aliasesField = args.aliases && args.aliases.length > 0
+    ? `aliases: [${args.aliases.map((a) => JSON.stringify(a)).join(', ')}]\n`
+    : ''
   const typeField = category === 'entity' ? `entity_type: ${type}` : `concept_type: ${type}`
   // §5.2.1: optional `## 관련` H2 sandwiched between description and `## 출처`.
   // Empty/undefined relatedLinks → section omitted (no empty H2).
@@ -391,16 +415,16 @@ ${relatedLinks.map((b) => `- [[${b}]]`).join('\n')}
       : `${sourceFilename}.md`
   const sourceDisplay = sourceFilename.replace(/\.[^.]+$/, '')
   return `---
-title: ${name}
+title: ${titleValue}
 type: ${category}
 ${typeField}
-created: ${today}
+${aliasesField}created: ${today}
 updated: ${today}
 sources: [${sourceFilename}]
 tags: []
 ---
 
-# ${name}
+# ${titleValue}
 
 ${description}
 
