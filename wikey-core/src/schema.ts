@@ -36,8 +36,8 @@ export async function loadSchemaOverride(
 /**
  * §5.10.4 P2-2 (codex follow-up): minimal `.wikey/schema.yaml` aliases parser.
  *
- * D-wide 보존 영역 = `aliases` (canonical slug normalization) + `pii_patterns` (별 layer).
- * 본 함수는 `aliases:` block 만 read — `pii_patterns` 는 `pii-patterns.ts` 가 별 file
+ * D-wide 보존 영역 = `aliases` (canonical slug normalization) 단독. PII custom rule 은
+ * 본 schema.yaml 에 두지 않음 — `pii-patterns.ts` 가 별 file
  * (`.wikey/pii-patterns.yaml`) 에서 별도 load.
  *
  * 지원 syntax (minimal, anchors / multiline scalars 미지원):

@@ -330,7 +330,7 @@ const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
 | 행위 | 기준 |
 |------|------|
 | **mention 생성** | 산업표준 용어, 회사·인물·제품·도구의 고유명, 정식 문서 유형. evidence 1 문장. |
-| **mention 거부** | UI 라벨, 단순 기능명, 비즈니스 객체, 한국어 일반 명사. *LLM 이 자체 거부* — Stage 3 도 다시 거름. |
+| **mention 거부** | UI 라벨, 단순 기능명, 비즈니스 객체, 한국어 일반 명사. *LLM 이 자체 거부* (canonicalizer 가 추가 dropped 추적). |
 | **source_page 생성** | summary LLM 이 항상 1 개. 멱등 (filename 같으면 update). |
 | **source_page 수정** | `appendSectionTOCToSource` 가 결정적 섹션 TOC append (Phase C enablement). |
 
@@ -345,7 +345,7 @@ const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
 ### 7.1 위치
 
 - 코드: `wikey-core/src/canonicalizer.ts`
-- 데이터: `.wikey/schema.yaml` (사용자 alias / pii_patterns 만 — `entity_types` / `concept_types` / `standard_decompositions` 모두 D-wide 폐기)
+- 데이터: `.wikey/schema.yaml` (사용자 `aliases:` 만 — `entity_types` / `concept_types` / `standard_decompositions` / `custom_types` / `pii_patterns` 모두 D-wide 폐기. PII custom rule 은 별 file `.wikey/pii-patterns.yaml` shape `patterns: - id/kind/mask`.)
 
 ### 7.2 LLM 개입 포인트 — doc-global 1 콜
 
@@ -409,7 +409,7 @@ mention extraction 단계에서 LLM 자체가 거부 가이드 (UI 라벨, 기�
 
 ### 7.8 schema.yaml — D-wide 갱신 (§5.4 4 Stage 폐기)
 
-`.wikey/schema.yaml` 의 D-wide 보존 영역은 **`aliases` + `pii_patterns`** 두 section 뿐. `entity_types` / `concept_types` / `standard_decompositions` / `custom_types` 는 §5.10 D-wide 결정으로 모두 폐기 — Stage 1 BUILTIN_STANDARD_DECOMPOSITIONS / Stage 2 suggestion / Stage 3 self-declaration / Stage 4 converged decomposition 의 4 layer self-extending 메커니즘 전체 제거. 도메인 type 진화는 LLM 자연 의미 매칭 + qmd embedding cluster 가 대체.
+`.wikey/schema.yaml` 의 D-wide 보존 영역은 **`aliases` 단독 section**. `entity_types` / `concept_types` / `standard_decompositions` / `custom_types` 는 §5.10 D-wide 결정으로 모두 폐기 — Stage 1 BUILTIN_STANDARD_DECOMPOSITIONS / Stage 2 suggestion / Stage 3 self-declaration / Stage 4 converged decomposition 의 4 layer self-extending 메커니즘 전체 제거. 도메인 type 진화는 LLM 자연 의미 매칭 + qmd embedding cluster 가 대체. PII custom rule 은 schema.yaml 에 두지 않음 — 별 file `.wikey/pii-patterns.yaml` (또는 `~/.config/wikey/pii-patterns.yaml`) shape `patterns: - id/kind/mask` 으로 관리 (PII engine 별 layer, `pii-patterns.ts` 참조).
 
 ---
 
@@ -649,9 +649,9 @@ const rawAnswer = await llm.call(prompt, { provider, model })
 [Step 7] write pages + index + log + reindex — deterministic
    │
    ▼
-[Step 8] Stage 2 suggestion detector (deterministic, immediate)
-       Stage 3 self-declaration (deterministic, runtime)
-       Stage 4 convergence (수동 batch, arbitration='union' 0콜 또는 'llm' N콜)
+~~[Step 8]~~ **D-wide 폐기 (2026-05-05, §5.10.4)** — Stage 1~4 self-extending
+        (suggestion-detector / self-declaration / convergence) 모두 제거.
+        ingest 후 추가 자동 처리 없음. canonResult → wiki write 직후 종결.
 
 ──────── 별도 트리거 ────────
 

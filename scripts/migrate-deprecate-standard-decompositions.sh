@@ -12,7 +12,7 @@
 # 5 단계 (보조 plan §3.3):
 #   1. .wikey/schema.yaml 의 standard_decompositions / entity_types / concept_types
 #      / custom_types 영역만 → .wikey/manual-overrides.yaml 백업 후 본 schema 에서 제거.
-#      aliases / pii_patterns 만 보존 (D-wide 보존 영역).
+#      aliases 만 보존 (D-wide 보존 영역; PII 는 .wikey/pii-patterns.yaml 별 file).
 #   2. .wikey/suggestions.json / converged-decompositions.json /
 #      converged-decompositions.mock-baseline.json / mention-history.json /
 #      qmd-embeddings.json 백업 후 제거.
@@ -58,7 +58,7 @@ if [[ -f "$SCHEMA_YAML" ]]; then
   echo "    → backup: $BACKUP_DIR/schema.yaml.original"
   echo "    → split deprecated sections (standard_decompositions / entity_types / concept_types / custom_types)"
   echo "      → $MANUAL_OVERRIDES (보존, 사용자 수동 정정 reference)"
-  echo "    → rewrite: aliases / pii_patterns 만 잔존"
+  echo "    → rewrite: aliases 만 잔존 (PII 는 별 file)"
   if [[ "$MODE" == "--apply" ]]; then
     mkdir -p "$BACKUP_DIR"
     cp "$SCHEMA_YAML" "$BACKUP_DIR/schema.yaml.original"
@@ -69,9 +69,13 @@ if [[ -f "$SCHEMA_YAML" ]]; then
     fi
     # awk 로 deprecated sections (top-level keys + 그 indented children) 만 추출.
     # YAML 의 단순 indent 기반 — anchors / multiline scalars 미지원 (wikey schema 규칙 일치).
+    # §5.10.4 cycle #4 P2 fix: pii_patterns 도 deprecated section 으로 처리.
+    # PII engine 은 .wikey/pii-patterns.yaml + ~/.config/wikey/pii-patterns.yaml 만 인식
+    # (shape patterns:- id/kind/mask). schema.yaml 의 pii_patterns 는 inactive — 사용자
+    # 정의 잔존 시 PII protection 누락 위험 → manual-overrides.yaml 으로 분리 + redirect 안내.
     awk '
       BEGIN { skip = 0; section = "" }
-      /^standard_decompositions[ \t]*:/ || /^entity_types[ \t]*:/ || /^concept_types[ \t]*:/ || /^custom_types[ \t]*:/ {
+      /^standard_decompositions[ \t]*:/ || /^entity_types[ \t]*:/ || /^concept_types[ \t]*:/ || /^custom_types[ \t]*:/ || /^pii_patterns[ \t]*:/ {
         skip = 1; section = $0; print "# --- section: " section " ---"; print; next
       }
       /^[a-zA-Z_]/ { skip = 0 }
@@ -83,20 +87,24 @@ if [[ -f "$SCHEMA_YAML" ]]; then
 #
 # 본 file 은 schema.yaml 에서 분리된 deprecated sections.
 # standard_decompositions / entity_types / concept_types / custom_types 모두 D-wide 폐기.
-# canonicalizer 가 더 이상 본 정의를 읽지 않습니다.
+# pii_patterns 도 schema.yaml 에서 분리 (PII engine 은 .wikey/pii-patterns.yaml +
+# ~/.config/wikey/pii-patterns.yaml 만 load, shape patterns:- id/kind/mask).
+# canonicalizer / PII engine 모두 본 file 의 정의를 더 이상 읽지 않습니다.
 #
-# 사용자가 wiki page 의 alias / type 통제를 원하면 .wikey/schema.yaml 의
-# `aliases:` 섹션을 사용하세요 (canonical slug normalization).
+# 액션:
+# - alias 정의는 .wikey/schema.yaml 의 `aliases:` 섹션으로 이동 (canonicalizer 인식)
+# - pii_patterns 는 .wikey/pii-patterns.yaml 의 `patterns: - id/kind/mask` shape 으로
+#   변환 (PII engine 인식). 자세한 shape: wikey-core/src/pii-patterns.ts.
 
 EOF_HEADER
       cat "$MANUAL_OVERRIDES.tmp" >> "$MANUAL_OVERRIDES"
       echo "      ✓ deprecated sections → $MANUAL_OVERRIDES"
     fi
     rm -f "$MANUAL_OVERRIDES.tmp"
-    # schema.yaml rewrite — deprecated sections 제거, aliases / pii_patterns 만 잔존.
+    # schema.yaml rewrite — deprecated sections 모두 제거, aliases 만 잔존.
     awk '
       BEGIN { skip = 0 }
-      /^standard_decompositions[ \t]*:/ || /^entity_types[ \t]*:/ || /^concept_types[ \t]*:/ || /^custom_types[ \t]*:/ {
+      /^standard_decompositions[ \t]*:/ || /^entity_types[ \t]*:/ || /^concept_types[ \t]*:/ || /^custom_types[ \t]*:/ || /^pii_patterns[ \t]*:/ {
         skip = 1; next
       }
       /^[a-zA-Z_]/ { skip = 0 }
@@ -117,7 +125,7 @@ EOF_HEADER
 #     - ISO/IEC 27001
 EOF_PLACEHOLDER
     fi
-    echo "      ✓ schema.yaml 정정 (aliases / pii_patterns 만 잔존)"
+    echo "      ✓ schema.yaml 정정 (aliases 만 잔존 (PII 는 별 file))"
   fi
 else
   echo "[1] schema.yaml: 없음 → skip"
