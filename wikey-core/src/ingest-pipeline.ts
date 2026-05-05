@@ -544,6 +544,11 @@ export async function ingest(
       sourceBody: content,
     })
     log(`stage 2.3 canonicalize done in ${Date.now() - tCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
+    // §5.11 v2 B6: FULL route dropped sample log (SEGMENTED route mirror)
+    if (canon.dropped.length > 0) {
+      const droppedSummary = canon.dropped.slice(0, 10).map((d) => `${d.mention.name} (${d.reason})`).join(', ')
+      log(`dropped sample: ${droppedSummary}${canon.dropped.length > 10 ? `, +${canon.dropped.length - 10} more` : ''}`)
+    }
 
     parsed = {
       source_page: summaryParsed.source_page,
@@ -931,9 +936,16 @@ Source: {{SOURCE_FILENAME}}
 ❌ X-management, X-service, X-support 같은 단순 기능명 — mention 아님
 ❌ 비즈니스 객체 라벨 (quotation, purchase-order, tax-invoice 등) — mention 아님
 
-## 가이드 분량
+## 가이드 분량 + 의미·관련도 (§5.11 v2)
 
-청크당 0~15개 정도. 모르는 것보다 **빠뜨리는 게 낫습니다**. 명확한 것만.
+페이지 의도와 직접 관련된 명확한 entity/concept 만. **수가 적어도 (1~3개) 관계없음**. 페이지의 핵심 주제·방법론·도구·인물·조직·표준에 해당하는 것만 선택.
+
+❌ 추가 제외 대상 (의도/관련도 기반):
+- 단순 출처 (예: "출처: X", "발급기관: Y", "개최 장소: Z")
+- 단순 행사 장소 / 단순 인용
+- 1회 등장 + action/property/relation 서술 없는 단순 명칭
+- 단편적 사실 (날짜·일정·단순 위치) 자체
+- 페이지 의도와 약한 관련의 고유명사 (page intent 와 1-hop relation 없음)
 
 ## 출력 형식 (JSON only)
 

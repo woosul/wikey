@@ -235,7 +235,15 @@ ${guideBlock}
 5. **description**: 1~2문장, 의미 위주.
 6. **display_name (원문 표기)**: \`display_name\` 필드는 **mention evidence 의 원문에 등장한 표기 그대로** (한국어 / 일본어 / 중국어 / 영문 — 본문 언어 따라). 페이지 frontmatter \`title\` 과 H1 으로 사용됨. evidence 가 한국어면 한국어 표기, 영문이면 영문 표기. 빈 값이면 \`name\` (영문 slug) fallback.
 7. **다국어 alias**: \`aliases\` 배열에 **다른 언어 / 다른 표기** 명시. evidence 가 한국어면 영문 표기를 alias 로 (없으면 base name 자동 등록). 영문이면 한국어 표기 alias 로. 약어·풀네임 변형도 모두 alias.
-8. **promotion threshold (§5.11)**: 본문 전체에서 의미 있는 등장 (action / property / relation 서술) 이 **2회 이상**이거나 다른 mention 이 cross-reference 하는 hub 역할일 때만 entity/concept 으로 출력. 단순 출처 (예: "개최 장소: X", "출처: Y"), 단순 인용, 1회 mention 만 있는 고유명사는 entities/concepts 에서 **제외**. 본문 의미에 비례한 promotion 만 — wiki noise 방지.
+8. **promotion threshold (§5.11 v2)**: 페이지 의도·관련도 기준으로 entity/concept 결정.
+   - **포함**: 페이지 의도(주제)와 1-hop 직접 관련 + action/property/relation 서술이 있는 명사. 다른 mention 이 cross-reference 하는 hub.
+   - **제외**: 단순 출처 (예: "개최 장소: X", "출처: Y", "발급기관"), 단순 행사 장소, 단순 인용, 1회 mention 만 있는 고유명사, 단편 사실 (날짜·일정·단순 위치) 자체. 페이지 의도와 약한 관련의 고유명사.
+   - **수량 제한 없음** — **수가 적어도 (1~3개만 출력해도)** OK. 본문 의미에 비례한 promotion 만 — wiki noise 방지.
+9. **원문 언어 중심 + 반대 언어 alias (§5.11 v2)**:
+   - **한국어 source** (sourceFilename 또는 mention evidence 의 한글 비중 ≥ 30%) → \`name\` = 한국어 base, \`aliases\` = [영어 transliteration / 표준 영문 약어]
+   - **영어 source** → \`name\` = 영어 base, \`aliases\` = [한국어 transliteration / 한국어 표기]
+   - 예 (한국어 source): \`{"name": "전라남도-테크노파크", "aliases": ["jeonnam-technopark", "JTP"]}\`
+   - 예 (영어 source): \`{"name": "project-management-institute", "aliases": ["프로젝트관리협회", "PMI"]}\`
 ${decompositionSection}
 ## 입력 mention (${mentions.length}개)
 
@@ -273,7 +281,12 @@ JSON only:
 const PROMOTION_THRESHOLD = 2
 
 function countOccurrences(name: string, aliases: readonly string[], sourceBody: string): number {
-  const candidates = [name, ...aliases].map((s) => s.trim()).filter((s) => s.length > 1)
+  const base = [name, ...aliases].map((s) => s.trim()).filter((s) => s.length > 1)
+  // §5.11 v2: 한국어 source 대응 — 하이픈 ↔ 공백 변형 모두 substring search
+  // (예: '전라남도-테크노파크' base 가 본문 '전라남도 테크노파크' 와도 매치)
+  const candidates = Array.from(
+    new Set(base.flatMap((c) => (c.includes('-') ? [c, c.replace(/-/g, ' ')] : [c]))),
+  )
   const haystack = sourceBody.toLowerCase()
   let total = 0
   for (const c of candidates) {

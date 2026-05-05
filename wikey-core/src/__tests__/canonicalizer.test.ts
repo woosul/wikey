@@ -3,6 +3,7 @@ import {
   canonicalize, buildCanonicalizerPrompt,
   canonicalizeSlug, SLUG_ALIASES,
 } from '../canonicalizer.js'
+import { BUNDLED_STAGE2_MENTION_PROMPT } from '../ingest-pipeline.js'
 import { EXAMPLE_ORG_BASE } from '../example-placeholders.js'
 import type { Mention } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
@@ -694,6 +695,59 @@ describe('canonicalize — §5.11 promotion threshold', () => {
     const result = await canonicalize({ ...baseArgs, llm, mentions })
     expect(result.entities).toHaveLength(1)
     expect(result.entities[0].filename).toBe('single-mention-org.md')
+  })
+})
+
+// §5.11 v2 — relevance/intent + 원문 언어 alias (5 신규 case AC-V1~V5)
+describe('canonicalize — §5.11 v2 relevance/intent + 원문 언어 alias', () => {
+  const promptArgs = {
+    mentions: [{ name: 'pms', evidence: 'PMS 제품' }],
+    existingEntityBases: [],
+    existingConceptBases: [],
+    sourceFilename: 'PMS_test.pdf',
+  }
+
+  it('AC-V1: canonicalizer prompt 에 "수가 적어도" 문구 (1~3개 OK)', () => {
+    const p = buildCanonicalizerPrompt(promptArgs)
+    expect(p).toMatch(/수가 적어도|1~3개만 출력해도/)
+  })
+
+  it('AC-V2: canonicalizer prompt 에 rule 9 "한국어 source" + "영어 source" alias 룰', () => {
+    const p = buildCanonicalizerPrompt(promptArgs)
+    expect(p).toContain('한국어 source')
+    expect(p).toContain('영어 source')
+  })
+
+  it('AC-V3: canonicalizer prompt 에 단순 출처/개최 장소 ❌ 명시', () => {
+    const p = buildCanonicalizerPrompt(promptArgs)
+    expect(p).toMatch(/단순 출처|발급기관|개최 장소/)
+  })
+
+  it('AC-V4: BUNDLED_STAGE2_MENTION_PROMPT 의 "0~15개" cap 제거 + "수가 적어도" 명시', () => {
+    expect(BUNDLED_STAGE2_MENTION_PROMPT).not.toMatch(/0~15개 정도/)
+    expect(BUNDLED_STAGE2_MENTION_PROMPT).toMatch(/수가 적어도/)
+  })
+
+  it('AC-V5: 한국어 source LLM 출력 통과 — Korean filename + English alias frontmatter', async () => {
+    const mentions: Mention[] = [
+      { name: '전라남도-테크노파크', type_hint: 'organization', evidence: '전라남도 테크노파크 본관에서 회의' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: '전라남도-테크노파크', type: 'organization',
+        description: '전남 지역 R&D 지원 공공기관.',
+        aliases: ['jeonnam-technopark', 'JTP'],
+      }],
+      concepts: [],
+    }))
+    // sourceBody 충분히 등장 (≥ 2 회) → §5.11 v1 occurrence gate 통과
+    const sourceBody = '전라남도 테크노파크 소개. 전라남도 테크노파크 본관에서 회의 진행. JTP 산하 연구소.'
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    expect(result.entities).toHaveLength(1)
+    // WikiPage 시그니처: filename + content + category (codex cycle #1 P1-#2 fix)
+    expect(result.entities[0].filename).toBe('전라남도-테크노파크.md')
+    // alias 는 content frontmatter 의 aliases yaml 리스트로 검증
+    expect(result.entities[0].content).toMatch(/aliases:\s*\n\s*-\s*jeonnam-technopark|aliases:\s*\[.*jeonnam-technopark/)
   })
 })
 
