@@ -2,9 +2,8 @@ import type { LLMClient } from './llm-client.js'
 import type {
   CanonicalizedResult, Mention, WikiPage,
 } from './types.js'
-// Phase 5 §5.10.3 + §5.10.4 D-wide: schema gate (entity/concept type union, anti-pattern
-// detector, standard decomposition block) 모두 폐기. canonicalizer = LLM 자율 type 분류
-// + canonicalizeSlug alias normalization 만.
+// §5.10.4 D-wide: schema gate · anti-pattern detector · standard decomposition 모두 폐기.
+// canonicalizer = LLM 자율 type 분류 + canonicalizeSlug alias normalization 만.
 import { normalizeBase } from './wiki-ops.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_ORG_ALIAS, EXAMPLE_ORG_KO, EXAMPLE_ORG_DESC_KO,
@@ -12,20 +11,16 @@ import {
 } from './example-placeholders.js'
 
 /**
- * Phase C v6 + §5.10.4 D-wide: Stage 3 (formerly Stage 2) Canonicalizer.
- *
- * Single document-global LLM call that:
+ * Stage 3 Canonicalizer (D-wide). Single document-global LLM call that:
  *   1. Takes all mentions from chunk LLMs (Stage 2) + existing wiki page list
  *   2. Maps each mention to canonical entity/concept under LLM 자율 type 분류
- *      (D-wide: 7-type schema gate / standard_decompositions / anti-pattern 검증 모두 폐기)
  *   3. Resolves abbreviation↔fullname pairs and existing-page reuse
  *   4. Drops only on empty name or empty type (LLM 자체가 거부 가이드 적용)
  *
- * Key invariants (D-wide 갱신):
+ * Invariants:
  *   - Output filenames are normalized base names (no path, no .md → wiki-ops adds .md)
- *   - Each kept page has an explicit entityType or conceptType (free string, LLM 자율)
- *   - Minimal alias normalization (SLUG_ALIASES + .wikey/schema.yaml `aliases:` parser
- *     via loadUserAliases) for canonical slug dedup. type 분류 강제 검증 0.
+ *   - Each kept page has explicit entityType or conceptType (free string, LLM 자율)
+ *   - Minimal alias normalization (SLUG_ALIASES + .wikey/schema.yaml `aliases:`)
  */
 
 const MAX_JSON_RETRIES = 2
@@ -106,16 +101,15 @@ export function canonicalizeSlug(base: string, userAliases?: Readonly<Record<str
   return SLUG_ALIASES[base] ?? base
 }
 
-// Phase 5 §5.10.3 R2 (D-wide LLM-only ontology): FORCED_CATEGORIES 폐기.
-// 변경 전: 30-run PMS 측정 oscillation 안정화 위해 slug 별 entity/concept 강제 pin.
-// 변경 후: LLM 자율 분류. determinism 측정은 슬러그별 pin 이 아닌 LLM 자체 안정성 측정.
-// minimal alias normalization (SLUG_ALIASES, canonicalizeSlug, dedupAcronymsCrossPool) 만 잔존.
+// §5.10.3 R2 (D-wide LLM-only ontology): FORCED_CATEGORIES + entity/concept pin 폐기.
+// minimal alias normalization (SLUG_ALIASES, canonicalizeSlug) 만 잔존.
 
 export interface CanonicalizeArgs {
   readonly llm: LLMClient
   readonly mentions: readonly Mention[]
   readonly existingEntityBases: readonly string[]
   readonly existingConceptBases: readonly string[]
+  /** Raw source filename incl. extension (e.g., `pmbok-overview.md`) — display 용. */
   readonly sourceFilename: string
   /**
    * §5.12: wiki/sources/<sourcePageBase>.md 단일 진실 소스 base. ingest-pipeline 이
@@ -153,8 +147,8 @@ export interface CanonicalizeArgs {
 }
 
 interface RawCanonical {
-  entities?: Array<{ name?: string; display_name?: string; type?: string; description?: string; aliases?: string[] }>
-  concepts?: Array<{ name?: string; display_name?: string; type?: string; description?: string; aliases?: string[] }>
+  entities?: RawPage[]
+  concepts?: RawPage[]
   index_additions?: string[]
   log_entry?: string
 }
@@ -212,21 +206,20 @@ export function buildCanonicalizerPrompt(args: PromptArgs): string {
     return `${i + 1}. \`${m.name}\` (hint: ${m.type_hint ?? 'unknown'}) — ${evidence}`
   }).join('\n')
 
-  // Phase 5 §5.10.3 R2 + §5.10.4 (D-wide): schemaBlock + standardDecompositionBlock 모두 폐기. LLM 자율 type 분류.
+  // §5.10.4 D-wide: schemaBlock + standardDecompositionBlock 폐기. LLM 자율 type 분류.
+  // SCHEMA_BLOCK / STANDARD_DECOMPOSITION_BLOCK substitution 은 deprecated override
+  // prompt 와의 backward compat 만 유지 (변환 시 빈 문자열).
   if (overridePrompt && overridePrompt.trim()) {
     return overridePrompt
       .replaceAll('{{SOURCE_FILENAME}}', sourceFilename)
       .replaceAll('{{GUIDE_BLOCK}}', guideBlock)
-      .replaceAll('{{SCHEMA_BLOCK}}', '')   // Phase 5 §5.10.3 R2: schema gate 폐기.
-      .replaceAll('{{STANDARD_DECOMPOSITION_BLOCK}}', '')   // §5.10.4: standard decomposition 폐기.
+      .replaceAll('{{SCHEMA_BLOCK}}', '')
+      .replaceAll('{{STANDARD_DECOMPOSITION_BLOCK}}', '')
       .replaceAll('{{EXISTING_BLOCK}}', existingBlock)
       .replaceAll('{{MENTIONS_BLOCK}}', mentionsBlock)
       .replaceAll('{{MENTIONS_COUNT}}', String(mentions.length))
   }
 
-  const decompositionSection = ''
-
-  // Phase 5 §5.10.3 R2 (D-wide): schema 7-type 강제 prompt 폐기. LLM 자율 type 분류.
   return `당신은 wikey LLM Wiki의 canonicalizer입니다. chunk LLM이 추출한 mention 리스트를 받아 entity/concept 으로 분류하고 canonical filename 으로 통합합니다.
 
 Source: ${sourceFilename}
@@ -250,7 +243,7 @@ ${guideBlock}
    - **영어 source** → \`name\` = 영어 base, \`aliases\` = [한국어 transliteration / 한국어 표기]
    - 예 (한국어 source): \`{"name": "전라남도-테크노파크", "aliases": ["jeonnam-technopark", "JTP"]}\`
    - 예 (영어 source): \`{"name": "project-management-institute", "aliases": ["프로젝트관리협회", "PMI"]}\`
-${decompositionSection}
+
 ## 입력 mention (${mentions.length}개)
 
 ${mentionsBlock}
@@ -281,14 +274,14 @@ JSON only:
 /**
  * §5.11 page promotion threshold — Layer 2 deterministic gate. mention name +
  * alias 의 sourceBody substring 등장 횟수가 PROMOTION_THRESHOLD 미만이면 drop.
- * length ≤ 1 candidate (예: "a" / "x" 같은 단일 문자) 는 false positive 방지로 제외.
+ * length ≤ 1 candidate (단일 문자) 는 false positive 방지로 제외.
  * sourceBody 미전달 시 gate skip (backward compatible).
  */
 const PROMOTION_THRESHOLD = 2
 
 function countOccurrences(name: string, aliases: readonly string[], sourceBody: string): number {
   const base = [name, ...aliases].map((s) => s.trim()).filter((s) => s.length > 1)
-  // §5.11 v2: 한국어 source 대응 — 하이픈 ↔ 공백 변형 모두 substring search
+  // §5.11 v2 한국어 대응 — 하이픈 ↔ 공백 변형 모두 substring search
   // (예: '전라남도-테크노파크' base 가 본문 '전라남도 테크노파크' 와도 매치)
   const candidates = Array.from(
     new Set(base.flatMap((c) => (c.includes('-') ? [c, c.replace(/-/g, ' ')] : [c]))),
@@ -307,6 +300,71 @@ function countOccurrences(name: string, aliases: readonly string[], sourceBody: 
   return total
 }
 
+interface RawPage { name?: string; display_name?: string; type?: string; description?: string; aliases?: string[] }
+
+/**
+ * §5.11 promotion gate — entity/concept 공통 substring-count drop logic.
+ * sourceBody 미전달 → 모두 allowed (gate skip). 통과한 raw page 와
+ * dropped reason map (canonical base 별) 분리 반환.
+ */
+function applyPromotionGate(
+  rawPages: readonly RawPage[],
+  sourceBody: string | undefined,
+  userAliases?: Readonly<Record<string, string>>,
+): { allowed: readonly RawPage[]; drops: Map<string, string> } {
+  if (sourceBody === undefined) {
+    return { allowed: rawPages, drops: new Map() }
+  }
+  const drops = new Map<string, string>()
+  const allowed: RawPage[] = []
+  for (const p of rawPages) {
+    const occ = countOccurrences(p.name ?? '', p.aliases ?? [], sourceBody)
+    if (occ < PROMOTION_THRESHOLD) {
+      const reason = `single-mention (${occ} occurrence) — not promoted to page`
+      drops.set(canonicalizeSlug(normalizeBase(p.name ?? ''), userAliases), reason)
+      for (const alias of p.aliases ?? []) {
+        drops.set(canonicalizeSlug(normalizeBase(alias), userAliases), reason)
+      }
+      continue
+    }
+    allowed.push(p)
+  }
+  return { allowed, drops }
+}
+
+/**
+ * Build a single category (entity or concept) — promotion gate → validateAndBuildPage.
+ * Mutates `keptBases` for cross-pool collision detection.
+ *
+ * Entity pass: 모든 valid 결과 push (entity 간 base 충돌은 caller 가 다루지 않음 — LLM
+ * 이 중복 emit 시 마지막 것만 wiki 에 write 됨, 동작 변경 X 보존).
+ * Concept pass: cross-pool dedup 적용 — entity 와 같은 base 면 skip.
+ */
+function buildCategoryPages(
+  rawPages: readonly RawPage[],
+  category: 'entity' | 'concept',
+  sourceFilename: string,
+  sourcePageBase: string,
+  today: string,
+  sourceBody: string | undefined,
+  keptBases: Set<string>,
+  userAliases?: Readonly<Record<string, string>>,
+): { pages: WikiPage[]; drops: Map<string, string> } {
+  const { allowed, drops } = applyPromotionGate(rawPages, sourceBody, userAliases)
+  const pages: WikiPage[] = []
+  const dedupeAgainstKept = category === 'concept'
+  for (const p of allowed) {
+    const result = validateAndBuildPage(p, category, sourceFilename, sourcePageBase, today, userAliases)
+    if (!result.ok) continue
+    const base = normalizeBase(result.page.filename)
+    if (dedupeAgainstKept && keptBases.has(base)) continue
+    pages.push(result.page)
+    keptBases.add(base)
+    for (const alias of p.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias), userAliases))
+  }
+  return { pages, drops }
+}
+
 function assembleCanonicalResult(
   raw: RawCanonical,
   mentions: readonly Mention[],
@@ -316,67 +374,27 @@ function assembleCanonicalResult(
   userAliases?: Readonly<Record<string, string>>,
   sourceBody?: string,
 ): CanonicalizedResult {
-  const dropped: Array<{ mention: Mention; reason: string }> = []
   const keptBases = new Set<string>()
-  const entities: WikiPage[] = []
-  const concepts: WikiPage[] = []
-  // §5.11 promotion-threshold drops captured here so caller's diagnostic surface
-  // (`canon.dropped`) reports the exact reason. Without this, computeDropReason()
-  // (LLM-omitted fallback) would label single-mention drops as "not in LLM output".
-  const promotionDrops = new Map<string, string>()
+  const entityResult = buildCategoryPages(
+    raw.entities ?? [], 'entity', sourceFilename, sourcePageBase, today, sourceBody, keptBases, userAliases,
+  )
+  const conceptResult = buildCategoryPages(
+    raw.concepts ?? [], 'concept', sourceFilename, sourcePageBase, today, sourceBody, keptBases, userAliases,
+  )
+  // §5.11 — promotion drops 는 canon.dropped 의 reason 에 정확 표기를 위해 보존
+  // (computeDropReason fallback 이 single-mention 을 generic "not in LLM output" 으로
+  // 잘못 라벨링하지 않도록).
+  const promotionDrops = new Map<string, string>([...entityResult.drops, ...conceptResult.drops])
 
-  for (const e of raw.entities ?? []) {
-    if (sourceBody !== undefined) {
-      const occ = countOccurrences(e.name ?? '', e.aliases ?? [], sourceBody)
-      if (occ < PROMOTION_THRESHOLD) {
-        const reason = `single-mention (${occ} occurrence) — not promoted to page`
-        const base = canonicalizeSlug(normalizeBase(e.name ?? ''), userAliases)
-        promotionDrops.set(base, reason)
-        for (const alias of e.aliases ?? []) {
-          promotionDrops.set(canonicalizeSlug(normalizeBase(alias), userAliases), reason)
-        }
-        continue
-      }
-    }
-    const result = validateAndBuildPage(e, 'entity', sourceFilename, sourcePageBase, today, userAliases)
-    if (!result.ok) continue
-    entities.push(result.page)
-    keptBases.add(normalizeBase(result.page.filename))
-    for (const alias of e.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias), userAliases))
-  }
+  // §5.2.1 cross-link injection — every entity ↔ every concept (sorted, deterministic).
+  // Empty other-pool → page unchanged (no empty `## 관련` H2).
+  const pinned = applyCrossLinks(entityResult.pages, conceptResult.pages, sourceFilename, sourcePageBase, today)
 
-  for (const c of raw.concepts ?? []) {
-    if (sourceBody !== undefined) {
-      const occ = countOccurrences(c.name ?? '', c.aliases ?? [], sourceBody)
-      if (occ < PROMOTION_THRESHOLD) {
-        const reason = `single-mention (${occ} occurrence) — not promoted to page`
-        const base = canonicalizeSlug(normalizeBase(c.name ?? ''), userAliases)
-        promotionDrops.set(base, reason)
-        for (const alias of c.aliases ?? []) {
-          promotionDrops.set(canonicalizeSlug(normalizeBase(alias), userAliases), reason)
-        }
-        continue
-      }
-    }
-    const result = validateAndBuildPage(c, 'concept', sourceFilename, sourcePageBase, today, userAliases)
-    if (!result.ok) continue
-    // Cross-pool dedup: if entity with same base already kept, skip concept
-    if (keptBases.has(normalizeBase(result.page.filename))) continue
-    concepts.push(result.page)
-    keptBases.add(normalizeBase(result.page.filename))
-    for (const alias of c.aliases ?? []) keptBases.add(canonicalizeSlug(normalizeBase(alias), userAliases))
-  }
-
-  // Phase 5 §5.10.3 R2 (D-wide): applyForcedCategories 폐기. LLM 분류 그대로 통과.
-  // §5.2.1: inject `## 관련` cross-links between same-cycle entity ↔ concept pages.
-  // Deterministic policy: every entity links to all concepts in the cycle (and vice versa).
-  // Empty other-pool → no `## 관련` H2 (no empty section). Sorted alphabetically.
-  const pinned = applyCrossLinks(entities, concepts, sourceFilename, sourcePageBase, today)
-
-  // Track dropped mentions: anything in `mentions` whose canonical base didn't survive
+  // Track dropped mentions: anything in `mentions` whose canonical base didn't survive.
   const pinnedBases = new Set<string>()
   for (const p of pinned.entities) pinnedBases.add(normalizeBase(p.filename))
   for (const p of pinned.concepts) pinnedBases.add(normalizeBase(p.filename))
+  const dropped: Array<{ mention: Mention; reason: string }> = []
   for (const m of mentions) {
     const base = canonicalizeSlug(normalizeBase(m.name), userAliases)
     if (pinnedBases.has(base)) continue
@@ -393,9 +411,6 @@ function assembleCanonicalResult(
     logEntry: raw.log_entry,
   }
 }
-
-// Phase 5 §5.10.3 R2 (D-wide): applyForcedCategories + FORCED_CATEGORIES 폐기. LLM 자율 분류 그대로 통과.
-// `mqtt`/`restful-api`/`pms` 같은 boundary pin 도 모두 폐기. 측정 안정성은 LLM 자체 안정성에 의존.
 
 function extractDescription(content: string): string {
   // Front-matter ends at the second '---'; description is the first non-empty paragraph after `# title`
@@ -416,10 +431,15 @@ function extractDescription(content: string): string {
 interface PageBuildOk { ok: true; page: WikiPage }
 interface PageBuildFail { ok: false; reason: string }
 
-// Phase 5 §5.10.3 R2 (D-wide): validateAndBuildPage 의 anti-pattern + type validation 폐기.
-// LLM 자율 출력 통과. minimal alias normalization (canonicalizeSlug) 만 잔존.
+/**
+ * §5.10.4 D-wide: anti-pattern + type validation 폐기. minimal validation
+ * (empty name / empty type) + canonicalizeSlug alias normalization 만.
+ *
+ * §5.10.4 follow-up: display_name (원문 표기) 가 있으면 frontmatter title 로 사용,
+ * 없으면 base slug fallback. aliases 는 raw + base 자동 합집합 (title 자체는 제외).
+ */
 function validateAndBuildPage(
-  raw: { name?: string; display_name?: string; type?: string; description?: string; aliases?: string[] },
+  raw: RawPage,
   category: 'entity' | 'concept',
   sourceFilename: string,
   sourcePageBase: string,
@@ -428,19 +448,11 @@ function validateAndBuildPage(
 ): PageBuildOk | PageBuildFail {
   const name = (raw.name ?? '').trim()
   if (!name) return { ok: false, reason: 'empty name' }
-
-  // alias normalization (variant spellings collapse to canonical slug, deterministic)
-  // §5.10.4 P2-2: user-defined aliases (.wikey/schema.yaml `aliases:`) take precedence.
-  const base = canonicalizeSlug(normalizeBase(name), userAliases)
-
   const type = (raw.type ?? '').trim()
   if (!type) return { ok: false, reason: 'empty type' }
 
+  const base = canonicalizeSlug(normalizeBase(name), userAliases)
   const description = (raw.description ?? '').trim() || '(설명 없음)'
-
-  // §5.10.4 follow-up — title 원문 보존 (사용자 지시 2026-05-05).
-  // display_name 이 있으면 그 표기 (원문 본문에 등장한 표기) 를 frontmatter title 로.
-  // 없으면 base (영문 slug) fallback. aliases 는 raw.aliases 그대로 + base 자동 추가.
   const displayTitle = (raw.display_name ?? '').trim() || base
   const aliases = Array.from(new Set([
     ...(raw.aliases ?? []).map((a) => a.trim()).filter(Boolean),
@@ -453,15 +465,8 @@ function validateAndBuildPage(
     entityType: category === 'entity' ? type : undefined,
     conceptType: category === 'concept' ? type : undefined,
     content: buildPageContent({
-      name: base,
-      title: displayTitle,
-      aliases,
-      type,
-      description,
-      category,
-      sourceFilename,
-      sourcePageBase,
-      today,
+      name: base, title: displayTitle, aliases, type, description, category,
+      sourceFilename, sourcePageBase, today,
     }),
   }
   return { ok: true, page }
@@ -518,12 +523,51 @@ ${relatedSection}## 출처
 }
 
 /**
+ * §5.2.1 — rebuild a single page with `## 관련` cross-link section. `related` 가
+ * 비어 있거나 self-only 면 page 그대로 반환. type 누락 시도 그대로 반환.
+ *
+ * §5.10.4 P2-1: rebuild 시 frontmatter 의 title + aliases 보존 — display_name
+ * 원문 보존이 cross-link 단계에서 영문 slug 으로 회귀하지 않도록.
+ */
+function rebuildPageWithCrossLinks(
+  page: WikiPage,
+  related: readonly string[],
+  sourceFilename: string,
+  sourcePageBase: string,
+  today: string,
+): WikiPage {
+  if (related.length === 0) return page
+  const ownBase = normalizeBase(page.filename)
+  const filtered = related.filter((b) => b !== ownBase)
+  if (filtered.length === 0) return page
+  const isEntity = page.category === 'entities'
+  const type = isEntity ? page.entityType : page.conceptType
+  if (!type) return page
+  const preservedTitle = extractFrontmatterScalar(page.content, 'title')
+  const preservedAliases = extractFrontmatterList(page.content, 'aliases')
+  return {
+    ...page,
+    content: buildPageContent({
+      name: ownBase,
+      title: preservedTitle,
+      aliases: preservedAliases,
+      type,
+      description: extractDescription(page.content) || '(설명 없음)',
+      category: isEntity ? 'entity' : 'concept',
+      sourceFilename,
+      sourcePageBase,
+      today,
+      relatedLinks: filtered,
+    }),
+  }
+}
+
+/**
  * §5.2.1 — inject `## 관련` cross-link section into entity/concept pages.
  *
- * Policy (option B, deterministic): every entity in the same ingest cycle links to
- * every concept in that cycle (and vice versa). Self-links and entity↔entity /
- * concept↔concept links are not generated. Empty other-pool → page is unchanged
- * (no empty H2). Bullets sorted alphabetically by base.
+ * Policy (option B, deterministic): every entity in a single ingest cycle links to
+ * every concept in that cycle (and vice versa). Self-links and intra-pool links not
+ * generated. Empty other-pool → page unchanged (no empty H2). Bullets sorted by base.
  */
 function applyCrossLinks(
   entities: WikiPage[],
@@ -534,37 +578,9 @@ function applyCrossLinks(
 ): { entities: WikiPage[]; concepts: WikiPage[] } {
   const entityBases = entities.map((p) => normalizeBase(p.filename)).sort()
   const conceptBases = concepts.map((p) => normalizeBase(p.filename)).sort()
-  const rebuild = (page: WikiPage, related: readonly string[]): WikiPage => {
-    if (related.length === 0) return page
-    const ownBase = normalizeBase(page.filename)
-    const filtered = related.filter((b) => b !== ownBase)
-    if (filtered.length === 0) return page
-    const isEntity = page.category === 'entities'
-    const type = isEntity ? page.entityType : page.conceptType
-    if (!type) return page
-    // §5.10.4 P2-1 fix: rebuild 시 frontmatter 의 title + aliases 보존 (d8e37dd 의
-    // display_name 원문 보존이 cross-link 단계에서 영문 slug 으로 회귀하지 않도록).
-    const preservedTitle = extractFrontmatterScalar(page.content, 'title')
-    const preservedAliases = extractFrontmatterList(page.content, 'aliases')
-    return {
-      ...page,
-      content: buildPageContent({
-        name: ownBase,
-        title: preservedTitle,
-        aliases: preservedAliases,
-        type: type as string,
-        description: extractDescription(page.content) || '(설명 없음)',
-        category: isEntity ? 'entity' : 'concept',
-        sourceFilename,
-        sourcePageBase,
-        today,
-        relatedLinks: filtered,
-      }),
-    }
-  }
   return {
-    entities: entities.map((p) => rebuild(p, conceptBases)),
-    concepts: concepts.map((p) => rebuild(p, entityBases)),
+    entities: entities.map((p) => rebuildPageWithCrossLinks(p, conceptBases, sourceFilename, sourcePageBase, today)),
+    concepts: concepts.map((p) => rebuildPageWithCrossLinks(p, entityBases, sourceFilename, sourcePageBase, today)),
   }
 }
 
@@ -587,7 +603,6 @@ function extractFrontmatterList(content: string, key: string): readonly string[]
 }
 
 function computeDropReason(mention: Mention): string {
-  // Phase 5 §5.10.3 R2 (D-wide): detectAntiPattern 폐기. LLM 자율 분류.
   if (!mention.type_hint || mention.type_hint === 'unknown') return 'no type_hint'
   return 'rejected by canonicalizer LLM'
 }

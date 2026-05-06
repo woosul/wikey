@@ -3,7 +3,7 @@ import type { WikiFS, WikiPage, ProvenanceEntry } from './types.js'
 const WIKI_PREFIX = 'wiki/'
 const WIKILINK_RE = /\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g
 
-// ── Phase 4.2 Stage 1 S1-3 / Stage 2 S2-2 ──
+// ── §4.2 Stage 1 S1-3 / Stage 2 S2-2 source frontmatter v3 ──
 
 export interface SourceFrontmatter {
   readonly source_id: string
@@ -33,25 +33,13 @@ export function injectSourceFrontmatter(content: string, meta: SourceFrontmatter
 }
 
 /**
- * Stage 2 S2-2 — update only vault_path / sidecar_vault_path on an existing page.
- * Other fields (source_id/hash/size/first_seen/preserved LLM fields) untouched.
- */
-
-/**
  * §4.3.2 Part A — entity/concept/analyses 페이지 frontmatter 에 `provenance` 배열 주입.
+ * frontmatter 없음 → 새 블록 생성. 있고 `provenance` 없음 → 추가. 있음 → dedupe (type+ref) 후 append.
  *
- * 동작:
- *   - 기존 frontmatter 없음 → 새 블록 생성 (`provenance` 만 포함, 본문 보존).
- *   - 기존 frontmatter 있고 `provenance` 필드 없음 → 추가.
- *   - 기존 `provenance` 있음 → dedupe (type + ref 기준) 후 append.
- *
- * YAML 형식 (2-space indent, flow style 사용 안 함 — 가독성 + Obsidian 호환):
+ * YAML 형식 (2-space indent, block style — Obsidian 호환):
  *   provenance:
  *     - type: extracted
  *       ref: sources/sha256:...
- *     - type: inferred
- *       ref: sources/sha256:...
- *       confidence: 0.7
  */
 export function injectProvenance(content: string, newEntries: readonly ProvenanceEntry[]): string {
   if (newEntries.length === 0) return content
@@ -515,15 +503,10 @@ export function extractWikilinks(content: string): readonly string[] {
 }
 
 function buildPath(category: string, filename: string): string {
-  // LLM sometimes returns full paths — strip to basename
-  const cleaned = filename.includes('/') ? filename.split('/').pop()! : filename
-  filename = cleaned
-  if (filename.includes('..')) {
-    throw new Error(`Invalid filename: ${filename} — directory traversal not allowed`)
+  // LLM sometimes returns full paths — strip to basename.
+  const basename = filename.includes('/') ? filename.split('/').pop()! : filename
+  if (basename.includes('..')) {
+    throw new Error(`Invalid filename: ${basename} — directory traversal not allowed`)
   }
-  const path = `${WIKI_PREFIX}${category}/${filename}`
-  if (!path.startsWith(WIKI_PREFIX)) {
-    throw new Error(`Path must start with ${WIKI_PREFIX}: ${path}`)
-  }
-  return path
+  return `${WIKI_PREFIX}${category}/${basename}`
 }

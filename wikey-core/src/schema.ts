@@ -1,22 +1,17 @@
 import type { WikiFS } from './types.js'
 
 /**
- * Phase 5 §5.10.3 + §5.10.4 D-wide (LLM-only ontology): schema gate 전부 폐기.
+ * §5.10.4 D-wide (LLM-only ontology): schema gate 전부 폐기. 보존 영역 = `aliases`
+ * (canonical slug normalization) 단독. canonicalizer.ts 의 SLUG_ALIASES + 본 file 의
+ * loadUserAliases 가 .wikey/schema.yaml `aliases:` 블록을 variant → canonical map
+ * 으로 merge.
  *
- * 보존 영역 = `aliases` (canonical slug normalization) 단독. canonicalizer.ts 의
- * SLUG_ALIASES + 본 file 의 loadUserAliases 가 .wikey/schema.yaml `aliases:` 블록을
- * variant → canonical map 으로 merge.
- *
- * PII custom rule 은 별 file 로 분리 (`.wikey/pii-patterns.yaml` + `~/.config/wikey/pii-patterns.yaml`,
+ * PII custom rule 은 별 file (`.wikey/pii-patterns.yaml` + `~/.config/wikey/pii-patterns.yaml`,
  * shape: `patterns: - id/kind/mask/...` — `pii-patterns.ts` 참조).
  */
 
 /**
- * §5.10.4 P2-2 (codex follow-up): minimal `.wikey/schema.yaml` aliases parser.
- *
- * D-wide 보존 영역 = `aliases` (canonical slug normalization) 단독. PII custom rule 은
- * 본 schema.yaml 에 두지 않음 — `pii-patterns.ts` 가 별 file
- * (`.wikey/pii-patterns.yaml`) 에서 별도 load.
+ * §5.10.4 P2-2: minimal `.wikey/schema.yaml` aliases parser.
  *
  * 지원 syntax (minimal, anchors / multiline scalars 미지원):
  *   aliases:

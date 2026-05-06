@@ -473,6 +473,17 @@ export async function expandWithOneHopWikilinks(
 }
 
 const WIKI_CATEGORIES = ['entities', 'concepts', 'sources', 'analyses'] as const
+const ONE_HOP_CAP = 5
+
+/** Render base + 1-hop expansion as `--- <basename>.md ---` delimited text. */
+function renderContextPages(pages: readonly { path: string; content: string }[]): string {
+  return pages
+    .map(({ path, content }) => {
+      const name = path.split('/').pop()?.replace('.md', '') ?? path
+      return `--- ${name}.md ---\n${content}\n`
+    })
+    .join('\n')
+}
 
 async function buildContextWithWikiFS(
   results: readonly SearchResult[],
@@ -496,14 +507,8 @@ async function buildContextWithWikiFS(
     }
     return null
   }
-  const expanded = await expandWithOneHopWikilinks(base, reader, 5)
-
-  return [...base, ...expanded]
-    .map(({ path, content }) => {
-      const name = path.split('/').pop()?.replace('.md', '') ?? path
-      return `--- ${name}.md ---\n${content}\n`
-    })
-    .join('\n')
+  const expanded = await expandWithOneHopWikilinks(base, reader, ONE_HOP_CAP)
+  return renderContextPages([...base, ...expanded])
 }
 
 function buildContextFromFS(
@@ -521,8 +526,7 @@ function buildContextFromFS(
     } catch { /* skip */ }
   }
 
-  // Sync expansion for FS path — used in non-wikiFS code path. We mirror the async
-  // helper logic but resolve via existsSync to avoid awaiting in a sync function.
+  // Sync mirror of expandWithOneHopWikilinks — resolve via existsSync (no await).
   const basePaths = new Set(base.map((r) => r.path))
   const freq = new Map<string, number>()
   const firstSeen = new Map<string, number>()
@@ -539,7 +543,7 @@ function buildContextFromFS(
   })
   const expanded: ExpandedPage[] = []
   for (const [basename] of sorted) {
-    if (expanded.length >= 5) break
+    if (expanded.length >= ONE_HOP_CAP) break
     let resolved: ExpandedPage | null = null
     for (const cat of WIKI_CATEGORIES) {
       const path = `wiki/${cat}/${basename}.md`
@@ -556,12 +560,7 @@ function buildContextFromFS(
     expanded.push(resolved)
   }
 
-  return [...base, ...expanded]
-    .map(({ path, content }) => {
-      const name = path.split('/').pop()?.replace('.md', '') ?? path
-      return `--- ${name}.md ---\n${content}\n`
-    })
-    .join('\n')
+  return renderContextPages([...base, ...expanded])
 }
 
 function tryKoreanPreprocess(

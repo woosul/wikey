@@ -115,7 +115,7 @@ class WikeyStatsModal extends Modal {
 
     const total = Object.values(counts).reduce((a, b) => a + b, 0)
 
-    // Meta pages (index, log) — §5.11 v2: overview.md 폐기, index.md 로 통합
+    // Meta pages (index, log) — wiki/ root level
     const metaFolder = vault.getAbstractFileByPath('wiki')
     let metaCount = 0
     if (metaFolder && (metaFolder as any).children) {

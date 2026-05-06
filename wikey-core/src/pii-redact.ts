@@ -1,23 +1,20 @@
 /**
- * pii-redact.ts — Phase 4 D.0 (§4.1 v6) + Phase 5 §5.8 (2026-04-24, session 8).
+ * pii-redact.ts — 한국 기업 문서 (사업자등록증, 등기부등본, 계약서) PII 감지·치환.
  *
- * 한국 기업 문서 (사업자등록증, 등기부등본, 계약서) 에서 자주 등장하는
- * PII 를 감지·치환한다. **패턴은 하드코딩되지 않는다** — `pii-patterns.ts` 의
- * DEFAULT_PATTERNS 또는 `~/.config/wikey/pii-patterns.yaml` / `<basePath>/.wikey/pii-patterns.yaml`
- * 에서 로드된 사용자 정의 패턴을 사용.
+ * 패턴은 하드코딩 X — `pii-patterns.ts` DEFAULT_PATTERNS + 사용자 yaml 에서 로드.
  *
- * 설계:
- *   - **2-layer gate** (§4.1.2):
- *       `guardEnabled` (advanced, default true)  — false = 검사 전체 skip (user-trust)
- *       `allowIngest`  (basic,    default false) — false = PII 감지 시 throw
- *       `mode` (display | mask | hide, default mask) — 치환 방식
- *   - 중앙 wrapper (`applyPiiGate`) 는 ingest/PDF sidecar 양쪽에서 공통 호출.
- *   - `sanitizeForLlmPrompt` 은 body 외 filename/metadata 같은 **LLM 가시성 있는 임의 텍스트**
- *     에 동일 패턴을 mask 로 적용하는 단일 진입점 (Phase 5 §5.8.1 C-A1 filename leak 대응).
- *   - 본 모듈은 항상 **이미 텍스트로 변환된 markdown 또는 plain text** 를 받는다.
+ * 2-layer gate (§4.1.2):
+ *   - `guardEnabled` (advanced, default true)  — false = 검사 skip
+ *   - `allowIngest`  (basic,    default false) — false = 감지 시 throw
+ *   - `mode` (display | mask | hide, default mask) — 치환 방식
  *
- * FP 회피는 패턴 수준에서 관리 (DEFAULT_PATTERNS 의 look-behind + 한글자 수 제한).
- * 사용자가 YAML 에서 패턴을 추가·override 하면 그 즉시 엔진이 반영.
+ * Public surface:
+ *   - `applyPiiGate` — ingest body / PDF sidecar 공통 진입점
+ *   - `sanitizeForLlmPrompt` — LLM 가시 텍스트 (filename/metadata) mask 단일 진입점
+ *     (§5.8.1 C-A1 filename leak 대응)
+ *
+ * 입력은 항상 텍스트 변환된 markdown / plain text. FP 회피는 패턴 수준 (DEFAULT_PATTERNS
+ * 의 look-behind + 한글자 수 제한).
  */
 
 import {

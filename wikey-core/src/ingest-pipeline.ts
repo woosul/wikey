@@ -507,10 +507,9 @@ export async function ingest(
     .map((f) => f.replace(/\.md$/i, ''))
   log(`existing wiki — entities=${existingEntityBases.length}, concepts=${existingConceptBases.length}`)
 
-  // §5.10.4 D-wide: schema overrides + Stage 3 self-declarations 폐기. canonicalizer 가
-  // schemaOverride 없이 LLM 자율 type 분류 수행.
-  // §5.10.4 P2-2: .wikey/schema.yaml 의 `aliases:` block 만 read 하여 canonicalize 에 전달
-  // (canonical slug normalization layer 의 사용자 정의 확장).
+  // §5.10.4 P2-2: .wikey/schema.yaml 의 `aliases:` block 만 read 하여 canonicalize 에
+  // 전달 (canonical slug normalization 의 사용자 정의 확장). 그 외 schema gate / Stage 3
+  // self-declarations 는 D-wide 에서 폐기 — LLM 자율 type 분류.
   const userAliases = await loadUserAliases(wikiFS).catch(() => ({} as Record<string, string>))
   if (Object.keys(userAliases).length > 0) {
     log(`user aliases loaded — ${Object.keys(userAliases).length} variant→canonical mappings`)
@@ -535,31 +534,15 @@ export async function ingest(
     log(`stage 2.2 mention extraction done in ${Date.now() - tMentions0}ms (FULL, ${mentions.length} mentions)`)
 
     onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
-    const tCanon0 = Date.now()
-    // §5.12 — wiki/sources/<sourcePageBase>.md 단일 진실 소스 base 주입 (LLM emit drift 방어).
-    const sourcePageBase = normalizeBase(summaryParsed.source_page.filename)
-    const canon = await canonicalize({
+    parsed = await canonicalizeAndAssembleParsed({
       llm, mentions, existingEntityBases, existingConceptBases,
-      sourceFilename: llmSourceFilename, sourcePageBase, today,
-      guideHint: opts?.guideHint, provider, model,
-      userAliases, deterministic, overridePrompt: stage3OverridePrompt,
-      // §5.11 promotion threshold: deterministic Layer 2 gate (substring count ≥ 2 in body).
+      llmSourceFilename, summaryParsed, today,
+      guideHint: opts?.guideHint, provider, model, userAliases,
+      deterministic, stage3OverridePrompt,
+      // §5.11 promotion threshold (FULL): deterministic Layer 2 gate (substring count ≥ 2 in body).
       sourceBody: content,
+      log,
     })
-    log(`stage 2.3 canonicalize done in ${Date.now() - tCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
-    // §5.11 v2 B6: FULL route dropped sample log (SEGMENTED route mirror)
-    if (canon.dropped.length > 0) {
-      const droppedSummary = canon.dropped.slice(0, 10).map((d) => `${d.mention.name} (${d.reason})`).join(', ')
-      log(`dropped sample: ${droppedSummary}${canon.dropped.length > 10 ? `, +${canon.dropped.length - 10} more` : ''}`)
-    }
-
-    parsed = {
-      source_page: summaryParsed.source_page,
-      entities: canon.entities.map((p) => ({ filename: p.filename, content: p.content })),
-      concepts: canon.concepts.map((p) => ({ filename: p.filename, content: p.content })),
-      index_additions: canon.indexAdditions ? [...canon.indexAdditions] : summaryParsed.index_additions,
-      log_entry: canon.logEntry ?? summaryParsed.log_entry,
-    }
   } else {
     // ── SEGMENTED — 섹션별 심독 (core priority 만) + peer context ──
     const coreSections = sectionIndex.sections.filter(
@@ -607,31 +590,16 @@ export async function ingest(
       subStep: targetSections.length + 1, subTotal: totalSteps,
       message: `Canonicalizing (${model}) [SEGMENTED ${targetSections.length + 1}/${totalSteps}]`,
     })
-    const tSegCanon0 = Date.now()
-    // §5.12 — FULL route 와 동일 invariant.
-    const sourcePageBase = normalizeBase(summaryParsed.source_page.filename)
-    const canon = await canonicalize({
+    parsed = await canonicalizeAndAssembleParsed({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
-      sourceFilename: llmSourceFilename, sourcePageBase, today,
-      guideHint: opts?.guideHint, provider, model,
-      userAliases, deterministic, overridePrompt: stage3OverridePrompt,
-      // §5.11 promotion threshold: SEGMENTED route 의 sourceBody 는 전체 sourceContent
-      // (per-section 합산 대신 본문 전체 — substring count 의 ground truth).
+      llmSourceFilename, summaryParsed, today,
+      guideHint: opts?.guideHint, provider, model, userAliases,
+      deterministic, stage3OverridePrompt,
+      // §5.11 promotion threshold (SEGMENTED): sourceBody 는 전체 sourceContent
+      // — per-section 합산이 아닌 본문 전체가 substring count 의 ground truth.
       sourceBody: sourceContent,
+      log,
     })
-    log(`stage 2.3 canonicalize done in ${Date.now() - tSegCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
-    if (canon.dropped.length > 0) {
-      const droppedSummary = canon.dropped.slice(0, 10).map((d) => `${d.mention.name} (${d.reason})`).join(', ')
-      log(`dropped sample: ${droppedSummary}${canon.dropped.length > 10 ? `, +${canon.dropped.length - 10} more` : ''}`)
-    }
-
-    parsed = {
-      source_page: summaryParsed.source_page,
-      entities: canon.entities.map((p) => ({ filename: p.filename, content: p.content })),
-      concepts: canon.concepts.map((p) => ({ filename: p.filename, content: p.content })),
-      index_additions: canon.indexAdditions ? [...canon.indexAdditions] : summaryParsed.index_additions,
-      log_entry: canon.logEntry ?? summaryParsed.log_entry,
-    }
   }
 
   if (!parsed.source_page?.filename || !parsed.source_page?.content) {
@@ -840,9 +808,6 @@ export async function ingest(
   log(`log.md prepended`)
   log(`step 3 page write done in ${Date.now() - tStep3_0}ms (${createdPages.length} created, ${updatedPages.length} updated)`)
 
-  // §5.10.4 D-wide: Stage 2 suggestion finalization 폐기. canonicalize 결과는 wiki write 직후 종결,
-  // .wikey/suggestions.json / mention-history.json 자동 재생성 0.
-
   // Step 4: Reindex (Phase 4 D.0.f / v6 §4.4)
   //   - `reindexQuick` 동기 실행 (throw on failure)
   //   - `waitUntilFresh` polling 으로 `status==='fresh' && stale===0` 확보 후 return.
@@ -886,6 +851,59 @@ async function callLLMForSummary(
 ): Promise<IngestRawResult> {
   const prompt = buildIngestPrompt(sourceContent, sourceFilename, indexContent, promptTemplate)
   return callLLMWithRetry(llm, prompt, provider, model, deterministic)
+}
+
+/**
+ * §5.14.B (Tier 2 BLUE) — FULL/SEGMENTED route 의 stage 2.3 canonicalize 호출 +
+ * dropped sample log + IngestRawResult assembly 공통화. mentions / sourceBody 만
+ * route 별 다르고 나머지는 동일.
+ *
+ * §5.12 invariant: wiki/sources/<sourcePageBase>.md 단일 진실 소스 base 는
+ * `normalizeBase(summaryParsed.source_page.filename)` derive (LLM emit drift 방어).
+ */
+async function canonicalizeAndAssembleParsed(args: {
+  llm: LLMClient
+  mentions: readonly Mention[]
+  existingEntityBases: readonly string[]
+  existingConceptBases: readonly string[]
+  llmSourceFilename: string
+  summaryParsed: IngestRawResult
+  today: string
+  guideHint: string | undefined
+  provider: string
+  model: string
+  userAliases: Readonly<Record<string, string>>
+  deterministic: boolean
+  stage3OverridePrompt: string | undefined
+  sourceBody: string
+  log: (msg: string) => void
+}): Promise<IngestRawResult> {
+  const {
+    llm, mentions, existingEntityBases, existingConceptBases,
+    llmSourceFilename, summaryParsed, today, guideHint, provider, model,
+    userAliases, deterministic, stage3OverridePrompt, sourceBody, log,
+  } = args
+  const tCanon0 = Date.now()
+  const sourcePageBase = normalizeBase(summaryParsed.source_page.filename)
+  const canon = await canonicalize({
+    llm, mentions, existingEntityBases, existingConceptBases,
+    sourceFilename: llmSourceFilename, sourcePageBase, today,
+    guideHint, provider, model, userAliases, deterministic,
+    overridePrompt: stage3OverridePrompt,
+    sourceBody,
+  })
+  log(`stage 2.3 canonicalize done in ${Date.now() - tCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
+  if (canon.dropped.length > 0) {
+    const droppedSummary = canon.dropped.slice(0, 10).map((d) => `${d.mention.name} (${d.reason})`).join(', ')
+    log(`dropped sample: ${droppedSummary}${canon.dropped.length > 10 ? `, +${canon.dropped.length - 10} more` : ''}`)
+  }
+  return {
+    source_page: summaryParsed.source_page,
+    entities: canon.entities.map((p) => ({ filename: p.filename, content: p.content })),
+    concepts: canon.concepts.map((p) => ({ filename: p.filename, content: p.content })),
+    index_additions: canon.indexAdditions ? [...canon.indexAdditions] : summaryParsed.index_additions,
+    log_entry: canon.logEntry ?? summaryParsed.log_entry,
+  }
 }
 
 /**

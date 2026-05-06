@@ -560,8 +560,8 @@ export class WikeySettingTab extends PluginSettingTab {
         })
       })
 
-    // Async status update — schema.yaml 보존 영역 (aliases) 존재 여부. PII 는 별 file.
-    // §5.10.4 D-wide: entity_types / concept_types / standard_decompositions 모두 폐기.
+    // §5.10.4 D-wide: schema.yaml 은 `aliases:` 만 보존 (entity_types / concept_types
+    // / standard_decompositions 폐기). PII 는 별 file.
     void (async () => {
       const exists = await vault.adapter.exists(path)
       if (!exists) {
