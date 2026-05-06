@@ -2263,38 +2263,55 @@ LLM call 시간:
 
 ---
 
-## 5.14 retrospective TDD-BLUE refactor — codebase wide (Session 19, 2026-05-06) draft / P0 다음 세션 최우선
+## 5.14 retrospective TDD-BLUE refactor — Tier 2-4 narrow 완료 (Session 20, 2026-05-06)
 
-> mirror: [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](../plan/phase-5-todox-5.14-retrospective-blue-refactor.md) v1 · status: draft / P0
+> mirror: [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](../plan/phase-5-todox-5.14-retrospective-blue-refactor.md) v1 · status: **completed** · 상세: [`activity/phase-5-resultx-5.14-tier-2-4-blue-2026-05-06.md`](./phase-5-resultx-5.14-tier-2-4-blue-2026-05-06.md)
 
-§5.11 v2 + §5.12 SDD+TDD 진행 시 RED + GREEN 명시 진행했으나 **BLUE (Refactor) 누락** (Phase 3 가 회귀 검증으로만 그침). 사용자 raise 2026-05-06 후 retrospective 보강 정식 todox + 영구 정책 등록.
+§5.11 v2 + §5.12 SDD+TDD 진행 시 RED + GREEN 명시 진행했으나 **BLUE (Refactor) 누락** (Phase 3 가 회귀 검증으로만 그침). 사용자 raise 2026-05-06 (session 19) → 정식 todox + 영구 정책 등록 → session 20 본격 진행 (Tier 2-4 narrow 완료).
 
-### 5.14 master 사전 진단 (2026-05-06)
-- 거대 파일: `ingest-pipeline.ts` 2319 LOC / `sidebar-chat.ts` 2300 / `settings-tab.ts` 1175 / 7+ 파일 600+ LOC
-- TODO/FIXME 0 ✓ / console.* 51 / § historical 주석 누적 (ingest-pipeline 67 + canonicalizer 37)
-- deprecated/legacy/폐기 marker **179건** — Phase 폐기 후 cleanup 미진행
-- 결론: narrow scope (§5.11 v2 + §5.12) underscope → Tier 2 시작 권고
+### 5.14 진행 결과 (session 20)
 
-### 5.14 scope 4 tier
-- Tier 1 (narrow): §5.11 v2 + §5.12 변경 영역만 (~150 LOC, 1 cycle)
-- **Tier 2 (★ 추천 시작)**: Phase 5 핵심 5 파일 — canonicalizer / ingest-pipeline / wiki-ops / pii-redact / query-pipeline (~4600 LOC, 3~5 cycle, sub-cycle 5개 분리: §5.14.A ~ E)
-- Tier 3: + wikey-obsidian UI (sidebar-chat / settings-tab / main / commands / ingest-modals, ~5588 추가)
-- Tier 4: 전체 codebase sampling (~13000 LOC)
+- **Tier 2 (core 6 파일)** 본격 BLUE — extract / dedup / naming / cleanup
+  - canonicalizer.ts (626→637): `applyPromotionGate` + `buildCategoryPages` extract / `rebuildPageWithCrossLinks` top-level / `RawPage` interface 통합 / dead variable 제거
+  - ingest-pipeline.ts (2319→2337): `canonicalizeAndAssembleParsed` extract → FULL/SEGMENTED route 의 stage 2.3 공통화
+  - wiki-ops.ts (529→512): `buildPath` dead-after-throw 제거 / JSDoc 압축
+  - pii-redact.ts (517→514) / query-pipeline.ts (661→660, `renderContextPages` extract + `ONE_HOP_CAP` 명명) / schema.ts (104→100)
+  - **Tier 2 net LOC: +4** (extract 시그니처 + JSDoc 정상 비용)
 
-### 5.14 검토 차원
-- 함수 분해 (assembleCanonicalResult ~100 LOC, applyCrossLinks.rebuild, buildPageContent, FULL+SEGMENTED stage 2 ~80 LOC)
-- Naming consistency (sourceFilename / sourcePageBase / sourceBase / sourceDisplay / llmSourceFilename 5 변수 mapping)
-- 중복 패턴 (FULL + SEGMENTED route → `runCanonicalizeAndMerge` extract)
-- 주석 quality (historical 압축, deprecation marker cleanup)
-- Test fixture / 명명 (§5.12 정합)
+- **Tier 3 (UI 4 파일)** narrow cleanup — historical context 압축 (sidebar-chat / settings-tab / ingest-modals / status-bar)
+- **Tier 4 잔여 sampling** — wikey-core 누적 §5.10.4 D-wide 표기 추가 압축
 
-### 5.14 영구 정책 등록 (사용자 결정 2026-05-06)
+### 5.14 회귀 검증
+
+- npm test: **615 PASS / 3 skipped / 0 errors** (매 cycle 확증)
+- npm run build: **0 errors** (1 pre-existing import.meta warning 무관)
+- validate-wiki.sh: PASS (live smoke 후)
+
+### 5.14 codex post-impl review
+
+- **Cycle #1** (surface:2): NEEDS_REVISION, 1 finding (P2) — `buildCategoryPages` entity 패스에서 `keptBases.has(base)` collision check 추가된 동작 변경. 원본은 concept 패스만 cross-pool dedup.
+- **Master fix**: `dedupeAgainstKept = category === 'concept'` flag — entity 패스 push 무조건, concept 패스만 collision skip. 원본 동작 정확 보존.
+- **Cycle #2** (surface:7): **APPROVE** — "buildCategoryPages refactor now preserves the original assembleCanonicalResult behavior".
+
+### 5.14 obsidian-cdp 라이브 smoke
+
+- 샘플: `raw/0_inbox/nanovna-v2-notes.md` (1851 bytes)
+- Full cycle: Brief Proceed → Processing → Preview (3 entities + 2 concepts + source) → Approve & Write → wiki write 9 files
+- IV.A movePair: raw/0_inbox → raw/3_resources/60_note/600_technology/nanovna-v2-notes.md / path_history 2 entries
+- validate-wiki PASS / Query 응답 정상 (citation 0 — 환경 이슈 별도, 본 §5.14 와 무관)
+- → ingest 파이프라인 흐름에 영향 없음 확증
+
+### 5.14 영구 정책 등록 (session 19 commit `eccf98a`)
+
 **TDD-BLUE Phase 3a/3b 분리 의무**:
 - `claude-forge-custom/rules/testing.md` (global, commit `0cb2e06`)
 - `wikey/CLAUDE.md` (project-specific mirror, commit `eccf98a`)
 - 모든 비-사소 SDD+TDD cycle 의 Phase 3 = Phase 3a (회귀 검증) + Phase 3b (BLUE refactor 명시) 분리
 - 예외: 사소 작업 (오타 / 1-line / config / dependency bump)
 
-### 5.14 commit
-- `cd3750f` docs(§5.14): retrospective TDD-BLUE refactor 등록 (P0)
-- `eccf98a` docs(§5.14 v1 + policy): scope 4 tier 확장 + TDD-BLUE 분리 영구 등록
+### 5.14 commit chain
+
+- `cd3750f` docs(§5.14): retrospective TDD-BLUE refactor 등록 (P0) — session 19
+- `eccf98a` docs(§5.14 v1 + policy): scope 4 tier 확장 + TDD-BLUE 분리 영구 등록 — session 19
+- `7088c53` docs(sync): §5.11 v2 / §5.12 / §5.13 / §5.14 mirror — session 19
+- (session 20) refactor + docs commit chain — 아래 §5.14 잔존 후속 별도

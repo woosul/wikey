@@ -1,11 +1,28 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-05 session 19 — §5.11 v2 (의미·관련도 + 원문 언어 alias + wiki 완전 초기화) + §5.12 (Source Wikilink Format) 모두 완료**. §5.11 v2 plan v1 → v2.5 (5 codex cycle, 17 finding: 12 fix + 5 dispute). §5.12 plan v1 → v3 (2 plan cycle + 1 post-impl, 7 finding 모두 fix). 615 PASS / 3 skipped / 0 errors / build OK. 라이브: validate-wiki.sh PASS (12 broken → 0). 다음 = 사용자 신규 issue.
+> 최신 갱신: **2026-05-06 session 20 — §5.14 retrospective TDD-BLUE refactor (Tier 2-4 narrow) 완료**. Tier 2 (core 6 file: canonicalizer / ingest-pipeline / wiki-ops / pii-redact / query-pipeline / schema, net LOC +4) extract / dedup / cleanup. Tier 3 (UI 4 file) historical context 압축. Tier 4 잔여 sampling. 615 PASS / 3 skipped / 0 errors / build OK / validate-wiki PASS / live smoke (nanovna-v2-notes.md full cycle). codex post-impl: cycle #1 P2 (entity 패스 cross-pool dedup 누설) → fix → cycle #2 APPROVE. 다음 = §5.13 (A1+B2+C4) 또는 사용자 신규 issue.
 > 생성일: 2026-04-10
 
 ---
 
-## 🎯 다음 세션 첫 액션 (2026-05-05 session 19 §5.11 v2 + §5.12 종결 직후)
+## 🎯 다음 세션 첫 액션 (2026-05-06 session 20 §5.14 종결 직후)
+
+> **세션 20 종결**: §5.14 retrospective TDD-BLUE refactor (Tier 2-4 narrow) 완료. codex post-impl APPROVE + obsidian-cdp 라이브 smoke PASS.
+>
+> **§5.14 commit chain (이 세션 끝, push 대기)**:
+> - `feat(§5.14): canonicalizer + ingest-pipeline + wiki-ops + pii-redact + query-pipeline + schema BLUE refactor — Tier 2 core extract + dedup + naming`
+> - `refactor(§5.14): wikey-obsidian UI minor cleanup + wikey-core 잔여 historical context — Tier 3-4`
+> - `docs(sync): §5.14 result + todo + todox + session-wrap mirror`
+>
+> **§5.14 codex 추세**: cycle #1 (1 P2 finding) → master fix (`dedupeAgainstKept` flag) → cycle #2 APPROVE. P2 = `buildCategoryPages` entity 패스 cross-pool dedup 누설. 원본 동작 보존 명시 분리.
+>
+> **§5.14 본질**: §5.11 v2 + §5.12 의 BLUE 누락 retrospective 보강. 동작 변경 0 (Surgical) 엄격 준수. UI 거대 파일 분해는 회귀 위험 ↑ (UI 단위 test X) — 별도 plan 으로 분리.
+>
+> **다음 세션 첫 액션 옵션** = **§5.13 (사용자 임시 결정 A1+B2+C4)** 또는 사용자 신규 issue.
+
+---
+
+## 📁 이전 세션 (2026-05-05 session 19) — §5.11 v2 + §5.12 종결
 
 > **세션 19 종결**: §5.11 v2 (Page Promotion Threshold + 원문 언어 alias + wiki 완전 초기화) + §5.12 (Source Wikilink Format pre-existing fix) 누적 종결. 모두 codex 검증 후 APPROVE.
 >

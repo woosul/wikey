@@ -19,5 +19,26 @@
     ],
     "tombstone": false,
     "last_action": "force"
+  },
+  "sha256:5d96b65588a65d5a": {
+    "vault_path": "raw/3_resources/60_note/600_technology/nanovna-v2-notes.md",
+    "hash": "5d96b65588a65d5a42b7873cee4b6355bf13c77ea12a938f3d528d6d0dafd93c",
+    "size": 1851,
+    "first_seen": "2026-05-06T09:57:22.911Z",
+    "ingested_pages": [
+      "wiki/sources/source-nanovna-v2-notes.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/nanovna-v2-notes.md",
+        "at": "2026-05-06T09:57:22.911Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/600_technology/nanovna-v2-notes.md",
+        "at": "2026-05-06T09:57:23.513Z"
+      }
+    ],
+    "tombstone": true,
+    "last_action": "force"
   }
 }

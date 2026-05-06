@@ -1483,29 +1483,32 @@
 
 ---
 
-## 5.14 retrospective TDD-BLUE refactor — codebase wide — 2026-05-06 session 19 draft / **P0 다음 세션 최우선**
+## 5.14 retrospective TDD-BLUE refactor — Tier 2-4 narrow 완료 — Session 20, 2026-05-06 ✅
 
-> **상위 plan**: [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](./phase-5-todox-5.14-retrospective-blue-refactor.md) v1
-> 상태: draft / P0 — §5.11 v2 + §5.12 의 BLUE 누락 보완
+> **상위 plan**: [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](./phase-5-todox-5.14-retrospective-blue-refactor.md) v1 · status: **completed**
+> 상세: [`activity/phase-5-resultx-5.14-tier-2-4-blue-2026-05-06.md`](../activity/phase-5-resultx-5.14-tier-2-4-blue-2026-05-06.md)
 
-- [ ] master 사전 진단 재확증 (LOC / 함수 길이 / deprecation marker / TODO 등 metric 갱신)
-- [ ] Tier 결정 (Tier 2 권고 — Phase 5 핵심 5 파일, sub-cycle 5개)
-- [ ] §5.14.A canonicalizer.ts BLUE refactor (시작 권고)
-  - [ ] codex Mode D Panel cycle (BLUE plan v1 — extract / naming / dedup 결정)
-  - [ ] Phase 1 RED — 신규 test 필요 시만 (대부분 회귀 안전망)
-  - [ ] Phase 2 GREEN — refactor 적용
-  - [ ] Phase 3a 회귀 검증 (npm test + build + validate-wiki.sh)
-  - [ ] Phase 3b BLUE refactor (명시 분리)
-  - [ ] Phase 5 codex post-impl
-  - [ ] commit + result 문서
-- [ ] §5.14.B ingest-pipeline.ts (거대 2319 LOC, 가장 큰 영향)
-- [ ] §5.14.C wiki-ops.ts
-- [ ] §5.14.D pii-redact.ts
-- [ ] §5.14.E query-pipeline.ts
-- [ ] AC 검증: 회귀 0 (615 PASS 유지) + build 0 + validator PASS + 라이브 smoke + LOC/함수길이/naming metric
-- [ ] Tier 3 / 4 진행 결정 (Tier 2 결과 검토 후 사용자 별)
+- [x] master 사전 진단 재확증 — Tier 2-4 narrow scope 결정
+- [x] **Tier 2** (core 6 파일) BLUE — canonicalizer / ingest-pipeline / wiki-ops / pii-redact / query-pipeline / schema (net LOC +4)
+  - [x] §5.14.A canonicalizer.ts — `applyPromotionGate` + `buildCategoryPages` + `rebuildPageWithCrossLinks` extract / `RawPage` 통합
+  - [x] §5.14.B ingest-pipeline.ts — `canonicalizeAndAssembleParsed` extract (FULL/SEGMENTED route 공통화)
+  - [x] §5.14.C wiki-ops.ts — `buildPath` dead-after-throw 제거 / JSDoc 압축
+  - [x] §5.14.D pii-redact.ts — 모듈 doc-comment 압축
+  - [x] §5.14.E query-pipeline.ts — `renderContextPages` extract / `ONE_HOP_CAP` 명명
+  - [x] §5.14.F schema.ts — doc-comment 통합
+- [x] **Tier 3** (UI 4 파일) narrow cleanup — sidebar-chat / settings-tab / ingest-modals / status-bar 의 historical context 압축
+- [x] **Tier 4** wikey-core 잔여 sampling — 누적 §5.10.4 D-wide 표기 추가 압축
+- [x] AC 검증: 615 PASS / 3 skipped / 0 build errors / validate-wiki PASS / live smoke 1 source full cycle
+- [x] codex post-impl: cycle #1 P2 finding (entity 패스 cross-pool dedup 누설) → fix → cycle #2 APPROVE
+- [x] obsidian-cdp 라이브 smoke (master 직접) — `raw/0_inbox/nanovna-v2-notes.md` full cycle / IV.A movePair / wiki write 9 files
 
 ### 5.14 영구 정책 등록 ✅ 완료
 - [x] `claude-forge-custom/rules/testing.md` Phase 3a/3b 분리 의무 (commit `0cb2e06`)
 - [x] `wikey/CLAUDE.md` project-specific mirror (commit `eccf98a`)
 - [x] §5.14 todox v0 → v1 (scope 4 tier 확장, commit `eccf98a`)
+- [x] Session 20 본 §5.14 가 그 정책의 첫 retrospective 적용 사례
+
+### 5.14 잔존 후속 (별도 plan 후 결정)
+- [ ] sidebar-chat.ts `renderAuditSection` 726 LOC 분해 — UI E2E test 마련 후
+- [ ] settings-tab.ts setting group 별 분해 — 동일
+- [ ] main.ts / commands.ts 추가 분해 — 동일
