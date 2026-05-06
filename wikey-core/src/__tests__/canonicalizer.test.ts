@@ -22,6 +22,9 @@ const baseArgs = {
   existingEntityBases: [],
   existingConceptBases: [],
   sourceFilename: 'PMS_test.pdf',
+  // §5.13.A1: rawSourceFilename = mask 안 된 원본 raw basename. PII guard ON 시 sourceFilename 이
+  // mask 적용된 형식이라 raw wikilink target 으로 부적합 → 별도 인자.
+  rawSourceFilename: 'PMS_test.pdf',
   // §5.12 — wiki/sources/<sourcePageBase>.md 단일 진실 소스. canonicalize 호출 ~10곳에서 default 사용,
   // source-link 검증 case 만 override.
   sourcePageBase: 'source-PMS_test',
@@ -572,6 +575,165 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
     })
     const topic = result.concepts[0].content
     expect(topic).toMatch(/- \[\[pmbok-overview\|pmbok-overview\]\]/)
+  })
+
+  // §5.13.A1 — `## 출처` 에 source 요약 wikilink + raw 원문 wikilink 병기.
+  // raw wikilink target = rawSourceFilename (PII guard 적용 안 된 원본 raw basename).
+  // PII guard ON 시 sourceFilename 이 mask 적용된 형식이라 별도 인자.
+  it('§5.13 AC-A1-1: ## 출처 — entity raw wikilink 병기 (rawSourceFilename .md)', async () => {
+    const mentions: Mention[] = [{ name: 'pmi', type_hint: 'organization', evidence: 'PMI' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [{ name: 'pmi', type: 'organization', description: 'PMI.' }],
+        concepts: [],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'pmbok-overview.md',
+      rawSourceFilename: 'pmbok-overview.md',
+      sourcePageBase: 'source-pmbok-overview',
+    })
+    const pmi = result.entities[0].content
+    expect(pmi).toContain('## 출처')
+    expect(pmi).toContain('- [[source-pmbok-overview|pmbok-overview]]')
+    expect(pmi).toContain('- [[pmbok-overview.md|원문]]')
+  })
+
+  it('§5.13 AC-A1-2: ## 출처 — concept raw wikilink 병기 (rawSourceFilename .md)', async () => {
+    const mentions: Mention[] = [{ name: 'project-management', type_hint: 'standard', evidence: 'std' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{ name: 'project-management', type: 'methodology', description: 'PM.' }],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'pmbok-overview.md',
+      rawSourceFilename: 'pmbok-overview.md',
+      sourcePageBase: 'source-pmbok-overview',
+    })
+    const concept = result.concepts[0].content
+    expect(concept).toContain('## 출처')
+    expect(concept).toContain('- [[source-pmbok-overview|pmbok-overview]]')
+    expect(concept).toContain('- [[pmbok-overview.md|원문]]')
+  })
+
+  it('§5.13 AC-A1-3: ## 출처 — rawSourceFilename 다양한 확장자 (.pdf/.hwp/.hwpx/.txt)', async () => {
+    const cases = [
+      { ext: 'pdf', raw: 'sample.pdf', base: 'source-sample' },
+      { ext: 'hwp', raw: 'doc.hwp', base: 'source-doc' },
+      { ext: 'hwpx', raw: 'document.hwpx', base: 'source-document' },
+      { ext: 'txt', raw: 'plain.txt', base: 'source-plain' },
+    ]
+    for (const c of cases) {
+      const mentions: Mention[] = [{ name: 'foo', type_hint: 'standard', evidence: 'e' }]
+      const llm = makeMockLLM(
+        JSON.stringify({
+          entities: [],
+          concepts: [{ name: 'foo', type: 'standard', description: 'Foo.' }],
+        }),
+      )
+      const result = await canonicalize({
+        ...baseArgs,
+        llm,
+        mentions,
+        sourceFilename: c.raw,
+        rawSourceFilename: c.raw,
+        sourcePageBase: c.base,
+      })
+      const concept = result.concepts[0].content
+      expect(concept, `ext=${c.ext}`).toContain(`- [[${c.raw}|원문]]`)
+    }
+  })
+
+  it('§5.13 AC-A1-4: ## 출처 — 첫 줄 source wikilink 회귀 없음 (§5.12 paradigm)', async () => {
+    const mentions: Mention[] = [{ name: 'topic', type_hint: 'standard', evidence: 't' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{ name: 'topic', type: 'standard', description: 'A topic.' }],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'note.md',
+      rawSourceFilename: 'note.md',
+      sourcePageBase: 'source-note',
+    })
+    const concept = result.concepts[0].content
+    // §5.12: 첫 줄 source wikilink 위치 보존
+    const lines = concept.split('\n')
+    const sourceIdx = lines.findIndex((l) => l.startsWith('## 출처'))
+    expect(sourceIdx).toBeGreaterThanOrEqual(0)
+    expect(lines[sourceIdx + 2]).toBe('- [[source-note|note]]')
+    expect(lines[sourceIdx + 3]).toBe('- [[note.md|원문]]')
+  })
+
+  it('§5.13 AC-A1-5: rebuildPageWithCrossLinks — raw wikilink 줄 보존', async () => {
+    // applyCrossLinks 가 rebuildPageWithCrossLinks 호출 시 raw wikilink 줄도 보존.
+    // entity + concept 둘 다 만들어 cross-link 트리거 (§5.2.1 H2 `## 관련` 추가).
+    const mentions: Mention[] = [
+      { name: 'pmi', type_hint: 'organization', evidence: 'PMI' },
+      { name: 'pmbok', type_hint: 'standard', evidence: 'PMBOK' },
+    ]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [{ name: 'pmi', type: 'organization', description: 'PMI.' }],
+        concepts: [{ name: 'pmbok', type: 'standard', description: 'PMBOK.' }],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'pmbok-overview.md',
+      rawSourceFilename: 'pmbok-overview.md',
+      sourcePageBase: 'source-pmbok-overview',
+    })
+    // entity 와 concept 모두 cross-link 후에도 raw wikilink 줄 보존
+    expect(result.entities[0].content).toContain('- [[pmbok-overview.md|원문]]')
+    expect(result.concepts[0].content).toContain('- [[pmbok-overview.md|원문]]')
+    // cross-link 도 함께 추가됐는지 확증 (§5.2.1 회귀)
+    expect(result.entities[0].content).toContain('## 관련')
+    expect(result.concepts[0].content).toContain('## 관련')
+  })
+
+  it('§5.13 AC-A1-7: ## 출처 — PII guard ON 시 raw wikilink target = unmasked rawSourceFilename', async () => {
+    // PII guard ON 시 sourceFilename 은 sanitizeForLlmPrompt 로 mask 처리될 수 있음.
+    // 그러나 raw wikilink target 은 rawSourceFilename (mask 안 된 원본) 사용해야 raw 매칭 가능.
+    const mentions: Mention[] = [{ name: 'foo', type_hint: 'standard', evidence: 'e' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{ name: 'foo', type: 'standard', description: 'Foo.' }],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      // sourceFilename 은 PII-mask 적용된 형식 (예: 회원번호 등 PII 가 포함된 raw 파일)
+      sourceFilename: '___-test-mask.pdf',
+      // rawSourceFilename 은 mask 전 원본
+      rawSourceFilename: '사업자등록증_홍길동_123456.pdf',
+      sourcePageBase: 'source-test-mask',
+    })
+    const concept = result.concepts[0].content
+    // raw wikilink target 은 rawSourceFilename (mask 안 된 원본)
+    expect(concept).toContain('- [[사업자등록증_홍길동_123456.pdf|원문]]')
+    // sourceFilename (masked) 은 frontmatter sources: 배열 + 첫 줄 wikilink display 에 사용 (§5.12).
+    // raw wikilink target 으로는 등장 X — A1 paradigm 분리 (raw 매칭 방어).
+    expect(concept).not.toContain('___-test-mask.pdf|원문')
+    // 첫 줄 source wikilink display = sourceFilename 의 ext 제외 형식 (§5.12 paradigm 보존).
+    expect(concept).toContain('- [[source-test-mask|___-test-mask]]')
   })
 
   // Phase 5 §5.10.3.7 R8.1: 폐기 — D-wide (FORCED_CATEGORIES 폐기).

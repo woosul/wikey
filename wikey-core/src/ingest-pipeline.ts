@@ -536,7 +536,8 @@ export async function ingest(
     onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
     parsed = await canonicalizeAndAssembleParsed({
       llm, mentions, existingEntityBases, existingConceptBases,
-      llmSourceFilename, summaryParsed, today,
+      // §5.13.A1: rawSourceFilename = mask 안 된 원본 raw basename (sourceFilename 그대로).
+      llmSourceFilename, rawSourceFilename: sourceFilename, summaryParsed, today,
       guideHint: opts?.guideHint, provider, model, userAliases,
       deterministic, stage3OverridePrompt,
       // §5.11 promotion threshold (FULL): deterministic Layer 2 gate (substring count ≥ 2 in body).
@@ -592,7 +593,8 @@ export async function ingest(
     })
     parsed = await canonicalizeAndAssembleParsed({
       llm, mentions: allMentions, existingEntityBases, existingConceptBases,
-      llmSourceFilename, summaryParsed, today,
+      // §5.13.A1: rawSourceFilename = mask 안 된 원본 raw basename (sourceFilename 그대로).
+      llmSourceFilename, rawSourceFilename: sourceFilename, summaryParsed, today,
       guideHint: opts?.guideHint, provider, model, userAliases,
       deterministic, stage3OverridePrompt,
       // §5.11 promotion threshold (SEGMENTED): sourceBody 는 전체 sourceContent
@@ -867,6 +869,8 @@ async function canonicalizeAndAssembleParsed(args: {
   existingEntityBases: readonly string[]
   existingConceptBases: readonly string[]
   llmSourceFilename: string
+  /** §5.13.A1: PII-mask 적용 안 된 원본 raw basename (예: `pmbok-overview.md`). raw wikilink target 용. */
+  rawSourceFilename: string
   summaryParsed: IngestRawResult
   today: string
   guideHint: string | undefined
@@ -880,14 +884,17 @@ async function canonicalizeAndAssembleParsed(args: {
 }): Promise<IngestRawResult> {
   const {
     llm, mentions, existingEntityBases, existingConceptBases,
-    llmSourceFilename, summaryParsed, today, guideHint, provider, model,
+    llmSourceFilename, rawSourceFilename, summaryParsed, today, guideHint, provider, model,
     userAliases, deterministic, stage3OverridePrompt, sourceBody, log,
   } = args
   const tCanon0 = Date.now()
   const sourcePageBase = normalizeBase(summaryParsed.source_page.filename)
   const canon = await canonicalize({
     llm, mentions, existingEntityBases, existingConceptBases,
-    sourceFilename: llmSourceFilename, sourcePageBase, today,
+    // §5.13.A1: sourceFilename = LLM body 등재용 (PII guard ON 시 mask 적용된 형식).
+    //   rawSourceFilename = mask 안 된 원본 raw basename — `## 출처` raw wikilink target
+    //   으로 사용. PII guard 흐름과 무관하게 raw 파일 jump 1 클릭 보장.
+    sourceFilename: llmSourceFilename, rawSourceFilename, sourcePageBase, today,
     guideHint, provider, model, userAliases, deterministic,
     overridePrompt: stage3OverridePrompt,
     sourceBody,

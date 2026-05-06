@@ -109,8 +109,19 @@ export interface CanonicalizeArgs {
   readonly mentions: readonly Mention[]
   readonly existingEntityBases: readonly string[]
   readonly existingConceptBases: readonly string[]
-  /** Raw source filename incl. extension (e.g., `pmbok-overview.md`) — display 용. */
+  /**
+   * Source filename incl. extension — frontmatter `sources:` 배열 등재용.
+   * PII guard ON 시 ingest-pipeline 의 sanitizeForLlmPrompt 가 mask 적용된 형식 전달
+   * (예: `___-test-mask.pdf`). LLM body 에 PII 누출 방지.
+   */
   readonly sourceFilename: string
+  /**
+   * §5.13.A1: PII-mask 적용 안 된 원본 raw basename (예: `사업자등록증_홍길동_123456.pdf`).
+   * concept/entity 페이지 `## 출처` 의 raw wikilink target 으로 사용 — Obsidian basename
+   * matcher 가 raw/<bucket>/<rawSourceFilename> 매칭 + validate-wiki.sh §5.13.B2 link 자체
+   * 매칭 PASS. PII guard 흐름과 무관한 원본 raw 파일 jump 1 클릭 보장.
+   */
+  readonly rawSourceFilename: string
   /**
    * §5.12: wiki/sources/<sourcePageBase>.md 단일 진실 소스 base. ingest-pipeline 이
    * `normalizeBase(summaryParsed.source_page.filename)` derive 후 주입. canonicalizer
@@ -155,7 +166,7 @@ interface RawCanonical {
 
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
-          sourceFilename, sourcePageBase, today, guideHint, provider, model, userAliases,
+          sourceFilename, rawSourceFilename, sourcePageBase, today, guideHint, provider, model, userAliases,
           deterministic, overridePrompt, sourceBody } = args
 
   if (mentions.length === 0) {
@@ -168,7 +179,7 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
   })
 
   const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
-  return assembleCanonicalResult(raw, mentions, sourceFilename, sourcePageBase, today, userAliases, sourceBody)
+  return assembleCanonicalResult(raw, mentions, sourceFilename, rawSourceFilename, sourcePageBase, today, userAliases, sourceBody)
 }
 
 // ── Prompt construction ──
@@ -344,6 +355,7 @@ function buildCategoryPages(
   rawPages: readonly RawPage[],
   category: 'entity' | 'concept',
   sourceFilename: string,
+  rawSourceFilename: string,
   sourcePageBase: string,
   today: string,
   sourceBody: string | undefined,
@@ -354,7 +366,7 @@ function buildCategoryPages(
   const pages: WikiPage[] = []
   const dedupeAgainstKept = category === 'concept'
   for (const p of allowed) {
-    const result = validateAndBuildPage(p, category, sourceFilename, sourcePageBase, today, userAliases)
+    const result = validateAndBuildPage(p, category, sourceFilename, rawSourceFilename, sourcePageBase, today, userAliases)
     if (!result.ok) continue
     const base = normalizeBase(result.page.filename)
     if (dedupeAgainstKept && keptBases.has(base)) continue
@@ -369,6 +381,7 @@ function assembleCanonicalResult(
   raw: RawCanonical,
   mentions: readonly Mention[],
   sourceFilename: string,
+  rawSourceFilename: string,
   sourcePageBase: string,
   today: string,
   userAliases?: Readonly<Record<string, string>>,
@@ -376,10 +389,10 @@ function assembleCanonicalResult(
 ): CanonicalizedResult {
   const keptBases = new Set<string>()
   const entityResult = buildCategoryPages(
-    raw.entities ?? [], 'entity', sourceFilename, sourcePageBase, today, sourceBody, keptBases, userAliases,
+    raw.entities ?? [], 'entity', sourceFilename, rawSourceFilename, sourcePageBase, today, sourceBody, keptBases, userAliases,
   )
   const conceptResult = buildCategoryPages(
-    raw.concepts ?? [], 'concept', sourceFilename, sourcePageBase, today, sourceBody, keptBases, userAliases,
+    raw.concepts ?? [], 'concept', sourceFilename, rawSourceFilename, sourcePageBase, today, sourceBody, keptBases, userAliases,
   )
   // §5.11 — promotion drops 는 canon.dropped 의 reason 에 정확 표기를 위해 보존
   // (computeDropReason fallback 이 single-mention 을 generic "not in LLM output" 으로
@@ -388,7 +401,7 @@ function assembleCanonicalResult(
 
   // §5.2.1 cross-link injection — every entity ↔ every concept (sorted, deterministic).
   // Empty other-pool → page unchanged (no empty `## 관련` H2).
-  const pinned = applyCrossLinks(entityResult.pages, conceptResult.pages, sourceFilename, sourcePageBase, today)
+  const pinned = applyCrossLinks(entityResult.pages, conceptResult.pages, sourceFilename, rawSourceFilename, sourcePageBase, today)
 
   // Track dropped mentions: anything in `mentions` whose canonical base didn't survive.
   const pinnedBases = new Set<string>()
@@ -442,6 +455,7 @@ function validateAndBuildPage(
   raw: RawPage,
   category: 'entity' | 'concept',
   sourceFilename: string,
+  rawSourceFilename: string,
   sourcePageBase: string,
   today: string,
   userAliases?: Readonly<Record<string, string>>,
@@ -466,7 +480,7 @@ function validateAndBuildPage(
     conceptType: category === 'concept' ? type : undefined,
     content: buildPageContent({
       name: base, title: displayTitle, aliases, type, description, category,
-      sourceFilename, sourcePageBase, today,
+      sourceFilename, rawSourceFilename, sourcePageBase, today,
     }),
   }
   return { ok: true, page }
@@ -475,10 +489,13 @@ function validateAndBuildPage(
 function buildPageContent(args: {
   name: string; title?: string; aliases?: readonly string[];
   type: string; description: string;
-  category: 'entity' | 'concept'; sourceFilename: string; sourcePageBase: string; today: string;
+  category: 'entity' | 'concept';
+  sourceFilename: string;
+  rawSourceFilename: string;
+  sourcePageBase: string; today: string;
   relatedLinks?: readonly string[];
 }): string {
-  const { name, type, description, category, sourceFilename, sourcePageBase, today, relatedLinks } = args
+  const { name, type, description, category, sourceFilename, rawSourceFilename, sourcePageBase, today, relatedLinks } = args
   const titleValue = (args.title ?? name).trim() || name
   const aliasesField = args.aliases && args.aliases.length > 0
     ? `aliases: [${args.aliases.map((a) => JSON.stringify(a)).join(', ')}]\n`
@@ -493,14 +510,11 @@ ${relatedLinks.map((b) => `- [[${b}]]`).join('\n')}
 
 `
     : ''
-  // §5.12 — `## 출처` wikilink 가 wiki/sources/<sourcePageBase>.md 단일 진실 소스 매칭.
-  // 이전 (§5.3 follow-up #11): raw sidecar `<base>.<ext>.md` 매칭 — validate-wiki.sh resolver
-  //   (`find wiki -name "${link}.md"` + `find raw -name "${link}.*"`) 와 mismatch 였음 (broken link
-  //   상시 발생, wiki/ 가 .gitignore 라 발견 안 됐음). 폐기.
-  // 신규: ingest-pipeline 이 normalizeBase(summaryParsed.source_page.filename) 로 derive 한
-  //   sourcePageBase 그대로 사용. wiki/sources/<sourcePageBase>.md 가 source page 의 단일 위치.
-  //   Obsidian basename matcher + validate-wiki.sh `find wiki -name "<link>.md"` 양쪽 PASS.
-  //   raw sourceFilename 은 display 용 (사람이 읽을 short 이름) 만.
+  // §5.12 — `## 출처` 첫 줄 wikilink 가 wiki/sources/<sourcePageBase>.md 단일 진실 소스 매칭.
+  // §5.13.A1 — 둘째 줄 raw wikilink `[[<rawSourceFilename>|원문]]` 추가. Obsidian basename
+  //   matcher 가 raw/<bucket>/<rawSourceFilename> 매칭 + validate-wiki.sh §5.13.B2 link 자체
+  //   매칭 PASS. PII guard ON 시 sourceFilename 은 mask 적용된 형식이라 raw wikilink target
+  //   으로 부적합 → rawSourceFilename (mask 안 된 원본) 별도 사용.
   const sourceDisplay = sourceFilename.replace(/\.[^.]+$/, '')
   return `---
 title: ${titleValue}
@@ -519,6 +533,7 @@ ${description}
 ${relatedSection}## 출처
 
 - [[${sourcePageBase}|${sourceDisplay}]]
+- [[${rawSourceFilename}|원문]]
 `
 }
 
@@ -533,6 +548,7 @@ function rebuildPageWithCrossLinks(
   page: WikiPage,
   related: readonly string[],
   sourceFilename: string,
+  rawSourceFilename: string,
   sourcePageBase: string,
   today: string,
 ): WikiPage {
@@ -555,6 +571,7 @@ function rebuildPageWithCrossLinks(
       description: extractDescription(page.content) || '(설명 없음)',
       category: isEntity ? 'entity' : 'concept',
       sourceFilename,
+      rawSourceFilename,
       sourcePageBase,
       today,
       relatedLinks: filtered,
@@ -573,14 +590,15 @@ function applyCrossLinks(
   entities: WikiPage[],
   concepts: WikiPage[],
   sourceFilename: string,
+  rawSourceFilename: string,
   sourcePageBase: string,
   today: string,
 ): { entities: WikiPage[]; concepts: WikiPage[] } {
   const entityBases = entities.map((p) => normalizeBase(p.filename)).sort()
   const conceptBases = concepts.map((p) => normalizeBase(p.filename)).sort()
   return {
-    entities: entities.map((p) => rebuildPageWithCrossLinks(p, conceptBases, sourceFilename, sourcePageBase, today)),
-    concepts: concepts.map((p) => rebuildPageWithCrossLinks(p, entityBases, sourceFilename, sourcePageBase, today)),
+    entities: entities.map((p) => rebuildPageWithCrossLinks(p, conceptBases, sourceFilename, rawSourceFilename, sourcePageBase, today)),
+    concepts: concepts.map((p) => rebuildPageWithCrossLinks(p, entityBases, sourceFilename, rawSourceFilename, sourcePageBase, today)),
   }
 }
 
