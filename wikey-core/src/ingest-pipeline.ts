@@ -852,7 +852,31 @@ async function callLLMForSummary(
   promptTemplate?: string, deterministic?: boolean,
 ): Promise<IngestRawResult> {
   const prompt = buildIngestPrompt(sourceContent, sourceFilename, indexContent, promptTemplate)
-  return callLLMWithRetry(llm, prompt, provider, model, deterministic)
+  const parsed = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
+  // §5.13.C4: LLM emit drift 방어 — `source_page.filename` 의 `source-` prefix 누락
+  //   또는 다른 prefix (raw-, archive- 등) 를 force normalize. assembleCanonicalResult
+  //   의 sourcePageBase derive (normalizeBase) 보다 먼저 진행 → entity/concept `## 출처`
+  //   wikilink 도 normalized base 일관 (§5.12 paradigm 회귀 0).
+  return normalizeSourcePageFilename(parsed)
+}
+
+/**
+ * §5.13.C4 — LLM emit `source_page.filename` 의 `source-` prefix 누락 시 자동 prepend.
+ * 다른 prefix (e.g., `raw-`, `archive-`) 도 force prepend (사용자 결정 = force, 보존 X).
+ * 결과 immutable — 원본 parsed 변경 없음.
+ *
+ * 1차 방어선 = prompt template 에 명시 강제 문구 (buildIngestPrompt). 2차 방어선 =
+ * 본 함수 (defense in depth, LLM 자율 흐름이 prompt 무시 가능 케이스 cover).
+ */
+export function normalizeSourcePageFilename(parsed: IngestRawResult): IngestRawResult {
+  if (!parsed.source_page?.filename) return parsed
+  const original = parsed.source_page.filename
+  if (original.startsWith('source-')) return parsed
+  console.warn(`[Wikey ingest] LLM emit drift — auto-normalizing source_page.filename: ${original} → source-${original}`)
+  return {
+    ...parsed,
+    source_page: { ...parsed.source_page, filename: `source-${original}` },
+  }
 }
 
 /**
@@ -1408,6 +1432,7 @@ tags: [태그1, 태그2]
 ### 파일명 규칙
 - 소문자, 하이픈 구분 (예: my-page-name.md)
 - 소스 페이지: source-{name}.md
+- **\`source_page.filename\` 은 반드시 \`source-\` prefix 로 시작** — 예: \`source-pmbok-overview.md\`. 다른 prefix (\`raw-\`, \`archive-\` 등) 또는 prefix 없음 → 무효 (자동 force prepend).
 - 엔티티: wiki/entities/ — 문서의 **핵심 주체**이거나 **다른 소스에서 반복 참조될 가능성이 높을 때만** 생성합니다. 발급기관·서명자·푸터의 기관명·1회 언급 주변 인물은 source 페이지 본문에만 남기고 별도 페이지로 만들지 마세요.
 - 개념: wiki/concepts/ — **독립적 설명 가치가 있는 제도·방법론·문서유형**만 생성합니다. 업종 분류명, 빈 폼 필드, 일회성 라벨, 관용구는 concept로 승격하지 마세요.
 

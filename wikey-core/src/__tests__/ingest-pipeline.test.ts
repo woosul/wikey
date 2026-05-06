@@ -7,6 +7,7 @@ import {
   BUNDLED_INGEST_PROMPT, BUNDLED_STAGE2_MENTION_PROMPT,
   formatLocalDate, assertNotWikiPath, callLLMWithRetry,
   buildDoclingArgs, defaultOcrLangForEngine, defaultOcrEngine,
+  normalizeSourcePageFilename,
 } from '../ingest-pipeline.js'
 import type { WikiFS } from '../types.js'
 import type { LLMClient } from '../llm-client.js'
@@ -110,6 +111,90 @@ describe('buildIngestPrompt', () => {
     const override = 'CUSTOM PROMPT — process {{SOURCE_FILENAME}} content: {{SOURCE_CONTENT}}'
     const prompt = buildIngestPrompt('hello', 'foo.md', '', override)
     expect(prompt).toBe('CUSTOM PROMPT — process foo.md content: hello')
+  })
+
+  // §5.13 AC-C4-5 — prompt template 의 source_page.filename 강제 문구 포함.
+  // LLM emit drift (prefix 누락) 의 1차 방어선: prompt 명시. 2차 방어선:
+  // ingest-pipeline 의 normalize (callLLMForSummary 내부, defense in depth).
+  it('§5.13 AC-C4-5: bundled prompt enforces source_page.filename = source- prefix', () => {
+    const prompt = buildIngestPrompt('content', 'file.md', '')
+    expect(prompt).toContain('source_page.filename')
+    expect(prompt).toContain('source-')
+    expect(prompt).toMatch(/source-\s*prefix|반드시\s*[`']?source-/)
+  })
+})
+
+// §5.13.C4 — LLM emit `source_page.filename` 의 `source-` prefix 누락 시 자동 prepend.
+// 다른 prefix (e.g., `raw-`, `archive-`) 도 force prepend (사용자 결정 = force, 보존 X).
+// 호출 위치: callLLMForSummary 내부 LLM call 결과 받은 직후, sourcePageBase derive
+// (assembleCanonicalResult 내부 normalizeBase) 보다 먼저.
+describe('§5.13.C4 normalizeSourcePageFilename', () => {
+  it('§5.13 AC-C4-1: prefix 정상 시 그대로 반환 (회귀)', () => {
+    const parsed = {
+      source_page: { filename: 'source-pmbok-overview.md', content: '# PMBOK\n' },
+      entities: [],
+      concepts: [],
+    }
+    const result = normalizeSourcePageFilename(parsed)
+    expect(result.source_page.filename).toBe('source-pmbok-overview.md')
+  })
+
+  it('§5.13 AC-C4-2: prefix 누락 시 source- 자동 prepend', () => {
+    const parsed = {
+      source_page: { filename: 'pmbok-overview.md', content: '# PMBOK\n' },
+      entities: [],
+      concepts: [],
+    }
+    const result = normalizeSourcePageFilename(parsed)
+    expect(result.source_page.filename).toBe('source-pmbok-overview.md')
+  })
+
+  it('§5.13 AC-C4-3: 다른 prefix (raw-) 시 force prepend (보존 X)', () => {
+    const parsed = {
+      source_page: { filename: 'raw-pmbok.md', content: '# Raw\n' },
+      entities: [],
+      concepts: [],
+    }
+    const result = normalizeSourcePageFilename(parsed)
+    // 사용자 결정 = force prepend (raw- 보존하지 않음)
+    expect(result.source_page.filename).toBe('source-raw-pmbok.md')
+  })
+
+  it('§5.13 AC-C4-4: normalize 후 sourcePageBase derive 일관 (normalizeBase 결과)', async () => {
+    const { normalizeBase } = await import('../wiki-ops.js')
+    const cases = [
+      { emit: 'pmbok-overview.md', expectedBase: 'source-pmbok-overview' },
+      { emit: 'source-pmbok-overview.md', expectedBase: 'source-pmbok-overview' },
+      { emit: 'raw-pmbok.md', expectedBase: 'source-raw-pmbok' },
+    ]
+    for (const c of cases) {
+      const parsed = {
+        source_page: { filename: c.emit, content: '' },
+        entities: [],
+        concepts: [],
+      }
+      const normalized = normalizeSourcePageFilename(parsed)
+      // assembleCanonicalResult 의 sourcePageBase derive (line 887) 가 normalize 결과 사용
+      const sourcePageBase = normalizeBase(normalized.source_page.filename)
+      expect(sourcePageBase, `emit=${c.emit}`).toBe(c.expectedBase)
+    }
+  })
+
+  it('§5.13 AC-C4-6: 결과 immutable — 원본 parsed 변경 없음', () => {
+    const parsed = {
+      source_page: { filename: 'pmbok-overview.md', content: '# PMBOK\n' },
+      entities: [],
+      concepts: [],
+    }
+    const original = parsed.source_page.filename
+    normalizeSourcePageFilename(parsed)
+    expect(parsed.source_page.filename).toBe(original)
+  })
+
+  it('§5.13: source_page 누락 시 그대로 반환 (defensive)', () => {
+    const parsed = { entities: [], concepts: [] } as any
+    const result = normalizeSourcePageFilename(parsed)
+    expect(result).toBe(parsed)
   })
 })
 
