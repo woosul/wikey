@@ -633,28 +633,31 @@ function findQmdBin(
   const { join } = require('node:path') as typeof import('node:path')
   const { accessSync } = require('node:fs') as typeof import('node:fs')
 
-  // 1. 설정값
-  if ((config as any).QMD_PATH) {
-    return { bin: (config as any).QMD_PATH, isJs: false }
-  }
-
-  // 2. vendored qmd.js (직접 node로 실행 — ABI 불일치 방지)
   const vendoredJs = join(basePath, 'tools/qmd/dist/cli/qmd.js')
+  const vendoredBin = join(basePath, 'tools/qmd/bin/qmd')
+  const userQmdPath = (config as any).QMD_PATH as string | undefined
+
+  // §5.14 (2026-05-06) — 우선순위 재배치:
+  //   (1) vendored qmd.js (isJs=true, plugin 의 nodePath 로 직접 실행 → ABI mismatch 회피)
+  //   (2) 사용자 명시 override — 단 자동 감지된 vendored bin 이면 (1) 결과 사용
+  //   (3) vendored bin (wrapper script — 마지막 fallback)
+  // 변경 전: config.QMD_PATH 가 1순위였는데, env-detect 가 vendored bin 을 자동 set
+  // 하므로 wrapper script 가 항상 우선 → wrapper 가 PATH 첫 node 호출 → ABI mismatch.
   try {
     accessSync(vendoredJs)
-    return { bin: vendoredJs, isJs: true }
-  } catch {
-    // pass
+    if (!userQmdPath || userQmdPath === vendoredBin) {
+      return { bin: vendoredJs, isJs: true }
+    }
+  } catch { /* vendoredJs 없음 — fallback */ }
+
+  if (userQmdPath) {
+    return { bin: userQmdPath, isJs: false }
   }
 
-  // 3. vendored bin
-  const vendoredBin = join(basePath, 'tools/qmd/bin/qmd')
   try {
     accessSync(vendoredBin)
     return { bin: vendoredBin, isJs: false }
-  } catch {
-    // pass
-  }
+  } catch { /* pass */ }
 
   throw new Error('qmd를 찾을 수 없습니다 — tools/qmd/가 있는지 확인하세요')
 }

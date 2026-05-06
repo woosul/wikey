@@ -38,7 +38,7 @@
         "at": "2026-05-06T09:57:23.513Z"
       }
     ],
-    "tombstone": true,
+    "tombstone": false,
     "last_action": "force"
   }
 }

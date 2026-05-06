@@ -156,30 +156,40 @@ for (const p of allowed) {
 
 | 단계 | 결과 |
 |------|------|
-| 파일 열기 (`raw/0_inbox/nanovna-v2-notes.md`) | ✓ |
-| `wikey:ingest-current-note` 트리거 | ✓ |
-| Brief modal Proceed 클릭 | ✓ |
-| Processing 대기 (gemini provider, ~2분) | ✓ Preview 도달 |
+| 파일 열기 (`raw/0_inbox/nanovna-v2-notes.md`) | OK |
+| `wikey:ingest-current-note` 트리거 | OK |
+| Brief modal Proceed 클릭 | OK |
+| Processing 대기 (gemini provider, ~2분) | OK Preview 도달 |
 | Preview 내용 | source-nanovna-v2-notes.md + entities (3): nanovna-v2 / nanovna-qt / dji-o3-air-unit + concepts (2): swr / fpv + index +13 entries / log +1 entry |
-| Approve & Write 클릭 | ✓ |
-| Modal closed | ✓ |
-| wiki write 검증 | ✓ 9 file mtime ≤3min: source + 3 entities + 2 concepts + index.md + log.md + .ingest-map.json |
-| validate-wiki.sh | ✓ PASS (frontmatter / 위키링크 / 인덱스 등재 / log 형식 / 중복 모두) |
-| IV.A movePair | ✓ raw/0_inbox/nanovna-v2-notes.md 사라지고 raw/3_resources/60_note/600_technology/nanovna-v2-notes.md 로 이동 |
-| source-registry path_history | ✓ 2 entries: [raw/0_inbox/..., raw/3_resources/60_note/600_technology/...] |
-| Chat panel query: "NanoVNA V2의 주요 측정 항목과 SWR 와의 관계는?" | ✓ 응답 도착 (~30s) |
+| Approve & Write 클릭 | OK |
+| Modal closed | OK |
+| wiki write 검증 | OK 9 file mtime ≤3min: source + 3 entities + 2 concepts + index.md + log.md + .ingest-map.json |
+| validate-wiki.sh | OK PASS (frontmatter / 위키링크 / 인덱스 등재 / log 형식 / 중복 모두) |
+| IV.A movePair | OK raw/0_inbox/nanovna-v2-notes.md 사라지고 raw/3_resources/60_note/600_technology/nanovna-v2-notes.md 로 이동 |
+| source-registry path_history | OK 2 entries: [raw/0_inbox/..., raw/3_resources/60_note/600_technology/...] |
+| Chat panel query: "NanoVNA V2의 주요 측정 항목과 SWR 와의 관계는?" | OK 응답 도착 (~30s) |
 | Query 응답 본문 | LLM 자체 지식 기반 정확한 답변 (S-파라미터 / S11 / 반사 계수 → SWR 공식 / 매칭 상태 평가) |
-| Query citation | ⚠ 부재 (links: []) — 환경 이슈 (qmd better-sqlite3 native binding ERR_DLOPEN_FAILED, Node v22.17.0). **본 §5.14 BLUE refactor 와 무관**. 새 ingest 페이지 qmd 인덱싱 누락. |
+| Query citation 1차 | FAIL 부재 (links: []) — qmd query 가 검색 결과 0 받음 |
+| Query citation 2차 (post-fix) | OK **31 HTML links** + "참고: source-nanovna-v2-notes, nanovna-v2[원본], swr[원본], dji-o3-air-unit, fpv, nanovna-qt[원본]" + "원본: nanovna-v2-notes" + ground truth 정확 인용 (50kHz~3GHz / DJI O3 Air Unit / SWR 1.5 양호) |
 
-### Live smoke 결론
+### Live smoke 결론 + qmd query 회귀 root cause + 다층 영구 fix (사용자 명시 영구 등록)
 
-- ingest pipeline full cycle (Brief → Proceed → Processing → Preview → Approve → Write) — **모든 단계 정상 동작**
-- canonicalizer / ingest-pipeline / wiki-ops 의 BLUE refactor 가 실제 ingest 흐름에 영향 없음 확증
-- §5.12 invariant (sourcePageBase chain) 라이브 작동: `wiki/sources/source-nanovna-v2-notes.md` 단일 진실 소스 정확 생성
-- §5.11 promotion threshold 작동: 5 페이지만 promote (overwhelming wiki noise 차단)
-- IV.A movePair 의 path_history 2 entries 패턴 정상
+ingest pipeline full cycle 자체는 모든 단계 정상 (Brief → Proceed → Processing → Preview → Approve → Write → wiki write 9 file). §5.12 sourcePageBase chain / §5.11 promotion threshold / IV.A movePair 모두 라이브 작동.
 
-→ **§5.14 BLUE refactor 는 동작 변경 0 (Surgical) 확증**. citation issue 는 별도 환경 이슈.
+그러나 **query citation 부재 회귀** = 단일 환경 이슈가 아닌 **6 layer silent fail 결합** 으로 확정 (사용자 raise "반복되는 문제, 정확히 기록"):
+
+| Layer | 증상 | 영구 fix |
+|-------|------|---------|
+| 1. native binding NODE_MODULE_VERSION | `tools/qmd/node_modules/better-sqlite3` 가 Node v24 (MOD 137) 기준 build, 시스템 v22 (MOD 127) 와 mismatch → ERR_DLOPEN_FAILED | `bash ./scripts/rebuild-qmd-deps.sh` (login shell node 기준 rebuild) |
+| 2. 다중 node 공존 | `/opt/homebrew/bin/node` v24 + `~/.nvm/.../v22.17.0/bin/node` 둘 다 PATH 에 존재 | (Layer 3 와 함께) |
+| 3. plugin execEnv PATH 의 node 우선순위 | `makeEnv` 가 `process.env.PATH` 만 사용 → login shell PATH 의 첫 node 가 v24 → wrapper script 가 잘못된 node 호출 | **fix**: `wikey-obsidian/src/env-detect.ts::makeEnv/buildExecEnv` + `main.ts::getExecEnv` 가 `detectedNodePath` 의 dir 을 PATH 시작에 prepend |
+| 4. query-pipeline findQmdBin 우선순위 | `config.QMD_PATH` (env-detect 자동 set wrapper bin) 1단계 → wrapper 가 PATH 첫 node 호출 → ABI mismatch | **fix**: `wikey-core/src/query-pipeline.ts::findQmdBin` — vendored qmd.js (isJs=true, plugin nodePath 직접 실행) 1단계, 사용자 명시 override 만 wrapper |
+| 5. qmd collection path misconfig | `~/.cache/qmd/index.sqlite` 의 `wikey-wiki` path 가 `wiki/wikey-wiki/` (없음) → reindex 0 indexed silent success | **fix**: `scripts/setup.sh` 가 path 정합성 자동 verify + 잘못되면 UPDATE |
+| 6. waitUntilFresh design | status='fresh' && stale=0 만 check — 빈 collection 도 fresh 로 판정 | (잔존 — 별도 plan, indexed file count vs wiki/.md count 비교 추가 검토) |
+
+영구 기록: `~/.claude/projects/-Users-denny-Project-wikey/memory/feedback_qmd_node_abi.md` (반복 회귀 방지). 다음 세션에서 같은 증상 발생 시 6 layer 진단 순서 적용.
+
+**post-fix 라이브 verify**: plugin reload 후 query 재실행 → 31 HTML links + wikilinks + 정확한 본문 인용 → OK 회귀 0.
 
 ## 5.14.7 영구 정책 등록 (이미 완료 — session 19)
 

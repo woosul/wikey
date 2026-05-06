@@ -459,7 +459,10 @@ export default class WikeyPlugin extends Plugin {
   }
 
   getExecEnv(): Record<string, string> {
-    return buildExecEnv(this.settings.detectedShellPath || process.env.PATH || '')
+    return buildExecEnv(
+      this.settings.detectedShellPath || process.env.PATH || '',
+      this.settings.detectedNodePath || undefined,
+    )
   }
 
   async loadSettings() {

@@ -117,16 +117,34 @@ QMD_BIN="${PROJECT_DIR}/tools/qmd/bin/qmd"
 if [ -x "$QMD_BIN" ]; then
   ok "qmd 설치됨"
 
-  # 컬렉션 확인/생성
+  # 컬렉션 확인/생성/path 정합성 검증 (§5.14, 2026-05-06)
+  # 과거 실측: wiki/wikey-wiki/ 같은 nested path 로 잘못 register 되면 reindex 가
+  # success 보고하면서 query 시 검색 결과 0 (silent fail). 따라서 collection 존재해도
+  # path 가 ${PROJECT_DIR}/wiki 와 일치하는지 검증 + 자동 fix.
+  local db_path="${HOME}/.cache/qmd/index.sqlite"
+  local expected_path="${PROJECT_DIR}/wiki"
   local_collection=$("$QMD_BIN" collection list 2>/dev/null | grep "wikey-wiki" || true)
   if [ -n "$local_collection" ]; then
-    ok "wikey-wiki 컬렉션 존재"
+    if [ -f "$db_path" ]; then
+      local current_path=$(sqlite3 "$db_path" "SELECT path FROM store_collections WHERE name='wikey-wiki';" 2>/dev/null)
+      if [ -n "$current_path" ] && [ "$current_path" != "$expected_path" ]; then
+        if [ "$CHECK_ONLY" = false ]; then
+          sqlite3 "$db_path" "UPDATE store_collections SET path='${expected_path}' WHERE name='wikey-wiki';" 2>/dev/null
+          "$QMD_BIN" update 2>/dev/null
+          ok "wikey-wiki path 정정: ${current_path} → ${expected_path} (재인덱싱 완료)"
+        else
+          warn "wikey-wiki path 잘못 등록: ${current_path} (기대: ${expected_path})"
+        fi
+      else
+        ok "wikey-wiki 컬렉션 존재 (path 정상)"
+      fi
+    else
+      ok "wikey-wiki 컬렉션 존재"
+    fi
   else
     if [ "$CHECK_ONLY" = false ]; then
-      # DB에 직접 컬렉션 경로 설정
-      local db_path="${HOME}/.cache/qmd/index.sqlite"
       if [ -f "$db_path" ]; then
-        sqlite3 "$db_path" "INSERT OR REPLACE INTO store_collections (name, path, pattern, include, command) VALUES ('wikey-wiki', '${PROJECT_DIR}/wiki', '**/*.md', 1, '');" 2>/dev/null
+        sqlite3 "$db_path" "INSERT OR REPLACE INTO store_collections (name, path, pattern, include, command) VALUES ('wikey-wiki', '${expected_path}', '**/*.md', 1, '');" 2>/dev/null
         "$QMD_BIN" update 2>/dev/null
         "$QMD_BIN" embed 2>/dev/null
         ok "wikey-wiki 컬렉션 생성 + 인덱싱 완료"

@@ -1512,3 +1512,12 @@
 - [ ] sidebar-chat.ts `renderAuditSection` 726 LOC 분해 — UI E2E test 마련 후
 - [ ] settings-tab.ts setting group 별 분해 — 동일
 - [ ] main.ts / commands.ts 추가 분해 — 동일
+
+### 5.14 follow-up — qmd query 회귀 6 layer silent fail fix (session 20 후반) ✅
+- [x] Layer 1 native binding rebuild (NODE_MODULE_VERSION v24/137 → v22/127)
+- [x] Layer 3 plugin execEnv PATH detectedNodePath dir prepend (env-detect.ts + main.ts)
+- [x] Layer 4 findQmdBin 우선순위 (vendored qmd.js 1단계 — query-pipeline.ts)
+- [x] Layer 5 qmd collection path 자동 verify (scripts/setup.sh)
+- [x] citation marker (📄 / [원본]) 폐기 — attachCitationBacklinks 호출 비활성 (사용자 raise: wiki 페이지에 "원본" 마커 misleading)
+- [x] 영구 메모리 등록: `feedback_qmd_node_abi.md` 6 layer 진단 순서
+- [ ] Layer 6 waitUntilFresh 강화 — 빈 collection 도 fresh 판정 (별도 plan)

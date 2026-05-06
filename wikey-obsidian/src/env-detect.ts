@@ -61,8 +61,22 @@ async function detectShellPath(): Promise<string> {
   }
 }
 
-function makeEnv(shellPath: string): Record<string, string> {
-  return { ...process.env, PATH: shellPath } as Record<string, string>
+function makeEnv(shellPath: string, nodePath?: string): Record<string, string> {
+  // §5.14 (2026-05-06) — qmd 호환 node 가 detect 되면 그 dir 을 PATH 시작에 prepend.
+  // 이유 (실측): login shell PATH 가 /opt/homebrew/bin/node (v24) 를 우선 — 그러나
+  // tools/qmd/node_modules/better-sqlite3 binding 은 nvm v22 기준 build → wrapper
+  // script (tools/qmd/bin/qmd) 가 v24 호출 시 ABI mismatch (NODE_MODULE_VERSION
+  // 137 vs 127) → reindex 는 success 보고하면서 query 시 검색 결과 0 (silent fail).
+  // detectedNodePath 의 dir 을 PATH 시작에 두면 wrapper 가 호환 node 를 첫 detect.
+  let path = shellPath
+  if (nodePath) {
+    const sep = require('node:path') as typeof import('node:path')
+    const nodeDir = sep.dirname(nodePath)
+    if (nodeDir && !shellPath.startsWith(`${nodeDir}:`)) {
+      path = `${nodeDir}:${shellPath}`
+    }
+  }
+  return { ...process.env, PATH: path } as Record<string, string>
 }
 
 async function which(cmd: string, env: Record<string, string>): Promise<string> {
@@ -307,7 +321,8 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
 
 /**
  * 탐지된 shellPath를 exec에서 사용할 env 객체로 변환.
+ * §5.14: nodePath 가 detect 되면 그 dir 을 PATH 시작에 prepend (ABI mismatch 회피).
  */
-export function buildExecEnv(shellPath: string): Record<string, string> {
-  return makeEnv(shellPath)
+export function buildExecEnv(shellPath: string, nodePath?: string): Record<string, string> {
+  return makeEnv(shellPath, nodePath)
 }

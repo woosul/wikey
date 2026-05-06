@@ -74,9 +74,11 @@ const PROVIDER_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
  * CSS (`.wikey-citation-link`) 가 크기·투명도·간격을 제어. UI 레이어 분리.
  */
 function buildCitationButton(resolved: ResolvedSource): HTMLElement {
+  // 사용자 정책: 이모지 사용 금지. 보조 citation 링크는 텍스트 마커 (대괄호) 로 표기.
+  // CSS (`.wikey-citation-link`) 가 시각 강조 (작은 크기 + 투명도) 담당.
   const btn = document.createElement('a') as HTMLAnchorElement
   btn.className = 'wikey-citation-link'
-  btn.textContent = '📄'
+  btn.textContent = '[원본]'
   const filename = resolved.displayLabel.split('/').pop() ?? resolved.displayLabel
   if (resolved.tombstoned) {
     btn.classList.add('wikey-citation-tombstone')
@@ -411,12 +413,9 @@ export class WikeyChatView extends ItemView {
     } else {
       const contentEl = msgEl.createDiv({ cls: 'wikey-chat-content' })
       this.renderMarkdown(msg.content, contentEl)
-      if (msg.citations && msg.citations.length > 0) {
-        // Schedule after render so wikilinks are in DOM before citation attach.
-        void this.attachCitationBacklinks(contentEl, msg.citations).catch((err) =>
-          console.warn('[Wikey] citation attach failed:', err),
-        )
-      }
+      // 사용자 정책 (2026-05-06 session 20): wikilink 뒤 보조 citation 마커 ([원본] / 📄)
+      // 자체 폐기. wikilink 만으로 충분. attachCitationBacklinks / buildCitationButton 은
+      // 호출되지 않음 (코드는 §4.3.2 Part B 의 historical reference 로 보존하지만 dead path).
       this.addMessageActions(msgEl, msg.content)
     }
 
@@ -424,9 +423,9 @@ export class WikeyChatView extends ItemView {
   }
 
   /**
-   * §4.3.2 Part B — 각 wikilink 뒤에 원본 파일 보조 링크 (`📄`) 를 attach.
+   * §4.3.2 Part B — 각 wikilink 뒤에 원본 파일 보조 링크 (`[원본]`) 를 attach.
    * citation 없는 링크는 건드리지 않음. 한 페이지가 여러 source 에서 왔으면
-   * 각 source 별 아이콘을 나란히 배치 (대부분 1개).
+   * 각 source 별 마커를 나란히 배치 (대부분 1개).
    */
   private async attachCitationBacklinks(
     container: HTMLElement,

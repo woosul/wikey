@@ -2314,4 +2314,26 @@ LLM call 시간:
 - `cd3750f` docs(§5.14): retrospective TDD-BLUE refactor 등록 (P0) — session 19
 - `eccf98a` docs(§5.14 v1 + policy): scope 4 tier 확장 + TDD-BLUE 분리 영구 등록 — session 19
 - `7088c53` docs(sync): §5.11 v2 / §5.12 / §5.13 / §5.14 mirror — session 19
-- (session 20) refactor + docs commit chain — 아래 §5.14 잔존 후속 별도
+- `888317f` refactor(§5.14): Tier 2-4 narrow BLUE — extract / dedup / naming / cleanup — session 20
+- `7b1ccc3` docs(sync §5.14): Tier 2-4 mirror + live smoke evidence — session 20
+
+### 5.14 follow-up — qmd query 회귀 6 layer silent fail 영구 fix (session 20 후반)
+
+obsidian-cdp 라이브 smoke 중 query "검색 결과 없음" 회귀 raise → 6 layer 다층 fix:
+
+| Layer | Fix |
+|-------|-----|
+| 1. native binding NODE_MODULE_VERSION (v24/137 vs v22/127) | `npm rebuild better-sqlite3` (즉시) |
+| 2. 다중 node 공존 (homebrew v24 + nvm v22) | (Layer 3 와 함께) |
+| 3. plugin execEnv PATH node 우선순위 | `wikey-obsidian/src/env-detect.ts::makeEnv/buildExecEnv` 가 detectedNodePath dir 을 PATH 시작 prepend + `main.ts::getExecEnv` 전달 |
+| 4. query-pipeline findQmdBin 우선순위 | `wikey-core/src/query-pipeline.ts::findQmdBin` — vendored qmd.js (isJs=true) 1단계, 자동감지 wrapper bin fallback |
+| 5. qmd collection path misconfig (DB `wiki/wikey-wiki/`) | `scripts/setup.sh` 가 path 정합성 자동 verify + UPDATE |
+| 6. waitUntilFresh design (잔존) | 별도 plan |
+
+추가 fix:
+- citation marker (📄 / [원본]) 자체 폐기 — `attachCitationBacklinks` 호출 비활성. 사용자 raise: wiki 페이지 (entity/concept) 에 "원본" 마커 misleading.
+- 본 세션 master 작성 docs 의 이모지 cleanup (이전 세션 잔재 제외)
+
+영구 메모리: `~/.claude/projects/-Users-denny-Project-wikey/memory/feedback_qmd_node_abi.md` (반복 회귀 방지 6 layer 진단 순서).
+
+post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEmoji: false / hasMarker: false`.
