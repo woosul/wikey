@@ -40,11 +40,15 @@ find "$WIKI_DIR" -name "*.md" -print0 | while IFS= read -r -d '' file; do
       error "$file: 깨진 위키링크 [[${link}]]"
       continue
     fi
-    # basename 형태 — wiki/ 안 .md 매칭 우선, 없으면 raw/ 안 임의 확장자
-    found=$(find "$WIKI_DIR" -name "${link}.md" -print -quit 2>/dev/null)
-    if [ -z "$found" ]; then
-      found=$(find raw -name "${link}.*" -print -quit 2>/dev/null)
-    fi
+    # basename 형태 — §5.13.B2: link 자체 매칭 + extension fallback 양방 시도.
+    # 1) wiki/ 안 link 자체 (extension 포함된 경우 — `link.md`, `link.txt` 등)
+    # 2) wiki/ 안 link.md auto-append (extension 없는 경우 — `link` → `link.md`)
+    # 3) raw/ 안 link 자체 (extension 포함된 경우 — `link.md`, `link.pdf` 등)
+    # 4) raw/ 안 link.* fallback (extension 없는 경우 — `link` → `link.<any>`)
+    found=$(find "$WIKI_DIR" -name "${link}" -print -quit 2>/dev/null)
+    [ -z "$found" ] && found=$(find "$WIKI_DIR" -name "${link}.md" -print -quit 2>/dev/null)
+    [ -z "$found" ] && found=$(find raw -name "${link}" -print -quit 2>/dev/null)
+    [ -z "$found" ] && found=$(find raw -name "${link}.*" -print -quit 2>/dev/null)
     if [ -z "$found" ]; then
       error "$file: 깨진 위키링크 [[${link}]]"
     fi
