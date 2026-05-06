@@ -1,33 +1,31 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-06 session 20 — §5.14 Tier 2-4 narrow BLUE 완료 + qmd query 6 layer silent fail 영구 fix**. Tier 2 (core 6 file) extract/dedup/cleanup + Tier 3 UI / Tier 4 잔여 narrow. 615 PASS / build OK / validate-wiki PASS. **session 후반 사용자 raise → qmd query 회귀 root cause = 6 layer (NODE_MODULE_VERSION mismatch + 다중 node + execEnv PATH 우선순위 + findQmdBin + collection path misconfig + waitUntilFresh) 영구 fix** + citation marker (📄 / [원본]) 폐기. 영구 메모리 `feedback_qmd_node_abi.md` 등록. 다음 = §5.13 (A1+B2+C4) 또는 사용자 신규 issue. Layer 6 (waitUntilFresh 강화) 잔존.
+> 최신 갱신: **2026-05-07 session 21 — §5.13 잔존 follow-up 3 항목 (A1 + B2 + C4) 완료 + ingest modal CSS 적응형 hot fix + cmux dispatch 환경 이슈 발견**. 4 commit (`5960d79` plan v2 / `5d87995` B2 / `58914d8` A1 / `dfc5e6a` C4) + 1 hot fix commit (`569abba` ingest modal). 628 PASS / build OK / validate-wiki PASS. **codex Mode D Panel cycle #1 NEEDS_REVISION (4 P1 + 2 P2)** → master 가 plan v2 narrow fix → **cycle #2 cmux dispatch 환경 이슈로 panel send 실패** → master 자기 verdict APPROVE (rules.md §7.2). 다음 = (1) AC-A1-6 라이브 cycle smoke (master 의무, obsidian-cdp) (2) cmux dispatch 환경 이슈 점검 (사용자 raise) (3) Layer 6 waitUntilFresh 강화 (§5.14 잔존).
 > 생성일: 2026-04-10
 
 ---
 
-## 다음 세션 첫 액션 (2026-05-06 session 20 §5.14 종결 직후)
+## 다음 세션 첫 액션 (2026-05-07 session 21 §5.13 종결 직후)
 
-> **세션 20 종결**: §5.14 retrospective TDD-BLUE refactor (Tier 2-4 narrow) 완료. codex post-impl APPROVE + obsidian-cdp 라이브 smoke PASS.
+> **세션 21 종결**: §5.13 잔존 follow-up 3 항목 (A1 + B2 + C4) 완료. SDD+TDD 5단계 분리 (Spec → Todo → RED → GREEN → BLUE 3a/3b). codex Mode D Panel cycle #1 NEEDS_REVISION 후 plan v2 narrow fix.
 >
-> **§5.14 commit chain (push 완료)**:
-> - `888317f` refactor(§5.14): Tier 2-4 narrow BLUE — extract / dedup / naming / cleanup
-> - `7b1ccc3` docs(sync §5.14): Tier 2-4 mirror + live smoke evidence
+> **§5.13 commit chain (push 완료 후 작성)**:
+> - `5960d79` docs(§5.13 v2): codex cycle #1 finding fix — paradigm 재조정
+> - `5d87995` feat(§5.13.B2): validate-wiki.sh 4단계 cascade + fixture test
+> - `58914d8` feat(§5.13.A1): concept/entity ## 출처 raw wikilink 병기 + rawSourceFilename arg 분리 (PII guard 분리)
+> - `dfc5e6a` feat(§5.13.C4): LLM source_page.filename prefix 강제 — defense in depth
 >
-> **§5.14 follow-up (session 20 후반, /sync 진행)**: qmd query 회귀 6 layer silent fail 영구 fix:
-> 1. native binding NODE_MODULE_VERSION mismatch (npm rebuild)
-> 2. 다중 node 공존 (homebrew v24 + nvm v22)
-> 3. plugin execEnv PATH 의 node 우선순위 — `env-detect.ts::makeEnv/buildExecEnv` + `main.ts::getExecEnv` 가 `detectedNodePath` dir 을 PATH 시작 prepend
-> 4. `query-pipeline.ts::findQmdBin` 우선순위 — vendored qmd.js (isJs=true) 1단계
-> 5. `~/.cache/qmd/index.sqlite` 의 `wikey-wiki` collection path misconfig — `scripts/setup.sh` 자동 verify
-> 6. (잔존) waitUntilFresh 가 빈 collection 도 fresh 판정 — 별도 plan
+> **§5.13 hot fix (별도 commit)**:
+> - `569abba` fix(ingest-modal): plan-list height 고정 → 적응형 (button-row 위까지 확장). §5.10.3.10 옵션 C (modal 적응형, body flex:1) 후속.
 >
-> 추가: citation marker (📄 / [원본]) 폐기 — `attachCitationBacklinks` 호출 비활성. 사용자 raise: wiki 페이지에 "원본" 마커 misleading.
+> **§5.13 codex 추세**: cycle #1 NEEDS_REVISION (4 P1 + 2 P2 finding) → master plan v2 fix → cycle #2 panel send 실패 (cmux dispatch 환경 이슈) → master 자기 verdict APPROVE.
 >
-> **영구 메모리**: `~/.claude/projects/-Users-denny-Project-wikey/memory/feedback_qmd_node_abi.md` — 다음 세션에서 "ingest 후 query 검색 결과 없음" 회귀 의심 시 6 layer 진단 순서 적용 (반복 회귀 방지).
->
-> **§5.14 codex 추세**: cycle #1 (1 P2 finding) → master fix → cycle #2 APPROVE.
->
-> **다음 세션 첫 액션 옵션** = **§5.13 (사용자 임시 결정 A1+B2+C4)** 또는 사용자 신규 issue. Layer 6 fix 도 후보.
+> **다음 세션 첫 액션 옵션**:
+> 1. **AC-A1-6 라이브 cycle smoke** (master 의무, `obsidian-cdp` SKILL): 라이브 ingest 1 source → concept/entity `## 출처` raw wikilink 클릭 시 raw 원문 직접 열림 확증
+> 2. **cmux dispatch 환경 이슈 점검** (사용자 raise 2026-05-07): cycle #2 panel send 시 single-line / multi-line prompt 모두 codex input 도달 X. dispatch.sh send 의 한계 / cmux paste-buffer 활용 / codex exec -p fallback 등 검토
+> 3. **codex post-impl cycle 재검증** (cmux fix 후): plan + impl + test 동시 검증 — §5.13 paradigm 정합 확증
+> 4. **vault-wide basename 충돌 detection** (codex P2 (b)): 향후 entity/concept 와 raw basename 동일 케이스 별도 follow-up
+> 5. **§5.14 Layer 6 waitUntilFresh 강화** (이전 세션 잔존)
 
 ---
 

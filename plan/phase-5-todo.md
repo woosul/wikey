@@ -1470,16 +1470,19 @@
 
 ---
 
-## 5.13 잔존 follow-up 3 항목 — 2026-05-06 session 19 draft (P1, §5.14 완료 후)
+## 5.13 잔존 follow-up 3 항목 (A1 + B2 + C4) — 완료 — Session 21, 2026-05-07 ✅
 
-> **상위 plan**: [`plan/phase-5-todox-5.13-residual-followups.md`](./phase-5-todox-5.13-residual-followups.md) v0.1
-> 상태: draft / 사용자 임시 결정 A1+B2+C4 (착수 직전 최종 confirm)
+> **상위 plan**: [`plan/phase-5-todox-5.13-residual-followups.md`](./phase-5-todox-5.13-residual-followups.md) v2 · status: **completed**
+> 상세: [`activity/phase-5-resultx-5.13-completion-2026-05-07.md`](../activity/phase-5-resultx-5.13-completion-2026-05-07.md)
 
-- [ ] **A1 (LOW)**: concept/entity `## 출처` 에 `[[source-...]]` + `[raw](raw/...)` 양 link 병기 — canonicalizer.ts:498-510 buildPageContent 의 `## 출처` 렌더 + sourcePageRawPath 인자 추가 또는 source-registry mapping
-- [ ] **B2 (LOW)**: validate-wiki.sh `find raw -name "${link}"` (자체) + `find raw -name "${link}.*"` (fallback) — scripts/validate-wiki.sh:46 일대 + shell test fixture
-- [ ] **C4 (MEDIUM)**: LLM prompt `source-` prefix 강제 + ingest-pipeline normalize 안전망 — ingest-pipeline.ts:1366-1413 prompt + line 673 직전 normalize + unit/라이브 test
-- [ ] §5.14 완료 후 v0.1 → v1 갱신 (옵션 별 AC + 구현 details + LOC 추정 구체화)
-- [ ] 착수 직전 사용자 최종 confirm
+- [x] §5.13 v0.1 → v1 → v2 갱신 (codex cycle #1 finding fix — A1 PII guard 흐름 / C4 normalize 위치)
+- [x] **B2**: validate-wiki.sh 4단계 cascade (wiki 자체 → wiki .md → raw 자체 → raw .*) + scripts/validate-wiki.test.sh 6 AC fixture (`5d87995`)
+- [x] **A1**: `## 출처` raw wikilink 병기 + `rawSourceFilename` arg 1개 추가 (PII guard 분리, args chain 6 함수) + canonicalizer.test.ts §5.13 block 6 test (`58914d8`)
+- [x] **C4**: `normalizeSourcePageFilename` helper export + callLLMForSummary 적용 + buildIngestPrompt 강제 문구 + ingest-pipeline.test.ts §5.13 block 6 test (`dfc5e6a`)
+- [x] Phase 3a 회귀: 628 PASS / 3 skip / 0 fail / build PASS / validate-wiki PASS
+- [x] Phase 3b BLUE: defense in depth (prompt + normalize) 의도적 유지 / args chain narrow inline / paradigm 주석 명시
+- [ ] **AC-A1-6 라이브 cycle smoke** (다음 세션 사용자 라이브 검증, master 의무, obsidian-cdp SKILL)
+- [ ] codex post-impl cycle 재검증 — cmux dispatch 환경 이슈 fix 후
 
 ---
 

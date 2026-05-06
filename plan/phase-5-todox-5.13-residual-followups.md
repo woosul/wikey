@@ -2,7 +2,7 @@
 phase: 5
 section: 5.13
 title: §5.12 잔존 follow-up 3 항목 — raw wikilink 병기 + validator link/extension 양방 매칭 + LLM source filename prefix
-status: in_progress
+status: completed
 created: 2026-05-06
 updated: 2026-05-07
 version: v2

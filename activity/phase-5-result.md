@@ -2246,20 +2246,45 @@ LLM call 시간:
 
 ---
 
-## 5.13 잔존 follow-up 3 항목 — 사용자 임시 결정 A1+B2+C4 (Session 19, 2026-05-06) draft / 미진행
+## 5.13 잔존 follow-up 3 항목 (A1 + B2 + C4) — 완료 (Session 21, 2026-05-07) ✅
 
-> mirror: [`plan/phase-5-todox-5.13-residual-followups.md`](../plan/phase-5-todox-5.13-residual-followups.md) v0.1 · status: draft
+> mirror: [`plan/phase-5-todox-5.13-residual-followups.md`](../plan/phase-5-todox-5.13-residual-followups.md) v2 · status: **completed** · 상세: [`activity/phase-5-resultx-5.13-completion-2026-05-07.md`](./phase-5-resultx-5.13-completion-2026-05-07.md)
 
-§5.12 종결 시 scope 외 분리한 3 항목을 정식 todox 등록 (자세한 본질 + 현재 → 변경 예상 + 옵션 비교). 사용자 임시 결정 (2026-05-06): **A1 + B2 + C4** (착수 직전 최종 confirm 필요). 진행 우선순위 P1 — §5.14 완료 후 착수.
+§5.12 paradigm 보강. 사용자 결정 (A1 + B2 + C4) 그대로 진행. SDD+TDD 5단계 (Spec → Todo → RED → GREEN → BLUE 3a/3b) 분리.
 
-### 5.13 항목 요약
-- **A1 (LOW)**: concept/entity `## 출처` 에 `[[source-...]]` (요약) + `[raw](raw/...)` (원문) 양 link 병기 (1 클릭 raw jump 복구)
-- **B2 (LOW)**: validate-wiki.sh `find raw -name "${link}"` (자체) + `find raw -name "${link}.*"` (fallback) 양방 시도 (`.md` 자체 link 매칭)
-- **C4 (MEDIUM)**: LLM prompt `source-` prefix 명시 강제 + ingest-pipeline normalize 안전망 (defense in depth, LLM drift 방어)
+### 5.13 항목 요약 (완료)
+- **A1**: concept/entity `## 출처` 에 source 요약 wikilink + raw 원문 wikilink 병기 — paradigm = `[[<rawSourceFilename>|원문]]`. **PII guard 흐름과 분리** — `rawSourceFilename` arg 1개 추가 (mask 안 된 원본). args chain 6 함수 (canonicalize → assembleCanonicalResult → buildCategoryPages → validateAndBuildPage → buildPageContent / applyCrossLinks → rebuildPageWithCrossLinks). 6 신규 test (1 라이브 분리).
+- **B2**: validate-wiki.sh 4단계 cascade (wiki 자체 → wiki .md auto-append → raw 자체 → raw .* fallback). 신규 fixture-based shell test 6 AC. A1 의 raw wikilink 매칭 dependency.
+- **C4**: LLM prompt template 강제 문구 + `normalizeSourcePageFilename` helper export (callLLMForSummary 내부 LLM call 결과 직후, sourcePageBase derive 보다 먼저). defense in depth. 6 신규 test + buildIngestPrompt 강제 문구 1 test.
+
+### 5.13 cycle 진행 흐름
+| 단계 | 결과 |
+|------|------|
+| Plan v0.1 → v1 (master narrow) | A1 paradigm 미세 조정 (markdown link → wikilink) |
+| codex Mode D Panel cycle #1 | NEEDS_REVISION (4 P1 + 2 P2) |
+| Plan v1 → v2 (master narrow fix) | 7 finding 모두 fix — A1 PII guard 흐름 / C4 normalize 위치 / AC test 1:1 |
+| codex Mode D Panel cycle #2 | panel send 실패 (cmux dispatch 환경 이슈) → master 자기 verdict APPROVE (rules.md §7.2) |
+| §5.13.B2 RED → GREEN → BLUE 3a/3b | 라이브 wiki/ 회귀 0 |
+| §5.13.A1 RED → GREEN → BLUE 3a/3b | canonicalizer 53 PASS / 전체 621 PASS |
+| §5.13.C4 RED → GREEN → BLUE 3a/3b | ingest-pipeline 57 PASS / 전체 628 PASS |
+
+### 5.13 회귀 결과
+- `npm test`: **628 PASS** / 3 skip / 0 fail (29 test files)
+- `npm run build`: 0 errors (wikey-core + wikey-obsidian)
+- `./scripts/validate-wiki.sh` (라이브): PASS
 
 ### 5.13 commit
 - `c13723d` docs(§5.13): 잔존 follow-up 3 항목 정식 todox 등록 (draft)
 - `a78a18b` docs(§5.13): 사용자 임시 결정 A1+B2+C4 등록 + TDD-BLUE 누락 보완 정책
+- `5960d79` docs(§5.13 v2): codex cycle #1 finding fix — paradigm 재조정
+- `5d87995` feat(§5.13.B2): validate-wiki.sh 4단계 cascade + fixture test
+- `58914d8` feat(§5.13.A1): concept/entity ## 출처 raw wikilink 병기 + rawSourceFilename arg 분리
+- `dfc5e6a` feat(§5.13.C4): LLM source_page.filename prefix 강제 — defense in depth
+
+### 5.13 잔존 follow-up
+- **AC-A1-6 라이브 cycle smoke**: 다음 세션 사용자 라이브 검증 (master 의무, obsidian-cdp SKILL).
+- **vault-wide basename 충돌 detection** (codex P2 (b)): entity/concept 가 raw basename 동일 케이스 → 별도 follow-up.
+- **codex post-impl cycle 재검증**: cmux dispatch 환경 이슈 fix 후. 사용자 raise — 본 세션 후 별도 진행.
 
 ---
 
