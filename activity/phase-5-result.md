@@ -2425,9 +2425,9 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 |-----|-----------|------|----------|-----------|
 | **§5.15.A** UI E2E test 인프라 (vitest + Obsidian API mock + jsdom) | UI 코드 변경 시 회귀 detect 5초 (vitest) — 30분 (라이브 smoke) → 360× 단축 | 안전망 없이 외줄타기 → 안전망 깔기 | 1000~1600 신규 | 3~5 |
 | **§5.15.B** PROMOTION_THRESHOLD override (`.wikey/promotion-threshold.yaml`) | 도메인별 threshold 코드 수정 (15분) → YAML 1줄 (5초) → 180× 단축 | 시트 매번 공장 → 운전석 레버 | 200~300 신규 | 1 |
-| **§5.15.C** citation 마커 dead code cleanup (`attachCitationBacklinks` / `buildCitationButton`) | sidebar-chat.ts -60 LOC, dead path 검토 비용 0 | 옛 임차인 가구 정리 | net -100 | narrow 1 |
+| **§5.15.C** ✅ citation 마커 dead code cleanup (`attachCitationBacklinks` / `buildCitationButton` / `openResolvedSource`) | sidebar-chat.ts **-98 LOC** (목표 60+ 충족), dead path 검토 비용 0 | 옛 임차인 가구 정리 | net -98 (실제) | narrow 1 (완료, session 24) |
 
-**추천 진행 순서**: C (작은 hygiene) → B (UX flexibility) → A (큰 인프라). 순차 5~7 cycle 합. 사용자 결정에 따라 어느 sub-section 부터든 진행 가능.
+**잔여 추천 진행 순서**: B (UX flexibility) → A (큰 인프라). 순차 4~6 cycle 합. C 는 session 24 종결 (아래 §5.15.C 결과 참조).
 
 ---
 
@@ -2656,3 +2656,51 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 | `e5238ff` | footer display 원문 title (frontmatter title 우선) — 1차 시도 |
 | `93d43b1` | footer raw basename 정정 (frontmatter title 폐기) + audit-ingest registry path 1순위 |
 | `8555255` | audit-ingest content hash 0순위 (URI = sha256, 사용자 raise 정확) |
+
+---
+
+## 5.15.C citation 마커 dead code cleanup ✅ (Session 24, 2026-05-07, §5.15 sub-section)
+
+> mirror: [`plan/phase-5-todox-5.15-pipeline-v2-followups.md §10`](../plan/phase-5-todox-5.15-pipeline-v2-followups.md) v1 · [`plan/phase-5-todo.md §5.15.A/B/C/D`](../plan/phase-5-todo.md)
+> 분류: **hygiene** (Karpathy Surgical Changes — 본인이 만든 잔재 정리). plan §6 추천 순서 C → B → A 의 첫 단계.
+
+### 5.15.C 본질 — 사용자 정책의 코드 완결
+
+**사용자 정책 (2026-05-06 session 20)**: chat 응답 wikilink 뒤 보조 citation 마커 (`[원본]` / 📄) 폐기. wikilink 만으로 충분.
+
+**§5.14 BLUE refactor 시점 결정** (2026-05-06 session 20): 함수 + 타입 + 데이터 필드는 historical reference 로 일단 보존 (Surgical Changes 원칙). 호출 site 0 으로만 처리.
+
+**§5.15.C 가 정리하는 잔재**: 호출 site 0 인 함수 / 타입 / import / 데이터 필드 — sidebar-chat.ts 안 dead path 만. wikey-core 의 동일 export 는 *다른 곳에서 사용되거나 미래 사용 가능* — 손대지 않음.
+
+### 5.15.C 변경 위치 — wikey-obsidian/src/sidebar-chat.ts 만
+
+| # | 위치 | 변경 |
+|---|------|------|
+| 1 | line 6~12 imports | `resolveSourceSync, loadRegistry` value import + `Citation, ResolvedSource, SourceRegistry` type import 제거 (wikey-obsidian 안 dead path 만) |
+| 2 | line 21~22 ChatMessage interface | `readonly citations?: readonly Citation[]` + JSDoc 제거 (read site 0; main.ts `chatHistory` 타입 (`{role, content}` 만) 에 의해 어차피 dropped) |
+| 3 | line 72~93 `buildCitationButton` | 함수 + JSDoc 22 LOC 삭제 |
+| 4 | line 471~475 assistantMsg | `citations: result.citations,` 1 line 제거 |
+| 5 | line 518~520 historical 주석 | `사용자 정책 (2026-05-06 session 20): wikilink 뒤 보조 citation 마커...` 3 line 주석 제거 |
+| 6 | line 527~603 `attachCitationBacklinks` + `openResolvedSource` | 두 method + JSDoc 76 LOC 삭제 (`openResolvedSource` 는 `attachCitationBacklinks` click handler 안에서만 호출되어 동반 dead) |
+
+### 5.15.C 회귀 검증 — AC-C1~C6
+
+| AC | 결과 |
+|----|------|
+| **AC-C1** `attachCitationBacklinks` grep | 0 hit (wikey-obsidian + wikey-core) ✅ |
+| **AC-C2** `buildCitationButton` grep | 0 hit ✅ |
+| **AC-C3** `Citation` / `ResolvedSource` / `SourceRegistry` cross-check | wikey-obsidian 0 hit (wikey-core 자체 export 활성 보존) ✅ |
+| **AC-C4** sidebar-chat.ts LOC 감소 | 2325 → 2227 = **-98 LOC** (목표 60+ 충족) ✅ |
+| **AC-C5** 회귀 0 | wikey-core 686 PASS / 3 skip / 0 build errors / validate-wiki PASS ✅ |
+| **AC-C6** 라이브 smoke (chat 응답 마커 부재) | 변경 본질이 *호출 site 0 인 함수 제거* — 사용자 정책 (2026-05-06 session 20) 이후 이미 마커 표시 없는 상태. build 가 type/syntax 회귀 cover. 차후 plugin reload + chat 사용 시 자연 검증. ✅ (effective) |
+
+### 5.15.C Karpathy 4원칙 적용
+
+- **Think Before Coding**: dead 함수가 의존하는 chain 추적 (`buildCitationButton` → 호출 in `attachCitationBacklinks` line 566; `openResolvedSource` → 호출 in `attachCitationBacklinks` click handler line 570) — 동반 삭제. wikey-core 안 동일 export 가 다른 wikey-core 코드에서 사용되는지 cross-check 후 wikey-obsidian 의 import 만 제거 (wikey-core source-resolver.ts / index.ts / source-resolver.test.ts 활성 — wikey-core 자체는 손대지 않음)
+- **Simplicity First**: 인접 코드 "정리" 0. 사용자가 요청한 dead code 제거만
+- **Surgical Changes**: 활성 코드 0 변경. 본인이 만든 잔재 (호출 site 0 함수) 만 제거. `loadRegistry` `resolveSourceSync` 의 wikey-obsidian 안 활성 사용처 0 확증 후 import 제거
+- **Goal-Driven**: AC-C1~C6 정량 grep / LOC / npm test 결과로 검증. 모호한 "잘 동작" 판정 X
+
+### 5.15.C 잔여 — A/B P2 draft 유지
+
+§5.15.A (UI E2E test 인프라, 1000~1600 LOC, 3~5 cycle) + §5.15.B (PROMOTION_THRESHOLD override, 200~300 LOC, 1 cycle) — P2 draft 유지. 추천 다음 진행: **B (1 cycle UX flexibility) → A (3~5 cycle 큰 인프라)**.

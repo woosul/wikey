@@ -2,11 +2,11 @@
 phase: 5
 section: 5.15
 title: Pipeline v2 후속 — UI E2E test 인프라 + PROMOTION_THRESHOLD override + citation 마커 dead code cleanup
-status: draft
+status: §5.15.C 종결 / §5.15.A·B draft
 created: 2026-05-07
 updated: 2026-05-07
-version: v0 (session 23)
-priority: P2 (다음 세션 후보)
+version: v1 (session 24 — §5.15.C 종결)
+priority: P2 (A·B 잔여)
 ---
 
 # Phase 5 §5.15 — Pipeline v2 후속 3 항목
@@ -367,4 +367,41 @@ Phase 5: master verdict + commit + push + result 문서
 |-----|-----------|------------------|
 | **§5.15.A** | UI 코드 변경 시 회귀 detect 5초 (vitest) — 30분 (라이브 smoke) → 360x 단축 | 향후 wikey-obsidian PR 의 안전망 ↑ + §5.14 잔존 4 항목 deep split unblock |
 | **§5.15.B** | promotion threshold 코드 수정 (15 분) → YAML 1 줄 편집 (5 초) → 180x 단축 | 도메인별 wiki noise 정책 사용자 통제 |
-| **§5.15.C** | sidebar-chat.ts -60 LOC, dead path 검토 비용 0 | codebase 정리 + 향후 refactor 시 *진짜* 활성 코드만 분석 |
+| **§5.15.C** ✅ | sidebar-chat.ts -98 LOC, dead path 검토 비용 0 | codebase 정리 + 향후 refactor 시 *진짜* 활성 코드만 분석 |
+
+---
+
+## 10. §5.15.C 진행 결과 — Session 24, 2026-05-07 ✅
+
+### 10.1 변경 위치 (wikey-obsidian/src/sidebar-chat.ts 만)
+
+| # | 위치 | 변경 |
+|---|------|------|
+| 1 | line 6~12 (imports) | `resolveSourceSync, loadRegistry` value import + `Citation, ResolvedSource, SourceRegistry` type import 제거 (wikey-obsidian 안 dead path 만 사용 — wikey-core 자체 export 는 보존) |
+| 2 | line 21~22 (ChatMessage interface) | `readonly citations?: readonly Citation[]` 필드 + JSDoc 제거 (read site 0, main.ts `chatHistory` 타입에 의해 어차피 dropped) |
+| 3 | line 72~93 (buildCitationButton) | 함수 + JSDoc 22 LOC 삭제 |
+| 4 | line 471~475 (assistantMsg) | `citations: result.citations,` 1 line 제거 |
+| 5 | line 518~520 (historical 주석) | `사용자 정책 (2026-05-06 session 20): wikilink 뒤 보조 citation 마커 ([원본] / 📄) 자체 폐기...` 3 line 주석 제거 |
+| 6 | line 527~603 (attachCitationBacklinks + openResolvedSource) | 두 method + JSDoc 76 LOC 삭제 (openResolvedSource 는 attachCitationBacklinks click handler 안에서만 호출되어 동반 dead) |
+
+### 10.2 회귀 검증
+
+| AC | 결과 |
+|----|------|
+| **AC-C1** `attachCitationBacklinks` grep | 0 hit (wikey-obsidian + wikey-core) ✅ |
+| **AC-C2** `buildCitationButton` grep | 0 hit ✅ |
+| **AC-C3** `Citation` / `ResolvedSource` / `SourceRegistry` cross-check | wikey-obsidian 0 hit (wikey-core 자체 export 활성 보존) ✅ |
+| **AC-C4** sidebar-chat.ts LOC 감소 | 2325 → 2227 = **-98 LOC** (목표 60+ 충족) ✅ |
+| **AC-C5** 회귀 0 | wikey-core 686 PASS / 3 skip / 0 build errors / validate-wiki PASS ✅ |
+| **AC-C6** 라이브 smoke (chat 응답 마커 부재) | 변경 본질이 *호출 site 0 인 함수 제거* — 사용자 정책 (2026-05-06 session 20) 이후 이미 마커 표시 없는 상태 보존만 됨. 차후 plugin reload + chat 사용 시 자연 검증. build 가 type/syntax 회귀 cover. ✅ (effective) |
+
+### 10.3 Karpathy 4원칙 적용
+
+- **Think Before Coding**: dead 함수가 의존하는 helper 추적 (`Citation` `ResolvedSource` `SourceRegistry` `loadRegistry` `resolveSourceSync` import + `openResolvedSource` method 동반 dead) — wikey-core 안 동일 export 가 다른 곳에서 사용되는지 cross-check 후 wikey-obsidian 의 import 만 제거 (wikey-core 자체는 손대지 않음)
+- **Simplicity First**: 인접 코드 "정리" 0 — Surgical Changes 원칙 준수
+- **Surgical Changes**: 활성 코드 0 변경. 본인이 만든 잔재 (호출 site 0 함수) 만 제거
+- **Goal-Driven**: AC-C1~C6 정량 grep / LOC / npm test 결과로 검증
+
+### 10.4 잔여
+
+§5.15.A (UI E2E test 인프라) + §5.15.B (PROMOTION_THRESHOLD override) — P2 draft 유지. 추천 다음 진행: **B (1 cycle UX flexibility) → A (3~5 cycle 큰 인프라)**.

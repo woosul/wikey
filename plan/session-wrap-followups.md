@@ -1,15 +1,14 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-07 session 23 — §5.14 본체 종결 + §5.15 D 종결 (A/B/C draft) + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix**.
-> (a) §5.14 잔존 4 항목 (UI E2E test 의존) 의도적 유지 결정 + 근거 명시 ✅
-> (b) Phase 5 본체 BLUE refactor 작업 모두 종결 ✅
-> (c) `docs/wikey-ingest-pipeline-v2.md` 작성 — Phase 5 누적 변경 단계별 상세 + v1 비교 평가 ✅
-> (d) §5.15 신규 등록 — A/B/C draft (UI E2E test 인프라 / PROMOTION_THRESHOLD override / citation 마커 cleanup), **D 종결** (inline `<svg>`/HTML media strip + audit row UI + wikilink whitelist sanitize + footer raw basename + audit content hash 0순위)
-> (e) **§5.11 v3** paradigm 회귀 fix — alias 카운트 inflation 차단 (sentence-unique 카운트) + Layer 1 prompt rule 8 강화 ✅
-> (f) §5.6.3 신규 — LLM provider strategy draft (이전 §5.16 자리에서 §5.6 LLM 엔진 영역으로 이동)
-> (g) **finetree 4 파일 fresh ingest 완료** (RAG/BOT/SQL/OCR) + 첫 cycle 잔재 7 broken concept + 1 entity 중복 cleanup + validate-wiki PASS
-> (h) **audit-ingest content hash 0순위 매칭** (사용자 raise "URI = sha256") — vault 안 raw 파일 자유 이동에도 ingested 정확 (4 tier matching: hash / registry path / legacy ingest-map / fuzzy)
-> wikey-core 686 PASS / 3 skip / build OK / validate-wiki PASS / commit chain 5건 push.
+> 최신 갱신: **2026-05-07 session 24 — §5.15.C 종결 (citation 마커 dead code cleanup, sidebar-chat.ts -98 LOC)**.
+> (a) §5.15.C citation 마커 dead code cleanup 완료 — `attachCitationBacklinks` (50 LOC) + `buildCitationButton` (22 LOC) + `openResolvedSource` (25 LOC) + import 5종 + `ChatMessage.citations` 필드 + assignment + historical 주석 모두 삭제. sidebar-chat.ts 2325 → 2227 = **-98 LOC** (목표 60+ 충족). AC-C1~C6 모두 PASS. ✅
+> (b) §5.15 잔여: **A** (UI E2E test 인프라, 1000~1600 LOC, 3~5 cycle) + **B** (PROMOTION_THRESHOLD override, 200~300 LOC, 1 cycle) — 추천 다음 진행 **B → A**.
+>
+> 이전 세션 (session 23) 종결:
+> - §5.14 본체 종결 (잔존 4 항목 의도적 유지 결정) + §5.15.D 종결 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix.
+> - `docs/wikey-ingest-pipeline-v2.md` 작성 — Phase 5 누적 변경 단계별 상세 + v1 비교 평가.
+>
+> wikey-core 686 PASS / 3 skip / 0 build errors / validate-wiki PASS.
 > 생성일: 2026-04-10
 
 ---
@@ -40,17 +39,12 @@
 > | main.ts `onload` | 131 | 8 (lifecycle) | (캡슐화 약화) | 의도적 유지 |
 > | commands.ts `runIngest` | 113 | (cleanly structured) | 0 | 의도적 유지 |
 >
-> **다음 세션 첫 액션 옵션**:
-> 1. **§5.15 진행** ★ — 추천 순서 C (citation 마커 dead code cleanup, narrow 1 cycle) → B (PROMOTION_THRESHOLD override, 1 cycle) → A (UI E2E test 인프라, 3~5 cycle). 자세한 plan: `plan/phase-5-todox-5.15-pipeline-v2-followups.md`
-> 2. **Phase 6 (웹 환경) 진입** — Phase 5 본체 종결 (5.1~5.4 + 5.10~5.14 핵심) 충족, plan-full §3.3.6 진입 조건 검토.
-> 3. **Phase 5 P3 (§5.5 / §5.6) 또는 P4 (§5.7~§5.9) 진입** — 우선순위 미낮은 잔여 subject 진행.
-> 4. **새 issue / paradigm shift** (사용자 raise 시)
->
-> **§5.16 commit chain**:
-> - (예정) `feat(§5.16): inline <svg>/HTML media strip — finetree 류 LLM JSON parsing fail 차단 + audit row UI line height 안정`
-> - (예정) `docs(§5.15): Pipeline v2 후속 3 항목 등록 (P2 draft)`
-> - (예정) `docs(pipeline-v2): docs/wikey-ingest-pipeline-v2.md — Phase 5 누적 변경 단계별 상세`
-> - (또는 단일 통합 commit)
+> **다음 세션 첫 액션 옵션** (session 24 §5.15.C 종결 후 갱신):
+> 1. **§5.15.B 진행** ★ — PROMOTION_THRESHOLD override (`.wikey/promotion-threshold.yaml`). 200~300 LOC / 1 cycle. UX flexibility — 사용자 도메인별 wiki noise 정책 조정. plan: `plan/phase-5-todox-5.15-pipeline-v2-followups.md §2.2 / AC-B1~B6`
+> 2. **§5.15.A 진행** — UI E2E test 인프라 (vitest + Obsidian API mock + jsdom). 1000~1600 LOC / 3~5 cycle. §5.14 잔존 4 항목 deep split enabler. 큰 작업.
+> 3. **Phase 6 (웹 환경) 진입** — Phase 5 본체 종결 충족, plan-full §3.3.6 진입 조건 검토.
+> 4. **Phase 5 P3 (§5.5 / §5.6) 또는 P4 (§5.7~§5.9) 진입** — 우선순위 낮은 잔여 subject 진행.
+> 5. **새 issue / paradigm shift** (사용자 raise 시)
 
 ---
 

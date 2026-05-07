@@ -1666,12 +1666,12 @@ Phase 6: master verdict + commit + push + result 문서
 > **상위 plan**: [`plan/phase-5-todox-5.15-pipeline-v2-followups.md`](./phase-5-todox-5.15-pipeline-v2-followups.md) v0
 > 도출: `docs/wikey-ingest-pipeline-v2.md §15.4 단점·리스크 + §15.6 v3 후보`
 
-### 5.15 sub-section 4종 (A=enabler / B=flexibility / C=hygiene / D=bug-fix-and-UX) — P2 draft + D 종결
+### 5.15 sub-section 4종 (A=enabler / B=flexibility / C=hygiene / D=bug-fix-and-UX) — A/B P2 draft + C/D 종결
 
 - [ ] **§5.15.A** UI E2E test 인프라 (vitest + Obsidian API mock + jsdom) — §5.14 잔존 4 항목 deep split enabler. 추정 1000~1600 LOC / 3~5 cycle.
 - [ ] **§5.15.B** PROMOTION_THRESHOLD override (`.wikey/promotion-threshold.yaml`) — 사용자 도메인별 정책 강화. 추정 200~300 LOC / 1 cycle.
-- [ ] **§5.15.C** citation 마커 dead code cleanup (`attachCitationBacklinks` / `buildCitationButton` 함수 + 호출처 완전 삭제). net -100 LOC / narrow 1 cycle.
-- 추천 진행 순서: C → B → A (작은 hygiene → UX flexibility → 큰 인프라)
+- [x] **§5.15.C** citation 마커 dead code cleanup — `attachCitationBacklinks` (50 LOC) + `buildCitationButton` (~22 LOC) + `openResolvedSource` (~25 LOC) + `Citation`/`ResolvedSource`/`SourceRegistry` import + `loadRegistry`/`resolveSourceSync` import (wikey-obsidian 안 dead path 만) + `ChatMessage.citations` 필드 + line 474 assignment + historical 주석 모두 삭제. sidebar-chat.ts: 2325 → 2227 = **-98 LOC**. 회귀: wikey-core 686 PASS / 3 skip / 0 build errors / validate-wiki PASS. (session 24, 2026-05-07)
+- 잔여 추천 진행 순서: B → A (UX flexibility → 큰 인프라)
 
 ### 5.15.D inline media strip + audit row UI fix + wikilink whitelist sanitize — Session 23, 2026-05-07 ✅
 
