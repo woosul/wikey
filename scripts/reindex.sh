@@ -93,28 +93,34 @@ cmd_check() {
   echo -e "  CR 캐시: ~/.cache/qmd/contextual-prefixes.json"
 }
 
-# --- --check --json 모드 (Phase 4 D.0.f / v6 §4.4.1) ---
+# --- --check --json 모드 (Phase 4 D.0.f / v6 §4.4.1 + §5.14 Layer 6) ---
 # 플러그인 `waitUntilFresh` 가 파싱하는 구조화 output. stdout 에 단 한 줄 JSON 만 찍고 exit 0.
-# Schema: { "stale": number, "status": "fresh" | "stale" | "never" }
+# Schema: { "stale": number, "status": "fresh" | "stale" | "never", "indexed": number }
 #   - fresh: stale = 0
 #   - stale: stale = 변경된 파일 수 (>0)
 #   - never: stale = -1 (인덱싱 한번도 안 됨)
+#   - indexed: §5.14 L6 — `SELECT count(*) FROM documents WHERE active=1`. 0 = 빈 collection
+#     (silent-fresh 회귀 detection 의 핵심 신호). sqlite 미가용 시 -1 (legacy fallback).
 cmd_check_json() {
   local result
   result=$(check_stale)
   local status
   status=$(echo "$result" | head -1)
+  # §5.14 L6: indexed count — sqlite 미가용 시 -1 (caller 가 legacy 로 처리)
+  local indexed
+  indexed=$(sqlite3 "${HOME}/.cache/qmd/index.sqlite" "SELECT count(*) FROM documents WHERE active=1;" 2>/dev/null || echo "-1")
+  [ -z "$indexed" ] && indexed=-1
   case "$status" in
-    never) echo '{"stale":-1,"status":"never"}' ;;
-    fresh) echo '{"stale":0,"status":"fresh"}' ;;
+    never) echo "{\"stale\":-1,\"status\":\"never\",\"indexed\":${indexed}}" ;;
+    fresh) echo "{\"stale\":0,\"status\":\"fresh\",\"indexed\":${indexed}}" ;;
     stale)
       local count
       count=$(echo "$result" | tail -n +2 | wc -l | tr -d ' ')
-      echo "{\"stale\":${count},\"status\":\"stale\"}"
+      echo "{\"stale\":${count},\"status\":\"stale\",\"indexed\":${indexed}}"
       ;;
     *)
       # 예상 외 상태 — contract 준수를 위해 never 로 fallback
-      echo '{"stale":-1,"status":"never"}'
+      echo "{\"stale\":-1,\"status\":\"never\",\"indexed\":${indexed}}"
       ;;
   esac
 }

@@ -1,11 +1,16 @@
 /**
- * scripts-runner.test.ts — Phase 4 D.0.f (v6 §4.4.2 / §4.4.5).
+ * scripts-runner.test.ts — Phase 4 D.0.f (v6 §4.4.2 / §4.4.5) + §5.14 Layer 6.
  *
  * Coverage:
  *   1. reindexCheckJson — fresh / stale N / never 세 status 올바른 parse
  *   2. reindexCheckJson — 깨진 JSON → throw
  *   3. waitUntilFresh — 첫 polling 이 stale 이어도 이후 fresh 로 바뀌면 resolve
  *   4. waitUntilFresh — timeout 초과 시 throw
+ *   5. §5.14 L6 — reindexCheckJson 이 indexed 필드 parse, 누락 시 -1 fallback (legacy)
+ *   6. §5.14 L6 — waitUntilFresh expectMinIndexed=0 (default) 회귀 없음
+ *   7. §5.14 L6 — waitUntilFresh expectMinIndexed>0 + indexed 부족 → polling 지속, timeout throw
+ *   8. §5.14 L6 — waitUntilFresh expectMinIndexed>0 + indexed 충분 → resolve
+ *   9. §5.14 L6 — waitUntilFresh timeout error message 에 last indexed + expectMin surface
  *
  * Strategy:
  *   real shell process 없이 `scripts/reindex.sh` 를 mktemp 디렉터리에 mock 스크립트로
@@ -37,26 +42,33 @@ describe('reindexCheckJson — JSON parse', () => {
   })
 
   it('fresh status — stale=0, status=fresh 반환', async () => {
-    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh"}\'\nexit 0\n')
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh","indexed":42}\'\nexit 0\n')
     const result = await reindexCheckJson(tmp, {})
-    expect(result).toEqual({ stale: 0, status: 'fresh' })
+    expect(result).toEqual({ stale: 0, status: 'fresh', indexed: 42 })
   })
 
   it('stale status — stale=N, status=stale 반환', async () => {
-    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":3,"status":"stale"}\'\nexit 0\n')
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":3,"status":"stale","indexed":7}\'\nexit 0\n')
     const result = await reindexCheckJson(tmp, {})
-    expect(result).toEqual({ stale: 3, status: 'stale' })
+    expect(result).toEqual({ stale: 3, status: 'stale', indexed: 7 })
   })
 
   it('never status — stale=-1, status=never 반환', async () => {
-    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":-1,"status":"never"}\'\nexit 0\n')
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":-1,"status":"never","indexed":0}\'\nexit 0\n')
     const result = await reindexCheckJson(tmp, {})
-    expect(result).toEqual({ stale: -1, status: 'never' })
+    expect(result).toEqual({ stale: -1, status: 'never', indexed: 0 })
   })
 
   it('깨진 JSON → throw (parse 실패 contract violation)', async () => {
     writeMockScript(tmp, '#!/usr/bin/env bash\necho "not json"\nexit 0\n')
     await expect(reindexCheckJson(tmp, {})).rejects.toThrow(/parse failed|schema mismatch/)
+  })
+
+  // §5.14 L6 AC: indexed 필드 누락 (legacy schema) → indexed=-1 fallback (backwards compat)
+  it('§5.14 L6 — indexed 필드 누락 시 -1 fallback (legacy schema)', async () => {
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh"}\'\nexit 0\n')
+    const result = await reindexCheckJson(tmp, {})
+    expect(result).toEqual({ stale: 0, status: 'fresh', indexed: -1 })
   })
 })
 
@@ -70,7 +82,7 @@ describe('waitUntilFresh — polling', () => {
   })
 
   it('즉시 fresh → resolve 반환값 없음', async () => {
-    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh"}\'\nexit 0\n')
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh","indexed":10}\'\nexit 0\n')
     await expect(waitUntilFresh(tmp, {}, 2000, 50)).resolves.toBeUndefined()
   })
 
@@ -83,9 +95,9 @@ cnt=$(cat "${stateFile}")
 next=$((cnt + 1))
 echo "$next" > "${stateFile}"
 if [ "$next" -ge 3 ]; then
-  echo '{"stale":0,"status":"fresh"}'
+  echo '{"stale":0,"status":"fresh","indexed":10}'
 else
-  echo '{"stale":2,"status":"stale"}'
+  echo '{"stale":2,"status":"stale","indexed":8}'
 fi
 exit 0
 `
@@ -95,7 +107,37 @@ exit 0
   })
 
   it('timeout 초과 시 throw (status 계속 stale)', async () => {
-    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":5,"status":"stale"}\'\nexit 0\n')
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":5,"status":"stale","indexed":3}\'\nexit 0\n')
     await expect(waitUntilFresh(tmp, {}, 600, 100)).rejects.toThrow(/freshness timeout/)
+  })
+
+  // §5.14 L6 AC: expectMinIndexed=0 (default) → 회귀 0, indexed 무관
+  it('§5.14 L6 — expectMinIndexed=0 (default), indexed=0 도 fresh resolve (회귀 없음)', async () => {
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh","indexed":0}\'\nexit 0\n')
+    await expect(waitUntilFresh(tmp, {}, 2000, 50)).resolves.toBeUndefined()
+  })
+
+  // §5.14 L6 AC: expectMinIndexed>0 + indexed 부족 → polling 지속 → timeout throw
+  it('§5.14 L6 — expectMinIndexed=5, indexed=2 (status=fresh, stale=0) → timeout throw', async () => {
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh","indexed":2}\'\nexit 0\n')
+    await expect(waitUntilFresh(tmp, {}, 600, 100, 5)).rejects.toThrow(/freshness timeout/)
+  })
+
+  // §5.14 L6 AC: expectMinIndexed>0 + indexed 충분 → resolve
+  it('§5.14 L6 — expectMinIndexed=5, indexed=7 (status=fresh, stale=0) → resolve', async () => {
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh","indexed":7}\'\nexit 0\n')
+    await expect(waitUntilFresh(tmp, {}, 2000, 50, 5)).resolves.toBeUndefined()
+  })
+
+  // §5.14 L6 AC: error message 에 last indexed + expectMin surface (diagnostic)
+  it('§5.14 L6 — timeout error 에 indexed + expectMin 포함', async () => {
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh","indexed":3}\'\nexit 0\n')
+    await expect(waitUntilFresh(tmp, {}, 400, 100, 10)).rejects.toThrow(/indexed=3.*expectMin=10|expectMin=10.*indexed=3/)
+  })
+
+  // §5.14 L6 AC: legacy schema (indexed 누락 → -1) + expectMinIndexed>0 → 통과 (backward compat)
+  it('§5.14 L6 — legacy schema (indexed=-1) + expectMinIndexed>0 → 회귀 없음 resolve', async () => {
+    writeMockScript(tmp, '#!/usr/bin/env bash\necho \'{"stale":0,"status":"fresh"}\'\nexit 0\n')
+    await expect(waitUntilFresh(tmp, {}, 2000, 50, 5)).resolves.toBeUndefined()
   })
 })

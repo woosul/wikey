@@ -97,6 +97,11 @@ export interface ReindexCheckResult {
   /** 신선: 0, 구버전: 변경된 파일 수, 미실행: -1 */
   readonly stale: number
   readonly status: ReindexFreshness
+  /**
+   * §5.14 Layer 6: documents WHERE active=1 count (`SELECT count(*) FROM documents WHERE active=1`).
+   * legacy schema (필드 누락) → -1 (unknown). waitUntilFresh expectMinIndexed 검증에 사용.
+   */
+  readonly indexed: number
 }
 
 const REINDEX_STATUSES: ReadonlySet<ReindexFreshness> = new Set<ReindexFreshness>(['fresh', 'stale', 'never'])
@@ -148,14 +153,19 @@ export async function reindexCheckJson(
   if (typeof obj.status !== 'string' || !REINDEX_STATUSES.has(obj.status as ReindexFreshness)) {
     throw new Error(`reindex --check --json: schema mismatch (status=${String(obj.status)})`)
   }
-  return { stale: obj.stale, status: obj.status as ReindexFreshness }
+  // §5.14 Layer 6: indexed 필드 — legacy schema (누락) 시 -1 fallback (backwards compat)
+  const indexed = typeof obj.indexed === 'number' ? obj.indexed : -1
+  return { stale: obj.stale, status: obj.status as ReindexFreshness, indexed }
 }
 
 /**
- * Poll `reindexCheckJson` 까지 `status === 'fresh' && stale === 0` 만족할 때까지 대기.
+ * Poll `reindexCheckJson` 까지 `status === 'fresh' && stale === 0` (+ optional indexed gate) 까지 대기.
  *
  * - 성공 조건: `status === 'fresh' && stale === 0` **만** 해당 (plan v6 §4.4.2 v5 엄격화).
  *   `status === 'never'` (index 미실행) 은 fresh 가 아님 — polling 지속.
+ * - §5.14 Layer 6: `expectMinIndexed > 0` 지정 시 `indexed >= expectMinIndexed` 추가 조건.
+ *   legacy schema (`indexed === -1`) 는 backwards-compat 으로 통과 — 새 reindex.sh 만 strict 적용.
+ *   기존 caller (intervalMs 미지정) 회귀 0 — `expectMinIndexed=0` default.
  * - Contract 위반 (parse/exit 오류) 은 transient 로 간주하고 재시도. timeoutMs 넘으면 throw.
  */
 export async function waitUntilFresh(
@@ -163,24 +173,30 @@ export async function waitUntilFresh(
   env: Record<string, string>,
   timeoutMs: number,
   intervalMs = 500,
+  expectMinIndexed = 0,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs
   let lastStatus: ReindexFreshness | 'unknown' = 'unknown'
   let lastStale = -1
+  let lastIndexed = -1
   while (Date.now() < deadline) {
     try {
       const res = await reindexCheckJson(basePath, env)
       lastStatus = res.status
       lastStale = res.stale
-      if (res.status === 'fresh' && res.stale === 0) return
+      lastIndexed = res.indexed
+      // §5.14 Layer 6: indexedOk = no expectation OR legacy schema (-1) OR meets expectation.
+      const indexedOk = expectMinIndexed === 0 || res.indexed === -1 || res.indexed >= expectMinIndexed
+      if (res.status === 'fresh' && res.stale === 0 && indexedOk) return
     } catch (err) {
       // transient — 구버전 reindex.sh 등. timeout 까지 재시도.
       console.warn('[Wikey] reindexCheckJson transient error:', err)
     }
     await new Promise((r) => setTimeout(r, intervalMs))
   }
-  // §5.2.5: surface last status + stale count so diagnostic can identify race vs PATH vs timeout.
+  // §5.2.5 + §5.14 L6: surface last status / stale / indexed / expectMin so diagnostic can identify
+  // race vs PATH vs ABI vs collection-empty silent fail.
   throw new Error(
-    `freshness timeout after ${timeoutMs}ms (last status=${lastStatus}, stale=${lastStale})`,
+    `freshness timeout after ${timeoutMs}ms (last status=${lastStatus}, stale=${lastStale}, indexed=${lastIndexed}, expectMin=${expectMinIndexed})`,
   )
 }

@@ -72,8 +72,40 @@ import {
 } from './section-index.js'
 import { applyPiiGate, sanitizeForLlmPrompt, loadPiiPatterns } from './pii-redact.js'
 import { reindexQuick, waitUntilFresh } from './scripts-runner.js'
+import * as path from 'node:path'
+import * as fsSync from 'node:fs'
 
 const execFileAsync = promisify(execFile)
+
+/**
+ * §5.14 Layer 6: count `.md` files under wiki/ for `expectMinIndexed` gate.
+ * waitUntilFresh 가 빈 collection silent-fresh 회귀 detect 하도록 caller (runReindexAndWait) 가 전달.
+ * 실패 (wiki dir 없음 / 권한 등) 시 0 반환 — fallback = 기존 동작 유지.
+ */
+function countWikiMdFiles(cwd: string): number {
+  const wikiDir = path.join(cwd, 'wiki')
+  if (!fsSync.existsSync(wikiDir)) return 0
+  let count = 0
+  const stack: string[] = [wikiDir]
+  while (stack.length > 0) {
+    const dir = stack.pop()!
+    let entries: fsSync.Dirent[]
+    try {
+      entries = fsSync.readdirSync(dir, { withFileTypes: true })
+    } catch {
+      continue
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) {
+        stack.push(full)
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        count++
+      }
+    }
+  }
+  return count
+}
 
 const MAX_JSON_RETRIES = 2
 
@@ -2354,9 +2386,13 @@ async function runReindexAndWait(
     return
   }
   try {
-    await waitUntilFresh(cwd, env, timeoutMs)
+    // §5.14 Layer 6: pass wiki/.md count as expectMinIndexed so waitUntilFresh detects
+    // collection-empty silent-fresh 회귀 (qmd query 0-result symptom). 0 = no expectation
+    // (fallback when wiki dir unreadable).
+    const expectMinIndexed = countWikiMdFiles(cwd)
+    await waitUntilFresh(cwd, env, timeoutMs, undefined, expectMinIndexed)
     const elapsed = Date.now() - t0
-    log(`index is fresh (total ${elapsed}ms)`)
+    log(`index is fresh (total ${elapsed}ms, expected ${expectMinIndexed} indexed)`)
     onOk?.(elapsed)
   } catch (err) {
     const msg = errorMessage(err)
