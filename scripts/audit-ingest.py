@@ -77,7 +77,7 @@ def normalize(name: str) -> str:
 
 
 def load_ingest_map() -> set[str]:
-    """Load ingested raw paths from wiki/.ingest-map.json."""
+    """Load ingested raw paths from wiki/.ingest-map.json (legacy, §5.3 deprecated)."""
     map_path = ROOT / "wiki" / ".ingest-map.json"
     if not map_path.exists():
         return set()
@@ -86,6 +86,40 @@ def load_ingest_map() -> set[str]:
         return set(data.keys())
     except (json.JSONDecodeError, OSError):
         return set()
+
+
+def load_registry_paths() -> set[str]:
+    """§5.15.D follow-up (2026-05-07): registry-driven ingested path set.
+
+    .wikey/source-registry.json 의 각 record 에서 *현재* vault_path + path_history 의
+    *모든* path 를 set 으로. movePair 후 raw 파일이 이동해도 registry 에 등록된 모든
+    path 를 ingested 로 인정 → audit panel 의 missing 회귀 차단.
+
+    legacy `.ingest-map.json` 은 movePair 시점에 갱신 안 되므로 stale path 보유. 본
+    함수가 1순위 매칭, ingest_map 이 fallback.
+    """
+    paths: set[str] = set()
+    p = ROOT / REGISTRY_PATH
+    if not p.exists():
+        return paths
+    try:
+        registry = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return paths
+    for record in registry.values():
+        if not isinstance(record, dict):
+            continue
+        if record.get("tombstone"):
+            continue
+        vp = record.get("vault_path")
+        if vp:
+            paths.add(vp)
+        for hist in record.get("path_history", []) or []:
+            if isinstance(hist, dict):
+                hvp = hist.get("vault_path")
+                if hvp:
+                    paths.add(hvp)
+    return paths
 
 
 # ── §5.3.1/§5.3.2 (plan v11) — registry-driven hash diff helpers ──
@@ -174,6 +208,7 @@ def main():
 
     wiki_keys = load_wiki_sources()
     ingest_map = load_ingest_map()
+    registry_paths = load_registry_paths()  # §5.15.D follow-up
     all_docs = scan_raw_docs()
     registry = load_registry()
 
@@ -198,12 +233,18 @@ def main():
             unsupported_docs.append(doc)
             continue
 
-        # 1순위: ingest-map.json에 기록된 경로
+        # 1순위: source-registry 의 vault_path / path_history 매칭 (§5.15.D follow-up)
+        #   movePair 후 raw 파일 이동해도 path_history 에 모든 이력 보존 → ingested 정확
+        if rel in registry_paths:
+            ingested_files.append(doc)
+            folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
+            continue
+        # 2순위: legacy .ingest-map.json — §5.3 deprecated 이지만 backward compat
         if rel in ingest_map:
             ingested_files.append(doc)
             folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
             continue
-        # 2순위: 파일명 기반 fuzzy matching
+        # 3순위: 파일명 기반 fuzzy matching (registry/ingest-map 모두 miss 시 last resort)
         name = normalize(doc.stem)
         if match(name, wiki_keys):
             ingested_files.append(doc)

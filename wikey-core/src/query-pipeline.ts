@@ -188,48 +188,6 @@ function basenameWithoutExt(path: string): string {
 }
 
 /**
- * §5.15.D follow-up (2026-05-07): wiki/sources/ 의 source 페이지 frontmatter 에서
- * source_id → title Map 을 빌드. footer display 를 영문 slug (basename) 이 아닌
- * *원문 title* (한국어 보존) 로 노출하기 위함.
- *
- * 사용자 raise: "filename 영문 slug 정책은 query 영향 없는데, 답변 footer 의 원본
- * 링크에서 display 가 영문이라 인지 비용 ↑". → wiki/sources/source-*.md 의 frontmatter
- * title (LLM 이 한국어 원문 보존하여 작성한 것) 를 사용.
- *
- * wiki/sources/ 미존재 또는 read 실패 시 빈 Map (caller 가 basename fallback).
- */
-async function buildSourceIdToTitle(wikiFS: WikiFS): Promise<Map<string, string>> {
-  const map = new Map<string, string>()
-  let files: readonly string[] = []
-  try {
-    files = await wikiFS.list('wiki/sources')
-  } catch {
-    return map
-  }
-  for (const f of files) {
-    if (!f.endsWith('.md')) continue
-    const path = f.includes('/') ? f : `wiki/sources/${f}`
-    try {
-      const content = await wikiFS.read(path)
-      const fmMatch = content.match(/^---\n([\s\S]*?)\n---/)
-      if (!fmMatch) continue
-      const yaml = fmMatch[1]
-      const idMatch = yaml.match(/^source_id:\s*(.+?)\s*$/m)
-      const titleMatch = yaml.match(/^title:\s*(.+?)\s*$/m)
-      if (!idMatch || !titleMatch) continue
-      const unquote = (s: string): string =>
-        s.replace(/^"(.*)"$/, '$1').replace(/^'(.*)'$/, '$1').trim()
-      const id = unquote(idMatch[1])
-      const title = unquote(titleMatch[1])
-      if (id && title) map.set(id, title)
-    } catch {
-      // 한 파일 실패는 건너뜀
-    }
-  }
-  return map
-}
-
-/**
  * LLM 답변 (`answer`) 끝에 citation 에서 해석한 원본 파일 wikilink 를 추가한다.
  *
  * - mode='hidden': footer 미출력 (answer 그대로 trimEnd 만)
@@ -239,8 +197,10 @@ async function buildSourceIdToTitle(wikiFS: WikiFS): Promise<Map<string, string>
  *   • mode='raw'     → record.vault_path
  *   • mode='sidecar' → deriveSidecarPath(record.vault_path) — `<vault_path>.md`
  *     (단독 md 면 vault_path 자체)
- *   • display 우선순위 (§5.15.D 사용자 raise): wiki/sources/source-*.md 의 frontmatter
- *     title (한국어 원문 보존) → fallback: basename without ext (영문 slug)
+ *   • display = `basenameWithoutExt(rawVaultPath)` — *raw 파일명 basename* (한국어 보존
+ *     §5.15.D vault rename 적용 후. wiki/sources/source-* 의 영문 slug 이 아닌, 사용자
+ *     vault 안 raw 파일의 실제 파일명 그대로). frontmatter title 은 LLM 이 추출한 부제일
+ *     수 있어 *원문 제목* 으로 부적절하므로 raw basename 만 사용 (사용자 raise 2026-05-07).
  *
  * rawVaultPath 는 current vault_path 우선, fallback 으로 path_history 마지막 유효 entry.
  * 둘 다 없으면 resolve 실패로 간주.
@@ -259,8 +219,6 @@ export async function appendOriginalLinks(
     return `${trimmed}\n\n원본: (없음 — 외부 근거 없음)`
   }
   const registry = await loadRegistry(opts.wikiFS).catch(() => ({}))
-  // §5.15.D: source_id → frontmatter title Map (한국어 원문 display 용)
-  const sourceIdToTitle = await buildSourceIdToTitle(opts.wikiFS)
   const links: string[] = []
   const seen = new Set<string>()
   for (const citation of citations) {
@@ -275,9 +233,8 @@ export async function appendOriginalLinks(
           mode === 'sidecar' ? deriveSidecarPath(resolved.rawVaultPath) : resolved.rawVaultPath
         if (seen.has(target)) continue
         seen.add(target)
-        // §5.15.D — display 우선순위: wiki/sources frontmatter title → basename fallback.
-        // link target 은 full vault path → Obsidian rollover 시 tooltip 으로 노출됨.
-        const display = sourceIdToTitle.get(sourceId) ?? basenameWithoutExt(resolved.rawVaultPath)
+        // display = raw 파일명 basename (한국어 보존, §5.15.D vault rename 후).
+        const display = basenameWithoutExt(resolved.rawVaultPath)
         links.push(`[[${target}|${display}]]`)
       } catch {
         // single citation resolve 실패는 건너뜀 — 전체가 실패해야 WARN 처리.
