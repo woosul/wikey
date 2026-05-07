@@ -1713,7 +1713,10 @@ Phase 6: master verdict + commit + push + result 문서
 - [x] `wikey-obsidian/src/commands.ts` — `runIngest` 진입 시 `sanitizeRawFilenameIfNeeded` helper 가 raw 파일명 검사 → unsafe 시 vault rename (`fileManager.renameFile`) + 사용자 Notice
 - [x] 회귀: wikey-core 678 PASS / 3 skip / 0 build errors / validate-wiki PASS
 - [x] **라이브 smoke** (master obsidian-cdp 직접): finetree-RAG/BOT/SQL/OCR 4 파일 fresh ingest — vault rename + sanitized wikilink + paradigm 정확 적용 (§5.11 v3 fix 후)
-- [x] **footer display 원문 title** (사용자 raise): `query-pipeline.ts::appendOriginalLinks` 가 wiki/sources frontmatter title (한국어 원문) 를 display 로 사용 + basename fallback. 신규 helper `buildSourceIdToTitle` (wiki/sources list + read frontmatter source_id → title Map). 신규 3 test case. 라이브 query 검증: `원본: 종이 위의 데이터를, AI가 읽고 정리하고 적재합니다, AI 기반 기업 지식 검색 및 답변 솔루션 - finetree-RAG` (한국어 원문 표시) — 회귀 687 PASS
+- [x] **footer display 원문 title — frontmatter title 시도** (사용자 raise 1차): `appendOriginalLinks` 가 wiki/sources frontmatter title 사용 → 라이브 query 결과 `종이 위의 데이터를...` (LLM 추출 부제) 가 부적절로 판명
+- [x] **footer raw basename 정정** (사용자 raise 2차): `buildSourceIdToTitle` helper 폐기 → display = `basenameWithoutExt(rawVaultPath)` 만 사용. raw 파일명이 §5.15.D vault rename 후 한국어 보존이라 그대로 사용 (예: `AI 기반 다채널 비정형 문서의 데이터화 - finetree-OCR`)
+- [x] **audit-ingest content hash 0순위 매칭** (사용자 raise 3차 — "URI 기반"): `audit-ingest.py` 에 `load_registry_hashes()` 추가 + 매칭 4-tier (hash 0순위 / registry path 1순위 / legacy ingest-map 2순위 / fuzzy 3순위). 4 finetree 파일 모두 INGESTED 인식 — vault 안 raw 파일 이동에도 정확
+- [x] commit chain: `35c09ea` (§5.15.D 본체) → `e5238ff` (frontmatter title 1차) → `93d43b1` (raw basename 정정 + registry path 1순위) → `8555255` (content hash 0순위)
 
 ---
 

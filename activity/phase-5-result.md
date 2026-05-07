@@ -2620,3 +2620,39 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 
 - wikey-core: 687 PASS / 3 skip / 0 FAIL (이전 684 + footer 신규 3)
 - build OK / validate-wiki PASS
+
+### 5.15.D footer 정정 — frontmatter title 폐기 + raw basename 우선 (사용자 raise 2번째)
+
+**raise**: `종이 위의 데이터를, AI가 읽고 정리하고 적재합니다` 가 finetree-OCR 의 frontmatter title 인데 *원문 부제 (헤드라인)* 라 *원문 제목* 으로 부적절. 사용자 원래 의도 = raw 파일명 basename (한국어 보존, sanitize 후).
+
+**fix**:
+- `query-pipeline.ts::appendOriginalLinks` 의 display = `basenameWithoutExt(rawVaultPath)` 만 사용
+- `buildSourceIdToTitle` helper 폐기 (frontmatter title 우선순위 제거)
+- test 1 case (한국어 raw filename basename) + 1 case (basename fallback) 정정
+
+**효과**: footer display 가 sanitize 적용된 raw 파일명 그대로 (예: `AI 기반 다채널 비정형 문서의 데이터화 - finetree-OCR`).
+
+### 5.15.D audit-ingest content hash 매칭 (사용자 raise 3번째 — URI 본질)
+
+**raise**: "raw/ 폴더 내 파일 이동해도 URI 기반이라 관계 없는 거 아냐?"
+
+**진단**: wikey 의 source 식별자 = sha256(raw bytes) (= source_id). 단 `audit-ingest.py` 가 path-based matching (legacy `.ingest-map.json` 1순위) 만 사용 → movePair 후 stale path → finetree-RAG 같은 경우 missing 으로 표시. wiki 등록은 정상이나 audit panel 만 회귀.
+
+**fix** (`scripts/audit-ingest.py`):
+- `load_registry_hashes()` 신규 — registry record.hash set (tombstone 제외)
+- 매칭 4-tier:
+  - **0순위 (NEW, content URI)**: `file_hash(disk) ∈ registry_hashes` — vault 안 자유 이동에도 정확
+  - 1순위 (path-based, fallback): `rel ∈ registry vault_path/path_history`
+  - 2순위 (legacy): `rel ∈ .ingest-map.json`
+  - 3순위 (last resort): fuzzy filename matching
+
+**검증**: 4 finetree 파일 (RAG/OCR/BOT/SQL) 모두 INGESTED 인식 (이전 missing 회귀 0). audit-ingest --json: total=21 / ingested=8 / missing=13 (finetree 외).
+
+### 5.15.D commit chain (session 23 누적)
+
+| commit | 영역 |
+|--------|------|
+| `35c09ea` | §5.15.D inline media strip + audit row UI + wikilink whitelist sanitize + finetree 4 fresh ingest + 잔재 cleanup |
+| `e5238ff` | footer display 원문 title (frontmatter title 우선) — 1차 시도 |
+| `93d43b1` | footer raw basename 정정 (frontmatter title 폐기) + audit-ingest registry path 1순위 |
+| `8555255` | audit-ingest content hash 0순위 (URI = sha256, 사용자 raise 정확) |

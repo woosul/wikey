@@ -1,14 +1,15 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-07 session 23 — §5.14 본체 종결 + §5.15 (A/B/C draft + D 종결) + §5.11 v3 paradigm fix + finetree 4 fresh ingest 완료**.
+> 최신 갱신: **2026-05-07 session 23 — §5.14 본체 종결 + §5.15 D 종결 (A/B/C draft) + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix**.
 > (a) §5.14 잔존 4 항목 (UI E2E test 의존) 의도적 유지 결정 + 근거 명시 ✅
 > (b) Phase 5 본체 BLUE refactor 작업 모두 종결 ✅
 > (c) `docs/wikey-ingest-pipeline-v2.md` 작성 — Phase 5 누적 변경 단계별 상세 + v1 비교 평가 ✅
-> (d) §5.15 신규 등록 — A/B/C draft (UI E2E test 인프라 / PROMOTION_THRESHOLD override / citation 마커 cleanup), **D 종결** (inline `<svg>`/HTML media strip + audit row UI fix + wikilink whitelist sanitize)
-> (e) **§5.11 v3** paradigm 회귀 fix — alias 카운트 inflation 차단 (sentence-unique 카운트) + Layer 1 prompt rule 8 강화 (parenthetical / list element / acronym-no-context 거부) ✅
-> (f) §5.6.3 신규 — LLM provider strategy (subscription / Ollama cloud / stage-aware routing) draft (이전 §5.16 자리에서 §5.6 LLM 엔진 영역으로 이동)
-> (g) **finetree 4 파일 fresh ingest 완료** (RAG/BOT/SQL/OCR) — vault rename + sanitized wikilink + paradigm 정확 적용. 첫 cycle 잔재 7 broken concept + 1 entity 중복 cleanup. validate-wiki PASS.
-> wikey-core 684 PASS / 3 skip / build OK / validate-wiki PASS.
+> (d) §5.15 신규 등록 — A/B/C draft (UI E2E test 인프라 / PROMOTION_THRESHOLD override / citation 마커 cleanup), **D 종결** (inline `<svg>`/HTML media strip + audit row UI + wikilink whitelist sanitize + footer raw basename + audit content hash 0순위)
+> (e) **§5.11 v3** paradigm 회귀 fix — alias 카운트 inflation 차단 (sentence-unique 카운트) + Layer 1 prompt rule 8 강화 ✅
+> (f) §5.6.3 신규 — LLM provider strategy draft (이전 §5.16 자리에서 §5.6 LLM 엔진 영역으로 이동)
+> (g) **finetree 4 파일 fresh ingest 완료** (RAG/BOT/SQL/OCR) + 첫 cycle 잔재 7 broken concept + 1 entity 중복 cleanup + validate-wiki PASS
+> (h) **audit-ingest content hash 0순위 매칭** (사용자 raise "URI = sha256") — vault 안 raw 파일 자유 이동에도 ingested 정확 (4 tier matching: hash / registry path / legacy ingest-map / fuzzy)
+> wikey-core 686 PASS / 3 skip / build OK / validate-wiki PASS / commit chain 5건 push.
 > 생성일: 2026-04-10
 
 ---
