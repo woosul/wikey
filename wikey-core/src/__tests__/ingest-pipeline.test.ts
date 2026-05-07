@@ -139,25 +139,43 @@ describe('§5.13.C4 normalizeSourcePageFilename', () => {
     expect(result.source_page.filename).toBe('source-pmbok-overview.md')
   })
 
-  it('§5.13 AC-C4-2: prefix 누락 시 source- 자동 prepend', () => {
-    const parsed = {
-      source_page: { filename: 'pmbok-overview.md', content: '# PMBOK\n' },
-      entities: [],
-      concepts: [],
+  it('§5.13 AC-C4-2: prefix 누락 시 source- 자동 prepend + warn 로그', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const parsed = {
+        source_page: { filename: 'pmbok-overview.md', content: '# PMBOK\n' },
+        entities: [],
+        concepts: [],
+      }
+      const result = normalizeSourcePageFilename(parsed)
+      expect(result.source_page.filename).toBe('source-pmbok-overview.md')
+      // codex P1 (d) — warn 로그 assertion (LLM emit drift detection observability)
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/LLM emit drift.*pmbok-overview\.md.*source-pmbok-overview\.md/),
+      )
+    } finally {
+      warnSpy.mockRestore()
     }
-    const result = normalizeSourcePageFilename(parsed)
-    expect(result.source_page.filename).toBe('source-pmbok-overview.md')
   })
 
-  it('§5.13 AC-C4-3: 다른 prefix (raw-) 시 force prepend (보존 X)', () => {
-    const parsed = {
-      source_page: { filename: 'raw-pmbok.md', content: '# Raw\n' },
-      entities: [],
-      concepts: [],
+  it('§5.13 AC-C4-3: 다른 prefix (raw-) 시 force prepend (보존 X) + warn 로그', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const parsed = {
+        source_page: { filename: 'raw-pmbok.md', content: '# Raw\n' },
+        entities: [],
+        concepts: [],
+      }
+      const result = normalizeSourcePageFilename(parsed)
+      // 사용자 결정 = force prepend (raw- 보존하지 않음)
+      expect(result.source_page.filename).toBe('source-raw-pmbok.md')
+      // codex P1 (d) — warn 로그 assertion
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringMatching(/LLM emit drift.*raw-pmbok\.md.*source-raw-pmbok\.md/),
+      )
+    } finally {
+      warnSpy.mockRestore()
     }
-    const result = normalizeSourcePageFilename(parsed)
-    // 사용자 결정 = force prepend (raw- 보존하지 않음)
-    expect(result.source_page.filename).toBe('source-raw-pmbok.md')
   })
 
   it('§5.13 AC-C4-4: normalize 후 sourcePageBase derive 일관 (normalizeBase 결과)', async () => {
@@ -180,7 +198,29 @@ describe('§5.13.C4 normalizeSourcePageFilename', () => {
     }
   })
 
-  it('§5.13 AC-C4-6: 결과 immutable — 원본 parsed 변경 없음', () => {
+  // codex P1 (d) — plan v2 §AC-C4-6 SEGMENTED route 의도 명확화. callLLMForSummary 가
+  // FULL/SEGMENTED 양 route 의 진입점이고 normalize 가 그 안 line 870 직후에서 1회 발생 →
+  // route-agnostic. SEGMENTED 의 segmented_summary parsed JSON 도 동일 schema (source_page +
+  // entities + concepts) 를 emit 하므로 normalize 가 동일하게 적용. assembleCanonicalResult
+  // sourcePageBase derive 가 normalize 결과 사용 → entity/concept ## 출처 첫 줄 wikilink 도
+  // normalized base 일관 (AC-C4-4 + canonicalizer.test §5.13 AC-A1-* 결합 증명).
+  it('§5.13 AC-C4-6 (SEGMENTED route): segmented_summary 의 source_page 도 normalize 일관', async () => {
+    const { normalizeBase } = await import('../wiki-ops.js')
+    // SEGMENTED route 의 segmented_summary parsed JSON shape (= FULL parsed 동일 schema).
+    // 다중 chunk merge 후 한 번의 source_page emit. normalizeSourcePageFilename 적용 검증.
+    const segmentedParsed = {
+      source_page: { filename: 'pmbok-overview.md', content: '# PMBOK (segmented merged)\n' },
+      entities: [{ name: 'pmi', display_name: 'PMI', description: 'org', type: 'organization' }],
+      concepts: [{ name: 'pmbok', display_name: 'PMBOK', description: 'standard', type: 'standard' }],
+    }
+    const normalized = normalizeSourcePageFilename(segmentedParsed)
+    // SEGMENTED route 의 normalize 결과 = FULL 동일
+    expect(normalized.source_page.filename).toBe('source-pmbok-overview.md')
+    // sourcePageBase derive 도 normalized 일관 — entity/concept ## 출처 첫 줄 wikilink target
+    expect(normalizeBase(normalized.source_page.filename)).toBe('source-pmbok-overview')
+  })
+
+  it('§5.13 AC-C4-defensive: 결과 immutable — 원본 parsed 변경 없음', () => {
     const parsed = {
       source_page: { filename: 'pmbok-overview.md', content: '# PMBOK\n' },
       entities: [],
