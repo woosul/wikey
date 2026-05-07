@@ -802,6 +802,8 @@
 
 ### 5.7.1 bash→TS 완전 포팅
 
+> **다음 세션 진행 결정 (사용자 2026-05-08 session 25)**: 4 스크립트 모두 1 세션 처리. scope 명확 (input/output/exit code 이미 spec) + wikey-core 함수 재사용 + 동작 동등성 골든 테스트로 회귀 검증 단순 + wiki 재생성 0. §5.7.2 (qmd SDK) 는 별도 spec 분리.
+
 - [ ] `validate-wiki`, `check-pii`, `cost-tracker`, `reindex` 를 TypeScript 구현으로 포팅
 - [ ] 현재 exec 래퍼로 안정 동작 중 → 우선순위 낮음
 - [ ] 이점: 크로스 플랫폼, 타입 안전성, 테스트 용이성

@@ -10,10 +10,16 @@
 > (f) **§5.15.A 종결 결정 (session 25, 사용자)**: Cycle 3~5 (AC-A4 handleVaultCreate / AC-A6 §5.14 deep split) 의도적 미진행. 근거: §5.14 session 23 의도적 유지 결정의 본질 = closure state 12+ field 비용 + plugin lifecycle scoped 자연 캡슐화 (test 인프라 부재가 아님). Cycle 1+2 가 향후 isolated function 신규 추가 시 자연 cover 안전망 충분.
 > (g) **§5.15 sub-section 5종 (A/B/C/D/E) 모두 종결** — Phase 5 잔여 = §5.5 / §5.6 / §5.7 / §5.8 / §5.9 (P3/P4) 5 subject 만.
 >
-> 다음 세션 후보:
-> - **§5.7.1 bash→TS 포팅** (P4, narrow scope, 1~2 cycle, 동작 변경 0) — 사용자 명시 후보
+> **다음 세션 결정 (사용자 2026-05-08 session 25)**: **§5.7.1 — 4 스크립트 (validate-wiki / check-pii / cost-tracker / reindex) 모두 bash→TS 포팅 1 세션 처리**.
+>   - 근거: 4 스크립트 1:1 mapping (input/output/exit code 이미 spec) + wikey-core 함수 재사용 + 동작 동등성 골든 테스트로 회귀 검증 단순 + wiki 재생성 0
+>   - scope: validate-wiki.ts / check-pii.ts / cost-tracker.ts / reindex.ts 4 스크립트 신규 + 기존 .sh 파일은 thin wrapper (혹은 deprecated marker) 결정
+>   - §5.7.2 (qmd SDK import) 는 별도 spec 으로 분리 — vendored CLI 구조 변경 + Node 바인딩 결정 필요라 unbounded scope
+>   - 추정 cycle: 1~2 (4 스크립트 동시 진행, 골든 fixture 작성 + TS 포팅 + wikey-core export 보강)
+>
+> **이외 후보** (§5.7.1 종결 후):
 > - **§5.6.3 LLM provider strategy** (P3 draft, session 24 환경 latency 관측 후속) — LLM hang 근본 fix
-> - 기타 P3/P4 항목 또는 Phase 6 진입
+> - **§5.7.2 qmd SDK import** (P4, vendored CLI → Node 바인딩 결정)
+> - 기타 P3/P4 (§5.5 / §5.8 / §5.9) 또는 Phase 6 진입
 >
 > 이전 세션 (session 23) 종결:
 > - §5.14 본체 종결 + §5.15.D 종결 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix.
