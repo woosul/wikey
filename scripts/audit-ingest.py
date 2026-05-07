@@ -93,10 +93,11 @@ def load_registry_paths() -> set[str]:
 
     .wikey/source-registry.json 의 각 record 에서 *현재* vault_path + path_history 의
     *모든* path 를 set 으로. movePair 후 raw 파일이 이동해도 registry 에 등록된 모든
-    path 를 ingested 로 인정 → audit panel 의 missing 회귀 차단.
+    path 를 ingested 로 인정.
 
-    legacy `.ingest-map.json` 은 movePair 시점에 갱신 안 되므로 stale path 보유. 본
-    함수가 1순위 매칭, ingest_map 이 fallback.
+    단 path 는 ephemeral — 사용자가 raw 파일을 vault 안 자유롭게 이동하면 stale.
+    `load_registry_hashes` 가 더 본질적 (content-based, sha256). 본 함수는 hash 계산
+    skip 시 fallback.
     """
     paths: set[str] = set()
     p = ROOT / REGISTRY_PATH
@@ -120,6 +121,35 @@ def load_registry_paths() -> set[str]:
                 if hvp:
                     paths.add(hvp)
     return paths
+
+
+def load_registry_hashes() -> set[str]:
+    """§5.15.D follow-up #2 (2026-05-07 사용자 raise): content-based ingested hash set.
+
+    wikey 의 source 식별 = sha256(raw bytes) (= source_id). raw 파일이 vault 안 어디로
+    이동해도 hash 동일 → ingested 정확 판단. path-based matching 은 ephemeral (이동 시
+    stale). 본 함수가 *0순위* 매칭의 진실 소스.
+
+    "raw/ 폴더 내 파일 이동해도 URI 기반이라 관계 없는거 아냐?" — 정확. wikey 의 URI =
+    content hash. audit 도 동일 원칙으로 매칭.
+    """
+    hashes: set[str] = set()
+    p = ROOT / REGISTRY_PATH
+    if not p.exists():
+        return hashes
+    try:
+        registry = json.loads(p.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return hashes
+    for record in registry.values():
+        if not isinstance(record, dict):
+            continue
+        if record.get("tombstone"):
+            continue
+        h = record.get("hash")
+        if h:
+            hashes.add(h)
+    return hashes
 
 
 # ── §5.3.1/§5.3.2 (plan v11) — registry-driven hash diff helpers ──
@@ -209,6 +239,7 @@ def main():
     wiki_keys = load_wiki_sources()
     ingest_map = load_ingest_map()
     registry_paths = load_registry_paths()  # §5.15.D follow-up
+    registry_hashes = load_registry_hashes()  # §5.15.D follow-up #2 — content-based
     all_docs = scan_raw_docs()
     registry = load_registry()
 
@@ -233,8 +264,15 @@ def main():
             unsupported_docs.append(doc)
             continue
 
-        # 1순위: source-registry 의 vault_path / path_history 매칭 (§5.15.D follow-up)
-        #   movePair 후 raw 파일 이동해도 path_history 에 모든 이력 보존 → ingested 정확
+        # 0순위: content hash matching (§5.15.D follow-up #2 — 사용자 raise)
+        #   wikey 의 source identifier = sha256(raw bytes). raw 파일이 vault 안 어디로
+        #   이동해도 hash 동일 → ingested 정확 판단. path-based 의 ephemeral 회피.
+        disk_hash = file_hash(doc) if registry_hashes else None
+        if disk_hash and disk_hash in registry_hashes:
+            ingested_files.append(doc)
+            folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
+            continue
+        # 1순위: source-registry vault_path / path_history (path-based, fallback)
         if rel in registry_paths:
             ingested_files.append(doc)
             folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
@@ -244,7 +282,7 @@ def main():
             ingested_files.append(doc)
             folder_ingested[folder_key] = folder_ingested.get(folder_key, 0) + 1
             continue
-        # 3순위: 파일명 기반 fuzzy matching (registry/ingest-map 모두 miss 시 last resort)
+        # 3순위: 파일명 기반 fuzzy matching (last resort)
         name = normalize(doc.stem)
         if match(name, wiki_keys):
             ingested_files.append(doc)
