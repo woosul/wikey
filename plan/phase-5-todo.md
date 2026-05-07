@@ -1511,10 +1511,12 @@
 - [x] §5.14 todox v0 → v1 (scope 4 tier 확장, commit `eccf98a`)
 - [x] Session 20 본 §5.14 가 그 정책의 첫 retrospective 적용 사례
 
-### 5.14 잔존 후속 (별도 plan 후 결정)
-- [ ] sidebar-chat.ts `renderAuditSection` 726 LOC 분해 — UI E2E test 마련 후
-- [ ] settings-tab.ts setting group 별 분해 — 동일
-- [ ] main.ts / commands.ts 추가 분해 — 동일
+### 5.14 잔존 후속 — narrow BLUE (session 22, 2026-05-07) 부분 진행
+- [x] **sidebar-chat.ts narrow refactor**: 3 top-level helper 추출 (loadAuditScriptOutput / renderConverterCapabilityWarning / applyPairedSidecarToAudit) + 3 함수 audit-ingest fetch DRY (renderAuditSection / renderAuditSummaryOnly / renderRawSourcesDashboard) + dynamic `await import('wikey-core')` 2개 → top-level `LLMClient` import 전환. renderAuditSection 727 → 687 LOC (-40). 5 패널 라이브 smoke OK (Chat/Dashboard/Audit/Ingest/Help 모두 render, console 0 error).
+- [ ] **sidebar-chat.ts deeper split** — `renderAuditSection` UI 클로저 (renderList / renderTree / ingest btn click handler 95+95+196 LOC) state 추출은 closure 의존성 높아 UI E2E test 없이는 회귀 위험. UI E2E test 마련 후 진행.
+- [ ] **settings-tab.ts setting group 별 분해** — 이미 `render*Section` 으로 section-decomposed 양호 (renderEnvStatusSection 148 + renderGeneralSection 180 LOC 가 max). 추가 분해는 artificial split 우려. UI E2E 후 재평가.
+- [ ] **main.ts onload 131 LOC** — vault event handler 3종 (rename/delete/create) closure 의존성 + auto-ingest queue + bypass detection state 가 단일 onload 내 plumbing. extract 시 state object 파라미터 chain 위험. UI E2E 후 재평가.
+- [ ] **commands.ts runIngest 113 LOC** — fast path / stay-involved flow / inner loop 3 단계 cleanly structured. 추가 분해 가치 없음.
 
 ### 5.14 follow-up — qmd query 회귀 6 layer silent fail fix (session 20 후반) ✅
 - [x] Layer 1 native binding rebuild (NODE_MODULE_VERSION v24/137 → v22/127)

@@ -25,8 +25,12 @@
 > - P1 (test gap): AC-C4-2/3 warn 로그 assertion 누락 + AC-C4-6 mislabel (immutability test 였음). master 가 1 commit 으로 narrow fix.
 > - P2 (live evidence gap): AC-A1-3 라이브 evidence 다양 확장자 한계 — code path extension-agnostic + unit test cover. result doc 명시 추가.
 >
+> **§5.14 잔존 narrow BLUE 추가 진행 (session 22 후반)**:
+> - sidebar-chat.ts narrow refactor 완료 — 3 helper 추출 + audit fetch DRY + dynamic import 제거. renderAuditSection 727 → 687 LOC. 5 패널 라이브 smoke OK.
+> - settings-tab.ts / main.ts / commands.ts 는 이미 cleanly structured 또는 closure-state 의존성으로 UI E2E test 없이 추가 분해 회귀 위험 — defer.
+>
 > **다음 세션 첫 액션 옵션**:
-> 1. (잔존) §5.14 BLUE 잔존 후속 (sidebar-chat.ts 726 LOC 분해 / settings-tab.ts setting group 분해 / main.ts / commands.ts 추가 분해) — UI E2E test 마련 후
+> 1. UI E2E test infrastructure (Playwright + obsidian-cdp 기반) 마련 — sidebar-chat.ts deeper split / main.ts onload state extraction 의 enabler.
 > 2. 새 issue (사용자 raise 시)
 
 ---
