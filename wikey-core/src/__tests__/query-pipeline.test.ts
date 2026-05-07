@@ -314,7 +314,7 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     sourceIds,
   })
 
-  it('current vault_path 있음 — raw 링크 append (alias 형식, display 는 basename without ext)', async () => {
+  it('current vault_path 있음 — raw 링크 append (alias 형식, display 는 basename without ext fallback)', async () => {
     const fs = new MemoryFS()
     const registry: SourceRegistry = {
       [ID_FOO]: mkRecord({
@@ -323,10 +323,53 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
       }),
     }
     await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    // wiki/sources/source-foo.md 가 *없으면* fallback display = basename without ext
     const out = await appendOriginalLinks('답변 본문', [citation([ID_FOO])], { wikiFS: fs })
-    // alias: link target = full vault path, display = basename without ext
     expect(out).toContain('원본: [[raw/2_areas/foo.pdf|foo]]')
     expect(out).toContain('답변 본문')
+  })
+
+  // §5.15.D follow-up (사용자 raise 2026-05-07): footer display 를 영문 slug 이 아닌
+  // wiki/sources frontmatter title (한국어 원문) 로 노출.
+  it('§5.15.D footer — wiki/sources frontmatter title 매칭 시 display = 원문 title', async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({
+        vault_path: 'raw/3_resources/60_note/AI 기반 자연어 데이터 질의 - finetree-SQL.md',
+      }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    // wiki/sources/source-finetree-sql.md frontmatter 에 source_id + title 명시
+    await fs.write(
+      'wiki/sources/source-finetree-sql.md',
+      `---\ntitle: AI 기반 자연어 데이터 질의 - finetree-SQL\ntype: source\nsource_id: ${ID_FOO}\n---\n\n# 본문`,
+    )
+    const out = await appendOriginalLinks('답변', [citation([ID_FOO])], { wikiFS: fs })
+    expect(out).toContain('원본: [[raw/3_resources/60_note/AI 기반 자연어 데이터 질의 - finetree-SQL.md|AI 기반 자연어 데이터 질의 - finetree-SQL]]')
+  })
+
+  it('§5.15.D footer — wiki/sources 페이지 없으면 basename without ext fallback', async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({ vault_path: 'raw/2_areas/foo.pdf' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('답변', [citation([ID_FOO])], { wikiFS: fs })
+    expect(out).toContain('원본: [[raw/2_areas/foo.pdf|foo]]')
+  })
+
+  it('§5.15.D footer — wiki/sources frontmatter 에 quoted title 도 unquote 후 사용', async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_FOO]: mkRecord({ vault_path: 'raw/x.md' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    await fs.write(
+      'wiki/sources/source-x.md',
+      `---\ntitle: "한국어: 따옴표 포함"\nsource_id: ${ID_FOO}\n---\n\n# x`,
+    )
+    const out = await appendOriginalLinks('답변', [citation([ID_FOO])], { wikiFS: fs })
+    expect(out).toContain('원본: [[raw/x.md|한국어: 따옴표 포함]]')
   })
 
   it('current vault_path 비어 있고 path_history 존재 — 마지막 유효 entry fallback', async () => {

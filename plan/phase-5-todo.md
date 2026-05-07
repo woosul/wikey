@@ -1712,7 +1712,8 @@ Phase 6: master verdict + commit + push + result 문서
 - [x] `canonicalizer.ts::buildPageContent` — `safeRawTarget = sanitizeWikilinkTarget(rawSourceFilename)` 적용 (fallback safety)
 - [x] `wikey-obsidian/src/commands.ts` — `runIngest` 진입 시 `sanitizeRawFilenameIfNeeded` helper 가 raw 파일명 검사 → unsafe 시 vault rename (`fileManager.renameFile`) + 사용자 Notice
 - [x] 회귀: wikey-core 678 PASS / 3 skip / 0 build errors / validate-wiki PASS
-- [x] **라이브 smoke** (master obsidian-cdp 직접): finetree-RAG/BOT 2 파일 fresh ingest — vault rename `... | finetree-RAG.md` → `... - finetree-RAG.md`, wiki 페이지의 `## 출처` raw wikilink 정확 매칭 확증. finetree-OCR (이미 movePair 후 raw/3_resources/...) + finetree-SQL 잔여 — 사용자 결정 (forceReingest 또는 wiki rollback) 후 진행
+- [x] **라이브 smoke** (master obsidian-cdp 직접): finetree-RAG/BOT/SQL/OCR 4 파일 fresh ingest — vault rename + sanitized wikilink + paradigm 정확 적용 (§5.11 v3 fix 후)
+- [x] **footer display 원문 title** (사용자 raise): `query-pipeline.ts::appendOriginalLinks` 가 wiki/sources frontmatter title (한국어 원문) 를 display 로 사용 + basename fallback. 신규 helper `buildSourceIdToTitle` (wiki/sources list + read frontmatter source_id → title Map). 신규 3 test case. 라이브 query 검증: `원본: 종이 위의 데이터를, AI가 읽고 정리하고 적재합니다, AI 기반 기업 지식 검색 및 답변 솔루션 - finetree-RAG` (한국어 원문 표시) — 회귀 687 PASS
 
 ---
 

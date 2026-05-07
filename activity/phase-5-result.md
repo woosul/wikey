@@ -2575,3 +2575,48 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 
 - wikey-core: 684 PASS / 3 skip / 0 FAIL (이전 678 + v3 신규 6)
 - build OK / validate-wiki PASS / finetree 4 파일 ingest 종결
+
+---
+
+## 5.15.D footer display — 원문 title 노출 ✅ (Session 23, 2026-05-07)
+
+> mirror: [`plan/phase-5-todo.md §5.15.D`](../plan/phase-5-todo.md) · 사용자 raise 2026-05-07
+
+### 사용자 raise
+
+"filename을 영문 slug으로 사용해도 query에는 전혀 영향이 없는 거지? 단지 원문 링크로 갔을 때 제목이 영어로 보이는 것뿐?" — 답변 footer 의 `원본: [[<path>|<basename>]]` display 가 영문 slug 이라 인지 비용 ↑.
+
+### fix 적용
+
+`wikey-core/src/query-pipeline.ts`:
+- 신규 helper `buildSourceIdToTitle(wikiFS): Promise<Map<string, string>>`
+  - `wiki/sources/` list → 각 source page read → frontmatter `source_id` + `title` 매칭
+  - quoted title (`"..."` / `'...'`) 자동 unquote
+  - 빈 Map fallback (`wiki/sources/` 미존재 또는 read 실패)
+- `appendOriginalLinks` display 우선순위:
+  1. **wiki/sources frontmatter title** (한국어 원문 보존, LLM 이 emit)
+  2. fallback: `basenameWithoutExt(rawVaultPath)` (영문 slug)
+
+### 신규 test (query-pipeline.test.ts) — 3 case
+
+- §5.15.D footer — wiki/sources frontmatter title 매칭 시 display = 원문 title ✅
+- §5.15.D footer — wiki/sources 페이지 없으면 basename fallback ✅
+- §5.15.D footer — wiki/sources frontmatter quoted title 도 unquote 후 사용 ✅
+
+### 라이브 query 검증
+
+질문: "finetree-RAG 와 finetree-OCR 의 핵심 차이는?"
+
+답변 footer:
+```
+원본: 종이 위의 데이터를, AI가 읽고 정리하고 적재합니다, AI 기반 기업 지식 검색 및 답변 솔루션 - finetree-RAG
+```
+
+- `종이 위의 데이터를, AI가 읽고 정리하고 적재합니다` = finetree-OCR 의 frontmatter title (한국어 헤드라인)
+- `AI 기반 기업 지식 검색 및 답변 솔루션 - finetree-RAG` = finetree-RAG 의 frontmatter title
+- 두 link 모두 *한국어 원문 display*. 사용자 raise 완벽 충족.
+
+### 회귀
+
+- wikey-core: 687 PASS / 3 skip / 0 FAIL (이전 684 + footer 신규 3)
+- build OK / validate-wiki PASS
