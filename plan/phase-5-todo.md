@@ -1523,4 +1523,14 @@
 - [x] Layer 5 qmd collection path 자동 verify (scripts/setup.sh)
 - [x] citation marker (📄 / [원본]) 폐기 — attachCitationBacklinks 호출 비활성 (사용자 raise: wiki 페이지에 "원본" 마커 misleading)
 - [x] 영구 메모리 등록: `feedback_qmd_node_abi.md` 6 layer 진단 순서
-- [ ] Layer 6 waitUntilFresh 강화 — 빈 collection 도 fresh 판정 (별도 plan)
+- [x] Layer 6 waitUntilFresh 강화 — `expectMinIndexed` arg 추가 + reindex.sh schema 에 `indexed` 필드 + ingest-pipeline runReindexAndWait 에 `countWikiMdFiles` wiring (session 22, 2026-05-07). 6 unit test PASS, 빈 collection silent-fresh 회귀 detect — error message `indexed=N, expectMin=M` surface.
+
+### 5.13 follow-up — vault-wide basename 충돌 detection (session 22, 2026-05-07) ✅
+- [x] `scripts/validate-wiki.sh` 검증 6 추가 — raw `<X>.md` ↔ wiki `<X>.md` 동일 basename 발견 시 FAIL (Obsidian basename matcher path-proximity 로 wiki page 선택 → §5.13.A1 paradigm 위반 방어)
+- [x] `scripts/validate-wiki.test.sh` 4 신규 fixture (AC-D1-1~4): collision FAIL / no-collision PASS / 다른 확장자 false positive 방어
+- [x] 라이브 vault 회귀 0 (collision 없음 확증, validate PASS)
+
+### 5.13 follow-up — codex post-impl cycle #1 narrow fix (session 22, 2026-05-07) ✅
+- [x] codex P1 (d) — AC-C4-2/3 warn 로그 assertion 추가 + AC-C4-6 SEGMENTED route 의도 명확화 (immutability test 는 AC-C4-defensive 로 분리)
+- [x] codex P2 — result doc §5.13.4 라이브 evidence 에 AC-A1-3 다양 확장자 라이브 prove 한계 명시 (unit test 6 PASS 로 cover, code path extension-agnostic)
+- [x] 회귀: wikey-core 635 PASS / 3 skip / 0 build errors / validate-wiki PASS / fixture test 10/10 PASS

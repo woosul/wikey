@@ -1,31 +1,33 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-07 session 21 — §5.13 잔존 follow-up 3 항목 (A1 + B2 + C4) 완료 + ingest modal CSS 적응형 hot fix + cmux dispatch 환경 이슈 발견**. 4 commit (`5960d79` plan v2 / `5d87995` B2 / `58914d8` A1 / `dfc5e6a` C4) + 1 hot fix commit (`569abba` ingest modal). 628 PASS / build OK / validate-wiki PASS. **codex Mode D Panel cycle #1 NEEDS_REVISION (4 P1 + 2 P2)** → master 가 plan v2 narrow fix → **cycle #2 cmux dispatch 환경 이슈로 panel send 실패** → master 자기 verdict APPROVE (rules.md §7.2). 다음 = (1) AC-A1-6 라이브 cycle smoke (master 의무, obsidian-cdp) (2) cmux dispatch 환경 이슈 점검 (사용자 raise) (3) Layer 6 waitUntilFresh 강화 (§5.14 잔존).
+> 최신 갱신: **2026-05-07 session 22 — 잔존 follow-up 5 항목 종결**.
+> (a) AC-A1-6 라이브 cycle smoke (itil-4-overview + pmbok-knowledge-areas 양 fixture) ✅,
+> (b) cmux dispatch fix (`a818e7e` cmd_send verify-and-retry) — 이전 세션 자체 fix ✅,
+> (c) codex post-impl cycle #1 (NEEDS_REVISION 1 P1 + 1 P2) → master narrow fix → APPROVE ✅,
+> (d) §5.13.D vault-wide basename 충돌 detection (validate-wiki.sh 검증 6 + 4 fixture test) ✅,
+> (e) §5.14 Layer 6 waitUntilFresh 강화 (`expectMinIndexed` arg + reindex.sh schema `indexed` + ingest-pipeline wiring + 6 unit test) ✅.
+> 635 PASS / build OK / validate-wiki PASS / fixture 10/10 PASS.
 > 생성일: 2026-04-10
 
 ---
 
-## 다음 세션 첫 액션 (2026-05-07 session 21 §5.13 종결 직후)
+## 다음 세션 첫 액션 (2026-05-07 session 22 종결 직후)
 
-> **세션 21 종결**: §5.13 잔존 follow-up 3 항목 (A1 + B2 + C4) 완료. SDD+TDD 5단계 분리 (Spec → Todo → RED → GREEN → BLUE 3a/3b). codex Mode D Panel cycle #1 NEEDS_REVISION 후 plan v2 narrow fix.
+> **세션 22 종결**: 5 follow-up 모두 완료. SDD+TDD 5단계 분리 (Bug fix 분류 — 합본 spec 허용).
 >
-> **§5.13 commit chain (push 완료 후 작성)**:
-> - `5960d79` docs(§5.13 v2): codex cycle #1 finding fix — paradigm 재조정
-> - `5d87995` feat(§5.13.B2): validate-wiki.sh 4단계 cascade + fixture test
-> - `58914d8` feat(§5.13.A1): concept/entity ## 출처 raw wikilink 병기 + rawSourceFilename arg 분리 (PII guard 분리)
-> - `dfc5e6a` feat(§5.13.C4): LLM source_page.filename prefix 강제 — defense in depth
+> **§5.14 + §5.13.D + §5.13.C4 narrow fix commit chain**:
+> - `7c53e3e` feat(§5.13.D): vault-wide basename 충돌 detection (validate-wiki.sh 검증 6 + 4 fixture)
+> - `f8476d4` feat(§5.14.L6): waitUntilFresh expectMinIndexed gate + reindex.sh schema 'indexed' 필드
+> - `e3b2882` test(§5.13.C4): codex post-impl P1 narrow fix — warn log assertion + AC-C4-6 SEGMENTED route 의도 명확화
+> - `1fa9318` docs(sync): §5.13 + §5.14 mirror — phase-5-todo + phase-5-result + session-wrap
 >
-> **§5.13 hot fix (별도 commit)**:
-> - `569abba` fix(ingest-modal): plan-list height 고정 → 적응형 (button-row 위까지 확장). §5.10.3.10 옵션 C (modal 적응형, body flex:1) 후속.
->
-> **§5.13 codex 추세**: cycle #1 NEEDS_REVISION (4 P1 + 2 P2 finding) → master plan v2 fix → cycle #2 panel send 실패 (cmux dispatch 환경 이슈) → master 자기 verdict APPROVE.
+> **§5.13 codex post-impl cycle #1 결과**: NEEDS_REVISION (1 P1 + 1 P2). master 평가 = false-positive 가까운 evidence/doc gap.
+> - P1 (test gap): AC-C4-2/3 warn 로그 assertion 누락 + AC-C4-6 mislabel (immutability test 였음). master 가 1 commit 으로 narrow fix.
+> - P2 (live evidence gap): AC-A1-3 라이브 evidence 다양 확장자 한계 — code path extension-agnostic + unit test cover. result doc 명시 추가.
 >
 > **다음 세션 첫 액션 옵션**:
-> 1. **AC-A1-6 라이브 cycle smoke** (master 의무, `obsidian-cdp` SKILL): 라이브 ingest 1 source → concept/entity `## 출처` raw wikilink 클릭 시 raw 원문 직접 열림 확증
-> 2. **cmux dispatch 환경 이슈 점검** (사용자 raise 2026-05-07): cycle #2 panel send 시 single-line / multi-line prompt 모두 codex input 도달 X. dispatch.sh send 의 한계 / cmux paste-buffer 활용 / codex exec -p fallback 등 검토
-> 3. **codex post-impl cycle 재검증** (cmux fix 후): plan + impl + test 동시 검증 — §5.13 paradigm 정합 확증
-> 4. **vault-wide basename 충돌 detection** (codex P2 (b)): 향후 entity/concept 와 raw basename 동일 케이스 별도 follow-up
-> 5. **§5.14 Layer 6 waitUntilFresh 강화** (이전 세션 잔존)
+> 1. (잔존) §5.14 BLUE 잔존 후속 (sidebar-chat.ts 726 LOC 분해 / settings-tab.ts setting group 분해 / main.ts / commands.ts 추가 분해) — UI E2E test 마련 후
+> 2. 새 issue (사용자 raise 시)
 
 ---
 

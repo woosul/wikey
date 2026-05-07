@@ -116,8 +116,16 @@ normalize 위치 정정:
 | `./scripts/validate-wiki.sh` (라이브 wiki/) | PASS |
 | `./scripts/validate-wiki.test.sh` (B2 fixture) | 6/6 PASS |
 
-라이브 ingest cycle smoke (master 책임, `obsidian-cdp` SKILL):
-- AC-A1-6: 라이브 ingest 1 source → concept/entity `## 출처` raw wikilink 클릭 시 raw 원문 직접 열림 — **다음 세션 사용자 라이브 검증 시 진행** (현 세션 시간 제약).
+라이브 ingest cycle smoke (master 책임, `obsidian-cdp` SKILL) — **session 22 (2026-05-07) 완료**:
+- fixture 1: `raw/0_inbox/itil-4-overview.md` (concept-heavy, 48 lines) → 11 concepts + source-itil-4-overview. concept 페이지 모두 `## 출처` 두 줄 (`[[source-itil-4-overview|itil-4-overview]]` + `[[itil-4-overview.md|원문]]`).
+- fixture 2: `raw/0_inbox/pmbok-knowledge-areas.md` → 13 concepts (PMBOK / project-*-management) + source-pmbok-knowledge-areas. 동일 두 줄 패턴 확증.
+- **wikilink resolve 라이브 확증**: Obsidian metadata cache (`app.metadataCache.getFirstLinkpathDest`) 가 `[[itil-4-overview.md|원문]]` (sourcePath = `wiki/concepts/itil-4.md`) → `raw/3_resources/60_note/500_technology/itil-4-overview.md` 로 정확히 resolve. clicking 시 raw 원문 직접 열림 paradigm 충족.
+- movePair 동반 검증: `raw/0_inbox/itil-4-overview.md` → `raw/3_resources/60_note/500_technology/itil-4-overview.md` 자동 분류 이동.
+- AC-A1-6 (validate-wiki.sh PASS): 라이브 wiki/ 직 실행 → PASS.
+- AC-A1-2 (entity ## 출처 동일): 본 ingest 들은 entity 신규 emit 없음 (concept-heavy fixture). canonicalizer.ts `buildPageContent` template 이 category-agnostic 이라 source-level 으로 entity/concept 동일 적용 보장. 별 fixture 라이브 emit 은 follow-up 자연 검증 (AC-A1-2 unit test 6 PASS 로 이미 통과).
+- AC-A1-5 (rebuildPageWithCrossLinks 후 raw wikilink 보존): unit test PASS (`§5.13 AC-A1-5: rebuildPageWithCrossLinks — raw wikilink 줄 보존`). 본 ingest 의 fresh concept 들 `## 관련` 단계 자체가 발생 안 함 (cross-batch only). source-level 보장.
+- AC-A1-7 (PII guard ON 시 unmasked rawSourceFilename): unit test PASS. 본 fixture 들 PII free 라 mask 발생 자체 X (별 PII fixture 으로 자연 검증 또는 unit test 로 대체).
+- **AC-A1-3 라이브 evidence 한계** (codex post-impl P2 finding): 본 라이브 ingest fixture 들이 모두 `.md` 라 `## 출처` raw wikilink 의 다양 확장자 (`.pdf` / `.hwp` / `.hwpx` / `.txt`) 출력은 라이브로 prove 안 됨 — code path 가 extension-agnostic (canonicalizer.ts:536 template literal `${rawSourceFilename}` 그대로 emit) + AC-A1-3 unit test 6 PASS 로 cover. 라이브 cycle smoke 의 evidence/doc gap 명시.
 
 ## 5.13.5 codex Mode D Panel cycle 결과
 
@@ -138,9 +146,9 @@ normalize 위치 정정:
 
 ## 5.13.7 잔존 follow-up
 
-- **AC-A1-6 라이브 cycle smoke**: 다음 세션 사용자 라이브 검증 (master 의무, obsidian-cdp SKILL).
+- ~~**AC-A1-6 라이브 cycle smoke**~~ → **session 22 (2026-05-07) 완료** (§5.13.4 라이브 evidence 참조).
 - **vault-wide basename 충돌 detection** (codex cycle #1 P2 finding (b)): 향후 entity/concept 가 raw basename 동일하게 만들어지면 충돌 가능 — 별도 follow-up issue.
-- **codex post-impl cycle 재검증**: cmux dispatch 환경 이슈 fix 후. 사용자 raise = "codex 호출 관련된 문제 점검" — 본 세션 §5.13 종결 후 별도 진행.
+- **codex post-impl cycle 재검증**: cmux dispatch fix (`a818e7e` cmd_send verify-and-retry) 적용 후 — session 22 진행.
 
 ## 5.13.8 Karpathy 4원칙 적용 self-review
 

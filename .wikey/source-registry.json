@@ -40,5 +40,47 @@
     ],
     "tombstone": false,
     "last_action": "force"
+  },
+  "sha256:3b6bc9a9679378ae": {
+    "vault_path": "raw/3_resources/60_note/500_technology/itil-4-overview.md",
+    "hash": "3b6bc9a9679378ae23be38efeec4c2a515007a8a7605dd26023341a4fb0b4fa9",
+    "size": 2388,
+    "first_seen": "2026-05-07T00:23:13.329Z",
+    "ingested_pages": [
+      "wiki/sources/source-itil-4-overview.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/itil-4-overview.md",
+        "at": "2026-05-07T00:23:13.329Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/itil-4-overview.md",
+        "at": "2026-05-07T00:23:35.910Z"
+      }
+    ],
+    "tombstone": true,
+    "last_action": "force"
+  },
+  "sha256:1b53c2b4e431c903": {
+    "vault_path": "raw/3_resources/60_note/200_social/pmbok-knowledge-areas.md",
+    "hash": "1b53c2b4e431c903f5a555f9c2157a35574c2b90326a8d5620680aae5f9cd8f0",
+    "size": 2662,
+    "first_seen": "2026-05-07T00:26:18.477Z",
+    "ingested_pages": [
+      "wiki/sources/source-pmbok-knowledge-areas.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/pmbok-knowledge-areas.md",
+        "at": "2026-05-07T00:26:18.477Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/200_social/pmbok-knowledge-areas.md",
+        "at": "2026-05-07T00:26:36.967Z"
+      }
+    ],
+    "tombstone": true,
+    "last_action": "force"
   }
 }
