@@ -2411,3 +2411,167 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 **§5.14 종결 verdict**: 본체 BLUE refactor 작업 완료. 미래 wikey-obsidian 에 vitest + Obsidian API mock + jsdom UI E2E test 인프라가 구축되면 잔존 4 항목 deep split 재평가 가능. 그 인프라 구축은 별도 phase / future work — 현 시점 §5.14 scope 외.
 
 **문서 변경 only — 코드 변경 0**: 본 종결은 결정 + 근거 등록이며 코드/테스트 회귀 검증 별도 실행 불필요 (session 22 종결 시 635 PASS / build OK / validate-wiki PASS 확증). validate-wiki.sh 만 한 번 더 sanity 확증.
+
+---
+
+## 5.15 Pipeline v2 후속 — draft 등록 (Session 23, 2026-05-07)
+
+> mirror: [`plan/phase-5-todox-5.15-pipeline-v2-followups.md`](../plan/phase-5-todox-5.15-pipeline-v2-followups.md) v0 · status: **draft / 다음 세션 후보 (P2)**
+> 도출: `docs/wikey-ingest-pipeline-v2.md §15.4 단점·리스크 + §15.6 v3 후보`
+
+3 sub-section 분리 + 효과 정량화:
+
+| Sub | 한 줄 효과 | 비유 | 추정 LOC | 추정 cycle |
+|-----|-----------|------|----------|-----------|
+| **§5.15.A** UI E2E test 인프라 (vitest + Obsidian API mock + jsdom) | UI 코드 변경 시 회귀 detect 5초 (vitest) — 30분 (라이브 smoke) → 360× 단축 | 안전망 없이 외줄타기 → 안전망 깔기 | 1000~1600 신규 | 3~5 |
+| **§5.15.B** PROMOTION_THRESHOLD override (`.wikey/promotion-threshold.yaml`) | 도메인별 threshold 코드 수정 (15분) → YAML 1줄 (5초) → 180× 단축 | 시트 매번 공장 → 운전석 레버 | 200~300 신규 | 1 |
+| **§5.15.C** citation 마커 dead code cleanup (`attachCitationBacklinks` / `buildCitationButton`) | sidebar-chat.ts -60 LOC, dead path 검토 비용 0 | 옛 임차인 가구 정리 | net -100 | narrow 1 |
+
+**추천 진행 순서**: C (작은 hygiene) → B (UX flexibility) → A (큰 인프라). 순차 5~7 cycle 합. 사용자 결정에 따라 어느 sub-section 부터든 진행 가능.
+
+---
+
+## 5.15.D inline media strip + audit row UI fix + wikilink whitelist sanitize ✅ (Session 23, 2026-05-07, §5.15 sub-section)
+
+> mirror: [`plan/phase-5-todo.md §5.15.D`](../plan/phase-5-todo.md) · 합본 spec (Bug fix 분류, testing.md §3 매트릭스)
+> 이전 §5.16 자리에서 §5.15.D 로 통합 (사용자 결정 — Pipeline v2 후속 항목들과 묶음)
+
+### 5.15.D 본질 — 사용자 raise 와 진단
+
+**사용자 raise**: `AI 기반 다채널 비정형 문서의 데이터화  |  finetree-OCR.md` (+ 동일 패턴 RAG/BOT/SQL 3 파일) ingest 시 LLM JSON parsing 실패. SVG 첨부 의심.
+
+**정량 측정** (4 파일):
+| 파일 | 전체 bytes | SVG block 수 | SVG bytes | SVG 비중 |
+|------|-----------|-------------|-----------|----------|
+| finetree-OCR.md | 156,384 | 7 | 151,926 | **97.1%** |
+| finetree-RAG.md | 135,530 | 7 | 131,134 | 96.8% |
+| finetree-BOT.md | 108,007 | 7 | 103,585 | 95.9% |
+| finetree-SQL.md | 121,852 | 7 | 117,604 | 96.5% |
+
+→ 진짜 본문 4~5 KB, 나머지 95%+ inline `<svg>` path 좌표.
+
+**원인**: `wikey-core/src/rag-preprocess.ts::stripEmbeddedImages` (line 32) 가 처리하는 패턴은 markdown image syntax 2 종류 (`![alt](data:...)` / `![alt](https://....png)`) **만**. inline `<svg>...</svg>` 본문 + inline HTML media tag (`<img>` / `<iframe>` 등) 미처리 → 156 KB 가 그대로 Stage 1 summary LLM 입력 → 토큰 폭증 + LLM attention 분산 + JSON 응답 깨짐 + `MAX_JSON_RETRIES=2` 도 같은 입력 재시도라 회복 불가.
+
+### 5.15.D fix (옵션 1 + 옵션 3 묶음)
+
+사용자 결정: 옵션 1 (즉시 narrow fix — inline SVG) → 검증 완료 후 옵션 3 (확장 — `<img>`/`<picture>`/`<iframe>`/`<canvas>` 등) 추가.
+
+**fix 적용**:
+- `wikey-core/src/rag-preprocess.ts`:
+  - `INLINE_SVG = /<svg\b[^>]*(?:\/>|>[\s\S]*?<\/svg>)/gi` 추가 (multiline body cover, self-closing 도 지원)
+  - `INLINE_HTML_MEDIA = /<(img|picture|iframe|canvas|video|audio|embed|object)(?=[\s/>])[^>]*(?:\/>|>(?:[\s\S]*?<\/\1>)?)/gi` 추가 (8 tag 일괄 cover, custom element false positive 차단을 위한 lookahead `(?=[\s/>])`)
+  - `extractAlt(tag): string | null` helper — `alt="..."` 또는 `alt='...'` 첫 매칭
+  - `stripEmbeddedImages` chain 4 단계 (`DATA_URI_IMG → EXTERNAL_IMG → INLINE_SVG → INLINE_HTML_MEDIA`)
+  - `countEmbeddedImages` schema 확장 — `{ dataUri, externalUrl, inlineSvg, inlineHtmlMedia }`
+- `wikey-core/src/__tests__/rag-preprocess.test.ts`: 신규 19 case (AC-1~AC-16 + AC-1b/5b/9b)
+  - AC-1~AC-8: inline SVG (single/multiple/nested/mixed/no-alt/empty-alt/special-char/finetree-95%-reduction)
+  - AC-9~AC-16: HTML media (img/picture/iframe/canvas/video/embed/object/custom-element-preserve)
+
+### 5.15.D audit row UI fix (사용자 추가 raise — 같은 cycle)
+
+**raise**: ingest error 시 audit row 의 line height 증가. 사용자 명시 — "노트/기사 분류값이 있는 곳에 override".
+
+**fix 적용**:
+- `wikey-obsidian/src/sidebar-chat.ts`:
+  - `showRowError(row, errorText, maxLen=80)` top-level helper 추가 (line 107~120)
+  - error 시 `wikey-audit-path` span (= 분류 hint, 예: `노트/기사`) 의 text override + `wikey-audit-path-error` class 추가 → row line height 증가 0
+  - fallback (path span 미존재 시) 기존 `createDiv` 패턴 유지
+  - 4 호출처 helper 적용: Audit ingest 2 (line 1471, 1872) + Inbox ingest 1 (line 2216) + Inbox fail-state preserve 1 (line 2059)
+- `wikey-obsidian/styles.css`: `.wikey-audit-path.wikey-audit-path-error { color: var(--text-error); }` 추가
+
+### 5.15.D 회귀 검증
+
+- **wikey-core**: 654 PASS / 3 skip / 0 FAIL (이전 635 + 신규 19)
+- **build**: typecheck OK / wikey-core build OK / wikey-obsidian build OK (warning 1 = 기존 pii-patterns CJS import.meta, 무관)
+- **validate-wiki.sh**: 6 검증 모두 PASS
+- **라이브 smoke**: 사용자 환경에서 finetree-OCR.md 직접 ingest 시도 권장 (master obsidian-cdp 가용 시 직접 진행)
+
+### 5.15.D BLUE 3b 6 활동 명시 검토
+
+| # | 활동 | 적용 |
+|---|------|------|
+| 1 | 함수 분해 | `showRowError` 신규 helper (4 호출처 dedup), `extractAlt` 신규 helper, `sanitizeWikilinkTarget` / `needsWikilinkSanitize` 신규 module, `sanitizeRawFilenameIfNeeded` runIngest 진입 helper |
+| 2 | Naming consistency | `INLINE_SVG` / `INLINE_HTML_MEDIA` / `extractAlt` / `placeholderFor` / `WIKILINK_UNSAFE_GROUP` 일관 |
+| 3 | DRY | error message truncation + path override 패턴 4 호출처 통합, wikilink sanitize chain (canonicalizer + commands.ts vault rename + helper) |
+| 4 | 주석 quality | `§5.15.D` historical context 명시, regex 경계 lookahead 근거 주석, whitelist 정책 사용자 통찰 출처 주석 |
+| 5 | 가독성 | regex `(?=[\s/>])` lookahead 주석 명시, magic number `maxLen=80` 인자, `WIKILINK_UNSAFE_GROUP` 별 string export |
+| 6 | 회귀 재검증 | 684 PASS / build / validate 매 단계 |
+
+→ Phase 3a/3b 명시 분리 정책 (testing.md §4) 준수.
+
+### 5.15.D wikilink whitelist sanitize (사용자 통찰 추가 raise)
+
+**raise**: 사용자 — "특정한 캐릭터를 정의하면, 앞으로도 계속 비슷한 에러가 나오겠지...?" — blacklist (지금까지 알려진 reserved char 만 명시) 방식의 한계 지적.
+
+**fix 적용** — whitelist 정책:
+- `wikey-core/src/wikilink-safe.ts` 신규 — `WIKILINK_UNSAFE_GROUP` regex (영문/CJK/안전 ASCII 외 모두 unsafe), `sanitizeWikilinkTarget(filename)` + `needsWikilinkSanitize(filename)` API. 22 case test (Obsidian reserved 6종 + Filesystem reserved + Unicode 특수문자 + 이모지 + 미래 syntax 확장 자동 cover + 한국어/일본어/중국어/CJK 한자 보존)
+- `wikey-core/src/canonicalizer.ts::buildPageContent` — `safeRawTarget = sanitizeWikilinkTarget(rawSourceFilename)` (fallback safety + canonicalizer 자체에서 wikilink 안전 보장)
+- `wikey-obsidian/src/commands.ts::runIngest` 진입 시 `sanitizeRawFilenameIfNeeded(plugin, sourcePath)` — disk 의 raw 파일 자체를 vault rename (`fileManager.renameFile`) → disk 와 wikilink target 일관 + 사용자 Notice
+- `wikey-core/src/index.ts` — `sanitizeWikilinkTarget` / `needsWikilinkSanitize` export
+
+**효과**: 정규화 정책 multi-pass — (1) Whitelist 외 → `-`, (2) `[\s-]+` 그룹 정규화 (순수 공백 → space, 순수 dash → hyphen 보존, mixed → ` - `), (3) 양 끝 trim. 결과: `AI 기반...| finetree-OCR.md` → `AI 기반... - finetree-OCR.md` (단일 hyphen 보존, multi-space + `|` mix → ` - `).
+
+### 5.15.D 라이브 smoke (master obsidian-cdp 직접) — finetree 4 파일 fresh ingest
+
+**finetree-RAG.md** (raw/0_inbox/) — Brief LLM 정상 한국어 요약 (이전 SVG 156KB → 4562 chars, 97.1% 감소). vault rename `... | finetree-RAG.md` → `... - finetree-RAG.md`. Stage 1 summary (58s) + Stage 2 mention (25s, 25 mentions) + Stage 3 canonicalize (40s) — entities=3 / concepts=10 / dropped=12. wiki write 17 신규 파일. `## 출처` raw wikilink 정확 매칭 (`[[AI 기반 기업 지식 검색 및 답변 솔루션 - finetree-RAG.md|원문]]`).
+
+**finetree-BOT.md** + **finetree-SQL.md** (v3 fix 적용 후) — 동일 패턴.
+
+**finetree-OCR.md** — 이전 첫 cycle 의 broken wikilink 13건 잔존 (sanitize 도입 전). source-registry 의 finetree-OCR entry 1개 제거 (사용자 옵션 A 명시) → fresh ingest → vault rename → entities=2 / concepts=3 (모두 update, sanitized wikilink) / dropped=1.
+
+**잔재 cleanup** (사용자 옵션 3 — paradigm 위반 첫 cycle 잔재 + 중복):
+- 7 broken concept 삭제: `pdf / fax / ocr / deskew / denoise / erp / msds` (paradigm 위반 + broken wikilink)
+- 1 entity 삭제: `large-language-model.md` (concept 분류 정합 — entities/concepts 중복 → entity 삭제, concept 보존)
+- index.md / log.md 의 stale wikilink 정리 (8 페이지 등재 줄 제거 + log 의 wikilink → plain text 강등)
+- **validate-wiki PASS (6 검증 모두 통과)**
+
+---
+
+## 5.11 v3 paradigm 회귀 fix — alias 카운트 inflation + Layer 1 prompt 강화 ✅ (Session 23, 2026-05-07)
+
+> mirror: [`plan/phase-5-todo.md §5.11 v3`](../plan/phase-5-todo.md) · 합본 spec (paradigm regression fix 분류)
+
+### 5.11 v3 사용자 raise
+
+`finetree-SQL` 첫 ingest Preview 의 concept 9 개 중 4 개 (`tsdb / rbac / rlhf / eda`) 가 paradigm 위반 의심. 사용자 raise: "v2 에서는 의미론적으로 연결되지 않은 단순 mention 은 생성하지 않기로 했는데?" — paradigm 회귀 인정.
+
+### 5.11 v3 회귀 원인 진단
+
+**Layer 2 (`countOccurrences`, canonicalizer.ts:293)**: `[name, ...aliases]` 모든 substring 매칭 횟수 *합산*. `탐색적 데이터 분석(EDA) 지원` 1 문장에 `eda` substring + `탐색적 데이터 분석` substring → 2 카운트 inflation → ≥ PROMOTION_THRESHOLD(2) 통과. paradigm 의도 (서로 다른 location 에서 ≥ 2 mention) 불일치.
+
+**Layer 1 (Stage 3 prompt, canonicalizer.ts:248~257)**: "1회 mention / 약한 관련 거부" 가이드를 Gemini Flash 가 acronym 류 (technical term) 등장 시 promote 하는 경향.
+
+### 5.11 v3 fix 적용
+
+**Layer 2 sentence-unique 카운트** (`canonicalizer.ts::countOccurrences`):
+- `splitSentences(text)` helper — sentence boundary (`. ! ? 。 ！ ？`, `\n\n`, heading start, list start) 로 split
+- 각 sentence 안에서 candidate alias 중 *하나라도* 매칭 → 1 카운트 (한 sentence 안 multiple alias 매칭은 합산 X)
+- threshold = 2 유지
+
+**Layer 1 prompt rule 8 강화**:
+- parenthetical 1회 acronym (`풀네임(ACRONYM)` 패턴 한 문장 only) 명시 거부
+- 단순 list element / enumeration only (`A, B, C 등` / `Data Lake(RDB, TSDB)`) 명시 거부
+- acronym only 1~2 mention + 서술 부재 명시 거부
+- 포함 예시 (RLHF / RBAC) + 거부 예시 (TSDB / EDA) 명시
+
+### 5.11 v3 신규 test (canonicalizer.test.ts) — 6 case
+
+- AC-v3.1 EDA case (parenthetical 1 sentence) → drop ✅
+- AC-v3.2 TSDB case (2 sentence list element) → Layer 2 통과 (Layer 1 prompt 거부 책임)
+- AC-v3.3 RBAC case (action 서술 2 sentence) → promote ✅
+- AC-v3.4 RLHF case (메커니즘 핵심 2 sentence) → promote ✅
+- AC-v3.5 PMBOK 한국어 alias 회귀 0 (3 sentence) → promote 보존 ✅
+- AC-v3.6 single sentence 안 multiple alias (3 alias 매칭) → 1 카운트 → drop ✅
+
+### 5.11 v3 라이브 smoke 효과 (finetree-SQL 재 ingest)
+
+**이전 (v2 fix)**: entities=3 / concepts=10 / dropped=12 (`tsdb / rbac / rlhf / eda` promote — paradigm 위반)
+**이후 (v3 fix)**: entities=5 / concepts=6 / dropped=21
+- **paradigm 위반 차단**: `eda / tsdb / rdb / pdf / excel / png` (Layer 1 + Layer 2 시너지)
+- **paradigm 부합 보존**: `sql / llm / nl-to-sql / rbac / rlhf` (action/property 서술 강함)
+- dropped reason 정확: `(rejected by canonicalizer LLM)` (Layer 1) + `single-mention (N occurrence) — not promoted to page` (Layer 2)
+
+### 5.11 v3 회귀
+
+- wikey-core: 684 PASS / 3 skip / 0 FAIL (이전 678 + v3 신규 6)
+- build OK / validate-wiki PASS / finetree 4 파일 ingest 종결

@@ -21,6 +21,7 @@
   - [`plan/phase-5-todox-5.12-source-wikilink-format.md`](./phase-5-todox-5.12-source-wikilink-format.md) — §5.12 v3 source wikilink format (canonicalizer sourcePageBase chain, 2 plan cycle + post-impl APPROVE)
   - [`plan/phase-5-todox-5.13-residual-followups.md`](./phase-5-todox-5.13-residual-followups.md) — §5.13 잔존 follow-up 3 항목 (raw sidecar 부활 / validator find raw 패턴 / LLM source filename prefix), **draft v0.1 (사용자 임시 A1+B2+C4)** §5.14 완료 후 착수
   - [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](./phase-5-todox-5.14-retrospective-blue-refactor.md) — §5.14 Phase 5 retrospective TDD-BLUE refactor (§5.11 v2 + §5.12 GREEN 단계 BLUE 누락 보완), **draft v0 / P0 다음 세션 최우선**
+  - [`plan/phase-5-todox-5.15-pipeline-v2-followups.md`](./phase-5-todox-5.15-pipeline-v2-followups.md) — §5.15 Pipeline v2 후속 3 항목 (UI E2E test 인프라 / PROMOTION_THRESHOLD override / citation 마커 dead code cleanup), **draft v0 / P2 다음 세션 후보**
 - **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
 
 ## 우선순위 가이드 (2026-04-24 재조정)
@@ -757,6 +758,40 @@
   - `activity/phase-5-resultx-5.6-rapidocr-linux-<date>.md` 신규
   - `~/.claude/skills/docling/reference/korean-ocr-advanced.md` 에 실측 갱신 (커뮤니티 consensus 와 일치 여부)
 
+### 5.6.3 LLM provider strategy — subscription 모델 + Ollama cloud + stage-aware routing (Session 23 raise, 2026-05-07)
+
+> **이슈 출처**: 사용자 raise 2026-05-07 — 현재 ingest 주력 모델 = Gemini 2.5 Flash (BYOAI API). 향상된 LLM (Claude Opus 4.7 등) 사용 시 ingest 결과 영향 의문 → provider strategy 재검토 필요. (이전 §5.16 자리에서 본 §5.6 LLM 엔진 영역으로 이동.)
+> **분류**: P3 design / cost-benefit 평가
+> **status**: draft / Phase 6 (웹 환경) 진입 전 또는 후 결정
+
+- [ ] **§5.6.3.A** Subscription 모델 통합 (BYOAI API → Claude.ai 구독 / ChatGPT Plus / Gemini Advanced 같은 *사용자 자체 구독* 활용)
+  - 현재: API 키 필요 (`~/.config/wikey/credentials.json`) + token 별 과금. ingest 1 cycle ≈ Gemini Flash $0.005 / Opus 4.7 $1.0
+  - 검토: **Claude Code SDK / Anthropic Console 의 사용자 plan** 을 외부에서 호출 가능한가? Claude.ai 구독 자체는 외부 API key 분리됨 — 즉 구독 ≠ API. 단, *Claude Code 의 SDK / web app remote* 는 구독 내 사용 가능 (별도 entry point)
+  - 옵션:
+    - (a) Anthropic Workbench / Console 의 *plan* 으로 전환 — Pro plan ($20/월) 으로 API 사용량 일부 무료 (단 한도 있음)
+    - (b) ChatGPT Team / Enterprise 같은 *flat-rate plan* 의 API 접근 — 일부 plan 만 가능
+    - (c) **Self-hosted via subscription proxy** — Claude.ai 의 web session cookie 로 API 흉내. 비공식, ToS 위반 우려
+  - 비용 trade-off: token 단위 과금 → flat-rate. ingest 빈도 ≥ 일 10회 시 break-even
+  - 구현: provider 추상화 layer 추가 (`wikey-core/src/llm-client.ts` 의 `provider: 'subscription'` 새 case + token bucket + rate limit + 한도 초과 시 BYOAI fallback)
+
+- [ ] **§5.6.3.B** Ollama Cloud 대형 모델 (`llama3-70b-cloud` / `qwen3-72b-cloud` 같은 호스팅 대형 모델)
+  - 현재: Ollama = 로컬 only. 대형 모델 (≥ 30B) 은 로컬 GPU/RAM 부족으로 사실상 활용 불가
+  - **Ollama Cloud (2025년 출시)**: ollama.com 의 hosted endpoint — 로컬 ollama 명령으로 cloud 모델 호출 가능 (`ollama run llama3:70b` 등)
+  - 비용: subscription 기반 (Ollama Pro 등) 또는 token 기반. Anthropic 보다 저렴, 로컬 ollama 호환성 그대로
+  - 옵션:
+    - (a) Ollama Cloud 가입 후 `provider: 'ollama'` + `OLLAMA_HOST` 를 cloud endpoint 로 — 코드 변경 0 (`provider-defaults.ts` 의 ollama budget config 만 cloud 용으로 update)
+    - (b) wikey config 에 `ollama_cloud` 별 provider key 추가 — local + cloud 분리 운영 (local fallback)
+  - 가능성: ingest 의 canonicalize 단계만 cloud 70B 사용 + brief/mention 은 local 8B → 비용 효율 + 품질 균형
+
+- [ ] **§5.6.3.C** Stage-aware provider routing (현재 `'ingest'` 단일 키 → stage 별 분리)
+  - 현재 `wikey.conf` provider 키: `default` / `ingest` / `classify` / `chat` / `embedding`
+  - 제안 추가 키: `summary` (Stage 1) / `mention` (Stage 2) / `canonicalize` (Stage 3) — `'ingest'` 안에서 분리
+  - 효과:
+    - canonicalize → Opus 4.7 또는 Ollama cloud 70B (high quality, 비용 ↑)
+    - mention/brief → Flash / local 8B (low cost, 충분)
+    - summary → Sonnet 4.6 (중간)
+  - 추정 비용 절감: 단순 전체 Opus 대비 80%+ 절감 + canonicalize 품질만 보존
+
 ---
 
 ## 5.7 운영 인프라 포팅 (P4)
@@ -1454,6 +1489,79 @@
 
 ---
 
+## 5.11 v3 paradigm 회귀 fix — alias 카운트 inflation + Layer 1 prompt 강화 — Session 23, 2026-05-07 (draft)
+
+> **이슈 출처**: 사용자 raise 2026-05-07 — finetree-SQL ingest Preview 에서 `tsdb / rbac / rlhf / eda` 4 concept 등장. raw 본문 검증 결과:
+> - **EDA**: `탐색적 데이터 분석(EDA) 지원` *1 문장 parenthetical* — paradigm 의 "1회 mention 만 있는 고유명사" 거부 대상이지만 Layer 2 의 alias 카운트 inflation (1 문장 내 acronym + 한국어 풀네임이 2 카운트) 으로 promote 됨
+> - **TSDB**: `Data Lake(RDB, TSDB)` + `RDB, TSDB 등 이기종 데이터 소스` *데이터 형식 list element* — paradigm 의 "약한 관련 / 단순 list element" 거부 대상이지만 Layer 1 (Gemini Flash) 가 거부 정책 무시
+> - RBAC / RLHF — paradigm 부합 (action/property/relation 서술 강함)
+>
+> **분류**: P1 paradigm regression fix. §5.11 v2 의 의미론적 원칙 (1회 mention / 약한 관련 거부) 이 실제 ingest 에서 회귀하는 케이스 발견.
+> **status**: draft / 다음 세션 시작 시 master 우선 진행
+
+### 5.11 v3 Specification (합본 spec)
+
+**Goal**: §5.11 v2 paradigm 의 "의미론적으로 연결되지 않은 단순 mention 차단" 원칙을 *deterministic gate* + *LLM prompt* 양 layer 에서 강화. parenthetical-only acronym (EDA case) + list element acronym (TSDB case) 자동 drop.
+
+**현재 회귀 원인**:
+1. **Layer 2 (`countOccurrences`, canonicalizer.ts:293)**: `[name, ...aliases]` 모든 substring 매칭 횟수 *합산*. 한 문장 안 acronym + 한국어 풀네임 (`(EDA)` + `탐색적 데이터 분석`) 이 2 카운트 → ≥ PROMOTION_THRESHOLD(2) 통과
+2. **Layer 1 (Stage 3 prompt, canonicalizer.ts:248~257)**: "1회 mention / 약한 관련 거부" 가이드를 Gemini Flash 가 acronym 류 (technical term 자체) 가 등장하면 promote 하는 경향
+
+### 5.11 v3 Acceptance Scenarios
+
+- **AC-v3.1** EDA case (parenthetical 1회): `탐색적 데이터 분석(EDA) 지원` 단일 문장 → drop
+- **AC-v3.2** TSDB case (list element 2회): `Data Lake(RDB, TSDB)` + `RDB, TSDB 등 이기종 데이터 소스` → drop (또는 promote 여부는 Layer 1 정확도 ↑ 후 확정)
+- **AC-v3.3** RBAC case (action/property 서술 2회): `역할 기반 접근 제어(RBAC)` + `RBAC — 부서별...접근` → promote (paradigm 부합 보존, 회귀 0)
+- **AC-v3.4** RLHF case (메커니즘 핵심 2회): `RLHF 메커니즘 제공` + `RLHF 학습` → promote (회귀 0)
+- **AC-v3.5** PMBOK 한국어 alias case (§5.11 v2 회귀 0): 12 promoted / 4 dropped 그대로 유지
+- **AC-v3.6** dropped reason 정확도: parenthetical-only / list-element / acronym-no-context 별 명명 분리
+
+### 5.11 v3 sub-section
+
+- [ ] **§5.11 v3.A** Layer 2 deterministic gate 강화 — `countOccurrences` 가 *unique sentence position* 카운트
+  - 본문을 sentence boundary (`. ! ? \n\n`) 로 split → 각 sentence 안에서 alias 매칭은 1 카운트
+  - alias `[eda, exploratory-data-analysis, 탐색적 데이터 분석]` 이 한 sentence 안 매칭 → **1**, 두 sentence 면 **2**
+  - threshold = 2 유지. 의도 (서로 다른 location 에서 ≥ 2 mention) 정확 적용
+  - 추정 LOC: ~50 (canonicalizer.ts countOccurrences + sentence-tokenize helper) + test 5 case
+
+- [ ] **§5.11 v3.B** Layer 1 prompt 강화 — parenthetical / list element / acronym-only context 명시 거부
+  - prompt rule 8 추가:
+    - "parenthetical 1회 acronym (`(XXX)` 패턴 한 문장 등장 only) 은 거부"
+    - "단순 list element (`A, B, C 등` / `Data Lake(RDB, TSDB)` 같은 enumeration only) 은 거부"
+    - "acronym 자체로만 1~2회 등장 + action/property/relation 서술 부재 시 거부"
+  - 예시 (긍정): `RLHF 메커니즘 제공 — 사용자가 수정한 SQL을 학습 데이터로 활용` (action 서술 있음 → promote)
+  - 예시 (부정): `Data Lake(RDB, TSDB)` (parenthetical-only enumeration → 거부)
+
+- [ ] **§5.11 v3.C** dropped reason 정확도 ↑ — 명명 분리
+  - 현재: `single-mention (N occurrence)` (단일 라벨)
+  - v3: `parenthetical-only`, `list-element`, `acronym-no-context`, `single-sentence-multi-alias`, `weak-relation` 등 분류
+  - canonicalizer.ts dropped 구조에 reason taxonomy 추가
+  - 사용자가 console log 의 dropped sample 만 보고 paradigm 회귀 즉시 진단 가능
+
+### 5.11 v3 진행 흐름 — SDD+TDD
+
+```
+Phase 0: codex Mode D Panel — Layer 2 sentence-tokenize + Layer 1 prompt 강화 plan 검증
+Phase 1: TDD RED — AC-v3.1~v3.6 신규 6+ test case
+Phase 2: TDD GREEN — countOccurrences sentence-tokenize + prompt rule 8 강화
+Phase 3a: 회귀 (678+ PASS / build / validate-wiki)
+Phase 3b: BLUE — sentence-tokenize helper extract / dropped reason taxonomy
+Phase 4: 라이브 smoke — finetree-SQL 재 ingest. tsdb/eda drop / rbac/rlhf promote 확증
+Phase 5: codex post-impl
+Phase 6: master verdict + commit + push + result 문서
+```
+
+### 5.11 v3 의존성
+
+- §5.15.D 완료 후 진행 (현재 inline media strip + audit row UI + wikilink whitelist sanitize 미커밋 — push 필요)
+- 또는 §5.15.D 와 함께 묶음 commit (현재 모두 미커밋)
+
+### 5.11 v3 진행 우선순위
+
+**P1 paradigm regression fix**. 사용자 raise 즉시 처리 (paradigm 회귀가 wiki noise 누적 → compounding 가치 침해).
+
+---
+
 ## 5.12 Source Wikilink Format — `## 출처` wikilink wiki/sources/source-<base>.md 매칭 — 2026-05-05 session 19 ✅ 완료
 
 > **상위 plan**: [`plan/phase-5-todox-5.12-source-wikilink-format.md`](./phase-5-todox-5.12-source-wikilink-format.md) v3
@@ -1550,3 +1658,62 @@
 - [x] codex P1 (d) — AC-C4-2/3 warn 로그 assertion 추가 + AC-C4-6 SEGMENTED route 의도 명확화 (immutability test 는 AC-C4-defensive 로 분리)
 - [x] codex P2 — result doc §5.13.4 라이브 evidence 에 AC-A1-3 다양 확장자 라이브 prove 한계 명시 (unit test 6 PASS 로 cover, code path extension-agnostic)
 - [x] 회귀: wikey-core 635 PASS / 3 skip / 0 build errors / validate-wiki PASS / fixture test 10/10 PASS
+
+---
+
+## 5.15 Pipeline v2 후속 — Session 23, 2026-05-07
+
+> **상위 plan**: [`plan/phase-5-todox-5.15-pipeline-v2-followups.md`](./phase-5-todox-5.15-pipeline-v2-followups.md) v0
+> 도출: `docs/wikey-ingest-pipeline-v2.md §15.4 단점·리스크 + §15.6 v3 후보`
+
+### 5.15 sub-section 4종 (A=enabler / B=flexibility / C=hygiene / D=bug-fix-and-UX) — P2 draft + D 종결
+
+- [ ] **§5.15.A** UI E2E test 인프라 (vitest + Obsidian API mock + jsdom) — §5.14 잔존 4 항목 deep split enabler. 추정 1000~1600 LOC / 3~5 cycle.
+- [ ] **§5.15.B** PROMOTION_THRESHOLD override (`.wikey/promotion-threshold.yaml`) — 사용자 도메인별 정책 강화. 추정 200~300 LOC / 1 cycle.
+- [ ] **§5.15.C** citation 마커 dead code cleanup (`attachCitationBacklinks` / `buildCitationButton` 함수 + 호출처 완전 삭제). net -100 LOC / narrow 1 cycle.
+- 추천 진행 순서: C → B → A (작은 hygiene → UX flexibility → 큰 인프라)
+
+### 5.15.D inline media strip + audit row UI fix + wikilink whitelist sanitize — Session 23, 2026-05-07 ✅
+
+> **이슈 출처**: 사용자 raise 2026-05-07 — `AI 기반 다채널 비정형 문서의 데이터화  |  finetree-OCR.md` 류 4 파일 ingest 시 LLM JSON parsing 실패. 진단 결과 inline `<svg>` 본문이 95.9~97.1% 비중 (전체 156 KB 중 152 KB SVG) — `stripEmbeddedImages` 가 markdown image syntax 만 처리, inline HTML SVG/img 미처리.
+> **분류**: P0 bug fix + UX raise (Phase 5 본체 종결 후 발견된 회귀)
+> **합본 spec** (Bug fix 분류 — testing.md §3 매트릭스): todo 안 §Specification 섹션 (Goal/Inputs/Outputs/Invariants/AC/Out-of-scope/Dependencies)
+
+#### 5.15.D Specification (합본 spec)
+
+**Goal** (3 묶음):
+1. inline `<svg>...</svg>` block + HTML media tag (`<img>`/`<picture>`/`<iframe>`/`<canvas>`/`<video>`/`<audio>`/`<embed>`/`<object>`) 본문이 LLM 입력에 그대로 통과되는 회귀 차단.
+2. ingest 실패 시 audit row error 메시지가 별도 line 차지 → row line height 증가 → UI 레이아웃 깨짐. 분류 hint span 자리에 override.
+3. raw 파일명에 wikilink-unsafe character (`|` `[` `]` `#` `^` `\` + Unicode 특수문자) 포함 시 `## 출처` 둘째 줄 raw wikilink 가 깨짐 → vault rename + canonicalizer wikilink emit 양쪽 sanitize.
+
+**Acceptance Scenarios**:
+- inline SVG: AC-1~AC-8 (single/multiple/nested/mixed/no-alt/empty-alt/custom-element-preserve/finetree-95%-reduction)
+- HTML media: AC-9~AC-16 (img/picture/iframe/canvas/video/embed/object/custom-element)
+- audit row UI: row line height 증가 0 (Ingest + Audit 패널 양쪽), 분류 hint span override 시 `wikey-audit-path-error` class 추가
+- wikilink whitelist sanitize (whitelist 정책 — 사용자 통찰 "특정 캐릭터 정의는 미래 지속적 에러"): 영문/CJK/안전 ASCII 만 allow, 그 외 → `-`. 단일 hyphen 보존 (`finetree-OCR`), mixed → ` - `
+
+**Out-of-Scope**: SVG ↔ markdown 의미 보존 (alt 만), inline `<style>`/`<script>` block, vision LLM description (별 cycle / Phase 6), 한국어 filename 정책 변경 (별 cycle).
+
+**Dependencies**:
+- `wikey-core/src/rag-preprocess.ts` (1 함수 + 2 regex)
+- `wikey-core/src/wikilink-safe.ts` (신규, whitelist + sanitize)
+- `wikey-core/src/canonicalizer.ts` (`buildPageContent` rawSourceFilename sanitize)
+- `wikey-obsidian/src/commands.ts` (`runIngest` 진입 시 vault rename)
+- `wikey-obsidian/src/sidebar-chat.ts` (`showRowError` helper + 4 호출처)
+- `wikey-obsidian/styles.css` (`.wikey-audit-path-error`)
+
+#### 5.15.D 진행 사항
+
+- [x] **inline media strip**: `rag-preprocess.ts` 의 `INLINE_SVG` regex (`<svg ...>...</svg>`) + `INLINE_HTML_MEDIA` regex (img/picture/iframe/canvas/video/audio/embed/object) + `extractAlt` helper. `countEmbeddedImages` schema 확장 (`inlineSvg / inlineHtmlMedia` 필드).
+- [x] `rag-preprocess.test.ts` — AC-1~AC-16 신규 19 case (옵션 1 + 옵션 3 묶음, custom element false positive 차단)
+- [x] **audit row UI**: `wikey-obsidian/src/sidebar-chat.ts` — `showRowError(row, errorText, maxLen=80)` top-level helper 추가 + 4 호출처 (Audit ingest 2 + Inbox ingest 1 + Inbox fail-state preserve 1) 일괄 적용. 분류 hint span (`.wikey-audit-path`) text override + `wikey-audit-path-error` class 추가 → row line height 증가 0 (Ingest + Audit 패널 양쪽)
+- [x] `wikey-obsidian/styles.css` — `.wikey-audit-path.wikey-audit-path-error { color: var(--text-error); }` 추가
+- [x] **wikilink whitelist sanitize**: `wikey-core/src/wikilink-safe.ts` 신규 — `WIKILINK_UNSAFE_GROUP` whitelist (알파벳/CJK/안전 ASCII 외 자동 normalize), `sanitizeWikilinkTarget(filename)` + `needsWikilinkSanitize(filename)` 22 case test
+- [x] `canonicalizer.ts::buildPageContent` — `safeRawTarget = sanitizeWikilinkTarget(rawSourceFilename)` 적용 (fallback safety)
+- [x] `wikey-obsidian/src/commands.ts` — `runIngest` 진입 시 `sanitizeRawFilenameIfNeeded` helper 가 raw 파일명 검사 → unsafe 시 vault rename (`fileManager.renameFile`) + 사용자 Notice
+- [x] 회귀: wikey-core 678 PASS / 3 skip / 0 build errors / validate-wiki PASS
+- [x] **라이브 smoke** (master obsidian-cdp 직접): finetree-RAG/BOT 2 파일 fresh ingest — vault rename `... | finetree-RAG.md` → `... - finetree-RAG.md`, wiki 페이지의 `## 출처` raw wikilink 정확 매칭 확증. finetree-OCR (이미 movePair 후 raw/3_resources/...) + finetree-SQL 잔여 — 사용자 결정 (forceReingest 또는 wiki rollback) 후 진행
+
+---
+
+> **§5.16 자리는 의도적으로 비어 있음** — 이전 inline media strip + audit row UI + wikilink whitelist sanitize 작업은 §5.15.D 로 통합. 이전 LLM provider strategy 작업은 §5.6.3 으로 이동 (LLM 엔진 영역 정리).

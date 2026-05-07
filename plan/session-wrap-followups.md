@@ -1,9 +1,14 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-07 session 23 — §5.14 본체 종결**.
+> 최신 갱신: **2026-05-07 session 23 — §5.14 본체 종결 + §5.15 (A/B/C draft + D 종결) + §5.11 v3 paradigm fix + finetree 4 fresh ingest 완료**.
 > (a) §5.14 잔존 4 항목 (UI E2E test 의존) 의도적 유지 결정 + 근거 명시 ✅
 > (b) Phase 5 본체 BLUE refactor 작업 모두 종결 ✅
-> 코드 변경 0 (문서 mirror only). 회귀 = session 22 종결 시 635 PASS / build OK / validate-wiki PASS 확증 그대로 유효.
+> (c) `docs/wikey-ingest-pipeline-v2.md` 작성 — Phase 5 누적 변경 단계별 상세 + v1 비교 평가 ✅
+> (d) §5.15 신규 등록 — A/B/C draft (UI E2E test 인프라 / PROMOTION_THRESHOLD override / citation 마커 cleanup), **D 종결** (inline `<svg>`/HTML media strip + audit row UI fix + wikilink whitelist sanitize)
+> (e) **§5.11 v3** paradigm 회귀 fix — alias 카운트 inflation 차단 (sentence-unique 카운트) + Layer 1 prompt rule 8 강화 (parenthetical / list element / acronym-no-context 거부) ✅
+> (f) §5.6.3 신규 — LLM provider strategy (subscription / Ollama cloud / stage-aware routing) draft (이전 §5.16 자리에서 §5.6 LLM 엔진 영역으로 이동)
+> (g) **finetree 4 파일 fresh ingest 완료** (RAG/BOT/SQL/OCR) — vault rename + sanitized wikilink + paradigm 정확 적용. 첫 cycle 잔재 7 broken concept + 1 entity 중복 cleanup. validate-wiki PASS.
+> wikey-core 684 PASS / 3 skip / build OK / validate-wiki PASS.
 > 생성일: 2026-04-10
 
 ---
@@ -35,10 +40,16 @@
 > | commands.ts `runIngest` | 113 | (cleanly structured) | 0 | 의도적 유지 |
 >
 > **다음 세션 첫 액션 옵션**:
-> 1. **Phase 6 (웹 환경) 진입** — Phase 5 본체 종결 (5.1~5.4 + 5.10~5.14 핵심) 충족, plan-full §3.3.6 진입 조건 검토.
-> 2. **새 issue / paradigm shift** (사용자 raise 시)
-> 3. **future work**: wikey-obsidian UI E2E test 인프라 (vitest + Obsidian API mock + jsdom) 구축 — §5.14 잔존 4 항목 deep split 재평가의 enabler. 별도 phase / future work 로 분리.
-> 4. **Phase 5 P3 (§5.5 / §5.6) 또는 P4 (§5.7~§5.9) 진입** — 우선순위 미낮은 잔여 subject 진행.
+> 1. **§5.15 진행** ★ — 추천 순서 C (citation 마커 dead code cleanup, narrow 1 cycle) → B (PROMOTION_THRESHOLD override, 1 cycle) → A (UI E2E test 인프라, 3~5 cycle). 자세한 plan: `plan/phase-5-todox-5.15-pipeline-v2-followups.md`
+> 2. **Phase 6 (웹 환경) 진입** — Phase 5 본체 종결 (5.1~5.4 + 5.10~5.14 핵심) 충족, plan-full §3.3.6 진입 조건 검토.
+> 3. **Phase 5 P3 (§5.5 / §5.6) 또는 P4 (§5.7~§5.9) 진입** — 우선순위 미낮은 잔여 subject 진행.
+> 4. **새 issue / paradigm shift** (사용자 raise 시)
+>
+> **§5.16 commit chain**:
+> - (예정) `feat(§5.16): inline <svg>/HTML media strip — finetree 류 LLM JSON parsing fail 차단 + audit row UI line height 안정`
+> - (예정) `docs(§5.15): Pipeline v2 후속 3 항목 등록 (P2 draft)`
+> - (예정) `docs(pipeline-v2): docs/wikey-ingest-pipeline-v2.md — Phase 5 누적 변경 단계별 상세`
+> - (또는 단일 통합 commit)
 
 ---
 

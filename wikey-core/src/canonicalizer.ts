@@ -5,6 +5,7 @@ import type {
 // §5.10.4 D-wide: schema gate · anti-pattern detector · standard decomposition 모두 폐기.
 // canonicalizer = LLM 자율 type 분류 + canonicalizeSlug alias normalization 만.
 import { normalizeBase } from './wiki-ops.js'
+import { sanitizeWikilinkTarget } from './wikilink-safe.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_ORG_ALIAS, EXAMPLE_ORG_KO, EXAMPLE_ORG_DESC_KO,
   EXAMPLE_CONCEPT_BASE, EXAMPLE_CONCEPT_ALIAS,
@@ -245,9 +246,21 @@ ${guideBlock}
 5. **description**: 1~2문장, 의미 위주.
 6. **display_name (원문 표기)**: \`display_name\` 필드는 **mention evidence 의 원문에 등장한 표기 그대로** (한국어 / 일본어 / 중국어 / 영문 — 본문 언어 따라). 페이지 frontmatter \`title\` 과 H1 으로 사용됨. evidence 가 한국어면 한국어 표기, 영문이면 영문 표기. 빈 값이면 \`name\` (영문 slug) fallback.
 7. **다국어 alias**: \`aliases\` 배열에 **다른 언어 / 다른 표기** 명시. evidence 가 한국어면 영문 표기를 alias 로 (없으면 base name 자동 등록). 영문이면 한국어 표기 alias 로. 약어·풀네임 변형도 모두 alias.
-8. **promotion threshold (§5.11 v2)**: 페이지 의도·관련도 기준으로 entity/concept 결정.
+8. **promotion threshold (§5.11 v3)**: 페이지 의도·관련도 기준으로 entity/concept 결정.
    - **포함**: 페이지 의도(주제)와 1-hop 직접 관련 + action/property/relation 서술이 있는 명사. 다른 mention 이 cross-reference 하는 hub.
-   - **제외**: 단순 출처 (예: "개최 장소: X", "출처: Y", "발급기관"), 단순 행사 장소, 단순 인용, 1회 mention 만 있는 고유명사, 단편 사실 (날짜·일정·단순 위치) 자체. 페이지 의도와 약한 관련의 고유명사.
+   - **제외 (의미적 약한 관련 — paradigm 의 본질 차단 대상)**:
+     - 단순 출처 (예: "개최 장소: X", "출처: Y", "발급기관")
+     - 단순 행사 장소, 단순 인용
+     - **parenthetical 1회 acronym** — \`풀네임(ACRONYM)\` 패턴이 한 문장 안에서만 등장 (예: "탐색적 데이터 분석(EDA) 지원") → 거부
+     - **단순 list element / enumeration only** — \`A, B, C 등\` 또는 \`Data Lake(RDB, TSDB)\` 같이 다른 항목들과 *나열* 만 되고 본문에서 자체 action/property/relation 서술 부재 → 거부
+     - **acronym only 1~2 mention + 서술 부재** — 약어 자체로만 등장하고 본문에서 그 acronym 의 *기능·동작·역할* 설명 부재 → 거부
+     - 단편 사실 (날짜·일정·단순 위치) 자체. 페이지 의도와 약한 관련의 고유명사
+   - **포함 예시 (긍정)**:
+     - "RLHF 메커니즘 — 사용자가 수정한 SQL을 학습 데이터로 활용" (action 서술 명시 → promote)
+     - "RBAC — 부서별, 직급별 접근 가능한 테이블과 컬럼을 세밀하게 관리" (property 서술 → promote)
+   - **거부 예시 (부정)**:
+     - "Data Lake(RDB, TSDB)는 물론..." (parenthetical enumeration only → 거부)
+     - "탐색적 데이터 분석(EDA) 지원" (parenthetical 1회 + 서술 부재 → 거부)
    - **수량 제한 없음** — **수가 적어도 (1~3개만 출력해도)** OK. 본문 의미에 비례한 promotion 만 — wiki noise 방지.
 9. **원문 언어 중심 + 반대 언어 alias (§5.11 v2)**:
    - **한국어 source** (sourceFilename 또는 mention evidence 의 한글 비중 ≥ 30%) → \`name\` = 한국어 base, \`aliases\` = [영어 transliteration / 표준 영문 약어]
@@ -284,28 +297,45 @@ JSON only:
 
 /**
  * §5.11 page promotion threshold — Layer 2 deterministic gate. mention name +
- * alias 의 sourceBody substring 등장 횟수가 PROMOTION_THRESHOLD 미만이면 drop.
+ * alias 의 sourceBody 등장 횟수가 PROMOTION_THRESHOLD 미만이면 drop.
  * length ≤ 1 candidate (단일 문자) 는 false positive 방지로 제외.
  * sourceBody 미전달 시 gate skip (backward compatible).
+ *
+ * §5.11 v3 (2026-05-07): *unique sentence position* 카운트 — 한 sentence 안에
+ * multiple alias 매칭은 1 카운트. v2 의 raw substring 합산으로 인한 alias 카운트
+ * inflation 차단 (예: `탐색적 데이터 분석(EDA)` 한 문장이 `eda` + `탐색적 데이터
+ * 분석` 둘 다 매칭되어 2 카운트로 promote 되던 회귀). paradigm 의도 = "서로 다른
+ * location 에서 ≥ N mention".
  */
 const PROMOTION_THRESHOLD = 2
+
+/**
+ * §5.11 v3: sentence boundary 로 split. 한국어/영어 구분자 모두 cover.
+ * - `. ! ? 。 ！ ？` (영어 + 한중일 마침표)
+ * - `\n\n` (paragraph break)
+ * - `:`, `—`, `;` 등은 sentence 안 sub-clause 라 sentence boundary 로 안 침
+ */
+function splitSentences(text: string): readonly string[] {
+  return text
+    .split(/(?:[.!?。！？]+\s+|\n{2,}|\n(?=#{1,6}\s)|\n(?=[-*+]\s))/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+}
 
 function countOccurrences(name: string, aliases: readonly string[], sourceBody: string): number {
   const base = [name, ...aliases].map((s) => s.trim()).filter((s) => s.length > 1)
   // §5.11 v2 한국어 대응 — 하이픈 ↔ 공백 변형 모두 substring search
-  // (예: '전라남도-테크노파크' base 가 본문 '전라남도 테크노파크' 와도 매치)
   const candidates = Array.from(
     new Set(base.flatMap((c) => (c.includes('-') ? [c, c.replace(/-/g, ' ')] : [c]))),
-  )
-  const haystack = sourceBody.toLowerCase()
+  ).map((c) => c.toLowerCase()).filter((c) => c.length > 0)
+  if (candidates.length === 0) return 0
+  // §5.11 v3: sentence-level unique 카운트. 각 sentence 안에서 candidate 중 *하나라도*
+  // 매칭되면 1 카운트. 한 sentence 안 multiple alias 가 매칭되어도 합산 X.
+  const sentences = splitSentences(sourceBody.toLowerCase())
   let total = 0
-  for (const c of candidates) {
-    const needle = c.toLowerCase()
-    if (!needle) continue
-    let idx = 0
-    while ((idx = haystack.indexOf(needle, idx)) !== -1) {
-      total++
-      idx += needle.length
+  for (const sentence of sentences) {
+    if (candidates.some((c) => sentence.includes(c))) {
+      total += 1
     }
   }
   return total
@@ -515,7 +545,11 @@ ${relatedLinks.map((b) => `- [[${b}]]`).join('\n')}
   //   matcher 가 raw/<bucket>/<rawSourceFilename> 매칭 + validate-wiki.sh §5.13.B2 link 자체
   //   매칭 PASS. PII guard ON 시 sourceFilename 은 mask 적용된 형식이라 raw wikilink target
   //   으로 부적합 → rawSourceFilename (mask 안 된 원본) 별도 사용.
+  // §5.16 follow-up — rawSourceFilename 은 caller 가 `sanitizeWikilinkTarget` 통과한 상태
+  //   라고 가정 (commands.ts::runIngest 진입 시 vault rename 적용). target 안 wikilink-unsafe
+  //   character 0 invariant. caller 미적용 시 본 함수가 추가 sanitize fallback 으로 안전.
   const sourceDisplay = sourceFilename.replace(/\.[^.]+$/, '')
+  const safeRawTarget = sanitizeWikilinkTarget(rawSourceFilename)
   return `---
 title: ${titleValue}
 type: ${category}
@@ -533,7 +567,7 @@ ${description}
 ${relatedSection}## 출처
 
 - [[${sourcePageBase}|${sourceDisplay}]]
-- [[${rawSourceFilename}|원문]]
+- [[${safeRawTarget}|원문]]
 `
 }
 

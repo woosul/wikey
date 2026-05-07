@@ -101,6 +101,23 @@ function computeRowPct(step: number, subStep?: number, subTotal?: number): numbe
   return weights[step] ?? Math.round((step / 4) * 100)
 }
 
+// §5.16: audit row 의 ingest error 표시는 별도 line (createDiv) 대신 `wikey-audit-path`
+// (= 분류 hint, 예: `노트/기사`) span 의 text 를 override + error class 추가. row line height
+// 증가 0 — UI 레이아웃 안정. fallback: `wikey-audit-path` 미존재 시 기존 createDiv 패턴.
+function showRowError(row: HTMLElement, errorText: string, maxLen = 80): void {
+  const truncated = errorText.length > maxLen ? errorText.slice(0, maxLen) + '...' : errorText
+  const pathEl = row.querySelector('.wikey-audit-path') as HTMLElement | null
+  if (pathEl) {
+    pathEl.setText(truncated)
+    pathEl.addClass('wikey-audit-path-error')
+    pathEl.setAttribute('title', errorText)
+    return
+  }
+  const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
+  const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
+  errEl.setText(truncated)
+}
+
 // §5.14 BLUE refactor — renderAuditSection 의 데이터 fetch / dedup / capability warn
 // 3 부분 분해 (closure 자유). Phase 4 D.0.d audit-ingest.py contract 의 raw shape.
 interface AuditScriptCapabilities {
@@ -1449,11 +1466,9 @@ Click [[page name]] in answers to navigate to the wiki page.
           } else {
             row.addClass('wikey-audit-row-fail')
             if (result.error) {
-              // 에러 메시지는 info column 내부 (path-line 하단) 에 삽입해
-              // filename 공간을 침범하지 않고 하단 메시지 공간만 사용한다.
-              const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
-              const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
-              errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
+              // §5.16: error 메시지는 별 line 추가 대신 분류 hint span 을 override —
+              //   row line height 증가 0 (사용자 UX raise 2026-05-07).
+              showRowError(row, result.error)
             }
           }
 
@@ -1853,9 +1868,8 @@ Click [[page name]] in answers to navigate to the wiki page.
           row.style.removeProperty('--progress')
 
           if (!result.success && result.error) {
-            const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
-            const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
-            errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
+            // §5.16: pathEl override — row line height 증가 0.
+            showRowError(row, result.error)
           }
         }
 
@@ -2041,8 +2055,8 @@ Click [[page name]] in answers to navigate to the wiki page.
       const failInfo = this.inboxFailState.get(f)
       if (failInfo && Date.now() - failInfo.timestamp < 10 * 60 * 1000) {
         row.addClass('wikey-audit-row-fail')
-        const errEl = info.createDiv({ cls: 'wikey-audit-error' })
-        errEl.setText(failInfo.error.length > 100 ? failInfo.error.slice(0, 100) + '...' : failInfo.error)
+        // §5.16: pathEl override — re-render 시에도 row line height 증가 0.
+        showRowError(row, failInfo.error, 100)
       } else if (failInfo) {
         this.inboxFailState.delete(f)
       }
@@ -2198,9 +2212,8 @@ Click [[page name]] in answers to navigate to the wiki page.
           row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
           row.style.removeProperty('--progress')
           if (!result.success && result.error) {
-            const infoEl = row.querySelector('.wikey-audit-info') as HTMLElement | null
-            const errEl = (infoEl ?? row).createDiv({ cls: 'wikey-audit-error' })
-            errEl.setText(result.error.length > 80 ? result.error.slice(0, 80) + '...' : result.error)
+            // §5.16: pathEl override — row line height 증가 0.
+            showRowError(row, result.error)
           }
         }
 

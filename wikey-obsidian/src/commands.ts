@@ -23,6 +23,8 @@ import {
   reindexQuick,
   convertSourceToMarkdown,
   type ConversionResult,
+  needsWikilinkSanitize,
+  sanitizeWikilinkTarget,
 } from 'wikey-core'
 import { ConflictModal, type ConflictChoice } from './conflict-modal'
 import { WIKEY_CHAT_VIEW } from './sidebar-chat'
@@ -326,6 +328,13 @@ export async function runIngest(
   runOpts?: IngestRunOptions,
 ): Promise<IngestRunResult> {
   const basePath = (plugin.app.vault.adapter as any).basePath ?? ''
+
+  // §5.15.D: ingest 진입 시 raw 파일명 wikilink-safe normalize. raw 파일 자체를 vault rename
+  //   → disk 와 wikilink target 일관 보장. wikilink-unsafe character (`|` `[` `]` `#` `^` `\`
+  //   + Unicode 특수문자 등) 포함 시 sanitize 결과로 rename. 사용자 통찰: blacklist 가 아닌
+  //   whitelist (`wikilink-safe.ts`) 라 향후 reserved char 자동 cover.
+  sourcePath = await sanitizeRawFilenameIfNeeded(plugin, sourcePath)
+
   const briefMode = plugin.settings.ingestBriefs
   const shouldShowFlow = !runOpts?.skipBriefModal
     && briefMode !== 'never'
@@ -672,5 +681,56 @@ export class IngestFileSuggestModal extends FuzzySuggestModal<TFile> {
 
   onChooseItem(file: TFile): void {
     runIngest(this.plugin, file.path)
+  }
+}
+
+/**
+ * §5.15.D — Wikilink-safe vault rename (whitelist 정책).
+ *
+ * raw 파일명에 wikilink-unsafe character (`|` `[` `]` `#` `^` `\` + Unicode 특수문자
+ * 등) 가 포함되면 `sanitizeWikilinkTarget` 결과로 *vault rename*. disk 와 wikilink
+ * target 일관 → Obsidian basename matcher + validate-wiki.sh 정합 보장.
+ *
+ * `sourcePath` 의 dirname 보존, basename 만 sanitize. rename 충돌 시 `-N` suffix.
+ * rename 발생 시 사용자 Notice + 신 path 반환. unsafe char 없으면 no-op.
+ */
+async function sanitizeRawFilenameIfNeeded(
+  plugin: WikeyPlugin,
+  sourcePath: string,
+): Promise<string> {
+  const filename = sourcePath.includes('/') ? sourcePath.split('/').pop()! : sourcePath
+  if (!needsWikilinkSanitize(filename)) return sourcePath
+
+  const dir = sourcePath.includes('/') ? sourcePath.slice(0, sourcePath.lastIndexOf('/')) : ''
+  const safe = sanitizeWikilinkTarget(filename)
+  if (!safe || safe === filename) return sourcePath
+
+  // 충돌 회피: <safe>, <safe>-1, <safe>-2 ... (확장자 보존)
+  const dotIdx = safe.lastIndexOf('.')
+  const stem = dotIdx > 0 ? safe.slice(0, dotIdx) : safe
+  const ext = dotIdx > 0 ? safe.slice(dotIdx) : ''
+  let candidate = safe
+  let suffix = 0
+  while (await plugin.app.vault.adapter.exists(dir ? `${dir}/${candidate}` : candidate)) {
+    suffix += 1
+    candidate = `${stem}-${suffix}${ext}`
+    if (suffix > 99) break // 안전망
+  }
+  const newPath = dir ? `${dir}/${candidate}` : candidate
+
+  const file = plugin.app.vault.getAbstractFileByPath(sourcePath)
+  if (!file || !(file instanceof TFile)) return sourcePath
+  try {
+    plugin.renameGuard?.register(newPath) // movePair 와 동일 패턴 — 자체 rename 이벤트 skip
+    await plugin.app.fileManager.renameFile(file, newPath)
+    new Notice(
+      `Wikey: 파일명 wikilink-safe 정규화 — ${filename} → ${candidate}`,
+      6000,
+    )
+    console.info(`[Wikey ingest] §5.15.D rename — ${sourcePath} → ${newPath}`)
+    return newPath
+  } catch (err) {
+    console.warn(`[Wikey ingest] §5.15.D rename failed (continuing with original):`, err)
+    return sourcePath
   }
 }

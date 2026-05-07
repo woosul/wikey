@@ -82,5 +82,85 @@
     ],
     "tombstone": false,
     "last_action": "force"
+  },
+  "sha256:f7dfcf192c179cfd": {
+    "vault_path": "raw/3_resources/60_note/000_computer_science/AI 기반 기업 지식 검색 및 답변 솔루션 - finetree-RAG.md",
+    "hash": "f7dfcf192c179cfdf157bb000dd2afcacda97eec80a0e45d779889a5c7ccbc5f",
+    "size": 143511,
+    "first_seen": "2026-05-07T10:01:39.747Z",
+    "ingested_pages": [
+      "wiki/sources/source-finetree-rag-solution.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/AI 기반 기업 지식 검색 및 답변 솔루션 - finetree-RAG.md",
+        "at": "2026-05-07T10:01:39.747Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/000_computer_science/AI 기반 기업 지식 검색 및 답변 솔루션 - finetree-RAG.md",
+        "at": "2026-05-07T10:01:47.296Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:cddec5c32e18a677": {
+    "vault_path": "raw/3_resources/60_note/000_computer_science/AI 기반 통합 대화형 인터페이스 - finetree-BOT.md",
+    "hash": "cddec5c32e18a677264c224ac1ca793f14437d09203f8fca45ca559bd7f86357",
+    "size": 116318,
+    "first_seen": "2026-05-07T10:05:27.853Z",
+    "ingested_pages": [
+      "wiki/sources/source-finetree-bot.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/AI 기반 통합 대화형 인터페이스 - finetree-BOT.md",
+        "at": "2026-05-07T10:05:27.853Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/000_computer_science/AI 기반 통합 대화형 인터페이스 - finetree-BOT.md",
+        "at": "2026-05-07T10:05:34.405Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:29b8cb34919c933b": {
+    "vault_path": "raw/3_resources/60_note/000_computer_science/AI 기반 자연어 데이터 질의 - finetree-SQL.md",
+    "hash": "29b8cb34919c933bf0496d940ba6393fedfd62bc793e2b6588a0085ad47a0472",
+    "size": 129681,
+    "first_seen": "2026-05-07T10:26:51.187Z",
+    "ingested_pages": [
+      "wiki/sources/source-finetree-sql.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/AI 기반 자연어 데이터 질의 - finetree-SQL.md",
+        "at": "2026-05-07T10:26:51.187Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/000_computer_science/AI 기반 자연어 데이터 질의 - finetree-SQL.md",
+        "at": "2026-05-07T10:26:57.245Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:22df7df2deda0a8f": {
+    "vault_path": "raw/3_resources/60_note/000_computer_science/AI 기반 다채널 비정형 문서의 데이터화 - finetree-OCR.md",
+    "hash": "22df7df2deda0a8f5ea450f1a23879ec1ddea0fb3faed1ab326a1d21d921f16a",
+    "size": 164054,
+    "first_seen": "2026-05-07T11:29:50.981Z",
+    "ingested_pages": [
+      "wiki/sources/source-finetree-ocr.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/3_resources/60_note/000_computer_science/AI 기반 다채널 비정형 문서의 데이터화 - finetree-OCR.md",
+        "at": "2026-05-07T11:29:50.981Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
   }
 }

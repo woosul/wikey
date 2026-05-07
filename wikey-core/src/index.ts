@@ -216,3 +216,6 @@ export type {
   SupportedExtensionMap,
   BuildCapabilityInput,
 } from './capability-map.js'
+
+// §5.15.D — wikilink-safe filename normalization (whitelist 정책).
+export { sanitizeWikilinkTarget, needsWikilinkSanitize } from './wikilink-safe.js'

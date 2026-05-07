@@ -831,6 +831,59 @@ describe('canonicalize — cross-link insertion (§5.2.1)', () => {
     const smithBullets = (nanovna.match(/\[\[smith-chart\]\]/g) ?? []).length
     expect(smithBullets).toBe(1)
   })
+
+  // §5.16 follow-up (whitelist 정책): rawSourceFilename 의 wikilink-unsafe character 가
+  // 자동 sanitize → ` - ` 또는 `-` 정규화. caller 가 vault rename 까지 적용하면 disk 와
+  // wikilink target 일관 유지 (§commands.ts::runIngest §5.16-rename). 본 함수는 fallback
+  // sanitize 로 wikilink syntax 안전 보장.
+  it('§5.16 raw wikilink — rawSourceFilename 의 `|` → sanitized target 으로 emit', async () => {
+    const mentions: Mention[] = [
+      { name: 'finetree-ocr', type_hint: 'product', evidence: 'finetree-OCR is OCR system' },
+    ]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [{ name: 'finetree-ocr', type: 'product', description: 'OCR system.' }],
+        concepts: [],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'AI 기반 다채널 비정형 문서의 데이터화  |  finetree-OCR.md',
+      rawSourceFilename: 'AI 기반 다채널 비정형 문서의 데이터화  |  finetree-OCR.md',
+      sourcePageBase: 'source-finetree-ocr',
+    })
+    const ocr = result.entities[0].content
+    expect(ocr).toContain('## 출처')
+    // 첫 줄 source wikilink 보존
+    expect(ocr).toContain('- [[source-finetree-ocr|')
+    // 둘째 줄 raw wikilink — sanitized target ( `|` → ` - `, multi-space 압축)
+    expect(ocr).toContain(
+      '- [[AI 기반 다채널 비정형 문서의 데이터화 - finetree-OCR.md|원문]]',
+    )
+  })
+
+  it('§5.16 raw wikilink — rawSourceFilename 에 `|` 없으면 기존 동작 (회귀 0)', async () => {
+    const mentions: Mention[] = [{ name: 'pmi', type_hint: 'organization', evidence: 'PMI' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [{ name: 'pmi', type: 'organization', description: 'PMI.' }],
+        concepts: [],
+      }),
+    )
+    const result = await canonicalize({
+      ...baseArgs,
+      llm,
+      mentions,
+      sourceFilename: 'pmbok-overview.md',
+      rawSourceFilename: 'pmbok-overview.md',
+      sourcePageBase: 'source-pmbok-overview',
+    })
+    const pmi = result.entities[0].content
+    // 기존 §5.13.A1 동작 보존 — raw wikilink 라인 emit
+    expect(pmi).toContain('- [[pmbok-overview.md|원문]]')
+  })
 })
 
 // §5.11 Page Promotion Threshold (Issue B) — Layer 2 deterministic gate
@@ -906,6 +959,114 @@ describe('canonicalize — §5.11 promotion threshold', () => {
     const result = await canonicalize({ ...baseArgs, llm, mentions })
     expect(result.entities).toHaveLength(1)
     expect(result.entities[0].filename).toBe('single-mention-org.md')
+  })
+})
+
+// §5.11 v3 — paradigm 회귀 fix: alias 카운트 inflation 차단 (sentence-unique 카운트)
+describe('canonicalize — §5.11 v3 sentence-unique 카운트 (alias inflation 방어)', () => {
+  it('AC-v3.1 EDA case — parenthetical 1 sentence 등장 (acronym + 한국어 풀네임 같은 문장) → drop', async () => {
+    const sourceBody = '점진적 분석 심화를 위한 탐색적 데이터 분석(EDA) 지원. 다른 본문.'
+    const mentions: Mention[] = [{ name: 'eda', type_hint: 'standard', evidence: 'EDA' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{
+          name: 'eda', type: 'standard', description: 'Exploratory Data Analysis.',
+          aliases: ['exploratory-data-analysis', '탐색적 데이터 분석'],
+        }],
+      }),
+    )
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    // v3: 한 sentence 안 acronym + 한국어 풀네임 둘 다 매칭되어도 1 카운트 → < threshold(2) → drop
+    expect(result.concepts).toHaveLength(0)
+    const droppedReasons = result.dropped.map((d) => d.reason)
+    expect(droppedReasons.some((r) => r.includes('single-mention') || r.includes('1 occurrence'))).toBe(true)
+  })
+
+  it('AC-v3.2 TSDB case — 두 sentence 등장 (list element 2회) → ≥ 2 카운트 → promote (Layer 2 통과, Layer 1 prompt 가 거부 책임)', async () => {
+    const sourceBody =
+      'Data Lake(RDB, TSDB)는 물론 Peak9 Edge를 통한 실시간 제조 데이터까지 질의 가능합니다.\n\n다중 DB 지원 — RDB, TSDB 등 이기종 데이터 소스의 통합 매핑.'
+    const mentions: Mention[] = [{ name: 'tsdb', type_hint: 'product', evidence: 'TSDB' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{
+          name: 'tsdb', type: 'product', description: 'Time-Series Database.',
+          aliases: ['time-series-database'],
+        }],
+      }),
+    )
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    // v3: 2 sentence 에 각 1회 = 2 카운트 → promote (Layer 2 통과). Layer 1 prompt 가 list-element 거부.
+    expect(result.concepts).toHaveLength(1)
+  })
+
+  it('AC-v3.3 RBAC case — paradigm 부합 보존 (action 서술 2 sentence)', async () => {
+    const sourceBody =
+      '역할 기반 접근 제어(RBAC)와 컬럼 마스킹으로 데이터 거버넌스 보장.\n\nRBAC — 부서별, 직급별 접근 가능한 테이블과 컬럼을 세밀하게 관리.'
+    const mentions: Mention[] = [{ name: 'rbac', type_hint: 'standard', evidence: 'RBAC' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{
+          name: 'rbac', type: 'standard', description: 'Role-Based Access Control.',
+          aliases: ['role-based-access-control', '역할 기반 접근 제어'],
+        }],
+      }),
+    )
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    expect(result.concepts).toHaveLength(1)
+  })
+
+  it('AC-v3.4 RLHF case — 메커니즘 핵심 2 sentence 등장 → promote', async () => {
+    const sourceBody =
+      'NL-to-SQL 변환 정확도를 지속적으로 개선하는 RLHF 메커니즘을 제공합니다.\n\nRLHF 학습 — 사용자가 수정한 SQL을 학습 데이터로 활용.'
+    const mentions: Mention[] = [{ name: 'rlhf', type_hint: 'methodology', evidence: 'RLHF' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{ name: 'rlhf', type: 'methodology', description: 'Reinforcement Learning from Human Feedback.' }],
+      }),
+    )
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    expect(result.concepts).toHaveLength(1)
+  })
+
+  it('AC-v3.5 v2 PMBOK 회귀 0 — 한국어 alias 단순 본문에서 promote 보존', async () => {
+    // PMBOK 본문에 자주 등장 (한국어 + 영어 alias 둘 다 self-mentioning)
+    const sourceBody =
+      'PMBOK은 PMI가 발행하는 프로젝트 관리 표준입니다.\n\n프로젝트 관리 지식체계(PMBOK)는 다양한 영역을 다룹니다.\n\nPMBOK 7판은 원칙 기반 접근을 채택합니다.'
+    const mentions: Mention[] = [{ name: 'pmbok', type_hint: 'standard', evidence: 'PMBOK' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{
+          name: 'pmbok', type: 'standard', description: 'PMI 의 프로젝트 관리 표준.',
+          aliases: ['프로젝트 관리 지식체계', 'project-management-body-of-knowledge'],
+        }],
+      }),
+    )
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    // 3 sentence 등장 → ≥ 2 → promote 보존
+    expect(result.concepts).toHaveLength(1)
+  })
+
+  it('AC-v3.6 single sentence 안 multiple alias 매칭 → 여전히 1 카운트', async () => {
+    // 한 sentence 안 acronym + 영문 풀네임 + 한국어 풀네임 모두 등장 → 1 카운트
+    const sourceBody = '시스템은 EDA (Exploratory Data Analysis, 탐색적 데이터 분석) 기능을 지원합니다.'
+    const mentions: Mention[] = [{ name: 'eda', type_hint: 'standard', evidence: 'EDA' }]
+    const llm = makeMockLLM(
+      JSON.stringify({
+        entities: [],
+        concepts: [{
+          name: 'eda', type: 'standard', description: 'Exploratory Data Analysis.',
+          aliases: ['exploratory-data-analysis', '탐색적 데이터 분석'],
+        }],
+      }),
+    )
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    // v3: 한 sentence 안 3 alias 매칭 → 1 카운트 → < 2 → drop
+    expect(result.concepts).toHaveLength(0)
   })
 })
 

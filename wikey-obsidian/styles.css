@@ -938,6 +938,12 @@
   white-space: nowrap;
 }
 
+/* §5.16: ingest 실패 시 wikey-audit-path 텍스트를 error 메시지로 override —
+   별 line 추가 없이 분류 hint 자리에 표시 → row line height 증가 0 (UX 안정). */
+.wikey-audit-path.wikey-audit-path-error {
+  color: var(--text-error);
+}
+
 /* 하단 고정 영역 */
 .wikey-audit-bottom {
   flex-shrink: 0;
