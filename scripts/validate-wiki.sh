@@ -111,6 +111,21 @@ if [ -n "$dupes" ]; then
 fi
 
 # ──────────────────────────────────────────────
+# 검증 6: vault-wide basename 충돌 (§5.13.D)
+# ──────────────────────────────────────────────
+# §5.13.A1 raw wikilink `[[<rawSourceFilename>|원문]]` 가 raw 파일로 정확히 resolve 되도록
+# wiki/{entities,concepts,sources,analyses}/<X>.md 와 raw/<*>/<X>.md 동일 basename 충돌 detection.
+# 충돌 시 Obsidian basename matcher 가 path proximity 로 wiki page 선택 → §5.13.A1 paradigm 위반.
+echo "=== 검증 6: raw vs wiki basename 충돌 확인 ==="
+find raw -type f -name "*.md" 2>/dev/null | while read -r raw_file; do
+  base=$(basename "$raw_file")
+  find "$WIKI_DIR" -name "$base" -print 2>/dev/null | while read -r wiki_match; do
+    [ -z "$wiki_match" ] && continue
+    error "basename 충돌: $base (raw=$raw_file ↔ wiki=$wiki_match) — §5.13.A1 raw wikilink target ambiguity"
+  done
+done
+
+# ──────────────────────────────────────────────
 # 결과
 # ──────────────────────────────────────────────
 ERRORS=$(cat "$ERROR_FILE")

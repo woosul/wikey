@@ -161,12 +161,111 @@ type: concept
 EOF
 }
 
+# §5.13.D vault-wide basename 충돌 detection — §5.13.A1 raw wikilink target ambiguity 방어
+# wiki/{entities,concepts,sources,analyses}/<X>.md 와 raw/<*>/<X>.md 가 동일 basename 이면
+# Obsidian 의 [[<X>.md|원문]] 가 wiki page 로 resolve → §5.13.A1 paradigm (raw 직접 jump) 위반.
+
+write_with_source() {
+  local concept_or_entity="$1"; local source_base="$2"
+  mkdir -p wiki/concepts wiki/entities wiki/sources
+  printf -- '---\ntitle: index\ntype: index\n---\n\n# Index\n\n- [[%s]]\n- [[source-%s]]\n' "$concept_or_entity" "$source_base" > wiki/index.md
+  printf -- '---\ntitle: log\ntype: log\n---\n\n## [2026-05-07] test entry\n\n- [[%s]]\n' "$concept_or_entity" > wiki/log.md
+  cat > "wiki/sources/source-${source_base}.md" <<EOF
+---
+title: ${source_base}
+type: source
+---
+
+# ${source_base}
+EOF
+}
+
+# AC-D1-1: raw/<X>.md ↔ wiki/concepts/<X>.md 충돌 → validator FAIL (collision detection)
+fixture_AC_D1_1() {
+  mkdir -p raw/3_resources
+  echo "raw md content" > raw/3_resources/clash-base.md
+  write_with_source "clash-base" "clash-base"
+  cat > wiki/concepts/clash-base.md <<'EOF'
+---
+title: clash
+type: concept
+---
+
+# Clash
+
+## 출처
+- [[source-clash-base|clash-base]]
+- [[clash-base.md|원문]]
+EOF
+}
+
+# AC-D1-2: raw/<X>.md ↔ wiki/entities/<X>.md 충돌 → validator FAIL
+fixture_AC_D1_2() {
+  mkdir -p raw/3_resources
+  echo "raw md content" > raw/3_resources/clash-ent.md
+  write_with_source "clash-ent" "clash-ent"
+  cat > wiki/entities/clash-ent.md <<'EOF'
+---
+title: clash
+type: entity
+---
+
+# Clash
+
+## 출처
+- [[source-clash-ent|clash-ent]]
+- [[clash-ent.md|원문]]
+EOF
+}
+
+# AC-D1-3: raw/<X>.md 단독 (충돌 없음) → validator PASS (회귀)
+fixture_AC_D1_3() {
+  mkdir -p raw/3_resources
+  echo "raw md content" > raw/3_resources/no-clash.md
+  write_with_source "concept-foo" "no-clash"
+  cat > wiki/concepts/concept-foo.md <<'EOF'
+---
+title: foo
+type: concept
+---
+
+# Foo
+
+## 출처
+- [[source-no-clash|no-clash]]
+- [[no-clash.md|원문]]
+EOF
+}
+
+# AC-D1-4: raw/<X>.pdf + wiki/concepts/<X>.md (다른 확장자) → validator PASS (false positive 방어)
+fixture_AC_D1_4() {
+  mkdir -p raw/3_resources
+  echo "%PDF stub" > raw/3_resources/sample.pdf
+  write_with_source "sample" "sample"
+  cat > wiki/concepts/sample.md <<'EOF'
+---
+title: sample
+type: concept
+---
+
+# Sample
+
+## 출처
+- [[source-sample|sample]]
+- [[sample.pdf|원문]]
+EOF
+}
+
 run_case AC-B2-1 "raw/<base>.md + [[<base>.md]] PASS" 0 fixture_AC_B2_1
 run_case AC-B2-2 "raw/<base>.pdf + [[<base>]] PASS (regression)" 0 fixture_AC_B2_2
 run_case AC-B2-3 "raw/<base>.hwpx + [[<base>.hwpx]] PASS" 0 fixture_AC_B2_3
 run_case AC-B2-4 "non-existent wikilink FAIL (no regression)" 1 fixture_AC_B2_4
 run_case AC-B2-5 "wiki/<X>.md + [[<X>]] PASS (regression)" 0 fixture_AC_B2_5
 run_case AC-B2-6 "wiki/<X>.md + [[<X>.md]] PASS" 0 fixture_AC_B2_6
+run_case AC-D1-1 "raw/<X>.md ↔ wiki/concepts/<X>.md collision FAIL" 1 fixture_AC_D1_1
+run_case AC-D1-2 "raw/<X>.md ↔ wiki/entities/<X>.md collision FAIL" 1 fixture_AC_D1_2
+run_case AC-D1-3 "raw/<X>.md alone PASS (no collision regression)" 0 fixture_AC_D1_3
+run_case AC-D1-4 "raw/<X>.pdf + wiki/<X>.md PASS (different ext, no collision)" 0 fixture_AC_D1_4
 
 echo ""
 echo "── Results ──"
