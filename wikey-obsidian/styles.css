@@ -944,6 +944,12 @@
   color: var(--text-error);
 }
 
+/* §5.15.E F4: cancelled 상태 — silent gray 가 아닌 "취소됨" 명시 (muted color, italic). */
+.wikey-audit-path.wikey-audit-path-cancelled {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* 하단 고정 영역 */
 .wikey-audit-bottom {
   flex-shrink: 0;
@@ -1981,6 +1987,15 @@ a.internal-link.wikey-broken-link,
   font-family: var(--font-monospace);
   color: var(--interactive-accent);
   font-weight: 600;
+}
+
+/* §5.15.E F3: progress line 의 elapsed (분/초) — LLM call wait/stuck 구별 */
+.wikey-modal-progress-elapsed {
+  font-family: var(--font-monospace);
+  color: var(--text-muted);
+  font-size: 0.92em;
+  margin-left: auto;
+  margin-right: 8px;
 }
 
 .wikey-modal-progress-bar {

@@ -2704,3 +2704,90 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 ### 5.15.C 잔여 — A/B P2 draft 유지
 
 §5.15.A (UI E2E test 인프라, 1000~1600 LOC, 3~5 cycle) + §5.15.B (PROMOTION_THRESHOLD override, 200~300 LOC, 1 cycle) — P2 draft 유지. 추천 다음 진행: **B (1 cycle UX flexibility) → A (3~5 cycle 큰 인프라)**.
+
+---
+
+## 5.15.E LLM hang UX hardening — F1/F2/F3/F4 ✅ (Session 24, 2026-05-07, §5.15 sub-section)
+
+> mirror: [`plan/phase-5-todox-5.15-pipeline-v2-followups.md §11`](../plan/phase-5-todox-5.15-pipeline-v2-followups.md) v2
+>
+> **이슈 출처**: 사용자 raise 2026-05-07 session 24 — "MarkItDown 으로 모든 문서를 마크다운으로 변환하기.md ingest 실패한듯 + 에러 문구 없음 + linebar 빨강 아님" + 추가 raise "파일 하나씩 ingest 할 때마다 에러" 근본 진단 요청.
+
+### 5.15.E 본질 진단 — master obsidian-cdp 라이브 측정
+
+**MarkItDown 76K char ingest 측정 (라이브)**:
+- Stage 2.1 Summary: **265,729ms (4분 26초)** — DEFAULT_TIMEOUT 5분 직전 통과
+- Stage 2.2 Mention: **75,798ms (1분 16초)**
+- Stage 2.3 Canonicalize: **130,762ms (2분 11초)**
+- 누적 ~8분 → **Preview 까지 정상 도달** (fail 아님)
+
+**핵심 mechanism**:
+```
+사용자 ingest 시작
+  ↓
+Stage 2.1 LLM call ... 1분 ... 2분 ... 3분 wait
+  ↓
+사용자: "응답 없음, 실패한듯" → modal X 클릭
+  ↓
+ingest-modals.ts:436 → action='cancel'
+  ↓
+commands.ts (PlanRejectedError 또는 brief outcome cancel)
+  ↓
+result: { success: false, cancelled: true, error: undefined }
+  ↓
+showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
+  ↓
+사용자: muted gray linebar + 에러 문구 0 → "에러 없는 fail" 인식
+```
+
+### 5.15.E 코드 측 결함 4 누락 + Fix
+
+| # | 결함 | Fix |
+|---|------|------|
+| **F1** | `commands.ts:382` conversion fail catch 가 `error` 미전달 | error 채움 + cancelled 의미 정정 (conversion fail 후 close 는 silent cancel 아닌 fail) |
+| **F2** | `main.ts:743~760` `ObsidianHttpClient.request` 가 `opts.timeout` 무시 — `requestUrl({...})` 호출 시 timeout 인자 omit | `Promise.race + setTimeout` 적용 — `timeoutMs = opts.timeout ?? 300_000`. timeout 초과 시 명확 Error throw → row fail + showRowError |
+| **F3** | modal processing phase 에 elapsed 표시 X — 사용자가 stuck/wait 구별 불가 | `processingStartTime` + `elapsedTimer` field + `setInterval(patchElapsed, 1000)` + `.wikey-modal-progress-elapsed` element + CSS muted color monospace |
+| **F4** | `wikey-audit-row-cancelled` silent gray — row 에 사용자 취소 표시 X | `showRowCancelled` helper + audit + inbox 2 호출처의 cancel 분기 보강 + `wikey-audit-path-cancelled` CSS (italic, muted) |
+
+### 5.15.E 라이브 smoke 검증 (master 직접)
+
+**iso-27001-overview.md (2.5KB / 1621 chars text) full cycle (post-build + plugin reload)**:
+
+| Poll | Stage | F3 Elapsed |
+|------|-------|------------|
+| 1 | Summary [FULL] 25% | **10s** |
+| 2 | Summary [FULL] 25% | **26s** |
+| 3 | Summary [FULL] 25% | **41s** |
+| 4 | Summary [FULL] 25% | **56s** |
+| 5 | Summary [FULL] 25% | **1m 11s** |
+| 6 | Mentions [FULL] | **1m 26s** (stage 2.1 done in 73,217ms) |
+| 7 | Mentions [FULL] | **1m 41s** |
+| 8 | Canonicalizing 42% | **1m 56s** (stage 2.2 done in 29,066ms) |
+| 9 | Canonicalizing 42% | **2m 11s** |
+| 10 | **Preview Pages to create** | "" (Processing 종료 — F3 stopTimer ✅) |
+
+→ Cancel 클릭 → `plan rejected by user` + `cancelled at preview` log + **vault write 0** + modal closed. Stage 2.3 done in 31,535ms — entities=0, concepts=7, dropped=8.
+
+### 5.15.E AC 검증
+
+| AC | 결과 |
+|----|------|
+| **AC-E1** F1 conversion fail catch error 전달 | ✅ commands.ts:382 fix |
+| **AC-E2** F2 ObsidianHttpClient timeout 적용 | ✅ main.ts:750 fix (verify deferred — 본 시도 모두 5분 내 정상 응답) |
+| **AC-E3** F3 modal elapsed 1s 갱신 | ✅ **live verified** (10s → 1m 11s → 2m 11s 정확) |
+| **AC-E4** F4 cancel "취소됨" + path-cancelled class | ✅ sidebar-chat fix + CSS (build PASS, sidebar 직접 verify defer) |
+| **AC-E5** 회귀 0 | ✅ wikey-core 686 PASS / 0 build errors / vault write 0 |
+
+### 5.15.E Karpathy 4원칙
+
+- **Think Before Coding**: 사용자 raise 의 본질 = silent fail UX 인지 코드 hang 인지 진단 분리. 라이브 smoke 측정으로 *fail 아닌 slow LLM* 확증
+- **Simplicity First**: 4 narrow fix — DRY refactor 등 BLUE 영역 분리
+- **Surgical Changes**: F1/F2/F3/F4 각 영향 범위 작음 (commands.ts 1 catch / main.ts 1 method / ingest-modals.ts 1 phase + 1 timer / sidebar-chat.ts 4 호출처 + 1 helper)
+- **Goal-Driven**: AC-E1~E5 정량 검증 — F3 라이브 smoke 시간 측정 + AC 매핑
+
+### 5.15.E 환경 측 latency 관측
+
+- Gemini-2.5-flash 의 input-size 비례 latency: 76K char → 8분, 1.6K char → 2분
+- baseline ~1-2분 (Gemini 응답 자체 시작 latency)
+- 한국 latency / Gemini 서버 부하 가능성. *코드 회귀 아님* — 환경 자체 baseline.
+- 향후 §5.6.3 LLM provider strategy (subscription / Ollama cloud / stage-aware routing) 가 구조적 해결

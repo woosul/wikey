@@ -374,12 +374,13 @@ export async function runIngest(
       wikiFS: plugin.wikiFS,
     })
   } catch (err) {
+    const errMsg = `Conversion failed: ${(err as Error)?.message ?? err}`
+    console.error(`[Wikey ingest] conversion failed for ${sourcePath}:`, errMsg, (err as Error)?.stack ?? '')
     modal.showBrief()
-    modal.setBrief(`(Conversion failed: ${(err as Error)?.message ?? err})`)
-    // Wait for user acknowledgement (Cancel or Back) — vault write 0 invariant 보존.
-    const out = await modal.awaitBrief()
+    modal.setBrief(`(${errMsg})`)
+    await modal.awaitBrief()
     modal.dispose()
-    return { success: false, sourcePath, createdPages: [], cancelled: out.action === 'cancel' }
+    return { success: false, sourcePath, createdPages: [], error: errMsg }
   }
 
   modal.showBrief()

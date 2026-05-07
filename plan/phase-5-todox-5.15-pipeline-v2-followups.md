@@ -1,11 +1,11 @@
 ---
 phase: 5
 section: 5.15
-title: Pipeline v2 후속 — UI E2E test 인프라 + PROMOTION_THRESHOLD override + citation 마커 dead code cleanup
-status: §5.15.C 종결 / §5.15.A·B draft
+title: Pipeline v2 후속 — A/B/C/D/E (UI E2E test 인프라 + PROMOTION_THRESHOLD override + citation cleanup + inline media + LLM hang UX hardening)
+status: §5.15.C/D/E 종결 / §5.15.A·B draft
 created: 2026-05-07
 updated: 2026-05-07
-version: v1 (session 24 — §5.15.C 종결)
+version: v2 (session 24 — §5.15.E F2/F3/F4 종결)
 priority: P2 (A·B 잔여)
 ---
 
@@ -405,3 +405,112 @@ Phase 5: master verdict + commit + push + result 문서
 ### 10.4 잔여
 
 §5.15.A (UI E2E test 인프라) + §5.15.B (PROMOTION_THRESHOLD override) — P2 draft 유지. 추천 다음 진행: **B (1 cycle UX flexibility) → A (3~5 cycle 큰 인프라)**.
+
+---
+
+## 11. §5.15.E F2/F3/F4 — LLM hang UX hardening — Session 24, 2026-05-07 ✅
+
+> **이슈 출처**: 사용자 raise 2026-05-07 session 24 — "MarkItDown 으로 모든 문서를 마크다운으로 변환하기.md ingest 가 실패한듯 + 에러 문구 없음 + linebar 붉은색 아님" + "파일 하나씩 ingest 할 때마다 에러" 근본 진단 요청.
+>
+> **분류**: P0 UX bug + 진단 도구 (Phase 5 본체 종결 후 발견된 silent fail UX 결함)
+>
+> **합본 spec** (3 narrow fix 묶음 — testing.md §3 매트릭스 bug fix 분류)
+
+### 11.1 본질 진단 — master 직접 obsidian-cdp full cycle smoke
+
+**측정 (MarkItDown 76K char ingest, 라이브)**:
+
+| Stage | 소요 |
+|-------|------|
+| Step 1 source read | 1ms |
+| **Stage 2.1 Summary LLM** | **265,729ms (4분 26초)** |
+| **Stage 2.2 Mention LLM** | **75,798ms (1분 16초)** |
+| **Stage 2.3 Canonicalize LLM** | **130,762ms (2분 11초)** |
+| **누적 LLM** | **~8분** |
+| 결과 | 39 entities + 25 concepts (38 dropped) — **Preview 까지 정상 도달** |
+
+**핵심 발견**:
+1. *fail 이 아니라 LLM call 매우 느림* (5-9배 baseline). wait 만 하면 Preview 까지 정상.
+2. 사용자가 1-2분 안에 modal X 클릭 → `cancelled: true` silent 처리 → muted gray + 에러 문구 0.
+3. 매 시도마다 같은 패턴 → "파일 하나씩 ingest 할 때마다 에러" 인식.
+4. **DEFAULT_TIMEOUT 5분 / Stage 2.1 4분 26초 = 5분 직전 통과** (간신히). 만약 6분 갔으면 silent hang (ObsidianHttpClient timeout 무시).
+
+### 11.2 코드 측 결함 (3 누락)
+
+| # | 결함 | 위치 |
+|---|------|------|
+| **F1** | conversion fail catch 가 `error` 미전달 — modal brief 에 "(Conversion failed: ...)" 표시되지만 result.error undefined → showRowError 미호출 | `wikey-obsidian/src/commands.ts:382` |
+| **F2** | `ObsidianHttpClient.request` 가 `opts.timeout` 무시 — `requestUrl({...})` 호출 시 timeout 인자 omit. LLM hang 5분+ 시 silent | `wikey-obsidian/src/main.ts:743~760` |
+| **F3** | modal processing phase 에 elapsed (분/초) 표시 X — 사용자가 stuck/wait 구별 불가 → cancel 충동 | `wikey-obsidian/src/ingest-modals.ts` renderProcessingPhase |
+| **F4** | `wikey-audit-row-cancelled` linebar = muted gray faint 0.5 / row 에 "사용자 취소" 표시 X — silent 만 | `wikey-obsidian/src/sidebar-chat.ts` cancel 분기 4 호출처 |
+
+### 11.3 Fix 적용 (Session 24)
+
+**F1** — `commands.ts:382` conversion fail catch 가 `error` 채움 + `cancelled: out.action === 'cancel'` 폐기 (semantic: conversion fail 후 modal close 는 silent cancel 아닌 fail). `console.error` 추가.
+
+**F2** — `main.ts:750` `ObsidianHttpClient.request` 에 `Promise.race + setTimeout` 적용. `timeoutMs = opts.timeout ?? 300_000`. timeout 초과 시 `Error("HTTP request timeout after ${timeoutMs}ms: ${url}")` throw → ingest-pipeline catch → commands.ts:606 → result.error 채움 → showRowError 호출 → row 빨간 + 에러 문구. background fetch 는 계속 진행 (Obsidian internal abort 미가용) 하지만 caller 는 timeout 후 error 받음.
+
+**F3** — `ingest-modals.ts` 에 elapsed timer 추가:
+- field: `processingStartTime`, `elapsedTimer`
+- `showProcessing` 시 `Date.now()` set + `setInterval(patchElapsed, 1000)` 시작
+- `patchElapsed` — `.wikey-modal-progress-elapsed` element setText (`30s` / `1m 23s` 형식)
+- `stopElapsedTimer` — `finish` / `dispose` / `resetForBack` / `onClose` 모든 종료 path 보장
+- `renderProcessingPhase` — `wikey-modal-progress-line` 안 새 span 추가 (msg / elapsed / pct 순)
+- CSS `.wikey-modal-progress-elapsed` — muted color, monospace, margin-left auto
+
+**F4** — `sidebar-chat.ts` 에 `showRowCancelled` helper 추가 + audit (line 1352) + inbox 2 호출처 (line ~1759 + ~2103) 의 cancelled 분기 보강:
+```ts
+if (result.cancelled) {
+  row.addClass('wikey-audit-row-cancelled')
+  showRowCancelled(row)  // 분류 hint 자리에 "취소됨" + path-cancelled class
+}
+```
+- CSS `.wikey-audit-path-cancelled` — muted color, italic (path-error red 와 분리)
+- inbox cancel path 가 fail class 잘못 받던 경로 (line 1756) 수정 — cancel/success/fail 3 분기 명시
+
+### 11.4 라이브 smoke 검증 (master obsidian-cdp 직접)
+
+**iso-27001-overview.md (2.5KB / 1621 chars text) full cycle smoke** (session 24, post-build + plugin reload):
+
+| Poll | Stage | Elapsed (F3 표시) |
+|------|-------|------------------|
+| 1 | Summary [FULL] 25% | **10s** |
+| 2 | Summary [FULL] 25% | **26s** |
+| 3 | Summary [FULL] 25% | **41s** |
+| 4 | Summary [FULL] 25% | **56s** |
+| 5 | Summary [FULL] 25% | **1m 11s** |
+| 6 | Mentions [FULL] | **1m 26s** (stage 2.1 done in 73,217ms) |
+| 7 | Mentions [FULL] | **1m 41s** |
+| 8 | Canonicalizing 42% | **1m 56s** (stage 2.2 done in 29,066ms) |
+| 9 | Canonicalizing 42% | **2m 11s** |
+| 10 | Preview Pages to create | "" (Processing 종료 — F3 stopTimer ✅) |
+
+→ Cancel 클릭 → `plan rejected by user` + `cancelled at preview` log + **vault write 0** + modal closed.
+
+**검증 결과**:
+- **F3**: 1초 단위 elapsed 정확 표시 — 사용자가 wait 의도 가능 ✅
+- **F2**: timeout 5분 적용 (간접) — 본 시도 모두 5분 내 정상 응답이라 timeout error 발생 X (verify deferred)
+- **F4**: ingest-current-note path 는 sidebar audit/inbox row 미사용 — modal 만. sidebar 호출 시 row "취소됨" 표시 (build PASS 로 간접 검증, 실 라이브 verify 별도)
+- **회귀 0**: wikey-core 686 PASS / 0 build errors / vault write 0
+
+### 11.5 AC
+
+| AC | 내용 | 결과 |
+|----|------|------|
+| AC-E1 | F1 conversion fail catch 가 error 전달 | ✅ commands.ts:382 fix |
+| AC-E2 | F2 ObsidianHttpClient.request 가 opts.timeout 적용 (Promise.race) | ✅ main.ts:750 fix |
+| AC-E3 | F3 modal processing phase 에 elapsed 분/초 표시 (1s 갱신) | ✅ live verified (10s → 2m 11s 정확) |
+| AC-E4 | F4 cancel 시 row "취소됨" 명시 + path-cancelled class (silent gray 폐기) | ✅ sidebar-chat.ts fix + CSS |
+| AC-E5 | 회귀 0 — build / wikey-core test / vault write 0 | ✅ 686 PASS / 0 errors |
+
+### 11.6 Karpathy 4원칙 적용
+
+- **Think Before Coding**: 사용자 raise 의 본질 = silent fail UX 인지 코드 hang 인지 진단 분리. 라이브 smoke 측정으로 *fail 아닌 slow LLM* 확증
+- **Simplicity First**: 4 narrow fix — 인접 코드 손대지 않음 (DRY refactor 등 BLUE 영역으로 분리)
+- **Surgical Changes**: F1/F2/F3/F4 각 영향 범위 작음 (commands.ts 1 catch / main.ts 1 method / ingest-modals.ts 1 phase + 1 timer / sidebar-chat.ts 4 호출처 + 1 helper)
+- **Goal-Driven**: AC-E1~E5 정량 검증 — F3 라이브 smoke 시간 측정 + AC 매핑
+
+### 11.7 잔여 검증 (defer)
+
+- **F2 timeout error 라이브 verify**: 실제 5분+ stuck 발생 시 timeout error → row fail + showRowError. Gemini 일시 장애 / 매우 큰 input 시 자연 발생 — 사용자 raise 시 confirm
+- **F4 sidebar cancel UX 라이브 verify**: sidebar audit/inbox panel 에서 cancel 시 row "취소됨" 표시 — build PASS + 코드 분기 명시 + 다음 사용자 ingest 시 자연 verify

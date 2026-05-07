@@ -1666,11 +1666,12 @@ Phase 6: master verdict + commit + push + result 문서
 > **상위 plan**: [`plan/phase-5-todox-5.15-pipeline-v2-followups.md`](./phase-5-todox-5.15-pipeline-v2-followups.md) v0
 > 도출: `docs/wikey-ingest-pipeline-v2.md §15.4 단점·리스크 + §15.6 v3 후보`
 
-### 5.15 sub-section 4종 (A=enabler / B=flexibility / C=hygiene / D=bug-fix-and-UX) — A/B P2 draft + C/D 종결
+### 5.15 sub-section 5종 (A=enabler / B=flexibility / C=hygiene / D=bug-fix-and-UX / E=LLM-hang-UX) — A/B P2 draft + C/D/E 종결
 
 - [ ] **§5.15.A** UI E2E test 인프라 (vitest + Obsidian API mock + jsdom) — §5.14 잔존 4 항목 deep split enabler. 추정 1000~1600 LOC / 3~5 cycle.
 - [ ] **§5.15.B** PROMOTION_THRESHOLD override (`.wikey/promotion-threshold.yaml`) — 사용자 도메인별 정책 강화. 추정 200~300 LOC / 1 cycle.
 - [x] **§5.15.C** citation 마커 dead code cleanup — `attachCitationBacklinks` (50 LOC) + `buildCitationButton` (~22 LOC) + `openResolvedSource` (~25 LOC) + `Citation`/`ResolvedSource`/`SourceRegistry` import + `loadRegistry`/`resolveSourceSync` import (wikey-obsidian 안 dead path 만) + `ChatMessage.citations` 필드 + line 474 assignment + historical 주석 모두 삭제. sidebar-chat.ts: 2325 → 2227 = **-98 LOC**. 회귀: wikey-core 686 PASS / 3 skip / 0 build errors / validate-wiki PASS. (session 24, 2026-05-07)
+- [x] **§5.15.E** LLM hang UX hardening (F2/F3/F4) — 사용자 raise "ingest 실패한 듯 + 에러 문구 없음 + linebar 빨강 아님" 근본 진단으로 도출. F1: `commands.ts:382` conversion fail error propagation fix. F2: `main.ts` ObsidianHttpClient.request 에 timeout (Promise.race + setTimeout, default 5분). F3: ingest-modals processing phase 에 elapsed (분/초) 1초 timer + `wikey-modal-progress-elapsed` element. F4: sidebar-chat 의 cancel 분기 4 호출처 보강 + `showRowCancelled` helper + `wikey-audit-path-cancelled` CSS — silent gray → "취소됨" 명시. 라이브 smoke iso-27001-overview.md (2.5KB) 직접 master obsidian-cdp full cycle 검증 — F3 elapsed 1s 단위 정확 (10s → 2m 11s) / vault write 0 / Preview 도달. (session 24, 2026-05-07)
 - 잔여 추천 진행 순서: B → A (UX flexibility → 큰 인프라)
 
 ### 5.15.D inline media strip + audit row UI fix + wikilink whitelist sanitize — Session 23, 2026-05-07 ✅

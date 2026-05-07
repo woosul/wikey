@@ -1,12 +1,18 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-07 session 24 — §5.15.C 종결 (citation 마커 dead code cleanup, sidebar-chat.ts -98 LOC)**.
-> (a) §5.15.C citation 마커 dead code cleanup 완료 — `attachCitationBacklinks` (50 LOC) + `buildCitationButton` (22 LOC) + `openResolvedSource` (25 LOC) + import 5종 + `ChatMessage.citations` 필드 + assignment + historical 주석 모두 삭제. sidebar-chat.ts 2325 → 2227 = **-98 LOC** (목표 60+ 충족). AC-C1~C6 모두 PASS. ✅
-> (b) §5.15 잔여: **A** (UI E2E test 인프라, 1000~1600 LOC, 3~5 cycle) + **B** (PROMOTION_THRESHOLD override, 200~300 LOC, 1 cycle) — 추천 다음 진행 **B → A**.
+> 최신 갱신: **2026-05-07 session 24 — §5.15.C 종결 + §5.15.E 종결 (LLM hang UX hardening F1/F2/F3/F4)**.
+> (a) §5.15.C citation 마커 dead code cleanup — sidebar-chat.ts -98 LOC (commit `e93b05e`) ✅
+> (b) §5.15.E LLM hang UX hardening — 사용자 raise "MarkItDown ingest 실패한듯 + 에러 문구 없음 + linebar 빨강 아님" 근본 진단으로 도출. master obsidian-cdp 라이브 측정 결과 *fail 아닌 LLM call 5-9배 slow + cancel UX silent* 확증.
+>   - F1 commands.ts:382 conversion fail catch error propagation
+>   - F2 main.ts ObsidianHttpClient.request 에 timeout (Promise.race + setTimeout, default 5분)
+>   - F3 ingest-modals processing phase elapsed 1초 timer (modal 안 분/초 표시 — sticky/wait 구별)
+>   - F4 sidebar-chat cancel 분기 4 호출처 + showRowCancelled helper + path-cancelled CSS — silent gray → "취소됨" 명시
+>   - 라이브 smoke iso-27001 (2.5KB) full cycle: F3 elapsed 1s 정확 (10s → 2m 11s) / vault write 0 / Preview 도달
+>   - AC-E1~E5 모두 PASS / wikey-core 686 PASS / 0 build errors ✅
+> (c) §5.15 잔여: **A** (UI E2E test 인프라, 1000~1600 LOC, 3~5 cycle) + **B** (PROMOTION_THRESHOLD override, 200~300 LOC, 1 cycle) — 추천 다음 진행 **B → A**.
 >
 > 이전 세션 (session 23) 종결:
-> - §5.14 본체 종결 (잔존 4 항목 의도적 유지 결정) + §5.15.D 종결 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix.
-> - `docs/wikey-ingest-pipeline-v2.md` 작성 — Phase 5 누적 변경 단계별 상세 + v1 비교 평가.
+> - §5.14 본체 종결 + §5.15.D 종결 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix.
 >
 > wikey-core 686 PASS / 3 skip / 0 build errors / validate-wiki PASS.
 > 생성일: 2026-04-10

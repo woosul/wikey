@@ -89,6 +89,17 @@ function showRowError(row: HTMLElement, errorText: string, maxLen = 80): void {
   errEl.setText(truncated)
 }
 
+// §5.15.E F4: 사용자 취소 (cancelled=true) 시 row 분류 hint 자리에 "취소됨" 명시 표시.
+// silent muted gray 만 적용되던 기존 UX 가 "에러 없는 fail" 인식 유발 — 사용자 취소 의도
+// 명시. CSS `.wikey-audit-path-cancelled` 가 muted color 표현 (path-error 와 분리).
+function showRowCancelled(row: HTMLElement): void {
+  const pathEl = row.querySelector('.wikey-audit-path') as HTMLElement | null
+  if (pathEl) {
+    pathEl.setText('취소됨')
+    pathEl.addClass('wikey-audit-path-cancelled')
+  }
+}
+
 // §5.14 BLUE refactor — renderAuditSection 의 데이터 fetch / dedup / capability warn
 // 3 부분 분해 (closure 자유). Phase 4 D.0.d audit-ingest.py contract 의 raw shape.
 interface AuditScriptCapabilities {
@@ -1350,8 +1361,9 @@ Click [[page name]] in answers to navigate to the wiki page.
             const nameEl = row.querySelector('.wikey-audit-name') as HTMLElement | null
             if (nameEl) nameEl.addClass('wikey-audit-name-done')
           } else if (result.cancelled) {
-            // User cancelled — silent, no red fail state (just reset)
+            // §5.15.E F4: silent gray → "취소됨" 명시 표시. 사용자 의도 cancel 인식 가능.
             row.addClass('wikey-audit-row-cancelled')
+            showRowCancelled(row)
           } else {
             row.addClass('wikey-audit-row-fail')
             if (result.error) {
@@ -1753,10 +1765,16 @@ Click [[page name]] in answers to navigate to the wiki page.
 
         if (row) {
           row.removeClass('wikey-audit-row-active')
-          row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
+          // §5.15.E F4: cancelled 는 별도 row class — fail 과 구별.
+          if (result.cancelled) {
+            row.addClass('wikey-audit-row-cancelled')
+            showRowCancelled(row)
+          } else {
+            row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
+          }
           row.style.removeProperty('--progress')
 
-          if (!result.success && result.error) {
+          if (!result.success && result.error && !result.cancelled) {
             // §5.16: pathEl override — row line height 증가 0.
             showRowError(row, result.error)
           }
@@ -2098,9 +2116,15 @@ Click [[page name]] in answers to navigate to the wiki page.
 
         if (row) {
           row.removeClass('wikey-audit-row-active')
-          row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
+          // §5.15.E F4: cancelled 는 별도 row class — fail 과 구별 + "취소됨" 명시.
+          if (result.cancelled) {
+            row.addClass('wikey-audit-row-cancelled')
+            showRowCancelled(row)
+          } else {
+            row.addClass(result.success ? 'wikey-audit-row-done' : 'wikey-audit-row-fail')
+          }
           row.style.removeProperty('--progress')
-          if (!result.success && result.error) {
+          if (!result.success && result.error && !result.cancelled) {
             // §5.16: pathEl override — row line height 증가 0.
             showRowError(row, result.error)
           }
@@ -2110,7 +2134,7 @@ Click [[page name]] in answers to navigate to the wiki page.
           done++
           this.inboxFailState.delete(name)
         } else if (result.cancelled) {
-          // User cancelled — silent, no fail state, file remains in inbox
+          // §5.15.E F4: 위 row class + showRowCancelled 가 명시 — 추가 처리 0.
         } else {
           failed++
           if (result.error) {

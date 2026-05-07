@@ -746,16 +746,31 @@ class ObsidianHttpClient implements HttpClient {
       return this.requestViaNode(url, opts)
     }
 
-    // 외부 API → Obsidian requestUrl
-    const response = await requestUrl({
+    // §5.15.E F2: Obsidian requestUrl 은 timeout 옵션 미지원 → Promise.race + setTimeout
+    // 으로 caller-side timeout 적용. background fetch 는 계속 진행 (Obsidian internal abort
+    // 미가용) 하지만 ingest pipeline 은 명확한 Error throw 받아 fail 처리 가능.
+    const timeoutMs = opts.timeout ?? 300_000
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const requestPromise = requestUrl({
       url,
       method: opts.method,
       headers: opts.headers as Record<string, string>,
       body: opts.body,
     })
-    return {
-      status: response.status,
-      body: typeof response.text === 'string' ? response.text : JSON.stringify(response.json),
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`HTTP request timeout after ${timeoutMs}ms: ${url}`)),
+        timeoutMs,
+      )
+    })
+    try {
+      const response = await Promise.race([requestPromise, timeoutPromise])
+      return {
+        status: response.status,
+        body: typeof response.text === 'string' ? response.text : JSON.stringify(response.json),
+      }
+    } finally {
+      if (timer) clearTimeout(timer)
     }
   }
 

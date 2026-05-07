@@ -43,6 +43,10 @@ export class IngestFlowModal extends Modal {
   /** True until setBrief() is called with the real LLM brief. Shows a loading state. */
   private briefLoading = true
 
+  // §5.15.E F3: processing phase 진행 시간 (분/초) 표시 — LLM call hang/wait 구별 가능.
+  private processingStartTime: number | null = null
+  private elapsedTimer: ReturnType<typeof setInterval> | null = null
+
   /** Set by processing-phase [Back] click. runIngest checks this to decide whether to loop back. */
   backRequested = false
 
@@ -132,7 +136,29 @@ export class IngestFlowModal extends Modal {
     this.progressMessage = message
     this.progressStep = 3
     this.progressTotal = 4
+    // §5.15.E F3: processing 진입 시점부터 elapsed 카운트 시작.
+    this.processingStartTime = Date.now()
+    if (this.elapsedTimer) clearInterval(this.elapsedTimer)
+    this.elapsedTimer = setInterval(() => this.patchElapsed(), 1000)
     this.rerender()
+  }
+
+  private patchElapsed() {
+    if (this.processingStartTime == null) return
+    const elapsedSec = Math.round((Date.now() - this.processingStartTime) / 1000)
+    const min = Math.floor(elapsedSec / 60)
+    const sec = elapsedSec % 60
+    const text = min > 0 ? `${min}m ${sec}s` : `${sec}s`
+    const el = this.bodyEl?.querySelector('.wikey-modal-progress-elapsed') as HTMLElement | null
+    if (el) el.setText(text)
+  }
+
+  private stopElapsedTimer() {
+    if (this.elapsedTimer) {
+      clearInterval(this.elapsedTimer)
+      this.elapsedTimer = null
+    }
+    this.processingStartTime = null
   }
 
   /** Update processing phase: step/total + message + optional sub-progress within a step. */
@@ -181,6 +207,7 @@ export class IngestFlowModal extends Modal {
     this.phase = 'brief'
     this.plan = null
     this.progressStep = 0
+    this.stopElapsedTimer()
     this.rerender()
   }
 
@@ -188,6 +215,7 @@ export class IngestFlowModal extends Modal {
   finish() {
     this.phase = 'done'
     this.allowClose = true
+    this.stopElapsedTimer()
     super.close()
   }
 
@@ -197,6 +225,7 @@ export class IngestFlowModal extends Modal {
    */
   dispose() {
     this.allowClose = true
+    this.stopElapsedTimer()
     super.close()
   }
 
@@ -536,6 +565,14 @@ export class IngestFlowModal extends Modal {
       cls: 'wikey-modal-progress-msg',
       text: `${this.progressStep}/${this.progressTotal} · ${this.progressMessage}`,
     })
+    // §5.15.E F3: elapsed 시간 (분/초) — LLM call wait 인지 stuck 인지 사용자가 구별 가능.
+    const elapsedInit = this.processingStartTime != null
+      ? (() => {
+          const s = Math.round((Date.now() - this.processingStartTime!) / 1000)
+          return s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`
+        })()
+      : ''
+    msgLine.createEl('span', { cls: 'wikey-modal-progress-elapsed', text: elapsedInit })
     msgLine.createEl('span', { cls: 'wikey-modal-progress-pct', text: `${pct}%` })
 
     const barOuter = progressGroup.createDiv({ cls: 'wikey-modal-progress-bar' })
@@ -637,6 +674,8 @@ export class IngestFlowModal extends Modal {
       try { fn() } catch { /* ignore */ }
     }
     this.cleanups = []
+    // §5.15.E F3: ensure elapsed timer cleared on any close path.
+    this.stopElapsedTimer()
 
     // Modal was closed mid-flow — cancel any pending phase resolvers
     if (this.briefResolver) {
