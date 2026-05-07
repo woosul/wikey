@@ -2,7 +2,7 @@ import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
 import {
   query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair,
-  fetchModelList,
+  fetchModelList, LLMClient,
   resolveSourceSync, loadRegistry,
   pairedSidecarSet, hasSidecar, filterOutPairedSidecars,
   recountAuditAfterPairedExclude,
@@ -99,6 +99,91 @@ function computeRowPct(step: number, subStep?: number, subTotal?: number): numbe
     return Math.round(weights[1] + (weights[2] - weights[1]) * fraction)
   }
   return weights[step] ?? Math.round((step / 4) * 100)
+}
+
+// §5.14 BLUE refactor — renderAuditSection 의 데이터 fetch / dedup / capability warn
+// 3 부분 분해 (closure 자유). Phase 4 D.0.d audit-ingest.py contract 의 raw shape.
+interface AuditScriptCapabilities {
+  doclingInstalled: boolean
+  unhwpInstalled: boolean
+  generatedAt: string
+  source: string
+}
+
+interface AuditScriptOutput {
+  total_documents: number
+  ingested: number
+  missing: number
+  unsupported?: number
+  files: string[]
+  ingested_files: string[]
+  unsupported_files?: string[]
+  capabilities?: AuditScriptCapabilities
+}
+
+/**
+ * Phase 4 D.0.d / §5.14 BLUE: scripts/audit-ingest.py --json 실행 + parse.
+ * 실패 (스크립트 없음 / timeout / JSON 파싱 실패) 시 null 반환 — caller 가 placeholder 표시.
+ */
+function loadAuditScriptOutput(
+  basePath: string,
+  env: Record<string, string>,
+): AuditScriptOutput | null {
+  const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
+  const { join } = require('node:path') as typeof import('node:path')
+  try {
+    const script = join(basePath, 'scripts/audit-ingest.py')
+    const stdout = execFileSync('python3', [script, '--json'], {
+      cwd: basePath, timeout: 10000, env, encoding: 'utf-8',
+    })
+    return JSON.parse(stdout) as AuditScriptOutput
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Phase 4 D.0.d / §5.14 BLUE: converter 미설치 시 상단 경고 배너 렌더.
+ * caps 가 없거나 양쪽 다 설치돼 있으면 noop.
+ */
+function renderConverterCapabilityWarning(
+  container: HTMLElement,
+  caps: AuditScriptCapabilities | undefined,
+): void {
+  if (!caps || (caps.doclingInstalled && caps.unhwpInstalled)) return
+  const banner = container.createDiv({ cls: 'wikey-audit-banner-warn' })
+  const parts: string[] = []
+  if (!caps.doclingInstalled) parts.push('Docling (PDF/DOCX/PPTX/XLSX/HTML/image) — `uv tool install docling`')
+  if (!caps.unhwpInstalled) parts.push('unhwp (HWP/HWPX) — `pip install unhwp`')
+  banner.setText(`⚠ 일부 포맷 변환기가 설치되지 않았습니다. 아래 빨간 행은 인제스트 불가: ${parts.join(' / ')}`)
+}
+
+/**
+ * §5.2.0 / §5.14 BLUE: paired sidecar.md (`<base>.<ext>.md` from docling/unhwp converter)
+ * 를 audit 카운트에서 제외 + recountAuditAfterPairedExclude 로 totals 재계산.
+ * 원본 audit 객체는 변경 X — 새 객체 반환 (immutable).
+ */
+function applyPairedSidecarToAudit(audit: AuditScriptOutput): AuditScriptOutput {
+  const auditAllSet = new Set<string>([
+    ...audit.files,
+    ...(audit.ingested_files ?? []),
+    ...(audit.unsupported_files ?? []),
+  ])
+  const paired = pairedSidecarSet([...auditAllSet])
+  const drop = (xs: readonly string[]) => xs.filter((x) => !paired.has(x))
+  const files = drop(audit.files)
+  const ingested_files = drop(audit.ingested_files ?? [])
+  const unsupported_files = drop(audit.unsupported_files ?? [])
+  return {
+    ...audit,
+    files,
+    ingested_files,
+    unsupported_files,
+    ingested: ingested_files.length,
+    missing: files.length,
+    unsupported: unsupported_files.length,
+    total_documents: ingested_files.length + files.length + unsupported_files.length,
+  }
 }
 
 export class WikeyChatView extends ItemView {
@@ -695,39 +780,22 @@ Click [[page name]] in answers to navigate to the wiki page.
   }
 
   private renderAuditSummaryOnly(container: HTMLElement) {
-    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
-    const { join } = require('node:path') as typeof import('node:path')
     const basePath = (this.app.vault.adapter as any).basePath ?? ''
-    const env = this.plugin.getExecEnv()
-
-    try {
-      const script = join(basePath, 'scripts/audit-ingest.py')
-      const stdout = execFileSync('python3', [script, '--json'], {
-        cwd: basePath, timeout: 10000, env, encoding: 'utf-8',
-      })
-      const data = JSON.parse(stdout)
-      const grid = container.createDiv({ cls: 'wikey-dashboard-grid' })
-      this.addStatCard(grid, String(data.total_documents), 'Total Docs')
-      this.addStatCard(grid, String(data.ingested), 'Ingested')
-      this.addStatCard(grid, String(data.missing), 'Missing')
-    } catch {
+    const data = loadAuditScriptOutput(basePath, this.plugin.getExecEnv())
+    if (!data) {
       container.createEl('span', { text: 'Audit failed', cls: 'wikey-dashboard-empty' })
+      return
     }
+    const grid = container.createDiv({ cls: 'wikey-dashboard-grid' })
+    this.addStatCard(grid, String(data.total_documents), 'Total Docs')
+    this.addStatCard(grid, String(data.ingested), 'Ingested')
+    this.addStatCard(grid, String(data.missing), 'Missing')
   }
 
   private renderRawSourcesDashboard(container: HTMLElement) {
-    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
-    const { join } = require('node:path') as typeof import('node:path')
     const basePath = (this.app.vault.adapter as any).basePath ?? ''
-    const env = this.plugin.getExecEnv()
-
-    try {
-      const script = join(basePath, 'scripts/audit-ingest.py')
-      const stdout = execFileSync('python3', [script, '--json'], {
-        cwd: basePath, timeout: 10000, env, encoding: 'utf-8',
-      })
-      const data = JSON.parse(stdout)
-
+    const data = loadAuditScriptOutput(basePath, this.plugin.getExecEnv())
+    if (data) {
       // §5.2.0 v4 (2026-04-25 사용자 요청): paired sidecar `<base>.<ext>.md` 를
       // dashboard 카운트에서도 제외 (audit panel §5.2.0 와 동일 정책).
       // 원본.ext + 원본.md 를 하나의 원본으로 취급. UI 레이어 처리, audit-ingest.py
@@ -769,17 +837,18 @@ Click [[page name]] in answers to navigate to the wiki page.
           this.addStatCard(paraGrid, '0', label)
         }
       }
-
-    } catch {
-      const rawStats = this.collectRawStats()
-      const grid = container.createDiv({ cls: 'wikey-dashboard-grid' })
-      this.addStatCard(grid, String(rawStats.total), 'Folders')
-      this.addStatCard(grid, String(rawStats.inbox), 'Inbox')
-      this.addStatCard(grid, String(rawStats.projects), 'Projects')
-      this.addStatCard(grid, String(rawStats.areas), 'Areas')
-      this.addStatCard(grid, String(rawStats.resources), 'Resources')
-      this.addStatCard(grid, String(rawStats.archive), 'Archive')
+      return
     }
+
+    // Fallback — audit-ingest.py 실패 시 raw filesystem stats.
+    const rawStats = this.collectRawStats()
+    const grid = container.createDiv({ cls: 'wikey-dashboard-grid' })
+    this.addStatCard(grid, String(rawStats.total), 'Folders')
+    this.addStatCard(grid, String(rawStats.inbox), 'Inbox')
+    this.addStatCard(grid, String(rawStats.projects), 'Projects')
+    this.addStatCard(grid, String(rawStats.areas), 'Areas')
+    this.addStatCard(grid, String(rawStats.resources), 'Resources')
+    this.addStatCard(grid, String(rawStats.archive), 'Archive')
   }
 
   private openAuditPanel() {
@@ -791,70 +860,30 @@ Click [[page name]] in answers to navigate to the wiki page.
   private auditSelections: Set<string> = new Set()
 
   private renderAuditSection(container: HTMLElement) {
-    const { execFileSync } = require('node:child_process') as typeof import('node:child_process')
     const { join } = require('node:path') as typeof import('node:path')
     const basePath = (this.app.vault.adapter as any).basePath ?? ''
     const env = this.plugin.getExecEnv()
 
-    // Phase 4 D.0.d — audit-ingest.py 신규 필드: unsupported_files / capabilities / entries
-    let auditData: {
-      total_documents: number
-      ingested: number
-      missing: number
-      unsupported?: number
-      files: string[]
-      ingested_files: string[]
-      unsupported_files?: string[]
-      capabilities?: { doclingInstalled: boolean; unhwpInstalled: boolean; generatedAt: string; source: string }
-    }
-    try {
-      const script = join(basePath, 'scripts/audit-ingest.py')
-      const stdout = execFileSync('python3', [script, '--json'], {
-        cwd: basePath, timeout: 10000, env, encoding: 'utf-8',
-      })
-      auditData = JSON.parse(stdout)
-    } catch {
+    // §5.14 BLUE refactor — fetch + parse + paired-sidecar dedup 분해 (3 helper).
+    const rawAudit = loadAuditScriptOutput(basePath, env)
+    if (!rawAudit) {
       container.createEl('span', { text: 'Audit script failed', cls: 'wikey-dashboard-empty' })
       return
     }
+    renderConverterCapabilityWarning(container, rawAudit.capabilities)
+    const auditData = applyPairedSidecarToAudit(rawAudit)
 
-    // Phase 4 D.0.d — converter 미설치 시 상단 경고 배너.
-    const caps = auditData.capabilities
-    if (caps && (!caps.doclingInstalled || !caps.unhwpInstalled)) {
-      const banner = container.createDiv({ cls: 'wikey-audit-banner-warn' })
-      const parts: string[] = []
-      if (!caps.doclingInstalled) parts.push('Docling (PDF/DOCX/PPTX/XLSX/HTML/image) — `uv tool install docling`')
-      if (!caps.unhwpInstalled) parts.push('unhwp (HWP/HWPX) — `pip install unhwp`')
-      banner.setText(`⚠ 일부 포맷 변환기가 설치되지 않았습니다. 아래 빨간 행은 인제스트 불가: ${parts.join(' / ')}`)
-    }
-
-    // §5.2.0 — paired sidecar.md (`<base>.<ext>.md` from docling/unhwp converter)
-    // is hidden from rows + excluded from counts. The original `<base>.<ext>` row
-    // gets a [md] badge instead. Filter at render time, source-of-truth (registry,
-    // wiki/, audit-ingest.py output) is unchanged.
-    const auditAllSet = new Set<string>([
-      ...auditData.files,
-      ...(auditData.ingested_files ?? []),
-      ...(auditData.unsupported_files ?? []),
-    ])
-    const auditPaired = pairedSidecarSet([...auditAllSet])
-    const dropPaired = (xs: readonly string[]) => xs.filter((x) => !auditPaired.has(x))
-    auditData = {
-      ...auditData,
-      files: dropPaired(auditData.files),
-      ingested_files: dropPaired(auditData.ingested_files ?? []),
-      unsupported_files: dropPaired(auditData.unsupported_files ?? []),
-    }
-    auditData.ingested = auditData.ingested_files.length
-    auditData.missing = auditData.files.length
     // §5.2.0 v2 (사용자 요청 2026-04-25): paired (sidecar.md 존재) 인데 audit
     // missing 분류 = broken state (registry/wiki reset 됐거나 sidecar 만 남고
     // ingested 안 됨). badge 오렌지로 시각 경고.
     const ingestedSet = new Set<string>(auditData.ingested_files)
-    auditData.unsupported = (auditData.unsupported_files ?? []).length
-    auditData.total_documents = auditData.ingested + auditData.missing + (auditData.unsupported ?? 0)
-
     const unsupportedSet = new Set(auditData.unsupported_files ?? [])
+    // §5.2.0 hasSidecar lookup 용 — paired 제외 후 남은 audit 파일들의 union.
+    const auditAllSet = new Set<string>([
+      ...auditData.files,
+      ...auditData.ingested_files,
+      ...(auditData.unsupported_files ?? []),
+    ])
 
     // ── Audit UI state (filter/view/search) ──
     type AuditMode = 'all' | 'missing' | 'ingested'
@@ -1337,9 +1366,7 @@ Click [[page name]] in answers to navigate to the wiki page.
         this.plugin.settings.ingestProvider = selectedProvider
       }
       if (selectedModel) this.plugin.settings.ingestModel = selectedModel
-      this.plugin.llmClient = new (await import('wikey-core')).LLMClient(
-        this.plugin.httpClient, this.plugin.buildConfig(),
-      )
+      this.plugin.llmClient = new LLMClient(this.plugin.httpClient, this.plugin.buildConfig())
 
       let done = 0
       let failed = 0
@@ -1947,7 +1974,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       if (!savedInboxModel) def.selected = true
       if (!provider) return
       try {
-        const models = await (await import('wikey-core')).fetchModelList(provider as any, this.plugin.buildConfig(), this.plugin.httpClient)
+        const models = await fetchModelList(provider as any, this.plugin.buildConfig(), this.plugin.httpClient)
         for (const m of models) {
           const opt = inboxModelSelect.createEl('option', { text: m, attr: { value: m } })
           if (m === savedInboxModel) opt.selected = true
