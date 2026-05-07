@@ -1,15 +1,16 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-07 session 24 — §5.15.C / §5.15.E / §5.15.B 모두 종결**.
+> 최신 갱신: **2026-05-07 session 24 — §5.15.C / §5.15.E / §5.15.B / §5.15.A Cycle 1 모두 종결**.
 > (a) §5.15.C citation 마커 dead code cleanup — sidebar-chat.ts -98 LOC (commit `e93b05e`) ✅
 > (b) §5.15.E LLM hang UX hardening (F1/F2/F3/F4) — master obsidian-cdp 라이브 진단으로 *fail 아닌 LLM call 5-9배 slow + cancel UX silent* 확증. modal elapsed 1s timer + ObsidianHttpClient timeout + cancel "취소됨" 명시 (commit `88e5286`) ✅
-> (c) §5.15.B PROMOTION_THRESHOLD override — `.wikey/promotion-threshold.yaml` 사용자 정의 layer. `wikey-core/src/promotion-config.ts` 신규 47 LOC + canonicalizer/ingest-pipeline 시그니처 chain + 14 신규 tests + `.wikey/promotion-threshold.yaml.example`. v0 = top-level `default:` 만 (patterns out-of-scope, Karpathy Simplicity First). wikey-core 700 PASS / 0 build errors / validate-wiki PASS ✅
-> (d) §5.15 잔여: **A** (UI E2E test 인프라, 1000~1600 LOC, 3~5 cycle) 만 — 다음 세션 진행 후보.
+> (c) §5.15.B PROMOTION_THRESHOLD override — `.wikey/promotion-threshold.yaml` 사용자 정의 layer. `wikey-core/src/promotion-config.ts` 신규 47 LOC + canonicalizer/ingest-pipeline 시그니처 chain + 14 신규 tests + `.wikey/promotion-threshold.yaml.example`. v0 = top-level `default:` 만 (patterns out-of-scope, Karpathy Simplicity First). wikey-core 700 PASS / 0 build errors / validate-wiki PASS (commit `90b0011`) ✅
+> (d) §5.15.A Cycle 1 (UI E2E test 인프라) — vitest + happy-dom + Obsidian mock 5 인터페이스 (App / Vault / TFile / Notice / ItemView) + 14 인프라 검증 test PASS. wikey-obsidian/package.json devDeps + vitest.config.ts + `__mocks__/obsidian.ts` + `obsidian-mock.test.ts` + root package.json `test:core`/`test:obsidian` script 분리. wikey-core 700 + wikey-obsidian 14 = 714 total PASS / 0 build errors ✅
+> (e) §5.15 잔여: **§5.15.A Cycle 2~5** (sidebar-chat `renderAuditSection` test → main.ts `handleVaultCreate` test → §5.14 잔존 4 항목 deep split 재평가). 추정 700~1300 LOC. 다음 세션 진행 후보.
 >
 > 이전 세션 (session 23) 종결:
 > - §5.14 본체 종결 + §5.15.D 종결 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix.
 >
-> wikey-core 700 PASS / 3 skip / 0 build errors / validate-wiki PASS.
+> wikey-core 700 PASS / 3 skip + wikey-obsidian 14 PASS = 714 total / 0 build errors / validate-wiki PASS.
 > 생성일: 2026-04-10
 
 ---

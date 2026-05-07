@@ -2,11 +2,11 @@
 phase: 5
 section: 5.15
 title: Pipeline v2 후속 — A/B/C/D/E (UI E2E test 인프라 + PROMOTION_THRESHOLD override + citation cleanup + inline media + LLM hang UX hardening)
-status: §5.15.B/C/D/E 종결 / §5.15.A draft
+status: §5.15.A Cycle 1 종결 (인프라 PASS) / §5.15.B/C/D/E 종결 / §5.15.A Cycle 2~5 다음 세션 후보
 created: 2026-05-07
 updated: 2026-05-07
-version: v3 (session 24 — §5.15.B PROMOTION_THRESHOLD override 종결)
-priority: P2 (A 잔여)
+version: v4 (session 24 — §5.15.A Cycle 1 인프라 종결 — vitest + happy-dom + Obsidian mock 5 인터페이스 + 14 tests PASS)
+priority: P2 (A Cycle 2~5 잔여)
 ---
 
 # Phase 5 §5.15 — Pipeline v2 후속 3 항목
@@ -583,3 +583,69 @@ if (result.cancelled) {
 ### 12.5 잔여
 
 §5.15.A (UI E2E test 인프라) 만 잔존. 1000~1600 LOC / 3~5 cycle.
+
+---
+
+## 13. §5.15.A Cycle 1 진행 결과 — Session 24, 2026-05-07 ✅
+
+> **분류**: Mid-sized (인프라 단독, 1 cycle, 영향 < 5 신규 파일 — testing.md §3 매트릭스 적용).
+>
+> **scope 결정** (Karpathy Simplicity First): Cycle 1 = vitest + happy-dom + Obsidian mock minimum 5 인터페이스 + 1 인프라 검증 test. 사용자 raise 시 Cycle 2~5 (sidebar-chat / main.ts deep split test) 진행.
+
+### 13.1 변경 파일 (5 신규 + 2 mod)
+
+| # | 파일 | 변경 |
+|---|------|------|
+| 1 | `wikey-obsidian/package.json` | devDependencies 에 `vitest`, `happy-dom` 추가 + `test` / `test:watch` script |
+| 2 | `wikey-obsidian/vitest.config.ts` | **신규 22 LOC** — happy-dom env + obsidian module → mock alias + test pattern (`src/__tests__/**/*.test.ts`) |
+| 3 | `wikey-obsidian/src/__tests__/__mocks__/obsidian.ts` | **신규 ~180 LOC** — App / Vault / TFile / TFolder / Notice / ItemView / Plugin / Modal / Setting / setIcon / MarkdownRenderer mock. test helper (`__setFile` / `__getFile` / `__listAll` / `Notice.__log`) |
+| 4 | `wikey-obsidian/src/__tests__/obsidian-mock.test.ts` | **신규 ~120 LOC / 14 tests** — TFile (2) / Vault (5) / App (3) / Notice (2) / ItemView (2) cover. AC-A2 충족 |
+| 5 | `package.json` (root) | scripts.test 가 wikey-core + wikey-obsidian 모두 run. `test:core` / `test:obsidian` 분리 script 추가 |
+
+**합계**: 신규 ~322 LOC + delta ~10 LOC = **332 LOC** (추정 1000~1600 의 일부 — Cycle 1 인프라만).
+
+### 13.2 회귀 검증 (Phase 3a)
+
+| 검증 | 결과 |
+|------|------|
+| `npm test` (root, wikey-core + wikey-obsidian) | **wikey-core 700 PASS** / 3 skip + **wikey-obsidian 14 PASS** = **714 total PASS** |
+| `npm run build` (root, both) | 0 errors (기존 import.meta cjs warning 만) |
+| `./scripts/validate-wiki.sh` | PASS (영향 0) |
+
+### 13.3 BLUE 6 활동 (Phase 3b)
+
+| # | 활동 | 적용 / 의도적 유지 + 근거 |
+|---|------|---------------------------|
+| 1 | 함수 분해 | **유지** — mock class method 모두 ≤ 10 LOC. 분해 대상 X |
+| 2 | Naming consistency | **적용** — Obsidian 1.7.x API 명명 정확 mirror (App / Vault / TFile / Notice / ItemView / WorkspaceLeaf), test helper 는 `__` prefix 로 production code 와 분리 |
+| 3 | DRY | **유지** — 5 인터페이스 mock 단순, helper 추출 불필요 |
+| 4 | 주석 quality | **적용** — file header 가 §5.15.A scope / 의도적 제한 (EventRef chain 미구현 / FuzzySuggestModal 미포함) / 확장 가이드 명시 |
+| 5 | 가독성 | **적용** — magic number 0, mock test helper 명확 분리 |
+| 6 | 회귀 재검증 | **적용** — Phase 3a 동일 명령 재run 결과 동일 PASS |
+
+### 13.4 AC
+
+| AC | 내용 | 결과 |
+|----|------|------|
+| AC-A1 | `npm test` 실행 가능 (wikey-obsidian) — exit 0 | ✅ 14 PASS / exit 0 |
+| AC-A2 | Obsidian API mock layer 가 App / Vault / TFile / Notice / ItemView 최소 5 인터페이스 cover | ✅ obsidian-mock.test.ts 14 tests 모두 PASS |
+| AC-A3 | sidebar-chat.ts `renderAuditSection` audit fetch + render 흐름 1+ test | **deferred (Cycle 2~5)** — Cycle 1 은 인프라만. 사용자 raise 시 진행 |
+| AC-A4 | (옵션) main.ts `handleVaultCreate` test | **deferred (Cycle 2~5)** |
+| AC-A5 | esbuild 빌드 영향 0 — `npm run build` 회귀 0 | ✅ both wikey-core/obsidian build 0 errors |
+| AC-A6 | (옵션) §5.14 잔존 4 항목 deep split 재평가 + 진행 | **deferred (Cycle 2~5)** — 인프라 가용 후 사용자 raise 시 진행 |
+
+### 13.5 Karpathy 4원칙
+
+- **Think Before Coding**: jsdom vs happy-dom 비교 → happy-dom 채택 근거 (jsdom 보다 ~3x 빠른 minimal DOM, vitest 권장 default). 5 인터페이스 minimum 결정 (15 인터페이스 한꺼번에 mock 시 over-engineering)
+- **Simplicity First**: Cycle 1 = 인프라만. AC-A3/A4/A6 모두 deferred 명시 (silent skip 금지). mock layer 의 EventRef chain / MarkdownPostProcessor 등 미사용 인터페이스 미포함
+- **Surgical Changes**: wikey-obsidian/src/ 의 기존 ts 파일 변경 0 (sidebar-chat / main.ts / commands.ts 등 손대지 않음). 신규 파일만으로 인프라 구축
+- **Goal-Driven**: AC-A1/A2/A5 정량 PASS. AC-A3/A4/A6 deferred 시점 명시
+
+### 13.6 잔여 (Cycle 2~5)
+
+다음 세션 후보:
+- **Cycle 2**: sidebar-chat.ts `renderAuditSection` 의 audit fetch + render 흐름 unit test (mock vault fixture 기반). AC-A3 충족.
+- **Cycle 3**: main.ts `handleVaultCreate` vault create event → autoIngest queue / bypass detection 분기 unit test. AC-A4 충족.
+- **Cycle 4~5**: §5.14 잔존 4 항목 (renderAuditSection deep split / handleVaultCreate method 추출 / settings-tab section split / runIngest 분해) 재평가 + 진행. AC-A6 충족.
+
+추정 LOC 추가: 700~1300 (Cycle 1 의 ~322 + Cycle 2~5 의 ~700~1300 = 1000~1600 plan 추정 충족).

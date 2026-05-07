@@ -11,7 +11,9 @@
     "build": "npm run build --workspaces",
     "build:core": "npm run build -w wikey-core",
     "build:obsidian": "npm run build -w wikey-obsidian",
-    "test": "npm test -w wikey-core",
+    "test": "npm test -w wikey-core && npm test -w wikey-obsidian",
+    "test:core": "npm test -w wikey-core",
+    "test:obsidian": "npm test -w wikey-obsidian",
     "dev": "npm run dev -w wikey-obsidian"
   }
 }

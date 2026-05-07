@@ -2860,3 +2860,77 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 ### 5.15.B 잔여
 
 §5.15.A (UI E2E test 인프라) 만 잔존. 1000~1600 LOC / 3~5 cycle. wikey-obsidian/package.json 에 vitest / jsdom devDependency 추가 + Obsidian API mock layer (App / Vault / TFile / Notice / ItemView 5 인터페이스 minimum) + sidebar-chat / main.ts test 1+ → §5.14 잔존 4 항목 (deep split 안전망) 의 enabler.
+
+---
+
+## 5.15.A Cycle 1 (UI E2E test 인프라 — vitest + happy-dom + Obsidian mock 5 인터페이스) ✅ (Session 24, 2026-05-07, §5.15 sub-section)
+
+> mirror: [`plan/phase-5-todox-5.15-pipeline-v2-followups.md §13`](../plan/phase-5-todox-5.15-pipeline-v2-followups.md) v4 · 합본 spec (Mid-sized — testing.md §3 매트릭스)
+>
+> Cycle 1 (인프라) 만. Cycle 2~5 (sidebar-chat / main.ts deep split test + §5.14 잔존 4 항목 재평가) 다음 세션 후보.
+
+### 5.15.A 본질 — UI 코드 회귀 안전망 구축
+
+**현재 상황 cross-check**: `wikey-obsidian/package.json` 에 `vitest` / `jest` 등 test runner 의존성 0 건, `test` script 0 건. UI 코드 변경 시 회귀 검증 = `npm run build` (타입 체크만) + `obsidian-cdp` full cycle smoke (5 패널 render + console 0 error, 30분) 만 가능.
+
+§5.14 잔존 4 항목 의도적 유지 결정 (session 23 `phase-5-todox-5.14 §9`) 의 핵심 이유: **closure state 추출 시 회귀 detect 안 됨** → unit test 인프라 부재가 enabler bottleneck.
+
+§5.15.A Cycle 1 = **그 인프라 자체 구축**. vitest + happy-dom + Obsidian API mock 5 인터페이스 minimum + 인프라 검증 1 test PASS = **AC-A1 + AC-A2 + AC-A5 충족**. AC-A3/A4/A6 (실 sidebar-chat / main.ts test + §5.14 deep split 재평가) 는 다음 cycle.
+
+### 5.15.A 변경 파일 (5 신규 + 2 mod)
+
+| # | 파일 | 변경 |
+|---|------|------|
+| 1 | `wikey-obsidian/package.json` | devDeps `vitest@^3.2.4` + `happy-dom@^20.9.0` + `test` / `test:watch` script |
+| 2 | `wikey-obsidian/vitest.config.ts` | **신규 22 LOC** — happy-dom env + obsidian module → mock alias + test pattern |
+| 3 | `wikey-obsidian/src/__tests__/__mocks__/obsidian.ts` | **신규 ~180 LOC** — App / Vault / TFile / TFolder / Notice / ItemView / Plugin / Modal / Setting / setIcon / MarkdownRenderer mock + test helper (`__setFile` / `__getFile` / `__listAll` / `Notice.__log`) |
+| 4 | `wikey-obsidian/src/__tests__/obsidian-mock.test.ts` | **신규 ~120 LOC / 14 tests** — TFile (2) / Vault (5) / App (3) / Notice (2) / ItemView (2) 모두 PASS. AC-A2 충족 |
+| 5 | `package.json` (root) | scripts.test 가 wikey-core + wikey-obsidian 모두 run. `test:core` / `test:obsidian` 분리 script 추가 |
+
+**합계**: 신규 ~322 LOC + delta ~10 LOC = **332 LOC** (Cycle 1 인프라만 — 추정 1000~1600 LOC plan 의 ~25%).
+
+### 5.15.A 회귀 검증 (Phase 3a)
+
+| 검증 | 결과 |
+|------|------|
+| `npm test` (root) | wikey-core 700 PASS / wikey-obsidian 14 PASS = **714 total** |
+| `npm run build` (root) | 0 errors (기존 import.meta cjs warning 만) |
+| `./scripts/validate-wiki.sh` | PASS |
+
+### 5.15.A BLUE 6 활동 (Phase 3b)
+
+| # | 활동 | 적용 / 의도적 유지 + 근거 |
+|---|------|---------------------------|
+| 1 | 함수 분해 | **유지** — mock class method 모두 ≤ 10 LOC |
+| 2 | Naming consistency | **적용** — Obsidian 1.7.x API 명명 정확 mirror, test helper `__` prefix 로 production 분리 |
+| 3 | DRY | **유지** — 5 인터페이스 mock simple, helper 추출 불필요 |
+| 4 | 주석 quality | **적용** — file header 가 §5.15.A scope / 의도적 제한 (EventRef chain 미구현 / FuzzySuggestModal 미포함) / 확장 가이드 명시 |
+| 5 | 가독성 | **적용** — magic number 0, mock test helper 명확 분리 |
+| 6 | 회귀 재검증 | **적용** — Phase 3a 동일 명령 재run PASS |
+
+### 5.15.A AC
+
+| AC | 내용 | 결과 |
+|----|------|------|
+| AC-A1 | `npm test` 실행 가능 (wikey-obsidian) — exit 0 | ✅ |
+| AC-A2 | Obsidian API mock 5 인터페이스 cover | ✅ |
+| AC-A3 | sidebar-chat `renderAuditSection` test 1+ | **deferred (Cycle 2)** |
+| AC-A4 | main.ts `handleVaultCreate` test (옵션) | **deferred (Cycle 3)** |
+| AC-A5 | esbuild 빌드 영향 0 | ✅ |
+| AC-A6 | §5.14 잔존 4 항목 deep split 재평가 + 진행 (옵션) | **deferred (Cycle 4~5)** |
+
+### 5.15.A Karpathy 4원칙
+
+- **Think Before Coding**: jsdom vs happy-dom → happy-dom 채택 (jsdom 보다 ~3x 빠른 minimal DOM, vitest 권장 default). 5 인터페이스 minimum (15 한꺼번에는 over-engineering)
+- **Simplicity First**: Cycle 1 = 인프라만. AC-A3/A4/A6 deferred 명시 (silent skip 금지)
+- **Surgical Changes**: wikey-obsidian/src/ 기존 ts 파일 변경 0 (sidebar-chat / main.ts / commands.ts 손대지 않음). 신규 파일만 인프라 구축
+- **Goal-Driven**: AC-A1/A2/A5 정량 PASS. AC-A3/A4/A6 deferred 명시
+
+### 5.15.A 잔여
+
+**Cycle 2~5 (다음 세션 후보)**:
+- **Cycle 2**: sidebar-chat.ts `renderAuditSection` audit fetch + render 흐름 unit test → AC-A3
+- **Cycle 3**: main.ts `handleVaultCreate` vault create event 분기 unit test → AC-A4
+- **Cycle 4~5**: §5.14 잔존 4 항목 (renderAuditSection deep split / handleVaultCreate method 추출 / settings-tab section split / runIngest 분해) 재평가 + 진행 → AC-A6
+
+추정 LOC: Cycle 2~5 합 ~700~1300 (Cycle 1 의 ~322 + Cycle 2~5 = 1000~1600 plan 추정 충족).
