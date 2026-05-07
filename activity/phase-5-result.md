@@ -2387,3 +2387,27 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 - commands.ts runIngest (이미 fast path / stay-involved / inner loop cleanly structured)
 
 **Session 22 회귀**: 635 PASS / 3 skip / 0 build errors / validate-wiki PASS / fixture 10/10 PASS.
+
+### 5.14 본체 종결 — 잔존 4 항목 의도적 유지 결정 (Session 23, 2026-05-07) ✅
+
+> **사용자 명시**: "5.14 의 잔존 작업 'UI E2E test 의존' 과 관련해서 진행해줘. 이제 본체 관련된 모든 작업은 이것으로 종결되어야 함."
+> 상세 분석 + 항목별 정량 근거: [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md §9`](../plan/phase-5-todox-5.14-retrospective-blue-refactor.md)
+
+**근거 cross-check**:
+- **Test 인프라**: `wikey-obsidian/package.json` vitest/jest 의존성·`test` script 0건. UI 코드 unit test 인프라 자체 부재 → deep split 안전망 = 라이브 obsidian-cdp full cycle smoke (5 패널 render + console 0 error) 만 가용.
+- **Karpathy Simplicity First**: 4 항목 모두 closure state ≥6, props 인터페이스 신설 비용 > 함수 길이 절감 → indirection 만 추가.
+- **Karpathy Surgical Changes**: 잔존 항목들은 본 §5.14 cycle 이 만든 게 아닌 plugin lifecycle scoped state 의 자연스러운 캡슐화. 손대지 말 것.
+- **Goal-Driven**: AC-7 회귀 0 / AC-8 build 0 errors / AC-9 validate-wiki PASS 모두 만족 (635 PASS). 추가 cycle marginal benefit ↓.
+
+**4 항목 의도적 유지 결정**:
+
+| 항목 | LOC | closure state | extract 비용 | LOC 절감 | 결정 |
+|------|-----|----------------|---------------|----------|------|
+| sidebar-chat `renderAuditSection` | 684 | 12+ (mut 4) | props 객체 + 4 setter callback +50 LOC | net ≈ 0 | 의도적 유지 |
+| settings-tab section split | 1175 (이미 분해) | — | UI 행 정렬과 코드 정렬 1:1 mapping 깨뜨림 | (artificial) | 의도적 유지 |
+| main.ts `onload` | 131 | 8 (lifecycle) | 6 closure state instance field 격상 → 캡슐화 약화 | (indirection) | 의도적 유지 |
+| commands.ts `runIngest` | 113 | (cleanly structured) | 각 step 5~30 LOC, 함수 호출 1줄 + 정의 N+2줄 | 0 | 의도적 유지 |
+
+**§5.14 종결 verdict**: 본체 BLUE refactor 작업 완료. 미래 wikey-obsidian 에 vitest + Obsidian API mock + jsdom UI E2E test 인프라가 구축되면 잔존 4 항목 deep split 재평가 가능. 그 인프라 구축은 별도 phase / future work — 현 시점 §5.14 scope 외.
+
+**문서 변경 only — 코드 변경 0**: 본 종결은 결정 + 근거 등록이며 코드/테스트 회귀 검증 별도 실행 불필요 (session 22 종결 시 635 PASS / build OK / validate-wiki PASS 확증). validate-wiki.sh 만 한 번 더 sanity 확증.

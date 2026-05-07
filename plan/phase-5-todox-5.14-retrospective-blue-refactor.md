@@ -1,25 +1,28 @@
 ---
 phase: 5
 section: 5.14
-title: Phase 5 retrospective TDD-BLUE refactor — Tier 2-4 narrow 완료
+title: Phase 5 retrospective TDD-BLUE refactor — 본체 종결
 status: completed
 created: 2026-05-06
-updated: 2026-05-06
-version: v1 (session 19) → executed (session 20)
-priority: P0 (완료)
+updated: 2026-05-07
+version: v1 (session 19) → executed (session 20) → narrow continuation (session 22) → terminal verdict (session 23)
+priority: P0 (종결)
 ---
 
-# Phase 5 §5.14 — retrospective TDD-BLUE refactor (codebase wide, 다음 세션 최우선)
+# Phase 5 §5.14 — retrospective TDD-BLUE refactor (본체 종결)
 
 > **상위 문서**: [`plan/phase-5-todo.md`](./phase-5-todo.md) · [`activity/phase-5-result.md`](../activity/phase-5-result.md)
 >
 > **이슈 출처**: 사용자 raise 2026-05-06 — §5.11 v2 + §5.12 SDD+TDD 진행 시 RED + GREEN 은 명시 진행했으나 **BLUE (Refactor)** 가 사실상 누락 (Phase 3 가 회귀 검증만 수행, 코드 quality 개선 활동 X). retrospective 으로 BLUE 단계를 별도 cycle 로 보강.
 >
-> **상태**: **draft v1 / 다음 세션 최우선 (P0)**. §5.13 (A1+B2+C4) 보다 우선 진행.
+> **상태**: **종결 (session 23, 2026-05-07)**. Tier 2-4 narrow BLUE + Layer 6 + sidebar-chat narrow 완료. 잔존 4 항목 (UI E2E test 의존) 은 `§9 본체 종결 결정` 참고 — 의도적 유지 + 근거 명시.
 >
 > **버전 이력**:
 > - v0 (2026-05-06 session 19, narrow scope = §5.11 v2 + §5.12 만)
-> - **v1 (2026-05-06 session 19, 사용자 raise "전체 코드 refactoring 필요할 수도" → master 코드 health 진단 후 scope 4 tier 로 확장. Tier 2 시작 권고).**
+> - v1 (2026-05-06 session 19, 사용자 raise "전체 코드 refactoring 필요할 수도" → master 코드 health 진단 후 scope 4 tier 로 확장. Tier 2 시작 권고)
+> - executed (2026-05-06 session 20, Tier 2-4 narrow BLUE 진행 + codex post-impl APPROVE)
+> - narrow continuation (2026-05-07 session 22, Layer 6 waitUntilFresh 강화 + sidebar-chat narrow refactor)
+> - **terminal (2026-05-07 session 23, 잔존 4 항목 본체 종결 결정 — §9)**
 
 ---
 
@@ -373,3 +376,83 @@ Phase 6: master verdict + commit + push + result 문서
 - 본 §5.14 는 **draft v0**. 착수 직전 v1 으로 갱신 (의심 지점별 옵션 결정 + AC 구체화).
 - 1차 scope 만 명시 (§5.11 v2 + §5.12 retrospective). 2차 (§5.1~§5.10 sampling) 은 사용자 결정 후.
 - §5.14 가 §5.13 보다 우선이라는 사용자 임시 결정은 변경 가능 (§5.13 항목별 우선 진행도 옵션).
+
+---
+
+## 9. 본체 종결 결정 (session 23, 2026-05-07)
+
+> **사용자 명시**: "5.14 의 잔존 작업 'UI E2E test 의존' 과 관련해서 진행해줘. 이제 본체 관련된 모든 작업은 이것으로 종결되어야 함."
+>
+> **결론**: 잔존 4 항목 모두 **deep split 의도적 유지** 결정. 본 §5.14 본체 종결.
+
+### 9.0 종결 근거 — 인프라·원칙 cross-check
+
+| 시각 | 평가 |
+|------|------|
+| **Test 인프라** | `wikey-obsidian/package.json` 에 vitest/jest 의존성·`test` script 0건. 모든 unit test 는 wikey-core 에만 존재. UI 코드 deep split 시 안전망 = 라이브 obsidian-cdp full cycle smoke 만 가용 (5 패널 render + console 0 error). |
+| **Karpathy Simplicity First** | extract 가 LOC 줄이는가 vs indirection 추가만 하는가 — 4 항목 모두 후자에 해당 (closure state ≥6, props 인터페이스 신설 비용 > 함수 길이 절감). |
+| **Karpathy Surgical Changes** | 본인이 만든 잔재만 정리. 잔존 항목들은 본 §5.14 cycle 이 만든 게 아니라 plugin lifecycle scoped state 의 자연스러운 캡슐화. |
+| **Goal-Driven** | AC-7 회귀 0 / AC-8 build 0 errors / AC-9 validate-wiki PASS 모두 만족 (session 22 종결 시점 635 PASS). 추가 cycle 의 marginal benefit ↓ |
+
+### 9.1 항목별 정량 분석 + 의도적 유지 근거
+
+#### Item 1 — `sidebar-chat.ts` `renderAuditSection` deeper split
+
+| 항목 | 값 |
+|------|-----|
+| 현 LOC | 862 ~ 1546 (684 lines) |
+| 외부 closure state | 12+ (auditMode mut / viewMode mut / searchQuery mut / treeExpand Map mut / auditData / ingestedSet / unsupportedSet / auditAllSet / container / basePath / env / this.app / this.plugin) |
+| inner closure (extract 후보) | renderList (95 LOC) / renderTree (95 LOC) / ingest btn click handler (196 LOC) |
+| extract 비용 | 12 fields props 객체 + 4 setter callback (mut state) + module-level fn 의 module scope import — props formalization +50 LOC 추가 |
+| LOC 절감 | renderAuditSection 자체 200~250 LOC 잔존 + helper 들 95+95+196+(props 형식화 50) = ~436 LOC 격상 → **net LOC ≈ 0**, indirection 만 추가 |
+| 결정 | **의도적 유지** — Simplicity First 위반 (200줄 → 50줄 대신 zero gain). 추후 vitest+obsidian mock UI E2E test 인프라 구축 시 재평가. |
+
+#### Item 2 — `settings-tab.ts` setting group 별 분해
+
+| 항목 | 값 |
+|------|-----|
+| 현 LOC | 1175 |
+| 구조 | 이미 `render*Section` 으로 section-decomposed (renderEnvStatusSection 148 / renderGeneralSection 180 / renderProvidersSection / renderModelsSection / renderIngestSection / renderPiiSection 등) |
+| 추가 split 후보 | 같은 setting group 내 관련 setting 들을 sub-helper 로 분리 |
+| 비용 | UI 행 정렬과 코드 정렬의 1:1 매핑 깨뜨림 — 사용자 raise: "settings UI 한 화면에서 인접 행이 코드에서도 인접해야 직관적" (인지 비용 ↑) |
+| 결정 | **의도적 유지** — artificial split 우려. 현재 section 단위가 UX-meaningful 단위와 일치. |
+
+#### Item 3 — `main.ts` `onload` 분해
+
+| 항목 | 값 |
+|------|-----|
+| 현 LOC | 163~293 (131 lines) |
+| closure state | 8 (startTime / STARTUP_GRACE_MS / bypassBatch / bypassTimer / autoQueue / autoTimer / scheduleAutoIngest / renameDebouncers Map) |
+| 이미 method 추출됨 | `handleVaultRename` / `handleVaultDelete` (private async) |
+| 잔존 inline | `handleVaultCreate` (inbox auto-ingest queue + bypass detection) |
+| extract 비용 | 6 closure state instance field 격상 → plugin lifecycle scoped state 의 외부 노출 표면 확장 (캡슐화 약화) |
+| triggerReconcile (5 LOC) | extract 가능하나 5 LOC 의 비용·가치 균형 ≈ 0 |
+| 결정 | **의도적 유지** — onload closure 가 plugin lifecycle scoped state 의 자연스러운 캡슐화. method 격상은 캡슐화 약화 + indirection 추가. |
+
+#### Item 4 — `commands.ts` `runIngest` 113 LOC
+
+| 항목 | 값 |
+|------|-----|
+| 현 LOC | runIngest 113 |
+| 구조 | fast path (skip branch — early return) / stay-involved flow / inner loop 3 단계 cleanly structured + step 별 주석 |
+| extract 후보 | 명확히 없음 (각 단계가 5~30 LOC 의 작은 step) |
+| LOC 절감 | 0 (각 step 추출 시 함수 호출 1줄 + 함수 정의 N+2 줄, indirection 만) |
+| 결정 | **의도적 유지** — 분해 가치 < 0. 이미 cleanly structured. |
+
+### 9.2 잔존 항목 → "결정 후 종결" 분류 변경
+
+기존 `[ ] UI E2E test 의존` (defer) → **`[x] 의도적 유지 결정 (2026-05-07)`** 로 변경. 추후 wikey-obsidian 에 vitest + obsidian mock + jsdom 인프라 구축 시 (별도 phase / future work) 본 결정 재평가 가능. 본체 §5.14 는 종결.
+
+### 9.3 본체 §5.14 종결 verdict
+
+| 영역 | 상태 |
+|------|------|
+| Tier 2 (core 6 파일) BLUE | ✅ session 20 commit `888317f` (canonicalizer / ingest-pipeline / wiki-ops / pii-redact / query-pipeline / schema) |
+| Tier 3 (UI 4 파일) narrow cleanup | ✅ session 20 commit `888317f` |
+| Tier 4 wikey-core 잔여 sampling | ✅ session 20 commit `888317f` |
+| Layer 6 waitUntilFresh 강화 | ✅ session 22 commit `f8476d4` |
+| sidebar-chat narrow refactor | ✅ session 22 commit `7a166f4` (renderAuditSection 727→687 LOC) |
+| 잔존 4 항목 (UI E2E test 의존) | ✅ session 23 의도적 유지 결정 (본 §9) |
+| TDD-BLUE Phase 3a/3b 영구 정책 | ✅ session 19 commit `0cb2e06` + `eccf98a` |
+
+**§5.14 종결**. 본체 BLUE refactor 작업 완료. 미래 UI E2E test 인프라가 갖춰지면 잔존 4 항목 deep split 재평가 가능 — 그 때까지 현 closure 캡슐화가 정당.

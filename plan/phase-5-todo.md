@@ -1513,10 +1513,24 @@
 
 ### 5.14 잔존 후속 — narrow BLUE (session 22, 2026-05-07) 부분 진행
 - [x] **sidebar-chat.ts narrow refactor**: 3 top-level helper 추출 (loadAuditScriptOutput / renderConverterCapabilityWarning / applyPairedSidecarToAudit) + 3 함수 audit-ingest fetch DRY (renderAuditSection / renderAuditSummaryOnly / renderRawSourcesDashboard) + dynamic `await import('wikey-core')` 2개 → top-level `LLMClient` import 전환. renderAuditSection 727 → 687 LOC (-40). 5 패널 라이브 smoke OK (Chat/Dashboard/Audit/Ingest/Help 모두 render, console 0 error).
-- [ ] **sidebar-chat.ts deeper split** — `renderAuditSection` UI 클로저 (renderList / renderTree / ingest btn click handler 95+95+196 LOC) state 추출은 closure 의존성 높아 UI E2E test 없이는 회귀 위험. UI E2E test 마련 후 진행.
-- [ ] **settings-tab.ts setting group 별 분해** — 이미 `render*Section` 으로 section-decomposed 양호 (renderEnvStatusSection 148 + renderGeneralSection 180 LOC 가 max). 추가 분해는 artificial split 우려. UI E2E 후 재평가.
-- [ ] **main.ts onload 131 LOC** — vault event handler 3종 (rename/delete/create) closure 의존성 + auto-ingest queue + bypass detection state 가 단일 onload 내 plumbing. extract 시 state object 파라미터 chain 위험. UI E2E 후 재평가.
-- [ ] **commands.ts runIngest 113 LOC** — fast path / stay-involved flow / inner loop 3 단계 cleanly structured. 추가 분해 가치 없음.
+
+### 5.14 본체 종결 (session 23, 2026-05-07) ✅
+> **사용자 명시**: "5.14 의 잔존 작업 'UI E2E test 의존' 과 관련해서 진행해줘. 이제 본체 관련된 모든 작업은 이것으로 종결되어야 함."
+> 상세 분석 + 항목별 정량 근거: [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md §9`](./phase-5-todox-5.14-retrospective-blue-refactor.md)
+
+- [x] **sidebar-chat.ts deeper split** — 의도적 유지. `renderAuditSection` 외부 closure state 12+ (auditMode/viewMode/searchQuery/treeExpand mut + auditData/ingestedSet/unsupportedSet 등 immut). inner closure (renderList 95 / renderTree 95 / ingest click handler 196) extract 시 props 객체 + 4 setter callback formalization +50 LOC, helper 격상 ~436 LOC, renderAuditSection 자체 200~250 LOC 잔존 → **net LOC ≈ 0, indirection 만 추가** (Simplicity First 위반). UI E2E test 인프라 부재 (wikey-obsidian package.json 에 vitest/jest 의존성 0건) 로 회귀 안전망 부족. 추후 인프라 구축 시 재평가.
+- [x] **settings-tab.ts 추가 분해** — 의도적 유지. 이미 `render*Section` 으로 section-decomposed (renderEnvStatusSection 148 / renderGeneralSection 180 / 기타 6 section). 추가 split 시 같은 setting group 내 인접 행이 코드에서도 인접해야 직관적인 UI/코드 1:1 mapping 깨뜨림 → artificial split.
+- [x] **main.ts onload 131 LOC** — 의도적 유지. closure state 8개 (startTime / STARTUP_GRACE_MS / bypassBatch / bypassTimer / autoQueue / autoTimer / scheduleAutoIngest / renameDebouncers Map) 가 plugin lifecycle scoped — handleVaultRename / handleVaultDelete 는 이미 method 추출, handleVaultCreate inline 의 6 closure state 격상 시 캡슐화 약화 + indirection 추가. closure 가 lifecycle-scoped state 의 자연스러운 캡슐화.
+- [x] **commands.ts runIngest 113 LOC** — 의도적 유지. fast path (skip branch early return) / stay-involved flow / inner loop 3 단계 cleanly structured + step 별 주석. extract 후보 명확히 없음 (각 step 5~30 LOC, 함수 호출 1줄 + 정의 N+2줄 = indirection 만).
+
+**§5.14 본체 종결 verdict**:
+- Tier 2 (core 6 파일) BLUE ✅ session 20 `888317f`
+- Tier 3 (UI 4 파일) narrow cleanup ✅ session 20 `888317f`
+- Tier 4 wikey-core 잔여 sampling ✅ session 20 `888317f`
+- Layer 6 waitUntilFresh 강화 ✅ session 22 `f8476d4`
+- sidebar-chat narrow refactor ✅ session 22 `7a166f4`
+- 잔존 4 항목 의도적 유지 결정 ✅ session 23 (본 섹션)
+- TDD-BLUE Phase 3a/3b 영구 정책 ✅ session 19 `0cb2e06` + `eccf98a`
 
 ### 5.14 follow-up — qmd query 회귀 6 layer silent fail fix (session 20 후반) ✅
 - [x] Layer 1 native binding rebuild (NODE_MODULE_VERSION v24/137 → v22/127)

@@ -1,37 +1,44 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-07 session 22 — 잔존 follow-up 5 항목 종결**.
-> (a) AC-A1-6 라이브 cycle smoke (itil-4-overview + pmbok-knowledge-areas 양 fixture) ✅,
-> (b) cmux dispatch fix (`a818e7e` cmd_send verify-and-retry) — 이전 세션 자체 fix ✅,
-> (c) codex post-impl cycle #1 (NEEDS_REVISION 1 P1 + 1 P2) → master narrow fix → APPROVE ✅,
-> (d) §5.13.D vault-wide basename 충돌 detection (validate-wiki.sh 검증 6 + 4 fixture test) ✅,
-> (e) §5.14 Layer 6 waitUntilFresh 강화 (`expectMinIndexed` arg + reindex.sh schema `indexed` + ingest-pipeline wiring + 6 unit test) ✅.
-> 635 PASS / build OK / validate-wiki PASS / fixture 10/10 PASS.
+> 최신 갱신: **2026-05-07 session 23 — §5.14 본체 종결**.
+> (a) §5.14 잔존 4 항목 (UI E2E test 의존) 의도적 유지 결정 + 근거 명시 ✅
+> (b) Phase 5 본체 BLUE refactor 작업 모두 종결 ✅
+> 코드 변경 0 (문서 mirror only). 회귀 = session 22 종결 시 635 PASS / build OK / validate-wiki PASS 확증 그대로 유효.
 > 생성일: 2026-04-10
 
 ---
 
-## 다음 세션 첫 액션 (2026-05-07 session 22 종결 직후)
+## 다음 세션 첫 액션 (2026-05-07 session 23 §5.14 본체 종결 직후)
 
-> **세션 22 종결**: 5 follow-up 모두 완료. SDD+TDD 5단계 분리 (Bug fix 분류 — 합본 spec 허용).
+> **세션 23 종결**: §5.14 잔존 4 항목 모두 의도적 유지 결정 + 근거 명시. 사용자 명시 "본체 관련된 모든 작업은 이것으로 종결" 충족.
 >
-> **§5.14 + §5.13.D + §5.13.C4 narrow fix commit chain**:
-> - `7c53e3e` feat(§5.13.D): vault-wide basename 충돌 detection (validate-wiki.sh 검증 6 + 4 fixture)
-> - `f8476d4` feat(§5.14.L6): waitUntilFresh expectMinIndexed gate + reindex.sh schema 'indexed' 필드
-> - `e3b2882` test(§5.13.C4): codex post-impl P1 narrow fix — warn log assertion + AC-C4-6 SEGMENTED route 의도 명확화
-> - `1fa9318` docs(sync): §5.13 + §5.14 mirror — phase-5-todo + phase-5-result + session-wrap
+> **§5.14 본체 종결 근거**:
+> - **Test 인프라 cross-check**: `wikey-obsidian/package.json` 에 vitest/jest 의존성·`test` script 0건. UI 코드 unit test 인프라 자체 부재 → deep split 안전망 부족.
+> - **Karpathy Simplicity First**: 4 항목 모두 closure state ≥6, props 인터페이스 신설 비용 > 함수 길이 절감 → indirection 만 추가.
+> - **Karpathy Surgical Changes**: 잔존은 plugin lifecycle scoped state 의 자연 캡슐화. 본 §5.14 cycle 이 만든 잔재가 아님.
 >
-> **§5.13 codex post-impl cycle #1 결과**: NEEDS_REVISION (1 P1 + 1 P2). master 평가 = false-positive 가까운 evidence/doc gap.
-> - P1 (test gap): AC-C4-2/3 warn 로그 assertion 누락 + AC-C4-6 mislabel (immutability test 였음). master 가 1 commit 으로 narrow fix.
-> - P2 (live evidence gap): AC-A1-3 라이브 evidence 다양 확장자 한계 — code path extension-agnostic + unit test cover. result doc 명시 추가.
+> **§5.14 종결 verdict (전체)**:
+> - Tier 2 (core 6 파일) BLUE ✅ session 20 `888317f`
+> - Tier 3 (UI 4 파일) narrow cleanup ✅ session 20 `888317f`
+> - Tier 4 wikey-core 잔여 sampling ✅ session 20 `888317f`
+> - Layer 6 waitUntilFresh 강화 ✅ session 22 `f8476d4`
+> - sidebar-chat narrow refactor ✅ session 22 `7a166f4`
+> - 잔존 4 항목 의도적 유지 결정 ✅ session 23 (본 종결)
+> - TDD-BLUE Phase 3a/3b 영구 정책 ✅ session 19 `0cb2e06` + `eccf98a`
 >
-> **§5.14 잔존 narrow BLUE 추가 진행 (session 22 후반)**:
-> - sidebar-chat.ts narrow refactor 완료 — 3 helper 추출 + audit fetch DRY + dynamic import 제거. renderAuditSection 727 → 687 LOC. 5 패널 라이브 smoke OK.
-> - settings-tab.ts / main.ts / commands.ts 는 이미 cleanly structured 또는 closure-state 의존성으로 UI E2E test 없이 추가 분해 회귀 위험 — defer.
+> **§5.14 잔존 4 항목 정량 근거**:
+> | 항목 | LOC | closure state | LOC 절감 | 결정 |
+> |------|-----|----------------|----------|------|
+> | sidebar-chat `renderAuditSection` | 684 | 12+ (mut 4) | net ≈ 0 | 의도적 유지 |
+> | settings-tab section split | 1175 (이미 분해) | — | (artificial) | 의도적 유지 |
+> | main.ts `onload` | 131 | 8 (lifecycle) | (캡슐화 약화) | 의도적 유지 |
+> | commands.ts `runIngest` | 113 | (cleanly structured) | 0 | 의도적 유지 |
 >
 > **다음 세션 첫 액션 옵션**:
-> 1. UI E2E test infrastructure (Playwright + obsidian-cdp 기반) 마련 — sidebar-chat.ts deeper split / main.ts onload state extraction 의 enabler.
-> 2. 새 issue (사용자 raise 시)
+> 1. **Phase 6 (웹 환경) 진입** — Phase 5 본체 종결 (5.1~5.4 + 5.10~5.14 핵심) 충족, plan-full §3.3.6 진입 조건 검토.
+> 2. **새 issue / paradigm shift** (사용자 raise 시)
+> 3. **future work**: wikey-obsidian UI E2E test 인프라 (vitest + Obsidian API mock + jsdom) 구축 — §5.14 잔존 4 항목 deep split 재평가의 enabler. 별도 phase / future work 로 분리.
+> 4. **Phase 5 P3 (§5.5 / §5.6) 또는 P4 (§5.7~§5.9) 진입** — 우선순위 미낮은 잔여 subject 진행.
 
 ---
 
