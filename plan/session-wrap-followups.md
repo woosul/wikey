@@ -1,13 +1,19 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-08 session 25 — §5.15.A Cycle 2 종결 (AC-A3 충족)**.
+> 최신 갱신: **2026-05-08 session 25 — §5.15.A 종결 (Cycle 3~5 의도적 미진행)**.
 > 직전 session 24 (2026-05-07) 에서 §5.15.C / §5.15.E / §5.15.B / §5.15.A Cycle 1 모두 종결.
-> (a) §5.15.C citation 마커 dead code cleanup — sidebar-chat.ts -98 LOC (commit `e93b05e`) ✅
-> (b) §5.15.E LLM hang UX hardening (F1/F2/F3/F4) — modal elapsed 1s timer + ObsidianHttpClient timeout + cancel "취소됨" 명시 (commit `88e5286`) ✅
-> (c) §5.15.B PROMOTION_THRESHOLD override — `.wikey/promotion-threshold.yaml` `default:` (commit `90b0011`) ✅
+> (a) §5.15.C citation 마커 dead code cleanup (commit `e93b05e`) ✅
+> (b) §5.15.E LLM hang UX hardening F1/F2/F3/F4 (commit `88e5286`) ✅
+> (c) §5.15.B PROMOTION_THRESHOLD override (commit `90b0011`) ✅
 > (d) §5.15.A Cycle 1 — vitest + happy-dom + Obsidian mock 5 인터페이스 + 14 인프라 검증 tests (commit `f1d1dce`) ✅
-> (e) **§5.15.A Cycle 2 (session 25)** — sidebar-chat.ts 5 helper export (computeRowPct / showRowError / showRowCancelled / loadAuditScriptOutput / applyPairedSidecarToAudit) + AuditScriptOutput/Capabilities interface export. mock obsidian 에 HTMLElement augmentation (setText / addClass / createDiv 등 polyfill) + FuzzySuggestModal stub. 신규 21 unit tests — render 흐름 atomic unit cover. **AC-A3 충족** ✅
-> (f) §5.15 잔여: **§5.15.A Cycle 3~5** (Cycle 3 main.ts `handleVaultCreate` test 200~300 LOC → Cycle 4~5 §5.14 잔존 4 항목 deep split 재평가 300~700 LOC).
+> (e) §5.15.A Cycle 2 — sidebar-chat helper 5 export + 21 unit tests, AC-A3 충족 (commit `02270f3`) ✅
+> (f) **§5.15.A 종결 결정 (session 25, 사용자)**: Cycle 3~5 (AC-A4 handleVaultCreate / AC-A6 §5.14 deep split) 의도적 미진행. 근거: §5.14 session 23 의도적 유지 결정의 본질 = closure state 12+ field 비용 + plugin lifecycle scoped 자연 캡슐화 (test 인프라 부재가 아님). Cycle 1+2 가 향후 isolated function 신규 추가 시 자연 cover 안전망 충분.
+> (g) **§5.15 sub-section 5종 (A/B/C/D/E) 모두 종결** — Phase 5 잔여 = §5.5 / §5.6 / §5.7 / §5.8 / §5.9 (P3/P4) 5 subject 만.
+>
+> 다음 세션 후보:
+> - **§5.7.1 bash→TS 포팅** (P4, narrow scope, 1~2 cycle, 동작 변경 0) — 사용자 명시 후보
+> - **§5.6.3 LLM provider strategy** (P3 draft, session 24 환경 latency 관측 후속) — LLM hang 근본 fix
+> - 기타 P3/P4 항목 또는 Phase 6 진입
 >
 > 이전 세션 (session 23) 종결:
 > - §5.14 본체 종결 + §5.15.D 종결 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix.

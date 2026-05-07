@@ -2,11 +2,11 @@
 phase: 5
 section: 5.15
 title: Pipeline v2 후속 — A/B/C/D/E (UI E2E test 인프라 + PROMOTION_THRESHOLD override + citation cleanup + inline media + LLM hang UX hardening)
-status: §5.15.A Cycle 1+2 종결 / §5.15.B/C/D/E 종결 / §5.15.A Cycle 3~5 다음 세션 후보
+status: §5.15.A/B/C/D/E 모두 종결 (사용자 결정 2026-05-08)
 created: 2026-05-07
 updated: 2026-05-08
-version: v5 (session 25 — §5.15.A Cycle 2 종결 — sidebar-chat helper 5종 export + 21 tests PASS — AC-A3 충족)
-priority: P2 (A Cycle 3~5 잔여)
+version: v6 (session 25 — §5.15.A 종결 결정 — Cycle 3~5 의도적 미진행)
+priority: 종결
 ---
 
 # Phase 5 §5.15 — Pipeline v2 후속 3 항목
@@ -706,7 +706,23 @@ Cycle 2 종결 후 다음 세션 후보:
 - **Surgical Changes**: sidebar-chat.ts 의 활성 코드 변경 0 (5 `function` → `export function` only). renderAuditSection / WikeyChatView 본체 손대지 않음
 - **Goal-Driven**: AC-A3 정량 — 21 unit tests, 각 helper 의 입력/출력/edge case 명시 cover. computeRowPct 의 fraction 계산 (5% + 75% × 0.5 = 42.5 → round 43) 같은 boundary 명시
 
-### 14.5 잔여 (Cycle 3~5)
+### 14.5 잔여 (Cycle 3~5) — 종결 결정 (2026-05-08, 사용자 결정)
 
-- **Cycle 3**: main.ts `handleVaultCreate` (vault create event 분기) — Karpathy Simplicity First 로 method 추출 후 unit test (or 직접 instance method test 후 deep split). 추정 200~300 LOC.
-- **Cycle 4~5**: §5.14 잔존 4 항목 (renderAuditSection deep split / handleVaultCreate method 추출 / settings-tab section split / runIngest 분해) 재평가 — 인프라 가용 후 cover 가능 단위 우선. 추정 300~700 LOC.
+§5.15.A 는 Cycle 1+2 만으로 **종결**. Cycle 3~5 (AC-A4 / AC-A6) 의도적 미진행.
+
+**종결 근거**:
+- **AC-A4 (main.ts `handleVaultCreate` test)**: vault create event 분기는 plugin lifecycle scoped 동작 — instance state 6 closure (queue / bypassMap / inFlight / autoIngestSettings 등) 의존. test 가능하게 분해하려면 method 추출 + props 격상 = §5.14 session 23 의 *의도적 유지* 결정 (props 인터페이스 비용 > 함수 길이 절감) 와 정합. Cycle 1+2 인프라 가용 ≠ 분해 정당성.
+- **AC-A6 (§5.14 잔존 4 항목 deep split)**: session 23 의도적 유지 결정의 본질은 (a) closure state 12+ field 비용, (b) plugin lifecycle scoped 자연 캡슐화 — 둘 모두 *test 인프라* 와 무관. 인프라 생긴 후 재평가에도 결정 동일. 진행 시 indirection 만 추가 (Karpathy Simplicity First 위배).
+- **Cycle 1+2 산출의 충분성**: vitest + happy-dom + Obsidian mock 5 인터페이스 + helper 5 export → 향후 *isolated function* 신규 추가 시 자연 cover 가능. 회귀 detect 안전망 자체는 이미 가용.
+- **사용자 가치 분석**: Cycle 3~5 의 추가 LOC (~500~1000) 대비 actual 회귀 검출 가치 낮음 — Cycle 1+2 가 이미 §5.14 BLUE refactor 후속의 wallet-friendly 안전망. session 24 의 §5.15.E F4 cancel UX (`showRowCancelled`) 같은 신규 helper 가 자연스레 unit test 등록되는 패턴이 본 인프라의 실제 활용 시나리오.
+
+**Karpathy 4원칙 정합 cross-check**:
+- **Think Before Coding**: Cycle 1+2 가 §5.14 잔존 의 의도적 유지 결정 *재평가* 의 근거 인프라였음. 재평가 결과 = 결정 동일 (closure 비용 변하지 않음) → 추가 cycle 진행 시 retroactive justification 위험
+- **Simplicity First**: Cycle 1+2 = 인프라 + atomic helper cover. Cycle 3~5 = closure deep split + complex mock fixture (vault create event chain / plugin onload sequence) — overengineering risk
+- **Surgical Changes**: AC plan 이 처음부터 AC-A4/A6 를 "(옵션)" 으로 표기 — Cycle 1+2 만 의무 spec
+- **Goal-Driven**: AC-A1/A2/A3/A5 정량 PASS — 본 §5.15.A 의 핵심 목표 (vitest + Obsidian mock + helper cover + 빌드 영향 0) 충족
+
+**향후 reopen 조건** (사용자 명시 필요):
+- 대규모 sidebar-chat / main.ts 변경으로 *회귀 발생* 시 — closure state mut chain 의 deep test 필요시
+- §5.14 잔존 4 항목 중 *어느 하나* 가 사용자 가치 ↑ 변경 사유 (추가 feature 등) 발생 시
+- Phase 6 웹 환경 진입 시 동일 mock layer 재사용 정당성 발견 시

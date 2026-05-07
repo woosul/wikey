@@ -2990,7 +2990,21 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 - **Surgical Changes**: sidebar-chat.ts 활성 코드 변경 0 (5 `function` → `export function` only)
 - **Goal-Driven**: AC-A3 정량 — 21 unit tests, 각 helper 입력/출력/edge case 명시 cover. computeRowPct boundary (subStep clamp 0~1, fraction round) 명시 case
 
-### 5.15.A Cycle 2 잔여
+### 5.15.A Cycle 2 잔여 — 종결 (사용자 결정 2026-05-08)
 
-- **Cycle 3**: main.ts `handleVaultCreate` (vault create event 분기) — 200~300 LOC 추정
-- **Cycle 4~5**: §5.14 잔존 4 항목 deep split 재평가 — 300~700 LOC 추정
+§5.15.A Cycle 3~5 (AC-A4 / AC-A6) **의도적 미진행 종결**.
+
+**종결 근거** (Karpathy 4원칙 cross-check):
+- **AC-A4 (handleVaultCreate test)**: vault create event 분기는 plugin lifecycle scoped 동작. instance state 6 closure 의존 — test 가능하게 분해하려면 §5.14 session 23 의 *의도적 유지* 결정과 모순 (props 인터페이스 비용 > 함수 길이 절감).
+- **AC-A6 (§5.14 잔존 4 항목 deep split)**: session 23 의 의도적 유지 결정의 본질 = (a) closure state 12+ field 비용, (b) plugin lifecycle scoped 자연 캡슐화. *test 인프라 부재* 가 아니므로 Cycle 1+2 인프라 가용 후 재평가에도 결정 동일.
+- **Cycle 1+2 의 충분성**: vitest + happy-dom + Obsidian mock 5 인터페이스 + helper 5 export → 향후 *isolated function* 신규 추가 시 자연 cover (§5.15.E F4 `showRowCancelled` 같은 helper 가 본 인프라의 실제 활용 시나리오).
+- **사용자 가치 분석**: Cycle 3~5 의 추가 ~500~1000 LOC 대비 actual 회귀 검출 가치 낮음. Cycle 1+2 가 이미 §5.14 BLUE refactor 후속의 wallet-friendly 안전망.
+
+**향후 reopen 조건** (사용자 명시 필요):
+- 대규모 sidebar-chat / main.ts 변경으로 회귀 발생 시
+- §5.14 잔존 4 항목 중 어느 하나가 사용자 가치 ↑ 변경 사유 발생 시
+- Phase 6 웹 환경 진입 시 mock layer 재사용 정당성 발견 시
+
+**§5.15.A 최종 verdict**: Cycle 1+2 = 인프라 + helper cover 종결. Cycle 3~5 = 의도적 미진행. AC-A1/A2/A3/A5 PASS, A4/A6 의도적 미진행 (Karpathy Surgical Changes 정합).
+
+→ **§5.15 sub-section 5종 (A/B/C/D/E) 모두 종결** (sessions 23~25).
