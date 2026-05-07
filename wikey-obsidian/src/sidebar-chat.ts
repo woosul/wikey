@@ -63,7 +63,7 @@ const PROVIDER_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
  * between 5% and 80% so long documents show smooth progress instead of being
  * stuck at the step-2 flat weight.
  */
-function computeRowPct(step: number, subStep?: number, subTotal?: number): number {
+export function computeRowPct(step: number, subStep?: number, subTotal?: number): number {
   const weights = [0, 5, 80, 90, 100]
   if (step === 2 && subStep != null && subTotal && subTotal > 0) {
     const fraction = Math.min(1, Math.max(0, subStep / subTotal))
@@ -75,7 +75,7 @@ function computeRowPct(step: number, subStep?: number, subTotal?: number): numbe
 // §5.16: audit row 의 ingest error 표시는 별도 line (createDiv) 대신 `wikey-audit-path`
 // (= 분류 hint, 예: `노트/기사`) span 의 text 를 override + error class 추가. row line height
 // 증가 0 — UI 레이아웃 안정. fallback: `wikey-audit-path` 미존재 시 기존 createDiv 패턴.
-function showRowError(row: HTMLElement, errorText: string, maxLen = 80): void {
+export function showRowError(row: HTMLElement, errorText: string, maxLen = 80): void {
   const truncated = errorText.length > maxLen ? errorText.slice(0, maxLen) + '...' : errorText
   const pathEl = row.querySelector('.wikey-audit-path') as HTMLElement | null
   if (pathEl) {
@@ -92,7 +92,7 @@ function showRowError(row: HTMLElement, errorText: string, maxLen = 80): void {
 // §5.15.E F4: 사용자 취소 (cancelled=true) 시 row 분류 hint 자리에 "취소됨" 명시 표시.
 // silent muted gray 만 적용되던 기존 UX 가 "에러 없는 fail" 인식 유발 — 사용자 취소 의도
 // 명시. CSS `.wikey-audit-path-cancelled` 가 muted color 표현 (path-error 와 분리).
-function showRowCancelled(row: HTMLElement): void {
+export function showRowCancelled(row: HTMLElement): void {
   const pathEl = row.querySelector('.wikey-audit-path') as HTMLElement | null
   if (pathEl) {
     pathEl.setText('취소됨')
@@ -102,14 +102,14 @@ function showRowCancelled(row: HTMLElement): void {
 
 // §5.14 BLUE refactor — renderAuditSection 의 데이터 fetch / dedup / capability warn
 // 3 부분 분해 (closure 자유). Phase 4 D.0.d audit-ingest.py contract 의 raw shape.
-interface AuditScriptCapabilities {
+export interface AuditScriptCapabilities {
   doclingInstalled: boolean
   unhwpInstalled: boolean
   generatedAt: string
   source: string
 }
 
-interface AuditScriptOutput {
+export interface AuditScriptOutput {
   total_documents: number
   ingested: number
   missing: number
@@ -124,7 +124,7 @@ interface AuditScriptOutput {
  * Phase 4 D.0.d / §5.14 BLUE: scripts/audit-ingest.py --json 실행 + parse.
  * 실패 (스크립트 없음 / timeout / JSON 파싱 실패) 시 null 반환 — caller 가 placeholder 표시.
  */
-function loadAuditScriptOutput(
+export function loadAuditScriptOutput(
   basePath: string,
   env: Record<string, string>,
 ): AuditScriptOutput | null {
@@ -162,7 +162,7 @@ function renderConverterCapabilityWarning(
  * 를 audit 카운트에서 제외 + recountAuditAfterPairedExclude 로 totals 재계산.
  * 원본 audit 객체는 변경 X — 새 객체 반환 (immutable).
  */
-function applyPairedSidecarToAudit(audit: AuditScriptOutput): AuditScriptOutput {
+export function applyPairedSidecarToAudit(audit: AuditScriptOutput): AuditScriptOutput {
   const auditAllSet = new Set<string>([
     ...audit.files,
     ...(audit.ingested_files ?? []),

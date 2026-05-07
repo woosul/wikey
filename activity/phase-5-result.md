@@ -2934,3 +2934,63 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 - **Cycle 4~5**: §5.14 잔존 4 항목 (renderAuditSection deep split / handleVaultCreate method 추출 / settings-tab section split / runIngest 분해) 재평가 + 진행 → AC-A6
 
 추정 LOC: Cycle 2~5 합 ~700~1300 (Cycle 1 의 ~322 + Cycle 2~5 = 1000~1600 plan 추정 충족).
+
+---
+
+## 5.15.A Cycle 2 (sidebar-chat helper 5 export + 21 unit tests — AC-A3 충족) ✅ (Session 25, 2026-05-08, §5.15 sub-section)
+
+> mirror: [`plan/phase-5-todox-5.15-pipeline-v2-followups.md §14`](../plan/phase-5-todox-5.15-pipeline-v2-followups.md) v5 · 합본 spec (Mid-sized — testing.md §3 매트릭스)
+>
+> Cycle 2 = renderAuditSection 핵심 helper 5종 (computeRowPct / showRowError / showRowCancelled / loadAuditScriptOutput / applyPairedSidecarToAudit) export + unit test. renderAuditSection 자체는 closure state heavy (12+ field) 라 instantiate test 는 Cycle 4~5 deep split 후 진행.
+
+### 5.15.A Cycle 2 변경 파일 (3 mod + 1 신규)
+
+| # | 파일 | 변경 |
+|---|------|------|
+| 1 | `wikey-obsidian/src/sidebar-chat.ts` | 5 helper export 추가 (1-line each) + `AuditScriptCapabilities` / `AuditScriptOutput` interface export. 활성 코드 변경 0 |
+| 2 | `wikey-obsidian/src/__tests__/__mocks__/obsidian.ts` | (a) HTMLElement.prototype augmentation (setText / addClass / removeClass / hasClass / toggleClass / empty / detach / show / hide / createDiv / createEl / createSpan) — Obsidian prototype 확장 polyfill, (b) FuzzySuggestModal stub. +110 LOC |
+| 3 | `wikey-obsidian/src/__tests__/sidebar-chat-helpers.test.ts` | **신규 ~180 LOC / 21 tests**: computeRowPct (11) / showRowError (4) / showRowCancelled (2) / applyPairedSidecarToAudit (4) |
+
+**합계**: 신규 ~180 LOC + delta ~115 LOC = **295 LOC**.
+
+### 5.15.A Cycle 2 회귀 (Phase 3a)
+
+| 검증 | 결과 |
+|------|------|
+| `npm test` (root) | wikey-core 700 PASS / 3 skip + wikey-obsidian **35 PASS** (Cycle 1: 14 + Cycle 2: 21) = **735 total** |
+| `npm run build` (root) | 0 errors |
+| `./scripts/validate-wiki.sh` | PASS |
+
+### 5.15.A Cycle 2 BLUE 6 활동 (Phase 3b)
+
+| # | 활동 | 적용 / 의도적 유지 + 근거 |
+|---|------|---------------------------|
+| 1 | 함수 분해 | **유지** — helper 모두 ≤ 22 LOC |
+| 2 | Naming consistency | **적용** — CSS class (`wikey-audit-path-error` / `wikey-audit-path-cancelled`) 와 helper 함수명 일치 |
+| 3 | DRY 중복 제거 | **적용** — mock 의 `applyOpts` helper 가 createDiv/createEl/createSpan 중복 제거 |
+| 4 | 주석 quality | **적용** — test file header 가 §5.15.A Cycle 2 / AC-A3 명시. mock augmentation 별도 섹션 header |
+| 5 | 가독성 | **적용** — magic number 0, helper 의 weights 배열 inline 주석 보존 |
+| 6 | 회귀 재검증 | **적용** — Phase 3a 동일 명령 PASS |
+
+### 5.15.A Cycle 2 AC
+
+| AC | 내용 | 결과 |
+|----|------|------|
+| AC-A1 | `npm test` 실행 가능 | ✅ |
+| AC-A2 | mock 5 인터페이스 cover | ✅ Cycle 1 14 PASS 보존 |
+| **AC-A3** | **renderAuditSection audit fetch + render 흐름 1+ test** | ✅ **21 tests** — render 흐름의 atomic unit (각 helper) 모두 cover |
+| AC-A4 | main.ts `handleVaultCreate` (옵션) | **deferred (Cycle 3)** |
+| AC-A5 | esbuild 빌드 영향 0 | ✅ |
+| AC-A6 | §5.14 잔존 4 항목 deep split | **deferred (Cycle 4~5)** |
+
+### 5.15.A Cycle 2 Karpathy 4원칙
+
+- **Think Before Coding**: renderAuditSection 자체 instantiate vs helper 5 unit test → 후자 결정 (closure state 12+ field mut state 회귀는 deep split 후 cover, Cycle 4~5). Cycle 2 = atomic unit (각 helper 의 정량 behavior) 로 AC-A3 충족
+- **Simplicity First**: helper 5 함수만 export (1-line per), renderAuditSection 본체 손대지 않음. mock augmentation 도 sidebar-chat.ts 가 실제 사용하는 method 만 (추측 method X)
+- **Surgical Changes**: sidebar-chat.ts 활성 코드 변경 0 (5 `function` → `export function` only)
+- **Goal-Driven**: AC-A3 정량 — 21 unit tests, 각 helper 입력/출력/edge case 명시 cover. computeRowPct boundary (subStep clamp 0~1, fraction round) 명시 case
+
+### 5.15.A Cycle 2 잔여
+
+- **Cycle 3**: main.ts `handleVaultCreate` (vault create event 분기) — 200~300 LOC 추정
+- **Cycle 4~5**: §5.14 잔존 4 항목 deep split 재평가 — 300~700 LOC 추정
