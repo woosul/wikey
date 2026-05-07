@@ -48,6 +48,7 @@ import {
 } from './incremental-reingest.js'
 import { canonicalize } from './canonicalizer.js'
 import { loadUserAliases } from './schema.js'
+import { loadPromotionThreshold } from './promotion-config.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
 } from './example-placeholders.js'
@@ -547,6 +548,10 @@ export async function ingest(
     log(`user aliases loaded — ${Object.keys(userAliases).length} variant→canonical mappings`)
   }
 
+  // §5.15.B: `.wikey/promotion-threshold.yaml` 의 `default:` 값 — 부재 / 실패 시 default=2
+  const promotionThreshold = await loadPromotionThreshold(wikiFS)
+  log(`promotion threshold = ${promotionThreshold} (§5.11 page promotion gate)`)
+
   const today = formatLocalDate(new Date())
 
   // ── §4.5.1.5 v2 라우터 — FULL / SEGMENTED ──
@@ -572,8 +577,9 @@ export async function ingest(
       llmSourceFilename, rawSourceFilename: sourceFilename, summaryParsed, today,
       guideHint: opts?.guideHint, provider, model, userAliases,
       deterministic, stage3OverridePrompt,
-      // §5.11 promotion threshold (FULL): deterministic Layer 2 gate (substring count ≥ 2 in body).
+      // §5.11 promotion threshold (FULL): deterministic Layer 2 gate (substring count ≥ N in body).
       sourceBody: content,
+      promotionThreshold,
       log,
     })
   } else {
@@ -632,6 +638,7 @@ export async function ingest(
       // §5.11 promotion threshold (SEGMENTED): sourceBody 는 전체 sourceContent
       // — per-section 합산이 아닌 본문 전체가 substring count 의 ground truth.
       sourceBody: sourceContent,
+      promotionThreshold,
       log,
     })
   }
@@ -936,12 +943,14 @@ async function canonicalizeAndAssembleParsed(args: {
   deterministic: boolean
   stage3OverridePrompt: string | undefined
   sourceBody: string
+  /** §5.15.B: page promotion threshold (`.wikey/promotion-threshold.yaml` 의 `default:`). */
+  promotionThreshold: number
   log: (msg: string) => void
 }): Promise<IngestRawResult> {
   const {
     llm, mentions, existingEntityBases, existingConceptBases,
     llmSourceFilename, rawSourceFilename, summaryParsed, today, guideHint, provider, model,
-    userAliases, deterministic, stage3OverridePrompt, sourceBody, log,
+    userAliases, deterministic, stage3OverridePrompt, sourceBody, promotionThreshold, log,
   } = args
   const tCanon0 = Date.now()
   const sourcePageBase = normalizeBase(summaryParsed.source_page.filename)
@@ -954,6 +963,7 @@ async function canonicalizeAndAssembleParsed(args: {
     guideHint, provider, model, userAliases, deterministic,
     overridePrompt: stage3OverridePrompt,
     sourceBody,
+    promotionThreshold,
   })
   log(`stage 2.3 canonicalize done in ${Date.now() - tCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
   if (canon.dropped.length > 0) {

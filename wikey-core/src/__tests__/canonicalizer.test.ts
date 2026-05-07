@@ -962,6 +962,65 @@ describe('canonicalize — §5.11 promotion threshold', () => {
   })
 })
 
+// §5.15.B — promotionThreshold override (Mid-sized, 2026-05-07 session 24)
+describe('canonicalize — §5.15.B promotionThreshold override', () => {
+  it('AC-B2: promotionThreshold=1 → 1회 mention 도 promote', async () => {
+    const mentions: Mention[] = [
+      { name: 'jeonnam-technopark', type_hint: 'organization', evidence: '개최 장소: 전라남도 테크노파크' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'jeonnam-technopark', display_name: '전라남도 테크노파크', type: 'organization',
+        description: '행사 개최 장소.', aliases: ['전라남도 테크노파크'],
+      }],
+      concepts: [],
+    }))
+    const sourceBody = '스마트공장 보급확산 합동설명회 개최. 일시: 11월 1일. 개최 장소: 전라남도 테크노파크 본관 1층 강당. 주관: 중소벤처기업부.'
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody, promotionThreshold: 1 })
+    // threshold=1 → 1회 mention 통과
+    expect(result.entities).toHaveLength(1)
+    expect(result.entities[0].filename).toBe('jeonnam-technopark.md')
+    expect(result.dropped).toHaveLength(0)
+  })
+
+  it('AC-B3: promotionThreshold=3 → 2회 mention 도 drop', async () => {
+    const mentions: Mention[] = [
+      { name: 'lotus-pms', type_hint: 'product', evidence: 'PMS 제품 소개' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'lotus-pms', display_name: 'LOTUS PMS', type: 'product',
+        description: '프로젝트 관리 시스템.', aliases: ['PMS'],
+      }],
+      concepts: [],
+    }))
+    // 본문에 PMS 가 2 sentence 등장 (default=2 면 promote, threshold=3 이면 drop)
+    const sourceBody = 'LOTUS PMS 제품 소개. PMS 핵심 기능은 일정 관리.'
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody, promotionThreshold: 3 })
+    expect(result.entities).toHaveLength(0)
+    expect(result.dropped).toHaveLength(1)
+    expect(result.dropped[0].reason).toContain('single-mention')
+  })
+
+  it('AC-B1 backward: promotionThreshold 미전달 → default=2 보존', async () => {
+    const mentions: Mention[] = [
+      { name: 'jeonnam-technopark', type_hint: 'organization', evidence: '개최 장소: 전라남도 테크노파크' },
+    ]
+    const llm = makeMockLLM(JSON.stringify({
+      entities: [{
+        name: 'jeonnam-technopark', display_name: '전라남도 테크노파크', type: 'organization',
+        description: '행사 개최 장소.', aliases: ['전라남도 테크노파크'],
+      }],
+      concepts: [],
+    }))
+    // 1회 mention. promotionThreshold 미전달 → default=2 적용 → drop (기존 AC2 와 동일 동작)
+    const sourceBody = '스마트공장 보급확산 합동설명회 개최. 일시: 11월 1일. 개최 장소: 전라남도 테크노파크 본관 1층 강당. 주관: 중소벤처기업부.'
+    const result = await canonicalize({ ...baseArgs, llm, mentions, sourceBody })
+    expect(result.entities).toHaveLength(0)
+    expect(result.dropped).toHaveLength(1)
+  })
+})
+
 // §5.11 v3 — paradigm 회귀 fix: alias 카운트 inflation 차단 (sentence-unique 카운트)
 describe('canonicalize — §5.11 v3 sentence-unique 카운트 (alias inflation 방어)', () => {
   it('AC-v3.1 EDA case — parenthetical 1 sentence 등장 (acronym + 한국어 풀네임 같은 문장) → drop', async () => {

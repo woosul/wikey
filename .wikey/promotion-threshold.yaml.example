@@ -1,0 +1,18 @@
+# §5.15.B — Page promotion threshold override (사용자 vault 단위 설정)
+#
+# §5.11 v2/v3 page promotion gate 의 user-defined threshold. mention name + alias
+# 의 source body 등장 횟수 (sentence-unique 카운트) 가 threshold 미만이면 페이지로
+# 승격하지 않음 (단순 출처 / 행사 장소 / parenthetical 1회 acronym 차단).
+#
+# 사용법: 본 파일을 `.wikey/promotion-threshold.yaml` 로 복사 (.example 제거) 후
+# `default:` 값 조정. 부재 시 default=2 자동 적용 (기존 동작 보존).
+#
+# 가이드:
+#   default: 1  — 모든 mention 페이지화. 단순 출처도 포함 (recall 우선)
+#   default: 2  — wikey 기본값. 1회만 mention 된 noise 차단 (precision/recall 균형)
+#   default: 3  — 엄격 정책. 표준 분해 / 정형 매뉴얼 도메인에 적합
+#
+# v0 scope: top-level `default:` 만 지원. patterns / source-별 override 는 사용자
+# raise 시 확장 (plan/phase-5-todox-5.15-pipeline-v2-followups.md §2.2 참조).
+
+default: 2

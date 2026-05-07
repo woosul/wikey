@@ -10,6 +10,7 @@ import {
   EXAMPLE_ORG_BASE, EXAMPLE_ORG_ALIAS, EXAMPLE_ORG_KO, EXAMPLE_ORG_DESC_KO,
   EXAMPLE_CONCEPT_BASE, EXAMPLE_CONCEPT_ALIAS,
 } from './example-placeholders.js'
+import { DEFAULT_PROMOTION_THRESHOLD } from './promotion-config.js'
 
 /**
  * Stage 3 Canonicalizer (D-wide). Single document-global LLM call that:
@@ -152,10 +153,17 @@ export interface CanonicalizeArgs {
   /**
    * §5.11 page promotion threshold: full source body for deterministic occurrence
    * count gate. When provided, entity/concept whose name + alias substring count
-   * < PROMOTION_THRESHOLD in this body is dropped (single-mention noise filter).
+   * < promotionThreshold in this body is dropped (single-mention noise filter).
    * Optional — when absent, gate is skipped (backward compatible with existing tests).
    */
   readonly sourceBody?: string
+  /**
+   * §5.15.B: per-call promotion threshold override (default = DEFAULT_PROMOTION_THRESHOLD = 2).
+   * 사용자가 `.wikey/promotion-threshold.yaml` 의 `default:` 로 지정 → ingest-pipeline 이
+   * `loadPromotionThreshold` 결과를 본 인자로 전달. unit test 는 직접 인자 전달.
+   * 값 < 1 은 caller 책임 (loader 가 fallback 보장).
+   */
+  readonly promotionThreshold?: number
 }
 
 interface RawCanonical {
@@ -168,7 +176,7 @@ interface RawCanonical {
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
           sourceFilename, rawSourceFilename, sourcePageBase, today, guideHint, provider, model, userAliases,
-          deterministic, overridePrompt, sourceBody } = args
+          deterministic, overridePrompt, sourceBody, promotionThreshold } = args
 
   if (mentions.length === 0) {
     return { entities: [], concepts: [], dropped: [] }
@@ -180,7 +188,10 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
   })
 
   const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
-  return assembleCanonicalResult(raw, mentions, sourceFilename, rawSourceFilename, sourcePageBase, today, userAliases, sourceBody)
+  return assembleCanonicalResult(
+    raw, mentions, sourceFilename, rawSourceFilename, sourcePageBase, today,
+    userAliases, sourceBody, promotionThreshold,
+  )
 }
 
 // ── Prompt construction ──
@@ -297,7 +308,7 @@ JSON only:
 
 /**
  * §5.11 page promotion threshold — Layer 2 deterministic gate. mention name +
- * alias 의 sourceBody 등장 횟수가 PROMOTION_THRESHOLD 미만이면 drop.
+ * alias 의 sourceBody 등장 횟수가 threshold 미만이면 drop.
  * length ≤ 1 candidate (단일 문자) 는 false positive 방지로 제외.
  * sourceBody 미전달 시 gate skip (backward compatible).
  *
@@ -306,8 +317,11 @@ JSON only:
  * inflation 차단 (예: `탐색적 데이터 분석(EDA)` 한 문장이 `eda` + `탐색적 데이터
  * 분석` 둘 다 매칭되어 2 카운트로 promote 되던 회귀). paradigm 의도 = "서로 다른
  * location 에서 ≥ N mention".
+ *
+ * §5.15.B (2026-05-07): threshold 가 hardcoded const 가 아닌 인자 — caller
+ * (`canonicalize` args.promotionThreshold) 가 `.wikey/promotion-threshold.yaml`
+ * default 값을 전달. 미전달 / undefined → DEFAULT_PROMOTION_THRESHOLD.
  */
-const PROMOTION_THRESHOLD = 2
 
 /**
  * §5.11 v3: sentence boundary 로 split. 한국어/영어 구분자 모두 cover.
@@ -351,6 +365,7 @@ interface RawPage { name?: string; display_name?: string; type?: string; descrip
 function applyPromotionGate(
   rawPages: readonly RawPage[],
   sourceBody: string | undefined,
+  threshold: number,
   userAliases?: Readonly<Record<string, string>>,
 ): { allowed: readonly RawPage[]; drops: Map<string, string> } {
   if (sourceBody === undefined) {
@@ -360,7 +375,7 @@ function applyPromotionGate(
   const allowed: RawPage[] = []
   for (const p of rawPages) {
     const occ = countOccurrences(p.name ?? '', p.aliases ?? [], sourceBody)
-    if (occ < PROMOTION_THRESHOLD) {
+    if (occ < threshold) {
       const reason = `single-mention (${occ} occurrence) — not promoted to page`
       drops.set(canonicalizeSlug(normalizeBase(p.name ?? ''), userAliases), reason)
       for (const alias of p.aliases ?? []) {
@@ -387,12 +402,13 @@ function buildCategoryPages(
   sourceFilename: string,
   rawSourceFilename: string,
   sourcePageBase: string,
+  promotionThreshold: number,
   today: string,
   sourceBody: string | undefined,
   keptBases: Set<string>,
   userAliases?: Readonly<Record<string, string>>,
 ): { pages: WikiPage[]; drops: Map<string, string> } {
-  const { allowed, drops } = applyPromotionGate(rawPages, sourceBody, userAliases)
+  const { allowed, drops } = applyPromotionGate(rawPages, sourceBody, promotionThreshold, userAliases)
   const pages: WikiPage[] = []
   const dedupeAgainstKept = category === 'concept'
   for (const p of allowed) {
@@ -416,13 +432,15 @@ function assembleCanonicalResult(
   today: string,
   userAliases?: Readonly<Record<string, string>>,
   sourceBody?: string,
+  promotionThreshold?: number,
 ): CanonicalizedResult {
+  const threshold = promotionThreshold ?? DEFAULT_PROMOTION_THRESHOLD
   const keptBases = new Set<string>()
   const entityResult = buildCategoryPages(
-    raw.entities ?? [], 'entity', sourceFilename, rawSourceFilename, sourcePageBase, today, sourceBody, keptBases, userAliases,
+    raw.entities ?? [], 'entity', sourceFilename, rawSourceFilename, sourcePageBase, threshold, today, sourceBody, keptBases, userAliases,
   )
   const conceptResult = buildCategoryPages(
-    raw.concepts ?? [], 'concept', sourceFilename, rawSourceFilename, sourcePageBase, today, sourceBody, keptBases, userAliases,
+    raw.concepts ?? [], 'concept', sourceFilename, rawSourceFilename, sourcePageBase, threshold, today, sourceBody, keptBases, userAliases,
   )
   // §5.11 — promotion drops 는 canon.dropped 의 reason 에 정확 표기를 위해 보존
   // (computeDropReason fallback 이 single-mention 을 generic "not in LLM output" 으로

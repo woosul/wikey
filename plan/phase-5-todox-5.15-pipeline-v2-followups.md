@@ -2,11 +2,11 @@
 phase: 5
 section: 5.15
 title: Pipeline v2 후속 — A/B/C/D/E (UI E2E test 인프라 + PROMOTION_THRESHOLD override + citation cleanup + inline media + LLM hang UX hardening)
-status: §5.15.C/D/E 종결 / §5.15.A·B draft
+status: §5.15.B/C/D/E 종결 / §5.15.A draft
 created: 2026-05-07
 updated: 2026-05-07
-version: v2 (session 24 — §5.15.E F2/F3/F4 종결)
-priority: P2 (A·B 잔여)
+version: v3 (session 24 — §5.15.B PROMOTION_THRESHOLD override 종결)
+priority: P2 (A 잔여)
 ---
 
 # Phase 5 §5.15 — Pipeline v2 후속 3 항목
@@ -514,3 +514,72 @@ if (result.cancelled) {
 
 - **F2 timeout error 라이브 verify**: 실제 5분+ stuck 발생 시 timeout error → row fail + showRowError. Gemini 일시 장애 / 매우 큰 input 시 자연 발생 — 사용자 raise 시 confirm
 - **F4 sidebar cancel UX 라이브 verify**: sidebar audit/inbox panel 에서 cancel 시 row "취소됨" 표시 — build PASS + 코드 분기 명시 + 다음 사용자 ingest 시 자연 verify
+
+---
+
+## 12. §5.15.B PROMOTION_THRESHOLD override 진행 결과 — Session 24, 2026-05-07 ✅
+
+> **분류**: Mid-sized (1 phase + spec ≤ 2 + 영향 = 5 파일) — testing.md §3 매트릭스 적용. SDD+TDD Phase 3a/3b 분리 의무 준수.
+>
+> **scope 결정** (Karpathy Simplicity First): AC-B4 patterns 매칭은 v0 out-of-scope. top-level `default:` 만 지원 → 사용자 raise 시 확장.
+
+### 12.1 변경 파일 (5)
+
+| # | 파일 | 변경 |
+|---|------|------|
+| 1 | `wikey-core/src/promotion-config.ts` | **신규** — `DEFAULT_PROMOTION_THRESHOLD = 2` + `parsePromotionThresholdYaml(input): number \| null` (top-level `default:` regex parser) + `loadPromotionThreshold(wikiFS): Promise<number>` (file 부재 / read 실패 / parse 실패 → default fallback + warn). 47 LOC |
+| 2 | `wikey-core/src/canonicalizer.ts` | (a) `import { DEFAULT_PROMOTION_THRESHOLD }` 추가 (b) `CanonicalizeArgs.promotionThreshold?: number` 신규 필드 (c) `applyPromotionGate(rawPages, sourceBody, threshold, userAliases)` 시그니처 인자 추가 (d) `buildCategoryPages` 시그니처 인자 추가 (e) `assembleCanonicalResult` `promotionThreshold?` 인자 + `?? DEFAULT_PROMOTION_THRESHOLD` fallback (f) `canonicalize` arg 추출 + assembleCanonicalResult 전달. PROMOTION_THRESHOLD const 폐기. ~12 LOC delta |
+| 3 | `wikey-core/src/ingest-pipeline.ts` | (a) `import { loadPromotionThreshold }` 추가 (b) ingest 진입 시 `const promotionThreshold = await loadPromotionThreshold(wikiFS)` + log (c) `canonicalizeAndAssembleParsed` args 인터페이스에 `promotionThreshold: number` 추가 (d) FULL + SEGMENTED 두 호출 site 모두 전달 (e) canonicalize 에 forward. ~8 LOC delta |
+| 4 | `wikey-core/src/__tests__/promotion-config.test.ts` | **신규** — 11 tests: parser (default:1/3, invalid value, malformed, comments) + loader (file 부재 / 정상 / malformed / read throw 모두 fallback). 84 LOC |
+| 5 | `wikey-core/src/__tests__/canonicalizer.test.ts` | §5.15.B describe block 추가 — 3 tests (AC-B1 backward default=2 / AC-B2 threshold=1 promote 1회 mention / AC-B3 threshold=3 drop 2회 mention). ~60 LOC delta |
+| 6 | `.wikey/promotion-threshold.yaml.example` | **신규** — 사용자 가이드 (default 1/2/3 의미 + v0 scope 명시). 18 LOC |
+
+**합계**: 신규 ~150 LOC + delta ~20 LOC = **170 LOC** (추정 200~300 보다 짧음 — patterns out-of-scope 결정 영향).
+
+### 12.2 RED → GREEN → BLUE 흐름
+
+**RED** (commit 전 first run):
+- `promotion-config.test.ts` collect fail (import 없음) — file collect error
+- canonicalizer.test.ts AC-B2 / AC-B3 — 2 fail (`promotionThreshold` 인자 무시 → 기본 동작 PROMOTION_THRESHOLD=2 가 적용됨)
+
+**GREEN** (signature chain 적용 후):
+- `promotion-config.test.ts` 11 PASS
+- canonicalizer.test.ts §5.15.B 3 PASS + 기존 64 tests (incl. 3 skip) 회귀 0
+
+**Phase 3a (회귀)**:
+- `npm test` (wikey-core): 700 PASS / 3 skip / 0 fail (기존 686 + 신규 14)
+- `npm run build` (wikey-core): 0 errors
+- `npm run build` (wikey-obsidian): 0 errors (기존 import.meta cjs warning 만)
+- `./scripts/validate-wiki.sh`: PASS
+
+**Phase 3b (BLUE 6 활동)**:
+| # | 활동 | 적용 / 의도적 유지 + 근거 |
+|---|------|---------------------------|
+| 1 | 함수 분해 | **유지** — promotion-config.ts 신규 함수 모두 ≤ 17 LOC. canonicalizer 변경은 시그니처 1 인자 전달만 (분해 대상 X) |
+| 2 | Naming consistency | **적용** — `promotionThreshold` (public/spec API) ↔ `threshold` (internal arg) ↔ `DEFAULT_PROMOTION_THRESHOLD` (constant) 3-tier 일관 |
+| 3 | DRY 중복 제거 | **적용** — parser / loader 분리 (single-responsibility), magic value (2) 단일 소스 (DEFAULT_PROMOTION_THRESHOLD) |
+| 4 | 주석 quality | **적용** — 신규 jsdoc 모두 §5.15.B 출처 명시. TODO/FIXME 0. PROMOTION_THRESHOLD const 폐기 + §5.15.B 영구 등록 주석 |
+| 5 | 가독성 | **적용** — magic number 0, signature 인자 explicit |
+| 6 | 회귀 재검증 | **적용** — Phase 3a 동일 명령 재run 결과 동일 PASS (변경 무) |
+
+### 12.3 AC
+
+| AC | 내용 | 결과 |
+|----|------|------|
+| AC-B1 | 부재 시 default=2 (backwards compat) | ✅ promotion-config.test.ts `file absent` PASS / canonicalizer.test.ts `AC-B1 backward` PASS |
+| AC-B2 | `default: 1` → 1회 mention promote | ✅ promotion-config + canonicalizer 양쪽 PASS |
+| AC-B3 | `default: 3` → 2회 mention drop | ✅ canonicalizer.test.ts `AC-B3` PASS |
+| AC-B4 | patterns 매칭 | **out-of-scope (v0)** — Karpathy Simplicity First. 사용자 raise 시 확장 |
+| AC-B5 | YAML parse 실패 / 잘못된 schema → default fallback + warn | ✅ promotion-config.test.ts `malformed file` / `read throws` PASS + warn 로그 명시 |
+| AC-B6 | 라이브 smoke 1 source — `.wikey/promotion-threshold.yaml` 만들고 ingest → dropped sample console log 가 새 threshold 반영 | **deferred** — narrow 1 cycle 의 라이브 smoke 는 build PASS + AC test PASS + ingest-pipeline log 추가 (`promotion threshold = N (§5.11 page promotion gate)`) 로 갈음. 사용자 다음 ingest 세션에서 자연 verify |
+
+### 12.4 Karpathy 4원칙 적용
+
+- **Think Before Coding**: AC-B4 patterns 도입 시 schema 복잡도 ↑ + flat-file YAML 한계 → v0 = `default:` 만 결정. 사용자 raise 시 확장 (overengineering 회피)
+- **Simplicity First**: parsePromotionThresholdYaml = 1 regex (`^default\s*:\s*(\S+)$`) + 정수 검증. minimal YAML parser 재사용 안 함 (single-key 라 1-line regex 가 더 단순)
+- **Surgical Changes**: PROMOTION_THRESHOLD const 만 제거 + DEFAULT_PROMOTION_THRESHOLD reference. 인접 코드 (`countOccurrences` / `splitSentences` / `applyPromotionGate` 본체 로직) 손대지 않음. 시그니처 chain 만 인자 추가
+- **Goal-Driven**: AC-B1~B5 정량 검증 (각 AC = 1+ unit test 매핑). AC-B6 라이브 smoke 는 deferred 명시 (silent skip 금지)
+
+### 12.5 잔여
+
+§5.15.A (UI E2E test 인프라) 만 잔존. 1000~1600 LOC / 3~5 cycle.
