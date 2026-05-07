@@ -2281,10 +2281,11 @@ LLM call 시간:
 - `58914d8` feat(§5.13.A1): concept/entity ## 출처 raw wikilink 병기 + rawSourceFilename arg 분리
 - `dfc5e6a` feat(§5.13.C4): LLM source_page.filename prefix 강제 — defense in depth
 
-### 5.13 잔존 follow-up
-- **AC-A1-6 라이브 cycle smoke**: 다음 세션 사용자 라이브 검증 (master 의무, obsidian-cdp SKILL).
-- **vault-wide basename 충돌 detection** (codex P2 (b)): entity/concept 가 raw basename 동일 케이스 → 별도 follow-up.
-- **codex post-impl cycle 재검증**: cmux dispatch 환경 이슈 fix 후. 사용자 raise — 본 세션 후 별도 진행.
+### 5.13 잔존 follow-up — Session 22 (2026-05-07) 종결 ✅
+- ~~**AC-A1-6 라이브 cycle smoke**~~ → session 22 완료 (itil-4-overview + pmbok-knowledge-areas 양 fixture, metadata cache resolve 라이브 확증, movePair 동반).
+- ~~**vault-wide basename 충돌 detection**~~ → §5.13.D 로 정식화 + 완료 (`7c53e3e` validate-wiki.sh 검증 6 + 4 fixture, 라이브 vault collision 0).
+- ~~**codex post-impl cycle 재검증**~~ → cmux dispatch fix (`a818e7e` cmd_send verify-and-retry) 적용 후 session 22 cycle #1 완료. NEEDS_REVISION (1 P1 + 1 P2 — false-positive 가까움) → master narrow fix (`e3b2882` AC-C4-2/3 warn log + AC-C4-6 SEGMENTED route 의도 명확화) + result doc P2 doc gap 해소.
+- 상세 evidence: [`activity/phase-5-resultx-5.13-completion-2026-05-07.md`](./phase-5-resultx-5.13-completion-2026-05-07.md) §5.13.4 + §5.13.7.
 
 ---
 
@@ -2362,3 +2363,27 @@ obsidian-cdp 라이브 smoke 중 query "검색 결과 없음" 회귀 raise → 6
 영구 메모리: `~/.claude/projects/-Users-denny-Project-wikey/memory/feedback_qmd_node_abi.md` (반복 회귀 방지 6 layer 진단 순서).
 
 post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEmoji: false / hasMarker: false`.
+
+---
+
+### 5.14 추가 진행 — Layer 6 + sidebar-chat narrow (Session 22, 2026-05-07) ✅
+
+**Layer 6 waitUntilFresh 강화** (commit `f8476d4`):
+- 잔존 Layer 6 정식 종결. `expectMinIndexed` 5번째 optional arg 추가 + `reindex.sh --check --json` schema 에 `indexed` 필드 (sqlite count) + `runReindexAndWait` 의 wiring (`countWikiMdFiles` helper).
+- 빈 collection silent-fresh 회귀 detect: `status='fresh' && stale=0` 만으로 통과하던 false-positive 차단. `indexed < expectMinIndexed` 시 polling 지속 → timeout error message 에 `indexed=N, expectMin=M` surface (race vs PATH vs ABI vs collection-empty 진단).
+- 6 신규 unit test (indexed parse / legacy fallback / expectMinIndexed default / under / over / error message).
+
+**sidebar-chat.ts narrow refactor** (commit `7a166f4`):
+- 3 top-level helper 추출: `loadAuditScriptOutput` (script exec + parse), `renderConverterCapabilityWarning` (banner), `applyPairedSidecarToAudit` (paired sidecar dedup).
+- 3 site audit fetch DRY: renderAuditSection / renderAuditSummaryOnly / renderRawSourcesDashboard 모두 helper 공유.
+- dynamic `await import('wikey-core')` 2개 제거 → top-level `LLMClient` import 전환.
+- LOC: renderAuditSection 727 → 687 (-40), renderRawSourcesDashboard 66 → 58 (-8), renderAuditSummaryOnly 20 → 13 (-7).
+- 라이브 5 패널 smoke (Chat/Dashboard/Audit/Ingest/Help) 모두 render OK, console 0 error.
+
+**잔존 (UI E2E test 의존)**:
+- sidebar-chat.ts UI 클로저 deeper split (renderList 95 / renderTree 95 / ingest click handler 196 LOC) — closure 의존성 높아 회귀 위험
+- main.ts onload 131 LOC vault event handler 3종 + auto-ingest queue + bypass detection state 추출
+- settings-tab.ts 추가 분해 (이미 `render*Section` section-decomposed 양호)
+- commands.ts runIngest (이미 fast path / stay-involved / inner loop cleanly structured)
+
+**Session 22 회귀**: 635 PASS / 3 skip / 0 build errors / validate-wiki PASS / fixture 10/10 PASS.
