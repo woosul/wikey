@@ -162,5 +162,47 @@
     ],
     "tombstone": false,
     "last_action": "force"
+  },
+  "sha256:dc3efe98ae62f23d": {
+    "vault_path": "raw/3_resources/60_note/000_computer_science/llm-wiki.md",
+    "hash": "dc3efe98ae62f23dd08acad13aba2e95287beb20b6bec2f4af0423557fe37401",
+    "size": 11985,
+    "first_seen": "2026-05-07T16:31:38.944Z",
+    "ingested_pages": [
+      "wiki/sources/source-llm-wiki.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/llm-wiki.md",
+        "at": "2026-05-07T16:31:38.944Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/000_computer_science/llm-wiki.md",
+        "at": "2026-05-07T16:31:43.533Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:b06dc860b4952f01": {
+    "vault_path": "raw/3_resources/60_note/500_technology/iso-27001-overview.md",
+    "hash": "b06dc860b4952f0166061d471a0ad5fb428f9d5cd85e3eee82f642a3ccd3ee79",
+    "size": 2549,
+    "first_seen": "2026-05-07T17:16:08.077Z",
+    "ingested_pages": [
+      "wiki/sources/source-iso-27001-overview.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/iso-27001-overview.md",
+        "at": "2026-05-07T17:16:08.077Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/iso-27001-overview.md",
+        "at": "2026-05-07T17:16:23.116Z"
+      }
+    ],
+    "tombstone": true,
+    "last_action": "force"
   }
 }

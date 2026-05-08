@@ -1,0 +1,30 @@
+# wikey-core — bundled default check-pii leak patterns (Phase 5 §5.7.1, 2026-05-08).
+#
+# wiki/ 내 leak 검사 전용 default. ingest gate (`pii-patterns.default.yaml`) 와
+# 분리 — ingest gate 는 BRN/CEO 등 documentation 안 valid value 이지만, 본 file 의
+# 패턴은 wiki commit 전에 절대 leak 되면 안 되는 PII (전화/이메일/주민번호).
+#
+# 로더 우선순위: bundled (이 파일) → ~/.config/wikey/check-pii-patterns.yaml
+#                → <basePath>/.wikey/check-pii-patterns.yaml.
+
+patterns:
+  - id: phone-kr
+    patternType: single-line
+    kind: phone-kr
+    regex: '010-\d{4}-\d{4}'
+    mask: digits
+    description: '한국 휴대폰 번호 (010-1234-5678)'
+
+  - id: email
+    patternType: single-line
+    kind: email
+    regex: '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+    mask: full
+    description: '이메일 주소'
+
+  - id: jumin
+    patternType: single-line
+    kind: jumin
+    regex: '\d{6}-[1-4]\d{6}'
+    mask: digits
+    description: '주민등록번호 6-7 (뒷자리 1-4 시작)'

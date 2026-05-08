@@ -1,18 +1,46 @@
 /**
- * scripts-runner.ts — 기존 bash 스크립트 래퍼
+ * scripts-runner.ts — Phase 5 §5.7.1 (2026-05-08) refactor.
  *
- * validate-wiki.sh, check-pii.sh, cost-tracker.sh, reindex.sh를
- * Obsidian 플러그인에서 실행 가능하게 래핑.
+ * 기존: `child_process.execFile` 로 `scripts/*.sh` spawn.
+ * 변경: in-process TS logic (validate-wiki / check-pii / cost-tracker / reindex) 직접 호출.
+ *
+ * Public interface (`ScriptResult`, `validateWiki`, `checkPii`, `reindex`, `reindexCheck`,
+ * `reindexCheckJson`, `reindexQuick`, `costTrackerSummary`, `costTrackerAdd`, `waitUntilFresh`)
+ * 동일 — plugin 호출 사이트 (commands.ts + settings-tab.ts) 변경 0.
+ *
+ * `env` 파라미터는 호환성 위해 받되 in-process 호출에 영향 없음 (logger / timestamps 만
+ * 사용). 외부 binary 호출 (qmd / python3) 은 logic 함수 안에서 그대로 spawn.
  */
 
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
+import { runValidateWiki } from './scripts/validate-wiki.js'
+import { runCheckPii } from './scripts/check-pii.js'
+import {
+  cmdAdd,
+  cmdProviders,
+  cmdSummary,
+  type AddArgs,
+} from './scripts/cost-tracker.js'
+import {
+  cmdCheck,
+  cmdCheckJson,
+  cmdReindex,
+  type FreshnessStatus,
+  type ReindexOptions,
+} from './scripts/reindex.js'
 
-const execFileAsync = promisify(execFile)
+/**
+ * env 의 운영 환경 override 추출 — qmd binary / stamp file / sqlite db 위치. plugin 의
+ * `getExecEnv()` 가 process env 를 inject 하므로 사용자가 환경별로 path 변경 가능.
+ * test 환경에서 결정적 시나리오 검증에도 사용.
+ */
+function envOverrides(env: Record<string, string>): Partial<ReindexOptions> {
+  return {
+    ...(env.WIKEY_QMD_STAMP_FILE ? { stampFile: env.WIKEY_QMD_STAMP_FILE } : {}),
+    ...(env.WIKEY_QMD_SQLITE_DB ? { sqliteDb: env.WIKEY_QMD_SQLITE_DB } : {}),
+    ...(env.WIKEY_QMD_BIN ? { qmdBin: env.WIKEY_QMD_BIN } : {}),
+  }
+}
 
-// Phase 4 D.0.f (v6 §4.4.2): ScriptResult 확장 — exitCode 필드 신규.
-// 기존 `success` 만으로는 exec 실패 원인 구분 불가 (실행 실패 vs 정상 non-zero exit).
-// 신규 helper (reindexCheckJson, reindexQuick) 가 exitCode 를 contract 검증에 사용.
 export interface ScriptResult {
   readonly success: boolean
   readonly stdout: string
@@ -25,41 +53,80 @@ export interface RunScriptOptions {
   readonly timeoutMs?: number
 }
 
-async function runScript(
-  basePath: string,
-  script: string,
-  args: string[],
-  env: Record<string, string>,
+/**
+ * stdout / stderr capture wrapper. logic 함수는 (write, writeErr, signal) 콜백을 받는다.
+ *
+ * §5.7.1 codex cycle #2 finding #1 fix (2026-05-08):
+ *   - 기존 setTimeout 이 clearTimeout 안 해 빠른 호출도 timer 살아있음
+ *   - timed-out 작업의 child process (qmd / python) 가 abort 안 돼 background 에서 stamp
+ *     갱신 가능 (기존 execFile timeout 은 child kill 했음)
+ *   - fix: AbortController.signal 을 fn 에 전달 → reindex 의 spawn 으로 propagate.
+ *     finally 에 clearTimeout 으로 timer 정리.
+ */
+async function captureRun(
+  fn: (
+    write: (s: string) => void,
+    writeErr: (s: string) => void,
+    signal: AbortSignal,
+  ) => Promise<number>,
   opts?: RunScriptOptions,
 ): Promise<ScriptResult> {
-  const { join } = require('node:path') as typeof import('node:path')
-  const scriptPath = join(basePath, script)
-  const timeout = opts?.timeoutMs ?? 120000
-
+  const stdoutLines: string[] = []
+  const stderrLines: string[] = []
+  const write = (s: string) => stdoutLines.push(s)
+  const writeErr = (s: string) => stderrLines.push(s)
+  const timeout = opts?.timeoutMs ?? 120_000
+  const controller = new AbortController()
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  let exitCode: number
   try {
-    const { stdout, stderr } = await execFileAsync(scriptPath, args, {
-      cwd: basePath,
-      timeout,
-      env,
-    })
-    return { success: true, stdout, stderr, exitCode: 0 }
-  } catch (err: any) {
-    const code = typeof err?.code === 'number' ? err.code : -1
+    exitCode = await Promise.race([
+      fn(write, writeErr, controller.signal),
+      new Promise<number>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          controller.abort()
+          reject(new Error(`script timeout after ${timeout}ms`))
+        }, timeout)
+      }),
+    ])
+  } catch (err: unknown) {
+    controller.abort()
+    const msg = err instanceof Error ? err.message : String(err)
     return {
       success: false,
-      stdout: err.stdout ?? '',
-      stderr: err.stderr ?? err.message ?? String(err),
-      exitCode: code,
+      stdout: stdoutLines.join('\n'),
+      stderr: [...stderrLines, msg].join('\n'),
+      exitCode: -1,
     }
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+  }
+  return {
+    success: exitCode === 0,
+    stdout: stdoutLines.join('\n'),
+    stderr: stderrLines.join('\n'),
+    exitCode,
   }
 }
 
-export async function validateWiki(basePath: string, env: Record<string, string>): Promise<ScriptResult> {
-  return runScript(basePath, 'scripts/validate-wiki.sh', [], env)
+export async function validateWiki(
+  basePath: string,
+  _env: Record<string, string>,
+): Promise<ScriptResult> {
+  return captureRun(async (write) => {
+    const r = await runValidateWiki({ basePath, write })
+    return r.exitCode
+  })
 }
 
-export async function checkPii(basePath: string, env: Record<string, string>): Promise<ScriptResult> {
-  return runScript(basePath, 'scripts/check-pii.sh', [], env)
+export async function checkPii(
+  basePath: string,
+  _env: Record<string, string>,
+): Promise<ScriptResult> {
+  return captureRun(async (write) => {
+    const r = await runCheckPii({ basePath, write })
+    return r.exitCode
+  })
 }
 
 export async function reindex(
@@ -67,55 +134,94 @@ export async function reindex(
   env: Record<string, string>,
   mode: 'full' | 'quick' = 'full',
 ): Promise<ScriptResult> {
-  const args = mode === 'quick' ? ['--quick'] : []
-  return runScript(basePath, 'scripts/reindex.sh', args, env)
+  return captureRun(async (write, writeErr, signal) => {
+    const r = await cmdReindex(
+      { basePath, env, write, writeErr, signal, ...envOverrides(env) },
+      mode,
+    )
+    return r.exitCode
+  })
 }
 
-export async function reindexCheck(basePath: string, env: Record<string, string>): Promise<ScriptResult> {
-  return runScript(basePath, 'scripts/reindex.sh', ['--check'], env)
-}
-
-export async function costTrackerSummary(basePath: string, env: Record<string, string>): Promise<ScriptResult> {
-  return runScript(basePath, 'scripts/cost-tracker.sh', ['summary'], env)
-}
-
-export async function costTrackerAdd(
+export async function reindexCheck(
   basePath: string,
   env: Record<string, string>,
+): Promise<ScriptResult> {
+  return captureRun(async (write, _writeErr, signal) => {
+    const r = await cmdCheck({ basePath, env, write, signal, ...envOverrides(env) })
+    return r.exitCode
+  })
+}
+
+export async function costTrackerSummary(
+  basePath: string,
+  _env: Record<string, string>,
+): Promise<ScriptResult> {
+  return captureRun(async (write, writeErr) => {
+    const r = cmdSummary({ basePath, write, writeErr }, {})
+    return r.exitCode
+  })
+}
+
+/**
+ * @deprecated 기존 .sh 의 cost-tracker add 는 (basePath, env, provider, task, cost-string)
+ *   3쌍 단순 인자만 받음. 새 in-process API 는 inputTokens / outputTokens 등 풍부한 args
+ *   지원하지만, 호환성 위해 기존 시그니처 그대로 유지.
+ */
+export async function costTrackerAdd(
+  basePath: string,
+  _env: Record<string, string>,
   provider: string,
   task: string,
-  cost: string,
+  desc: string,
 ): Promise<ScriptResult> {
-  return runScript(basePath, 'scripts/cost-tracker.sh', ['add', provider, task, cost], env)
+  return captureRun(async (write, writeErr) => {
+    const args: AddArgs = { provider, task, desc }
+    const r = cmdAdd({ basePath, write, writeErr }, args)
+    return r.exitCode
+  })
+}
+
+export async function costTrackerProviders(
+  basePath: string,
+  _env: Record<string, string>,
+): Promise<ScriptResult> {
+  return captureRun(async (write) => {
+    const r = cmdProviders({ basePath, write })
+    return r.exitCode
+  })
 }
 
 // ── Phase 4 D.0.f (v6 §4.4.2) — reindex freshness contract ──
 
-export type ReindexFreshness = 'fresh' | 'stale' | 'never'
+export type ReindexFreshness = FreshnessStatus
 
 export interface ReindexCheckResult {
-  /** 신선: 0, 구버전: 변경된 파일 수, 미실행: -1 */
   readonly stale: number
   readonly status: ReindexFreshness
-  /**
-   * §5.14 Layer 6: documents WHERE active=1 count (`SELECT count(*) FROM documents WHERE active=1`).
-   * legacy schema (필드 누락) → -1 (unknown). waitUntilFresh expectMinIndexed 검증에 사용.
-   */
   readonly indexed: number
 }
 
 const REINDEX_STATUSES: ReadonlySet<ReindexFreshness> = new Set<ReindexFreshness>(['fresh', 'stale', 'never'])
 
 /**
- * `reindex.sh --quick` — qmd update + embed 만 실행. ingest pipeline 이 신규 페이지 후
- * invoke. 실패 시 throw (Stage 2 gate 가 잘못 열리는 것 방지).
+ * `reindex --quick` — qmd update + embed 만 실행. 실패 시 throw.
  */
 export async function reindexQuick(
   basePath: string,
   env: Record<string, string>,
   timeoutMs = 60_000,
 ): Promise<void> {
-  const res = await runScript(basePath, 'scripts/reindex.sh', ['--quick'], env, { timeoutMs })
+  const res = await captureRun(
+    async (write, writeErr, signal) => {
+      const r = await cmdReindex(
+        { basePath, env, write, writeErr, signal, ...envOverrides(env) },
+        'quick',
+      )
+      return r.exitCode
+    },
+    { timeoutMs },
+  )
   if (!res.success || res.exitCode !== 0) {
     const stderr = res.stderr?.slice(0, 200) ?? ''
     throw new Error(`reindex --quick failed (exit=${res.exitCode}): ${stderr}`)
@@ -123,23 +229,13 @@ export async function reindexQuick(
 }
 
 /**
- * `reindex.sh --check --json` — structured freshness output.
- *
- * Contract (plan v6 §4.4.1 / §4.4.2):
- *   stdout 에 단일 JSON 라인 `{"stale": number, "status": "fresh"|"stale"|"never"}`
- *   exit 0. 파싱 실패 · exit ≠ 0 · schema mismatch · enum 외 status 는 throw.
+ * `reindex --check --json` 의 stdout JSON 을 parse + schema 검증. exit code 검증 별도.
+ * test 가 schema mismatch 시나리오를 직접 검증할 때 사용.
  */
-export async function reindexCheckJson(
-  basePath: string,
-  env: Record<string, string>,
-): Promise<ReindexCheckResult> {
-  const res = await runScript(basePath, 'scripts/reindex.sh', ['--check', '--json'], env)
-  if (!res.success || res.exitCode !== 0) {
-    throw new Error(`reindex --check --json failed (exit=${res.exitCode}): ${res.stderr?.slice(0, 200) ?? ''}`)
-  }
+export function parseReindexCheckJsonOutput(stdout: string): ReindexCheckResult {
   let parsed: unknown
   try {
-    parsed = JSON.parse(res.stdout.trim())
+    parsed = JSON.parse(stdout.trim())
   } catch (err) {
     throw new Error(`reindex --check --json: stdout parse failed (${String(err)})`)
   }
@@ -153,24 +249,35 @@ export async function reindexCheckJson(
   if (typeof obj.status !== 'string' || !REINDEX_STATUSES.has(obj.status as ReindexFreshness)) {
     throw new Error(`reindex --check --json: schema mismatch (status=${String(obj.status)})`)
   }
-  // §5.14 Layer 6: indexed 필드 — legacy schema (누락) 시 -1 fallback (backwards compat)
   const indexed = typeof obj.indexed === 'number' ? obj.indexed : -1
   return { stale: obj.stale, status: obj.status as ReindexFreshness, indexed }
 }
 
 /**
- * Poll `reindexCheckJson` 까지 `status === 'fresh' && stale === 0` (+ optional indexed gate) 까지 대기.
- *
- * - 성공 조건: `status === 'fresh' && stale === 0` **만** 해당 (plan v6 §4.4.2 v5 엄격화).
- *   `status === 'never'` (index 미실행) 은 fresh 가 아님 — polling 지속.
- * - §5.14 Layer 6: `expectMinIndexed > 0` 지정 시 `indexed >= expectMinIndexed` 추가 조건.
- *   legacy schema (`indexed === -1`) 는 backwards-compat 으로 통과 — 새 reindex.sh 만 strict 적용.
- *   기존 caller (intervalMs 미지정) 회귀 0 — `expectMinIndexed=0` default.
- * - Contract 위반 (parse/exit 오류) 은 transient 로 간주하고 재시도. timeoutMs 넘으면 throw.
+ * `reindex --check --json` — in-process freshness JSON output. parse 실패는 contract 위반.
  */
-export async function waitUntilFresh(
+export async function reindexCheckJson(
   basePath: string,
   env: Record<string, string>,
+): Promise<ReindexCheckResult> {
+  const res = await captureRun(async (write, _writeErr, signal) => {
+    const r = await cmdCheckJson({ basePath, env, write, signal, ...envOverrides(env) })
+    return r.exitCode
+  })
+  if (!res.success || res.exitCode !== 0) {
+    throw new Error(`reindex --check --json failed (exit=${res.exitCode}): ${res.stderr?.slice(0, 200) ?? ''}`)
+  }
+  return parseReindexCheckJsonOutput(res.stdout)
+}
+
+/**
+ * waitUntilFresh 의 provider injection 형태. test 에서 reindexCheckJson 자체를 mock 하는 대신
+ * provider 함수를 자유롭게 주입하여 시나리오 검증.
+ */
+export type ReindexCheckProvider = () => Promise<ReindexCheckResult>
+
+export async function waitUntilFreshWithProvider(
+  provider: ReindexCheckProvider,
   timeoutMs: number,
   intervalMs = 500,
   expectMinIndexed = 0,
@@ -181,22 +288,40 @@ export async function waitUntilFresh(
   let lastIndexed = -1
   while (Date.now() < deadline) {
     try {
-      const res = await reindexCheckJson(basePath, env)
+      const res = await provider()
       lastStatus = res.status
       lastStale = res.stale
       lastIndexed = res.indexed
-      // §5.14 Layer 6: indexedOk = no expectation OR legacy schema (-1) OR meets expectation.
       const indexedOk = expectMinIndexed === 0 || res.indexed === -1 || res.indexed >= expectMinIndexed
       if (res.status === 'fresh' && res.stale === 0 && indexedOk) return
     } catch (err) {
-      // transient — 구버전 reindex.sh 등. timeout 까지 재시도.
       console.warn('[Wikey] reindexCheckJson transient error:', err)
     }
     await new Promise((r) => setTimeout(r, intervalMs))
   }
-  // §5.2.5 + §5.14 L6: surface last status / stale / indexed / expectMin so diagnostic can identify
-  // race vs PATH vs ABI vs collection-empty silent fail.
   throw new Error(
     `freshness timeout after ${timeoutMs}ms (last status=${lastStatus}, stale=${lastStale}, indexed=${lastIndexed}, expectMin=${expectMinIndexed})`,
+  )
+}
+
+/**
+ * Poll `reindexCheckJson` 까지 fresh + stale=0 (+ optional indexed gate) 까지 대기.
+ *
+ * - 성공 조건: `status === 'fresh' && stale === 0` (+ expectMinIndexed 충족)
+ * - §5.14 Layer 6: legacy schema (`indexed === -1`) 는 backwards-compat
+ * - Contract 위반 (parse/exit 오류) 은 transient 로 간주, timeoutMs 후 throw
+ */
+export async function waitUntilFresh(
+  basePath: string,
+  env: Record<string, string>,
+  timeoutMs: number,
+  intervalMs = 500,
+  expectMinIndexed = 0,
+): Promise<void> {
+  return waitUntilFreshWithProvider(
+    () => reindexCheckJson(basePath, env),
+    timeoutMs,
+    intervalMs,
+    expectMinIndexed,
   )
 }

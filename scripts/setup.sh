@@ -192,8 +192,27 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
-# --- 7. 스크립트 실행 권한 ---
-step "7/7" "스크립트 권한"
+# --- 7. wikey-core 빌드 (Phase 5 §5.7.1 thin wrapper 의존성) ---
+step "7/8" "wikey-core 빌드"
+
+if [ -f "${PROJECT_DIR}/wikey-core/dist/scripts/check-pii.js" ]; then
+  ok "wikey-core/dist 존재 (이미 빌드됨)"
+else
+  if [ "$CHECK_ONLY" = false ]; then
+    if (cd "${PROJECT_DIR}/wikey-core" && npm install --silent && npm run build) >/dev/null 2>&1; then
+      ok "wikey-core 빌드 완료"
+    else
+      fail "wikey-core 빌드 실패 — cd wikey-core && npm install && npm run build 직접 실행"
+      ERRORS=$((ERRORS + 1))
+    fi
+  else
+    fail "wikey-core/dist 없음 — npm install && npm run build 필요"
+    ERRORS=$((ERRORS + 1))
+  fi
+fi
+
+# --- 8. 스크립트 실행 권한 ---
+step "8/8" "스크립트 권한"
 
 local_scripts=(
   "scripts/validate-wiki.sh"

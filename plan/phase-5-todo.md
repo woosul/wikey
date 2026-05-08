@@ -800,14 +800,18 @@
 
 > **배경**. Phase 3 에서 이관된 우선순위 낮은 리팩토링 항목. 동작 유지하면서 구현만 개선. Phase 4 §4.5.2 에서 이관 (삭제 안전장치 + 초기화는 본체 남김).
 
-### 5.7.1 bash→TS 완전 포팅
+### 5.7.1 bash→TS 완전 포팅 ✅ 완료 (Session 26, 2026-05-08)
 
-> **다음 세션 진행 결정 (사용자 2026-05-08 session 25)**: 4 스크립트 모두 1 세션 처리. scope 명확 (input/output/exit code 이미 spec) + wikey-core 함수 재사용 + 동작 동등성 골든 테스트로 회귀 검증 단순 + wiki 재생성 0. §5.7.2 (qmd SDK) 는 별도 spec 분리.
+> **종결**: 4 스크립트 모두 1 세션 처리. scripts-runner.ts in-process refactor + scripts/*.sh thin wrapper + setup.sh wikey-core 빌드 추가. master 1차 → codex 4 cycle (#1~#4 APPROVE) → obsidian-cdp 라이브 (ingest cycle + query 정확 답변 + Settings tab 5 버튼) 모두 PASS.
 
-- [ ] `validate-wiki`, `check-pii`, `cost-tracker`, `reindex` 를 TypeScript 구현으로 포팅
-- [ ] 현재 exec 래퍼로 안정 동작 중 → 우선순위 낮음
-- [ ] 이점: 크로스 플랫폼, 타입 안전성, 테스트 용이성
-- [ ] **wiki 재생성 없음 확증**: 동작 동일성 유지, 실행 경로만 교체
+- [x] `validate-wiki`, `check-pii`, `cost-tracker`, `reindex` 를 TypeScript 구현으로 포팅 — `wikey-core/src/scripts/{4}.ts` (~1460 LOC) + `wikey-core/src/defaults/check-pii.default.yaml`
+- [x] scripts-runner.ts execFile bash → in-process 함수 호출 refactor (interface unchanged, plugin call 5 사이트 코드 변경 0)
+- [x] scripts/*.sh thin wrapper (`exec node wikey-core/dist/scripts/<name>.js`) — production runtime 에서 bash spawn 0
+- [x] 39 신규 unit test (5+9+16+9) + 21 migrated scripts-runner test → wikey-core 747 PASS / 3 skip / 0 fail
+- [x] golden diff 5 cases byte-equal (check-pii / validate-wiki / cost summary / cost providers / reindex --check --json)
+- [x] codex 4 cycle 누적 fix 8 항목: isEntryPoint try/catch / setup.sh 빌드 step / writeErr callback chain / python silent-fail fix / pii-patterns.yaml 양쪽 인식 / NaN guard / AbortController+clearTimeout+spawn signal / validate-stamp abort guard
+- [x] obsidian-cdp 라이브 cycle smoke (ISO 27001 — Brief 90s + Approve & Write 15s) — wiki write 9 파일, movePair OK, query 정확 (4 카테고리 + 통제수 37/8/14/34=93 + 13 citation links + 원본 backlink), Settings tab 5 버튼 PASS, **silent-fail 회귀 0 확증**
+- [x] **wiki 재생성 없음 확증**: 동작 동일성 유지 (golden byte-equal), 실행 경로만 교체. plugin call 사이트 코드 변경 0.
 
 ### 5.7.2 qmd SDK import
 

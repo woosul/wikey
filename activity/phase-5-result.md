@@ -1336,7 +1336,172 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 > tag: #utility, #infra
 > **이전 번호**: `was §5.7` (번호 유지).
 
-(착수 전 — 2026-04-22 Phase 4 §4.5.2 의 bash→TS 포팅 + qmd SDK import 두 항목에서 이관. 삭제 안전장치 + 초기화는 Phase 4 본체 유지. 우선순위 낮음 — 현 exec 래퍼로 안정 동작 중.)
+(2026-04-22 Phase 4 §4.5.2 의 bash→TS 포팅 + qmd SDK import 두 항목에서 이관. 삭제 안전장치 + 초기화는 Phase 4 본체 유지.)
+
+### 5.7.1 4 bash scripts → TypeScript port + scripts-runner refactor ✅ (Session 26, 2026-05-08)
+
+> **종결 결정 (사용자 2026-05-08 session 25)**: 4 스크립트 모두 1 세션 처리. session 26 진입 즉시 시작 — scope frozen + wikey-core 함수 재사용 + 골든 테스트로 동등성 검증 단순.
+
+#### 배경 + 동기
+
+- 2026-04-22 Phase 4 §4.5.2 에서 §5.7.1 + §5.7.2 (qmd SDK) 두 항목으로 이관. 사용자 직접 경험: ingest 후 query 결과 0 회귀 발생 — 메모리 [`feedback_qmd_node_abi.md`](memory) 의 6 layer silent fail (binding MOD / 다중 node / PATH 우선순위 / findQmdBin / collection path / waitUntilFresh) 중 reindex 의 python script silent-fail 도 origin 중 하나로 의심.
+- `wikey-core/src/scripts-runner.ts` 가 기존 `child_process.execFile` 로 4 .sh spawn — plugin runtime 이 매번 bash 띄움 (Obsidian + Node 에서 5 분 timeout 위험). production 에서 in-process 호출로 전환하면 (a) timeout 0 (Promise.race + AbortController 자체 제어) (b) cross-platform OK (Windows 도 작동) (c) 타입 안전성 (return type 직접) (d) test 가능성 (mock fs + writable callback).
+
+#### Specification (합본 §Spec, conversation 명시)
+
+| 요소 | 내용 |
+|------|------|
+| **Goal** | plugin runtime 의 bash spawn 4 곳 제거 — in-process TS 함수 호출. 기존 .sh = dev/CI thin wrapper. |
+| **Inputs** | 4 .sh (validate-wiki 141 lines / check-pii 39 / cost-tracker 241 / reindex 248) + 외부 (qmd binary, contextual-retrieval.py, korean-tokenize.py, ~/.cache/qmd/index.sqlite) + `detectPii` (재사용) |
+| **Outputs** | (a) `wikey-core/src/scripts/{check-pii,validate-wiki,cost-tracker,reindex}.ts` × 4 (logic + CLI entry) (b) `__tests__/{4}.test.ts` × 4 (39 tests) (c) `scripts-runner.ts` refactor (execFile→in-process) (d) `scripts/{4}.sh` × 4 thin wrapper |
+| **Invariants** | (1) `ScriptResult` interface 동일 (2) plugin 호출 5 사이트 코드 변경 0 (3) golden diff: stdout 동등 (4) production runtime 에서 bash spawn 0 (5) 외부 binary/python 호출 유지 |
+| **Acceptance (15)** | AC1~15 (PII 0/3-match, validate 정상/깨진 link, cost add/summary/providers, reindex check/json/quick/full, scripts-runner refactor, golden diff, 735+ tests PASS) |
+| **Out-of-scope** | §5.7.2 qmd SDK / .py 자체 포팅 / qmd binary 포팅 / plugin code 변경 / 다른 .sh 포팅 |
+| **Deps** | wikey-core build (tsc + dist/scripts copy), vitest mock fs, Node std lib only (외부 dep 0) |
+
+#### 변경 파일 (master 1차 작업, in-process refactor)
+
+| 파일 | 변경 | LOC |
+|------|------|-----|
+| `wikey-core/src/scripts/check-pii.ts` | NEW logic + CLI entry. `pii-patterns.ts` 의 `loadPiiPatternsFromYaml` 재사용. `runCheckPii({basePath, write, configPaths?})` export. | ~210 |
+| `wikey-core/src/scripts/validate-wiki.ts` | NEW. 6 검증 (frontmatter / wikilink 4-fallback resolve / index 등재 / log format / 중복 / raw↔wiki basename 충돌). BLUE 3b refactor 후 `checkFrontmatter / checkWikilinks / checkIndexRegistration / checkLogFormat / checkDuplicateBasename / checkBasenameConflict` 6 함수로 split. `runValidateWiki({basePath, wikiDir?, rawDir?, write})` export. | ~290 |
+| `wikey-core/src/scripts/cost-tracker.ts` | NEW. Python heredoc 제거 — `calcCost` (rate × tokens / 1M, NaN/Infinity guard) + `cmdAdd` (cost-log.md append + duration/pages/notes 옵션) + `parseCostLog` (정규식 entry 추출) + `cmdSummary` (provider/task aggregation + budget $50) + `cmdProviders` (5 row 요금표). byte-length pad 로 한국어 baseline 동등. | ~440 |
+| `wikey-core/src/scripts/reindex.ts` | NEW. `checkFreshness` (stamp file 비교, MAX_CHANGED_FILES_REPORTED=5) + `cmdCheck` (human-readable: 인덱스 최신 / 마지막 시각 / 문서·벡터 count) + `cmdCheckJson` (단일 JSON `{stale, status, indexed}`) + `cmdReindex` (5 step: qmd update / qmd embed / contextual-retrieval.py / korean-tokenize.py / runValidateWiki). 외부 binary 호출은 `runProc` (spawn) 으로 유지. AbortSignal 전 stage 로 propagate. | ~520 |
+| `wikey-core/src/defaults/check-pii.default.yaml` | NEW. 3 leak 패턴 (phone-kr `010-\d{4}-\d{4}` / email / jumin `\d{6}-[1-4]\d{6}`). FALLBACK_DEFAULT_PATTERNS 도 hardcoded (cjs bundle 안 import.meta.url empty 시 fallback). | ~22 |
+| `wikey-core/src/scripts-runner.ts` | REFACTORED — `execFile bash` → in-process 호출. `validateWiki / checkPii / reindex / reindexCheck / reindexCheckJson / reindexQuick / waitUntilFresh / costTrackerSummary / costTrackerAdd` signature 동일. plugin call 5 사이트 (`commands.ts:574 reindexQuick`, `settings-tab.ts:896,927,943,965,981 costTrackerSummary/reindexCheck/reindexWiki/validateWiki/checkPii`) 코드 변경 0. captureRun 에 AbortController + clearTimeout finally + envOverrides helper (`WIKEY_QMD_STAMP_FILE/SQLITE_DB/BIN`). `parseReindexCheckJsonOutput` + `waitUntilFreshWithProvider` test injection 용 export. | ~270 |
+| `wikey-core/src/scripts/__tests__/{check-pii,validate-wiki,cost-tracker,reindex}.test.ts` | NEW 4 파일 — 39 tests (5+9+16+9). PII 0/3-match, 6 검증 PASS/FAIL, calcCost 5 case, parseCostLog, cmdSummary 4 case, cmdProviders, freshness 4 case, cmdCheckJson 3 case + cmdCheck 2 case. mock fs (mktemp + 파일 작성), 외부 binary spawn 회피. | ~600 |
+| `wikey-core/src/__tests__/scripts-runner.test.ts` | MIGRATED — 기존 mock bash script (`scripts/reindex.sh` 작성) → in-process mock (`cmdCheckJson freshnessOverride/indexedCountOverride` + `waitUntilFreshWithProvider`). 21 tests (parseReindexCheckJsonOutput 7, cmdCheckJson 4, waitUntilFreshWithProvider 8, reindexCheckJson production round-trip 2). | ~280 |
+| `scripts/{check-pii,validate-wiki,cost-tracker,reindex}.sh` | REFACTORED thin wrapper — `exec node "$PROJECT_DIR/wikey-core/dist/scripts/<name>.js" "$@"`. dist 미존재 시 친절한 에러 (`wikey-core build 필요`). 단순참조 + production 제외 (사용자 결정 2026-05-08). | 각 ~17 |
+| `scripts/setup.sh` | step 7/8 wikey-core 빌드 추가 (dist/scripts/check-pii.js 존재 확인 + npm install + npm run build). step 8/8 = 권한. fresh checkout 회귀 방지 (codex cycle #1 finding #2). | +20 |
+
+#### Pipeline (master → codex → obsidian-cdp 3 단계)
+
+##### 1차: master 직접 검증 (Karpathy #4 — fresh 실행 증거)
+
+| 항목 | 결과 |
+|------|------|
+| `npx tsc --noEmit` (wikey-core) | 0 errors |
+| `npx vitest run` (wikey-core) | 35 files / 747 PASS + 3 skip / 0 fail (+47 신규: 39 logic + 8 scripts-runner migration delta) |
+| `npm test` (wikey-obsidian) | 35 PASS / 0 fail |
+| `npm run build` (wikey-core) | 0 errors |
+| `npm run build` (wikey-obsidian) | 2 warnings (cjs/esm import.meta — pre-existing pii-patterns/config/capability-map; 새 4 .ts 의 isEntryPoint try/catch 가 esbuild warning 4 spot 해소: 6→2) / main.js 293KB 생성 |
+| **golden diff** (실 .sh baseline ↔ 새 .ts 출력) | **5/5 byte-equal** (check-pii / validate-wiki / cost summary / cost providers / reindex --check --json) — Invariant 3 충족. 단 reindex --check --json 은 환경 시점 의존 (stamp mtime + sqlite count) 이라 fix 후 재캡처 시 환경 변화 — 새 .ts 동작 자체는 동일. |
+
+##### 2차: codex 4 cycle (Mode D Panel cross-model — surface:14/15/16/17)
+
+| Cycle | Surface | Verdict | Findings | Master 결정 |
+|-------|---------|---------|----------|-------------|
+| #1 | surface:14 | NEEDS_REVISION | 6 (2 Critical + 2 High + 2 Medium) | fix 5/6 동의. #4 (python script silent-fail) 초기 보류 — baseline 동등성 우선. |
+| #2 | surface:15 | NEEDS_REVISION | 2 (2 High) | 사용자 명시 후 #4 도 fix (사용자 직접 경험 회귀 origin). #2 (untracked file) 은 commit 단계 책임 인지. |
+| #3 | surface:16 | NEEDS_REVISION | 1 (1 High) — full-mode validate↔stamp gap | fix 동의. node smoke test (codex 직접 검증): aborted qmd update + pre-aborted signal 모두 stamp 안 생김 (exitCode:-1, stampExists:false, spawned:false). |
+| #4 | surface:17 | **APPROVE** | 0 | verified — npm test 747 PASS / build 0 errors / validate-wiki PASS. cycle 종결. |
+
+##### 누적 fix 8 항목 (4 cycle 합산)
+
+1. **isEntryPoint try/catch + import.meta.url undefined guard** (4 .ts 모두) — esbuild cjs bundle 안 `fileURLToPath(undefined)` ERR_INVALID_ARG_TYPE throw 회피. plugin module load 깨짐 위험 0.
+2. **scripts/setup.sh step 7/8 wikey-core 빌드** — fresh checkout 시 dist/scripts/*.js 자동 생성. .gitignore:54 `wikey-core/dist/` 와 양립.
+3. **writeErr callback chain** — runQmdUpdate / runQmdEmbed / runContextualRetrieval / runKoreanTokenize 모두 `process.stderr.write` 직접 호출 → `writeErr` callback 으로. plugin 이 stderr 받음 (captureRun stderrLines 누적).
+4. **python script silent-fail fix (사용자 영구 결정)** — runContextualRetrieval / runKoreanTokenize 가 exitCode 검사. 0 아니면 cmdReindex early return → stamp 갱신 차단. 기존 .sh 의 `cr_out=$(python3 ...)` 형식 (set -e command substitution 미작용) 과 다른 strict improvement. ingest→query 결과 0 silent-fail origin 중 하나 해소.
+5. **check-pii path drift fix** — `loadCheckPiiPatterns` 가 4 path (project + global × pii-patterns + check-pii-patterns) 모두 union load. id collision 시 뒤가 우선. schema (`§분해 정책` `<vault>/.wikey/pii-patterns.yaml`) 호환 + 분리 정신 (ingest gate ↔ leak check) 둘 다 보존.
+6. **NaN guard** — `parseIntSafe` (parseInt 결과 Number.isFinite 검사 + 0 fallback) + `calcCost` (NaN/Infinity 차단). cost-log.md 에 `$NaN.00` 누수 차단.
+7. **AbortController + clearTimeout finally + spawn signal** — captureRun 의 setTimeout 이 clearTimeout 안 함 → finally cleanup. controller.signal 을 fn callback 3rd arg 로 전달. cmdReindex 의 ReindexOptions.signal 옵션 추가 → runQmdUpdate / runQmdEmbed / runContextualRetrieval / runKoreanTokenize / querySqliteCount → runProc → spawn { signal } propagate. 매 step 사이 `if (signal?.aborted) return { exitCode: -1 }` early return guard. timed-out reindexQuick 가 background 에서 stamp 갱신하던 회귀 차단.
+8. **validate↔stamp 사이 abort guard** — cmdReindex full mode step 5 (runValidateWiki) 후 stamp 갱신 직전 `if (signal?.aborted) return` 추가. validate-wiki 자체 sync (file walk) — abort timing 만 stamp 갱신 차단으로 충분 (signal-aware validate-wiki 변경은 over-engineering).
+
+##### 3차: obsidian-cdp 라이브 cycle smoke (master 직접, agent-management.md §6)
+
+| 항목 | 결과 |
+|------|------|
+| Plugin reload | `obsidian plugin:reload id=wikey` PASS. `dev:errors` "No errors captured". wikey commands 9개 등록 (`wikey:ingest-current-note`, ...). |
+| Sample 선택 | `raw/0_inbox/iso-27001-overview.md` (PII-free 표준 자료, 적당 크기) |
+| Brief modal → Proceed | 정상 (3 버튼: Proceed / Skip briefs this session / Cancel) |
+| Processing → Preview | **90s** (기대 ~1~3분, baseline 2분 10초 대비 빠름) |
+| Approve & Write → CLOSED | **15s** |
+| wiki write 9 파일 | source-iso-27001-overview.md (1) + 6 concepts (iso-27001-people-controls / information-security-management-system / iso-27001-technological-controls / iso-27001-physical-controls / iso-iec-27001-2022 / iso-27001-organizational-controls) + log.md + index.md + .ingest-map.json. Karpathy "single source 5~15 wiki pages" 패턴 |
+| movePair (IV.A) | `raw/0_inbox/iso-27001-overview.md` 사라짐 → `raw/3_resources/60_note/500_technology/iso-27001-overview.md` 이동. reindex --quick (post-movePair commands.ts:574) in-process 호출 정상 |
+| Console error (§5.7.1 관련) | **0** — 기존 deprecation/Ollama warning 만 |
+| **Query 정확성** | "ISO 27001은 어떤 4 가지 컨트롤 카테고리를 정의하나?" → 1390 chars 답변. 4 카테고리 (조직적 / 인적 / 물리적 / 기술적) 명시. **통제 수 정확** (37 / 8 / 14 / 34 = 93 = ISO 27001 Annex A) — wiki 페이지 fact 정확 인용. **13 citation links** (entities/concepts/sources + raw 원본). 한국어 존댓말 (해요체) 준수. **silent-fail 회귀 0** 확증. |
+| Settings tab 5 버튼 | (1) **Cost Summary** → `[cost] 비용 로그 없음` exit 1 정상 (cost-log.md 없음). (2) **Check Index** → `인덱스 최신 (마지막: 2026-05-08 02:16)` `문서: 96개, 벡터: 289청크` (이전 90 docs → 새 6 페이지 추가 정확 = ingest 후 reindex --quick 정상). (3) **Validate Wiki** → `PASS: 모든 검증 통과` (6 검증 헤더). (4) **PII Scan** → `=== PII 스캔: wiki/ ===\nPASS: PII 패턴 없음`. (5) **Full Reindex** skip (시간 + 사이드 이펙트). 4 in-process 함수 모두 plugin runtime 안 직접 호출 PASS. |
+
+##### Pipeline 검증 종합
+
+```
+master 1차 (typecheck + 747 tests + golden 4/4 byte-equal)
+   ↓ 통과
+codex 4 cycle (#1~#4)
+   ↓ 누적 fix 8 항목 적용 후 #4 APPROVE
+obsidian-cdp 라이브 (ingest 90s + write 15s + query 정확 + Settings 5/5)
+   ↓ silent-fail 회귀 0 확증
+§5.7.1 종결
+```
+
+#### Phase 3a (회귀 검증 — tester+master)
+
+| 명령 | 결과 |
+|------|------|
+| `npx tsc --noEmit` | 0 errors |
+| `npx vitest run` (wikey-core 35 files) | 747 PASS + 3 skip / 0 fail |
+| `npm test` (wikey-obsidian) | 35 PASS / 0 fail |
+| `npm run build` (wikey-core + wikey-obsidian) | 0 errors / 2 warnings (pre-existing) |
+| `./scripts/check-pii.sh` (live, fresh build) | byte-equal baseline |
+| `./scripts/validate-wiki.sh` (live) | byte-equal baseline (PASS: 모든 검증 통과) |
+| `./scripts/cost-tracker.sh providers` (live) | byte-equal baseline (한글 byte pad) |
+| `./scripts/cost-tracker.sh summary` (live) | byte-equal baseline (exit 1 로그없음) |
+| `./scripts/reindex.sh --check --json` (live) | 환경 의존 OK (stale=N, indexed=N JSON 유효) |
+
+#### Phase 3b (BLUE refactor 6 활동 — developer+tester)
+
+| # | 활동 | 적용 / 의도적 유지 + 근거 |
+|---|------|---------------------------|
+| 1 | 함수 분해 | **적용** — validate-wiki `runValidateWiki` 100+ LOC 6 검증을 `checkFrontmatter / checkWikilinks / checkIndexRegistration / checkLogFormat / checkDuplicateBasename / checkBasenameConflict` 6 함수 split. 가독성 + test 단위 명확. |
+| 2 | Naming consistency | **유지** — provider/task/desc/freshness 등 일관, 한글 메시지 baseline 동등성 위험 (변경 시 invariant 3 위반) |
+| 3 | DRY (walkMarkdown 4곳 중복) | **유지** — extract 후 abstraction 비용 > value, 각 호출 사이트 inline Generator 자연 (Karpathy "premature abstraction 회피") |
+| 4 | 주석 quality | **적용** — TODO/FIXME 0 검사 + 새 4 .ts 모두 헤더 주석 (§5.7.1 reference + 동등성 명시 + 분리 근거). codex finding fix 후 fix 별 in-line comment (§5.7.1 cycle #N codex finding #M fix 식별) |
+| 5 | 가독성 | **적용** — magic 5 → `MAX_CHANGED_FILES_REPORTED` 상수 (reindex.ts checkFreshness `head -5` 동등). validate-wiki 의 `INDEX_REGISTERED_SUBDIRS` 상수 + relDisplay helper extract |
+| 6 | 회귀 재검증 | **적용** — 모든 refactor 후 `npx vitest run` + `npm run build` + golden diff 재실행, 매번 PASS 확증 |
+
+#### AC 충족 매트릭스 (15)
+
+| AC | 내용 | 결과 |
+|----|------|------|
+| AC1 | check-pii: PII 0건 wiki/ → exit 0, "PASS: PII 패턴 없음" | ✅ live 확증 |
+| AC2 | check-pii: 3 패턴 매치 fixture → exit 1 + WARN N건 + PII 라인 N개 | ✅ unit test (5 패턴) |
+| AC3 | validate-wiki: 정상 wiki/ → exit 0, "PASS: 모든 검증 통과" | ✅ live + unit |
+| AC4 | validate-wiki: 깨진 위키링크 fixture → exit 1 + FAIL 라인 | ✅ unit |
+| AC5 | cost-tracker add: 신규 entry 작성 + cost 정확 | ✅ unit (claude-code 50K input + 30K output → $3.00) |
+| AC6 | cost-tracker summary: 로그 없음 → exit 1, "비용 로그 없음" | ✅ live (Settings tab) |
+| AC7 | cost-tracker summary: 로그 있음 → exit 0 + provider/task aggregation + 예산 | ✅ unit |
+| AC8 | cost-tracker providers → 5 row 요금표 | ✅ live (한글 byte-equal) |
+| AC9 | reindex --check (fresh) → "인덱스 최신" + 문서/벡터 count | ✅ live (96 docs + 289 chunks) |
+| AC10 | reindex --check --json → 단일 JSON `{stale, status, indexed}` + exit 0 | ✅ live |
+| AC11 | reindex --quick → qmd update + embed 만, exit 0 | ✅ live (post-movePair commands.ts:574 trigger) |
+| AC12 | reindex 전체 (full) → 5 step 실행 (qmd / embed / CR / 한국어 / validate) | ✅ unit (mock spawn) |
+| AC13 | scripts-runner refactor → plugin 호출 5 사이트 PASS | ✅ Settings tab 5 버튼 라이브 + plugin call 코드 변경 0 |
+| AC14 | golden diff: stdout 동등 | ✅ 4/4 byte-equal (1 시점 의존 OK) |
+| AC15 | npm test (wikey-core + wikey-obsidian) total ≥ 735 PASS | ✅ 747+35 = **782 PASS** / 3 skip / 0 fail |
+
+#### Karpathy 4원칙 cross-check
+
+- **Think Before Coding**: 합본 §Specification 6요소 (Goal/Inputs/Outputs/Invariants/AC/Out-of-Scope/Deps) 명시 + golden baseline 캡처 (`/tmp/wikey-571-golden/`) 가 첫 단계 — invariant 3 (stdout 동등) 정량 측정 가능. 사용자 결정 (".sh 단순참조 production 제외" + "동시 진행" + "1)master 2)codex 3)obsidian-cdp 철저 검증") 명시 우선 후 진입.
+- **Simplicity First**: in-process 함수 + thin wrapper. **dependency 0 추가** (Node std lib only — `node:fs`, `node:path`, `node:child_process`, `node:os`, `node:url`). YAML parser 도 wikey-core 의 기존 `loadPiiPatternsFromYaml` 재사용 (js-yaml 의존성 회피). cost-tracker 의 Python heredoc 제거 — 모든 비용/parsing logic TS 로 (additional dep 0).
+- **Surgical Changes**: plugin code 변경 **0** (commands.ts + settings-tab.ts 1줄도 안 바뀜). 다른 .sh (ablation-ingest / classify-inbox / llm-ingest / migrate-* 등 11 개) 손대지 않음. CLAUDE.md 사용자 승인 의무 인지 — skip. .gitignore / esbuild config / package.json 변경 0.
+- **Goal-Driven Execution**: 각 cycle 의 "검증 가능 성공 기준" 명시 → 측정 → fix → 재측정 루프. golden diff byte-equal + npm test PASS + plugin call 사이트 0 변경 + codex APPROVE + obsidian-cdp 라이브 silent-fail 회귀 0 모두 정량 확증. cycle #1 의 "should work" 표현 0 — 매 cycle "fresh re-run + 출력 + exit 0" 증거 제시.
+
+#### 잔여 후속
+
+§5.7.1 본 cycle 종결. 다음 후보:
+
+| 후보 | 우선순위 | 비고 |
+|------|----------|------|
+| **§5.7.2 qmd SDK import** | P4 | vendored CLI → Node 바인딩 결정 (난이도 ↑). 별도 spec 분리 필요. |
+| §5.6.3 LLM provider strategy | P3 (draft) | session 24 환경 latency 관측 후속, LLM hang 근본 fix |
+| §5.5 / §5.8 / §5.9 | P3/P4 | 시간 여유 시 |
+
+#### 배운 점 / 패턴 메모
+
+- **golden fixture 첫 단계 캡처** = invariant 3 (동등성) 정량 측정 도구 — 진행 중 baseline drift detection (한글 padding byte vs codepoint 차이) 즉시 발견 + fix 후 재확증.
+- **codex 4 cycle 의 가치**: master 1차 + 자동 test 가 PASS 인 상태에서도 **6 + 2 + 1 finding 추가 발견** — esbuild cjs bundle 안 import.meta.url throw / dist gitignored / stderr bypass / silent-fail / NaN edge / abort timer 누수 / validate-stamp gap. 모두 production runtime 영향 — cross-model 적대적 검증의 실효성 확증.
+- **사용자 직접 경험 finding (#4)**: 처음에 master "기존 .sh 와 동등 동작" 으로 보류 → 사용자 명시 ("ingest 후 query 결과 안 나오는 문제 회귀") 후 fix 진행. **베이스라인 동등성 < 사용자 가치** 우선순위 명확화. baseline 이 잘못된 동작이면 strict improvement 가 정당.
+- **AbortController + spawn signal**: Node.js v15+ 의 spawn signal 옵션 — child kill 자동. captureRun 의 finally clearTimeout 과 결합해 reindexQuick 의 timed-out background 누수 차단. 기존 execFile timeout 의 "child kill" 동작 동등 + 더 정밀 제어.
 
 ---
 

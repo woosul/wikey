@@ -1,30 +1,26 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-08 session 25 — §5.15.A 종결 (Cycle 3~5 의도적 미진행)**.
+> 최신 갱신: **2026-05-08 session 26 — §5.7.1 종결 (4 bash scripts → TS port + scripts-runner refactor)**.
+> session 26 (2026-05-08) 에서 §5.7.1 1 세션 처리 완료.
+> (a) §5.7.1 — 4 .ts (check-pii / validate-wiki / cost-tracker / reindex) ~1460 LOC + scripts-runner.ts in-process refactor + 4 .sh thin wrapper + setup.sh 빌드 step ✅
+> (b) **검증 3 단계 PASS**: master (typecheck 0 / 747 PASS / golden 4/4 byte-equal) → codex 4 cycle (#1~#4 APPROVE, 8 finding 누적 fix) → obsidian-cdp 라이브 (ISO 27001 ingest 90s + Approve 15s + query 정확 답변 + Settings tab 5 버튼 PASS, **silent-fail 회귀 0 확증**)
+> (c) **사용자 직접 경험 회귀 origin 해소**: python script silent-fail (set -e command substitution 미작용) → exitCode 검사 + early return + stamp 차단 strict improvement
+> (d) **production 에서 .sh 제외**: plugin runtime 의 bash spawn 4 곳 제거 — in-process 함수 호출만. 5 plugin call 사이트 (commands.ts:574 + settings-tab.ts:896,927,943,965,981) 코드 변경 0
+>
+> 직전 session 25 (2026-05-08) 에서 §5.15.A 종결 + §5.15 sub-section 5종 (A/B/C/D/E) 모두 종결.
 > 직전 session 24 (2026-05-07) 에서 §5.15.C / §5.15.E / §5.15.B / §5.15.A Cycle 1 모두 종결.
-> (a) §5.15.C citation 마커 dead code cleanup (commit `e93b05e`) ✅
-> (b) §5.15.E LLM hang UX hardening F1/F2/F3/F4 (commit `88e5286`) ✅
-> (c) §5.15.B PROMOTION_THRESHOLD override (commit `90b0011`) ✅
-> (d) §5.15.A Cycle 1 — vitest + happy-dom + Obsidian mock 5 인터페이스 + 14 인프라 검증 tests (commit `f1d1dce`) ✅
-> (e) §5.15.A Cycle 2 — sidebar-chat helper 5 export + 21 unit tests, AC-A3 충족 (commit `02270f3`) ✅
-> (f) **§5.15.A 종결 결정 (session 25, 사용자)**: Cycle 3~5 (AC-A4 handleVaultCreate / AC-A6 §5.14 deep split) 의도적 미진행. 근거: §5.14 session 23 의도적 유지 결정의 본질 = closure state 12+ field 비용 + plugin lifecycle scoped 자연 캡슐화 (test 인프라 부재가 아님). Cycle 1+2 가 향후 isolated function 신규 추가 시 자연 cover 안전망 충분.
-> (g) **§5.15 sub-section 5종 (A/B/C/D/E) 모두 종결** — Phase 5 잔여 = §5.5 / §5.6 / §5.7 / §5.8 / §5.9 (P3/P4) 5 subject 만.
 >
-> **다음 세션 결정 (사용자 2026-05-08 session 25)**: **§5.7.1 — 4 스크립트 (validate-wiki / check-pii / cost-tracker / reindex) 모두 bash→TS 포팅 1 세션 처리**.
->   - 근거: 4 스크립트 1:1 mapping (input/output/exit code 이미 spec) + wikey-core 함수 재사용 + 동작 동등성 골든 테스트로 회귀 검증 단순 + wiki 재생성 0
->   - scope: validate-wiki.ts / check-pii.ts / cost-tracker.ts / reindex.ts 4 스크립트 신규 + 기존 .sh 파일은 thin wrapper (혹은 deprecated marker) 결정
->   - §5.7.2 (qmd SDK import) 는 별도 spec 으로 분리 — vendored CLI 구조 변경 + Node 바인딩 결정 필요라 unbounded scope
->   - 추정 cycle: 1~2 (4 스크립트 동시 진행, 골든 fixture 작성 + TS 포팅 + wikey-core export 보강)
->
-> **이외 후보** (§5.7.1 종결 후):
-> - **§5.6.3 LLM provider strategy** (P3 draft, session 24 환경 latency 관측 후속) — LLM hang 근본 fix
-> - **§5.7.2 qmd SDK import** (P4, vendored CLI → Node 바인딩 결정)
+> **다음 세션 결정 (사용자 session 26 직후 확정 필요)**: 다음 후보:
+> - **§5.7.2 qmd SDK import** (P4) — vendored CLI 구조 → Node 바인딩 (난이도 ↑, 별도 spec 분리 필요. unbounded scope 라 사전 plan 권장)
+> - **§5.6.3 LLM provider strategy** (P3 draft) — session 24 환경 latency 관측 후속, LLM hang 근본 fix
 > - 기타 P3/P4 (§5.5 / §5.8 / §5.9) 또는 Phase 6 진입
 >
-> 이전 세션 (session 23) 종결:
-> - §5.14 본체 종결 + §5.15.D 종결 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix.
+> Phase 5 잔여 = §5.5 / §5.6 / §5.7.2 / §5.8 / §5.9 (§5.7.1 종결 후 4.5 subject).
 >
-> wikey-core 700 PASS / 3 skip + wikey-obsidian 35 PASS = 735 total / 0 build errors / validate-wiki PASS.
+> 이전 세션 (session 23~25) 종결:
+> - §5.14 본체 + §5.15 (A/B/C/D/E) 5종 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix + §5.15.A Cycle 1+2 (Cycle 3~5 의도적 미진행).
+>
+> wikey-core 747 PASS / 3 skip + wikey-obsidian 35 PASS = 782 total / 0 build errors / validate-wiki PASS / golden diff 4/4 byte-equal.
 > 생성일: 2026-04-10
 
 ---
