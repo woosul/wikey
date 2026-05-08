@@ -164,7 +164,7 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 | 5.4 | 표준 분해 self-extending 4 Stage (BUILTIN PMBOK + Stage 2 detector + Stage 3 self-declaration + Stage 4 cluster) | P2 | ✅ 종결 (session 13, 732 PASS) + §5.4.7 1/2/3/4순위 (session 14) |
 | 5.5 | 지식 그래프 · 시각화 (NetworkX + Leiden + vis.js / Obsidian Graph View) | P3 | ⬜ 대기 |
 | 5.6 | 성능·엔진 확장 (llama.cpp PoC / rapidocr Linux) | P3 | ⬜ 대기 |
-| 5.7 | 운영 인프라 포팅 (bash → TS / qmd SDK import) | P4 | ⬜ 대기 |
+| 5.7 | 운영 인프라 포팅 — §5.7.1 종결 (bash → TS, session 26) / **§5.7.2 abandon** (in-process SDK import, Electron renderer file:// 미지원, 사용자 영구 결정 2026-05-08). qmd alternative engine (Orama 등) 검토 deferred 다음 세션 | P4 | 🟡 partial (5.7.1 ✅ / 5.7.2 🛑 abandon) |
 | 5.8 | Phase 4 D.0.l 잔여 (dedup / classify variance / reindex exit) | P4 | ⬜ 대기 |
 | 5.9 | Variance 기여도·diagnostic (4-points ablation / Ollama baseline) | P4 | ⬜ 대기 |
 | **5.10** | **Graph emergent ontology — §5.4 paradigm shift D-wide** | P1 | ✅ **종결** (session 17~18, 2026-05-05). §5.10.1~§5.10.4 4 Phase 모두 GREEN + codex cycle #8 APPROVE (b9130f5) + session 18 본체 잔재 모두 처리 (§5.4 dead code 완전 제거, broken-link wiki body fix, modal dismiss + timing instrumentation). canonicalizer = LLM 자율 type 분류 + alias normalization 만 잔존. |

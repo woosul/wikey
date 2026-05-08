@@ -813,12 +813,80 @@
 - [x] obsidian-cdp 라이브 cycle smoke (ISO 27001 — Brief 90s + Approve & Write 15s) — wiki write 9 파일, movePair OK, query 정확 (4 카테고리 + 통제수 37/8/14/34=93 + 13 citation links + 원본 backlink), Settings tab 5 버튼 PASS, **silent-fail 회귀 0 확증**
 - [x] **wiki 재생성 없음 확증**: 동작 동일성 유지 (golden byte-equal), 실행 경로만 교체. plugin call 사이트 코드 변경 0.
 
-### 5.7.2 qmd SDK import
+### 5.7.2 qmd SDK import — 🛑 abandon (2026-05-08 session 26 사용자 영구 결정)
 
-- [ ] CLI exec → 직접 import 로 전환 시 지연 감소 + 에러 처리 개선
-- [ ] 현재 vendored CLI 구조라 난이도 높음
-- [ ] 후속 전환 경로: qmd JS/TS 바인딩 확보 또는 RPC 게이트웨이
-- [ ] **wiki 재생성 없음 확증**: 인덱스 소비 방식만 변경, 데이터 그대로
+> **상태**: **abandon 종결**. 1차 시도 (in-process import) = Electron renderer file:// dynamic import 미지원으로 fundamental fail (8 cycle 후 full revert). 2차 시도 (subprocess+IPC) = 사용자 평가 결과 진정한 내재화 아닌 차선책 + 가치 < 위험 + qmd internal API coupling 부담 ↑ → abandon.
+>
+> **사용자 통찰** (2026-05-08, 영구 등록): "내재화 하면 우리가 직접 불편하고 잘 안맞는 부분을 고치려고 했던건데... 그게 아니면 qmd를 안정적으로 받아서 운영해야 하는거 아닌가?" → §5.7.2 의 진짜 motivation = ownership / customization. Electron 제약으로 fail 이면 *외부 안정 의존* 이 합리적 대안. 차선 (subprocess+IPC) 은 두 방향 모두 충족 못 함 (진정한 ownership 도 X, 외부 의존 simplicity 도 X).
+>
+> **다음 세션 검토 (deferred)**: qmd 대체 후보 (예: Orama pure JS hybrid search engine) — 진정한 in-process import 가능 + native deps 0 + Electron renderer 호환. 다음 세션에서 trade-off + PoC + 검토.
+
+- [x] (abandon) CLI exec → in-process 전환 시 지연 감소 — Electron 제약 + ownership 가치 mismatch 로 폐기
+- [x] (abandon) **wiki 재생성 없음 확증** — 적용 안 함 (작업 자체 abandon)
+
+#### 1차 시도 (in-process SDK dynamic import — 2026-05-08, 8 cycle, 종결 = revert)
+
+**시도 architecture**: `await import(pathToFileURL(join(basePath, 'tools/qmd/dist/index.js')).href)` (vendored absolute file URL dynamic import) + esbuild external 6 + module-scope singleton + ABI probe (existsSync + listCollections active_count + raw vec_version) + env switch fallback (`WIKEY_QMD_USE_CLI=1`) + 17 단위 test (AC-1/4/5/7).
+
+**사이클 누적**: plan v1~v7 (codex cycle #1~#7, 21 finding 누적) + post-impl v1~v2 (codex 2 cycle, 6 finding 누적) = 총 **8 cycle / 27 finding** 모두 master 직접 fix. 마지막 cycle = APPROVE.
+
+**라이브 검증 결과 (master 직접 obsidian-cdp smoke)**: ❌ **production runtime 미작동**
+```
+[Wikey] query error: [Step 2/4 qmd 검색] [Wikey qmd SDK] module load failed:
+Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/tools/qmd/dist/index.js
+  (fix: WIKEY_QMD_USE_CLI=1 + Obsidian 재시작)
+```
+
+**근본 원인**: Obsidian plugin = Electron renderer = **Chromium dynamic ESM loader 가 Node.js loader 우선** → file:// scheme 의 ESM dynamic import 가 HTTP fetch 시도 → fail. fundamental limitation.
+- 출처 1: [Electron ESM docs](https://www.electronjs.org/docs/latest/tutorial/esm) — "If your unsandboxed renderer process does not have the contextIsolation flag enabled, you cannot dynamically import() files via Node's ESM loader. This is because Chromium's dynamic ESM import() function usually takes precedence in the renderer process."
+- 출처 2: [Obsidian Forum — third-party dynamic imports](https://forum.obsidian.md/t/using-third-party-libraries-by-dynamic-imports/66203)
+- 출처 3: [obsidian-modules plugin (polyipseity)](https://github.com/polyipseity/obsidian-modules) — *이 플러그인 자체 존재 = 외부 ESM dynamic import 가 fundamental 미지원이라는 증거*
+
+**진행 시도의 process 결함** (master 책임 — 사용자 영구 등록 의무):
+1. **사전 PoC 누락**: plan v1 작성 *전* "Hello World" 수준 dynamic import 작동 PoC 0회. esbuild build 검증 (codex cycle #2 v2-F1) 까지만 했고 *그 build 산출물이 Electron renderer 안에서 실제 로드되는가* 는 검증 0.
+2. **커뮤니티 조사 누락**: plan 진입 전 5분 web search 만 했어도 `obsidian-modules` 의 존재 + Electron renderer 의 dynamic import limitation 발견 가능. plan v1~v7 동안 0회.
+3. **memory `feedback_qmd_node_abi.md` 의 6 layer 가 *system node spawn ABI* 차원**: Obsidian plugin renderer 의 *Chromium loader vs Node loader* 차원과 다름. plan §4.1 "ABI mismatch 위험" 이 이 차이 인지 못 함.
+4. **codex 7 cycle + post-impl 2 cycle = 정적 분석만**: 코드 + spec + ground truth (store.d.ts / index.d.ts) 까지만 검증 — runtime Electron 환경 검증 0.
+5. **8 cycle = 약 2 시간+ 자원 낭비**: 회피 가능했음.
+
+#### Baseline latency 측정 결과 (2026-05-08 master 직접, 5 sample × 1 cold + 10 warm = 55 measurements)
+
+| Query | Cold (ms) | Warm p50 | Warm p95 | Warm min | Warm max |
+|-------|-----------|----------|----------|----------|----------|
+| iso-korean | 8811 | 1225 | 1240 | 1221 | 1240 |
+| pmbok-english | 4740 | 1225 | 1238 | 1209 | 1238 |
+| nanovna-hyphen | 6764 | 1224 | 1240 | 1205 | 1240 |
+| short-3char | 4303 | 1222 | 1234 | 1212 | 1234 |
+| finetree-rag | 7775 | 1223 | 1245 | 1213 | 1245 |
+| **Aggregate** | **median 6.7s** | **p50 1.22s** | **p95 1.24s** | min 1.21s | max 1.25s |
+
+**의의**:
+- Cold first query = **4.3~8.8 초** (사용자 chat panel 처음 사용 시 체감 강함)
+- Warm steady-state = **1.22 초 / query** (추정 100~500ms 의 약 3 배)
+- 5 query 누적 spawn overhead = **6 초** (typical 사용자 일일 세션 영향 큼)
+- 옵션 = subprocess + IPC 시 절감 추정 **80%** (1.24s → ~1.24s 첫 + ~10ms IPC 이후)
+
+#### 2차 시도 후보 architecture (사용자 결정 대기)
+
+| 옵션 | 설명 | 난이도 | Electron 호환 |
+|------|------|--------|---------------|
+| **(A) Long-lived subprocess + IPC** | `child_process.fork('worker.js')` 1회 + JSON-RPC IPC. 첫 query spawn 1회 (~1.2s) + 이후 IPC (~10ms) | 중 | ✅ Node.js 표준 API, Electron 호환 검증 PoC 5분 |
+| (B) `obsidian-modules` plugin 의존 | `require.import()` API 사용. Electron renderer 안 ESM dynamic import 가능 | 작음 | ✅ 단 사용자에게 추가 plugin 설치 부담 |
+| (C) qmd 자체 CJS 변환 + bundle inline | wikey-core build 시 qmd dist/* 를 CJS transform + main.js 안 inline. native deps 만 external | 큼 | △ qmd top-level await + ESM-only 변환 어려움 |
+| (D) Worker thread + Electron Node context | Electron worker thread 안 dynamic import (Node loader). main 과 IPC | 큼 | ❓ 검증 필요 |
+
+**사용자 권장 = (A)** — 정량적 이득 명확 (spawn cost 1.2s 매번 → 1회만), Node.js 표준 API, plugin 추가 의존 0.
+
+#### 향후 cycle 진입 시 의무 (master 영구 등록, 사용자 raise 2026-05-08)
+
+1. **architecture 변경 시 plan 작성 *전* 5분 minimum viable PoC 의무** — Hello World 수준 검증으로 fundamental gap 사전 차단.
+2. **runtime 환경 (Electron renderer / Node.js / subprocess) 명시 + 해당 환경의 limitation web search 의무** — codex 정적 분석 만으로는 잡을 수 없는 차원.
+3. **baseline measurement 의무** — "성능 개선" 목적 plan 진입 전 *현재 baseline 측정 후 plan 작성*. 본 §5.7.2 에서 plan v1 `AC-3 Latency 감소 확증` 가 추정 (100~500ms) 만 가졌고 실측 (1.2s) 과 거리 컸음. 측정 후 plan 작성이면 architecture 우선순위 (subprocess vs in-process) 도 정확히 판단 가능.
+4. **codex 7 cycle 후에도 finding 잔존 가능 — 자정 못함**: 정적 분석 도구는 architecture fundamental 한계를 못 잡는다. 라이브 PoC 가 유일한 검증.
+
+> 본 §5.7.2 의 8 cycle 작업은 historical record 로만 가치. 코드 + plan v1~v7 모두 revert 완료 (HEAD = 1e37908 baseline). 본 todo 의 attempt log 가 미래 reference (사용자 영구 결정 — "5.7.2에는 진행의 문제점에 대해서 잘 기록해놔" 2026-05-08).
+>
+> **abandon 후속 검토 항목 (다음 세션)**: qmd 자체를 internal-customizable 한 alternative 로 *교체* 가능 여부 — 후보 = Orama (pure JS hybrid BM25 + vector + RRF, native deps 0, Electron renderer 호환). 진정한 in-process import + ownership/customization 회복 가능. 단 migration cost (search index 형식 변경 + 한국어 tokenization layer 재배치 + LLM rerank 통합) 검토 의무. **본 §5.7.2 의 `qmd SDK import` motivation 자체를 retire 하고 별도 §5.7.4 (또는 §5.5/§5.6 산하) 로 *qmd alternative engine* 신규 검토** 가 후속 cycle path.
 
 ---
 

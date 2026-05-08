@@ -1,26 +1,28 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-08 session 26 — §5.7.1 종결 (4 bash scripts → TS port + scripts-runner refactor)**.
-> session 26 (2026-05-08) 에서 §5.7.1 1 세션 처리 완료.
-> (a) §5.7.1 — 4 .ts (check-pii / validate-wiki / cost-tracker / reindex) ~1460 LOC + scripts-runner.ts in-process refactor + 4 .sh thin wrapper + setup.sh 빌드 step ✅
-> (b) **검증 3 단계 PASS**: master (typecheck 0 / 747 PASS / golden 4/4 byte-equal) → codex 4 cycle (#1~#4 APPROVE, 8 finding 누적 fix) → obsidian-cdp 라이브 (ISO 27001 ingest 90s + Approve 15s + query 정확 답변 + Settings tab 5 버튼 PASS, **silent-fail 회귀 0 확증**)
-> (c) **사용자 직접 경험 회귀 origin 해소**: python script silent-fail (set -e command substitution 미작용) → exitCode 검사 + early return + stamp 차단 strict improvement
-> (d) **production 에서 .sh 제외**: plugin runtime 의 bash spawn 4 곳 제거 — in-process 함수 호출만. 5 plugin call 사이트 (commands.ts:574 + settings-tab.ts:896,927,943,965,981) 코드 변경 0
+> 최신 갱신: **2026-05-08 session 26 후반 — §5.7.2 abandon 결정 (8 cycle 후 사용자 영구 결정)**.
+> session 26 (2026-05-08) 에서 §5.7.1 종결 + §5.7.2 abandon 처리.
+> (a) §5.7.1 종결 ✅ — 4 bash scripts → TS port + scripts-runner refactor. 검증 3 단계 PASS (typecheck 0 / 747 PASS / golden 4/4 byte-equal / codex 4 cycle APPROVE / obsidian-cdp 라이브 PASS / silent-fail 회귀 0 확증)
+> (b) **§5.7.2 abandon** 🛑 — 1차 시도 (in-process SDK dynamic import, 8 cycle plan/post-impl 누적 27 finding) 후 라이브 검증에서 **Electron renderer file:// dynamic import 미지원** fundamental fail 확증 → full revert (HEAD = 1e37908 baseline 복원). 차선 (subprocess+IPC) 도 사용자 평가 결과 ownership 가치 fail + 위험 surface ↑ + qmd internal API coupling 부담으로 abandon
+> (c) 사용자 통찰 영구 등록: "내재화 하면 우리가 직접 불편하고 잘 안맞는 부분을 고치려고 했던건데, 그게 아니면 qmd를 안정적으로 받아서 운영해야 하는거 아닌가?" → §5.7.2 의 진짜 motivation = ownership/customization. Electron 제약으로 fail 이면 외부 안정 의존이 합리적
+> (d) **process 결함 4항목 영구 등록** (master 의무): architecture 변경 시 plan 작성 *전* 5분 PoC 의무 / runtime 환경 limitation web search 의무 / baseline measurement 의무 (실측 1.22s vs plan 가정 100~500ms 거리 컸음) / codex 정적 분석은 architecture fundamental 한계 못 잡음 인지
 >
-> 직전 session 25 (2026-05-08) 에서 §5.15.A 종결 + §5.15 sub-section 5종 (A/B/C/D/E) 모두 종결.
+> **다음 세션 결정 (deferred)**: qmd 자체를 **internal-customizable alternative engine 으로 교체** 가능성 검토 — 후보 = Orama (pure JS hybrid BM25+vector+RRF, native deps 0, Electron renderer 호환). 진정한 in-process import 가능 = ownership 회복. 단 migration cost 큼 (search index 형식 / 한국어 tokenization layer / LLM rerank 통합) — 다음 세션 trade-off + PoC + 검토.
+>
+> 직전 session 25 (2026-05-08 전반) 에서 §5.15.A 종결 + §5.15 sub-section 5종 (A/B/C/D/E) 모두 종결.
 > 직전 session 24 (2026-05-07) 에서 §5.15.C / §5.15.E / §5.15.B / §5.15.A Cycle 1 모두 종결.
 >
-> **다음 세션 결정 (사용자 session 26 직후 확정 필요)**: 다음 후보:
-> - **§5.7.2 qmd SDK import** (P4) — vendored CLI 구조 → Node 바인딩 (난이도 ↑, 별도 spec 분리 필요. unbounded scope 라 사전 plan 권장)
-> - **§5.6.3 LLM provider strategy** (P3 draft) — session 24 환경 latency 관측 후속, LLM hang 근본 fix
-> - 기타 P3/P4 (§5.5 / §5.8 / §5.9) 또는 Phase 6 진입
+> **Phase 5 잔여**: §5.5 (graph) / §5.6 (LLM provider) / §5.7.2 (🛑 abandon — qmd alternative engine 검토 deferred) / §5.8 (D.0.l 잔여) / §5.9 (variance) — §5.7.2 abandon 후 4 subject.
 >
-> Phase 5 잔여 = §5.5 / §5.6 / §5.7.2 / §5.8 / §5.9 (§5.7.1 종결 후 4.5 subject).
+> **다음 세션 후보** (사용자 결정 필요):
+> - **qmd alternative engine 검토** (deferred) — 신규 §5.7.4 또는 §5.5/§5.6 산하. Orama PoC + migration cost 평가 + ownership 가치 회복 정량
+> - **§5.6.3 LLM provider strategy** (P3 draft) — session 24 환경 latency 관측 후속, LLM hang 근본 fix
+> - 기타 P3/P4 (§5.5 graph / §5.8 D.0.l / §5.9 variance) 또는 Phase 6 진입
 >
 > 이전 세션 (session 23~25) 종결:
 > - §5.14 본체 + §5.15 (A/B/C/D/E) 5종 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix + §5.15.A Cycle 1+2 (Cycle 3~5 의도적 미진행).
 >
-> wikey-core 747 PASS / 3 skip + wikey-obsidian 35 PASS = 782 total / 0 build errors / validate-wiki PASS / golden diff 4/4 byte-equal.
+> wikey-core 747 PASS / 3 skip + wikey-obsidian 35 PASS = 782 total / 0 build errors / validate-wiki PASS / golden diff 4/4 byte-equal (§5.7.1 baseline 보존, §5.7.2 변동 0).
 > 생성일: 2026-04-10
 
 ---
