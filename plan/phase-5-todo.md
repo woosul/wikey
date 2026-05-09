@@ -888,6 +888,43 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 >
 > **abandon 후속 검토 항목 (다음 세션)**: qmd 자체를 internal-customizable 한 alternative 로 *교체* 가능 여부 — 후보 = Orama (pure JS hybrid BM25 + vector + RRF, native deps 0, Electron renderer 호환). 진정한 in-process import + ownership/customization 회복 가능. 단 migration cost (search index 형식 변경 + 한국어 tokenization layer 재배치 + LLM rerank 통합) 검토 의무. **본 §5.7.2 의 `qmd SDK import` motivation 자체를 retire 하고 별도 §5.7.4 (또는 §5.5/§5.6 산하) 로 *qmd alternative engine* 신규 검토** 가 후속 cycle path.
 
+### 5.7.3 qmd alternative engine 검토 + Orama PoC ✅ 완료 (Session 27, 2026-05-09)
+
+> **상태**: research + PoC 4 단계 모두 완료. 결과 문서 [activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md](../activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md). 사용자 결정 (2026-05-09): 다음 세션 §5.7.4 진입.
+> #qmd-alternative #orama #kiwi-wasm #path-a #poc-pass
+
+- [x] 3 agent 병렬 research — codebase 표면 매핑 / 16 후보 community survey / 한국어 NLP 통합 path
+- [x] PoC 단계 1 — Kiwi WASM 가용성 (Node sandbox, kiwi-nlp v0.23.0, sync API + POS tag 동등)
+- [x] PoC 단계 2-A — Orama Electron renderer 통합 (esbuild bundle, §5.7.2 fundamental fail 함정 회피 확증, import 1ms)
+- [x] PoC 단계 2-B — Kiwi WASM + Orama 통합 (Module.instantiateWasm hook + wasmBinary 주입, init 1186ms / tokenize 1ms/sentence)
+- [x] PoC 단계 3 — Quality benchmark (10 query, 117 docs, qmd vs Orama BM25). Top-1 8/10 (qmd 7-8/10), Q4 ITIL / Q10 Obsidian 결정적 회복, Q5 1/10 회귀, latency 0.2ms vs 1.22s (6,000배+ 개선)
+- [x] qmd vs Orama 7 dimension 비교 분석 (D1~D7) — 6/7 Orama 우세, 1/7 (D7 단기 비용) qmd 우세 (일회성)
+
+**사용자 결정 영구 등록 (2026-05-09)**:
+- ✅ **LGPL-2.1 호환** — Kiwi 소스 사용 명시 + GitHub public (Obsidian Community Plugins 규약과 자연 호환)
+- ✅ **Path A 패러다임** = "irreversible commitment" 가 아닌 "reversible experiment" — qmd 가 self-contained CLI script 이므로 회귀 비용 ≈ 0 (3 layer 안전망: git revert / qmd vendored 보존 / `WIKEY_SEARCH_BACKEND` feature flag)
+- ✅ **§5.7.4 진입 결정** — 다음 세션 (session 28) 에서 spec 작성 + 마이그레이션 진행
+
+### 5.7.4 Orama 마이그레이션 — 🔵 다음 세션 진입 (Session 28 예정)
+
+> **상태**: 사용자 결정 (2026-05-09 session 27) — 다음 세션 진입. SDD+TDD spec 작성 → master 1차 → codex Mode D Panel → developer/tester 위임. PoC 코드 base (commands.ts 3 PoC command + @orama/orama + kiwi-nlp deps) 활용. 상세 todo 후보 = activity/phase-5-resultx-5.7.3 §7 (A1~A9 / B1~B6 / C1~C6 / D1~D5 = 26 항목).
+> #orama-migration #path-a #search-engine-replacement
+
+- [ ] (§5.7.4-A1) Kiwi WASM Korean tokenizer 모듈 구현 (`wikey-core/src/search/orama-korean-tokenizer.ts`) — Module.instantiateWasm hook + wasmBinary 주입 + smart_tokenize JS/TS 포팅
+- [ ] (§5.7.4-A2) Orama 인덱스 lifecycle (create / insertMultiple / search / persist / restore)
+- [ ] (§5.7.4-A3) Kiwi 사전 lazy download (`~/.cache/wikey/kiwi-models/cong/base/`, ~104MB) — qmd GGUF 패턴 mirror
+- [ ] (§5.7.4-A4) query-pipeline qmd CLI → Orama 호출 교체
+- [ ] (§5.7.4-A5) reindex qmd update/embed → Orama insert + Qwen3 임베딩 별 호출
+- [ ] (§5.7.4-A6) wikey-core 단위 테스트 매핑 + obsidian-cdp 라이브 cycle smoke
+- [ ] (§5.7.4-A7) `tools/qmd/` 보존 (사용자 결정: Path C 회귀 가능 유지)
+- [ ] (§5.7.4-A8) `WIKEY_SEARCH_BACKEND` feature flag 도입 (`orama` default / `qmd` 회귀)
+- [ ] (§5.7.4-A9) 회귀 절차 docs (`docs/orama-rollback.md`) — 3 layer 안전망 절차
+- [ ] (§5.7.4-B1~B6) Orama upstream update 동기화 프로세스 (npm outdated monitor / patch-minor-major 분기 / regression 검증 / Kiwi 사전 update / docs / notify)
+- [ ] (§5.7.4-C1~C6) deferred 검증 (Q5 회귀 보완 / 50~100 query benchmark / persistence sanity / 768D 호환 / wikey.conf 키 deprecate / env-detect 정리)
+- [ ] (§5.7.4-D1~D5) LGPL-2.1 compliance (LICENSE / NOTICE / README third-party 섹션 / GitHub public 확증 / relink 보장)
+
+상세 항목 정의: [activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md](../activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md) §7.
+
 ---
 
 ## 5.8 Phase 4 D.0.l 이관 과제 — 잔여 (P4)

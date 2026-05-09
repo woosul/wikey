@@ -1,28 +1,30 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-08 session 26 후반 — §5.7.2 abandon 결정 (8 cycle 후 사용자 영구 결정)**.
-> session 26 (2026-05-08) 에서 §5.7.1 종결 + §5.7.2 abandon 처리.
-> (a) §5.7.1 종결 ✅ — 4 bash scripts → TS port + scripts-runner refactor. 검증 3 단계 PASS (typecheck 0 / 747 PASS / golden 4/4 byte-equal / codex 4 cycle APPROVE / obsidian-cdp 라이브 PASS / silent-fail 회귀 0 확증)
-> (b) **§5.7.2 abandon** 🛑 — 1차 시도 (in-process SDK dynamic import, 8 cycle plan/post-impl 누적 27 finding) 후 라이브 검증에서 **Electron renderer file:// dynamic import 미지원** fundamental fail 확증 → full revert (HEAD = 1e37908 baseline 복원). 차선 (subprocess+IPC) 도 사용자 평가 결과 ownership 가치 fail + 위험 surface ↑ + qmd internal API coupling 부담으로 abandon
-> (c) 사용자 통찰 영구 등록: "내재화 하면 우리가 직접 불편하고 잘 안맞는 부분을 고치려고 했던건데, 그게 아니면 qmd를 안정적으로 받아서 운영해야 하는거 아닌가?" → §5.7.2 의 진짜 motivation = ownership/customization. Electron 제약으로 fail 이면 외부 안정 의존이 합리적
-> (d) **process 결함 4항목 영구 등록** (master 의무): architecture 변경 시 plan 작성 *전* 5분 PoC 의무 / runtime 환경 limitation web search 의무 / baseline measurement 의무 (실측 1.22s vs plan 가정 100~500ms 거리 컸음) / codex 정적 분석은 architecture fundamental 한계 못 잡음 인지
+> 최신 갱신: **2026-05-09 session 27 — §5.7.3 qmd alternative engine + Orama PoC 4 단계 모두 PASS / 사용자 §5.7.4 진입 결정**.
+> session 27 (2026-05-09) 에서 §5.7.3 research + PoC 종결.
+> (a) §5.7.3 종결 ✅ — 3 agent research (codebase 표면 매핑 / 16 후보 community survey / 한국어 NLP 통합 path) + master 직접 PoC 4 단계 (Kiwi WASM sandbox / Orama Electron renderer / Kiwi+Orama 통합 / 10 query benchmark)
+> (b) **PoC 차단 조건 3개 모두 해제**: Kiwi WASM packaging ✅ / Orama Electron renderer file:// 함정 ✅ (esbuild bundle 우회) / 검색 quality 회귀 ✅ (Top-1 8/10 vs qmd 7-8/10, latency 6,000배 우수)
+> (c) **qmd vs Orama 7 dimension 비교** — 6/7 Orama 우세, 1/7 (D7 단기 비용) qmd 우세 (일회성)
+> (d) **사용자 결정 영구 등록 (2026-05-09)**:
+>   - LGPL-2.1 호환: Kiwi 소스 사용 명시 + GitHub public (Obsidian Community Plugins 규약과 자연 호환). mecab-ko-wasm fallback 불필요
+>   - **Path A 패러다임** = "irreversible commitment" 가 아닌 "reversible experiment". qmd 가 self-contained CLI script 이므로 Path C 회귀 비용 ≈ 0 (3 layer 안전망: git revert / qmd vendored 보존 / `WIKEY_SEARCH_BACKEND` feature flag)
+>   - **§5.7.4 진입 결정**: 다음 세션 (session 28) 에서 spec 작성 → 마이그레이션 진행
 >
-> **다음 세션 결정 (deferred)**: qmd 자체를 **internal-customizable alternative engine 으로 교체** 가능성 검토 — 후보 = Orama (pure JS hybrid BM25+vector+RRF, native deps 0, Electron renderer 호환). 진정한 in-process import 가능 = ownership 회복. 단 migration cost 큼 (search index 형식 / 한국어 tokenization layer / LLM rerank 통합) — 다음 세션 trade-off + PoC + 검토.
+> **다음 세션 첫 액션 (Session 28 진입 시)**:
+> 1. SDD+TDD `plan/phase-5-todox-5.7.4-orama-migration.md` spec 작성 (analyst 위임)
+> 2. master 1차 검증 (7-anchor) → codex Mode D Panel 검토
+> 3. developer 위임 (A1~A9 구현) + tester 위임 (단위 + obsidian-cdp 라이브 cycle smoke)
+> 4. PoC 코드 base 활용 (commands.ts 3 PoC command + @orama/orama + kiwi-nlp deps 보존)
+> 5. tools/qmd/ 보존 + WIKEY_SEARCH_BACKEND feature flag (회귀 안전망)
+> 6. LGPL-2.1 compliance docs (LICENSE / NOTICE / README third-party 섹션)
 >
-> 직전 session 25 (2026-05-08 전반) 에서 §5.15.A 종결 + §5.15 sub-section 5종 (A/B/C/D/E) 모두 종결.
-> 직전 session 24 (2026-05-07) 에서 §5.15.C / §5.15.E / §5.15.B / §5.15.A Cycle 1 모두 종결.
+> 결과 문서: [`activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md) (35KB / 532 lines, 13 섹션, 7 dimension 비교 + PoC evidence + §5.7.4 todo 후보 26 항목).
 >
-> **Phase 5 잔여**: §5.5 (graph) / §5.6 (LLM provider) / §5.7.2 (🛑 abandon — qmd alternative engine 검토 deferred) / §5.8 (D.0.l 잔여) / §5.9 (variance) — §5.7.2 abandon 후 4 subject.
+> 직전 session 26 (2026-05-08) 에서 §5.7.1 종결 + §5.7.2 abandon 처리. (process 결함 4항목 master 의무 영구 등록 — architecture 변경 시 5분 PoC / runtime limitation web search / baseline measurement / codex 정적 한계 인지)
 >
-> **다음 세션 후보** (사용자 결정 필요):
-> - **qmd alternative engine 검토** (deferred) — 신규 §5.7.4 또는 §5.5/§5.6 산하. Orama PoC + migration cost 평가 + ownership 가치 회복 정량
-> - **§5.6.3 LLM provider strategy** (P3 draft) — session 24 환경 latency 관측 후속, LLM hang 근본 fix
-> - 기타 P3/P4 (§5.5 graph / §5.8 D.0.l / §5.9 variance) 또는 Phase 6 진입
+> **Phase 5 잔여**: §5.5 (graph) / §5.6 (LLM provider) / §5.7.2 (abandon log archive) + §5.7.3 (✅ 완료) → §5.7.4 (다음 세션 진입) / §5.8 (D.0.l 잔여) / §5.9 (variance).
 >
-> 이전 세션 (session 23~25) 종결:
-> - §5.14 본체 + §5.15 (A/B/C/D/E) 5종 + §5.11 v3 paradigm fix + finetree 4 fresh ingest + audit URI 매칭 fix + §5.15.A Cycle 1+2 (Cycle 3~5 의도적 미진행).
->
-> wikey-core 747 PASS / 3 skip + wikey-obsidian 35 PASS = 782 total / 0 build errors / validate-wiki PASS / golden diff 4/4 byte-equal (§5.7.1 baseline 보존, §5.7.2 변동 0).
+> wikey-core 747 PASS / 3 skip + wikey-obsidian 35 PASS = 782 total / 0 build errors / validate-wiki PASS / golden diff 4/4 byte-equal. PoC 코드 (commands.ts 3 command + @orama/orama + kiwi-nlp deps) main.js 369K → 423K 변동 — §5.7.4 진행 시 base 활용.
 > 생성일: 2026-04-10
 
 ---
