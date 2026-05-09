@@ -136,6 +136,37 @@ in-process (~0.2ms/query) 로 마이그레이션됐다. 회귀 시 3 layer 안�
    `WIKEY_SEARCH_ENGINE=qmd` set) 후 plugin reload. 기본값 `'orama'`. 변경 후 `query()`
    가 기존 `findQmdBin` + qmd subprocess 호출 path 으로 회귀 (단위·라이브 검증 완료).
 
+## Developer mode
+
+§5.7.5 (2026-05-09) 부터 *advanced* dependency / vendor / model upstream update
+추적용 settings 섹션이 추가됐다. **일반 사용자에게는 노출되지 않음** — settings 의
+"General" 섹션에서 `Show developer section` 토글을 켜야 settings *맨 마지막*에
+`Developer (advanced)` 섹션이 나타난다.
+
+토글 활성화 절차:
+1. Wikey settings 열기 → `General` 섹션 → `Show developer section` 토글 ON
+2. `Developer (advanced)` 섹션이 settings 하단에 표시됨 + `Allow upstream update
+   check (network)` 토글 (default OFF, opt-in). ON 으로 두면 plugin **재시작 시
+   1회만** upstream 정보를 fetch (cron / 자동 polling 없음).
+
+각 row 의미 (5 항목):
+- **Kiwi NLP (vendor)** — `wikey-core/vendor/kiwi-nlp/VENDOR.md` 의 git tag 와
+  `bab2min/Kiwi` 본가 latest release 비교
+- **Orama** — `wikey-core/package.json` 의 `@orama/orama` 와 npm registry latest
+- **Qwen3-Embedding-0.6B (GGUF)** — local cache (`~/.cache/qmd/models/`) 와 HF
+  model card revision
+- **qmd (vendored fallback)** — 회귀 path 의 vendored binary
+- **Kiwi dictionary models** — `~/.cache/wikey/kiwi-models/cong/base/` 사전 (~104MB)
+
+Row UI:
+- `[upgrade]` 뱃지 — 새 버전 있으면 active, 없으면 회색
+- `[분석]` 버튼 — 사용자 클릭 시 wikey 의 LLM provider (BYOAI 의 기본 chain) 가
+  changelog / release note 를 요약. update 가 있을 때만 enabled
+- `[개발필요]` 마크 — 분석 결과 wikey vendor patch list 와 충돌 가능성 detect 시
+  표시. 마크는 *알림* 만 — 실 변경은 master 의 별 SDD+TDD cycle 에서 진행
+
+사용자 직접 토글하지 않으면 모든 path 가 **호출 0** — plugin 정상 동작.
+
 ## Third-party software
 
 | 패키지 | 라이선스 | 위치 | 비고 |

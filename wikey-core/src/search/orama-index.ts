@@ -12,7 +12,16 @@
  *  - persist() → JSON serialize → ~/.cache/wikey/orama/wikey-wiki.json
  */
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, statSync, readdirSync } from 'node:fs'
+import {
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  existsSync,
+  statSync,
+  readdirSync,
+  renameSync,
+  unlinkSync,
+} from 'node:fs'
 import { dirname, join, relative, basename } from 'node:path'
 import {
   create as oramaCreate,
@@ -50,11 +59,19 @@ export interface OramaIngestResult {
   readonly ms: number
 }
 
+export interface OramaPersistOptions {
+  /** §5.7.5 LOW #14 — abort signal: aborted 시 final write skip + tmp cleanup. */
+  readonly signal?: AbortSignal
+}
+
 export interface OramaIndexHandle {
   /** BM25 단일 또는 hybrid (벡터 포함) search. */
   search(question: string, opts: OramaSearchOptions): Promise<readonly SearchResult[]>
-  /** 인덱스 파일 디스크 영속 (~/.cache/wikey/orama/wikey-wiki.json — JSON serialize). */
-  persist(): Promise<void>
+  /**
+   * §5.7.5 LOW #14 — atomic persist via tmp + rename (POSIX atomic) +
+   * abort signal honored before each fs side-effect.
+   */
+  persist(opts?: OramaPersistOptions): Promise<void>
   /** 인덱스 파일 로드 (없으면 빈 인덱스 — 신규 사용자). */
   restore(): Promise<void>
   /** 모든 wiki/*.md 를 frontmatter 파싱 + insertMultiple. */
@@ -177,10 +194,27 @@ export async function createOramaIndex(
       return hits.map(hitToSearchResult)
     },
 
-    async persist() {
+    async persist(persistOpts?: OramaPersistOptions) {
+      // §5.7.5 LOW #14 — atomic write: serialize → tmp → renameSync (POSIX atomic).
+      // signal aborted 시 tmp 잔존 X (cleanup) + final write skip.
+      const signal = persistOpts?.signal
+      if (signal?.aborted) return
       const data = await oramaSave(db)
+      if (signal?.aborted) return
       mkdirSync(dirname(opts.cachePath), { recursive: true })
-      writeFileSync(opts.cachePath, JSON.stringify(data), 'utf-8')
+      const tmpPath = `${opts.cachePath}.tmp`
+      try {
+        writeFileSync(tmpPath, JSON.stringify(data), 'utf-8')
+        if (signal?.aborted) {
+          // Cleanup tmp if abort raced after write but before rename.
+          try { unlinkSync(tmpPath) } catch { /* ignore */ }
+          return
+        }
+        renameSync(tmpPath, opts.cachePath)
+      } catch (err) {
+        try { if (existsSync(tmpPath)) unlinkSync(tmpPath) } catch { /* ignore */ }
+        throw err
+      }
     },
 
     async restore() {

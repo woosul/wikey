@@ -71,8 +71,8 @@ describe('§5.7.5 upstream-checker', () => {
 
     // kiwi-nlp = bab2min/Kiwi compare URL or releases page
     expect(byKind.get('kiwi-nlp')?.diffSource).toMatch(/bab2min\/Kiwi/)
-    // orama = npm changelog or @orama/orama repo
-    expect(byKind.get('orama')?.diffSource).toMatch(/@orama\/orama|orama-search\/orama|npmjs\.com/)
+    // orama = npm changelog or @orama/orama repo (GitHub: oramasearch/orama)
+    expect(byKind.get('orama')?.diffSource).toMatch(/@orama\/orama|oramasearch\/orama|npmjs\.com/)
     // qwen3-embedding = HF model card
     expect(byKind.get('qwen3-embedding')?.diffSource).toMatch(/huggingface\.co\/Qwen\/Qwen3-Embedding/)
     // qmd-vendored = qmd compare URL

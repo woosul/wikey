@@ -249,8 +249,16 @@ async function checkUnhwp(pythonPath: string, env: Record<string, string>): Prom
 
 /**
  * 전체 환경 탐지 실행. 플러그인 onload에서 1회 호출.
+ *
+ * §5.7.5 C6 — `searchEngine` 인자 추가. `searchEngine !== 'qmd'` 시 qmd inline block +
+ * `findCompatibleNode` ABI scan 모두 skip — default (Orama) path 의 부담 0. 회귀 path
+ * (`WIKEY_SEARCH_ENGINE=qmd` toggle) 는 기존 동작 유지.
  */
-export async function detectEnvironment(basePath: string, ollamaUrl: string): Promise<EnvStatus> {
+export async function detectEnvironment(
+  basePath: string,
+  ollamaUrl: string,
+  searchEngine: 'orama' | 'qmd' = 'orama',
+): Promise<EnvStatus> {
   const status: EnvStatus = { ...DEFAULT_STATUS, ollamaUrl }
   const issues: string[] = []
 
@@ -258,10 +266,16 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
   status.shellPath = await detectShellPath()
   const env = makeEnv(status.shellPath)
 
-  // 2. node (qmd 네이티브 모듈 호환 버전 우선 탐지)
-  status.nodePath = await findCompatibleNode(basePath, env)
-  if (!status.nodePath) {
-    issues.push('node를 찾을 수 없습니다. Node.js를 설치하세요.')
+  // 2. node detect — qmd 네이티브 모듈 호환 버전 우선. searchEngine !== 'qmd' 시 ABI
+  // scan skip (default path 부담 0) + process.execPath fallback.
+  if (searchEngine === 'qmd') {
+    status.nodePath = await findCompatibleNode(basePath, env)
+    if (!status.nodePath) {
+      issues.push('node를 찾을 수 없습니다. Node.js를 설치하세요.')
+    }
+  } else {
+    // Orama default — Kiwi WASM in-process, ABI scan 불요.
+    status.nodePath = process.execPath
   }
 
   // 3. python3
@@ -270,17 +284,19 @@ export async function detectEnvironment(basePath: string, ollamaUrl: string): Pr
     issues.push('python3를 찾을 수 없습니다 (한국어 검색 제한됨).')
   }
 
-  // 4. qmd
-  const vendoredQmd = join(basePath, 'tools/qmd/bin/qmd')
-  try {
-    accessSync(vendoredQmd)
-    status.qmdPath = vendoredQmd
-  } catch {
-    const systemQmd = await which('qmd', env)
-    if (systemQmd) {
-      status.qmdPath = systemQmd
-    } else {
-      issues.push('qmd를 찾을 수 없습니다. tools/qmd/를 확인하세요.')
+  // 4. qmd — searchEngine === 'qmd' 시만 inline detect. default 는 skip (qmdPath = '').
+  if (searchEngine === 'qmd') {
+    const vendoredQmd = join(basePath, 'tools/qmd/bin/qmd')
+    try {
+      accessSync(vendoredQmd)
+      status.qmdPath = vendoredQmd
+    } catch {
+      const systemQmd = await which('qmd', env)
+      if (systemQmd) {
+        status.qmdPath = systemQmd
+      } else {
+        issues.push('qmd를 찾을 수 없습니다. tools/qmd/를 확인하세요.')
+      }
     }
   }
 

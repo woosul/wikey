@@ -231,3 +231,14 @@ export {
   disposeOramaIndex,
 } from './search/orama-index-singleton.js'
 export type { OramaIndexHandle, OramaWikiDoc, OramaSearchOptions } from './search/orama-index.js'
+
+// §5.7.5 — upstream update detect (재시작 1회) + LLM 분석 ([분석] 버튼).
+export { detectUpstreamUpdates } from './update/upstream-checker.js'
+export type {
+  UpdateItemKind,
+  UpdateItemDescriptor,
+  UpdateCheckResult,
+  DetectUpstreamUpdatesOptions,
+} from './update/upstream-checker.js'
+export { analyzeUpdate } from './update/update-analyzer.js'
+export type { UpdateAnalysis, AnalyzeUpdateOptions } from './update/update-analyzer.js'

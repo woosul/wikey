@@ -32,6 +32,13 @@ export interface WikeyConfig {
   readonly WIKEY_QMD_TOP_N: number
 
   /**
+   * §5.7.5 — canonical alias of WIKEY_QMD_TOP_N. Priority:
+   *   WIKEY_SEARCH_TOP_N > WIKEY_QMD_TOP_N (deprecated) > default.
+   * Optional so legacy configs (only WIKEY_QMD_TOP_N) continue to parse.
+   */
+  readonly WIKEY_SEARCH_TOP_N?: number
+
+  /**
    * §5.7.4 — 검색 backend 엔진 선택. 기존 WIKEY_SEARCH_BACKEND ('basic'/'gemma4') 와
    * 의미 분리 — 본 키는 *index 엔진* 선택, 기존 키는 *LLM 합성 layer* 선택.
    *  - 'orama' (default post-§5.7.4): Orama in-process + Kiwi WASM tokenizer

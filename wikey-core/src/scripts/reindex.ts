@@ -16,7 +16,9 @@ import { spawn, type SpawnOptions } from 'node:child_process'
 import { runValidateWiki } from './validate-wiki.js'
 import { createOramaIndex, type KoreanTokenizerHandle } from '../search/orama-index.js'
 import { defaultOramaCachePath, disposeOramaIndex } from '../search/orama-index-singleton.js'
-import { createKoreanTokenizer } from '../search/orama-korean-tokenizer.js'
+// §5.7.5 LOW #15 — createKoreanTokenizer is lazy-imported inside runOramaIngest only;
+// engine='qmd' branch never loads the Kiwi vendor module → MODULE_TYPELESS_PACKAGE_JSON
+// warn 0 in qmd path.
 
 const RED = '\x1b[0;31m'
 const GREEN = '\x1b[0;32m'
@@ -190,7 +192,9 @@ async function runOramaIngest(
   const modelDir = modelDirOpt ?? defaultKiwiModelDir()
   if (wasmPath && fs.existsSync(wasmPath) && fs.existsSync(modelDir)) {
     try {
-      tokenizer = await createKoreanTokenizer({ wasmPath, modelDir })
+      // §5.7.5 LOW #15 — lazy dynamic import (engine='orama' branch only).
+      const mod = await import('../search/orama-korean-tokenizer.js')
+      tokenizer = await mod.createKoreanTokenizer({ wasmPath, modelDir })
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       log.warn(`Kiwi tokenizer init 실패 (${msg}) — whitespace fallback`)

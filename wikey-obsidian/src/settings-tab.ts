@@ -11,6 +11,7 @@ import type { LLMProvider, ResetScope } from 'wikey-core'
 import type WikeyPlugin from './main'
 import { ResetImpactModal } from './reset-modals'
 import { executeReset } from './commands'
+import { renderDeveloperSection } from './settings-tab-developer'
 
 export class WikeySettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: WikeyPlugin) {
@@ -35,6 +36,25 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderToolsSection(containerEl)
     this.renderResetSection(containerEl)
     this.renderAdvancedSection(containerEl)
+    // §5.7.5 — settings *맨 마지막* 에 [developer] 섹션 (사용자 결정 #1 (A) settings 토글 잠금).
+    this.renderDeveloperSection(containerEl)
+  }
+
+  // ── §5.7.5 Section: Developer (advanced) ──
+  private renderDeveloperSection(containerEl: HTMLElement): void {
+    renderDeveloperSection(containerEl, {
+      developerMode: this.plugin.settings.developerMode,
+      allowUpdateCheck: this.plugin.settings.allowUpdateCheck,
+      items: this.plugin.updateCheckResult?.items ?? [],
+      onAnalyze: (item) => {
+        void this.plugin.runUpdateAnalysis(item).then(() => this.display())
+      },
+      onToggleAllow: async (next) => {
+        this.plugin.settings.allowUpdateCheck = next
+        await this.plugin.saveSettings()
+      },
+      analyses: this.plugin.updateAnalyses,
+    })
   }
 
   // ── Section: Reset (Phase 4.5.2) ──
@@ -653,6 +673,20 @@ export class WikeySettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.verifyIngestResults = value
             await this.plugin.saveSettings()
+          }),
+      )
+
+    // §5.7.5 — Developer mode 토글 (사용자 결정 #1 (A) settings 토글 잠금).
+    new Setting(containerEl)
+      .setName('Show developer section')
+      .setDesc('Reveal the [developer] section at the bottom of settings (advanced — vendor / dep / model upstream update tracking).')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.developerMode)
+          .onChange(async (value) => {
+            this.plugin.settings.developerMode = value
+            await this.plugin.saveSettings()
+            this.display()
           }),
       )
 

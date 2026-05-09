@@ -2,7 +2,8 @@ import type { WikeyConfig, LLMProvider } from './types.js'
 import { PROVIDER_CHAT_DEFAULTS, CONTEXTUAL_DEFAULT_MODEL } from './provider-defaults.js'
 
 const NUMERIC_KEYS = new Set([
-  'WIKEY_QMD_TOP_N', 'COST_LIMIT',
+  // §5.7.5 — WIKEY_SEARCH_TOP_N (canonical) + WIKEY_QMD_TOP_N (deprecated alias).
+  'WIKEY_SEARCH_TOP_N', 'WIKEY_QMD_TOP_N', 'COST_LIMIT',
   'OCR_DPI', 'OCR_PARALLEL', 'OCR_MAX_PAGES',
   'DOCLING_TIMEOUT_MS',
 ])
@@ -14,6 +15,7 @@ const DEFAULTS: WikeyConfig = {
   WIKEY_SEARCH_ENGINE: 'orama',
   WIKEY_MODEL: 'wikey',
   WIKEY_QMD_TOP_N: 8,
+  WIKEY_SEARCH_TOP_N: 8,
   GEMINI_API_KEY: '',
   ANTHROPIC_API_KEY: '',
   OPENAI_API_KEY: '',
@@ -27,6 +29,8 @@ const DEFAULTS: WikeyConfig = {
 
 export function parseWikeyConf(content: string): Partial<WikeyConfig> {
   const result: Record<string, string | number> = {}
+  // §5.7.5 — deprecation warn for WIKEY_QMD_TOP_N is emitted at most once per parse.
+  let qmdTopNWarned = false
 
   for (const rawLine of content.split('\n')) {
     const line = rawLine.trim()
@@ -43,6 +47,11 @@ export function parseWikeyConf(content: string): Partial<WikeyConfig> {
 
     if (NUMERIC_KEYS.has(key)) {
       result[key] = Number(value)
+      if (key === 'WIKEY_QMD_TOP_N' && !qmdTopNWarned) {
+        // eslint-disable-next-line no-console
+        console.warn('[wikey] WIKEY_QMD_TOP_N is deprecated, use WIKEY_SEARCH_TOP_N')
+        qmdTopNWarned = true
+      }
     } else if (BOOLEAN_KEYS.has(key)) {
       ;(result as Record<string, unknown>)[key] = value === 'true' || value === '1' || value.toLowerCase() === 'yes'
     } else {

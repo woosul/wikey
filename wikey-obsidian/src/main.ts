@@ -15,8 +15,16 @@ import {
   defaultCapabilityCachePath,
   createKoreanTokenizer,
   disposeOramaIndex,
+  detectUpstreamUpdates,
+  analyzeUpdate,
 } from 'wikey-core'
-import type { KoreanTokenizerHandle } from 'wikey-core'
+import type {
+  KoreanTokenizerHandle,
+  UpdateCheckResult,
+  UpdateItemDescriptor,
+  UpdateAnalysis,
+} from 'wikey-core'
+import { shouldDetectUpstreamUpdates } from './update-onload-gate'
 
 // ── Phase 4 D.0.d (v6 §4.2.5) ──
 // create listener + inbox 우회 감지 + audit 스캔이 공통 기준으로 쓸 문서 확장자 정규식.
@@ -82,6 +90,11 @@ interface WikeySettings {
   // 'orama' (default): in-process Orama + Kiwi WASM tokenizer
   // 'qmd' (회귀): tools/qmd/ vendored CLI subprocess
   searchEngine: 'orama' | 'qmd'
+  // ── §5.7.5 Developer mode (settings 토글, opt-in) ──
+  // developerMode = settings 의 [developer] 섹션 표시 여부 (default false).
+  // allowUpdateCheck = plugin onload 시 외부 source fetch 동의 (default false).
+  developerMode: boolean
+  allowUpdateCheck: boolean
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -117,6 +130,8 @@ const DEFAULT_SETTINGS: WikeySettings = {
   piiGuardEnabled: true,
   originalLinkMode: 'raw',
   searchEngine: 'orama',
+  developerMode: false,
+  allowUpdateCheck: false,
 }
 
 export type { WikeySettings }
@@ -172,6 +187,11 @@ export default class WikeyPlugin extends Plugin {
   // cache. 첫 query 시 init (1~2s), 후속 호출은 await 만. onunload 시 close.
   private koreanTokenizerPromise: Promise<KoreanTokenizerHandle | null> | null = null
 
+  // §5.7.5 — upstream update detect cache. onload 1회 fetch 후 settings UI 표시.
+  updateCheckResult: UpdateCheckResult | null = null
+  // §5.7.5 — [분석] 버튼 결과 cache (kind → analysis). 사용자가 명시 reset 까지 보존.
+  updateAnalyses: Map<string, UpdateAnalysis> = new Map()
+
   /**
    * Lazy 진입점. 첫 호출 시 plugin folder 의 `kiwi-wasm.wasm` + `~/.cache/wikey/kiwi-models/cong/base`
    * 검사 + Kiwi WASM init. 부재 환경 또는 init 실패 시 null 반환 (sidebar 가 graceful 빈 결과).
@@ -224,6 +244,14 @@ export default class WikeyPlugin extends Plugin {
 
     // 환경 자동 탐지 (백그라운드)
     this.runEnvDetection()
+
+    // §5.7.5 — upstream update detect (재시작 1회, opt-in).
+    // developerMode + allowUpdateCheck 양쪽 토글 시만 호출 (사용자 결정 #2 = opt-in).
+    if (shouldDetectUpstreamUpdates(this.settings)) {
+      void this.runUpstreamUpdateCheck().catch((err) => {
+        console.warn('[Wikey] upstream update check failed:', err)
+      })
+    }
 
     // PARA 기본 폴더 구조 idempotent 보장 (신규 vault에 배포)
     void ensureParaFolders(this.app).then((r) => {
@@ -470,7 +498,12 @@ export default class WikeyPlugin extends Plugin {
   async runEnvDetection() {
     const basePath = this.basePath
     console.log('[Wikey] 환경 탐지 시작...')
-    this.envStatus = await detectEnvironment(basePath, this.settings.ollamaUrl)
+    // §5.7.5 C6 — searchEngine 전달. orama default 시 qmd inline block + ABI scan skip.
+    this.envStatus = await detectEnvironment(
+      basePath,
+      this.settings.ollamaUrl,
+      this.settings.searchEngine,
+    )
 
     // 탐지 결과 저장
     this.settings = {
@@ -508,6 +541,48 @@ export default class WikeyPlugin extends Plugin {
     } catch (err) {
       console.warn('[Wikey] capability map dump failed:', err)
     }
+  }
+
+  /**
+   * §5.7.5 — plugin onload 시 upstream update fetch (재시작 1회).
+   *
+   * 호출 조건: developerMode && allowUpdateCheck (사용자 결정 #2 = opt-in).
+   * fetch DI = obsidian `requestUrl` 을 thin wrap.
+   */
+  async runUpstreamUpdateCheck(): Promise<void> {
+    const fetcher = async (url: string): Promise<string> => {
+      const r = await requestUrl({ url, method: 'GET' })
+      return r.text
+    }
+    this.updateCheckResult = await detectUpstreamUpdates({
+      basePath: this.basePath,
+      allowNetwork: true,
+      fetch: fetcher,
+    })
+    console.log(
+      `[Wikey] upstream update check: ${this.updateCheckResult.items.length} items` +
+        ` (errors=${this.updateCheckResult.errors.length})`,
+    )
+  }
+
+  /**
+   * §5.7.5 — [분석] 버튼 backend. settings-tab UI 가 호출.
+   *
+   * LLM provider = wikey 기본 BYOAI (사용자 결정 #3 = `buildConfig` default provider).
+   */
+  async runUpdateAnalysis(item: UpdateItemDescriptor): Promise<void> {
+    const fetcher = async (url: string): Promise<string> => {
+      const r = await requestUrl({ url, method: 'GET' })
+      return r.text
+    }
+    const llm = {
+      generate: async (prompt: string): Promise<string> => {
+        const r = await this.llmClient.callLLM('summarize', prompt)
+        return typeof r === 'string' ? r : (r as { text?: string }).text ?? ''
+      },
+    }
+    const analysis = await analyzeUpdate({ item, llm, fetch: fetcher })
+    this.updateAnalyses.set(item.kind, analysis)
   }
 
   getExecEnv(): Record<string, string> {
@@ -662,6 +737,9 @@ export default class WikeyPlugin extends Plugin {
       allowPiiIngest: this.settings.allowPiiIngest,
       piiRedactionMode: this.settings.piiRedactionMode,
       piiGuardEnabled: this.settings.piiGuardEnabled,
+      // §5.7.5 — Developer mode (settings 토글, opt-in).
+      developerMode: this.settings.developerMode,
+      allowUpdateCheck: this.settings.allowUpdateCheck,
     }
   }
 
