@@ -943,10 +943,10 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 
 ---
 
-## 5.7.5 Orama upstream sync 자동화 + LOW 잔여 + PoC cleanup + Developer Update UI — Phase 5 별 subject (P3, 2026-05-09 신설, **plan APPROVE_v1.4** Session 30)
+## 5.7.5 Orama upstream sync 자동화 + LOW 잔여 + PoC cleanup + Developer Update UI — Phase 5 별 subject (P3, 2026-05-09 신설, **종결 Session 31 2026-05-09**)
 > tag: #search, #orama, #kiwi-nlp, #upstream-sync, #poc-cleanup, #developer-ui, #phase5-defferred
 >
-> **plan 상태**: spec v1.4 + todo v1.4 작성 완료 (codex Mode D Panel cycle #2 verdict APPROVE). Step B (RED→GREEN→BLUE) 구현 진입은 **다음 세션** (사용자 결정 2026-05-09).
+> **상태**: Session 31 (2026-05-09) **종결**. Step A/B/C/D 모두 완료 + codex 6 cycle (#1~#6) 모두 APPROVE 도달 + AC 22 verification PASS (단위 13 + 통합 4 + 라이브 3 + 부가 2). 활동 evidence: [`activity/phase-5-result.md §5.7.5`](../activity/phase-5-result.md) + [`activity/phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md`](../activity/phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md).
 >
 > **단일 소스**: [`plan/phase-5-spec-5.7.5-orama-update-sync.md`](./phase-5-spec-5.7.5-orama-update-sync.md) (Spec WHAT, 472줄) + [`plan/phase-5-todox-5.7.5-orama-update-sync.md`](./phase-5-todox-5.7.5-orama-update-sync.md) (Todo HOW, 308줄).
 
@@ -1010,15 +1010,31 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 ### Karpathy Simplicity 적용
 **본 §5.7.5 는 *별 cycle*** — §5.7.4 의 *코드 swap* 과 분리. 자동화 인프라 (cron / GitHub Actions / regression suite) 는 over-spec 후보 의무 검토. B 그룹 7 항목 모두 *진행 시점 결정* — 본 §5.7.5 의 spec 작성 시 어느 범위까지 자동화할지 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) 의무.
 
-### 진입 우선순위 (Session 30 plan APPROVE_v1.4 후 갱신)
-1. ✅ **§5.7.5 spec/todo v1.4 작성 + plan APPROVE** (Session 30 완료) — codex cycle #1 NEEDS_REVISION 6 finding fix + cycle #2 APPROVE + 사용자 결정 5건 (#1 (A) settings 토글 / #2 opt-in / #3 wikey 기본 BYOAI / #4 code lowercase 유지 + docs 정정 / #5 C5/C6 본 cycle 포함) + 부가 결정 4건 (선행 의무 #1 schema 진입 직전 / #2 harness-helper 별 repo / B4 Kiwi 사전 본 cycle 포함 / POC-1 cleanup).
-2. **다음 세션 진입** (Step A → Step B):
-  - **Step A 직전**: `wikey.schema.md` 검색 코어 안정성 갱신 (사용자 승인 의무, 별 commit) — Orama default + qmd fallback + Kiwi WASM 한국어 tokenizer 명시
-  - **Step A**: 코드 변경 위치 fact-check (master fresh re-grep)
-  - **Step B**: TDD RED 16 case → GREEN (~1005 LOC cleanup / ~925 LOC 보존) → BLUE 3a 회귀 → BLUE 3b refactor
-  - **Step C**: 라이브 smoke 3 시나리오 (master 직접 obsidian-cdp)
-  - **Step D**: 문서 동기화 + commit 분리
-3. **claude-harness-helper repo commit** — master-validation skill v1.4 (anchor (f) exact match 보강, 본 commit 포함) + harness-helper repo 별 단계.
+### 진입 결과 (Session 31, 2026-05-09 종결)
+1. ✅ **§5.7.5 spec/todo v1.4 + plan APPROVE_v1.4** (Session 30 — codex cycle #1 NEEDS_REVISION + #2 APPROVE)
+2. ✅ **Session 31 종결** — 모든 Step (A/B/C/D) 완료 + codex 6 cycle (#1~#6) 모두 APPROVE 도달:
+  - ✅ **선행 commit `62f6992`** — `wikey.schema.md` 검색 코어 4 영역 갱신 (사용자 승인) — Orama default + qmd fallback + Kiwi WASM 명시
+  - ✅ **Step A** — fact-check 6 위치 + baseline 측정 (737 PASS / 38 PASS)
+  - ✅ **Step B** — RED `d0ab150` (16 case) + GREEN `02b0318` (~1005 LOC, 18 files / 914+/456-) + BLUE 3a 회귀 PASS + BLUE 3b 6활동 (GREEN 안 자연 진행)
+  - ✅ **codex cycle #3** NEEDS_REVISION (4 MED + 2 LOW) → master fix `a8ca27b`
+  - ✅ **codex cycle #4** NEEDS_REVISION (1 MED) → master fix `e964be1`
+  - ✅ **codex cycle #5** APPROVE (findings: none)
+  - ✅ **Step C** 라이브 smoke (master 직접 obsidian-cdp) — AC-V1/V2/V3 모두 PASS, 라이브가 actual bug 2건 (LLMClient API + JSON markdown wrap parse) 발견 → master fix `a87c7f8`
+  - ✅ **codex cycle #6** APPROVE (findings: none) — live smoke fix verified
+  - ✅ **Step D** 문서 동기화 — `activity/phase-5-result.md §5.7.5` entry + `activity/phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md` resultx detail + 본 todo mirror
+3. **잔여 (별 cycle)**:
+  - **§5.7.6+ deferral 7항목**: B3 / B5 / B6 / C1 / C2 / HYBRID / BENCH-AUTO
+  - **`claude-harness-helper` repo commit**: master-validation skill v1.4 (anchor (f) exact match 보강) + rules.md §10. 별 repo master 단독.
+  - **AC-P1 spec body 정정 (선택)**: spec §5 의 `≤ 400K` hard threshold → measurement reporting. 우선순위 낮음 (codex cycle #5 ACK).
+
+**최종 회귀** (master fresh re-run, Session 31 23:30 기준):
+- wikey-core: 738 PASS / 3 skipped (baseline 726, +12)
+- wikey-obsidian: 46 PASS (baseline 38, +8)
+- npm run build: 0 errors (5 pre-existing import.meta cjs warning)
+- ./scripts/validate-wiki.sh: PASS
+- ./scripts/check-licenses.sh: OK (NOTICE 정합)
+- ./scripts/check-kiwi-vendor-sync.sh: OK (실 upstream Kiwi v0.23.1 detect)
+- main.js: 496679 → 433384 bytes (-63KB, -12.7%)
 
 ---
 

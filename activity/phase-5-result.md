@@ -1597,6 +1597,114 @@ obsidian-cdp 라이브 (ingest 90s + write 15s + query 정확 + Settings 5/5)
 - **PoC code cleanup**: `wikey-obsidian/src/commands.ts:96~522` (3 PoC command + npm `kiwi-nlp` / `@orama/orama` deps) — 본 §5.7.4 종결 후 별 step (사용자 결정).
 - **wikey.schema.md 검색 코어 안정성 갱신** (사용자 승인 의무) — 별 commit.
 
+### 5.7.5 Orama upstream sync 자동화 + LOW 잔여 + PoC cleanup + Developer Update UI ✅ (Session 31, 2026-05-09)
+> tag: #search, #orama, #kiwi-nlp, #upstream-sync, #poc-cleanup, #developer-ui, #phase5
+
+**상위 spec**: [`plan/phase-5-spec-5.7.5-orama-update-sync.md`](../plan/phase-5-spec-5.7.5-orama-update-sync.md) v1.4 + [`plan/phase-5-todox-5.7.5-orama-update-sync.md`](../plan/phase-5-todox-5.7.5-orama-update-sync.md) v1.4. Detail evidence: [`activity/phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md`](./phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md).
+
+**§5.7.4 종결 후 deferred 27 입력 항목** (UI 7 + B 7 + LOW 4 + PoC 3 + C 4 + 비목표 2) 의 4-question 검증 + 본 cycle 처리. 사용자 결정 9건 모두 v1.4 잠금 (#1 (A) settings 토글 / #2 opt-in / #3 wikey 기본 BYOAI / #4 code lowercase 유지 + docs / #5 C5/C6 본 cycle 포함, 부가 4 = schema 별 commit / harness-helper 별 repo / Kiwi 사전 본 cycle / POC-1 cleanup).
+
+#### 5.7.5 변경 파일 (5 commits)
+
+- **`62f6992` docs(wikey.schema.md)**: 선행 — 검색 코어 4 영역 갱신 (Orama default + qmd fallback + Kiwi WASM)
+- **`d0ab150` test(§5.7.5)**: RED 16 case (developer update UI + LOW fix + scripts + C5/C6)
+- **`02b0318` feat(§5.7.5)**: GREEN — developer update UI + LOW fix + PoC cleanup + C5/C6 (914+/456-, 18 files)
+- **`a8ca27b` fix(§5.7.5)**: cycle #3 NEEDS_REVISION 4 MED + 1 LOW (codex 권고)
+- **`e964be1` fix(§5.7.5)**: cycle #4 NEEDS_REVISION 1 MED — DEFAULTS WIKEY_SEARCH_TOP_N omit
+- **`a87c7f8` fix(§5.7.5)**: live smoke — LLMClient API call + LLM JSON markdown wrap parse
+
+#### 5.7.5 codex Mode D Panel 6 cycle 흐름
+
+| Cycle | 단계 | Verdict | 처리 |
+|-------|------|---------|------|
+| #1 | plan review | NEEDS_REVISION (6 finding HIGH 0 / MED 5 / LOW 1) | master fix → spec/todo v1.3 |
+| #2 | plan review | APPROVE_v1.4 (LOW 2 master fix only) | 부가 결정 4건 잠금 |
+| #3 | post-impl | NEEDS_REVISION (4 MED + 2 LOW) | master fix `a8ca27b` (config helper / qmd repo / Kiwi compare URL / persist signal / styles.css) |
+| #4 | re-review | NEEDS_REVISION (1 MED, default merge) | master fix `e964be1` (DEFAULTS WIKEY_SEARCH_TOP_N omit) |
+| #5 | re-review | APPROVE (findings: none) | — |
+| #6 | live smoke fix | APPROVE (findings: none) | — |
+
+#### 5.7.5 회귀 (Phase 3a)
+
+| 명령 | 결과 |
+|------|------|
+| `npm test --workspace=wikey-core` | 738 PASS / 3 skipped (baseline 726, +12) |
+| `npm test --workspace=wikey-obsidian` | 46 PASS (baseline 38, +8) |
+| `npm run build` (양 workspace) | 0 errors (5 esbuild warning = pre-existing import.meta cjs/Kiwi WASM 영역) |
+| `./scripts/validate-wiki.sh` | PASS |
+| `./scripts/check-licenses.sh` | OK (NOTICE 정합) |
+| `./scripts/check-kiwi-vendor-sync.sh` | OK (`current=v0.23.0 upstream=v0.23.1 hasUpdate=true` — 실 upstream Kiwi v0.23.1 detect) |
+
+#### 5.7.5 BLUE 6 활동 (Phase 3b, GREEN 안 자연 진행)
+
+| # | 활동 | 적용 / 의도적 유지 + 근거 |
+|---|------|---------------------------|
+| 1 | 함수 분해 | **적용** — `upstream-checker.ts` 4 kind 별 detect (`detectKiwiNlp` / `detectOrama` / `detectQwen3Embedding` / `detectQmdVendored` / `detectKiwiDict`) 별 함수 (~30 LOC each) |
+| 2 | Naming consistency | **적용** — `developerMode` / `allowUpdateCheck` / `UpdateItemDescriptor` / `UpdateCheckResult` / `[upgrade]` / `[분석]` / `[개발필요]` / `Developer (advanced)` / `Show developer section` spec ↔ code ↔ test 일관 |
+| 3 | DRY 중복 제거 | **적용** — `fetchJsonField` helper extract (4 kind 별 fetch 공통 패턴), `extractJsonObject` helper (markdown wrap + brace parse) |
+| 4 | 주석 quality | **적용** — 모든 신규 함수 docstring + spec section reference. TODO/FIXME 0. cycle #3/#4/live smoke fix 주석은 `§5.7.5 cycle #N fix` marker 보존 |
+| 5 | 가독성 | **적용** — `DEFAULT_MAX_CHARS = 4000` magic number 상수화 |
+| 6 | 회귀 재검증 | **적용** — 매 commit 후 fresh `npm test + build` PASS |
+
+#### 5.7.5 AC verification (총 22 — 단위 13 + 통합 4 + 라이브 3 + 부가 2)
+
+| AC | 내용 | 결과 |
+|----|------|------|
+| AC-U1 | detectUpstreamUpdates 5 kind 반환 (B4 잠금: kiwi-dict 추가) | PASS (단위 + 라이브 5 items) |
+| AC-U2 | diffSource URL 정확 (kiwi compare / orama npm / qwen3 HF / qmd compare / kiwi-dict releases) | PASS (cycle #3 fix 후) |
+| AC-U3 | settings `[developer]` 섹션 + `Developer (advanced)` exact phrase | PASS (라이브 DOM 검증) |
+| AC-U4 matrix | developerMode + allowUpdateCheck 양쪽 → call=1, false 시 0 | PASS (3 fixture + 라이브) |
+| AC-U5 | `[upgrade]` 뱃지 active/none CSS class | PASS (cycle #3 styles.css 추가 후) |
+| AC-U6 | analyzeUpdate LLM 요약 + devRequired heuristic + markdown wrap parse | PASS (라이브 7.9s + parse fix) |
+| AC-U7 | `[분석]` 버튼 disabled = !hasUpdate | PASS (라이브 5 row 검증) |
+| AC-U8 | `[개발필요]` mark + reason | PASS (markdown wrap fix 후) |
+| AC-L5 | smart_tokenize lowercase 일관 (production code 이미 일관, 사용자 결정 #4 mirror) | PASS |
+| AC-L7 | `scripts/check-licenses.sh` (workspace dep allowlist + devDependencies 제외) | PASS |
+| AC-L14 | `OramaIndexHandle.persist()` atomic + abort signal (cycle #3 reindex caller 갱신) | PASS |
+| AC-L15 | `runOramaIngest` lazy import — engine='qmd' path stderr warn 0 | PASS |
+| AC-S1 | `scripts/check-kiwi-vendor-sync.sh` bab2min/Kiwi releases + VENDOR.md tag 비교 | PASS (실 upstream v0.23.1 detect) |
+| AC-D1 | README `## Developer mode` 섹션 — `Show developer section` (env 표기 부재) | PASS |
+| AC-C5 | `WIKEY_SEARCH_TOP_N` alias + `WIKEY_QMD_TOP_N` deprecation marker (priority 작동) | PASS (cycle #4 default merge fix 후) |
+| AC-C6 | `detectEnvironment(basePath, ollamaUrl, searchEngine)` 시그니처 확장 + qmd block conditional skip | PASS |
+| AC-V1 | 라이브 — settings developer toggle on → 5 row + currentVersion + [upgrade] 뱃지 | PASS |
+| AC-V2 | 라이브 — [분석] 버튼 클릭 → LLM 호출 ≤ 30s + summary + [개발필요] mark | PASS (7.9s + parse fix) |
+| AC-V3 | 라이브 — toggle off → 섹션 숨김 + onload 호출 0 | PASS |
+| AC-P1 | PoC cleanup — main.js size measurement | **measurement reporting** — 496679 → 433384 bytes (-63KB, 12.7%). spec body `≤ 400K` threshold 미달 (433KB > 400K, settings-tab-developer.ts + main.ts 신규 method + upstream-checker bundle 추가가 일부 상쇄). cleanup 자체는 잠금 mirror 완수 + true regression 0. master ACK |
+| AC-S1-bonus | live upstream Kiwi detect (실 v0.23.0 → v0.23.1) | PASS |
+| AC-U6-bonus | LLM JSON markdown wrap parse (Gemini 응답 패턴 robustness) | PASS (live smoke fix `a87c7f8`) |
+
+#### 5.7.5 27 입력 항목 분류 결과 (spec §4.7 mirror)
+
+| 분류 | 개수 | 항목 |
+|---|---|---|
+| 포함 (해당 cycle 의무) | **11** | UI-1, UI-2, UI-3, UI-4, UI-5, UI-6, LOW #14, LOW #15, LOW #7, C5, C6 |
+| 수정 포함 (단순화) | **9** | UI-7, B1, B2, B4, B7, LOW #5, POC-1, POC-2, POC-3 |
+| deferral / 폐기 | **7** | B3, B5, B6, C1, C2, HYBRID, BENCH-AUTO |
+
+총 27 입력 = 본 cycle 안 실 작업 **20** (포함 11 + 수정 9), 별 cycle deferral **7**.
+
+#### 5.7.5 Karpathy 4원칙
+
+- **Think Before Coding**: 사용자 결정 5건 + 부가 4건 모두 spec/todo 잠금 후 진입. plan v1.4 = codex 2 cycle (#1 NEEDS_REVISION fix v1.3 + #2 APPROVE) + master 1차 23-anchor verification.
+- **Simplicity First**: 27 입력 → 11 포함 + 9 단순화 + 7 deferral (Karpathy 200줄→50줄 mirror). cron / GitHub Actions / regression suite / push notification 모두 over-spec 으로 별 cycle deferral. settings UI 표시까지만 처리 (UI-7 simplification).
+- **Surgical Changes**: 변경 면 18 file (commit `02b0318`) — spec §3 변경 면 직접 추적. wiki/ 변경 0 / raw/ 변경 0 / canonicalizer + ingest pipeline + mention extractor 변경 0 (검색·인덱싱 코어 변경 0, §5.7.4 swap 결과 그대로 유지). PoC cleanup 은 사용자 명시 결정 mirror.
+- **Goal-Driven Execution**: AC 22 모두 정량 (단위 13 + 통합 4 + 라이브 3 + 부가 2). 라이브 smoke 가 actual bug 발견 (LLMClient API + JSON markdown wrap) → master 직접 fix → cycle #6 APPROVE.
+
+#### 5.7.5 학습 — 라이브 smoke 의 implementation gap detection
+
+라이브 smoke (master 직접 obsidian-cdp) 가 단위 + 통합 test cover 외 영역 발견:
+
+1. **LLMClient API mismatch** (`main.ts:580` `callLLM` → 실제 `call`): mock LLM 안 generate 만 사용한 단위 test 가 plugin instance 의 actual LLMClient method 호출 누락. 라이브 smoke 가 첫 trigger 시 TypeError 발견. master fix 1 line.
+2. **JSON markdown wrap parse** (`update-analyzer.ts` extractJsonObject): mock LLM 가 strict JSON 반환만 시뮬레이션. 실제 Gemini-2.5-flash 응답이 ` ```json\n{...}\n``` ` markdown wrap. JSON.parse throw → fallback. 라이브 smoke 가 첫 응답에서 발견. master fix + 단위 test 보강.
+
+**원리**: integration / e2e test 가 mock layer 가 cover 하지 못하는 actual API contract 영역을 catch. CLAUDE.md §6 의 라이브 cycle smoke 정책의 정당성. test 인프라가 mock 의 fidelity 만으로 implementation gap 0 보장 X.
+
+#### 5.7.5 잔여 후속
+
+- **§5.7.6+ deferral 7항목**: B3 / B5 / B6 / C1 / C2 / HYBRID / BENCH-AUTO. 별 cycle 진입 시점 사용자 결정.
+- **`claude-harness-helper` repo commit**: master-validation skill v1.4 anchor (f) exact match 보강 + rules.md §10 — 별 repo master 단독 (본 wikey 외).
+- **AC-P1 spec body 정정** (선택): `≤ 400K` hard threshold → measurement reporting 표현. analyst 호출 후 spec v1.5 sweep 의무 — 우선순위 낮음 (cleanup 효과 자체는 잠금 mirror 완수, codex cycle #5 에서 ACK).
+
 ---
 
 ## 5.8 Phase 4 D.0.l 이관 과제 — 잔여 (P4)
