@@ -577,8 +577,10 @@ export default class WikeyPlugin extends Plugin {
     }
     const llm = {
       generate: async (prompt: string): Promise<string> => {
-        const r = await this.llmClient.callLLM('summarize', prompt)
-        return typeof r === 'string' ? r : (r as { text?: string }).text ?? ''
+        // §5.7.5 라이브 smoke fix — LLMClient public API = `call(prompt, opts?)`,
+        // not `callLLM` (verified in wikey-core/src/llm-client.ts:14). 사용자 결정 #3
+        // (buildConfig default provider) mirror — opts omit → default `gemini`.
+        return await this.llmClient.call(prompt)
       },
     }
     const analysis = await analyzeUpdate({ item, llm, fetch: fetcher })

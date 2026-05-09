@@ -223,7 +223,7 @@
         "at": "2026-05-09T09:33:13.736Z"
       }
     ],
-    "tombstone": true,
+    "tombstone": false,
     "last_action": "force"
   }
 }

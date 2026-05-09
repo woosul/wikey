@@ -53,4 +53,31 @@ describe('§5.7.5 update-analyzer', () => {
       expect(result.devRequiredReason!.length).toBeGreaterThan(0)
     }
   })
+
+  it('AC-U6 라이브 smoke fix: markdown-wrapped JSON (Gemini 응답) → devRequired/summary 추출', async () => {
+    // 라이브 smoke (2026-05-09) 에서 Gemini-2.5-flash 가 prompt 의 "JSON 만 반환"
+    // 지시에도 ```json\n{...}\n``` markdown fence 로 wrap. fix 전: JSON.parse 가 throw
+    // → fallback 의 devRequired=false (LLM 의 true 무시). fix 후: extractJsonObject 가
+    // fence/braces 추출 → 정상 parse.
+    const wrappedResponse = '```json\n' + JSON.stringify({
+      summary: 'Kiwi NLP v0.23.1 patch — 변경점 미명. 검토 필요.',
+      devRequired: true,
+      devRequiredReason: '제공된 변경 로그가 불완전하여 호환성 판단 불가',
+    }) + '\n```'
+    const mockLlm = {
+      generate: async (): Promise<string> => wrappedResponse,
+    }
+    const mockFetch = async (): Promise<string> => 'changelog body...'
+
+    const result = await analyzeUpdate({
+      item: FIXTURE_ITEM,
+      llm: mockLlm,
+      fetch: mockFetch,
+    })
+
+    expect(result.summary).toContain('Kiwi NLP')
+    expect(result.devRequired).toBe(true)
+    expect(result.devRequiredReason).toBeDefined()
+    expect(result.devRequiredReason!.length).toBeGreaterThan(0)
+  })
 })

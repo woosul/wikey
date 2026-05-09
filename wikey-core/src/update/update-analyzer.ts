@@ -49,9 +49,32 @@ ${item.kind === 'kiwi-nlp' ? '본 항목은 vendor (sparse) — VENDOR.md 안 pa
 }
 `
 
+/**
+ * §5.7.5 라이브 smoke fix — Strip markdown code fence around JSON before parse.
+ * Gemini / Anthropic 가 prompt 의 "JSON 만 반환" 지시에도 ```json\n...\n``` 으로 wrap
+ * 하는 경우 빈번. 첫 `{` ... 마지막 `}` 추출 → JSON.parse 시도.
+ */
+function extractJsonObject(raw: string): string {
+  const trimmed = raw.trim()
+  // Strip markdown fence if present
+  const fenceStart = trimmed.match(/^```(?:json)?\s*\n?/u)
+  const fenceEnd = trimmed.match(/\n?```\s*$/u)
+  let body = trimmed
+  if (fenceStart) body = body.slice(fenceStart[0].length)
+  if (fenceEnd) body = body.slice(0, body.length - fenceEnd[0].length)
+  // If still not pure JSON, slice from first `{` to last `}`
+  const firstBrace = body.indexOf('{')
+  const lastBrace = body.lastIndexOf('}')
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return body.slice(firstBrace, lastBrace + 1)
+  }
+  return body
+}
+
 function safeParseAnalysis(raw: string, fallbackSummary: string): UpdateAnalysis {
+  const candidate = extractJsonObject(raw)
   try {
-    const parsed = JSON.parse(raw) as Partial<UpdateAnalysis>
+    const parsed = JSON.parse(candidate) as Partial<UpdateAnalysis>
     if (typeof parsed.summary !== 'string' || typeof parsed.devRequired !== 'boolean') {
       return { summary: fallbackSummary, devRequired: false }
     }
@@ -67,7 +90,8 @@ function safeParseAnalysis(raw: string, fallbackSummary: string): UpdateAnalysis
       : { summary: parsed.summary, devRequired: false }
     return out
   } catch {
-    // Fallback — LLM 응답이 plain text 인 경우. devRequired heuristic 보수적으로 false.
+    // Fallback — LLM 응답이 plain text (markdown fence 도 JSON 도 아님).
+    // 보수적으로 raw 를 summary 로, devRequired=false.
     return { summary: raw.length > 0 ? raw : fallbackSummary, devRequired: false }
   }
 }
