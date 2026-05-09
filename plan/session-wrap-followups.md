@@ -1,23 +1,50 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-09 session 30 — §5.7.5 plan v1.4 APPROVE 종결 (analyst v1 + master fix v1.1/v1.2 + codex cycle #1 NEEDS_REVISION fix v1.3 + cycle #2 APPROVE + 부가 결정 잠금 v1.4)**.
+> 최신 갱신: **2026-05-10 session 31 — §5.7.5 종결 (Step A/B/C/D 모두 완료 + codex 6 cycle (#1~#6) 모두 APPROVE 도달 + 라이브 smoke AC-V1/V2/V3 PASS + 라이브 actual bug 2건 master 직접 fix)**.
 >
-> ## 다음 세션 첫 액션 (Session 31) — **§5.7.5 Step A → Step B 구현 진입**
+> ## 다음 세션 첫 액션 (Session 32) — **Phase 5 잔여 5 subject 중 진입 결정**
 >
-> **우선순위 1 (선행 의무, Step A 직전)**: `wikey.schema.md` 검색 코어 안정성 갱신 — 사용자 승인 의무 (CLAUDE.md 쓰기 규칙). Orama default 명시 + qmd fallback path + Kiwi WASM 한국어 tokenizer 명시. 별 commit (Step A 진입 직전).
+> **§5.7.5 Session 31 종결 commits** (7개, b6dc201..c908943):
+> - `62f6992` 선행: wikey.schema.md 검색 코어 4 영역 갱신 (Orama default + qmd fallback + Kiwi WASM)
+> - `d0ab150` test: RED 16 case
+> - `02b0318` feat: GREEN ~1005 LOC + PoC cleanup ~80 LOC 제거
+> - `a8ca27b` fix: cycle #3 NEEDS_REVISION 4 MED + 1 LOW
+> - `e964be1` fix: cycle #4 NEEDS_REVISION 1 MED (DEFAULTS WIKEY_SEARCH_TOP_N omit)
+> - `a87c7f8` fix: live smoke (LLMClient API + JSON markdown wrap parse)
+> - `c908943` docs: Step D — result + resultx + todo mirror
 >
-> **우선순위 2 (Step A 환경 세팅)**: 코드 변경 위치 fact-check (master fresh re-grep, todo §3 Step A3 mirror) + Step A4~A6 wikey-core 신규 모듈 + scripts 위치 결정. 사용자 결정 5건 + 부가 결정 4건 모두 v1.2/v1.4 잠금 완료.
+> **최종 회귀** (Session 31 종결 시점):
+> - wikey-core: 738 PASS / 3 skipped (baseline 726, +12)
+> - wikey-obsidian: 46 PASS (baseline 38, +8)
+> - npm run build: 0 errors / validate-wiki / check-licenses / check-kiwi-vendor-sync 모두 PASS
+> - main.js: 496679 → 433384 bytes (-63KB, -12.7%)
 >
-> **우선순위 3 (Step B 구현 진입)**: TDD RED 16 case → GREEN (~1005 LOC cleanup / ~925 보존) → BLUE 3a 회귀 → BLUE 3b refactor.
->   - **20 AC 매핑**: 단위 13 (§5.1 11 + §5.1.1 2 = AC-U1~U8 + AC-L5/L7/L14/L15 + AC-C5 + AC-C6) + 통합 4 (AC-S1 + AC-L7 + AC-P1 + AC-D1) + 라이브 3 (AC-V1~V3)
->   - **변경 면**: settings-tab.ts (`Show developer section` + `Allow upstream update check` 2 토글, `wikey-settings-developer-*` prefix) + 신규 `wikey-core/src/update/upstream-checker.ts` + `update-analyzer.ts` + `scripts/check-kiwi-vendor-sync.sh` + `scripts/check-licenses.sh` + `WikeySettings.developerMode` + `allowUpdateCheck` (main.ts:34/87/651) + `detectEnvironment(basePath, ollamaUrl, searchEngine)` 시그니처 확장 (env-detect.ts) + `WIKEY_SEARCH_TOP_N` alias + LOW #14 atomic write + LOW #15 lazy import + POC-1 cleanup (~80 LOC 제거)
+> **AC verification** (22/22): 단위 13 + 통합 4 + 라이브 3 + 부가 2. AC-P1 = master ACK measurement reporting (433KB > spec body 400K threshold, true regression 0).
 >
-> **우선순위 4 (Step C 라이브 smoke)**: master 직접 obsidian-cdp — AC-V1 (4 row 표시) / AC-V2 (분석 버튼 LLM 호출 + 개발필요 mark) / AC-V3 (toggle off + onload 호출 0).
+> **codex 6 cycle 흐름 종결**: #1 NEEDS_REVISION → #2 APPROVE_v1.4 → #3 NEEDS_REVISION (4 MED + 2 LOW) → #4 NEEDS_REVISION (1 MED) → #5 APPROVE → #6 APPROVE (live smoke fix verified).
 >
-> **우선순위 5 (Step D 문서)**: README `## Developer mode` 섹션 (`Show developer section` 만, env 표기 미도입) + activity result + phase-5-todo mirror + commit 분리.
+> **라이브 smoke 발견 + master fix**: master 직접 obsidian-cdp 가 mock layer 외 actual bug 2건 catch — (a) `main.ts:580` `callLLM` 메소드 부재 → `call(prompt)` 정정 / (b) Gemini 응답 markdown wrap → `extractJsonObject` helper 추가 + parse robustness. 모두 commit `a87c7f8` + cycle #6 APPROVE.
 >
-> **선행 의무 (별 단계, master 단독)**:
->   - `claude-harness-helper` repo commit — master-validation skill v1.4 (anchor (f) exact match 보강) + rules.md §10. 본 §5.7.5 commit 에 skill 갱신은 wikey 안에서 진행했으므로 harness-helper 별 repo commit 별도.
+> **메모리 영구 등록**: `feedback_cmux_skill_read.md` — codex/gemini 외부 panel 호출 직전 cmux SKILL.md 의무 read + `(r,c) <role>` 라벨 + 패널 재사용 패턴 (사용자 raise 2026-05-09).
+>
+> ## Phase 5 잔여 subject (5 candidates, 사용자 우선순위 결정 필요)
+>
+> 1. **§5.5 지식 그래프 · 시각화** (P3) — NetworkX + Leiden + vis.js / Obsidian Graph View
+> 2. **§5.6 성능·엔진 확장** (P3) — Ollama vs llama.cpp / rapidocr Linux baseline
+> 3. **§5.7.6 검색 quality tuning** (신설 후보, §5.7.5 deferred 7항목 통합)
+>    - C1 Q5 회귀 보완 (smart_tokenize 정밀화) / C2 50~100 query benchmark + 자동화 / HYBRID Stage 2 hybrid search full reroute
+>    - B3 Regression 검증 자동화 / B5 docs 자동 갱신 / B6 Notification (push/email/GitHub watch)
+>    - BENCH-AUTO 검색 quality benchmark CI 통합
+> 4. **§5.8 Phase 4 D.0.l 잔여** (P4) — W-A3 동명이인 dedup / W-B1 file 6 classify variance / W-C1 reindex --quick (§5.2.9 alias)
+> 5. **§5.9 Variance diagnostic** (P4) — variance 분해 4-points / Route SEGMENTED 10-run baseline / BOM 축 재분할 판단 / log_entry axis 정정
+>
+> §5.7.5 가 §5.5 / §5.6 의 진입 조건 X — 독립 진행 가능. §5.7.6 신설 시 §5.7.5 deferred 7항목 자연 통합.
+>
+> **선행 의무 (별 repo, master 단독)**:
+>   - `claude-harness-helper` repo commit — master-validation skill v1.4 (anchor (f) exact match 보강) + rules.md §10. 본 §5.7.5 commit 에 skill 갱신은 wikey 안에서 진행 X — claude-harness-helper repo 별 단계.
+>
+> **선택 후속**:
+>   - **AC-P1 spec body 정정** (선택, 우선순위 낮음): spec §5 의 `≤ 400K` hard threshold → measurement reporting 표현. analyst 호출 후 spec v1.5 sweep. master ACK 으로 종결되어 정정 안 해도 무결성 0 손상.
 >
 > ## Session 30 (2026-05-09) §5.7.5 plan APPROVE 종결
 >
