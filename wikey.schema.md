@@ -388,7 +388,7 @@ LLM Wiki (우리 방식): LLM이 쿼리 확장 → 외부 검색 → LLM이 리�
 
 ### 검색 코어의 안정성
 
-검색 코어 = **qmd (검색 인프라: BM25 + 벡터 + RRF) + LLM (지능 레이어: 쿼리 확장 / 리랭킹 / 합성) + 한국어 특화 (kiwipiepy 형태소 + Contextual Retrieval + Qwen3-Embedding)**. 인터페이스가 진화 (CLI → Obsidian → 웹 → 팀 서버) 해도 코어는 동일하며, 단계별 capability 와 진행 상태는 `plan/plan-full.md` 참조.
+검색 코어 = **검색 인프라 (Orama default — TypeScript 네이티브 BM25, ESM CommonJS bundle, file 1개 atomic write persist / qmd fallback — `WIKEY_SEARCH_ENGINE=qmd` toggle 시) + LLM (지능 레이어: 쿼리 확장 / 리랭킹 / 합성) + 한국어 특화 (Kiwi WASM bindings vendored at `wikey-core/vendor/kiwi-nlp/` + Contextual Retrieval + Qwen3-Embedding 0.6B)**. 인터페이스가 진화 (CLI → Obsidian → 웹 → 팀 서버) 해도 코어는 동일하며, 단계별 capability 와 진행 상태는 `plan/plan-full.md` 참조 (§5.7.4 Orama 마이그레이션 완료, qmd 회귀 path 보존).
 
 ### 참조 프로젝트의 검색 해법
 
@@ -396,25 +396,23 @@ LLM Wiki (우리 방식): LLM이 쿼리 확장 → 외부 검색 → LLM이 리�
 
 **seCall**: BM25(한국어 형태소 분석) + 벡터 검색 → RRF 융합 + 세션 다양성 필터.
 
-**qmd** (가장 정교): BM25+벡터 병렬 검색 → RRF 융합. 모든 모델 로컬 실행(<2GB). 쿼리 확장·리랭킹도 내장하지만, **지능 레이어는 외부 LLM이 담당**하는 것이 한국어 환경에서 더 정확.
+**Orama** (wikey default, §5.7.4 채택): TypeScript 네이티브 BM25 + Kiwi WASM 한국어 tokenizer + ESM CommonJS bundle (`@orama/orama@3.x`). file 1개 atomic write persist (`fs.renameSync` POSIX atomic). hybrid mode 시 vector column (`embedding: vector[768]`).
+
+**qmd** (fallback, `WIKEY_SEARCH_ENGINE=qmd` toggle 시): BM25+벡터 병렬 검색 → RRF 융합. 모든 모델 로컬 실행(<2GB). 회귀 path 보존 (§5.7.4 v9 결정). 한국어 형태소 = kiwipiepy (Python). 쿼리 확장·리랭킹도 내장하지만, **지능 레이어는 외부 LLM이 담당**하는 것이 한국어 환경에서 더 정확.
 
 ```
 wikey 파이프라인 (검색 인프라 + 지능 레이어 분리):
 
-  qmd = 검색 인프라: BM25 인덱스 + 벡터 인덱스 + RRF 융합
+  검색 인프라:
+    default  = Orama (TypeScript 네이티브 BM25, Kiwi WASM 한국어 tokenizer, file 1개 persist)
+    fallback = qmd   (BM25+벡터+RRF, WIKEY_SEARCH_ENGINE=qmd toggle 시)
   LLM = 지능 레이어: 쿼리 확장 + 리랭킹 + 합성
 
-  backend=basic:
-    질문 → qmd(내장 확장 1.7B → 검색 → RRF → 내장 리랭킹 0.6B) → LLM 합성
+  default (Orama backend):
+    질문 → LLM 쿼리 확장 → Orama BM25 검색 → LLM 리랭킹 → LLM 합성
 
-  backend=gemma4:
-    질문 → Gemma 4 쿼리확장 → qmd(검색 + RRF만, --no-rerank)
-                                    │
-                                    ▼
-                              Gemma 4 리랭킹 (상위 10개)
-                                    │
-                                    ▼
-                              Gemma 4 합성 (최종 답변)
+  fallback (qmd backend, WIKEY_SEARCH_ENGINE=qmd):
+    질문 → LLM 쿼리 확장 → qmd(BM25+벡터+RRF) → LLM 리랭킹 → LLM 합성
 ```
 
 ### 토큰 절감 효과
@@ -640,7 +638,9 @@ tags: [태그1, 태그2]
 - **Obsidian CLI**: 터미널에서 볼트 조작 (읽기, 생성, 검색, 태스크, 속성 관리)
 - **kepano/obsidian-skills**: Claude Code용 공식 스킬셋
 - **Obsidian Web Clipper**: 웹 기사 → 마크다운 변환
-- **qmd**: 마크다운 검색 인프라 (BM25 + 벡터 + RRF 융합, `tools/qmd/`에 vendored, `scripts/update-qmd.sh`로 upstream 관리)
+- **Orama** (default): TypeScript BM25 검색 엔진 (`@orama/orama@3.x` npm dep, `wikey-core/src/search/orama-index.ts`, Kiwi WASM 한국어 tokenizer)
+- **Kiwi WASM** (한국어 tokenizer): `wikey-core/vendor/kiwi-nlp/` (sparse vendor of `bab2min/Kiwi/bindings/wasm/package/`, `docs/kiwi-nlp-vendor-sync.md` 수동 sync 절차)
+- **qmd** (fallback, `WIKEY_SEARCH_ENGINE=qmd` toggle 시): 마크다운 검색 인프라 (BM25 + 벡터 + RRF 융합, `tools/qmd/`에 vendored, `scripts/update-qmd.sh`로 upstream 관리)
 - **Marp**: 위키 콘텐츠 → 슬라이드 덱
 - **Git**: 버전 관리, 변경 이력 추적
 
@@ -690,8 +690,9 @@ obsidian backlinks file="overview"
 
 ## 한국어 운영 참고
 
-- **BM25 검색은 한글에 약하다** — 위키 규모 확대 시 한국어 형태소 분석 기반 검색 또는 별도 가드레일 필요
-- 참고 구현체: [seCall](https://github.com/hang-in/seCall) (한글 검색 가드레일, GitHub 백업, Codex/Gemini 파서)
+- **한국어 BM25 = Orama + Kiwi WASM 형태소 분석** (default, §5.7.4 채택) — `wikey-core/vendor/kiwi-nlp/` (sparse vendor of `bab2min/Kiwi/bindings/wasm/package/`) + `wikey-core/src/search/orama-korean-tokenizer.ts`. 토큰 lowercase 일관 적용 (case-insensitive 매칭).
+- **fallback 회귀 path** (`WIKEY_SEARCH_ENGINE=qmd`): qmd 가 BM25 + 벡터 + RRF 융합. 한국어 형태소 = kiwipiepy (Python).
+- 참고 구현체: [seCall](https://github.com/hang-in/seCall) (한글 검색 가드레일, GitHub 백업, Codex/Gemini 파서) — wikey 의 영감 source.
 
 ## 참고 프로젝트
 
