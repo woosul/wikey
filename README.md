@@ -125,6 +125,27 @@ wikey/                          ← 이 폴더 = Obsidian 볼트 = Git 저장소
 - [seCall](https://github.com/hang-in/seCall) — 한국어 검색
 - [qmd](https://github.com/tobi/qmd) — 로컬 하이브리드 검색 엔진
 
+## Search engine rollback
+
+§5.7.4 (2026-05-09) 부터 검색 backend 가 qmd CLI subprocess (1.22s/query) 에서 Orama
+in-process (~0.2ms/query) 로 마이그레이션됐다. 회귀 시 3 layer 안전망:
+
+1. **git revert** — 코드 단위 되돌림. commit `0be45c7` 직전으로 reset.
+2. **`tools/qmd/` vendored 보존** — qmd binary 134 파일 git-tracked. runtime 호출 가능.
+3. **runtime toggle** — `wikey.conf` 에 `WIKEY_SEARCH_ENGINE=qmd` 행 추가 (또는 환경변수
+   `WIKEY_SEARCH_ENGINE=qmd` set) 후 plugin reload. 기본값 `'orama'`. 변경 후 `query()`
+   가 기존 `findQmdBin` + qmd subprocess 호출 path 으로 회귀 (단위·라이브 검증 완료).
+
+## Third-party software
+
+| 패키지 | 라이선스 | 위치 | 비고 |
+|--------|---------|------|------|
+| `@orama/orama` | Apache-2.0 | `wikey-core/package.json` deps | In-process BM25/벡터 검색 엔진 |
+| `kiwi-nlp` (JS wrapper) | LGPL-2.1-or-later | `wikey-core/vendor/kiwi-nlp/` (sparse vendor) | 한국어 형태소 분석 (Kiwi WASM). LGPL §6 의무 충족 — `NOTICE` 참조 |
+| `qmd` | (upstream tobi/qmd) | `tools/qmd/` (vendored binary, 회귀 fallback) | rollback 안전망용 |
+
+상세 라이선스 의무 (LGPL §6 4 항목 + relink mechanism) 는 [`NOTICE`](NOTICE) 참조.
+
 ## 라이선스
 
 [MIT](LICENSE)

@@ -1505,6 +1505,100 @@ obsidian-cdp 라이브 (ingest 90s + write 15s + query 정확 + Settings 5/5)
 
 ---
 
+### 5.7.4 Orama 마이그레이션 — qmd CLI subprocess → in-process 검색 ✅ (Session 28, 2026-05-09)
+> tag: #search, #orama, #kiwi-nlp, #vendor, #lgpl, #masters-validation
+
+#### 본질 — qmd CLI subprocess 검색을 Orama in-process 로 교체 + Kiwi WASM 한국어 tokenizer wikey-core 이전 + kiwi-nlp B-2 sparse vendor
+
+**Phase 5 §5.7.3 PoC 결과** (2026-05-09 Session 27): qmd 1.22s/query → Orama 0.2ms/query (6,000배+ 성능 개선) + Top-1 8/10 quality 동등. 4 단계 PoC (Kiwi WASM sandbox / Orama Electron renderer / Kiwi+Orama 통합 / 10 query benchmark) 모두 PASS + qmd vs Orama 7 dimension 6/7 Orama 우세 (community / API ergonomics / installation footprint / hybrid future / TypeScript native / customization). Path A reversible experiment 패러다임 (qmd self-contained CLI 이므로 회귀 비용 ≈ 0).
+
+**§5.7.4 cycle 결과**:
+- **plan 검증**: codex 7 cycle 누적 (#1 NEEDS_REVISION 9 finding → #7 APPROVE_WITH_CHANGES 1 LOW only) — spec/todo v8 = 781 lines / 270 lines / 28 AC + 14 Risk + 20 anchor self-check.
+- **post-impl 검증**: codex 6 cycle 누적 16 finding (1 HIGH + 4 MED + 11 LOW). 13 fixed + 3 deferred (MED #10 vendor build reality drift / LOW #14 PARTIAL persist race / LOW #15 vendor warn). cycle #6 verdict: **APPROVE_WITH_CHANGES** (LOW + Step D deferred 인정).
+- **라이브 smoke (master 직접, obsidian-cdp)**: AC-L1 (itil-4-practices.md ingest full cycle, FULL route ~106s, 10 created + 1 updated, raw/0_inbox → raw/3_resources/60_note/500_technology auto-move, reindex --quick OK 1884ms) / AC-L2 한+영 query (citations: PMBOK / BM25 / Hallucination Guard / finetree-RAG) / AC-L3 `WIKEY_SEARCH_ENGINE=qmd` toggle (회귀 path 정상 응답) / PoC benchmark 재실행 10 queries avg=0.2ms p50=0ms p95=1ms / **MED #13 cross-process invalidation 라이브 검증** (post-ingest query "ITIL 4 service request management" → 신규 ingest 페이지 즉시 검색 + citation, cache mtime+size detect → fresh handle reload).
+
+#### 변경 파일 (3 commit)
+
+**0be45c7 feat(§5.7.4)**: Orama in-process 검색 + kiwi-nlp B-2 vendor (52 files, 257+/30-)
+- WIKEY_SEARCH_ENGINE config 키 ('orama' default | 'qmd' fallback) — 4 위치 bridge
+- query-pipeline.ts engine 분기 + execQmdSearchLegacy rename + execOramaSearch 신규
+- reindex.ts ReindexOptions.searchEngine + cmdReindex 분기 + runOramaIngest (production Kiwi tokenizer + signal propagation)
+- wikey-core/src/search/ 3 신규 (orama-korean-tokenizer.ts / orama-index.ts / orama-index-singleton.ts)
+- wikey-core/vendor/kiwi-nlp/ B-2 sparse vendor (Kiwi v0.23.0 bindings/wasm/package + 본가 root LICENSE + dist mirror) + VENDOR.md + sync docs
+- esbuild wasmCopyPlugin (vendor → plugin root) + WIKEY_KIWI_WASM_PATH / WIKEY_KIWI_MODEL_DIR env injection
+- plugin tokenizer lifecycle (lazy promise cache + onunload close + disposeOramaIndex)
+- 19 신규 test (orama-tokenizer 4 + orama-index 5 + query-pipeline-orama 3 + reindex-orama 3 + main-config-bridge 3 + vendor-kiwi-nlp 1)
+
+**1e7daf2 test(§5.7.4)**: LOW #6 — qmd legacy integration test (1 file, 86+/1-)
+- query-pipeline-orama.test.ts 안 `WIKEY_SEARCH_ENGINE=qmd` integration 2 case 추가 (stub qmd.js + tmp basePath, vi.mock 미사용)
+
+**3997527 chore(§5.7.4)**: plugin symlink + 라이브 smoke 결과 (2 files, 22+)
+- .obsidian/plugins/wikey/kiwi-wasm.wasm symlink + .wikey/source-registry.json 갱신
+
+#### 회귀 검증 (Phase 3a, fresh)
+
+- wikey-core: 726 PASS / 3 skipped / 0 fail (기존 724 + 신규 19 case + tester 추가 2 case 일부 통합)
+- wikey-obsidian: 38 PASS / 0 fail
+- npm run build wikey-core: 0 errors
+- npm run build wikey-obsidian: 0 errors (5 esbuild warnings — 모두 vendor 안 emscripten generated JS + 기존 wikey-core/dist URL, 본 cycle 새 코드 import.meta warning 0)
+- ./scripts/validate-wiki.sh: PASS
+
+#### BLUE 6 활동 (Phase 3b)
+
+- **함수 분해**: 신규 함수 모두 ≤ 50 LOC — extract 미진행 (의도적). 단 `defaultOramaCachePath` extract (singleton.ts as single source).
+- **Naming consistency**: `execQmdSearch → execQmdSearchLegacy` (spec mirror) / `KoreanTokenizerHandle` / `OramaIndexHandle` / `kiwiWasmPath` / `kiwiModelDir`.
+- **DRY**: PoC commands.ts:142-156 의 smart_tokenize 와 wikey-core 신규 모듈 중복은 *의도적 유지* — PoC = 벤치마크 isolated, production = wikey-core 모듈.
+- **주석 quality**: 0 TODO/FIXME / 모든 신규 모듈 spec section reference 헤더.
+- **가독성**: magic number `240` (snippet maxLen) parametrize.
+- **회귀 재검증**: 매 fix 후 `npm test` + `npm run build` PASS 반복 (master fix 6 cycle).
+
+#### AC 28 매핑 (단위 18 + 통합 7 + 라이브 3)
+
+| AC | 검증 | 결과 |
+|----|------|------|
+| AC-T1~T3 + AC-W1 | orama-korean-tokenizer.test.ts (live Kiwi) | PASS (4 case) |
+| AC-I1, I2.a, I3, I4, V1 | orama-index.test.ts | PASS (5 case) |
+| AC-I2.b (production 117 docs) | 라이브 smoke (master 직접) | PASS (reindex log: indexed=117 → 127 expected) |
+| AC-Q1~Q3 | PoC benchmark 재실행 라이브 (10 queries) | PASS (avg=0.2ms / p50=0ms / p95=1ms, PoC §5.7.3 동등) |
+| AC-Q2 | query-pipeline-orama.test.ts (단위) | PASS |
+| AC-Q4 + Q5 | query-pipeline-orama.test.ts (cross-lingual + production path) | PASS (3 case) |
+| AC-R1~R3 | reindex-orama.test.ts | PASS (3 case) |
+| AC-F1.a + F1.b | main-config-bridge.test.ts (3 case) + query-pipeline-orama.test.ts qmd integration (LOW #6 fix, 2 case) | PASS (3+2 case) |
+| AC-F2 | git ls-files tools/qmd/ = 134 | PASS |
+| AC-D1 | README.md `## Search engine rollback` 섹션 신규 | PASS (Step D) |
+| AC-D2 | LICENSE (MIT) + NOTICE (LGPL §6 6 항목) + README.md `## Third-party software` | PASS (Step D) |
+| AC-S1 | scripts/download-kiwi-models.sh 신규 (78 LOC, +x) | PASS |
+| AC-V1 | orama-index.test.ts vector schema sanity | PASS |
+| AC-V2 | vendor-kiwi-nlp.test.ts + 라이브 vendor 디렉토리 검증 | PASS |
+| AC-L1 | obsidian-cdp full ingest cycle (itil-4-practices.md) | PASS |
+| AC-L2 | sidebar-chat 한+영 query | PASS (citations 정상) |
+| AC-L3 | WIKEY_SEARCH_ENGINE=qmd toggle + plugin reload + 동일 query | PASS (qmd 회귀 path 정상) |
+
+#### Karpathy 4 원칙
+
+- **Think Before Coding**: 매 cycle codex finding 의 type 분석 (P1 Fact-check / P4 Implementation feasibility / P6 Numeric consistency 등 6 패턴) → master 1차 self-check 의무화.
+- **Simplicity First**: dependency 1 추가 (`@orama/orama` only — wikey-core), `kiwi-nlp` 는 vendor 경유 (npm dep 미추가). build 절차 + dist mirror 패턴 (Karpathy "200 줄 → 50 줄" 원칙 — vendor build 환경 prerequisite 압축).
+- **Surgical Changes**: query-pipeline.ts 의 `execQmdSearch` rename + 분기 wrap만 (본문 보존). reindex.ts engine 분기 (Step 3+4+5 보존). PoC code (commands.ts:96~522) 미변경 — cleanup 시점까지 잠정 보존.
+- **Goal-Driven Execution**: 28 AC + 14 Risk + post-impl 16 finding 모두 정량 측정 — 라이브 smoke evidence (citations / latency / autoInvalidated reproduce) 누락 0.
+
+#### 학습 — master 1차 self-check 코드 영역 systematic 부재
+
+**사용자 raise 2건** (2026-05-09):
+1. "계획서 작성모드에서는 일부 master 검증을 체계적으로 했는데, 코드검증에는 해당 기준이 없어서 그런거야? 좀 많이 하네?" — codex 6 cycle 누적의 본질.
+2. "rules에는 단순기록하고, skills에 등록해서 연계하는게 좋을듯도 싶은데."
+
+**대응**: `claude-harness-helper/common/skills/master-validation/SKILL.md` 신규 (Layer 1~4 = 26 anchor + 의무 절차 + 실측 효과). rules.md §10 압축 (122 → 14 줄). cmux skill 과 동일 위치 패턴.
+
+**Layer 4 신설**: 코드 영역 6 runtime path matrix R1~R6 — CJS bundle (HIGH #8 catch) / ESM CLI / test isolation (LOW #11 catch) / same-process (MED #12 catch) / cross-process (MED #13 catch) / abort signal (LOW #14 catch). master 직접 reproduce 의무.
+
+#### 잔여 후속
+
+- **§5.7.5 별 spec** (deferred Step D 일부 + B 그룹 7 항목): kiwi-nlp upstream sync 자동화 (B7) + Orama update monitor (B1~B6) + LOW #14/#15 보강 + LOW #5/#6/#7 문서 정리 잔여.
+- **PoC code cleanup**: `wikey-obsidian/src/commands.ts:96~522` (3 PoC command + npm `kiwi-nlp` / `@orama/orama` deps) — 본 §5.7.4 종결 후 별 step (사용자 결정).
+- **wikey.schema.md 검색 코어 안정성 갱신** (사용자 승인 의무) — 별 commit.
+
+---
+
 ## 5.8 Phase 4 D.0.l 이관 과제 — 잔여 (P4)
 > tag: #pii, #classify, #reindex, #phase4-handover
 > **이전 번호**: `was §5.8` — 일부 이관·완료 반영해 재정리.

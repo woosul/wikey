@@ -936,11 +936,11 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 
 상세 cycle 이력 + 사용자 결정 + 26 todo 후보 검증: [`plan/phase-5-spec-5.7.4-orama-migration.md`](./phase-5-spec-5.7.4-orama-migration.md) §7.1 + §8 변경 이력.
 
-- [ ] (§5.7.4-Step A) 환경 세팅 — Kiwi 사전 cache + WIKEY_SEARCH_ENGINE config + kiwi-nlp B-2 vendor 결정
-- [ ] (§5.7.4-Step B) TDD RED→GREEN→BLUE — 21 RED case → A1~A8 + vendor 구현 → 회귀 검증 + refactor
-- [ ] (§5.7.4-Step C) 라이브 cycle smoke — obsidian-cdp + 한+영 query + qmd toggle
-- [ ] (§5.7.4-Step D) 문서 동기화 — LICENSE + NOTICE + README + schema.md + activity result + commit
-- [ ] (§5.7.4-deferred) §5.7.5 별 spec 작성 (Orama upstream sync 자동화 B1~B7)
+- [x] (§5.7.4-Step A) 환경 세팅 — Kiwi 사전 cache + WIKEY_SEARCH_ENGINE config + kiwi-nlp B-2 vendor 결정
+- [x] (§5.7.4-Step B) TDD RED→GREEN→BLUE — 19 case → A1~A8 + vendor 구현 → 회귀 PASS + refactor (codex 6 cycle, APPROVE_WITH_CHANGES)
+- [x] (§5.7.4-Step C) 라이브 cycle smoke — obsidian-cdp AC-L1/L2/L3 + PoC benchmark 재실행 + MED #13 cross-process invalidation 라이브 검증 PASS
+- [x] (§5.7.4-Step D) 문서 동기화 — LICENSE (MIT 기존) + NOTICE (LGPL §6 6 항목) + README rollback/third-party + VENDOR.md (v9 reality drift) + spec/todo v9 + activity result entry. wikey.schema.md 검색 코어 안정성 갱신은 사용자 승인 의무 (별 commit).
+- [ ] (§5.7.4-deferred) §5.7.5 별 spec 작성 (Orama upstream sync 자동화 B1~B7 + LOW #5/#6/#7/#14 PARTIAL/#15 잔여 + PoC code cleanup)
 
 ---
 

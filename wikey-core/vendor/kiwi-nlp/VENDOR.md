@@ -4,6 +4,11 @@
 - **Vendor scope**: `bindings/wasm/package/` subdir (JS/TS wrapper + 빌드 스크립트)
 - **Kiwi git tag**: v0.23.0 (npm `kiwi-nlp@0.23.0` 매칭)
 - **Vendor date**: 2026-05-09
+- **Version metadata note**: vendor `package.json` 의 `version` field 는 `0.22.2` —
+  Kiwi 본가 monorepo 의 publish-time bump 패턴 (commit 시점은 0.22.2, npm publish
+  시 0.23.0 으로 별 tooling 이 bump). vendor 의 `dist/` 는 npm `kiwi-nlp@0.23.0/dist/`
+  와 byte-equal mirror 라 runtime 동작은 정상. `package.json` version 자체는 본가
+  commit time form 보존 (sparse vendor 정합성).
 - **License**: LGPL-2.1 (root LICENSE 별 fetch — vendor/kiwi-nlp/LICENSE)
 - **WASM C++ source**: vendor scope **외** — `bab2min/Kiwi` repo root + `src/` + `include/` (LGPL §6 (d) relink path = 본가 + Emscripten + `bindings/wasm/build.sh`)
 - **WASM binary**: `dist/kiwi-wasm.wasm` (npm 0.23.0 mirror — npm 위치와 동일, v6 path 단일화)

@@ -1,0 +1,68 @@
+# NOTICE — Third-party software included in wikey
+
+This product (wikey) is licensed under the MIT License (see LICENSE).
+It includes third-party software with separate licenses, listed below per
+LGPL-2.1 §6 obligations and Apache-2.0 / Tobi qmd attribution requirements.
+
+## Kiwi NLP — JS wrapper layer (LGPL-2.1-or-later)
+
+(a) **Notice**: This product includes Kiwi NLP JS wrapper, vendored at
+    `wikey-core/vendor/kiwi-nlp/`. Kiwi is Copyright (c) 2017, Minchul Lee
+    (bab2min@gmail.com), licensed under the GNU Lesser General Public License
+    version 2.1 (LGPL-2.1-or-later).
+
+(b) **License copy**: A copy of the LGPL-2.1 license is included at
+    `wikey-core/vendor/kiwi-nlp/LICENSE` (fetched from upstream Kiwi repo
+    root LICENSE file at git tag v0.23.0).
+
+(c) **Library source**:
+    - JS wrapper source (TS originals) — `wikey-core/vendor/kiwi-nlp/src/`
+      (sparse vendor of `bab2min/Kiwi/bindings/wasm/package/src/`).
+    - JS wrapper build configuration — `wikey-core/vendor/kiwi-nlp/{package.json,tsconfig.json}`.
+    - WASM binary build mechanism (vendor scope outside) — upstream
+      `bab2min/Kiwi` repository at https://github.com/bab2min/Kiwi
+      + `src/` + `include/` + `bindings/wasm/build.sh` (Emscripten C++ build).
+
+(d) **JS wrapper relink mechanism**:
+    Users who wish to modify the JS wrapper layer may do so:
+    1. Edit `wikey-core/vendor/kiwi-nlp/src/*.ts` as needed.
+    2. Build with the upstream `bindings/wasm/build.sh` + Emscripten toolchain
+       to regenerate `src/build/kiwi-wasm.{js,d.ts}` (the Emscripten output
+       that the TS wrapper imports). The vendor's `dist/` directory is a
+       byte-equal mirror of the published npm package's `dist/`; running
+       `npm run build` inside the vendor without the upstream Emscripten
+       prerequisite will fail with TS2307 (missing `src/build/kiwi-wasm.js`).
+       This is intentional — the vendor preserves the JS wrapper TS source
+       for inspection/modification, while the prebuilt `dist/` is a working
+       copy mirrored from the upstream npm release.
+    3. After regenerating `vendor/kiwi-nlp/dist/`, rebuild wikey-obsidian
+       with `npm run build` so the plugin re-bundles `main.js` and copies
+       `kiwi-wasm.wasm` into the plugin folder root.
+
+(e) **WASM binary relink mechanism (LGPL §6 (d))**:
+    Users who wish to modify the WASM binary (Kiwi C++ core) may do so by
+    cloning `bab2min/Kiwi` upstream, editing the C++ source, running the
+    upstream Emscripten build (`cd bindings/wasm && ./build.sh`), and
+    replacing `wikey-core/vendor/kiwi-nlp/dist/kiwi-wasm.wasm` with the
+    regenerated artifact. Then rebuild wikey-obsidian.
+
+(f) **Repository public access**: This product's source code is publicly
+    available so users can exercise the modification rights granted by
+    LGPL §6. The Kiwi dictionary cache at
+    `~/.cache/wikey/kiwi-models/cong/base/` (downloaded from upstream Kiwi
+    releases) is dictionary data only, separate from the LGPL relink
+    mechanism above.
+
+## Orama — In-process search engine (Apache-2.0)
+
+This product includes `@orama/orama` (https://github.com/orama-search/orama)
+as a runtime dependency declared in `wikey-core/package.json`. Orama is
+licensed under the Apache License 2.0; the full Apache-2.0 license text is
+available at https://www.apache.org/licenses/LICENSE-2.0.
+
+## qmd — Vendored hybrid search CLI (rollback fallback)
+
+This product vendors the `qmd` hybrid search CLI at `tools/qmd/` (134 files,
+git-tracked). qmd is provided as a runtime fallback when the user sets
+`WIKEY_SEARCH_ENGINE=qmd`. See https://github.com/tobi/qmd for upstream
+license terms.
