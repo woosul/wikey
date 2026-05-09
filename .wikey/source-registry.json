@@ -204,5 +204,26 @@
     ],
     "tombstone": false,
     "last_action": "force"
+  },
+  "sha256:ba7803efc62459bf": {
+    "vault_path": "raw/3_resources/60_note/500_technology/itil-4-practices.md",
+    "hash": "ba7803efc62459bff735cb85934881d88e54d70e6e1fed79b9b08fb227abe35f",
+    "size": 2637,
+    "first_seen": "2026-05-09T09:32:02.795Z",
+    "ingested_pages": [
+      "wiki/sources/source-itil-4-practices.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/itil-4-practices.md",
+        "at": "2026-05-09T09:32:02.795Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/itil-4-practices.md",
+        "at": "2026-05-09T09:33:13.736Z"
+      }
+    ],
+    "tombstone": true,
+    "last_action": "force"
   }
 }
