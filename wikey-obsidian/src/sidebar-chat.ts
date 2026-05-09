@@ -442,12 +442,18 @@ export class WikeyChatView extends ItemView {
     try {
       const config = this.plugin.buildConfig()
       const basePath = (this.app.vault.adapter as any).basePath ?? ''
+      // §5.7.4 codex cycle #1 HIGH-1 fix — engine='orama' 시 Kiwi tokenizer 주입.
+      // null 반환 시 (Kiwi 사전/wasm 부재) execOramaSearch 가 warn + 빈 결과로 graceful.
+      const tokenizerOverride =
+        config.WIKEY_SEARCH_ENGINE === 'qmd' ? undefined : (await this.plugin.getKoreanTokenizer()) ?? undefined
       const result = await query(question, config, this.plugin.httpClient, {
         basePath, wikiFS: this.plugin.wikiFS,
         execEnv: this.plugin.getExecEnv(),
         nodePath: this.plugin.settings.detectedNodePath,
         // §5.3 follow-up — 사용자 설정 (raw / sidecar / hidden)
         originalLinkMode: this.plugin.settings.originalLinkMode,
+        // §5.7.4 — production Korean tokenizer (lazy plugin-scope singleton).
+        tokenizerOverride,
       })
       loadingEl.remove()
       const assistantMsg: ChatMessage = {

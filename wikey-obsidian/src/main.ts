@@ -13,7 +13,10 @@ import {
   buildCapabilityMap,
   dumpCapabilityMap,
   defaultCapabilityCachePath,
+  createKoreanTokenizer,
+  disposeOramaIndex,
 } from 'wikey-core'
+import type { KoreanTokenizerHandle } from 'wikey-core'
 
 // ── Phase 4 D.0.d (v6 §4.2.5) ──
 // create listener + inbox 우회 감지 + audit 스캔이 공통 기준으로 쓸 문서 확장자 정규식.
@@ -75,6 +78,10 @@ interface WikeySettings {
   // 'sidecar' : sidecar 파일 (paired 면 .md, 단독 md 면 자체)
   // 'hidden'  : footer 미출력
   originalLinkMode: 'raw' | 'sidecar' | 'hidden'
+  // ── §5.7.4 검색 backend engine ──
+  // 'orama' (default): in-process Orama + Kiwi WASM tokenizer
+  // 'qmd' (회귀): tools/qmd/ vendored CLI subprocess
+  searchEngine: 'orama' | 'qmd'
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -109,6 +116,7 @@ const DEFAULT_SETTINGS: WikeySettings = {
   piiRedactionMode: 'mask',
   piiGuardEnabled: true,
   originalLinkMode: 'raw',
+  searchEngine: 'orama',
 }
 
 export type { WikeySettings }
@@ -159,6 +167,42 @@ export default class WikeyPlugin extends Plugin {
   // Phase 4 D.0.e (v6 §4.3) — idempotent flag. onLayoutReady 가 한 번 이상 호출될 수 있고,
   // 1500ms fallback 이 실제 layout-ready 보다 먼저 돌 수 있어 재진입 방어 필요.
   private startupReconcileDone = false
+
+  // §5.7.4 codex cycle #1 HIGH-1 fix — production query 의 Korean tokenizer lazy promise
+  // cache. 첫 query 시 init (1~2s), 후속 호출은 await 만. onunload 시 close.
+  private koreanTokenizerPromise: Promise<KoreanTokenizerHandle | null> | null = null
+
+  /**
+   * Lazy 진입점. 첫 호출 시 plugin folder 의 `kiwi-wasm.wasm` + `~/.cache/wikey/kiwi-models/cong/base`
+   * 검사 + Kiwi WASM init. 부재 환경 또는 init 실패 시 null 반환 (sidebar 가 graceful 빈 결과).
+   */
+  async getKoreanTokenizer(): Promise<KoreanTokenizerHandle | null> {
+    if (this.koreanTokenizerPromise) return this.koreanTokenizerPromise
+    this.koreanTokenizerPromise = (async () => {
+      const path = require('node:path') as typeof import('node:path')
+      const fs = require('node:fs') as typeof import('node:fs')
+      const os = require('node:os') as typeof import('node:os')
+      const wasmPath = path.join(this.basePath, this.manifest.dir ?? '', 'kiwi-wasm.wasm')
+      const modelDir = path.join(os.homedir(), '.cache', 'wikey', 'kiwi-models', 'cong', 'base')
+      if (!fs.existsSync(wasmPath)) {
+        console.warn(`[Wikey] kiwi-wasm.wasm not found at ${wasmPath} — Korean tokenizer disabled`)
+        return null
+      }
+      if (!fs.existsSync(modelDir)) {
+        new Notice('[Wikey] Kiwi 사전이 없습니다. ./scripts/download-kiwi-models.sh 실행을 권고합니다.', 8000)
+        console.warn(`[Wikey] Kiwi modelDir not found at ${modelDir}`)
+        return null
+      }
+      try {
+        const wasmBinary = new Uint8Array(fs.readFileSync(wasmPath))
+        return await createKoreanTokenizer({ wasmPath, wasmBinary, modelDir })
+      } catch (err) {
+        console.error('[Wikey] createKoreanTokenizer failed:', err)
+        return null
+      }
+    })()
+    return this.koreanTokenizerPromise
+  }
 
   async onload() {
     await this.loadSettings()
@@ -407,6 +451,14 @@ export default class WikeyPlugin extends Plugin {
       clearTimeout(this.chatSaveTimer)
       this.chatSaveTimer = null
     }
+    // §5.7.4 — Kiwi tokenizer dispose (Kiwi WASM heap free). 미초기화 시 no-op.
+    if (this.koreanTokenizerPromise) {
+      this.koreanTokenizerPromise.then((t) => t?.close()).catch(() => {/* ignore */})
+      this.koreanTokenizerPromise = null
+    }
+    // §5.7.4 codex cycle #2 LOW-9 — Orama singleton cache 도 invalidate (closed tokenizer
+    // reference 보존 회피). plugin reload 시 fresh handle.
+    disposeOramaIndex()
     if (this.settings.persistChatHistory) {
       const MAX = 100
       const trimmed = this.chatHistory.length > MAX ? this.chatHistory.slice(-MAX) : [...this.chatHistory]
@@ -459,10 +511,23 @@ export default class WikeyPlugin extends Plugin {
   }
 
   getExecEnv(): Record<string, string> {
-    return buildExecEnv(
+    const env = buildExecEnv(
       this.settings.detectedShellPath || process.env.PATH || '',
       this.settings.detectedNodePath || undefined,
     )
+    // §5.7.4 — WIKEY_SEARCH_ENGINE 을 buildConfig() 와 같은 우선순위로 inject so that
+    // scripts-runner / cmdReindex 가 받는 env 에도 반영. process.env override > wikey.conf > 'orama'.
+    const cfg = this.buildConfig()
+    if (cfg.WIKEY_SEARCH_ENGINE) {
+      env.WIKEY_SEARCH_ENGINE = cfg.WIKEY_SEARCH_ENGINE
+    }
+    // §5.7.4 codex cycle #2 HIGH-8 — Kiwi WASM/사전 path inject. Obsidian CJS bundle 의
+    // `import.meta` empty 회피 — plugin folder + cache modelDir 명시 forward.
+    const path = require('node:path') as typeof import('node:path')
+    const os = require('node:os') as typeof import('node:os')
+    env.WIKEY_KIWI_WASM_PATH = path.join(this.basePath, this.manifest.dir ?? '', 'kiwi-wasm.wasm')
+    env.WIKEY_KIWI_MODEL_DIR = path.join(os.homedir(), '.cache', 'wikey', 'kiwi-models', 'cong', 'base')
+    return env
   }
 
   async loadSettings() {
@@ -518,6 +583,20 @@ export default class WikeyPlugin extends Plugin {
       const content = fs.readFileSync(confPath, 'utf-8')
       const conf = parseWikeyConf(content) as Record<string, unknown>
 
+      // §5.7.4 — WIKEY_SEARCH_ENGINE 인식. invalid 값 default 'orama' + console.warn.
+      const rawEngine = conf.WIKEY_SEARCH_ENGINE
+      let parsedEngine: 'orama' | 'qmd' = this.settings.searchEngine
+      if (rawEngine !== undefined) {
+        if (rawEngine === 'orama' || rawEngine === 'qmd') {
+          parsedEngine = rawEngine
+        } else {
+          console.warn(
+            `[Wikey] wikey.conf: invalid WIKEY_SEARCH_ENGINE=${String(rawEngine)} — fallback to 'orama'`,
+          )
+          parsedEngine = 'orama'
+        }
+      }
+
       this.settings = {
         ...this.settings,
         basicModel: (conf.WIKEY_BASIC_MODEL as string) || this.settings.basicModel,
@@ -528,6 +607,7 @@ export default class WikeyPlugin extends Plugin {
         lintProvider: (conf.LINT_PROVIDER as string) || '',
         summarizeProvider: (conf.SUMMARIZE_PROVIDER as string) || '',
         extractionDeterminism: conf.WIKEY_EXTRACTION_DETERMINISM === true || this.settings.extractionDeterminism,
+        searchEngine: parsedEngine,
       }
     } catch {
       // wikey.conf 없음 — data.json 값 유지
@@ -638,9 +718,14 @@ export default class WikeyPlugin extends Plugin {
     // Empty string lets wikey-core resolveProvider pick provider-default (e.g. gemini-2.5-flash).
     const rawModel = this.settings.ingestModel || this.settings.cloudModel || ''
     const validatedModel = isModelCompatible(rawModel, effectiveProvider) ? rawModel : ''
+    // §5.7.4 — search engine override priority: process.env > wikey.conf > DEFAULTS('orama')
+    const envEngine = process.env.WIKEY_SEARCH_ENGINE
+    const searchEngine: 'orama' | 'qmd' =
+      envEngine === 'orama' || envEngine === 'qmd' ? envEngine : this.settings.searchEngine
     return {
       WIKEY_BASIC_MODEL: this.settings.basicModel,
       WIKEY_SEARCH_BACKEND: 'basic',
+      WIKEY_SEARCH_ENGINE: searchEngine,
       WIKEY_MODEL: validatedModel,
       WIKEY_QMD_TOP_N: 5,
       GEMINI_API_KEY: this.settings.geminiApiKey,

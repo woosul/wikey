@@ -219,3 +219,15 @@ export type {
 
 // §5.15.D — wikilink-safe filename normalization (whitelist 정책).
 export { sanitizeWikilinkTarget, needsWikilinkSanitize } from './wikilink-safe.js'
+
+// §5.7.4 — Orama 검색 backend (production query path 의 tokenizer + 인덱스 lifecycle).
+export { createKoreanTokenizer } from './search/orama-korean-tokenizer.js'
+export type { KoreanTokenizerOptions, KoreanTokenizerHandle } from './search/orama-korean-tokenizer.js'
+export { execOramaSearch } from './query-pipeline.js'
+export {
+  getOramaIndex,
+  defaultOramaCachePath,
+  resetOramaIndexForTest,
+  disposeOramaIndex,
+} from './search/orama-index-singleton.js'
+export type { OramaIndexHandle, OramaWikiDoc, OramaSearchOptions } from './search/orama-index.js'

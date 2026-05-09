@@ -14,6 +14,9 @@ import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { spawn, type SpawnOptions } from 'node:child_process'
 import { runValidateWiki } from './validate-wiki.js'
+import { createOramaIndex, type KoreanTokenizerHandle } from '../search/orama-index.js'
+import { defaultOramaCachePath, disposeOramaIndex } from '../search/orama-index-singleton.js'
+import { createKoreanTokenizer } from '../search/orama-korean-tokenizer.js'
 
 const RED = '\x1b[0;31m'
 const GREEN = '\x1b[0;32m'
@@ -33,6 +36,21 @@ export interface ReindexOptions {
   readonly stampFile?: string
   /** sqlite db. default = `~/.cache/qmd/index.sqlite`. */
   readonly sqliteDb?: string
+  /**
+   * §5.7.4 — 검색 backend engine. 'orama' (default) 시 Step 1+2 = runOramaIngest 단일 호출.
+   * 'qmd' 시 회귀 path (기존 runQmdUpdate + runQmdEmbed).
+   */
+  readonly searchEngine?: 'orama' | 'qmd'
+  /** §5.7.4 — engine='orama' 시 Orama 인덱스 cache 파일 경로. default = ~/.cache/wikey/orama/wikey-wiki.json. */
+  readonly oramaCachePath?: string
+  /**
+   * §5.7.4 codex cycle #2 HIGH-8 fix — Kiwi WASM 바이너리 경로. CLI ESM 환경은 vendor default
+   * 사용 가능 (`fileURLToPath(import.meta.url)`), Obsidian CJS bundle 환경은 plugin 이 직접
+   * inject (env `WIKEY_KIWI_WASM_PATH` 또는 본 옵션). 미지정 + ESM 환경 = vendor default.
+   */
+  readonly kiwiWasmPath?: string
+  /** §5.7.4 — Kiwi 사전 디렉토리. 미지정 = `~/.cache/wikey/kiwi-models/cong/base/`. */
+  readonly kiwiModelDir?: string
   /** 출력 sink. default = console.log. */
   readonly write?: (line: string) => void
   /** 에러 sink. default = console.error. captureRun 의 stderr 수집 path. */
@@ -117,6 +135,105 @@ function defaultSqliteDb(): string {
 
 function defaultQmdBin(basePath: string): string {
   return path.join(basePath, 'tools', 'qmd', 'bin', 'qmd')
+}
+
+/**
+ * Resolve vendor wasm path from this module's location (dist/ or src/ both work).
+ * Returns null when `import.meta.url` is unavailable (Obsidian CJS bundle — caller
+ * must inject explicit path via `kiwiWasmPath` or env var).
+ */
+function defaultVendorWasmPath(): string | null {
+  let metaUrl: string | undefined
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    metaUrl = (import.meta as any)?.url
+  } catch {
+    metaUrl = undefined
+  }
+  if (!metaUrl) return null
+  const here = path.dirname(fileURLToPath(metaUrl))
+  // dist/scripts/reindex.js → ../../vendor/kiwi-nlp/dist/kiwi-wasm.wasm
+  // src/scripts/reindex.ts (during tests) → ../../vendor/kiwi-nlp/dist/kiwi-wasm.wasm
+  return path.resolve(here, '..', '..', 'vendor', 'kiwi-nlp', 'dist', 'kiwi-wasm.wasm')
+}
+
+function defaultKiwiModelDir(): string {
+  return path.join(os.homedir(), '.cache', 'wikey', 'kiwi-models', 'cong', 'base')
+}
+
+/**
+ * §5.7.4 — engine='orama' build-time ingest. PoC commands.ts:170-202 와 동등 path:
+ * wiki/ walk → frontmatter parse → Orama insertMultiple → persist().
+ *
+ * Codex cycle #1 MED-3 fix: production query path 와 동일 Kiwi tokenizer 사용 — index
+ * tokenizer drift 회피로 AC-Q1 quality parity 보장. vendor wasm + Kiwi 사전 부재 시
+ * whitespace fallback 으로 graceful 동작 (사용자 setup script 권고는 plugin 수준).
+ */
+async function runOramaIngest(
+  wikiDir: string,
+  cachePath: string,
+  log: StepLogger,
+  wasmPathOpt: string | undefined,
+  modelDirOpt: string | undefined,
+  signal: AbortSignal | undefined,
+): Promise<number> {
+  if (!fs.existsSync(wikiDir)) {
+    log.err(`wiki/ 디렉토리 없음: ${wikiDir}`)
+    return 1
+  }
+  if (signal?.aborted) return -1
+
+  let tokenizer: KoreanTokenizerHandle
+  let usedFallback = false
+  // §5.7.4 codex cycle #2 HIGH-8 fix — explicit path > vendor default (ESM only) > null.
+  const wasmPath = wasmPathOpt ?? defaultVendorWasmPath()
+  const modelDir = modelDirOpt ?? defaultKiwiModelDir()
+  if (wasmPath && fs.existsSync(wasmPath) && fs.existsSync(modelDir)) {
+    try {
+      tokenizer = await createKoreanTokenizer({ wasmPath, modelDir })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      log.warn(`Kiwi tokenizer init 실패 (${msg}) — whitespace fallback`)
+      tokenizer = whitespaceTokenizer()
+      usedFallback = true
+    }
+  } else {
+    const reason = !wasmPath
+      ? 'wasm path 미지정 (CJS bundle 환경에서 ReindexOptions.kiwiWasmPath inject 필요)'
+      : `Kiwi 사전 또는 wasm 부재 (modelDir=${modelDir}, wasm=${wasmPath})`
+    log.warn(`${reason} — whitespace fallback`)
+    tokenizer = whitespaceTokenizer()
+    usedFallback = true
+  }
+
+  try {
+    const handle = await createOramaIndex({ cachePath, tokenizer })
+    const r = await handle.ingestAll(wikiDir)
+    // §5.7.4 codex cycle #5 LOW-14 fix — abort 후 stale persist 방지. ingest 자체는
+    // 동기 walk + insertMultiple 이라 signal 전파 어려움 — persist 직전 마지막 check.
+    if (signal?.aborted) {
+      log.warn('abort signal — persist skipped')
+      return -1
+    }
+    await handle.persist()
+    log.ok(`Orama ingest: ${r.docCount} docs in ${r.ms}ms${usedFallback ? ' (fallback tokenizer)' : ''}`)
+    return 0
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    log.err(`Orama ingest 실패: ${msg}`)
+    return 1
+  } finally {
+    tokenizer.close()
+  }
+}
+
+/** Whitespace + lowercase tokenizer — Kiwi 부재 환경 fallback (build-time 만). */
+function whitespaceTokenizer(): KoreanTokenizerHandle {
+  return {
+    tokenize: (t: string) =>
+      t ? t.toLowerCase().split(/[\s,.!?()/:;'"`　]+/u).filter((s) => s.length > 0) : [],
+    close: () => undefined,
+  }
 }
 
 function* walkMarkdown(dir: string): Generator<string> {
@@ -267,6 +384,7 @@ interface StepLogger {
   ok: (msg: string) => void
   skip: (msg: string) => void
   err: (msg: string) => void
+  warn: (msg: string) => void
 }
 
 function makeLogger(write: (s: string) => void): StepLogger {
@@ -275,6 +393,7 @@ function makeLogger(write: (s: string) => void): StepLogger {
     ok: (msg) => write(`${GREEN}  ✓${NC} ${msg}`),
     skip: (msg) => write(`${YELLOW}  △${NC} ${msg} (스킵)`),
     err: (msg) => write(`${RED}  ✗${NC} ${msg}`),
+    warn: (msg) => write(`${YELLOW}  ⚠${NC} ${msg}`),
   }
 }
 
@@ -397,28 +516,55 @@ export async function cmdReindex(
   const write = opts.write ?? ((line: string) => console.log(line))
   const writeErr = opts.writeErr ?? ((line: string) => console.error(line))
   const log = makeLogger(write)
-  const env = opts.env ?? {}
+  // §5.7.4 codex cycle #1 MED-2 fix: process.env fallback so direct CLI rollback
+  // (`WIKEY_SEARCH_ENGINE=qmd ./scripts/reindex.sh`) reaches engine selection.
+  const env = opts.env ?? (process.env as Record<string, string>)
+  // §5.7.4 — engine 결정. env override > opts > default 'orama'.
+  const envEngine = env.WIKEY_SEARCH_ENGINE
+  const engine: 'orama' | 'qmd' =
+    envEngine === 'orama' || envEngine === 'qmd'
+      ? envEngine
+      : (opts.searchEngine ?? 'orama')
   const qmdBin = opts.qmdBin ?? defaultQmdBin(opts.basePath)
   const stampFile = opts.stampFile ?? defaultStampFile()
   const scriptsDir = path.join(opts.basePath, 'scripts')
   const startTime = Date.now()
 
   write('')
-  write(`${BOLD}=== Wikey 인덱싱 (${mode}) ===${NC}`)
+  write(`${BOLD}=== Wikey 인덱싱 (${mode}, engine=${engine}) ===${NC}`)
 
   const signal = opts.signal
 
-  // Step 1: qmd update
-  log.stepHeader(1, 5, 'qmd update — 파일 스캔')
-  const updateExit = await runQmdUpdate(qmdBin, opts.basePath, env, log, writeErr, signal)
-  if (updateExit !== 0) return { exitCode: updateExit }
-  if (signal?.aborted) return { exitCode: -1 }
+  if (engine === 'orama') {
+    // Step 1+2 통합 — Orama in-process ingest (qmd update + embed 대체).
+    log.stepHeader(1, 5, 'Orama ingest — wiki/ 스캔 + BM25 인덱스')
+    const cachePath = opts.oramaCachePath ?? defaultOramaCachePath()
+    const wikiDir = path.join(opts.basePath, 'wiki')
+    // §5.7.4 codex cycle #2 HIGH-8 — env override path 우선 (Obsidian CJS bundle 안전).
+    const wasmPathOpt = opts.kiwiWasmPath ?? env.WIKEY_KIWI_WASM_PATH
+    const modelDirOpt = opts.kiwiModelDir ?? env.WIKEY_KIWI_MODEL_DIR
+    const ingestExit = await runOramaIngest(wikiDir, cachePath, log, wasmPathOpt, modelDirOpt, signal)
+    if (ingestExit !== 0) return { exitCode: ingestExit }
+    if (signal?.aborted) return { exitCode: -1 }
+    // §5.7.4 codex cycle #4 MED-12 fix — invalidate query singleton so subsequent search()
+    // sees the freshly persisted index. Without this, same-process reindex → query 가
+    // stale handle (이전 ingest 시점의 in-memory db) 를 그대로 반환 (회귀).
+    disposeOramaIndex()
+    log.stepHeader(2, 5, 'Orama 벡터 임베딩 (skip — §5.7.4 v1 BM25-only)')
+    log.skip('AC-V1 sanity 만 (별 cycle 에서 hybrid 통합)')
+    if (signal?.aborted) return { exitCode: -1 }
+  } else {
+    // engine === 'qmd' (회귀 path) — 기존 Step 1 + 2.
+    log.stepHeader(1, 5, 'qmd update — 파일 스캔')
+    const updateExit = await runQmdUpdate(qmdBin, opts.basePath, env, log, writeErr, signal)
+    if (updateExit !== 0) return { exitCode: updateExit }
+    if (signal?.aborted) return { exitCode: -1 }
 
-  // Step 2: qmd embed
-  log.stepHeader(2, 5, 'qmd embed — 벡터 임베딩')
-  const embedExit = await runQmdEmbed(qmdBin, opts.basePath, env, log, write, writeErr, signal)
-  if (embedExit !== 0) return { exitCode: embedExit }
-  if (signal?.aborted) return { exitCode: -1 }
+    log.stepHeader(2, 5, 'qmd embed — 벡터 임베딩')
+    const embedExit = await runQmdEmbed(qmdBin, opts.basePath, env, log, write, writeErr, signal)
+    if (embedExit !== 0) return { exitCode: embedExit }
+    if (signal?.aborted) return { exitCode: -1 }
+  }
 
   if (mode === 'quick') {
     log.stepHeader(3, 5, 'Contextual Retrieval')

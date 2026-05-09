@@ -11,6 +11,7 @@ const BOOLEAN_KEYS = new Set(['DOCLING_DISABLE', 'WIKEY_EXTRACTION_DETERMINISM']
 const DEFAULTS: WikeyConfig = {
   WIKEY_BASIC_MODEL: 'claude-code',
   WIKEY_SEARCH_BACKEND: 'basic',
+  WIKEY_SEARCH_ENGINE: 'orama',
   WIKEY_MODEL: 'wikey',
   WIKEY_QMD_TOP_N: 8,
   GEMINI_API_KEY: '',

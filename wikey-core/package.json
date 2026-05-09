@@ -9,9 +9,12 @@
     "src/prompts"
   ],
   "scripts": {
-    "build": "tsc && node -e \"require('node:fs').cpSync('src/defaults','dist/defaults',{recursive:true})\" && node -e \"require('node:fs').cpSync('scripts','dist/scripts',{recursive:true})\"",
+    "build": "tsc && node -e \"require('node:fs').cpSync('src/defaults','dist/defaults',{recursive:true})\" && node -e \"const fs=require('node:fs'); if (fs.existsSync('scripts')) fs.cpSync('scripts','dist/scripts',{recursive:true})\"",
     "test": "vitest run",
     "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@orama/orama": "^3.1.18"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",

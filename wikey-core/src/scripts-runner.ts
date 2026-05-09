@@ -34,10 +34,18 @@ import {
  * test 환경에서 결정적 시나리오 검증에도 사용.
  */
 function envOverrides(env: Record<string, string>): Partial<ReindexOptions> {
+  // §5.7.4 — env.WIKEY_SEARCH_ENGINE 'orama' | 'qmd' 검증 후 forward. invalid 값은 ignore (기본 동작).
+  const rawEngine = env.WIKEY_SEARCH_ENGINE
+  const engine: 'orama' | 'qmd' | undefined =
+    rawEngine === 'orama' || rawEngine === 'qmd' ? rawEngine : undefined
   return {
     ...(env.WIKEY_QMD_STAMP_FILE ? { stampFile: env.WIKEY_QMD_STAMP_FILE } : {}),
     ...(env.WIKEY_QMD_SQLITE_DB ? { sqliteDb: env.WIKEY_QMD_SQLITE_DB } : {}),
     ...(env.WIKEY_QMD_BIN ? { qmdBin: env.WIKEY_QMD_BIN } : {}),
+    ...(engine ? { searchEngine: engine } : {}),
+    // §5.7.4 codex cycle #2 HIGH-8 — Kiwi WASM path env override (Obsidian CJS bundle 안전).
+    ...(env.WIKEY_KIWI_WASM_PATH ? { kiwiWasmPath: env.WIKEY_KIWI_WASM_PATH } : {}),
+    ...(env.WIKEY_KIWI_MODEL_DIR ? { kiwiModelDir: env.WIKEY_KIWI_MODEL_DIR } : {}),
   }
 }
 

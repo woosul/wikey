@@ -56,6 +56,7 @@ wikey-core/coverage/
 
 # wikey-obsidian build output
 wikey-obsidian/main.js
+wikey-obsidian/kiwi-wasm.wasm
 
 # Obsidian plugin data (사용자별 설정)
 .obsidian/plugins/wikey/data.json

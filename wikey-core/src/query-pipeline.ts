@@ -1,11 +1,17 @@
 import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
+import { join as pathJoin } from 'node:path'
 import type { Citation, HttpClient, QueryResult, SearchResult, WikiFS, WikeyConfig } from './types.js'
 import { LLMClient } from './llm-client.js'
 import { resolveProvider } from './config.js'
 import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
 import { resolveSource } from './source-resolver.js'
 import { loadRegistry } from './source-registry.js'
+import {
+  getOramaIndex,
+  defaultOramaCachePath,
+} from './search/orama-index-singleton.js'
+import type { KoreanTokenizerHandle } from './search/orama-index.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -25,6 +31,16 @@ export interface QueryOptions {
    *   - 'hidden'        : "원본:" footer 출력 안 함
    */
   readonly originalLinkMode?: OriginalLinkMode
+  /**
+   * §5.7.4 — Orama 인덱스 cache 파일 override (test 또는 사용자 환경).
+   *  default = `~/.cache/wikey/orama/wikey-wiki.json`.
+   */
+  readonly oramaCachePath?: string
+  /**
+   * §5.7.4 — Korean tokenizer override (test 환경에서 mock 주입). production 은 plugin
+   * onload 시 createKoreanTokenizer + 본 옵션 forward.
+   */
+  readonly tokenizerOverride?: KoreanTokenizerHandle
 }
 
 export async function query(
@@ -36,23 +52,35 @@ export async function query(
   const basePath = opts?.basePath ?? process.cwd()
   const execEnv = opts?.execEnv ?? (process.env as Record<string, string>)
 
-  // Step 1: Find qmd
-  let qmdBin: string
-  let qmdIsJs = false
-  try {
-    const result = findQmdBin(config, basePath)
-    qmdBin = result.bin
-    qmdIsJs = result.isJs
-  } catch (err: any) {
-    throw new Error(`[Step 1/4 qmd 탐색] ${err?.message ?? err}`)
-  }
+  // §5.7.4 — engine 판정 최상단. orama (default) 시 qmd 탐색 skip — qmd 부재 환경에서도 동작.
+  const engine: 'orama' | 'qmd' = config.WIKEY_SEARCH_ENGINE ?? 'orama'
 
-  // Step 2: Search
   let searchResults: readonly SearchResult[]
-  try {
-    searchResults = await execQmdSearch(qmdBin, qmdIsJs, question, config, basePath, execEnv, opts?.nodePath, httpClient)
-  } catch (err: any) {
-    throw new Error(`[Step 2/4 qmd 검색] ${err?.message ?? err}`)
+  if (engine === 'qmd') {
+    // 회귀 path — 기존 qmd 탐색 + execQmdSearchLegacy.
+    let qmdBin: string
+    let qmdIsJs = false
+    try {
+      const result = findQmdBin(config, basePath)
+      qmdBin = result.bin
+      qmdIsJs = result.isJs
+    } catch (err: any) {
+      throw new Error(`[Step 1/4 qmd 탐색] ${err?.message ?? err}`)
+    }
+    try {
+      searchResults = await execQmdSearchLegacy(
+        qmdBin, qmdIsJs, question, config, basePath, execEnv, opts?.nodePath, httpClient,
+      )
+    } catch (err: any) {
+      throw new Error(`[Step 2/4 qmd 검색] ${err?.message ?? err}`)
+    }
+  } else {
+    // engine === 'orama' — in-process Orama 검색 (default post-§5.7.4).
+    try {
+      searchResults = await execOramaSearch(question, config, basePath, opts, httpClient)
+    } catch (err: any) {
+      throw new Error(`[Step 2/4 Orama 검색] ${err?.message ?? err}`)
+    }
   }
 
   // Step 3: LLM call
@@ -296,7 +324,7 @@ function extractProvenanceRefs(content: string): readonly string[] {
   return out
 }
 
-async function execQmdSearch(
+async function execQmdSearchLegacy(
   qmdBin: string,
   isJs: boolean,
   question: string,
@@ -351,6 +379,64 @@ async function execQmdSearch(
     console.error('[Wikey] qmd exec FAILED:', msg.slice(0, 500))
     return []
   }
+}
+
+/**
+ * §5.7.4 — Orama in-process 검색 entry. execQmdSearchLegacy 와 동등한 한국어 preprocess
+ * + cross-lingual extraction (Ollama 영문 keyword) 보존. qmd subprocess 호출만 Orama
+ * search() 로 교체.
+ *
+ * Spec: phase-5-spec-5.7.4-orama-migration.md §3.4.
+ */
+export async function execOramaSearch(
+  question: string,
+  config: WikeyConfig,
+  basePath: string,
+  opts: QueryOptions | undefined,
+  httpClient: HttpClient,
+): Promise<readonly SearchResult[]> {
+  const topN = config.WIKEY_QMD_TOP_N || 8
+
+  // Cross-lingual extraction — 한국어 질문이면 Ollama 영문 keyword 추출 (qmd path 와 동일).
+  let englishKeywords = ''
+  if (containsKorean(question)) {
+    englishKeywords = await extractEnglishKeywords(question, config, httpClient)
+    if (englishKeywords) {
+      // eslint-disable-next-line no-console
+      console.log('[Wikey] cross-lingual lex added (orama):', englishKeywords)
+    }
+  }
+
+  // Compose search term: original question + English keywords (Orama BM25 union).
+  // qmd 의 multi-line `lex:` / `vec:` 는 Orama 의 단일 term 으로 통합.
+  const term = englishKeywords ? `${question} ${englishKeywords}` : question
+
+  // Resolve tokenizer + index handle (singleton).
+  const tokenizer = opts?.tokenizerOverride
+  if (!tokenizer) {
+    // production 환경에서는 plugin 진입점이 createKoreanTokenizer 를 주입해야 한다.
+    // 본 fallback 은 test / 회귀 시 의미없는 검색 회피용.
+    // eslint-disable-next-line no-console
+    console.warn('[Wikey] execOramaSearch: tokenizer not provided — returning empty results')
+    return []
+  }
+  const handle = await getOramaIndex({
+    cachePath: opts?.oramaCachePath ?? defaultOramaCachePath(),
+    tokenizer,
+  })
+
+  // §5.7.4 codex cycle #1 MED-4 fix — empty cache detection via docCount() (zero-cost
+  // lookup), NOT arbitrary search term. Korean-only index can have zero hits for 'a'.
+  if ((await handle.docCount()) === 0) {
+    const wikiDir = pathJoin(basePath, 'wiki')
+    try {
+      await handle.ingestAll(wikiDir)
+    } catch {
+      /* ignore — wiki dir may not exist in tests */
+    }
+  }
+
+  return handle.search(term, { topN })
 }
 
 export function parseQmdOutput(stdout: string): readonly SearchResult[] {
