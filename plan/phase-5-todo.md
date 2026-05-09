@@ -905,25 +905,42 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 - ✅ **Path A 패러다임** = "irreversible commitment" 가 아닌 "reversible experiment" — qmd 가 self-contained CLI script 이므로 회귀 비용 ≈ 0 (3 layer 안전망: git revert / qmd vendored 보존 / `WIKEY_SEARCH_BACKEND` feature flag)
 - ✅ **§5.7.4 진입 결정** — 다음 세션 (session 28) 에서 spec 작성 + 마이그레이션 진행
 
-### 5.7.4 Orama 마이그레이션 — 🔵 다음 세션 진입 (Session 28 예정)
+### 5.7.4 Orama 마이그레이션 — Spec/Todo APPROVE_WITH_CHANGES (Session 28, 2026-05-09) → 다음 세션 구현 진입
 
-> **상태**: 사용자 결정 (2026-05-09 session 27) — 다음 세션 진입. SDD+TDD spec 작성 → master 1차 → codex Mode D Panel → developer/tester 위임. PoC 코드 base (commands.ts 3 PoC command + @orama/orama + kiwi-nlp deps) 활용. 상세 todo 후보 = activity/phase-5-resultx-5.7.3 §7 (A1~A9 / B1~B6 / C1~C6 / D1~D5 = 26 항목).
-> #orama-migration #path-a #search-engine-replacement
+> **상태** (2026-05-09 session 28 갱신): SDD+TDD spec v8 + todo v8 작성 완료 (7 cycle 누적). codex Mode D Panel cycle #7 verdict = **APPROVE_WITH_CHANGES** (HIGH 0 + MED 0 + LOW 1 fix 완료). 사용자 최종 승인 완료. 다음 세션 구현 진입.
+> #orama-migration #path-a #search-engine-replacement #spec-approved
 
-- [ ] (§5.7.4-A1) Kiwi WASM Korean tokenizer 모듈 구현 (`wikey-core/src/search/orama-korean-tokenizer.ts`) — Module.instantiateWasm hook + wasmBinary 주입 + smart_tokenize JS/TS 포팅
-- [ ] (§5.7.4-A2) Orama 인덱스 lifecycle (create / insertMultiple / search / persist / restore)
-- [ ] (§5.7.4-A3) Kiwi 사전 lazy download (`~/.cache/wikey/kiwi-models/cong/base/`, ~104MB) — qmd GGUF 패턴 mirror
-- [ ] (§5.7.4-A4) query-pipeline qmd CLI → Orama 호출 교체
-- [ ] (§5.7.4-A5) reindex qmd update/embed → Orama insert + Qwen3 임베딩 별 호출
-- [ ] (§5.7.4-A6) wikey-core 단위 테스트 매핑 + obsidian-cdp 라이브 cycle smoke
-- [ ] (§5.7.4-A7) `tools/qmd/` 보존 (사용자 결정: Path C 회귀 가능 유지)
-- [ ] (§5.7.4-A8) `WIKEY_SEARCH_BACKEND` feature flag 도입 (`orama` default / `qmd` 회귀)
-- [ ] (§5.7.4-A9) 회귀 절차 docs (`docs/orama-rollback.md`) — 3 layer 안전망 절차
-- [ ] (§5.7.4-B1~B6) Orama upstream update 동기화 프로세스 (npm outdated monitor / patch-minor-major 분기 / regression 검증 / Kiwi 사전 update / docs / notify)
-- [ ] (§5.7.4-C1~C6) deferred 검증 (Q5 회귀 보완 / 50~100 query benchmark / persistence sanity / 768D 호환 / wikey.conf 키 deprecate / env-detect 정리)
-- [ ] (§5.7.4-D1~D5) LGPL-2.1 compliance (LICENSE / NOTICE / README third-party 섹션 / GitHub public 확증 / relink 보장)
+**Spec/Todo 단일 소스** (실 작업 단위):
+- Spec (WHAT, 781 lines): [`plan/phase-5-spec-5.7.4-orama-migration.md`](./phase-5-spec-5.7.4-orama-migration.md) — 28 AC + 14 Risk + 20 anchor self-check
+- Todo (HOW, 270 lines): [`plan/phase-5-todox-5.7.4-orama-migration.md`](./phase-5-todox-5.7.4-orama-migration.md) — Step A 환경 / Step B TDD RED→GREEN→BLUE / Step C 라이브 smoke / Step D 문서
 
-상세 항목 정의: [activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md](../activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md) §7.
+**핵심 결정** (사용자 영구 등록 2026-05-09):
+- **B-2 sparse vendor**: `wikey-core/vendor/kiwi-nlp/` = `bab2min/Kiwi/bindings/wasm/package/` subdir + 본가 root LICENSE 별 fetch (사용자 의도 = 코드 내재화)
+- **WIKEY_SEARCH_ENGINE 신규 config 키** (`'orama' | 'qmd'`, default `'orama'`) — 기존 `WIKEY_SEARCH_BACKEND` ('basic'/'gemma4') 와 의미 분리
+- **회귀 안전망 3 layer**: git revert + tools/qmd/ vendored 보존 + `WIKEY_SEARCH_ENGINE=qmd` runtime toggle
+- **LGPL §6 4 의무 충족**: NOTICE 6 항목 (JS wrapper layer + WASM binary layer 분리, rebuild 절차 명시)
+- **Karpathy Simplicity 적용**: PoC 26 후보 중 ✅ 11 포함 + ⚠️ 5 단순화 + ❌ 12 deferral (B 그룹 7 → §5.7.5 별 spec)
+
+**다음 세션 (Session 29) 시작 액션**:
+1. spec/todo read → master 컨텍스트 확보
+2. Step A (환경 세팅) — Kiwi 사전 cache 확증 + WIKEY_SEARCH_ENGINE config 키 도입 + kiwi-nlp B-2 vendor 결정 잠금
+3. Step B (TDD) — RED 21 case → GREEN A1~A8 + vendor 구현 → BLUE Phase 3a 회귀 + Phase 3b refactor
+4. Step C (라이브 smoke) — obsidian-cdp full cycle + sidebar-chat 한+영 query + WIKEY_SEARCH_ENGINE=qmd toggle
+5. Step D (문서) — LICENSE + NOTICE + README + schema.md + activity result + commit
+
+**누적 cycle 결과**:
+- 7 codex cycle (#1~#7) + 사용자 raise 1 (B-2 vendor) + 사용자 raise 2 (codex 패턴 학습) + 사용자 raise 3 (community 조사) + 사용자 raise 4 (글로벌 rules.md §10 갱신)
+- 누적 35+ finding fix → cycle #5/#6/#7 HIGH 0 연속 → cycle #7 APPROVE_WITH_CHANGES
+- master 13 anchor (P1~P6 + F1~F7) 학습 효과 = finding 88% 감소 (9 → 1)
+- **글로벌 rules.md §10 갱신 (모든 project 적용)** — 7-anchor + 6 codex 패턴 + 7 fix 모드 = 20 anchor 의무
+
+상세 cycle 이력 + 사용자 결정 + 26 todo 후보 검증: [`plan/phase-5-spec-5.7.4-orama-migration.md`](./phase-5-spec-5.7.4-orama-migration.md) §7.1 + §8 변경 이력.
+
+- [ ] (§5.7.4-Step A) 환경 세팅 — Kiwi 사전 cache + WIKEY_SEARCH_ENGINE config + kiwi-nlp B-2 vendor 결정
+- [ ] (§5.7.4-Step B) TDD RED→GREEN→BLUE — 21 RED case → A1~A8 + vendor 구현 → 회귀 검증 + refactor
+- [ ] (§5.7.4-Step C) 라이브 cycle smoke — obsidian-cdp + 한+영 query + qmd toggle
+- [ ] (§5.7.4-Step D) 문서 동기화 — LICENSE + NOTICE + README + schema.md + activity result + commit
+- [ ] (§5.7.4-deferred) §5.7.5 별 spec 작성 (Orama upstream sync 자동화 B1~B7)
 
 ---
 

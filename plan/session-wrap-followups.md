@@ -1,30 +1,40 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-09 session 27 — §5.7.3 qmd alternative engine + Orama PoC 4 단계 모두 PASS / 사용자 §5.7.4 진입 결정**.
-> session 27 (2026-05-09) 에서 §5.7.3 research + PoC 종결.
-> (a) §5.7.3 종결 ✅ — 3 agent research (codebase 표면 매핑 / 16 후보 community survey / 한국어 NLP 통합 path) + master 직접 PoC 4 단계 (Kiwi WASM sandbox / Orama Electron renderer / Kiwi+Orama 통합 / 10 query benchmark)
-> (b) **PoC 차단 조건 3개 모두 해제**: Kiwi WASM packaging ✅ / Orama Electron renderer file:// 함정 ✅ (esbuild bundle 우회) / 검색 quality 회귀 ✅ (Top-1 8/10 vs qmd 7-8/10, latency 6,000배 우수)
-> (c) **qmd vs Orama 7 dimension 비교** — 6/7 Orama 우세, 1/7 (D7 단기 비용) qmd 우세 (일회성)
-> (d) **사용자 결정 영구 등록 (2026-05-09)**:
->   - LGPL-2.1 호환: Kiwi 소스 사용 명시 + GitHub public (Obsidian Community Plugins 규약과 자연 호환). mecab-ko-wasm fallback 불필요
->   - **Path A 패러다임** = "irreversible commitment" 가 아닌 "reversible experiment". qmd 가 self-contained CLI script 이므로 Path C 회귀 비용 ≈ 0 (3 layer 안전망: git revert / qmd vendored 보존 / `WIKEY_SEARCH_BACKEND` feature flag)
->   - **§5.7.4 진입 결정**: 다음 세션 (session 28) 에서 spec 작성 → 마이그레이션 진행
+> 최신 갱신: **2026-05-09 session 28 — §5.7.4 SDD+TDD spec/todo v8 작성 완료 (7 cycle 누적, codex APPROVE_WITH_CHANGES) / 다음 세션 (29) 구현 진입**.
+> session 28 (2026-05-09) 에서 §5.7.4 spec/todo 종결.
+> (a) §5.7.4 spec/todo 종결 — `plan/phase-5-spec-5.7.4-orama-migration.md` (v8, 781 lines) + `plan/phase-5-todox-5.7.4-orama-migration.md` (v8, 270 lines). 28 AC + 14 Risk + 20 anchor self-check.
+> (b) **codex Mode D Panel 7 cycle 누적** — #1 NEEDS_REVISION (9) → #2 (6) → #3 (6) → #4 (7) → #5 (3, HIGH 0 첫) → #6 (4, HIGH 0) → **#7 APPROVE_WITH_CHANGES (1 LOW only, fix 완료)**. finding 88% 감소 (9→1).
+> (c) **사용자 결정 영구 등록 (2026-05-09 session 28)**:
+>   - **B-2 sparse vendor**: `wikey-core/vendor/kiwi-nlp/` = `bab2min/Kiwi/bindings/wasm/package/` subdir + 본가 root LICENSE 별 fetch (코드 내재화 의도 직접 충족)
+>   - **`WIKEY_SEARCH_ENGINE` 신규 config 키** (`'orama' | 'qmd'`, default `'orama'`) — 기존 `WIKEY_SEARCH_BACKEND` ('basic'/'gemma4') 와 의미 분리
+>   - **회귀 안전망 3 layer**: git revert + tools/qmd/ vendored 보존 + `WIKEY_SEARCH_ENGINE=qmd` runtime toggle
+>   - **LGPL §6 4 의무 충족**: NOTICE 6 항목 (JS wrapper layer + WASM binary layer 분리, rebuild 절차 명시)
+>   - **글로벌 rules.md §10 갱신** (사용자 승인 2026-05-09) — 7-anchor + 6 codex 패턴 (P1~P6) + 7 fix 모드 (F1~F7) = 20 anchor 의무 (모든 project 적용)
 >
-> **다음 세션 첫 액션 (Session 28 진입 시)**:
-> 1. SDD+TDD `plan/phase-5-todox-5.7.4-orama-migration.md` spec 작성 (analyst 위임)
-> 2. master 1차 검증 (7-anchor) → codex Mode D Panel 검토
-> 3. developer 위임 (A1~A9 구현) + tester 위임 (단위 + obsidian-cdp 라이브 cycle smoke)
-> 4. PoC 코드 base 활용 (commands.ts 3 PoC command + @orama/orama + kiwi-nlp deps 보존)
-> 5. tools/qmd/ 보존 + WIKEY_SEARCH_BACKEND feature flag (회귀 안전망)
-> 6. LGPL-2.1 compliance docs (LICENSE / NOTICE / README third-party 섹션)
+> **다음 세션 첫 액션 (Session 29 — 구현 진입)**:
+> 1. spec v8 + todo v8 read → master 컨텍스트 확보
+> 2. **Step A (환경 세팅)** — Kiwi 사전 cache 확증 (`~/.cache/wikey/kiwi-models/cong/base/` 9 파일 104MB) + WIKEY_SEARCH_ENGINE config 키 도입 (types.ts:30 + config.ts:13 + main.ts:513/641) + kiwi-nlp B-2 sparse vendor (`bab2min/Kiwi` git tag archive 의 `bindings/wasm/package/` subdir + root LICENSE 별 fetch)
+> 3. **Step B (TDD RED→GREEN→BLUE)** — RED 21 case (T1~T3 / I1, I2.a, I3, I4 / Q1~Q5 / R1~R3 / V1, V2 / W1 / F1.a, F1.b) → GREEN A1~A8 + vendor 구현 → BLUE Phase 3a 회귀 (npm test + build + validate-wiki) + Phase 3b refactor
+> 4. **Step C (라이브 cycle smoke, master 직접)** — obsidian-cdp full ingest cycle + sidebar-chat 한+영 query (search-only p95 ≤ 200ms) + WIKEY_SEARCH_ENGINE=qmd toggle 검증
+> 5. **Step D (문서 동기화)** — LICENSE + NOTICE (6 항목 spec AC-D2 byte-mirror) + README.md `## Third-party software` + `## Search engine rollback` + wikey.schema.md 검색 코어 섹션 갱신 + activity/phase-5-result.md §5.7.4 entry + commit
+> 6. **§5.7.5 별 spec 작성** (B 그룹 7 deferred — Orama upstream sync 자동화) — 본 §5.7.4 종결 후 별 cycle
 >
-> 결과 문서: [`activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md) (35KB / 532 lines, 13 섹션, 7 dimension 비교 + PoC evidence + §5.7.4 todo 후보 26 항목).
+> 단일 진실 source: spec → todox → master phase-5-todo cascade ([phase-5-spec-5.7.4-orama-migration.md](./phase-5-spec-5.7.4-orama-migration.md) + [phase-5-todox-5.7.4-orama-migration.md](./phase-5-todox-5.7.4-orama-migration.md) + [phase-5-todo.md](./phase-5-todo.md) §5.7.4).
 >
-> 직전 session 26 (2026-05-08) 에서 §5.7.1 종결 + §5.7.2 abandon 처리. (process 결함 4항목 master 의무 영구 등록 — architecture 변경 시 5분 PoC / runtime limitation web search / baseline measurement / codex 정적 한계 인지)
+> 직전 session 27 (2026-05-09) 에서 §5.7.3 research + PoC 4 단계 (Kiwi WASM sandbox / Orama Electron renderer / Kiwi+Orama 통합 / 10 query benchmark) 모두 PASS + 7 dimension 비교 (6/7 Orama 우세) + 사용자 §5.7.4 진입 결정. 결과 문서: [`activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md).
 >
-> **Phase 5 잔여**: §5.5 (graph) / §5.6 (LLM provider) / §5.7.2 (abandon log archive) + §5.7.3 (✅ 완료) → §5.7.4 (다음 세션 진입) / §5.8 (D.0.l 잔여) / §5.9 (variance).
+> 직전 session 26 (2026-05-08) §5.7.1 종결 + §5.7.2 abandon 처리. (process 결함 4 항목 master 의무 영구 등록 — architecture 변경 시 5분 PoC / runtime limitation web search / baseline measurement / codex 정적 한계 인지)
 >
-> wikey-core 747 PASS / 3 skip + wikey-obsidian 35 PASS = 782 total / 0 build errors / validate-wiki PASS / golden diff 4/4 byte-equal. PoC 코드 (commands.ts 3 command + @orama/orama + kiwi-nlp deps) main.js 369K → 423K 변동 — §5.7.4 진행 시 base 활용.
+> **Phase 5 잔여**: §5.5 (graph) / §5.6 (LLM provider) / **§5.7.4 (구현 진입)** / §5.7.5 (Orama upstream sync 자동화 별 spec, 본 §5.7.4 종결 후) / §5.8 (D.0.l 잔여) / §5.9 (variance).
+>
+> wikey-core 747 PASS / 3 skip + wikey-obsidian 35 PASS = 782 total / 0 build errors / validate-wiki PASS / golden diff 4/4 byte-equal. PoC 코드 (commands.ts 3 command + @orama/orama + kiwi-nlp deps) main.js 369K → 423K 변동 — §5.7.4 구현 시 base 활용 (Step A 안 cleanup 결정 보존).
+>
+> **session 28 master 학습** (2026-05-09 영구 등록):
+> - codex 6 검증 패턴 (P1 fact-check / P2 cross-file / P3 byte mirror / P4 feasibility / P5 legal / P6 numeric) — master 1차 self-check 의무
+> - master fix 7 실패 모드 (F1 partial / F2 cascading / F3 header-body / F4 spec-todo / F5 history / F6 feasibility / F7 over-literal) — master fix 후 self-check 의무
+> - community 7 카테고리 (C1~C7, [Pull Checklist](https://www.pullchecklist.com/posts/pull-request-best-practices) / [Drake MIT](https://drake.mit.edu/code_review_checklist.html) / [Qodo](https://www.qodo.ai/blog/5-ai-code-review-pattern-predictions-in-2026/) 등 출처)
+> - 글로벌 rules.md `claude-harness-helper/rules/rules.md §10` 갱신 — 모든 project 적용
+> - wikey project memory `~/.claude/projects/-Users-denny-Project-wikey/memory/feedback_master_codex_pattern_learning.md` 신규
 > 생성일: 2026-04-10
 
 ---
