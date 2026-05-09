@@ -23,7 +23,7 @@ export type {
 // Phase 5 §5.10.3 + §5.10.4 D-wide: schema gate public surface 폐기. canonicalizer 내부
 // alias normalization (SLUG_ALIASES + .wikey/schema.yaml `aliases:` parser) 만 잔존.
 
-export { parseWikeyConf, loadConfig, resolveProvider } from './config.js'
+export { parseWikeyConf, loadConfig, resolveProvider, getSearchTopN } from './config.js'
 export { stripEmbeddedImages, countEmbeddedImages } from './rag-preprocess.js'
 export { scoreConvertOutput, hasMissingKoreanWhitespace } from './convert-quality.js'
 export type { QualityResult, QualityOptions } from './convert-quality.js'

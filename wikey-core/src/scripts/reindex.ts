@@ -219,7 +219,9 @@ async function runOramaIngest(
       log.warn('abort signal — persist skipped')
       return -1
     }
-    await handle.persist()
+    // §5.7.5 cycle #3 fix — propagate signal so the persist() abort path is reachable
+    // (LOW #14 + Layer 4 R6: pre/post abort guards + atomic tmp-rename, signal-aware).
+    await handle.persist({ signal })
     log.ok(`Orama ingest: ${r.docCount} docs in ${r.ms}ms${usedFallback ? ' (fallback tokenizer)' : ''}`)
     return 0
   } catch (err) {

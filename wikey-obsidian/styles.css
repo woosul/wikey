@@ -2364,3 +2364,45 @@ a.internal-link.wikey-broken-link,
   cursor: not-allowed;
   filter: grayscale(1);
 }
+
+/* §5.7.5 cycle #3 fix — Developer mode upgrade badge (AC-U5).
+   active = 새 버전 있음, none = 회색/dimmed. */
+.wikey-settings-developer-section {
+  margin-top: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.wikey-settings-upgrade-badge {
+  display: inline-block;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 3px;
+  font-size: 0.75em;
+  font-weight: 600;
+  border: 1px solid var(--background-modifier-border);
+}
+
+.wikey-settings-upgrade-badge--active {
+  background-color: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border-color: var(--interactive-accent);
+  opacity: 1;
+}
+
+.wikey-settings-upgrade-badge--none {
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.wikey-settings-dev-required {
+  display: inline-block;
+  padding: 0 6px;
+  margin-left: 6px;
+  border-radius: 3px;
+  font-size: 0.75em;
+  font-weight: 600;
+  background-color: var(--background-modifier-error);
+  color: var(--text-error);
+}

@@ -27,6 +27,21 @@ const DEFAULTS: WikeyConfig = {
   COST_LIMIT: 50,
 }
 
+/**
+ * §5.7.5 cycle #3 fix — Resolve canonical search top-N with backward-compat fallback.
+ * Priority: WIKEY_SEARCH_TOP_N > WIKEY_QMD_TOP_N (deprecated) > 8 (default).
+ * Used by query-pipeline.ts (qmd + Orama paths) so the alias is honored end-to-end.
+ */
+export function getSearchTopN(config: WikeyConfig): number {
+  if (typeof config.WIKEY_SEARCH_TOP_N === 'number' && config.WIKEY_SEARCH_TOP_N > 0) {
+    return config.WIKEY_SEARCH_TOP_N
+  }
+  if (typeof config.WIKEY_QMD_TOP_N === 'number' && config.WIKEY_QMD_TOP_N > 0) {
+    return config.WIKEY_QMD_TOP_N
+  }
+  return 8
+}
+
 export function parseWikeyConf(content: string): Partial<WikeyConfig> {
   const result: Record<string, string | number> = {}
   // §5.7.5 — deprecation warn for WIKEY_QMD_TOP_N is emitted at most once per parse.

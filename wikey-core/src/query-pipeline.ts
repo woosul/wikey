@@ -3,7 +3,7 @@ import { promisify } from 'node:util'
 import { join as pathJoin } from 'node:path'
 import type { Citation, HttpClient, QueryResult, SearchResult, WikiFS, WikeyConfig } from './types.js'
 import { LLMClient } from './llm-client.js'
-import { resolveProvider } from './config.js'
+import { resolveProvider, getSearchTopN } from './config.js'
 import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
 import { resolveSource } from './source-resolver.js'
 import { loadRegistry } from './source-registry.js'
@@ -334,7 +334,7 @@ async function execQmdSearchLegacy(
   nodePath?: string,
   httpClient?: HttpClient,
 ): Promise<readonly SearchResult[]> {
-  const topN = String(config.WIKEY_QMD_TOP_N || 8)
+  const topN = String(getSearchTopN(config))
 
   const koreanQuery = await tryKoreanPreprocess(question, basePath, execEnv)
 
@@ -395,7 +395,7 @@ export async function execOramaSearch(
   opts: QueryOptions | undefined,
   httpClient: HttpClient,
 ): Promise<readonly SearchResult[]> {
-  const topN = config.WIKEY_QMD_TOP_N || 8
+  const topN = getSearchTopN(config)
 
   // Cross-lingual extraction — 한국어 질문이면 Ollama 영문 keyword 추출 (qmd path 와 동일).
   let englishKeywords = ''

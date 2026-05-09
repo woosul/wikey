@@ -48,8 +48,9 @@ const ORAMA_NPM_REGISTRY = 'https://registry.npmjs.org/@orama/orama'
 const ORAMA_REPO_RELEASES = 'https://github.com/oramasearch/orama/releases'
 const QWEN3_HF_API = 'https://huggingface.co/api/models/Qwen/Qwen3-Embedding-0.6B-GGUF'
 const QWEN3_HF_PAGE = 'https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF'
-const QMD_REPO_RELEASES = 'https://github.com/qmd/qmd/releases'
-const QMD_REPO_API = 'https://api.github.com/repos/qmd/qmd/releases/latest'
+// §5.7.5 cycle #3 fix — qmd vendored = Tobi Lutke의 `tobi/qmd` (package name `@tobilu/qmd`).
+const QMD_REPO_RELEASES = 'https://github.com/tobi/qmd/releases'
+const QMD_REPO_API = 'https://api.github.com/repos/tobi/qmd/releases/latest'
 
 /** simple semver-ish compare. Returns true if upstream > current. */
 function isNewer(current: string, upstream: string): boolean {
@@ -129,6 +130,11 @@ async function detectKiwiNlp(
     fetchError = r.error
   }
   const has = !!upstream && current !== 'unknown' && isNewer(current, upstream)
+  // §5.7.5 cycle #3 fix — spec AC-U2 요구 = `bab2min/Kiwi/compare/<currentTag>...<upstreamTag>`.
+  // upstream tag resolved 시 compare URL 생성, 실패/unknown 시 releases page fallback.
+  const diffSource = upstream && current !== 'unknown'
+    ? `https://github.com/bab2min/Kiwi/compare/${current}...${upstream}`
+    : KIWI_RELEASES_PAGE
   return {
     id: 'kiwi-nlp',
     kind: 'kiwi-nlp',
@@ -136,7 +142,7 @@ async function detectKiwiNlp(
     currentVersion: current,
     upstreamVersion: upstream,
     hasUpdate: has,
-    diffSource: KIWI_RELEASES_PAGE,
+    diffSource,
     fetchError,
   }
 }
@@ -204,13 +210,26 @@ async function detectQwen3Embedding(
   }
 }
 
+/** §5.7.5 cycle #3 fix — read tools/qmd/package.json version (pkg name = `@tobilu/qmd`). */
+function readQmdVendoredVersion(basePath: string): string {
+  const pkg = join(basePath, 'tools', 'qmd', 'package.json')
+  if (!existsSync(pkg)) return 'unknown'
+  try {
+    const json = JSON.parse(readFileSync(pkg, 'utf-8')) as { version?: string }
+    return typeof json.version === 'string' && json.version ? json.version : 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 async function detectQmdVendored(
+  basePath: string,
   fetcher: (url: string) => Promise<string>,
   allowNetwork: boolean,
 ): Promise<UpdateItemDescriptor> {
-  // qmd 잔여 회귀 path — version detect 은 vendored CHANGELOG 또는 git tag.
-  // 본 cycle 단위 테스트 = mock 응답만, production = best-effort.
-  const current = 'vendored'
+  // §5.7.5 cycle #3 fix — qmd 잔여 회귀 path version = tools/qmd/package.json `version`.
+  // upstream = api.github.com/repos/tobi/qmd/releases/latest. hasUpdate = isNewer 평가.
+  const current = readQmdVendoredVersion(basePath)
   let upstream: string | undefined
   let fetchError: string | undefined
   if (allowNetwork) {
@@ -222,7 +241,10 @@ async function detectQmdVendored(
     upstream = r.value
     fetchError = r.error
   }
-  const has = false // vendored 는 master 가 명시 sync 필요 — 자동 has 마크 회피
+  const has = !!upstream && current !== 'unknown' && isNewer(current, upstream)
+  const diffSource = upstream && current !== 'unknown'
+    ? `https://github.com/tobi/qmd/compare/v${current.replace(/^v/, '')}...${upstream}`
+    : QMD_REPO_RELEASES
   return {
     id: 'qmd-vendored',
     kind: 'qmd-vendored',
@@ -230,7 +252,7 @@ async function detectQmdVendored(
     currentVersion: current,
     upstreamVersion: upstream,
     hasUpdate: has,
-    diffSource: QMD_REPO_RELEASES,
+    diffSource,
     fetchError,
   }
 }
@@ -278,7 +300,7 @@ export async function detectUpstreamUpdates(
     detectKiwiNlp(opts.basePath, opts.fetch, opts.allowNetwork),
     detectOrama(opts.basePath, opts.fetch, opts.allowNetwork),
     detectQwen3Embedding(opts.fetch, opts.allowNetwork),
-    detectQmdVendored(opts.fetch, opts.allowNetwork),
+    detectQmdVendored(opts.basePath, opts.fetch, opts.allowNetwork),
     detectKiwiDict(opts.basePath, opts.fetch, opts.allowNetwork),
   ] as const
 

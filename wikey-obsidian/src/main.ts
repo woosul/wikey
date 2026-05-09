@@ -806,6 +806,7 @@ export default class WikeyPlugin extends Plugin {
       WIKEY_SEARCH_ENGINE: searchEngine,
       WIKEY_MODEL: validatedModel,
       WIKEY_QMD_TOP_N: 5,
+      WIKEY_SEARCH_TOP_N: 5,
       GEMINI_API_KEY: this.settings.geminiApiKey,
       ANTHROPIC_API_KEY: this.settings.anthropicApiKey,
       OPENAI_API_KEY: this.settings.openaiApiKey,
