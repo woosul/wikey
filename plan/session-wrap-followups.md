@@ -1,13 +1,23 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-09 session 29 — §5.7.4 GREEN cycle 종결 (codex post-impl 6 cycle APPROVE_WITH_CHANGES + 라이브 smoke + Step D 모두 완료, 4 commits)**.
+> 최신 갱신: **2026-05-09 session 29 — §5.7.4 GREEN cycle 종결 (codex post-impl 6 cycle APPROVE_WITH_CHANGES + 라이브 smoke + Step D 모두 완료, 4 commits) + §5.7.5 별 subject 신설 (20 항목 식별)**.
 >
-> ## 다음 세션 첫 액션 (Session 30)
+> ## 다음 세션 첫 액션 (Session 30) — **§5.7.5 진입**
 >
-> 1. **wikey.schema.md 검색 코어 안정성 갱신** — 사용자 승인 의무 (CLAUDE.md 쓰기 규칙). spec v9 의 reality drift fix + Orama default 명시 + qmd fallback path. 별 commit.
-> 2. **claude-harness-helper repo commit** — `common/skills/master-validation/SKILL.md` (신규) + `versions/V2/rules/rules.md §10` (압축, 14줄). 별 repo 라 별 commit.
-> 3. **§5.7.5 별 spec 작성** — Orama upstream sync 자동화 (B7 + B1~B6) + LOW 보강 (LOW #14 PARTIAL persist race / LOW #15 vendor warn / LOW #5 lowercase docs / LOW #7) + PoC code cleanup (`wikey-obsidian/src/commands.ts:96~522` 3 PoC command + npm `kiwi-nlp` / `@orama/orama` deps 정리)
-> 4. **Phase 5 잔여**: §5.5 (graph) / §5.6 (LLM provider) / §5.7.5 / §5.8 (D.0.l) / §5.9 (variance) — 우선순위 결정
+> **우선순위 1 (§5.7.5 spec 작성)**: `plan/phase-5-spec-5.7.5-orama-update-sync.md` 신규 — phase-5-todo.md §5.7.5 의 20 항목 (B 그룹 7 + LOW 4 + PoC cleanup 3 + C 그룹 4 + 비목표 2) 4-question 검증 후 포함/단순화/deferral 결정. SDD+TDD spec 6 요소 (Goal / Inputs / Outputs / Invariants / Acceptance Scenarios / Out-of-Scope / Dependencies). codex Mode D Panel 검증 cycle.
+>
+> **우선순위 2 (선행 의무)**: §5.7.5 spec 작성 *전* 다음 2 항목 처리 (의존성 해소):
+>   - **wikey.schema.md 검색 코어 안정성 갱신** — 사용자 승인 의무 (CLAUDE.md 쓰기 규칙). spec v9 의 reality drift fix + Orama default 명시 + qmd fallback path. 별 commit.
+>   - **claude-harness-helper repo commit** — `common/skills/master-validation/SKILL.md` (신규) + `versions/V2/rules/rules.md §10` (압축, 14줄). 별 repo 라 별 commit.
+>
+> **§5.7.5 의 4 그룹 + 비목표 = 20 항목 (`plan/phase-5-todo.md §5.7.5` 참조)**:
+>   - **B 그룹** (7): Orama + Kiwi upstream sync 자동화 (B1~B6 + B7 kiwi-nlp source vendor sync)
+>   - **LOW 잔여** (4): codex post-impl deferred (LOW #5 lowercase / LOW #7 라이선스 docs 자동검증 / LOW #14 PARTIAL persist race / LOW #15 vendor module load warn)
+>   - **PoC code cleanup** (3): wikey-obsidian PoC 3 command + npm deps 정리
+>   - **C 그룹** (4): spec v8 §4.3 deferred (C1 Q5 회귀 보완 / C2 50~100 query benchmark + 자동화 / C5 wikey.conf qmd 키 deprecate / C6 env-detect.ts qmd 의존 제거)
+>   - **비목표** (2): HYBRID Stage 2 full reroute / BENCH-AUTO benchmark CI 통합
+>
+> **우선순위 3 (Phase 5 잔여 우선순위 결정)**: §5.5 (graph) / §5.6 (LLM provider) / §5.7.5 / §5.8 (D.0.l) / §5.9 (variance). §5.7.5 는 본 cycle 의 자연 후속 — **§5.5 / §5.6 보다 우선** (사용자 결정 의뢰 가능).
 >
 > ## Session 29 (2026-05-09) §5.7.4 GREEN 종결 4 commit
 >
