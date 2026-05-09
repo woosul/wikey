@@ -15,7 +15,11 @@ const DEFAULTS: WikeyConfig = {
   WIKEY_SEARCH_ENGINE: 'orama',
   WIKEY_MODEL: 'wikey',
   WIKEY_QMD_TOP_N: 8,
-  WIKEY_SEARCH_TOP_N: 8,
+  // §5.7.5 cycle #4 fix — WIKEY_SEARCH_TOP_N (optional canonical) 는 DEFAULTS 에서 omit.
+  // default 가 명시되면 user 의 deprecated WIKEY_QMD_TOP_N=N override 가 차단됨
+  // (Object.assign(DEFAULTS, parsedConf) 시 user 가 canonical 미명시 → DEFAULTS 의 8
+  // 그대로 잔존 → getSearchTopN canonical=8 우선 → deprecated N 무시).
+  // omit 후 type-wise 정합 (types.ts: `readonly WIKEY_SEARCH_TOP_N?: number`).
   GEMINI_API_KEY: '',
   ANTHROPIC_API_KEY: '',
   OPENAI_API_KEY: '',
