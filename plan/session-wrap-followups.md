@@ -1,7 +1,32 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-09 session 28 — §5.7.4 SDD+TDD spec/todo v8 작성 완료 (7 cycle 누적, codex APPROVE_WITH_CHANGES) / 다음 세션 (29) 구현 진입**.
-> session 28 (2026-05-09) 에서 §5.7.4 spec/todo 종결.
+> 최신 갱신: **2026-05-09 session 29 — §5.7.4 GREEN cycle 종결 (codex post-impl 6 cycle APPROVE_WITH_CHANGES + 라이브 smoke + Step D 모두 완료, 4 commits)**.
+>
+> ## 다음 세션 첫 액션 (Session 30)
+>
+> 1. **wikey.schema.md 검색 코어 안정성 갱신** — 사용자 승인 의무 (CLAUDE.md 쓰기 규칙). spec v9 의 reality drift fix + Orama default 명시 + qmd fallback path. 별 commit.
+> 2. **claude-harness-helper repo commit** — `common/skills/master-validation/SKILL.md` (신규) + `versions/V2/rules/rules.md §10` (압축, 14줄). 별 repo 라 별 commit.
+> 3. **§5.7.5 별 spec 작성** — Orama upstream sync 자동화 (B7 + B1~B6) + LOW 보강 (LOW #14 PARTIAL persist race / LOW #15 vendor warn / LOW #5 lowercase docs / LOW #7) + PoC code cleanup (`wikey-obsidian/src/commands.ts:96~522` 3 PoC command + npm `kiwi-nlp` / `@orama/orama` deps 정리)
+> 4. **Phase 5 잔여**: §5.5 (graph) / §5.6 (LLM provider) / §5.7.5 / §5.8 (D.0.l) / §5.9 (variance) — 우선순위 결정
+>
+> ## Session 29 (2026-05-09) §5.7.4 GREEN 종결 4 commit
+>
+> - `0be45c7` feat(§5.7.4): Orama in-process 검색 마이그레이션 + kiwi-nlp B-2 vendor (52 files, 257+/30-)
+> - `1e7daf2` test(§5.7.4): LOW #6 — qmd legacy integration test (+86/-1)
+> - `3997527` chore(§5.7.4): plugin symlink + 라이브 smoke 결과
+> - `d460878` docs(§5.7.4 Step D): NOTICE + README rollback/third-party + spec/todo v9 + activity entry (7 files, 216+/21-)
+>
+> codex post-impl 6 cycle 누적 16 finding = 13 fixed + 3 deferred (MED #10 vendor build reality drift v9 정정 / LOW #14 PARTIAL persist race / LOW #15 vendor warn). cycle #6 verdict: APPROVE_WITH_CHANGES.
+>
+> 라이브 smoke (master 직접, obsidian-cdp): AC-L1 ingest cycle (itil-4-practices.md FULL ~106s) / AC-L2 한+영 query / AC-L3 qmd toggle / PoC benchmark 10 queries avg 0.2ms / **MED #13 cross-process invalidation 라이브 검증** (post-ingest 신규 페이지 즉시 검색).
+>
+> 사용자 raise 2건 → `claude-harness-helper/common/skills/master-validation/SKILL.md` 신규 (Layer 1~4 = 26 anchor — runtime path matrix R1~R6 신설). rules.md §10 압축 (122 → 14 줄).
+>
+> 회귀: wikey-core 726 PASS / 3 skipped / 0 fail / wikey-obsidian 38 PASS / build 0 errors / validate-wiki PASS.
+>
+> ## Session 28 (2026-05-09) §5.7.4 spec/todo v8 작성 (참조)
+>
+> session 28 에서 §5.7.4 spec/todo 종결.
 > (a) §5.7.4 spec/todo 종결 — `plan/phase-5-spec-5.7.4-orama-migration.md` (v8, 781 lines) + `plan/phase-5-todox-5.7.4-orama-migration.md` (v8, 270 lines). 28 AC + 14 Risk + 20 anchor self-check.
 > (b) **codex Mode D Panel 7 cycle 누적** — #1 NEEDS_REVISION (9) → #2 (6) → #3 (6) → #4 (7) → #5 (3, HIGH 0 첫) → #6 (4, HIGH 0) → **#7 APPROVE_WITH_CHANGES (1 LOW only, fix 완료)**. finding 88% 감소 (9→1).
 > (c) **사용자 결정 영구 등록 (2026-05-09 session 28)**:

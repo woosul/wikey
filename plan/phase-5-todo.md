@@ -940,7 +940,48 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 - [x] (§5.7.4-Step B) TDD RED→GREEN→BLUE — 19 case → A1~A8 + vendor 구현 → 회귀 PASS + refactor (codex 6 cycle, APPROVE_WITH_CHANGES)
 - [x] (§5.7.4-Step C) 라이브 cycle smoke — obsidian-cdp AC-L1/L2/L3 + PoC benchmark 재실행 + MED #13 cross-process invalidation 라이브 검증 PASS
 - [x] (§5.7.4-Step D) 문서 동기화 — LICENSE (MIT 기존) + NOTICE (LGPL §6 6 항목) + README rollback/third-party + VENDOR.md (v9 reality drift) + spec/todo v9 + activity result entry. wikey.schema.md 검색 코어 안정성 갱신은 사용자 승인 의무 (별 commit).
-- [ ] (§5.7.4-deferred) §5.7.5 별 spec 작성 (Orama upstream sync 자동화 B1~B7 + LOW #5/#6/#7/#14 PARTIAL/#15 잔여 + PoC code cleanup)
+
+---
+
+## 5.7.5 Orama upstream sync 자동화 + LOW 잔여 + PoC cleanup — Phase 5 별 subject (P3, 2026-05-09 신설)
+> tag: #search, #orama, #kiwi-nlp, #upstream-sync, #poc-cleanup, #phase5-defferred
+
+§5.7.4 종결 후 deferred 된 운영 정책 + 코드 quality 보강 + cleanup 항목 통합. 본 §5.7.5 는 *마이그레이션 후 운영* 영역이라 별 spec 으로 분리 (Karpathy Simplicity #2 — §5.7.4 코드 작업 cycle 과 명확 경계).
+
+**진입 조건** (충족됨):
+- §5.7.4 GREEN cycle 종결 (4 commits, 2026-05-09 session 29)
+- codex post-impl 6 cycle APPROVE_WITH_CHANGES
+- 라이브 smoke 4 항목 (AC-L1/L2/L3 + PoC benchmark) 모두 PASS
+
+**범위 — 3 그룹 (B 그룹 7 + LOW deferred 잔여 + PoC code cleanup)**:
+
+### B 그룹 (upstream update sync 자동화) — Orama + Kiwi
+- [ ] (B1) `@orama/orama` npm update monitor — `npm outdated` cron 또는 GitHub release atom feed 자동 감지
+- [ ] (B2) Update 반영 프로토콜 — patch/minor/major 분기 (patch 자동 / minor master 결정 / major 별 spec)
+- [ ] (B3) Regression 검증 자동화 — 매 update 후 quality benchmark 10 query + smoke 자동 실행
+- [ ] (B4) Kiwi 사전 update 자동 추적 — `~/.cache/wikey/kiwi-models/cong/base/` md5/size 비교 + 본가 release 감지
+- [ ] (B5) Update sync 프로세스 docs — 자동 갱신 (B1~B4 결과 mirror)
+- [ ] (B6) Notification — GitHub watch + workflow → 사용자/master notify
+- [ ] (B7) **kiwi-nlp source vendor upstream sync 자동화** — `wikey-core/vendor/kiwi-nlp/` (B-2 sparse vendor §3.8) 의 `bab2min/Kiwi` git tag 변경 감지 + `bindings/wasm/package/` subdir diff 분석 + cherry-pick 자동화 + 사용자 review queue. 본 cycle 안 = 수동 sync 절차 docs (`docs/kiwi-nlp-vendor-sync.md`) 까지만, 자동화는 본 §5.7.5
+
+### LOW 잔여 (codex post-impl 6 cycle deferred) — 4 항목
+- [ ] (LOW #5 lowercase docs) `wikey-obsidian/src/commands.ts:142-156` PoC code 의 alphanumeric token 보존 + `scripts/korean-tokenize.py::_smart_tokenize` 의 lowercase 미적용 vs wikey-core `orama-korean-tokenizer.ts:135` 의 lowercase 적용 — drift 정정. 사용자 결정: code lowercase 유지 (Orama tokenizer 양쪽 동일 적용 → case-insensitive 매칭) + spec/PoC docs 정정. 사용자 승인 의무 (PoC code 변경)
+- [ ] (LOW #14 PARTIAL persist race window) `wikey-core/src/search/orama-index.ts::persist()` 의 `oramaSave + writeFileSync` 사이 abort signal check — atomic write (temp + rename) 또는 final guard. 본 cycle 의 race window 는 ms 단위라 production 영향 거의 없으나 robustness 보강
+- [ ] (LOW #15 vendor module load warn) `./scripts/reindex.sh --check --json` 가 Kiwi vendor module load 시 stderr `MODULE_TYPELESS_PACKAGE_JSON` warn — `runOramaIngest` 의 `createKoreanTokenizer` lazy import (engine='orama' branch 안에서만 load) 또는 vendor `package.json` 의 `type: module` 추가 (vendor customize, VENDOR.md 등록 의무)
+- [ ] (LOW #7 보강 — 라이선스 docs 자동 검증) NOTICE/README rollback/third-party 섹션의 정합성 자동 검증 (CI 단계 grep) — npm dep 추가 시 NOTICE 누락 회피
+
+### PoC code cleanup — `wikey-obsidian/src/commands.ts:96~522`
+- [ ] (POC-1) `wikey-poc-orama-test` / `wikey-poc-kiwi-orama` / `wikey-poc-orama-benchmark` 3 PoC command 정리 결정 — 사용자 결정 영역 (벤치마크 도구로 보존 vs cleanup)
+- [ ] (POC-2) `wikey-obsidian/package.json` 의 `kiwi-nlp` / `@orama/orama` deps — production query path 가 vendor 경유라 의존성 정리 가능 (단 PoC 보존 시 deps 도 보존)
+- [ ] (POC-3) 정리 결정 시 main.js 크기 측정 — 현재 496K → 정리 후 ~370K 예상 (PoC 단계 base ~423K 와 비교)
+
+### Karpathy Simplicity 적용
+**본 §5.7.5 는 *별 cycle*** — §5.7.4 의 *코드 swap* 과 분리. 자동화 인프라 (cron / GitHub Actions / regression suite) 는 over-spec 후보 의무 검토. B 그룹 7 항목 모두 *진행 시점 결정* — 본 §5.7.5 의 spec 작성 시 어느 범위까지 자동화할지 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) 의무.
+
+### 진입 우선순위
+1. **wikey.schema.md 검색 코어 안정성 갱신** (사용자 승인) — §5.7.4 종결 직후 의무
+2. **claude-harness-helper repo commit** (master-validation skill + rules.md §10 압축) — 별 repo
+3. **§5.7.5 spec 작성** — `plan/phase-5-spec-5.7.5-orama-update-sync.md` 신규 (P3, §5.5 / §5.6 와 우선순위 비교 후 결정)
 
 ---
 
