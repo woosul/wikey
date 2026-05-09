@@ -22,6 +22,10 @@
   - [`plan/phase-5-todox-5.13-residual-followups.md`](./phase-5-todox-5.13-residual-followups.md) — §5.13 잔존 follow-up 3 항목 (raw sidecar 부활 / validator find raw 패턴 / LLM source filename prefix), **draft v0.1 (사용자 임시 A1+B2+C4)** §5.14 완료 후 착수
   - [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](./phase-5-todox-5.14-retrospective-blue-refactor.md) — §5.14 Phase 5 retrospective TDD-BLUE refactor (§5.11 v2 + §5.12 GREEN 단계 BLUE 누락 보완), **draft v0 / P0 다음 세션 최우선**
   - [`plan/phase-5-todox-5.15-pipeline-v2-followups.md`](./phase-5-todox-5.15-pipeline-v2-followups.md) — §5.15 Pipeline v2 후속 3 항목 (UI E2E test 인프라 / PROMOTION_THRESHOLD override / citation 마커 dead code cleanup), **draft v0 / P2 다음 세션 후보**
+  - [`plan/phase-5-spec-5.7.4-orama-migration.md`](./phase-5-spec-5.7.4-orama-migration.md) — §5.7.4 Orama 마이그레이션 Spec WHAT (28 AC + 14 Risk + 20 anchor self-check, **종결 Session 28~29 2026-05-09**)
+  - [`plan/phase-5-todox-5.7.4-orama-migration.md`](./phase-5-todox-5.7.4-orama-migration.md) — §5.7.4 Todo HOW (Step A 환경 / Step B TDD / Step C 라이브 / Step D 문서, codex 7+6 cycle, **종결 Session 28~29 2026-05-09**)
+  - [`plan/phase-5-spec-5.7.5-orama-update-sync.md`](./phase-5-spec-5.7.5-orama-update-sync.md) — §5.7.5 Orama upstream sync + LOW 잔여 + PoC cleanup + Developer Update UI Spec WHAT v1.4 (472줄, **종결 Session 30~31 2026-05-09**)
+  - [`plan/phase-5-todox-5.7.5-orama-update-sync.md`](./phase-5-todox-5.7.5-orama-update-sync.md) — §5.7.5 Todo HOW v1.4 (308줄, codex 6 cycle 모두 APPROVE, **종결 Session 30~31 2026-05-09**)
 - **프로젝트 공통**: [`plan/decisions.md`](./decisions.md) · [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md).
 
 ## 우선순위 가이드 (2026-04-24 재조정)
@@ -960,38 +964,38 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 **범위 — 3 그룹 (B 그룹 7 + LOW deferred 잔여 + PoC code cleanup)**:
 
 ### B 그룹 (upstream update sync 자동화) — Orama + Kiwi
-- [ ] (B1) `@orama/orama` npm update monitor — `npm outdated` cron 또는 GitHub release atom feed 자동 감지
-- [ ] (B2) Update 반영 프로토콜 — patch/minor/major 분기 (patch 자동 / minor master 결정 / major 별 spec)
-- [ ] (B3) Regression 검증 자동화 — 매 update 후 quality benchmark 10 query + smoke 자동 실행
-- [ ] (B4) Kiwi 사전 update 자동 추적 — `~/.cache/wikey/kiwi-models/cong/base/` md5/size 비교 + 본가 release 감지
-- [ ] (B5) Update sync 프로세스 docs — 자동 갱신 (B1~B4 결과 mirror)
-- [ ] (B6) Notification — GitHub watch + workflow → 사용자/master notify
-- [ ] (B7) **kiwi-nlp source vendor upstream sync 자동화** — `wikey-core/vendor/kiwi-nlp/` (B-2 sparse vendor §3.8) 의 `bab2min/Kiwi` git tag 변경 감지 + `bindings/wasm/package/` subdir diff 분석 + cherry-pick 자동화 + 사용자 review queue. 본 cycle 안 = 수동 sync 절차 docs (`docs/kiwi-nlp-vendor-sync.md`) 까지만, 자동화는 본 §5.7.5
+- [x] (B1) `@orama/orama` npm update monitor — **단순화 채택**: 재시작 1회 detect (UI-1~6 Developer Update UI 안 자연 통합). `npm outdated` cron / GitHub atom feed 미채택 (Karpathy Simplicity over-spec)
+- [x] (B2) Update 반영 프로토콜 — **단순화 채택**: LLM analyze 흡수 ([분석] 버튼 1회 호출, hasUpdate mirror UI-3). patch/minor/major 자동 분기 미채택
+- [~] (B3) Regression 검증 자동화 — **§5.7.6 deferral** (별 cycle, B 자동화 인프라 over-spec)
+- [x] (B4) Kiwi 사전 update 자동 추적 — **단순화 채택**: 본 cycle 포함, UI-4 자연 row (`./scripts/check-kiwi-vendor-sync.sh` + UI 통합)
+- [~] (B5) Update sync 프로세스 docs — **§5.7.6 deferral** (자동 갱신 인프라 over-spec)
+- [~] (B6) Notification — **§5.7.6 deferral** (GitHub watch + workflow 인프라 over-spec)
+- [x] (B7) **kiwi-nlp source vendor upstream sync 자동화** — **단순화 채택**: `./scripts/check-kiwi-vendor-sync.sh` detect + 절차 docs (`docs/kiwi-nlp-vendor-sync.md`) 까지. 자동 cherry-pick / review queue 미채택
 
 ### LOW 잔여 (codex post-impl 6 cycle deferred) — 4 항목
-- [ ] (LOW #5 lowercase docs) `wikey-obsidian/src/commands.ts:142-156` PoC code 의 alphanumeric token 보존 + `scripts/korean-tokenize.py::_smart_tokenize` 의 lowercase 미적용 vs wikey-core `orama-korean-tokenizer.ts:135` 의 lowercase 적용 — drift 정정. 사용자 결정: code lowercase 유지 (Orama tokenizer 양쪽 동일 적용 → case-insensitive 매칭) + spec/PoC docs 정정. 사용자 승인 의무 (PoC code 변경)
-- [ ] (LOW #14 PARTIAL persist race window) `wikey-core/src/search/orama-index.ts::persist()` 의 `oramaSave + writeFileSync` 사이 abort signal check — atomic write (temp + rename) 또는 final guard. 본 cycle 의 race window 는 ms 단위라 production 영향 거의 없으나 robustness 보강
-- [ ] (LOW #15 vendor module load warn) `./scripts/reindex.sh --check --json` 가 Kiwi vendor module load 시 stderr `MODULE_TYPELESS_PACKAGE_JSON` warn — `runOramaIngest` 의 `createKoreanTokenizer` lazy import (engine='orama' branch 안에서만 load) 또는 vendor `package.json` 의 `type: module` 추가 (vendor customize, VENDOR.md 등록 의무)
-- [ ] (LOW #7 보강 — 라이선스 docs 자동 검증) NOTICE/README rollback/third-party 섹션의 정합성 자동 검증 (CI 단계 grep) — npm dep 추가 시 NOTICE 누락 회피
+- [x] (LOW #5 lowercase docs) `wikey-obsidian/src/commands.ts:142-156` PoC code 의 alphanumeric token 보존 + `scripts/korean-tokenize.py::_smart_tokenize` 의 lowercase 미적용 vs wikey-core `orama-korean-tokenizer.ts:135` 의 lowercase 적용 — **drift 정정 종결**. 사용자 결정: code lowercase 유지 + spec/PoC docs 정정 (case-insensitive 매칭).
+- [x] (LOW #14 PARTIAL persist race window) `wikey-core/src/search/orama-index.ts::persist()` 의 `oramaSave + writeFileSync` 사이 abort signal check — atomic write (temp + rename) 적용 종결. 회귀 PASS.
+- [x] (LOW #15 vendor module load warn) `./scripts/reindex.sh --check --json` 가 Kiwi vendor module load 시 stderr `MODULE_TYPELESS_PACKAGE_JSON` warn — `createKoreanTokenizer` lazy import 적용 종결.
+- [x] (LOW #7 보강 — 라이선스 docs 자동 검증) NOTICE/README rollback/third-party 섹션의 정합성 자동 검증 (`./scripts/check-licenses.sh` CI grep) — npm dep 추가 시 NOTICE 누락 회피 종결.
 
 ### PoC code cleanup — `wikey-obsidian/src/commands.ts:96~522`
-- [ ] (POC-1) `wikey-poc-orama-test` / `wikey-poc-kiwi-orama` / `wikey-poc-orama-benchmark` 3 PoC command 정리 결정 — 사용자 결정 영역 (벤치마크 도구로 보존 vs cleanup)
-- [ ] (POC-2) `wikey-obsidian/package.json` 의 `kiwi-nlp` / `@orama/orama` deps — production query path 가 vendor 경유라 의존성 정리 가능 (단 PoC 보존 시 deps 도 보존)
-- [ ] (POC-3) 정리 결정 시 main.js 크기 측정 — 현재 496K → 정리 후 ~370K 예상 (PoC 단계 base ~423K 와 비교)
+- [x] (POC-1) `wikey-poc-orama-test` / `wikey-poc-kiwi-orama` / `wikey-poc-orama-benchmark` 3 PoC command — **단순화 채택**: cleanup. main.js -63KB (-12.7%, 496679→433384 bytes) 확증.
+- [x] (POC-2) `wikey-obsidian/package.json` 의 `kiwi-nlp` / `@orama/orama` deps — **POC-1 종속 cleanup** 적용. production path 는 vendor 경유.
+- [x] (POC-3) 정리 결정 시 main.js 크기 측정 — **1줄 verification**: 496679 → 433384 bytes (-63KB, -12.7%).
 
 ### C 그룹 (PoC §5.7.3 → spec v8 §4.3 deferred — 검색 품질·정합성 보강) — 4 항목
 
-> `plan/phase-5-spec-5.7.4-orama-migration.md §4.3` 에서 본 cycle 안 처리 거부된 항목 (deferral / Karpathy Simplicity #4 — 분리 합리). C3/C4 는 §5.7.4 안 sanity 수준 처리 완료, C1/C2/C5/C6 는 본 §5.7.5.
+> `plan/phase-5-spec-5.7.4-orama-migration.md §4.3` 에서 본 cycle 안 처리 거부된 항목 (deferral / Karpathy Simplicity #4 — 분리 합리). C3/C4 는 §5.7.4 안 sanity 수준 처리 완료, C5/C6 는 본 §5.7.5 종결, C1/C2 는 §5.7.6 deferral.
 
-- [ ] (C1 — Q5 회귀 보완 — smart_tokenize 정밀화) PoC §3 단계 3 의 10 query benchmark 결과 Q5 ("프로젝트 일정 관리") Top-1 회귀 1/10 (의도적 수용). 본 cycle 의 *quality regression bounded* 정책 vs *순 +1 우수* 의 trade-off — Q4 (ITIL) + Q10 (Obsidian) 회복으로 +2 (하지만 Q5 는 -1). 보완 후보: smart_tokenize 의 한국어 stopword 추가 (예: "관리", "프로젝트" 같은 generic content word 의 BM25 saturation 회피) 또는 POS filter 정밀화 (NNG vs NR 분리 등). 사용자 만족도 평가 후 결정 영역
-- [ ] (C2 — 50~100 query 확장 benchmark + 자동화) 현 10 query benchmark 의 statistical power 부족 — sample size ≥ 50 의 query suite 작성 + `npm run benchmark:search` script 자동화. quality regression 자동 감지 (CI 통합 가능). 본 §5.7.4 안 = *수동 1회 실측* (master 직접). 자동화 별 cycle
-- [ ] (C5 — wikey.conf qmd 키 deprecate) `WIKEY_QMD_TOP_N` → `WIKEY_SEARCH_TOP_N` naming alias 도입 (Orama backend 도 동일 의미 — top N 결과 수). 또한 `~/.cache/qmd/.last-reindex` stamp file → `~/.cache/wikey/.last-reindex` rename 검토 (cache root 정리). 본 §5.7.4 = naming refactor 미진행 (Karpathy Surgical 위반 회피)
-- [ ] (C6 — env-detect.ts qmd 의존 제거) `wikey-obsidian/src/env-detect.ts` 의 `findQmdBin` 호출 — feature flag default `'orama'` 라도 `WIKEY_SEARCH_ENGINE=qmd` toggle 시 detect 의무 (회귀 path). 본 §5.7.4 = detect 보존, qmd toggle 폐기 시점에 별 cycle 정리
+- [~] (C1 — Q5 회귀 보완 — smart_tokenize 정밀화) **§5.7.6 deferral** (사용자 만족도 평가 후 결정 영역, smart_tokenize 한국어 stopword / POS filter 정밀화)
+- [~] (C2 — 50~100 query 확장 benchmark + 자동화) **§5.7.6 deferral** (자동화 별 cycle, sample size ≥ 50 query suite + `npm run benchmark:search` + CI 통합)
+- [x] (C5 — wikey.conf qmd 키 deprecate) `WIKEY_QMD_TOP_N` → `WIKEY_SEARCH_TOP_N` naming alias 도입 종결 (Orama backend 도 동일 의미). v1.2 사용자 결정 본 cycle 포함.
+- [x] (C6 — env-detect.ts qmd 의존 제거) `wikey-obsidian/src/env-detect.ts` 의 `findQmdBin` 호출 — feature flag default `'orama'` 유지 + qmd toggle 회귀 path 정리 종결. v1.2 사용자 결정 본 cycle 포함.
 
 ### 비목표 추가 검토 (spec v8 §1.2 mirror) — 2 항목
 
-- [ ] (HYBRID — Stage 2 hybrid search full reroute) 본 §5.7.4 = BM25-only 1차 마이그레이션. AC-V1 sanity (Orama schema 의 `embedding: 'vector[768]'` column 추가 + mock vector round-trip) 만 검증. 실 호출 라인 reroute (Qwen3-Embedding 768D 통합 + RRF 또는 Orama hybrid mode) = 별 sub-cycle. 본 §5.7.5 또는 §5.7.6 결정
-- [ ] (BENCH-AUTO — 검색 quality benchmark 자동화 통합) 본 §5.7.4 = *수동 1회 실측* (master 직접 obsidian-cdp + PoC benchmark command 재실행). 자동화 (`npm run benchmark:search` + CI 통합 + regression alert) 별 cycle. C2 와 일부 중복
+- [~] (HYBRID — Stage 2 hybrid search full reroute) **§5.7.6 deferral** (Qwen3-Embedding 768D 통합 + RRF 또는 Orama hybrid mode 별 sub-cycle. 본 cycle = AC-V1 sanity mock vector round-trip 만 검증)
+- [~] (BENCH-AUTO — 검색 quality benchmark 자동화 통합) **§5.7.6 deferral** (`npm run benchmark:search` + CI 통합 + regression alert. C2 와 일부 중복)
 
 ### 진입 우선순위 결정 의무
 
@@ -1027,14 +1031,124 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
   - **`claude-harness-helper` repo commit**: master-validation skill v1.4 (anchor (f) exact match 보강) + rules.md §10. 별 repo master 단독.
   - **AC-P1 spec body 정정 (선택)**: spec §5 의 `≤ 400K` hard threshold → measurement reporting. 우선순위 낮음 (codex cycle #5 ACK).
 
-**최종 회귀** (master fresh re-run, Session 31 23:30 기준):
-- wikey-core: 738 PASS / 3 skipped (baseline 726, +12)
-- wikey-obsidian: 46 PASS (baseline 38, +8)
-- npm run build: 0 errors (5 pre-existing import.meta cjs warning)
-- ./scripts/validate-wiki.sh: PASS
-- ./scripts/check-licenses.sh: OK (NOTICE 정합)
-- ./scripts/check-kiwi-vendor-sync.sh: OK (실 upstream Kiwi v0.23.1 detect)
-- main.js: 496679 → 433384 bytes (-63KB, -12.7%)
+### 5.7.5 변경 파일 (5 commits) — result mirror
+
+- **`62f6992` docs(wikey.schema.md)**: 선행 — 검색 코어 4 영역 갱신 (Orama default + qmd fallback + Kiwi WASM)
+- **`d0ab150` test(§5.7.5)**: RED 16 case (developer update UI + LOW fix + scripts + C5/C6)
+- **`02b0318` feat(§5.7.5)**: GREEN — developer update UI + LOW fix + PoC cleanup + C5/C6 (914+/456-, 18 files)
+- **`a8ca27b` fix(§5.7.5)**: cycle #3 NEEDS_REVISION 4 MED + 1 LOW (codex 권고)
+- **`e964be1` fix(§5.7.5)**: cycle #4 NEEDS_REVISION 1 MED — DEFAULTS WIKEY_SEARCH_TOP_N omit
+- **`a87c7f8` fix(§5.7.5)**: live smoke — LLMClient API call + LLM JSON markdown wrap parse
+
+### 5.7.5 codex Mode D Panel 6 cycle 흐름 — result mirror
+
+| Cycle | 단계 | Verdict | 처리 |
+|-------|------|---------|------|
+| #1 | plan review | NEEDS_REVISION (6 finding HIGH 0 / MED 5 / LOW 1) | master fix → spec/todo v1.3 |
+| #2 | plan review | APPROVE_v1.4 (LOW 2 master fix only) | 부가 결정 4건 잠금 |
+| #3 | post-impl | NEEDS_REVISION (4 MED + 2 LOW) | master fix `a8ca27b` (config helper / qmd repo / Kiwi compare URL / persist signal / styles.css) |
+| #4 | re-review | NEEDS_REVISION (1 MED, default merge) | master fix `e964be1` (DEFAULTS WIKEY_SEARCH_TOP_N omit) |
+| #5 | re-review | APPROVE (findings: none) | — |
+| #6 | live smoke fix | APPROVE (findings: none) | — |
+
+### 5.7.5 회귀 (Phase 3a) — result mirror
+
+| 명령 | 결과 |
+|------|------|
+| `npm test --workspace=wikey-core` | 738 PASS / 3 skipped (baseline 726, +12) |
+| `npm test --workspace=wikey-obsidian` | 46 PASS (baseline 38, +8) |
+| `npm run build` (양 workspace) | 0 errors (5 esbuild warning = pre-existing import.meta cjs/Kiwi WASM 영역) |
+| `./scripts/validate-wiki.sh` | PASS |
+| `./scripts/check-licenses.sh` | OK (NOTICE 정합) |
+| `./scripts/check-kiwi-vendor-sync.sh` | OK (`current=v0.23.0 upstream=v0.23.1 hasUpdate=true` — 실 upstream Kiwi v0.23.1 detect) |
+| main.js size | 496679 → 433384 bytes (-63KB, -12.7%) |
+
+### 5.7.5 BLUE 6 활동 (Phase 3b, GREEN 안 자연 진행) — result mirror
+
+| # | 활동 | 적용 / 의도적 유지 + 근거 |
+|---|------|---------------------------|
+| 1 | 함수 분해 | **적용** — `upstream-checker.ts` 4 kind 별 detect (`detectKiwiNlp` / `detectOrama` / `detectQwen3Embedding` / `detectQmdVendored` / `detectKiwiDict`) 별 함수 (~30 LOC each) |
+| 2 | Naming consistency | **적용** — `developerMode` / `allowUpdateCheck` / `UpdateItemDescriptor` / `UpdateCheckResult` / `[upgrade]` / `[분석]` / `[개발필요]` / `Developer (advanced)` / `Show developer section` spec ↔ code ↔ test 일관 |
+| 3 | DRY 중복 제거 | **적용** — `fetchJsonField` helper extract (4 kind 별 fetch 공통 패턴), `extractJsonObject` helper (markdown wrap + brace parse) |
+| 4 | 주석 quality | **적용** — 모든 신규 함수 docstring + spec section reference. TODO/FIXME 0. cycle #3/#4/live smoke fix 주석은 `§5.7.5 cycle #N fix` marker 보존 |
+| 5 | 가독성 | **적용** — `DEFAULT_MAX_CHARS = 4000` magic number 상수화 |
+| 6 | 회귀 재검증 | **적용** — 매 commit 후 fresh `npm test + build` PASS |
+
+### 5.7.5 AC verification (총 22 — 단위 13 + 통합 4 + 라이브 3 + 부가 2) — result mirror
+
+| AC | 내용 | 결과 |
+|----|------|------|
+| AC-U1 | detectUpstreamUpdates 5 kind 반환 (B4 잠금: kiwi-dict 추가) | PASS (단위 + 라이브 5 items) |
+| AC-U2 | diffSource URL 정확 (kiwi compare / orama npm / qwen3 HF / qmd compare / kiwi-dict releases) | PASS (cycle #3 fix 후) |
+| AC-U3 | settings `[developer]` 섹션 + `Developer (advanced)` exact phrase | PASS (라이브 DOM 검증) |
+| AC-U4 matrix | developerMode + allowUpdateCheck 양쪽 → call=1, false 시 0 | PASS (3 fixture + 라이브) |
+| AC-U5 | `[upgrade]` 뱃지 active/none CSS class | PASS (cycle #3 styles.css 추가 후) |
+| AC-U6 | analyzeUpdate LLM 요약 + devRequired heuristic + markdown wrap parse | PASS (라이브 7.9s + parse fix) |
+| AC-U7 | `[분석]` 버튼 disabled = !hasUpdate | PASS (라이브 5 row 검증) |
+| AC-U8 | `[개발필요]` mark + reason | PASS (markdown wrap fix 후) |
+| AC-L5 | smart_tokenize lowercase 일관 (production code 이미 일관, 사용자 결정 #4 mirror) | PASS |
+| AC-L7 | `scripts/check-licenses.sh` (workspace dep allowlist + devDependencies 제외) | PASS |
+| AC-L14 | `OramaIndexHandle.persist()` atomic + abort signal (cycle #3 reindex caller 갱신) | PASS |
+| AC-L15 | `runOramaIngest` lazy import — engine='qmd' path stderr warn 0 | PASS |
+| AC-S1 | `scripts/check-kiwi-vendor-sync.sh` bab2min/Kiwi releases + VENDOR.md tag 비교 | PASS (실 upstream v0.23.1 detect) |
+| AC-D1 | README `## Developer mode` 섹션 — `Show developer section` (env 표기 부재) | PASS |
+| AC-C5 | `WIKEY_SEARCH_TOP_N` alias + `WIKEY_QMD_TOP_N` deprecation marker (priority 작동) | PASS (cycle #4 default merge fix 후) |
+| AC-C6 | `detectEnvironment(basePath, ollamaUrl, searchEngine)` 시그니처 확장 + qmd block conditional skip | PASS |
+| AC-V1 | 라이브 — settings developer toggle on → 5 row + currentVersion + [upgrade] 뱃지 | PASS |
+| AC-V2 | 라이브 — [분석] 버튼 클릭 → LLM 호출 ≤ 30s + summary + [개발필요] mark | PASS (7.9s + parse fix) |
+| AC-V3 | 라이브 — toggle off → 섹션 숨김 + onload 호출 0 | PASS |
+| AC-P1 | PoC cleanup — main.js size measurement | **measurement reporting** — 496679 → 433384 bytes (-63KB, 12.7%). spec body `≤ 400K` threshold 미달 (433KB > 400K, settings-tab-developer.ts + main.ts 신규 method + upstream-checker bundle 추가가 일부 상쇄). cleanup 자체는 잠금 mirror 완수 + true regression 0. master ACK |
+| AC-S1-bonus | live upstream Kiwi detect (실 v0.23.0 → v0.23.1) | PASS |
+| AC-U6-bonus | LLM JSON markdown wrap parse (Gemini 응답 패턴 robustness) | PASS (live smoke fix `a87c7f8`) |
+
+### 5.7.5 Karpathy 4원칙 — result mirror
+
+- **Think Before Coding**: 사용자 결정 5건 + 부가 4건 모두 spec/todo 잠금 후 진입. plan v1.4 = codex 2 cycle (#1 NEEDS_REVISION fix v1.3 + #2 APPROVE) + master 1차 23-anchor verification.
+- **Simplicity First**: 27 입력 → 11 포함 + 9 단순화 + 7 deferral (Karpathy 200줄→50줄 mirror). cron / GitHub Actions / regression suite / push notification 모두 over-spec 으로 별 cycle deferral. settings UI 표시까지만 처리 (UI-7 simplification).
+- **Surgical Changes**: 변경 면 18 file (commit `02b0318`) — spec §3 변경 면 직접 추적. wiki/ 변경 0 / raw/ 변경 0 / canonicalizer + ingest pipeline + mention extractor 변경 0 (검색·인덱싱 코어 변경 0, §5.7.4 swap 결과 그대로 유지). PoC cleanup 은 사용자 명시 결정 mirror.
+- **Goal-Driven Execution**: AC 22 모두 정량 (단위 13 + 통합 4 + 라이브 3 + 부가 2). 라이브 smoke 가 actual bug 발견 (LLMClient API + JSON markdown wrap) → master 직접 fix → cycle #6 APPROVE.
+
+### 5.7.5 학습 — 라이브 smoke 의 implementation gap detection — result mirror
+
+라이브 smoke (master 직접 obsidian-cdp) 가 단위 + 통합 test cover 외 영역 발견:
+
+1. **LLMClient API mismatch** (`main.ts:580` `callLLM` → 실제 `call`): mock LLM 안 generate 만 사용한 단위 test 가 plugin instance 의 actual LLMClient method 호출 누락. 라이브 smoke 가 첫 trigger 시 TypeError 발견. master fix 1 line.
+2. **JSON markdown wrap parse** (`update-analyzer.ts` extractJsonObject): mock LLM 가 strict JSON 반환만 시뮬레이션. 실제 Gemini-2.5-flash 응답이 ` ```json\n{...}\n``` ` markdown wrap. JSON.parse throw → fallback. 라이브 smoke 가 첫 응답에서 발견. master fix + 단위 test 보강.
+
+**원리**: integration / e2e test 가 mock layer 가 cover 하지 못하는 actual API contract 영역을 catch. CLAUDE.md §6 의 라이브 cycle smoke 정책의 정당성. test 인프라가 mock 의 fidelity 만으로 implementation gap 0 보장 X.
+
+### 5.7.5 잔여 후속 — result mirror
+
+- **§5.7.6+ deferral 7항목**: B3 / B5 / B6 / C1 / C2 / HYBRID / BENCH-AUTO. 별 cycle 진입 시점 사용자 결정. 본 todo §5.7.6 (신규 신설) 에 mirror.
+- **`claude-harness-helper` repo commit**: master-validation skill v1.4 anchor (f) exact match 보강 + rules.md §10 — 별 repo master 단독 (본 wikey 외).
+- **AC-P1 spec body 정정** (선택): `≤ 400K` hard threshold → measurement reporting 표현. analyst 호출 후 spec v1.5 sweep 의무 — 우선순위 낮음 (cleanup 효과 자체는 잠금 mirror 완수, codex cycle #5 에서 ACK).
+
+---
+
+## 5.7.6 §5.7.5 deferral 7항목 통합 — Phase 5 별 subject 후보 (P4, 2026-05-09 신설)
+> tag: #search, #orama, #benchmark, #automation, #hybrid, #phase5-deferred
+
+> **상태**: 신설 후보 — 본 cycle 진입은 별 spec 작성 후 결정. **§5.7.5 종결 (Session 31, 2026-05-09)** 시 deferral 7항목을 통합한 별 cycle 후보. master / 사용자 우선순위 결정 영역.
+>
+> **상위 spec**: 미작성 (진입 시점에 작성). 단일 소스 = 본 todo 섹션 + `plan/phase-5-spec-5.7.5-orama-update-sync.md §4.7 deferral` mirror.
+
+§5.7.5 의 27 입력 분류 결과 중 "deferral / 폐기 7항목" 을 별 cycle 로 통합. 자동화 인프라 (cron / GitHub Actions / regression suite / push notification) + 검색 quality 정밀화 (Q5 회귀 / 50+ query suite) + Stage 2 hybrid full reroute. Karpathy Simplicity #4 (분리 합리) 따름.
+
+### 7항목 deferral mirror
+
+- [ ] (B3) Regression 검증 자동화 — 매 update 후 quality benchmark 10 query + smoke 자동 실행 (cron / GitHub Actions). §5.7.5 의 *수동 1회 실측* 에서 *자동* 으로 격상
+- [ ] (B5) Update sync 프로세스 docs 자동 갱신 — B1~B4 결과 mirror. §5.7.5 = 수동 절차 docs 까지만
+- [ ] (B6) Notification — GitHub watch + workflow → 사용자/master notify. push 채널 결정 영역
+- [ ] (C1) Q5 회귀 보완 — smart_tokenize 정밀화. PoC §3 단계 3 의 Q5 ("프로젝트 일정 관리") Top-1 회귀 1/10 (의도적 수용). 보완 후보: 한국어 stopword (`관리` / `프로젝트` BM25 saturation 회피) + POS filter (NNG vs NR 분리). 사용자 만족도 평가 후 결정
+- [ ] (C2) 50~100 query 확장 benchmark + 자동화 — 현 10 query benchmark statistical power 부족. sample size ≥ 50 query suite + `npm run benchmark:search` script 자동화. quality regression 자동 감지 (CI 통합 가능). BENCH-AUTO 와 일부 중복
+- [ ] (HYBRID) Stage 2 hybrid search full reroute — Qwen3-Embedding 768D 통합 + RRF 또는 Orama hybrid mode. 본 §5.7.4 = AC-V1 sanity (mock vector round-trip) 까지. 실 호출 라인 reroute 별 sub-cycle
+- [ ] (BENCH-AUTO) 검색 quality benchmark 자동화 통합 — `npm run benchmark:search` + CI 통합 + regression alert. C2 와 일부 중복 (통합 검토 의무)
+
+### 진입 의무 (master / 사용자 결정)
+
+- 본 §5.7.6 진입 시 spec 작성 (4-question 검증: 필요성 / 역할 / Simplicity / Phase scope) 의무
+- 7항목 모두 자동화 인프라 영역 — Karpathy Simplicity over-spec 후보 의무 검토
+- 진입 우선순위 = Phase 5 잔여 5 subject 중 P4 잔여 (§5.5 / §5.6 / §5.8 / §5.9 와 비교)
 
 ---
 
