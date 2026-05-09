@@ -1,23 +1,41 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-09 session 29 — §5.7.4 GREEN cycle 종결 (codex post-impl 6 cycle APPROVE_WITH_CHANGES + 라이브 smoke + Step D 모두 완료, 4 commits) + §5.7.5 별 subject 신설 (20 항목 식별)**.
+> 최신 갱신: **2026-05-09 session 30 — §5.7.5 plan v1.4 APPROVE 종결 (analyst v1 + master fix v1.1/v1.2 + codex cycle #1 NEEDS_REVISION fix v1.3 + cycle #2 APPROVE + 부가 결정 잠금 v1.4)**.
 >
-> ## 다음 세션 첫 액션 (Session 30) — **§5.7.5 진입**
+> ## 다음 세션 첫 액션 (Session 31) — **§5.7.5 Step A → Step B 구현 진입**
 >
-> **우선순위 1 (§5.7.5 spec 작성)**: `plan/phase-5-spec-5.7.5-orama-update-sync.md` 신규 — phase-5-todo.md §5.7.5 의 20 항목 (B 그룹 7 + LOW 4 + PoC cleanup 3 + C 그룹 4 + 비목표 2) 4-question 검증 후 포함/단순화/deferral 결정. SDD+TDD spec 6 요소 (Goal / Inputs / Outputs / Invariants / Acceptance Scenarios / Out-of-Scope / Dependencies). codex Mode D Panel 검증 cycle.
+> **우선순위 1 (선행 의무, Step A 직전)**: `wikey.schema.md` 검색 코어 안정성 갱신 — 사용자 승인 의무 (CLAUDE.md 쓰기 규칙). Orama default 명시 + qmd fallback path + Kiwi WASM 한국어 tokenizer 명시. 별 commit (Step A 진입 직전).
 >
-> **우선순위 2 (선행 의무)**: §5.7.5 spec 작성 *전* 다음 2 항목 처리 (의존성 해소):
->   - **wikey.schema.md 검색 코어 안정성 갱신** — 사용자 승인 의무 (CLAUDE.md 쓰기 규칙). spec v9 의 reality drift fix + Orama default 명시 + qmd fallback path. 별 commit.
->   - **claude-harness-helper repo commit** — `common/skills/master-validation/SKILL.md` (신규) + `versions/V2/rules/rules.md §10` (압축, 14줄). 별 repo 라 별 commit.
+> **우선순위 2 (Step A 환경 세팅)**: 코드 변경 위치 fact-check (master fresh re-grep, todo §3 Step A3 mirror) + Step A4~A6 wikey-core 신규 모듈 + scripts 위치 결정. 사용자 결정 5건 + 부가 결정 4건 모두 v1.2/v1.4 잠금 완료.
 >
-> **§5.7.5 의 4 그룹 + 비목표 = 20 항목 (`plan/phase-5-todo.md §5.7.5` 참조)**:
->   - **B 그룹** (7): Orama + Kiwi upstream sync 자동화 (B1~B6 + B7 kiwi-nlp source vendor sync)
->   - **LOW 잔여** (4): codex post-impl deferred (LOW #5 lowercase / LOW #7 라이선스 docs 자동검증 / LOW #14 PARTIAL persist race / LOW #15 vendor module load warn)
->   - **PoC code cleanup** (3): wikey-obsidian PoC 3 command + npm deps 정리
->   - **C 그룹** (4): spec v8 §4.3 deferred (C1 Q5 회귀 보완 / C2 50~100 query benchmark + 자동화 / C5 wikey.conf qmd 키 deprecate / C6 env-detect.ts qmd 의존 제거)
->   - **비목표** (2): HYBRID Stage 2 full reroute / BENCH-AUTO benchmark CI 통합
+> **우선순위 3 (Step B 구현 진입)**: TDD RED 16 case → GREEN (~1005 LOC cleanup / ~925 보존) → BLUE 3a 회귀 → BLUE 3b refactor.
+>   - **20 AC 매핑**: 단위 13 (§5.1 11 + §5.1.1 2 = AC-U1~U8 + AC-L5/L7/L14/L15 + AC-C5 + AC-C6) + 통합 4 (AC-S1 + AC-L7 + AC-P1 + AC-D1) + 라이브 3 (AC-V1~V3)
+>   - **변경 면**: settings-tab.ts (`Show developer section` + `Allow upstream update check` 2 토글, `wikey-settings-developer-*` prefix) + 신규 `wikey-core/src/update/upstream-checker.ts` + `update-analyzer.ts` + `scripts/check-kiwi-vendor-sync.sh` + `scripts/check-licenses.sh` + `WikeySettings.developerMode` + `allowUpdateCheck` (main.ts:34/87/651) + `detectEnvironment(basePath, ollamaUrl, searchEngine)` 시그니처 확장 (env-detect.ts) + `WIKEY_SEARCH_TOP_N` alias + LOW #14 atomic write + LOW #15 lazy import + POC-1 cleanup (~80 LOC 제거)
 >
-> **우선순위 3 (Phase 5 잔여 우선순위 결정)**: §5.5 (graph) / §5.6 (LLM provider) / §5.7.5 / §5.8 (D.0.l) / §5.9 (variance). §5.7.5 는 본 cycle 의 자연 후속 — **§5.5 / §5.6 보다 우선** (사용자 결정 의뢰 가능).
+> **우선순위 4 (Step C 라이브 smoke)**: master 직접 obsidian-cdp — AC-V1 (4 row 표시) / AC-V2 (분석 버튼 LLM 호출 + 개발필요 mark) / AC-V3 (toggle off + onload 호출 0).
+>
+> **우선순위 5 (Step D 문서)**: README `## Developer mode` 섹션 (`Show developer section` 만, env 표기 미도입) + activity result + phase-5-todo mirror + commit 분리.
+>
+> **선행 의무 (별 단계, master 단독)**:
+>   - `claude-harness-helper` repo commit — master-validation skill v1.4 (anchor (f) exact match 보강) + rules.md §10. 본 §5.7.5 commit 에 skill 갱신은 wikey 안에서 진행했으므로 harness-helper 별 repo commit 별도.
+>
+> ## Session 30 (2026-05-09) §5.7.5 plan APPROVE 종결
+>
+> **plan 산출** (단일 commit):
+> - `plan/phase-5-spec-5.7.5-orama-update-sync.md` (v1.4, 472줄, Spec WHAT)
+> - `plan/phase-5-todox-5.7.5-orama-update-sync.md` (v1.4, 308줄, Todo HOW)
+> - `plan/phase-5-todo.md §5.7.5` mirror (분류 11/9/7=27 + 사용자 결정 5건 + 부가 4건 + AC 20)
+> - `claude-harness-helper/common/skills/master-validation/SKILL.md` anchor (f) exact match 보강 (사용자 승인)
+>
+> **Cycle 누적** (codex Mode D Panel):
+> - cycle #1 (NEEDS_REVISION): HIGH 0 / MED 5 / LOW 1 → master 직접 fix 6 finding (analyst 재호출 0)
+> - cycle #2 (APPROVE): LOW 2 (v1.3 mirror 품질 + history negative context) → master 직접 fix v1.4 LOW 5 위치 (PASS_v1 → PASS_v1.3, footer v1.4 mirror)
+>
+> **사용자 결정 5건 잠금** (v1.2): #1 (A) settings 토글 / #2 opt-in / #3 wikey 기본 BYOAI / #4 code lowercase 유지 + docs 정정 / #5 C5/C6 본 cycle 포함 (권고 deferral 와 다름).
+>
+> **부가 결정 4건 잠금** (v1.4): 선행 의무 #1 schema 진입 직전 별 step / #2 harness-helper 별 repo master 단독 / B4 Kiwi 사전 본 cycle 포함 / POC-1 cleanup.
+>
+> **`master-validation` 스킬 갱신** (사용자 승인): Layer 1 anchor (f) `version exact match` 보강 — 기존 prefix `grep "version: v1"` hole 로 v1.3 PASS_v1 stale 미감지 catch. claude-harness-helper repo commit 별도 단계.
 >
 > ## Session 29 (2026-05-09) §5.7.4 GREEN 종결 4 commit
 >

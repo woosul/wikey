@@ -943,8 +943,12 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 
 ---
 
-## 5.7.5 Orama upstream sync 자동화 + LOW 잔여 + PoC cleanup — Phase 5 별 subject (P3, 2026-05-09 신설)
-> tag: #search, #orama, #kiwi-nlp, #upstream-sync, #poc-cleanup, #phase5-defferred
+## 5.7.5 Orama upstream sync 자동화 + LOW 잔여 + PoC cleanup + Developer Update UI — Phase 5 별 subject (P3, 2026-05-09 신설, **plan APPROVE_v1.4** Session 30)
+> tag: #search, #orama, #kiwi-nlp, #upstream-sync, #poc-cleanup, #developer-ui, #phase5-defferred
+>
+> **plan 상태**: spec v1.4 + todo v1.4 작성 완료 (codex Mode D Panel cycle #2 verdict APPROVE). Step B (RED→GREEN→BLUE) 구현 진입은 **다음 세션** (사용자 결정 2026-05-09).
+>
+> **단일 소스**: [`plan/phase-5-spec-5.7.5-orama-update-sync.md`](./phase-5-spec-5.7.5-orama-update-sync.md) (Spec WHAT, 472줄) + [`plan/phase-5-todox-5.7.5-orama-update-sync.md`](./phase-5-todox-5.7.5-orama-update-sync.md) (Todo HOW, 308줄).
 
 §5.7.4 종결 후 deferred 된 운영 정책 + 코드 quality 보강 + cleanup 항목 통합. 본 §5.7.5 는 *마이그레이션 후 운영* 영역이라 별 spec 으로 분리 (Karpathy Simplicity #2 — §5.7.4 코드 작업 cycle 과 명확 경계).
 
@@ -991,15 +995,30 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 
 ### 진입 우선순위 결정 의무
 
-§5.7.5 의 4 그룹 (B 그룹 7 + LOW 4 + PoC cleanup 3 + C 그룹 4 + 비목표 2 = 총 20 항목) 모두 spec 작성 시 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) 후 포함/단순화/deferral 결정. 본 todo entry 는 *식별 + 후속 cycle reference* 만, 실 spec 은 별 `plan/phase-5-spec-5.7.5-orama-update-sync.md` 또는 `phase-5-todox-5.7.5-...md` 작성 시 결정.
+§5.7.5 의 4 그룹 (B 그룹 7 + LOW 4 + PoC cleanup 3 + C 그룹 4 + 비목표 2 = 총 20 항목) 모두 spec 작성 시 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) 후 포함/단순화/deferral 결정.
+
+**v1.4 분류 결과** (총 27 입력 = 위 20 항목 + 사용자 신규 UI 7 요구사항):
+
+| 분류 | 개수 | 항목 |
+|---|---|---|
+| **포함 (해당 cycle 의무)** | **11** | UI-1, UI-2, UI-3, UI-4, UI-5, UI-6, LOW #14, LOW #15, LOW #7, **C5 (v1.2)**, **C6 (v1.2)** |
+| **수정 포함 (단순화)** | **9** | UI-7 (표시까지만), B1 (재시작 1회), B2 (LLM analyze 흡수), B4 (본 cycle 포함, UI-4 자연 row), B7 (detect + script 까지), LOW #5 (code lowercase 유지), POC-1 (cleanup), POC-2 (POC-1 종속), POC-3 (1줄 verification) |
+| **deferral / 폐기** | **7** | B3, B5, B6, C1, C2, HYBRID, BENCH-AUTO |
+
+본 cycle 안 실 작업 = 20 (포함 11 + 수정 9), 별 cycle deferral = 7. AC 20 (단위 13 + 통합 4 + 라이브 3). LOC 추정 ~1005 (cleanup) / ~925 (보존).
 
 ### Karpathy Simplicity 적용
 **본 §5.7.5 는 *별 cycle*** — §5.7.4 의 *코드 swap* 과 분리. 자동화 인프라 (cron / GitHub Actions / regression suite) 는 over-spec 후보 의무 검토. B 그룹 7 항목 모두 *진행 시점 결정* — 본 §5.7.5 의 spec 작성 시 어느 범위까지 자동화할지 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) 의무.
 
-### 진입 우선순위
-1. **wikey.schema.md 검색 코어 안정성 갱신** (사용자 승인) — §5.7.4 종결 직후 의무
-2. **claude-harness-helper repo commit** (master-validation skill + rules.md §10 압축) — 별 repo
-3. **§5.7.5 spec 작성** — `plan/phase-5-spec-5.7.5-orama-update-sync.md` 신규 (P3, §5.5 / §5.6 와 우선순위 비교 후 결정)
+### 진입 우선순위 (Session 30 plan APPROVE_v1.4 후 갱신)
+1. ✅ **§5.7.5 spec/todo v1.4 작성 + plan APPROVE** (Session 30 완료) — codex cycle #1 NEEDS_REVISION 6 finding fix + cycle #2 APPROVE + 사용자 결정 5건 (#1 (A) settings 토글 / #2 opt-in / #3 wikey 기본 BYOAI / #4 code lowercase 유지 + docs 정정 / #5 C5/C6 본 cycle 포함) + 부가 결정 4건 (선행 의무 #1 schema 진입 직전 / #2 harness-helper 별 repo / B4 Kiwi 사전 본 cycle 포함 / POC-1 cleanup).
+2. **다음 세션 진입** (Step A → Step B):
+  - **Step A 직전**: `wikey.schema.md` 검색 코어 안정성 갱신 (사용자 승인 의무, 별 commit) — Orama default + qmd fallback + Kiwi WASM 한국어 tokenizer 명시
+  - **Step A**: 코드 변경 위치 fact-check (master fresh re-grep)
+  - **Step B**: TDD RED 16 case → GREEN (~1005 LOC cleanup / ~925 LOC 보존) → BLUE 3a 회귀 → BLUE 3b refactor
+  - **Step C**: 라이브 smoke 3 시나리오 (master 직접 obsidian-cdp)
+  - **Step D**: 문서 동기화 + commit 분리
+3. **claude-harness-helper repo commit** — master-validation skill v1.4 (anchor (f) exact match 보강, 본 commit 포함) + harness-helper repo 별 단계.
 
 ---
 
