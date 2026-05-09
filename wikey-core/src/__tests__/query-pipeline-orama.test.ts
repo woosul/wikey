@@ -7,9 +7,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, chmodSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { execPath } from 'node:process'
 import { execOramaSearch, query } from '../query-pipeline.js'
 import { resetOramaIndexForTest } from '../search/orama-index-singleton.js'
 import type { HttpClient, WikeyConfig } from '../types.js'
@@ -171,3 +172,87 @@ describe('query-pipeline Orama integration', () => {
 
 // Silence vitest unused-import warnings in this RED scaffold
 void vi
+
+/**
+ * AC-F1.b — `WIKEY_SEARCH_ENGINE=qmd` 환경 → query() 가 findQmdBin + qmd subprocess 호출.
+ *
+ * Codex post-impl LOW #6 fix — 기존 main-config-bridge test 는 *config parsing* 만
+ * 검증, 실제 qmd subprocess 호출 path 는 미검증. 본 통합 test 는:
+ *   - tmp basePath 안 stub `tools/qmd/dist/cli/qmd.js` 작성 (process.execPath 로 실행)
+ *   - stub 가 fixture JSON stdout 출력 (qmd.js 의 query 결과 형식)
+ *   - query() 호출 시 stub 호출 → parseQmdOutput → SearchResult[] 변환
+ *   - LLM mock (httpClient) 으로 답변 합성
+ *   - result.sources[*].path 가 'wiki/' prefix 포함 + score 보존 확증
+ *
+ * 본 test 는 mock execFile 대신 실제 subprocess 호출을 *fast stub script* 로 격리. 100ms
+ * 미만 의 실 spawn → integration shape 의 정확한 검증 (vi.mock 으로는 unmock 누락 시
+ * 다른 test 에 leak 위험).
+ */
+describe('query-pipeline qmd legacy integration (AC-F1.b)', () => {
+  it('query() with WIKEY_SEARCH_ENGINE=qmd → findQmdBin + qmd subprocess + parseQmdOutput', async () => {
+    const config = makeConfig({ WIKEY_SEARCH_ENGINE: 'qmd', WIKEY_QMD_TOP_N: 3 })
+
+    // Stub qmd.js — emits one JSON result. findQmdBin 는 tools/qmd/dist/cli/qmd.js 1순위.
+    const qmdDir = join(basePath, 'tools', 'qmd', 'dist', 'cli')
+    mkdirSync(qmdDir, { recursive: true })
+    const stubPath = join(qmdDir, 'qmd.js')
+    // qmd query 의 stdout JSON shape: [{file, score, snippet}]. parseQmdOutput 가
+    // file 의 'qmd://wikey-wiki/' prefix 제거 + 'wiki/' 접두사 보장.
+    writeFileSync(
+      stubPath,
+      `// stub qmd.js for integration test (AC-F1.b)
+const fixture = JSON.stringify([
+  { file: 'qmd://wikey-wiki/concepts/bm25.md', score: 0.92, snippet: 'BM25 algorithm' },
+  { file: 'concepts/orama.md', score: 0.81, snippet: 'Orama is in-process' },
+])
+process.stdout.write(fixture)
+`,
+      'utf-8',
+    )
+    chmodSync(stubPath, 0o644)
+
+    // LLM mock — synthesis path will call provider once.
+    const httpClient: HttpClient = {
+      request: async () => ({
+        status: 200,
+        body: JSON.stringify({ response: 'BM25 ranks documents.' }),
+      }),
+    }
+
+    const result = await query('BM25 ranking', config, httpClient, {
+      basePath,
+      execEnv: process.env as Record<string, string>,
+      // findQmdBin 가 isJs=true 분기일 때 nodePath 로 process.execPath 사용.
+      nodePath: execPath,
+    })
+
+    expect(result).toBeDefined()
+    expect(typeof result.answer).toBe('string')
+    expect(Array.isArray(result.sources)).toBe(true)
+    // 2 sources from stub, parseQmdOutput 가 wiki/ prefix 보장.
+    expect(result.sources.length).toBe(2)
+    const first = result.sources[0]
+    expect(first.path).toBe('wiki/concepts/bm25.md')
+    expect(first.score).toBe(0.92)
+    expect(first.snippet).toContain('BM25')
+    const second = result.sources[1]
+    expect(second.path).toBe('wiki/concepts/orama.md')
+    expect(second.score).toBe(0.81)
+  }, 30000)
+
+  it('query() with engine=qmd + qmd binary missing → findQmdBin throws + Step 1/4 error', async () => {
+    const config = makeConfig({ WIKEY_SEARCH_ENGINE: 'qmd' })
+    // tools/qmd/ absent → findQmdBin throws.
+
+    const httpClient: HttpClient = {
+      request: async () => ({ status: 500, body: 'no llm expected' }),
+    }
+
+    await expect(
+      query('any', config, httpClient, {
+        basePath,
+        execEnv: process.env as Record<string, string>,
+      }),
+    ).rejects.toThrow(/Step 1\/4 qmd 탐색/)
+  })
+})
