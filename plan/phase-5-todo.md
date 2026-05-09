@@ -975,6 +975,24 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 - [ ] (POC-2) `wikey-obsidian/package.json` 의 `kiwi-nlp` / `@orama/orama` deps — production query path 가 vendor 경유라 의존성 정리 가능 (단 PoC 보존 시 deps 도 보존)
 - [ ] (POC-3) 정리 결정 시 main.js 크기 측정 — 현재 496K → 정리 후 ~370K 예상 (PoC 단계 base ~423K 와 비교)
 
+### C 그룹 (PoC §5.7.3 → spec v8 §4.3 deferred — 검색 품질·정합성 보강) — 4 항목
+
+> `plan/phase-5-spec-5.7.4-orama-migration.md §4.3` 에서 본 cycle 안 처리 거부된 항목 (deferral / Karpathy Simplicity #4 — 분리 합리). C3/C4 는 §5.7.4 안 sanity 수준 처리 완료, C1/C2/C5/C6 는 본 §5.7.5.
+
+- [ ] (C1 — Q5 회귀 보완 — smart_tokenize 정밀화) PoC §3 단계 3 의 10 query benchmark 결과 Q5 ("프로젝트 일정 관리") Top-1 회귀 1/10 (의도적 수용). 본 cycle 의 *quality regression bounded* 정책 vs *순 +1 우수* 의 trade-off — Q4 (ITIL) + Q10 (Obsidian) 회복으로 +2 (하지만 Q5 는 -1). 보완 후보: smart_tokenize 의 한국어 stopword 추가 (예: "관리", "프로젝트" 같은 generic content word 의 BM25 saturation 회피) 또는 POS filter 정밀화 (NNG vs NR 분리 등). 사용자 만족도 평가 후 결정 영역
+- [ ] (C2 — 50~100 query 확장 benchmark + 자동화) 현 10 query benchmark 의 statistical power 부족 — sample size ≥ 50 의 query suite 작성 + `npm run benchmark:search` script 자동화. quality regression 자동 감지 (CI 통합 가능). 본 §5.7.4 안 = *수동 1회 실측* (master 직접). 자동화 별 cycle
+- [ ] (C5 — wikey.conf qmd 키 deprecate) `WIKEY_QMD_TOP_N` → `WIKEY_SEARCH_TOP_N` naming alias 도입 (Orama backend 도 동일 의미 — top N 결과 수). 또한 `~/.cache/qmd/.last-reindex` stamp file → `~/.cache/wikey/.last-reindex` rename 검토 (cache root 정리). 본 §5.7.4 = naming refactor 미진행 (Karpathy Surgical 위반 회피)
+- [ ] (C6 — env-detect.ts qmd 의존 제거) `wikey-obsidian/src/env-detect.ts` 의 `findQmdBin` 호출 — feature flag default `'orama'` 라도 `WIKEY_SEARCH_ENGINE=qmd` toggle 시 detect 의무 (회귀 path). 본 §5.7.4 = detect 보존, qmd toggle 폐기 시점에 별 cycle 정리
+
+### 비목표 추가 검토 (spec v8 §1.2 mirror) — 2 항목
+
+- [ ] (HYBRID — Stage 2 hybrid search full reroute) 본 §5.7.4 = BM25-only 1차 마이그레이션. AC-V1 sanity (Orama schema 의 `embedding: 'vector[768]'` column 추가 + mock vector round-trip) 만 검증. 실 호출 라인 reroute (Qwen3-Embedding 768D 통합 + RRF 또는 Orama hybrid mode) = 별 sub-cycle. 본 §5.7.5 또는 §5.7.6 결정
+- [ ] (BENCH-AUTO — 검색 quality benchmark 자동화 통합) 본 §5.7.4 = *수동 1회 실측* (master 직접 obsidian-cdp + PoC benchmark command 재실행). 자동화 (`npm run benchmark:search` + CI 통합 + regression alert) 별 cycle. C2 와 일부 중복
+
+### 진입 우선순위 결정 의무
+
+§5.7.5 의 4 그룹 (B 그룹 7 + LOW 4 + PoC cleanup 3 + C 그룹 4 + 비목표 2 = 총 20 항목) 모두 spec 작성 시 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) 후 포함/단순화/deferral 결정. 본 todo entry 는 *식별 + 후속 cycle reference* 만, 실 spec 은 별 `plan/phase-5-spec-5.7.5-orama-update-sync.md` 또는 `phase-5-todox-5.7.5-...md` 작성 시 결정.
+
 ### Karpathy Simplicity 적용
 **본 §5.7.5 는 *별 cycle*** — §5.7.4 의 *코드 swap* 과 분리. 자동화 인프라 (cron / GitHub Actions / regression suite) 는 over-spec 후보 의무 검토. B 그룹 7 항목 모두 *진행 시점 결정* — 본 §5.7.5 의 spec 작성 시 어느 범위까지 자동화할지 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) 의무.
 
