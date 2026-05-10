@@ -1,0 +1,367 @@
+{
+  "version": 1,
+  "collection": "wikey-wiki",
+  "created": "2026-05-10",
+  "_doc": "§5.7.6 — 50+ query benchmark suite for search quality regression tracking. 도메인 균형 (5 도메인 각 ≥ 10 query). Top-1 expected slug = wiki corpus 안 실 존재 slug (file existence assert AC-B1). Q5 (pmbok-q1) = stopword fix 의 직접 회복 대상.",
+  "queries": [
+    {
+      "id": "pmbok-q1",
+      "query": "프로젝트 일정 관리",
+      "expected_top1": "project-schedule-management",
+      "expected_top3": ["project-schedule-management", "project-management-body-of-knowledge", "earned-value-management"],
+      "domain": "pmbok",
+      "note": "§5.7.3 PoC Q5 — stopword fix 직접 회복 대상"
+    },
+    {
+      "id": "pmbok-q2",
+      "query": "PMBOK 지식체계",
+      "expected_top1": "project-management-body-of-knowledge",
+      "expected_top3": ["project-management-body-of-knowledge", "project-schedule-management", "work-breakdown-structure"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q3",
+      "query": "프로젝트 비용 관리",
+      "expected_top1": "project-cost-management",
+      "expected_top3": ["project-cost-management", "earned-value-management", "project-management-body-of-knowledge"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q4",
+      "query": "프로젝트 위험 관리",
+      "expected_top1": "project-risk-management",
+      "expected_top3": ["project-risk-management", "project-management-body-of-knowledge", "project-quality-management"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q5",
+      "query": "이해관계자 관리",
+      "expected_top1": "project-stakeholder-management",
+      "expected_top3": ["project-stakeholder-management", "project-communications-management", "project-management-body-of-knowledge"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q6",
+      "query": "WBS 작업 분류 체계",
+      "expected_top1": "work-breakdown-structure",
+      "expected_top3": ["work-breakdown-structure", "작업-분류-체계", "project-management-body-of-knowledge"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q7",
+      "query": "획득가치관리 EVM",
+      "expected_top1": "earned-value-management",
+      "expected_top3": ["earned-value-management", "project-cost-management", "project-management-body-of-knowledge"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q8",
+      "query": "프로젝트 품질 관리",
+      "expected_top1": "project-quality-management",
+      "expected_top3": ["project-quality-management", "project-risk-management", "project-management-body-of-knowledge"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q9",
+      "query": "프로젝트 자원 관리",
+      "expected_top1": "project-resource-management",
+      "expected_top3": ["project-resource-management", "project-cost-management", "project-management-body-of-knowledge"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q10",
+      "query": "프로젝트 통합 관리",
+      "expected_top1": "project-integration-management",
+      "expected_top3": ["project-integration-management", "project-management-body-of-knowledge", "project-scope-management"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "pmbok-q11",
+      "query": "PDCA 사이클",
+      "expected_top1": "pdca-cycle",
+      "expected_top3": ["pdca-cycle", "continual-improvement", "project-quality-management"],
+      "domain": "pmbok"
+    },
+    {
+      "id": "itil-q1",
+      "query": "ITIL 4 가이드 원칙",
+      "expected_top1": "itil-4-guiding-principles",
+      "expected_top3": ["itil-4-guiding-principles", "itil-4", "continual-improvement"],
+      "domain": "itil",
+      "note": "§5.7.3 PoC Q4 mirror"
+    },
+    {
+      "id": "itil-q2",
+      "query": "ITIL 변경 관리",
+      "expected_top1": "itil-4-change-enablement",
+      "expected_top3": ["itil-4-change-enablement", "itil-4", "itil-4-guiding-principles"],
+      "domain": "itil"
+    },
+    {
+      "id": "itil-q3",
+      "query": "사고 관리 incident",
+      "expected_top1": "itil-4-incident-management",
+      "expected_top3": ["itil-4-incident-management", "itil-4-problem-management", "itil-4"],
+      "domain": "itil"
+    },
+    {
+      "id": "itil-q4",
+      "query": "문제 관리 problem",
+      "expected_top1": "itil-4-problem-management",
+      "expected_top3": ["itil-4-problem-management", "itil-4-incident-management", "itil-4"],
+      "domain": "itil"
+    },
+    {
+      "id": "itil-q5",
+      "query": "서비스 데스크",
+      "expected_top1": "itil-4-service-desk",
+      "expected_top3": ["itil-4-service-desk", "itil-4-service-request-management", "itil-4"],
+      "domain": "itil"
+    },
+    {
+      "id": "itil-q6",
+      "query": "서비스 가치 사슬",
+      "expected_top1": "service-value-chain",
+      "expected_top3": ["service-value-chain", "service-value-system", "itil-4"],
+      "domain": "itil"
+    },
+    {
+      "id": "itil-q7",
+      "query": "서비스 가치 시스템",
+      "expected_top1": "service-value-system",
+      "expected_top3": ["service-value-system", "service-value-chain", "itil-4"],
+      "domain": "itil"
+    },
+    {
+      "id": "itil-q8",
+      "query": "지속적 개선",
+      "expected_top1": "continual-improvement",
+      "expected_top3": ["continual-improvement", "itil-4-guiding-principles", "pdca-cycle"],
+      "domain": "itil"
+    },
+    {
+      "id": "itil-q9",
+      "query": "SLA 서비스 수준 협약",
+      "expected_top1": "service-level-agreement",
+      "expected_top3": ["service-level-agreement", "itil-4-service-level-management", "itil-4"],
+      "domain": "itil"
+    },
+    {
+      "id": "itil-q10",
+      "query": "ITIL 가버넌스",
+      "expected_top1": "governance",
+      "expected_top3": ["governance", "itil-4-guiding-principles", "itil-4"],
+      "domain": "itil"
+    },
+    {
+      "id": "obsidian-q1",
+      "query": "Obsidian 마크다운 위키",
+      "expected_top1": "obsidian",
+      "expected_top3": ["obsidian", "yaml-frontmatter", "dataview"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q2",
+      "query": "frontmatter YAML",
+      "expected_top1": "yaml-frontmatter",
+      "expected_top3": ["yaml-frontmatter", "obsidian", "dataview"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q3",
+      "query": "dataview 플러그인",
+      "expected_top1": "dataview",
+      "expected_top3": ["dataview", "obsidian", "yaml-frontmatter"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q4",
+      "query": "marp 슬라이드",
+      "expected_top1": "marp",
+      "expected_top3": ["marp", "obsidian", "yaml-frontmatter"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q5",
+      "query": "git 버전 관리",
+      "expected_top1": "git",
+      "expected_top3": ["git", "obsidian", "claude-code"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q6",
+      "query": "claude code CLI",
+      "expected_top1": "claude-code",
+      "expected_top3": ["claude-code", "git", "obsidian"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q7",
+      "query": "Microsoft Teams 협업",
+      "expected_top1": "microsoft-teams",
+      "expected_top3": ["microsoft-teams", "teams", "slack"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q8",
+      "query": "slack 메신저",
+      "expected_top1": "slack",
+      "expected_top3": ["slack", "microsoft-teams", "teams"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q9",
+      "query": "FAQ 자주 묻는 질문",
+      "expected_top1": "frequently-asked-questions",
+      "expected_top3": ["frequently-asked-questions", "knowledge-gap", "retrieval"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "obsidian-q10",
+      "query": "표준 작업 절차 SOP",
+      "expected_top1": "standard-operating-procedure",
+      "expected_top3": ["standard-operating-procedure", "continual-improvement", "pdca-cycle"],
+      "domain": "obsidian"
+    },
+    {
+      "id": "korean-q1",
+      "query": "공급망 관리",
+      "expected_top1": "공급망-관리",
+      "expected_top3": ["공급망-관리", "자재-명세서", "전사적-자원-관리"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q2",
+      "query": "자재 명세서 BOM",
+      "expected_top1": "자재-명세서",
+      "expected_top3": ["자재-명세서", "공급망-관리", "manufacturing-execution-system"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q3",
+      "query": "전사적 자원 관리 ERP",
+      "expected_top1": "전사적-자원-관리",
+      "expected_top3": ["전사적-자원-관리", "공급망-관리", "manufacturing-execution-system"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q4",
+      "query": "제조 실행 시스템 MES",
+      "expected_top1": "manufacturing-execution-system",
+      "expected_top3": ["manufacturing-execution-system", "제조-실행-시스템", "전사적-자원-관리"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q5",
+      "query": "제품 수명 주기 관리",
+      "expected_top1": "제품-수명-주기-관리",
+      "expected_top3": ["제품-수명-주기-관리", "전사적-자원-관리", "공급망-관리"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q6",
+      "query": "고급 계획 및 스케줄링",
+      "expected_top1": "고급-계획-및-스케줄링",
+      "expected_top3": ["고급-계획-및-스케줄링", "manufacturing-execution-system", "제조-실행-시스템"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q7",
+      "query": "검사 성적서",
+      "expected_top1": "검사성적서",
+      "expected_top3": ["검사성적서", "거래명세서", "세금계산서"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q8",
+      "query": "세금 계산서",
+      "expected_top1": "세금계산서",
+      "expected_top3": ["세금계산서", "거래명세서", "검사성적서"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q9",
+      "query": "거래 명세서",
+      "expected_top1": "거래명세서",
+      "expected_top3": ["거래명세서", "세금계산서", "검사성적서"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "korean-q10",
+      "query": "모바일 앱 서비스",
+      "expected_top1": "모바일-앱-서비스",
+      "expected_top3": ["모바일-앱-서비스", "ai-orchestrator", "nocode-flow-editor"],
+      "domain": "korean-general"
+    },
+    {
+      "id": "english-q1",
+      "query": "BM25 algorithm",
+      "expected_top1": "bm25",
+      "expected_top3": ["bm25", "vector-search", "retrieval"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q2",
+      "query": "vector search",
+      "expected_top1": "vector-search",
+      "expected_top3": ["vector-search", "bm25", "semantic-search"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q3",
+      "query": "semantic search",
+      "expected_top1": "semantic-search",
+      "expected_top3": ["semantic-search", "vector-search", "retrieval"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q4",
+      "query": "RAG retrieval augmented generation",
+      "expected_top1": "retrieval-augmented-generation",
+      "expected_top3": ["retrieval-augmented-generation", "retrieval", "large-language-model"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q5",
+      "query": "large language model LLM",
+      "expected_top1": "large-language-model",
+      "expected_top3": ["large-language-model", "llm", "retrieval-augmented-generation"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q6",
+      "query": "RLHF reinforcement learning",
+      "expected_top1": "rlhf",
+      "expected_top3": ["rlhf", "large-language-model", "llm"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q7",
+      "query": "hallucination guard",
+      "expected_top1": "hallucination",
+      "expected_top3": ["hallucination", "hallucination-guard", "hallucination-free"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q8",
+      "query": "human in the loop",
+      "expected_top1": "human-in-the-loop",
+      "expected_top3": ["human-in-the-loop", "expert-in-the-loop", "rlhf"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q9",
+      "query": "ISO 27001 보안",
+      "expected_top1": "iso-iec-27001-2022",
+      "expected_top3": ["iso-iec-27001-2022", "information-security-management-system", "iso-27001-organizational-controls"],
+      "domain": "english-mixed"
+    },
+    {
+      "id": "english-q10",
+      "query": "OCR 광학 문자 인식",
+      "expected_top1": "optical-character-recognition",
+      "expected_top3": ["optical-character-recognition", "document-ai", "data-fusion"],
+      "domain": "english-mixed"
+    }
+  ]
+}

@@ -9,15 +9,17 @@
     "src/prompts"
   ],
   "scripts": {
-    "build": "tsc && node -e \"require('node:fs').cpSync('src/defaults','dist/defaults',{recursive:true})\" && node -e \"const fs=require('node:fs'); if (fs.existsSync('scripts')) fs.cpSync('scripts','dist/scripts',{recursive:true})\"",
+    "build": "tsc && node -e \"require('node:fs').cpSync('src/defaults','dist/defaults',{recursive:true})\" && node -e \"const fs=require('node:fs'); if (fs.existsSync('scripts')) fs.cpSync('scripts','dist/scripts',{recursive:true})\" && node -e \"const fs=require('node:fs'); if (fs.existsSync('eval')) fs.cpSync('eval','dist/eval',{recursive:true})\"",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "benchmark:search": "node dist/scripts/benchmark-search.js"
   },
   "dependencies": {
     "@orama/orama": "^3.1.18"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^3.2.4",
+    "tsx": "^4.7.0",
     "typescript": "^5.7.0",
     "vitest": "^3.1.0"
   }

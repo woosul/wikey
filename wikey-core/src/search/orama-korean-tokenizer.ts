@@ -21,6 +21,11 @@ const CONTENT_POS: ReadonlySet<string> = new Set([
   'NNG', 'NNP', 'NNB', 'NR', 'VV', 'VA', 'VX', 'MAG', 'XR', 'SL', 'SN', 'SH',
 ])
 
+// §5.7.6 abandoned (2026-05-10): static stopword paradigm = wikey 철학 위반 (LLM 참여형
+// 다층 검색 위반 — schema.md "지능 레이어 LLM 담당"). PMBOK 36% 회귀 = 일방적 drop 부작용.
+// LLM per-query dynamic stopword paradigm = §5.7.8 신설 후보 (별 cycle).
+// tokenizer = pure tokenize 복원 — semantic decision 0.
+
 /**
  * Alphanumeric-preserve regex — `BM25`, `ISO`, `gpt-4`, `o3.5_mini` 등 검색에 의미 있는
  * 단일 토큰 보존. start/end 가 영숫자, 사이에 `.`, `-`, `_` 허용.

@@ -1125,30 +1125,346 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 
 ---
 
-## 5.7.6 §5.7.5 deferral 7항목 통합 — Phase 5 별 subject 후보 (P4, 2026-05-09 신설)
-> tag: #search, #orama, #benchmark, #automation, #hybrid, #phase5-deferred
+## 5.7.6 검색 quality tuning — Q5 stopword + 50+ query benchmark (P3, 2026-05-10 진입 → **ABANDON 2026-05-10**)
+> tag: #search, #quality-tuning, #benchmark, #stopword, #orama, #abandoned, #paradigm-violation
 
-> **상태**: 신설 후보 — 본 cycle 진입은 별 spec 작성 후 결정. **§5.7.5 종결 (Session 31, 2026-05-09)** 시 deferral 7항목을 통합한 별 cycle 후보. master / 사용자 우선순위 결정 영역.
+> **상태**: Session 32 (2026-05-10) **ABANDON** — paradigm violation 인지 + revert.
 >
-> **상위 spec**: 미작성 (진입 시점에 작성). 단일 소스 = 본 todo 섹션 + `plan/phase-5-spec-5.7.5-orama-update-sync.md §4.7 deferral` mirror.
+> **abandon 결정 사유** (사용자 raise 2026-05-10): "stopword에 대한 의미론적 파악 후 제거 여부를 알고리즘에서 결정. 등록된 모든 단어를 제거하는건 LLM답지 않음. stopword에 등록된 단어라 하더라도, 질문의 유형에 따라 넣고 빼고가 결정되어야 함. 등록 단어의 일방적 삭제는 위험."
+>
+> **paradigm violation**: 본 §5.7.6 의 *static stopword* 접근은 wikey 철학 (`wikey.schema.md` "LLM 참여형 다층 검색" / "지능 레이어는 외부 LLM 이 담당") 위반. 본 cycle 의 PMBOK 36% Top-1 회귀 (의도된 Q5 회복 외 부작용) 가 paradigm 결함의 실증 — `프로젝트`/`관리` 가 PMBOK 카테고리 marker 인데 일방적 drop → "프로젝트 비용 관리" / "프로젝트 위험 관리" 등 모든 PMBOK query 회귀.
+>
+> **올바른 paradigm = §5.7.8 신설 후보** (LLM per-query dynamic stopword): tokenizer 는 pure tokenize (semantic 0). query 단계에서 LLM 호출 → query intent 분석 → stopword candidate 별 keep/drop per-query 판정. "프로젝트 비용 관리" → LLM 가 "PMBOK 도메인 카테고리 query" 인식 → `프로젝트` keep / 다른 generic 단어 drop. "정보 시스템 관리" → LLM 가 "generic 검색" 인식 → `정보` + `시스템` drop / `관리` 보존 등.
+>
+> **revert 영역** (commit 시 effective):
+> - `wikey-core/src/search/orama-korean-tokenizer.ts` — KOREAN_STOPWORDS const + tokenize fn 분기 모두 제거 (pure tokenize 복원)
+> - `scripts/korean-tokenize.py` — 동등 revert
+> - `wikey-core/src/defaults/stopwords-korean.default.json` — 삭제
+> - `wikey-core/src/scripts/analyze-stopwords.ts` — 삭제 (df-only paradigm 도 `LLM답지 않음` 위반)
+> - `wikey-core/src/__tests__/search/orama-korean-tokenizer-stopword.test.ts` — 삭제
+>
+> **§5.7.8 평가 도구로 보존**:
+> - `wikey-core/eval/benchmark-suite.json` (51 query, 5 도메인 균형) — 본 §5.7.8 의 quality measurement source
+> - `wikey-core/src/scripts/benchmark-search.ts` (export `runBenchmark` + searchFn injection) — §5.7.8 의 benchmark runner
+> - `wikey-core/package.json` 안 `tsx` devDep + `benchmark:search` script
+>
+> **본 cycle 학습** (paradigm 검증):
+> 1. PMBOK 36% 회귀 = static stopword 의 *일방적 drop 위험* 실증
+> 2. Q5 회복 (1/10 → 1/1) 가설 유효 — LLM dynamic 적용 시 자연 회복 예상
+> 3. 51 query benchmark suite 도메인 분포 baseline = §5.7.8 측정 source
+> 4. wikey 철학 정합 = LLM-driven decision = static rule 폐기 의무
+>
+> **단일 소스 (abandon)**: spec v1.2 + todox v1.2 (작성 잔존, 본 abandon 결론 추가 의무 — Step D 동기화 시).
+>
+> **단일 소스**: [`plan/phase-5-spec-5.7.6-search-quality-tuning.md`](./phase-5-spec-5.7.6-search-quality-tuning.md) **v1.2 작성 완료** (Spec WHAT, ~485줄 + codex cycle #1 NEEDS_REVISION 8 findings master fix mirror) + [`plan/phase-5-todox-5.7.6-search-quality-tuning.md`](./phase-5-todox-5.7.6-search-quality-tuning.md) **v1.2 작성 완료** (Todo HOW, ~310줄). codex Mode D Panel cycle #2 송부 직전.
 
-§5.7.5 의 27 입력 분류 결과 중 "deferral / 폐기 7항목" 을 별 cycle 로 통합. 자동화 인프라 (cron / GitHub Actions / regression suite / push notification) + 검색 quality 정밀화 (Q5 회귀 / 50+ query suite) + Stage 2 hybrid full reroute. Karpathy Simplicity #4 (분리 합리) 따름.
+§5.7.5 종결 후 deferred quality tuning 영역. 본 §5.7.6 = *minimal scope* — C1 (Q5 회귀 stopword 보완) + C2 (50+ query benchmark suite + `npm run benchmark:search` 자동화) 만 포함. HYBRID Stage 2 vector reroute 는 별 cycle (§5.7.7), B3/B5/B6 자동화 인프라는 미진행 (사용자 결정 2026-05-10 = 수동 update 절차).
 
-### 7항목 deferral mirror
+**진입 조건** (충족됨):
+- §5.7.5 종결 (Session 31, 2026-05-09, 7 commits, codex 6 cycle APPROVE, AC 22/22 PASS)
+- 검색 코어 (Orama default + Kiwi WASM) stable + ./scripts/check-kiwi-vendor-sync.sh 작동
 
-- [ ] (B3) Regression 검증 자동화 — 매 update 후 quality benchmark 10 query + smoke 자동 실행 (cron / GitHub Actions). §5.7.5 의 *수동 1회 실측* 에서 *자동* 으로 격상
-- [ ] (B5) Update sync 프로세스 docs 자동 갱신 — B1~B4 결과 mirror. §5.7.5 = 수동 절차 docs 까지만
-- [ ] (B6) Notification — GitHub watch + workflow → 사용자/master notify. push 채널 결정 영역
-- [ ] (C1) Q5 회귀 보완 — smart_tokenize 정밀화. PoC §3 단계 3 의 Q5 ("프로젝트 일정 관리") Top-1 회귀 1/10 (의도적 수용). 보완 후보: 한국어 stopword (`관리` / `프로젝트` BM25 saturation 회피) + POS filter (NNG vs NR 분리). 사용자 만족도 평가 후 결정
-- [ ] (C2) 50~100 query 확장 benchmark + 자동화 — 현 10 query benchmark statistical power 부족. sample size ≥ 50 query suite + `npm run benchmark:search` script 자동화. quality regression 자동 감지 (CI 통합 가능). BENCH-AUTO 와 일부 중복
-- [ ] (HYBRID) Stage 2 hybrid search full reroute — Qwen3-Embedding 768D 통합 + RRF 또는 Orama hybrid mode. 본 §5.7.4 = AC-V1 sanity (mock vector round-trip) 까지. 실 호출 라인 reroute 별 sub-cycle
-- [ ] (BENCH-AUTO) 검색 quality benchmark 자동화 통합 — `npm run benchmark:search` + CI 통합 + regression alert. C2 와 일부 중복 (통합 검토 의무)
+### 본 cycle 포함 — 2 항목 (BENCH-AUTO C2 통합)
 
-### 진입 의무 (master / 사용자 결정)
+- [ ] (C1) **Q5 회귀 보완 — smart_tokenize 정밀화 (v1.2 5 단어)**: 한국어 stopword list `프로젝트` / `관리` / `정보` / `시스템` / `업무` (generic content word BM25 saturation 회피, **`일정` 제거** — codex cycle #1 HIGH #3 fix: Q5 query "프로젝트 일정 관리" 3 단어 모두 stopword 시 tokenize empty → AC-Q1 unrecoverable). PoC §3 Q5 Top-1 1/10 (`프로젝트-관리-시스템`) → AC-Q1 = `project-schedule-management` Top-1 hit. 변경 면: `wikey-core/src/search/orama-korean-tokenizer.ts` smart_tokenize stopword 분기 + `scripts/korean-tokenize.py` 동등 mirror.
+- [ ] (C2 + BENCH-AUTO 통합) **50+ query benchmark suite + `npm run benchmark:search` script 자동화**: 현 10 query (statistical power 부족) → 50+ query (도메인 균형 — PMBOK / ITIL / Obsidian / 한국어 / 영문 / 한+영 mix). **JSON suite** (yaml dep 0, Node native parse — v1.1 사용자 결정) + script. Top-1 / Top-3 / MRR 측정. quality regression 자동 감지 보조 (수동 실행, CI 통합은 미진행). 변경 면: `wikey-core/eval/benchmark-suite.json` (50+ query) + `scripts/benchmark-search.ts` (export `runBenchmark` + searchFn injection, codex MED #4) + `wikey-core/package.json` script + tsx devDep.
 
-- 본 §5.7.6 진입 시 spec 작성 (4-question 검증: 필요성 / 역할 / Simplicity / Phase scope) 의무
-- 7항목 모두 자동화 인프라 영역 — Karpathy Simplicity over-spec 후보 의무 검토
-- 진입 우선순위 = Phase 5 잔여 5 subject 중 P4 잔여 (§5.5 / §5.6 / §5.8 / §5.9 와 비교)
+### 별 cycle 분리 — §5.7.7 후보 (1 항목)
+
+- (HYBRID) Stage 2 hybrid search full reroute — Qwen3-Embedding 768D 통합 + Orama hybrid mode (RRF 융합). **상세 = 아래 §5.7.7** (목적 / 이득 / trade-off / 진입 결정 기준).
+
+### 미진행 — wikey 철학 충돌 / over-spec (사용자 결정 2026-05-10)
+
+**B3/B5/B6 자동화 인프라는 본 todo 에서 todo 체크박스로 등록하지 않는다**. 대신 **수동 update 절차**로 기록:
+
+| 항목 | 미진행 사유 | 수동 절차 (master + 사용자) |
+|------|-------------|------------------------------|
+| B3 regression CI 자동화 | wikey single-user 도구, GitHub Actions 미설정, master 수동 [개발필요] mark 패턴 (§5.7.4/§5.7.5) 충분 | settings [developer] 토글 → [분석] → [개발필요] mark 시 master 가 별 SDD+TDD cycle 진행 |
+| B5 docs 자동 갱신 | docs/kiwi-nlp-vendor-sync.md (§5.7.4 stable) + LLM 요약 (UI-6, 7.9s) 이 즉시적, git noise 회피 | 수동 docs update 시점 = upstream major 변경 발생 시 master 가 PR 1회 작성 |
+| B6 push notification | UI-2 정책 (developer toggle off → 일반 사용자 미공개) 모순 + BYOAI 철학 (외부 server email 의존 0) 모순 | settings UI passive 표시 만 (§5.7.5 종결 상태) — 사용자가 주기적 settings 열어 [upgrade] 뱃지 확인 |
+
+**수동 update 절차 표준 (사용자가 update 인지 시)**:
+1. settings [developer] 토글 on → 5 row + [upgrade] 뱃지 active 확인
+2. [분석] 버튼 클릭 → LLM 요약 (~7.9s) + [개발필요] mark 확인
+3. [개발필요] mark 시 master 에게 별 SDD+TDD cycle 의뢰 (§5.7.4/§5.7.5 패턴)
+4. quality 회귀 의심 시 `npm run benchmark:search` (C2 결과물) 수동 실행 → Top-1/Top-3/MRR 비교
+5. 회귀 detect 시 master fix → 회귀 없으면 commit/push
+
+### 진입 절차 (Session 32~)
+
+1. **A** phase-5-todo.md §5.7.6 minimal scope 본문 정리 (현재 단계 ✅)
+2. **B** analyst 위임 — `plan/phase-5-spec-5.7.6-search-quality-tuning.md` (Spec WHAT, 6요소)
+3. **C** analyst 위임 — `plan/phase-5-todox-5.7.6-search-quality-tuning.md` (Todo HOW, Step A/B/C/D)
+4. **D** master 1차 검증 (master-validation skill 23-anchor)
+5. **E** codex Mode D Panel review (cmux T1 wait-for, plan review)
+6. **F** 사용자 승인 게이트 — codex APPROVE + master 권고 후 잠금
+7. **G** SDD+TDD 구현 (RED → GREEN → BLUE 3a/3b)
+8. **H** codex post-impl review
+9. **I** 라이브 cycle smoke (master 직접) — `npm run benchmark:search` 실행 + Q5 회복 확증
+10. **J** Step D 문서 동기화 + commit/push
+
+---
+
+## 5.7.7 HYBRID Stage 2 vector reroute — 검색 quality 격상 후보 (P3, 2026-05-10 신설 후보)
+> tag: #search, #hybrid, #vector, #qwen3-embedding, #rrf, #stage2, #phase5-deferred
+
+> **상태**: 신설 후보 — 본 §5.7.6 (Q5 stopword + 50+ query benchmark) 종결 후 진입 결정. **사용자 결정 영역** = 본 §5.7.6 의 50+ query benchmark 결과 (Top-1 / Top-3 / MRR) + cross-lingual / 의미 유사 query 회수 욕구 평가 후 진입.
+>
+> **단일 소스**: 본 todo 섹션 §5.7.7.0 (Background / Decision rationale) + §5.7.7.1~6 (Spec preview). 진입 결정 시 별 spec/todox 작성: `plan/phase-5-spec-5.7.7-hybrid-search.md` + `plan/phase-5-todox-5.7.7-hybrid-search.md`.
+>
+> **선행 cycle**: §5.7.4 = `embedding: vector[768]` Orama schema column 추가 (sanity, mock vector round-trip 만 검증, 실 호출 라인 reroute 보류). §5.7.6 = BM25-only 의 quality 한계 정량화 (50+ query suite Top-1 / Top-3 / MRR baseline).
+
+### 5.7.7.0 Background / Decision rationale (분리 정당화 + 목적 + 이득 + trade-off + 진입 결정 기준)
+
+#### 분리 정당화 (왜 §5.7.6 안 통합 안하는가)
+
+§5.7.6 = *minimal scope* (stopword + benchmark suite, ~324 LOC). HYBRID 통합 시 변경 면 ~600+ LOC 추가 = 본 cycle 2배 이상.
+
+- **Karpathy Simplicity #2 (Phase scope)**: 한 cycle 안 *복합 변경* 회피. stopword 정밀화 (BM25 안 정밀화) 와 hybrid 도입 (BM25 + vector 결합) 은 *직교 변경* — 분리 시 각각의 효과 측정 가능 (stopword 단독 효과 vs hybrid 단독 효과). 통합 시 둘 효과 mixing 으로 변경 안 무엇이 quality 에 기여했는지 attribution 불가.
+- **변경 면 격리**: §5.7.6 = `orama-korean-tokenizer.ts` smart_tokenize + benchmark suite 신규. §5.7.7 = Qwen3-Embedding loader 신규 + Orama hybrid mode 활성 + RRF 융합 + reindex 의무. 두 cycle 의 *변경 면 교차 0*.
+- **사용자 만족도 평가 게이트**: §5.7.6 의 50+ query benchmark 결과가 §5.7.7 진입 *정량 정당화* 의 source. BM25-only 가 이미 충분 (Top-1 ≥ 80%) 이면 §5.7.7 미진입. BM25-only 가 부족 (Top-1 < 70% 또는 cross-lingual fail) 이면 §5.7.7 진입.
+
+#### 목적 (수행 의도)
+
+본 §5.7.7 의 단일 목적 = **wikey 검색 코어를 BM25-only → BM25 + vector hybrid 로 격상하여 의미 유사·cross-lingual query 회수 능력 확보**.
+
+배경 (사실 mirror — `wikey.schema.md §5.7.4 후` line 391~429):
+- 현 검색 코어 = Orama BM25 (TypeScript 네이티브, ESM CJS bundle, file 1개 atomic write persist) + Kiwi WASM 한국어 tokenizer
+- §5.7.4 v9 결정 = Orama schema 의 `embedding: 'vector[768]'` column 추가 + mock vector round-trip 만 검증 = *AC-V1 sanity*
+- 실 호출 라인 reroute = §5.7.4 미진행 (deferral) = 본 §5.7.7 핵심 작업
+- wikey schema §"LLM 참여형 다층 검색" line 374~389 = "외부 검색 = BM25 + 벡터로 빠른 1차 필터링 (수천→30개)" — 본 §5.7.7 = wikey schema 의 *원래 정의* 회복
+
+#### 이득 (수행 시 얻는 가치, 6 항목)
+
+| # | 이득 | 정량 / 정성 | 근거 |
+|---|------|-------------|------|
+| 1 | **재현율 +α (의미 유사 회수)** | 정량 — Top-3 / MRR 개선 추정 +5~10% | BM25 가 놓치는 의미 유사 페이지 회수. 예: query "프로젝트 일정 관리" → BM25 정확 매칭 외에도 vector 가 "scheduling" / "PMBOK schedule management" / "ITIL 변경 관리" 같은 페이지 회수 |
+| 2 | **Cross-lingual 회수** | 정성 — 한+영 mix vault 효과 큼 | 한국어 query → 영어 페이지 (예: "지식 그래프" → "knowledge graph" 페이지). 사용자 vault 가 한+영 mix 일 때 BM25-only 는 매칭 0, hybrid 는 임베딩 유사도로 회수 |
+| 3 | **Q5 회귀 자연 회복 가능** | 정량 — PoC §3 Q5 1/10 → ≥ 8/10 추정 | §5.7.6 의 stopword 보완이 부분 회복하지만, vector 가 "프로젝트 일정 관리" 의 의미 유사 페이지 회수로 보강. 두 cycle 의 효과는 누적 가능 |
+| 4 | **wikey 철학 정합 회복** | 정성 — schema §"LLM 참여형 다층 검색" 정의 충족 | wikey.schema.md 의 *원래* "BM25 + 벡터 빠른 1차 필터링" 정의가 본 §5.7.7 으로 실현. 현재는 BM25-only 라 schema 정의 vs 실 구현 drift |
+| 5 | **§5.7.4 vector column 자산 활용** | 정성 — 기 추가된 schema 자원 활용 | 이미 schema 에 `embedding: vector[768]` column 추가됨 (§5.7.4 sanity). 본 §5.7.7 = *실 데이터 채우기* 만, schema 변경 0. 매몰 자산 회복 |
+| 6 | **LLM 리랭킹 정확도 향상** | 정성 — multi-stage retrieval 의 1차 후보 quality | wikey 검색 = 다층 (BM25 → LLM 리랭킹 → LLM 합성). 1차 후보 (BM25) 의 회수율이 ceiling 결정. hybrid 시 1차 후보 회수율 향상 → LLM 리랭킹 의 작업 quality 향상 |
+
+#### Trade-off (수행 시 위험 / 비용, 9 항목)
+
+| # | Trade-off | 영향도 | 완화 가능성 |
+|---|-----------|--------|------------|
+| 1 | **모델 download 부담** — Qwen3-Embedding 0.6B ~600MB | 높음 (UX) | 처음 1회만. settings UI 안 download progress + retry. lazy load (검색 시 첫 호출 시점) 고려 |
+| 2 | **Runtime cost — embedding 생성** | 높음 (성능) | reindex 시 117 페이지 = ~5~10분 (CPU) / ~1~2분 (GPU). 인덱싱 후 query 마다 1회 (~수십~수백ms). 인접 질문 cache 가능 |
+| 3 | **Memory ~600MB RAM** | 높음 (UX) | Obsidian renderer 메모리 압박. 사용자 환경 별 (8GB RAM 노트북 등) 영향. lazy load + unload 정책 설계 필요 |
+| 4 | **코드 복잡도 +30%** | 중간 (유지비용) | hybrid query path (BM25 + vector + RRF 융합) — 디버깅 어려움 (BM25 만 vs hybrid 의 결과 차이 분석 필요). error recovery (vector embedding 실패 시 BM25 fallback) 정책 결정 필요 |
+| 5 | **Quality regression 위험 — RRF tuning** | 중간 (정확도) | Vector 가 *의미 유사* 잡지만 *정확 매칭* 은 BM25 우세. RRF 가중치 (alpha) hyperparameter tuning 의무. 잘못 tuning 시 BM25-only 보다 *quality 하락* 가능. 50+ query benchmark (§5.7.6 결과물) 로 측정 |
+| 6 | **Determinism 영향** | 중간 (재현성) | vector 검색 = numerical (float32 cosine) → Phase 4 §4.5.1.7 의 결정성 정책 (CV < 10%) 회귀 위험. 반드시 ablation (BM25 vs hybrid) 결정성 측정 의무 |
+| 7 | **한국어 + Qwen3 정합성 first-time** | 낮음 (검증 필요) | 현 PoC = qmd 가 Qwen3 사용 (검증됨). Orama 는 first-time 통합. embedding column populate 절차 별 검증 의무 |
+| 8 | **현 상태로도 충분 가능성** | 본 cycle 진입 자체 위험 | §5.7.4 종결 시 BM25-only Top-1 8/10 (PoC §3) — 이미 qmd baseline 7-8/10 와 동등 또는 우위. 즉 *추가 이득* 영역. §5.7.6 의 stopword 보완 후 quality 가 충분 (Top-1 ≥ 80%) 면 §5.7.7 미진입 정당 |
+| 9 | **wikey schema §5.7.4 v9 정합** | 낮음 (정책 충돌 X) | schema.md line 393 + "쿼리 확장·리랭킹도 내장하지만, **지능 레이어는 외부 LLM 이 담당**" — LLM 리랭킹 으로 cover 가능한 영역. 즉 hybrid 가 *필수* 아닐 수 있음. 단 §"LLM 참여형 다층 검색" = "외부 검색 = BM25 + 벡터" 정의는 hybrid 정당화 |
+
+#### 진입 결정 기준 (사용자 만족도 + 정량 게이트)
+
+본 §5.7.7 진입은 **§5.7.6 종결 후 사용자 결정**. 결정 기준 = 본 §5.7.6 의 benchmark 결과 (50+ query Top-1 / Top-3 / MRR) + cross-lingual 욕구.
+
+**진입 정당화 (gating threshold)**:
+
+| 시나리오 | 본 §5.7.6 종결 후 측정값 | 본 §5.7.7 진입? |
+|----------|--------------------------|------------------|
+| BM25-only 충분 | Top-1 ≥ 80% / Top-3 ≥ 90% / cross-lingual query 0 | **미진입** (현 상태 유지, trade-off #8 mirror) |
+| Quality 부족 | Top-1 < 70% 또는 의미 유사 query 회수 fail | **진입 권고** (이득 #1 + #3 효과 큼) |
+| Cross-lingual 욕구 | 사용자 vault 한+영 mix + cross-lingual query 회수 fail | **진입 권고** (이득 #2 효과 큼) |
+| 중간 | Top-1 70~80% | **사용자 결정** (trade-off #1~#3 cost vs 이득 #1~#3) |
+
+**진입 시 first action**:
+1. analyst 위임 — `plan/phase-5-spec-5.7.7-hybrid-search.md` (Spec WHAT) + `plan/phase-5-todox-5.7.7-hybrid-search.md` (Todo HOW)
+2. spec 작성 시 본 §5.7.7.0 이득 / trade-off mirror 의무 + §5.7.7.1~6 spec preview byte mirror
+3. 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) — 특히 *대안 검토* (vector reroute vs LLM 리랭킹 강화 vs query 확장 정밀화 등)
+4. master 1차 검증 + codex Mode D Panel review + 사용자 승인
+5. SDD+TDD 구현
+
+**진입 미정당 결정 시 처리**:
+- 본 §5.7.7 = "deferral 영구" 마킹 (Phase 5 외 / Phase 6 후 / 미진행)
+- 본 §5.7.6 의 BM25-only quality 가 사용자 만족 도달 = wikey 검색 코어 *영구 BM25-only* 정책 잠금
+- §5.7.4 의 `embedding: vector[768]` schema column 은 *역사적 자산* 으로 보존 (제거 X)
+- wikey.schema.md 의 §"LLM 참여형 다층 검색" 정의는 *별 layer (LLM 리랭킹)* 가 cover 한다고 명시
+
+### 5.7.7.1 Goal (목표 — preview, 별 spec 에서 잠금)
+
+본 §5.7.7 단일 목적 = **wikey 검색 코어를 BM25-only → BM25 + vector hybrid 격상 + Qwen3-Embedding 0.6B 통합 + RRF 융합으로 의미 유사·cross-lingual query 회수 확보** (Karpathy Goal-Driven 단일 목적).
+
+sub-목표:
+- (G1) Qwen3-Embedding 0.6B local loader 통합 — `~/.cache/wikey/qwen3-embedding/` model download + cache + lazy load
+- (G2) Orama schema 의 기 추가 `embedding: vector[768]` column populate — 117 페이지 reindex 1회 + incremental ingest path (§5.3 / §5.7.5 mirror) hybrid 통합
+- (G3) Hybrid query path — BM25 결과 + vector cosine 결과 → RRF 융합 (`alpha` hyperparameter)
+- (G4) BM25 fallback 정책 — Qwen3 load 실패 / embedding fail 시 BM25-only 자동 회귀
+
+비목표 (Out-of-Scope):
+- 다중 임베딩 모델 지원 (Qwen3 외 — 단일 모델 잠금)
+- vault-level customize hyperparameter (alpha 단일 default)
+- Stage 3 reranker 통합 (LLM rerank 가 cover, schema 정합)
+
+### 5.7.7.2 Inputs (변경 면 — preview, 추정)
+
+| 영역 | 파일 | 변경 분포 (추정) | 비고 |
+|------|------|------------------|------|
+| Embedding loader | `wikey-core/src/embeddings/qwen3-loader.ts` (신규) | ~150 LOC | model download / cache / lazy load / unload |
+| Hybrid query path | `wikey-core/src/search/orama-index.ts::query()` | ~80 LOC 변경 | BM25 + vector + RRF 통합 |
+| Indexing path | `wikey-core/src/search/orama-index.ts::insert()` + `runOramaIngest` | ~60 LOC 변경 | embedding column populate (lazy or eager) |
+| Settings | `wikey-obsidian/src/settings-tab*.ts` | ~40 LOC | hybrid toggle + Qwen3 download status |
+| Config | `wikey.conf` + `wikey-core/src/config.ts` | ~20 LOC | `WIKEY_SEARCH_MODE=bm25|hybrid` 환경 변수 |
+| Tests (RED) | `wikey-core/src/__tests__/orama-hybrid.test.ts` (신규) | ~250 LOC | unit + integration |
+| Reindex script | `scripts/reindex.sh` + `wikey-core/src/scripts/reindex.ts` | ~30 LOC | embedding column populate path |
+| Documentation | `docs/qwen3-embedding-vendor.md` (신규) | ~80 LOC | NOTICE + license + cache path |
+
+**총 변경 면 추정**: ~710 LOC (코드 460 + test 250 + docs ~80). raw/ 변경 0 / wiki/ 변경 0 / canonicalizer / mention extractor / ingest pipeline 핵심 0 변경.
+
+### 5.7.7.3 Outputs (변경 분포 — preview)
+
+§5.7.7 종결 시 wikey 검색 동작:
+- `WIKEY_SEARCH_MODE=bm25` (default 권고 보수): BM25-only 유지 = §5.7.4 기존 동작 (회귀 path 보존, trade-off #4 완화)
+- `WIKEY_SEARCH_MODE=hybrid` (opt-in): Qwen3 load → embedding column populate → BM25 + vector → RRF
+- Settings UI 안 hybrid toggle + Qwen3 download progress
+- 117 페이지 reindex 1회 (master 직접 obsidian-cdp + `./scripts/reindex.sh`) — 후속 incremental ingest 자동 embedding 포함
+- `npm run benchmark:search` (§5.7.6 결과물) 가 mode 별 결과 비교 가능
+
+### 5.7.7.4 Acceptance Criteria (preview, ≥ 8 — 별 spec 에서 정량 잠금)
+
+| AC | 내용 | 검증 |
+|----|------|------|
+| AC-H1 | Qwen3-Embedding 0.6B loader 단위 — model download + cache + lazy load + unload | 단위 test |
+| AC-H2 | Orama schema `embedding: vector[768]` column populate — 117 페이지 reindex 후 모든 doc 의 embedding 비-null | 통합 test |
+| AC-H3 | Hybrid query path — BM25 + vector → RRF 융합 | 단위 test |
+| AC-H4 | BM25 fallback 정책 — Qwen3 load fail 시 BM25-only 자동 회귀 | 단위 test |
+| AC-H5 | `WIKEY_SEARCH_MODE` 환경 변수 — bm25 / hybrid toggle | 통합 test |
+| AC-Q1 | 50+ query benchmark — hybrid 모드 Top-1 ≥ BM25 + 5% (or cross-lingual 회수 ≥ 80%) | 라이브 (master 직접) |
+| AC-D1 | Determinism 회귀 0 — hybrid 모드 CV < 10% (Phase 4 §4.5.1.7 mirror) | 통합 test (10-run) |
+| AC-R1 | 회귀 — wikey-core 738+ PASS / wikey-obsidian 46+ PASS / npm run build 0 errors / validate-wiki PASS | 통합 (Phase 3a) |
+
+### 5.7.7.5 Risk grid (preview, mirror of §5.7.7.0 Trade-off — 9 항목)
+
+§5.7.7.0 Trade-off 표의 9 항목이 본 §5.7.7.5 Risk grid 의 1:1 mirror. 별 spec 에서 각 risk 의 *완화 전략 + 검증 방법* 정량 명시 의무.
+
+요약 — High risk 3 (download / runtime cost / memory) + Mid risk 3 (복잡도 / RRF tuning / determinism) + Low risk 3 (Qwen3+Orama first-time / 현 상태 충분 가능성 / schema 정합).
+
+### 5.7.7.6 Dependencies (preview)
+
+**진입 조건 (충족 의무)**:
+- §5.7.4 종결 = `embedding: vector[768]` schema column 존재 (본 §5.7.7 가 populate)
+- §5.7.6 종결 = 50+ query benchmark suite 존재 (본 §5.7.7 quality 측정 source)
+- `~/.cache/wikey/qwen3-embedding/` cache path 작성 가능 (filesystem write permission)
+
+**후속 cycle (본 §5.7.7 종결 후)**:
+- §5.5 지식 그래프·시각화 (P3) — 검색 결과의 graph 표현, 본 §5.7.7 의 vector 데이터 활용 가능
+- §5.6 성능·엔진 확장 (P3) — llama.cpp / rapidocr Linux 와 별 도메인. 본 §5.7.7 와 독립
+- 본 §5.7.7 = §5.5 / §5.6 의 *진입 조건 아님* (독립)
+
+---
+
+## 5.7.8 LLM per-query dynamic stopword — paradigm shift (P3, 2026-05-10 신설 후보, §5.7.6 abandon 결과)
+> tag: #search, #stopword, #llm-judgment, #per-query, #paradigm-shift, #phase5-deferred
+
+> **상태**: 신설 후보 — §5.7.6 (static stopword paradigm) abandon 후 *올바른 paradigm* 으로 신설. 사용자 명시 (2026-05-10): "stopword 등록된 단어라 하더라도, 질문의 유형에 따라 넣고 빼고가 결정되어야 함. 등록 단어의 일방적 삭제는 위험."
+>
+> **단일 소스**: 본 todo 섹션 (paradigm 정의 + spec preview). 진입 결정 시 별 spec/todox (`plan/phase-5-spec-5.7.8-llm-dynamic-stopword.md` + `phase-5-todox-5.7.8-llm-dynamic-stopword.md`) 작성 의무.
+>
+> **선행 cycle**: §5.7.6 abandon 결과물 — 51 query benchmark suite (`wikey-core/eval/benchmark-suite.json`, 5 도메인 균형) + benchmark runner (`wikey-core/src/scripts/benchmark-search.ts`, export injection 분리) + tsx devDep + npm script `benchmark:search`. 본 §5.7.8 가 평가 도구로 활용.
+
+### 5.7.8.0 Background / Decision rationale (paradigm shift 결정 사유)
+
+#### 분리 정당화 (§5.7.6 abandon 후 신설)
+
+§5.7.6 = *static stopword* paradigm 시도 → wikey 철학 위반 인지 + abandon. 본 §5.7.8 = 처음부터 wikey 철학 정합.
+
+- **wikey schema mirror**: `wikey.schema.md` "LLM 참여형 다층 검색" 정의 — "RAG (기존): DB 가 검색 → LLM 은 결과만 읽음" vs "**LLM Wiki: LLM 이 쿼리 확장 → 외부 검색 → LLM 이 리랭킹 → LLM 이 합성**". 즉 query 단계 = *LLM 결정 영역*. static rule = 위반.
+- **§5.7.6 실증**: PMBOK 36% Top-1 회귀가 *일방적 drop 위험* 실증. `프로젝트` / `관리` 가 PMBOK 카테고리 marker 인데 query "프로젝트 비용 관리" 시 drop → 카테고리 신호 손상.
+
+#### 목적 (수행 의도)
+
+본 §5.7.8 의 단일 목적 = **query 단계에서 LLM 호출 → query intent 분석 → stopword candidate 별 keep/drop per-query 판정 → corpus-aware dynamic filter**.
+
+#### 이득 (6 항목)
+
+| # | 이득 | 정량 / 정성 |
+|---|------|-------------|
+| 1 | **wikey 철학 정합** | schema "LLM 참여형 다층 검색" 정의 충족 |
+| 2 | **per-query 정밀화** | "프로젝트 일정 관리" → `[일정]` 만 / "정보 시스템 관리" → `[관리]` 만 / "PMBOK 비용 관리" → 모두 keep (도메인 marker) |
+| 3 | **PMBOK 카테고리 signal 보존** | "프로젝트 비용 관리" 시 LLM 가 PMBOK 인식 → keep all → `project-cost-management` Top-1 |
+| 4 | **Q5 자연 회복** | "프로젝트 일정 관리" 시 LLM 가 generic word `프로젝트`/`관리` drop → `[일정]` 신호 부각 → `project-schedule-management` Top-1 |
+| 5 | **stopword 후보 set 의무 X** | LLM corpus 분석 가능 (df 분포 + LLM 판정) — 사용자 inspection 외, 자동 갱신 |
+| 6 | **확장 가능** | 영문 stopword (`the`/`a` 등) 같은 다른 언어 추가 자연 통합 |
+
+#### Trade-off (6 항목)
+
+| # | Trade-off | 영향도 |
+|---|-----------|--------|
+| 1 | **LLM latency** — query 마다 LLM 호출 (~수백ms ~ 수초) | 높음 (UX) |
+| 2 | **LLM cost** — Ollama local OK, but inference 자원 | 중간 |
+| 3 | **Cache layer 의무** — query hash + filter result cache | 중간 |
+| 4 | **LLM judgment 비결정성** — 같은 query 다른 결과 가능성 | 중간 (Phase 4 §4.5.1.7 결정성 정책 회귀 risk) |
+| 5 | **prompt engineering** — query intent 분석 prompt 정밀화 | 중간 (별 sub-cycle) |
+| 6 | **wikey 철학 합치 강도 ↑** — 단 추가 LLM dependency | 낮음 (BYOAI 기반, OK) |
+
+#### 진입 결정 기준
+
+§5.7.6 abandon 후 즉시 진입 권고. 사용자 결정 의뢰:
+- **A. 즉시 진입** (별 cycle, spec/todox 작성 후 SDD+TDD)
+- **B. deferral** (Phase 5 다른 subject 우선 — §5.5 / §5.6 / §5.7.7 / §5.8 / §5.9 중)
+- **C. 영구 abandon** (검색 quality = LLM 리랭킹 단계가 cover, query 단계 LLM 호출 over-spec)
+
+### 5.7.8.1 Goal (목표 — preview, 별 spec 에서 잠금)
+
+본 §5.7.8 의 단일 목적 = **wikey 검색 query path 에 LLM-driven dynamic stopword filter 통합 — query intent 분석 후 candidate stopword 별 keep/drop per-query 결정**.
+
+sub-목표:
+- (G1) query intent 분석 — LLM (Ollama gemma4 또는 qwen3.6) 호출 + structured output (`{drop_words: [...], keep_words: [...]}`)
+- (G2) candidate stopword set 자동 생성 — corpus df 분석 (analyze-stopwords pattern) + LLM 판정
+- (G3) runtime cache — query hash + filter result LRU cache (~1000 entry)
+- (G4) benchmark 통합 — 51 query suite (§5.7.6 결과물) + 도메인별 Top-1/Top-3/MRR 측정
+
+비목표:
+- 영문 stopword (별 sub-cycle)
+- ML-based stopword classifier (LLM 으로 충분, simpler)
+
+### 5.7.8.2 Inputs (변경 면 — preview)
+
+| 영역 | 파일 | LOC 추정 |
+|------|------|---------|
+| Stopword analyzer | `wikey-core/src/scripts/analyze-stopwords.ts` (신규) | ~250 LOC (corpus df + LLM batch judgment) |
+| Query filter | `wikey-core/src/search/query-stopword-filter.ts` (신규) | ~150 LOC (LLM call + cache) |
+| Query pipeline integration | `wikey-core/src/query-pipeline.ts` 변경 | ~30 LOC |
+| Cache | `~/.cache/wikey/stopword-decisions/` (LRU) | runtime |
+| Tests | `wikey-core/src/__tests__/search/query-stopword-filter.test.ts` | ~150 LOC |
+| Benchmark integration | `benchmark-search.ts` 갱신 (§5.7.6 결과물 mirror) | ~20 LOC |
+
+총 변경 면 추정: ~600 LOC + ~150 test.
+
+### 5.7.8.3 Outputs (변경 분포 — preview)
+
+§5.7.8 종결 시:
+- `WIKEY_STOPWORD_FILTER=on|off` toggle (default on)
+- 각 query 호출 시 LLM filter 적용 (cache miss 시 ~수백ms latency)
+- 51 query benchmark = LLM filter 효과 측정 (도메인별 Top-1 회복)
+- AC-Q1 (Q5 회복) + 다른 PMBOK query 회복 동시 충족
+
+### 5.7.8.4 Acceptance Criteria (preview)
+
+- AC-D1: query "프로젝트 일정 관리" → LLM filter → `[일정]` (또는 `[일정, 관리]`) → Top-1 = `project-schedule-management`
+- AC-D2: query "프로젝트 비용 관리" → LLM filter → keep all (도메인 marker) → Top-1 = `project-cost-management`
+- AC-D3: cache LRU — 같은 query 2회 호출 시 1회만 LLM
+- AC-Q1: 51 query benchmark Top-1 ≥ 80% (§5.7.6 baseline 66.7% 보다 ≥ 13%p 개선)
+- AC-Q2: PMBOK 도메인 Top-1 ≥ 80% (§5.7.6 baseline 36% 보다 ≥ 44%p 개선)
+- AC-R1: 회귀 — 단위/통합 모든 PASS / build 0 errors
+
+### 5.7.8.5 Risk grid (preview)
+
+`§5.7.8.0 Trade-off` mirror — Latency / Cost / Cache / 비결정성 / Prompt eng / wikey 철학 강화.
+
+### 5.7.8.6 Dependencies
+
+진입 조건:
+- §5.7.6 abandon ✅
+- 51 query benchmark suite (`wikey-core/eval/benchmark-suite.json`) ✅ (§5.7.6 결과물)
+- benchmark runner (`benchmark-search.ts`) ✅ (§5.7.6 결과물)
+- Ollama local + model (gemma4 또는 qwen3.6) ✅
+
+후속 cycle: §5.5 / §5.6 / §5.7.7 (HYBRID) / §5.8 / §5.9 와 독립.
 
 ---
 

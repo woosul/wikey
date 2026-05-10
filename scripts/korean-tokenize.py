@@ -55,6 +55,9 @@ PARTICLE_POS = {
     'SF', 'SP', 'SS', 'SE', 'SO', 'SW',  # Punctuation/symbols
 }
 
+# §5.7.6 abandoned (2026-05-10): static stopword paradigm = wikey 철학 위반.
+# PMBOK 36% 회귀 = 일방적 drop 부작용. LLM per-query dynamic stopword paradigm = §5.7.8 신설 후보.
+
 
 import re
 

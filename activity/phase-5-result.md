@@ -1707,6 +1707,74 @@ obsidian-cdp 라이브 (ingest 90s + write 15s + query 정확 + Settings 5/5)
 
 ---
 
+### 5.7.6 검색 quality tuning — Q5 stopword + 50+ query benchmark 🛑 ABANDON (Session 32, 2026-05-10)
+> tag: #search, #stopword, #abandoned, #paradigm-violation, #lesson-learned
+
+**상태**: ABANDON — paradigm violation 인지 후 모든 구현 revert. 사용자 raise (2026-05-10): "stopword 일방적 삭제는 위험. 질문 유형에 따라 넣고 빼고 결정. LLM답지 않음."
+
+#### 5.7.6 진행 history
+
+- spec/todox v1.0 작성 (analyst, ~485 + ~310 줄)
+- master 1차 검증 = NEEDS_FIX (1 HIGH + 3 MED + 2 LOW + 1 권고) → master 직접 fix v1.1 (yaml→JSON, tsx devDep, vitest node env 등)
+- codex Mode D Panel cycle #1 = NEEDS_REVISION (3 HIGH + 4 MED + 1 LOW = 8 findings) → master fix v1.2 (loadOramaIndex → createOramaIndex factory + restore + SearchResult.path / 5 단어 stopword `일정` 제거 / RED test 위치 / runBenchmark export injection / corpus slug 정정)
+- codex cycle #2 = NEEDS_REVISION (2 HIGH + 2 MED) → master perl/Edit sweep
+- 사용자 결정 = "active impl section v1.2 정확, 즉시 구현 진입"
+- 구현: tokenizer + py mirror + benchmark suite (51 query, 5 도메인) + benchmark-search.ts (export injection) + tsx devDep + npm script
+- npm test 743 PASS (baseline 738 + 신규 5) / build 0 errors / fresh reindex 127 docs / 743ms
+- 라이브 smoke `npm run benchmark:search` → **Top-1 66.7% / Top-3 86.3% / Mean MRR 0.829**
+  - Q5 ("프로젝트 일정 관리") → Top-1 = `project-schedule-management` ✓ (AC-Q1 PASS, 1/10 → 1/1)
+  - **PMBOK 36% 회귀** (Top-1 4/11) — `프로젝트` + `관리` drop 부작용
+  - "프로젝트 비용 관리" → `earned-value-management` ✗ (expected `project-cost-management`)
+  - "프로젝트 위험 관리" → `itil-4-change-enablement` ✗ (expected `project-risk-management`)
+
+#### 5.7.6 사용자 raise — paradigm violation 인지
+
+> "하드코딩은 금물." (1차)
+>
+> "stopwords-korean.default.json 등록관리는 최소한 LLM이 하게해야해. 사용자는 모르게."
+>
+> "stopword에 대한 의미론적 파악 후 제거 여부를 알고리즘에서 결정. 등록된 모든 단어를 제거하는건 LLM답지 않음."
+>
+> "stopword에 등록된 단어라 하더라도, 질문의 유형에 따라 넣고 빼고가 결정되어야 함. 등록 단어의 일방적 삭제는 위험."
+
+**해석**: static stopword set drop = wikey 철학 (`wikey.schema.md` "LLM 참여형 다층 검색" / "지능 레이어는 외부 LLM 이 담당") 위반. PMBOK 36% 회귀 = paradigm 결함 실증.
+
+#### 5.7.6 abandon 결정 + revert 영역
+
+revert (paradigm 위반):
+- `wikey-core/src/search/orama-korean-tokenizer.ts` — KOREAN_STOPWORDS const + tokenize fn 분기 모두 제거 (pure tokenize 복원)
+- `scripts/korean-tokenize.py` — 동등 revert
+- `wikey-core/src/defaults/stopwords-korean.default.json` — 삭제
+- `wikey-core/src/scripts/analyze-stopwords.ts` — 삭제 (df-only paradigm 도 위반)
+- `wikey-core/src/__tests__/search/orama-korean-tokenizer-stopword.test.ts` — 삭제
+
+§5.7.8 평가 도구로 보존 (별 cycle 진입 시 활용):
+- `wikey-core/eval/benchmark-suite.json` (51 query, 5 도메인 균형)
+- `wikey-core/src/scripts/benchmark-search.ts` (export `runBenchmark` + searchFn injection — paradigm-neutral)
+- `wikey-core/package.json` 안 `tsx` devDep + `benchmark:search` script
+
+#### 5.7.6 paradigm 학습 (4 항목)
+
+1. **PMBOK 36% 회귀 = static stopword 의 일방적 drop 위험 실증** — `관리` / `프로젝트` drop 시 PMBOK 카테고리 marker 손상
+2. **Q5 회복 가설 유효** — `일정` 잔존 + 다른 단어 drop 시 BM25 신호 specific 단어 부각 (1/10 → 1/1). LLM dynamic 적용 시 자연 회복 예상
+3. **51 query benchmark suite = 도메인 분포 baseline** (PMBOK 4/11 / ITIL 6/10 / Obsidian 9/10 / Korean 10/10 / English 5/10) — §5.7.8 측정 source
+4. **wikey 철학 정합 = LLM-driven decision 의무** — static rule = 위반. tokenizer = pure tokenize, semantic decision = query 단계 LLM 호출
+
+#### 5.7.6 codex cycle 흐름 (검증 누적)
+
+- master 1차 검증 NEEDS_FIX → fix v1.1 (8 finding)
+- cycle #1 NEEDS_REVISION (8 findings: HIGH 3 + MED 4 + LOW 1) → fix v1.2
+- cycle #2 NEEDS_REVISION (4 findings: HIGH 2 + MED 2) → master sweep + 사용자 결정 = 즉시 구현 진입
+- **cycle #3 미진입** (사용자 abandon 결정)
+
+#### 5.7.6 잔여 후속
+
+- **§5.7.8 신설 후보** (LLM per-query dynamic stopword paradigm) — 본 §5.7.6 의 *올바른* paradigm. 51 query benchmark suite + benchmark runner + tsx devDep 보존하여 §5.7.8 평가 도구로 활용.
+- **§5.7.7 (HYBRID vector reroute) 관계**: §5.7.7 paradigm = vector embedding (static stopword 무관, violation 없음) — 보존 + §5.7.8 우선 진입 후 결정 (사용자 결정 2026-05-10).
+- **본 cycle 산출 도구 보존 가치**: benchmark suite 51 query 의 도메인 균형 + expected slug 검증 + Top-1/Top-3/MRR 계산 = paradigm-neutral 도구. §5.7.8 + §5.7.7 모두 quality measurement 로 활용.
+
+---
+
 ## 5.8 Phase 4 D.0.l 이관 과제 — 잔여 (P4)
 > tag: #pii, #classify, #reindex, #phase4-handover
 > **이전 번호**: `was §5.8` — 일부 이관·완료 반영해 재정리.
