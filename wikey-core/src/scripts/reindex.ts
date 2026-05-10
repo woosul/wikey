@@ -14,8 +14,34 @@ import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { spawn, type SpawnOptions } from 'node:child_process'
 import { runValidateWiki } from './validate-wiki.js'
-import { createOramaIndex, type KoreanTokenizerHandle } from '../search/orama-index.js'
+import { createOramaIndex, type KoreanTokenizerHandle, type EmbedderFn } from '../search/orama-index.js'
 import { defaultOramaCachePath, disposeOramaIndex } from '../search/orama-index-singleton.js'
+import { createQwen3Loader } from '../embeddings/qwen3-loader.js'
+
+/**
+ * §5.7.7 cycle #2 codex HIGH #2 fix — hybrid embedder factory for cold reindex.
+ * Returns EmbedderFn that calls Qwen3 loader with per-call abort signal forwarded
+ * (R6 + I22 cancellable). I7 page-level fail-open: undefined throws to caller's
+ * try/catch in orama-index.ingestAll (each page) — failed pages skip embedding,
+ * BM25 record still inserts.
+ */
+function createHybridEmbedder(
+  ollamaUrl: string | undefined,
+  signal: AbortSignal | undefined,
+): EmbedderFn {
+  // §5.7.7 cycle #8 라이브 smoke fix — timeout 60s (default 5s 이 cold model load 초과).
+  // 라이브 측정 (2026-05-11): 첫 cold load ~수초 + sequential 117 페이지 — default timeout
+  // 5s 시 모든 페이지 AbortError → BM25-only fallback (vector embedding 0개 생성).
+  const loader = createQwen3Loader({
+    ollamaUrl: ollamaUrl ?? 'http://localhost:11434',
+    timeoutMs: 60000,
+  })
+  return async (text: string) => {
+    const vec = await loader.embed(text, { signal })
+    if (!vec) throw new Error('Qwen3 embed unavailable (ollama disconnected)')
+    return vec
+  }
+}
 // §5.7.5 LOW #15 — createKoreanTokenizer is lazy-imported inside runOramaIngest only;
 // engine='qmd' branch never loads the Kiwi vendor module → MODULE_TYPELESS_PACKAGE_JSON
 // warn 0 in qmd path.
@@ -53,6 +79,12 @@ export interface ReindexOptions {
   readonly kiwiWasmPath?: string
   /** §5.7.4 — Kiwi 사전 디렉토리. 미지정 = `~/.cache/wikey/kiwi-models/cong/base/`. */
   readonly kiwiModelDir?: string
+  /**
+   * §5.7.7 — when true, run Orama ingest with embedder pre-compute (page-level
+   * Qwen3-Embedding 0.6B via ollama `/api/embeddings`). Currently advisory; the
+   * ingest path lazily picks up the embedder via WIKEY_HYBRID_MODE env or this flag.
+   */
+  readonly hybrid?: boolean
   /** 출력 sink. default = console.log. */
   readonly write?: (line: string) => void
   /** 에러 sink. default = console.error. captureRun 의 stderr 수집 path. */
@@ -178,6 +210,8 @@ async function runOramaIngest(
   wasmPathOpt: string | undefined,
   modelDirOpt: string | undefined,
   signal: AbortSignal | undefined,
+  hybrid?: boolean,
+  ollamaUrl?: string,
 ): Promise<number> {
   if (!fs.existsSync(wikiDir)) {
     log.err(`wiki/ 디렉토리 없음: ${wikiDir}`)
@@ -211,7 +245,14 @@ async function runOramaIngest(
   }
 
   try {
-    const handle = await createOramaIndex({ cachePath, tokenizer })
+    // §5.7.7 cycle #2 codex HIGH #2 fix — hybrid flag forwards Qwen3 embedder for
+    // page-level embedding pre-compute (Spec 5 cold reindex / I20 / I21 / I22).
+    // I7 page-level fail-open: per-page embed throw → BM25 only for that page,
+    // other pages proceed (orama-index.ingestAll internal try/catch).
+    const embedder: EmbedderFn | undefined = hybrid
+      ? createHybridEmbedder(ollamaUrl ?? process.env.OLLAMA_URL, signal)
+      : undefined
+    const handle = await createOramaIndex({ cachePath, tokenizer, embedder })
     const r = await handle.ingestAll(wikiDir)
     // §5.7.4 codex cycle #5 LOW-14 fix — abort 후 stale persist 방지. ingest 자체는
     // 동기 walk + insertMultiple 이라 signal 전파 어려움 — persist 직전 마지막 check.
@@ -549,7 +590,16 @@ export async function cmdReindex(
     // §5.7.4 codex cycle #2 HIGH-8 — env override path 우선 (Obsidian CJS bundle 안전).
     const wasmPathOpt = opts.kiwiWasmPath ?? env.WIKEY_KIWI_WASM_PATH
     const modelDirOpt = opts.kiwiModelDir ?? env.WIKEY_KIWI_MODEL_DIR
-    const ingestExit = await runOramaIngest(wikiDir, cachePath, log, wasmPathOpt, modelDirOpt, signal)
+    // §5.7.7 cycle #3 codex HIGH #2 fix — env WIKEY_HYBRID_MODE='on' 시 opts.hybrid 자동
+    // 활성. 사용자가 Settings 에서 Hybrid ON 후 plugin Full Reindex 시 main.ts:getExecEnv()
+    // 가 WIKEY_HYBRID_MODE inject — 본 path 가 hybrid 인지 detect.
+    const hybridFromEnv = env.WIKEY_HYBRID_MODE === 'on'
+    const effectiveHybrid = opts.hybrid || hybridFromEnv
+    const ingestExit = await runOramaIngest(
+      wikiDir, cachePath, log, wasmPathOpt, modelDirOpt, signal,
+      effectiveHybrid,
+      env.OLLAMA_URL ?? process.env.OLLAMA_URL,
+    )
     if (ingestExit !== 0) return { exitCode: ingestExit }
     if (signal?.aborted) return { exitCode: -1 }
     // §5.7.4 codex cycle #4 MED-12 fix — invalidate query singleton so subsequent search()
@@ -635,11 +685,18 @@ export async function main(argv: readonly string[]): Promise<number> {
       const r = await cmdReindex(opts, 'quick')
       return r.exitCode
     }
+    case '--hybrid': {
+      // §5.7.7 — cold reindex with Qwen3-Embedding pre-compute. Subsequent flag
+      // forwards to cmdReindex which honors `hybrid: true`.
+      const r = await cmdReindex({ ...opts, hybrid: true }, 'full')
+      return r.exitCode
+    }
     case '--help':
     case '-h':
       console.log('사용법:')
       console.log('  reindex.sh                 전체 인덱싱 (qmd + embed + CR + 한국어)')
       console.log('  reindex.sh --quick         qmd update + embed만')
+      console.log('  reindex.sh --hybrid        Orama + Qwen3 embedding pre-compute (§5.7.7)')
       console.log('  reindex.sh --check         stale 여부 확인 (human-readable)')
       console.log('  reindex.sh --check --json  stale 상태 JSON (플러그인 freshness gate)')
       return 0

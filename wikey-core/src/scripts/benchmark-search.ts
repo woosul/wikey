@@ -21,7 +21,9 @@ import { fileURLToPath } from 'node:url'
 import {
   createOramaIndex,
   type KoreanTokenizerHandle,
+  type EmbedderFn,
 } from '../search/orama-index.js'
+import { createQwen3Loader } from '../embeddings/qwen3-loader.js'
 import {
   defaultOramaCachePath,
   disposeOramaIndex,
@@ -215,7 +217,7 @@ function buildLayerStack(httpClient: HttpClient, config: WikeyConfig) {
   return { filter, rewriter, expander }
 }
 
-async function defaultSearchFn(): Promise<RunBenchmarkOpts['searchFn']> {
+async function defaultSearchFn(mode: 'bm25' | 'hybrid' = 'bm25'): Promise<RunBenchmarkOpts['searchFn']> {
   // src/scripts/benchmark-search.ts (compile → dist/scripts/benchmark-search.js)
   // Vendor wasm path = wikey-core/vendor/kiwi-nlp/dist/kiwi-wasm.wasm (root: 4 levels up from dist/scripts).
   const moduleDir = __dirname
@@ -239,9 +241,24 @@ async function defaultSearchFn(): Promise<RunBenchmarkOpts['searchFn']> {
   const tokenizerMod = await import('../search/orama-korean-tokenizer.js')
   const tokenizer: KoreanTokenizerHandle =
     await tokenizerMod.createKoreanTokenizer({ wasmPath, modelDir })
+  // §5.7.7 cycle #2 codex HIGH #3 fix — mode='hybrid' 시 Qwen3 embedder 주입 (real
+  // ablation, not BM25-only). I23 — benchmark suite 가 동일 query 를 BM25-only vs
+  // hybrid 두 mode 측정 가능. ollama 미동작 시 I3 graceful → BM25 fallback.
+  const embedder: EmbedderFn | undefined =
+    mode === 'hybrid'
+      ? (() => {
+          const loader = createQwen3Loader()
+          return async (text: string) => {
+            const vec = await loader.embed(text)
+            if (!vec) throw new Error('Qwen3 embed unavailable (ollama disconnected)')
+            return vec
+          }
+        })()
+      : undefined
   const handle = await createOramaIndex({
     cachePath: defaultOramaCachePath(),
     tokenizer,
+    embedder,
   })
   await handle.restore()
   // §5.7.8 AC-L1 — when WIKEY_BENCHMARK_LAYERS env present, wrap search with the
@@ -249,10 +266,11 @@ async function defaultSearchFn(): Promise<RunBenchmarkOpts['searchFn']> {
   const httpClient = new NodeHttpClient()
   const config = loadConfig(process.cwd())
   const layerOpts = buildLayerStack(httpClient, config)
+  const searchMode: 'fulltext' | 'hybrid' = mode === 'hybrid' ? 'hybrid' : 'fulltext'
   if (layerOpts) {
-    return async (query, topN) => handle.search(query, { topN, ...layerOpts })
+    return async (query, topN) => handle.search(query, { topN, mode: searchMode, ...layerOpts })
   }
-  return async (query, topN) => handle.search(query, { topN })
+  return async (query, topN) => handle.search(query, { topN, mode: searchMode })
 }
 
 async function main(): Promise<void> {
@@ -267,9 +285,17 @@ async function main(): Promise<void> {
   const suitePath = args.includes('--suite')
     ? args[args.indexOf('--suite') + 1]
     : resolve(defaultSuitePath)
-  const searchFn = await defaultSearchFn()
+  // §5.7.7 — `--mode bm25 | hybrid` ablation flag. default = bm25 (backward compat).
+  const modeIdx = args.indexOf('--mode')
+  const mode = modeIdx >= 0 ? args[modeIdx + 1] : 'bm25'
+  console.log(`# Mode: ${mode}`)
+  // §5.7.7 cycle #2 codex HIGH #3 fix — defaultSearchFn(mode) injects Qwen3 embedder
+  // when mode='hybrid'. wrappedFn pass-through (no-op wrapper removed — real ablation).
+  const searchMode: 'bm25' | 'hybrid' = mode === 'hybrid' ? 'hybrid' : 'bm25'
+  const searchFn = await defaultSearchFn(searchMode)
+  const wrappedFn = searchFn
   try {
-    const { pass } = await runBenchmark({ suitePath, searchFn })
+    const { pass } = await runBenchmark({ suitePath, searchFn: wrappedFn })
     process.exit(pass ? 0 : 1)
   } finally {
     disposeOramaIndex()

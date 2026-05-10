@@ -1205,10 +1205,10 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 
 ---
 
-## 5.7.7 HYBRID Stage 2 vector reroute — BM25 + Qwen3-Embedding hybrid + RRF (P3, **plan APPROVE v1.2 2026-05-10 session 34**)
-> tag: #search, #hybrid, #vector, #qwen3-embedding, #rrf, #stage2, #plan-approve
+## 5.7.7 HYBRID Stage 2 vector reroute — BM25 + Qwen3-Embedding hybrid + RRF (P3, ✅ **종결 v1.2 2026-05-11 session 35**)
+> tag: #search, #hybrid, #vector, #qwen3-embedding, #rrf, #stage2, #closed
 
-> **상태**: **plan APPROVE v1.2 (2026-05-10 session 34)**. SDD+TDD impl 진입 대기 (post-/compact, Session 35).
+> **상태**: ✅ **종결 (2026-05-11 session 35)**. Step A~F 모두 완료 + 라이브 master smoke. codex post-impl 7 cycle (NEEDS_REVISION 6 → cycle #7 APPROVE). 라이브 cold reindex 117/117 docs embedding 1024D + 51 query benchmark Top-3 +11.7%p (76.5 → 88.2%) / MRR +0.060 (0.753 → 0.813) — Spec I24 target 88% 정확 달성. 상세 = [`activity/phase-5/phase-5-result.md §5.7.7`](../../activity/phase-5/phase-5-result.md).
 
 > **단일 소스 (v1.2 — 2026-05-10)**: [`plan/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](./phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.2 (status: approved, spec/todox 합본 — testing.md §3 mid-sized 패턴 mirror). 본 todo 섹션 §5.7.7.0~6 = preview only — 단일 소스 = spec file v1.2.
 

@@ -2,10 +2,10 @@
 phase: 5
 section: 5.7.7
 title: HYBRID Stage 2 vector reroute — BM25 + Qwen3-Embedding 0.6B + RRF 융합 paradigm (Spec + Todo 합본)
-status: approved
+status: closed
 created: 2026-05-10
-updated: 2026-05-10
-version: v1.2
+updated: 2026-05-11
+version: v1.3
 ---
 
 # Phase 5 §5.7.7 — HYBRID Stage 2 vector reroute (BM25 + Qwen3-Embedding + RRF, Spec + Todo 합본)

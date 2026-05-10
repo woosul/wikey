@@ -46,6 +46,11 @@ export interface WikeyConfig {
    */
   readonly WIKEY_SEARCH_ENGINE?: 'orama' | 'qmd'
 
+  /** §5.7.7 — Hybrid search (BM25 + Qwen3-Embedding + RRF) env override. 'on'/'off', default 'off'. */
+  readonly WIKEY_HYBRID_MODE?: 'on' | 'off'
+  /** §5.7.7 — RRF k value env override. number, default 60 (논문 권고). */
+  readonly WIKEY_RRF_K?: number
+
   readonly GEMINI_API_KEY: string
   readonly ANTHROPIC_API_KEY: string
   readonly OPENAI_API_KEY: string
@@ -237,6 +242,12 @@ export interface SearchResult {
   readonly path: string
   readonly score: number
   readonly snippet: string
+  /** §5.7.7 Spec 1.2 Outputs (v1.1 Finding 5) — hybrid mode 시 BM25 ranking 안 1-indexed rank. */
+  readonly bm25Rank?: number
+  /** §5.7.7 Spec 1.2 Outputs — hybrid mode 시 vector ranking 안 1-indexed rank. */
+  readonly vectorRank?: number
+  /** §5.7.7 Spec 1.3 — RRF fused score (= the same value as `score` after fuse). */
+  readonly rrfScore?: number
 }
 
 /**

@@ -6,6 +6,8 @@ const NUMERIC_KEYS = new Set([
   'WIKEY_SEARCH_TOP_N', 'WIKEY_QMD_TOP_N', 'COST_LIMIT',
   'OCR_DPI', 'OCR_PARALLEL', 'OCR_MAX_PAGES',
   'DOCLING_TIMEOUT_MS',
+  // §5.7.7 — Hybrid search env override (RRF k).
+  'WIKEY_RRF_K',
 ])
 const BOOLEAN_KEYS = new Set(['DOCLING_DISABLE', 'WIKEY_EXTRACTION_DETERMINISM'])
 

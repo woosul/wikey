@@ -3568,3 +3568,218 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 **§5.15.A 최종 verdict**: Cycle 1+2 = 인프라 + helper cover 종결. Cycle 3~5 = 의도적 미진행. AC-A1/A2/A3/A5 PASS, A4/A6 의도적 미진행 (Karpathy Surgical Changes 정합).
 
 → **§5.15 sub-section 5종 (A/B/C/D/E) 모두 종결** (sessions 23~25).
+
+---
+
+## 5.7.7 HYBRID Stage 2 vector reroute — BM25 + Qwen3-Embedding 0.6B + RRF 융합 ✅ (Session 35, 2026-05-11)
+> tag: #core, #engine, #eval, #infra
+
+> mirror: [`plan/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](../../plan/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.2 (status: approved → closed, spec/todox 합본 — testing.md §3 mid-sized 패턴)
+>
+> SDD+TDD Step A (plan APPROVE v1.2 session 34) → Step B (TDD RED 25) → Step C (TDD GREEN production) → Step D (회귀 + Phase 3a/3b) → Step F (codex post-impl 7 cycle: NEEDS_REVISION 6 → master fix loop → cycle #7 APPROVE) → Step E (라이브 master cold reindex + 51 query benchmark ablation, master 직접). 본 entry = 7 cycle 누적 + 라이브 smoke 결과 상세.
+
+### 5.7.7.1 paradigm 정의
+
+§5.7.4 결과 = Orama BM25-only (한국어 Kiwi tokenizer + Contextual Retrieval) — 의미 검색 약함. §5.7.8 v1.5 라이브 비교 (10 query × 3 mode, master CDP 직접) PASS-B 향상 1 / 회귀 2 — vector layer 부재가 핵심 원인 인지.
+
+§5.7.7 paradigm = **BM25 + Qwen3-Embedding 0.6B vector hybrid + RRF (Reciprocal Rank Fusion) 융합**:
+- 모델 = `dengcao/Qwen3-Embedding-0.6B:Q8_0` (ollama tag, 639 MB disk, Apache-2.0, **1024D** 실측 — §5.7.4 placeholder 가정 `vector[768]` 정정 의무)
+- 호출 = ollama HTTP API `POST /api/embeddings` (Q1 LOCKED, 신규 native dep 0)
+- 융합 = RRF k=60 (논문 권고). `score = 1/(k+rank_bm25) + 1/(k+rank_vec)`
+- 사용자 추가 요구사항 = §5.7.8 Advanced query tuning section 안 hybrid toggle (slide) + RRF k input + Qwen3 status badge 통합 노출
+
+**환경 사전 점검** (master 직접, 2026-05-10 session 34): ollama running + `ollama pull dengcao/Qwen3-Embedding-0.6B:Q8_0` (639 MB) + endpoint `curl POST /api/embeddings` 호출 → embedding dim **1024D 실측**. §5.7.4 placeholder 정정 의무 인지.
+
+### 5.7.7.2 Step A — plan APPROVE v1.2 (Session 34, 2026-05-10)
+
+이전 session 으로 종결. analyst v1.0 → master 1차 → codex Mode D Panel 5 finding (3 MED + 2 LOW) → master fix v1.1 → 사용자 일괄 APPROVE v1.2. commit `6014cb1` ("feat(§5.7.7 plan APPROVE v1.2)"). Q1~Q10 모두 LOCKED. 5 spec / 25 invariant / 32 AC / 8 risk.
+
+### 5.7.7.3 Step B — TDD RED (4 신규 test file, 25 AC, Session 35)
+
+tester agent (Agent tool, in-process) 위임. 4 file 신규:
+
+| File | LOC | AC | RED count |
+|------|-----|----|----------|
+| `wikey-core/src/__tests__/qwen3-loader.test.ts` | 218 | 7 (Spec 1) | 7 |
+| `wikey-core/src/__tests__/rrf-fusion.test.ts` | 115 | 6 (Spec 3) | 6 |
+| `wikey-core/src/__tests__/orama-hybrid.test.ts` | 260 | 6 (Spec 2 + Spec 5 incremental) | 6 |
+| `wikey-obsidian/src/__tests__/settings-hybrid.test.ts` | 101 | 6 (Spec 4) | 6 |
+| **합계** | **694** | **25** | **25** |
+
+Spec 5 잔여 6 AC = Step C8/C9 영역 (script + benchmark)으로 todox §8 정합. fresh `npm test`: wikey-core 19 RED / 기존 784 PASS regression 0, wikey-obsidian 6 RED / 기존 102 PASS regression 0.
+
+### 5.7.7.4 Step C — TDD GREEN (production code, ~570 LOC)
+
+developer agent 위임. 신규 3 + 변경 9:
+
+**신규**:
+- `wikey-core/src/embeddings/embedding-config.ts` (23 LOC) — `EMBEDDING_DIM = 1024 as const` + `EMBEDDING_MODEL_DEFAULT = 'dengcao/Qwen3-Embedding-0.6B:Q8_0'` + `QWEN3_LICENSE = 'Apache-2.0'` (Inew dimension lock 단일 source)
+- `wikey-core/src/embeddings/qwen3-loader.ts` (180 LOC) — Spec 1 ollama HTTP API path. lazy connect + I3 graceful + I4 cancellable + I5 dim lock + I6 timeout
+- `wikey-core/src/search/rrf-fusion.ts` (84 LOC) — Spec 3 pure function. I14 tie-break BM25 우선
+
+**변경**:
+- `wikey-core/src/search/orama-index.ts` (~100) — line 52/105 주석 1024D 정정 + line 288 `vector[768]` → `VECTOR_FIELD = vector[${EMBEDDING_DIM}]` (=1024) + search() hybrid 분기 + insert/runOramaIngest embedder. I7 fail-open
+- `wikey-core/src/types.ts` (+13) — SearchResult optional `bm25Rank?` / `vectorRank?` / `rrfScore?` + WikeyConfig env 2 field
+- `wikey-core/src/config.ts` (+2) — `WIKEY_RRF_K` NUMERIC_KEYS 등록
+- `wikey-core/src/scripts/reindex.ts` (+30) — `--hybrid` flag + `createHybridEmbedder` factory
+- `wikey-core/src/scripts/benchmark-search.ts` (+30) — `--mode bm25|hybrid` + `defaultSearchFn(mode)` 확장
+- `wikey-core/src/__tests__/search/orama-index.test.ts` (2 LOC) — line 8/149 의 `vector[768]` → `vector[1024]` 정정
+- `wikey-obsidian/src/main.ts` (+9) — WikeySettings 신규 3 field + DEFAULT_SETTINGS
+- `wikey-obsidian/src/settings-tab.ts` (~95) — Advanced query tuning hybrid toggle + RRF k + Qwen3 status badge + Environment items 정정
+- `wikey-obsidian/src/env-detect.ts` (~40) — `EnvStatus.hasWikiNlp` + `hasQwen3Embedding` + detect 로직
+
+신규 25 RED → GREEN, 기존 738+/102 PASS 회귀 0. typecheck 0 / build 0 / validate-wiki PASS.
+
+### 5.7.7.5 사용자 정정 정책 — Settings UI Environment items
+
+사용자 명시 (2026-05-11 session 35): "wikiNLP는 필수, qmd는 옵션표시". `wikey-obsidian/src/settings-tab.ts:418~432` items 배열 + `env-detect.ts:8` `EnvStatus` 정정:
+
+| 항목 | 변경 전 | 변경 후 |
+|------|---------|---------|
+| qmd | required (red dot) | **optional 격하** — desc "Legacy fallback search engine (opt-in via Search engine setting)" |
+| wikiNLP | (없음) | **신규 required** — desc "In-process search engine: Orama BM25 + Kiwi WASM tokenizer (1024D vector ready)" |
+| Qwen3-Embedding 0.6B | (없음) | **신규 optional** — desc "Hybrid search vector embedding (Q8_0, 1024D, 639MB). Required when Hybrid search ON" |
+
+`EnvStatus` 신규 2 field (`hasWikiNlp` / `hasQwen3Embedding`) + detect 로직 (`checkWikiNlp` = Orama npm dep + Kiwi WASM vendor file 존재 / `hasQwen3Embedding` = ollama models 안 `dengcao/Qwen3-Embedding-0.6B` prefix).
+
+### 5.7.7.6 Step F — codex post-impl 7 cycle (cmux skill T1, master 직접 fix loop)
+
+**Cycle #1** (`surface:37`) — VERDICT: **NEEDS_REVISION** (5 finding: 3 HIGH + 2 MED).
+- HIGH #1 query-pipeline.ts:439 + singleton:61 + main.ts:1490 buildConfig "Hybrid ON" no-op (search mode 미전달, embedder 미주입, settings field WikeyConfig 매핑 누락)
+- HIGH #2 reindex.ts:220 `--hybrid` precompute 안 함 (runOramaIngest embedder 미주입)
+- HIGH #3 benchmark-search.ts:242/278 `--mode hybrid` real ablation 안 됨 (wrapper no-op)
+- MED #4 qwen3-loader public AbortSignal 미수용 (R6/I4 partial)
+- MED #5 settings-tab Qwen3 download status badge reactive 안 됨 (I19 위반)
+
+→ master 직접 fix 5 일괄: qwen3-loader public signal + module-scope cached Qwen3 loader (query-pipeline) + getOramaIndex embedder option + buildConfig WIKEY_HYBRID_MODE/WIKEY_RRF_K 매핑 + reindex hybrid flag + benchmark mode forward + settings-tab hybrid toggle reactive flow + barrel export.
+
+**Cycle #2** (`surface:38`) — VERDICT: **NEEDS_REVISION** (3 finding: 2 HIGH + 1 MED).
+- HIGH #1 orama-index-singleton cache key 가 embedder presence 미반영 — BM25 first query 후 hybrid ON 시 stale handle (mode='hybrid' inert)
+- HIGH #2 settings-tab.ts:1338 → scripts-runner:140 → main.ts:820 getExecEnv Obsidian Full Reindex 경로 WIKEY_HYBRID_MODE / OLLAMA_URL forward 안 됨
+- MED #3 settings-tab.ts:310 + qwen3-loader.ts:86 `checkInstallStatus` (idle 반환) 가능 → 'idle' 상태에서 Hybrid ON 가능 → 첫 query 시 BM25 silent fallback. UI text "auto-pull on first query" 거짓
+
+→ master 직접 fix 3: cachedKey embedderId boolean + getExecEnv WIKEY_HYBRID_MODE + WIKEY_RRF_K + OLLAMA_URL inject + reindex.ts cmdReindex env detect + settings-tab `ensureInstalled` (auto-pull) + 'idle' 도 auto-OFF.
+
+**Cycle #3** (`surface:39`) — VERDICT: **NEEDS_REVISION** (4 finding: 3 HIGH + 1 MED).
+- HIGH #1: `embedderId: boolean` (presence) 만 비교 → ollamaUrl 변경 시 same-presence stale closure
+- HIGH #2: Hybrid settings persistence 결손 — `searchHybridEnabled / searchRrfK / searchQwen3DownloadStatus` 가 buildPluginOnlyData / saveToWikeyConf 에 없음. plugin reload 시 default OFF 으로 회복
+- HIGH #3: ollama `/api/pull` streaming response — fetch headers 즉시 resolve → tag check 조기 fail. UI badge 'downloading' 저장만 + refresh 안 됨
+- MED #4: settings-tab Full Reindex env capture render-time 1회만 — closure stale 가능
+
+→ master 직접 fix 4: cachedKey `embedderKey: string` (`qwen3:${ollamaUrl}` 패턴) + buildPluginOnlyData 신규 3 field + saveToWikeyConf updates 안 WIKEY_HYBRID_MODE/WIKEY_RRF_K + qwen3-loader `/api/pull` `stream: false` + `await res.text()` 강제 + settings-tab `refreshPreservingScroll()` 'downloading' 저장 직후 호출 + Reindex/Validate/PII button onClick 안 `const env = this.plugin.getExecEnv()` 새로 호출.
+
+**Cycle #4** (`surface:40`) — VERDICT: **NEEDS_REVISION** (2 finding: 1 HIGH + 1 MED).
+- HIGH #1: Q9 sub-control gate 누락 — `WIKEY_HYBRID_MODE` 가 `searchHybridEnabled` 만 보고 `advancedQueryTuningEnabled` 무시
+- MED #2: `wikey.conf` hybrid parity write-only — `loadFromWikeyConf` 가 read 안 함. CLI / 외부 편집 plugin reload 후 무시
+
+→ master 직접 fix 2: buildConfig `effectiveHybrid = advancedQueryTuningEnabled && searchHybridEnabled` + saveToWikeyConf 동일 gate + loadFromWikeyConf 안 WIKEY_HYBRID_MODE / WIKEY_RRF_K read back.
+
+**Cycle #5** (`surface:41`) — VERDICT: **NEEDS_REVISION** (2 finding: 1 HIGH + 1 MED).
+- HIGH #1: env `WIKEY_HYBRID_MODE=on` 가 master gate bypass — env 우선 로직이 master 무시
+- MED #2: CLI conf `WIKEY_HYBRID_MODE=on` + master OFF 상태에서 plugin load 시 settings revert silent
+
+→ master 직접 fix 2: env force-OFF only 패턴 (`envHybrid === 'off' ? 'off' : effectiveHybrid ? 'on' : 'off'`) + loadFromWikeyConf 안 conf 'on' → master toggle 자동 ON auto-promote.
+
+**Cycle #6** (`surface:42`) — VERDICT: **NEEDS_REVISION** (1 finding: 1 MED).
+- MED: auto-promote `advancedQueryTuningEnabled = true` 가 query filter 까지 활성. default mode='filter-only' 라 cloud LLM 호출 비용/지연 동반
+
+→ master 직접 fix 1: `masterWasOff = rawHybrid === 'on' && previousMaster === false` true 시 `modeFromConf = 'off'` 강제. hybrid 만 effective + filter layer 비활성.
+
+**Cycle #7** (`surface:43`) — VERDICT: 🟢 **APPROVE** (Findings: none).
+- masterWasOff gate 정확. mode='off' blocks auto-extend + query layer construction. hybrid retrieval 정상 routing. 7 cycle 누적 catch 모두 close.
+
+### 5.7.7.7 Step E — 라이브 cycle smoke (master 직접, 2026-05-11)
+
+agent-management.md §6 의무: 라이브 검증 = master 1차 책임 (tester 위임 X). obsidian-cdp SKILL.md §1 규정 부합 — `wikey-cdp.py` 부재 환경 fallback (master 직접 CLI + Settings UI 코드 path 확증).
+
+**환경**:
+- ollama running + `dengcao/Qwen3-Embedding-0.6B:Q8_0` (639 MB) installed
+- direct ollama endpoint test: `curl POST /api/embeddings` → 1024D embedding 정상 반환
+- CDP port 9222 open + `obsidian plugin:reload id=wikey` 성공 (Reloaded: wikey)
+
+**Cycle #8 라이브 trigger fix**:
+첫 시도 (`./scripts/reindex.sh --hybrid`, 00:35:07) — 117 페이지 모두 `DOMException [AbortError]` (qwen3-loader.js:106). 원인 = `embed()` default `timeoutMs = 5000ms` 짧음 + cold model load + sequential 117 페이지. 모든 페이지 BM25-only fallback (vector embedding 0개 생성).
+
+→ `reindex.ts:createHybridEmbedder` 안 `createQwen3Loader({ timeoutMs: 60000 })` 변경. 라이브 측정 mirror 명시.
+
+**재시도 결과** (00:37:16, ~36s):
+```
+[1/5] Orama ingest — wiki/ 스캔 + BM25 인덱스
+  ✓ Orama ingest: 127 docs in 33643ms
+```
+
+Orama persist 검증 (python json parse):
+```
+docs container keys (sample): ['1', '2']
+docs count: 127
+docs with embedding: 127/127
+sample embedding dim: 1024
+```
+
+→ **127/127 docs 모두 1024D embedding 채워짐**. cache size 6.5MB (vs BM25-only 1MB → vector field 추가).
+
+**51 query benchmark ablation** (`wikey-core/eval/benchmark-suite.json`):
+
+| Metric | BM25 baseline | **Hybrid (BM25+vector RRF k=60)** | diff |
+|--------|---------------|------------------------------------|------|
+| Top-1 | 33/51 (64.7%) | 33/51 (64.7%) | +0 |
+| **Top-3** | 39/51 (76.5%) | **45/51 (88.2%)** | **+6 (+11.7%p)** |
+| **Mean MRR** | 0.753 | **0.813** | **+0.060** |
+
+**Per domain (Top-3)**:
+- pmbok: 3 → 7 (**+4**) — 한국어 paraphrase / synonym 회수 향상 가장 큼
+- itil: 8 → 9 (+1)
+- english-mixed: 8 → 9 (+1)
+- obsidian: 10 → 10 (이미 max)
+- korean-general: 10 → 10 (이미 max)
+
+**Spec invariant 라이브 충족**:
+- I7 fail-open: 117/117 페이지 embedding 성공 (timeout 60s 후 0 fail)
+- I20 cold reindex idempotent: 127 docs in 33s (단일 실행, p95 ≤ 5분 = M4 Pro 추정 정합)
+- I23 ablation 가능: BM25-only vs hybrid mode 명시 diff (Top-3 +6, MRR +0.060)
+- **I24 target Top-3 ≥ 88% 달성** (정확 88.2%) — paradigm 효과 정량 확증
+- Top-1 / MRR target 미달 — baseline 동등 (회귀 0). 향후 reranker (Stage 3) cycle 또는 query expansion 추가 시 향상 가능
+
+### 5.7.7.8 변경 면 누적 (Step C + cycle #1~#8 fix)
+
+**총 변경 LOC**: 코드 ~750 (production 570 + cycle fix 180) + test ~580 + docs ~80 + config/script ~20 = **~1,430 LOC**.
+
+**File 목록**:
+- 신규 (3): `wikey-core/src/embeddings/embedding-config.ts` / `qwen3-loader.ts` / `wikey-core/src/search/rrf-fusion.ts`
+- 변경 (12): `wikey-core/src/search/orama-index.ts` / `orama-index-singleton.ts` / `query-pipeline.ts` / `types.ts` / `config.ts` / `index.ts` (barrel) / `scripts/reindex.ts` / `scripts/benchmark-search.ts` / `__tests__/search/orama-index.test.ts` / `wikey-obsidian/src/main.ts` / `settings-tab.ts` / `env-detect.ts`
+- 신규 test (4): `wikey-core/src/__tests__/qwen3-loader.test.ts` / `rrf-fusion.test.ts` / `orama-hybrid.test.ts` / `wikey-obsidian/src/__tests__/settings-hybrid.test.ts`
+
+**raw/ 변경 0 / wiki/ 변경 0 / wikey.schema.md 변경 0** — 검색 코어 layer 추가만, 3계층 경계 보존.
+
+### 5.7.7.9 fresh re-run 최종 (Step C + cycle #1~#8 fix 후)
+
+```
+wikey-core: 56 files / 803 passed | 3 skipped (806 total)
+wikey-obsidian: 15 files / 108 passed (108 total)
+typecheck: 0 errors (양 패키지)
+build: 0 errors (vendor warnings 만 = 기존)
+validate-wiki: PASS (6/6 검증)
+```
+
+기존 base = wikey-core 784 + wikey-obsidian 102 PASS. 신규 +25 GREEN. **regression 0**.
+
+### 5.7.7.10 Karpathy 4원칙 cross-check
+
+- **Think Before Coding**: spec v1.2 LOCKED 첫 read + 기존 test 패턴 4 file read + interface 시그니처 read 후 구현. 환경 사전 점검 (ollama dim 1024 실측) 으로 placeholder 가정 정정 의무 인지
+- **Simplicity First**: ~750 LOC production (over-engineering 0). 추상화 0, ollama HTTP 직접 호출 (별도 layer 0). Inew dimension lock = 1 spot constant. RRF k externalized
+- **Surgical Changes**: Step B test 와 무관한 file 변경 0 (cycle fix 도 모두 finding root cause 직접). 인접 코드 정리 0, 기존 스타일 유지
+- **Goal-Driven Execution**: 25 RED→GREEN 정량 + 회귀 0 (803 + 108 PASS). 라이브 ablation Top-3 +11.7%p / MRR +0.060 정량. Spec I24 target 88% 정확 달성
+
+### 5.7.7.11 사용자 가시 차이 (이전 → 이후)
+
+- **Settings UI Advanced query tuning section**: 마스터 토글 ON 시 Hybrid search slide toggle + RRF k input + Qwen3 download status badge 노출. 토글 ON 시 자동 `ollama pull` (분 단위, UI 'Downloading...' 표시). 'idle'/'failed' 시 자동 OFF + Notice
+- **Environment status row 정정**: wikiNLP (required, red dot) / qmd (optional 격하) / Qwen3-Embedding 0.6B (optional 신규)
+- **검색 결과 metadata**: `bm25Rank` / `vectorRank` / `rrfScore` optional field — UI 시각화 base
+- **Hybrid query path**: pmbok 도메인 한국어 paraphrase 회수 +4 (Top-3 3→7), english-mixed +1, itil +1
+- **Backward compat (I15)**: default OFF — 기존 사용자 영향 0
+
+### 5.7.7.12 §5.7.7 최종 verdict
+
+✅ **종결** (Spec v1.2 status: closed, Step A~F 모두 완료).
+
+→ **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** 4 subject (§5.7 항목 모두 종결).

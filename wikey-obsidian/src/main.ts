@@ -132,6 +132,14 @@ interface WikeySettings {
    * trigger to avoid double-analysing pairs across reloads. Default 0.
    */
   advancedQueryTuningLastAnalyzedIndex: number
+  // ── §5.7.7 Hybrid search (BM25 + Qwen3-Embedding + RRF) ──
+  // Default OFF (Spec I15 backward compat). Sub-control of advancedQueryTuningEnabled
+  // (master OFF → hybrid hidden, Q9 LOCKED v1.2). Toggle 단일 — mode dropdown 폐기 (Q10).
+  searchHybridEnabled: boolean
+  /** §5.7.7 Spec 1.3 — RRF k value (default 60, 논문 권고; settings UI customizable). */
+  searchRrfK: number
+  /** §5.7.7 Spec 1.4 I19 — Qwen3-Embedding model download status (4 phase). */
+  searchQwen3DownloadStatus: 'idle' | 'downloading' | 'installed' | 'failed'
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -180,6 +188,10 @@ const DEFAULT_SETTINGS: WikeySettings = {
   advancedQueryTuningMaxTokens: 500,
   advancedQueryTuningAutoExtendThreshold: 5,
   advancedQueryTuningLastAnalyzedIndex: 0,
+  // §5.7.7 Hybrid search defaults — OFF / 60 / 'idle' (Spec I15 backward compat).
+  searchHybridEnabled: false,
+  searchRrfK: 60,
+  searchQwen3DownloadStatus: 'idle',
 }
 
 export type { WikeySettings }
@@ -816,6 +828,19 @@ export default class WikeyPlugin extends Plugin {
     if (cfg.WIKEY_SEARCH_ENGINE) {
       env.WIKEY_SEARCH_ENGINE = cfg.WIKEY_SEARCH_ENGINE
     }
+    // §5.7.7 cycle #3 codex HIGH #2 fix — Hybrid mode + Ollama URL forward to subprocess
+    // (Full Reindex CLI path). Without these, plugin Full Reindex builds BM25-only cache
+    // even when Settings shows Hybrid ON. cmdReindex reads WIKEY_HYBRID_MODE === 'on' to
+    // auto-enable opts.hybrid (parity with `--hybrid` CLI flag).
+    if (cfg.WIKEY_HYBRID_MODE) {
+      env.WIKEY_HYBRID_MODE = cfg.WIKEY_HYBRID_MODE
+    }
+    if (cfg.WIKEY_RRF_K !== undefined) {
+      env.WIKEY_RRF_K = String(cfg.WIKEY_RRF_K)
+    }
+    if (cfg.OLLAMA_URL) {
+      env.OLLAMA_URL = cfg.OLLAMA_URL
+    }
     // §5.7.4 codex cycle #2 HIGH-8 — Kiwi WASM/사전 path inject. Obsidian CJS bundle 의
     // `import.meta` empty 회피 — plugin folder + cache modelDir 명시 forward.
     const path = require('node:path') as typeof import('node:path')
@@ -913,6 +938,35 @@ export default class WikeyPlugin extends Plugin {
         }
       }
 
+      // §5.7.7 cycle #5 codex MED #2 fix — wikey.conf 의 hybrid field 도 read.
+      // 이전: write-only (saveToWikeyConf) 였음 — CLI / 외부 편집 변경이 plugin 안 무시됨.
+      // §5.7.7 cycle #6 codex MED #2 fix — conf hybrid='on' 시 master toggle 도 자동 ON.
+      // 사용자가 CLI 에서 conf 직접 편집해 ON 한 의도가 plugin reload 시 silent revert
+      // (master OFF 라 buildConfig effective OFF + 다음 save 'off' 덮어쓰기) 되던 회귀 회피.
+      const rawHybrid = conf.WIKEY_HYBRID_MODE
+      const hybridFromConf =
+        rawHybrid === 'on' ? true : rawHybrid === 'off' ? false : this.settings.searchHybridEnabled
+      const rawRrfK = conf.WIKEY_RRF_K
+      const rrfKFromConf =
+        typeof rawRrfK === 'number' && rawRrfK > 0
+          ? rawRrfK
+          : typeof rawRrfK === 'string' && Number.isFinite(Number(rawRrfK)) && Number(rawRrfK) > 0
+            ? Number(rawRrfK)
+            : this.settings.searchRrfK
+
+      // §5.7.7 cycle #6 codex MED #2 fix — conf hybrid 'on' 의도면 master toggle 도 ON.
+      // CLI 또는 외부 편집 의도가 plugin 안 silent revert 되지 않도록 auto-promote.
+      // §5.7.7 cycle #7 codex MED fix — auto-promote 시 query tuning mode='off' 강제.
+      // master ON + default mode='filter-only' 가 LLM filter 활성 → cloud LLM 호출/비용
+      // 동반 side effect (사용자 의도 "hybrid only" 초과). hybrid 만 effective 보장.
+      const advancedFromConf =
+        rawHybrid === 'on' ? true : this.settings.advancedQueryTuningEnabled
+      const masterWasOff =
+        rawHybrid === 'on' && this.settings.advancedQueryTuningEnabled === false
+      const modeFromConf: WikeySettings['advancedQueryTuningMode'] = masterWasOff
+        ? 'off'
+        : this.settings.advancedQueryTuningMode
+
       this.settings = {
         ...this.settings,
         basicModel: (conf.WIKEY_BASIC_MODEL as string) || this.settings.basicModel,
@@ -924,6 +978,10 @@ export default class WikeyPlugin extends Plugin {
         summarizeProvider: (conf.SUMMARIZE_PROVIDER as string) || '',
         extractionDeterminism: conf.WIKEY_EXTRACTION_DETERMINISM === true || this.settings.extractionDeterminism,
         searchEngine: parsedEngine,
+        searchHybridEnabled: hybridFromConf,
+        searchRrfK: rrfKFromConf,
+        advancedQueryTuningEnabled: advancedFromConf,
+        advancedQueryTuningMode: modeFromConf,
       }
     } catch {
       // wikey.conf 없음 — data.json 값 유지
@@ -942,6 +1000,12 @@ export default class WikeyPlugin extends Plugin {
         WIKEY_MODEL: this.settings.cloudModel || 'wikey',
         OLLAMA_URL: this.settings.ollamaUrl,
         COST_LIMIT: String(this.settings.costLimit),
+        // §5.7.7 cycle #3 codex HIGH #2 fix — Hybrid wiring conf bridge (CLI parity).
+        // §5.7.7 cycle #5 codex HIGH #1 fix — sub-control gate: master toggle ON 시만 'on'.
+        WIKEY_HYBRID_MODE:
+          (this.settings.advancedQueryTuningEnabled && this.settings.searchHybridEnabled)
+            ? 'on' : 'off',
+        WIKEY_RRF_K: String(this.settings.searchRrfK ?? 60),
       }
       if (this.settings.advancedLLM) {
         if (this.settings.ingestProvider) updates.INGEST_PROVIDER = this.settings.ingestProvider
@@ -993,6 +1057,11 @@ export default class WikeyPlugin extends Plugin {
       advancedQueryTuningMaxTokens: this.settings.advancedQueryTuningMaxTokens,
       advancedQueryTuningAutoExtendThreshold: this.settings.advancedQueryTuningAutoExtendThreshold,
       advancedQueryTuningLastAnalyzedIndex: this.settings.advancedQueryTuningLastAnalyzedIndex,
+      // §5.7.7 cycle #3 codex HIGH #2 fix — Hybrid search persistence (data.json).
+      // 이전 cycle 누락 — Settings 토글 후 reload 시 default OFF 으로 회복하던 회귀.
+      searchHybridEnabled: this.settings.searchHybridEnabled,
+      searchRrfK: this.settings.searchRrfK,
+      searchQwen3DownloadStatus: this.settings.searchQwen3DownloadStatus,
     }
   }
 
@@ -1486,10 +1555,30 @@ export default class WikeyPlugin extends Plugin {
     const envEngine = process.env.WIKEY_SEARCH_ENGINE
     const searchEngine: 'orama' | 'qmd' =
       envEngine === 'orama' || envEngine === 'qmd' ? envEngine : this.settings.searchEngine
+    // §5.7.7 cycle #2 codex HIGH #1 fix — hybrid wiring config bridge.
+    // settings.searchHybridEnabled → WIKEY_HYBRID_MODE 'on'|'off' (env override priority).
+    // settings.searchRrfK → WIKEY_RRF_K (default 60, I12 settings UI customizable).
+    // §5.7.7 cycle #5 codex HIGH #1 fix — Q9 sub-control invariant (I16): hybrid 는
+    // master toggle (advancedQueryTuningEnabled) ON 시에만 effective. 사용자 mental
+    // model "Hybrid 는 Advanced query tuning 의 sub-control" 일관 — UI 가 hide 시
+    // 효과도 OFF.
+    // §5.7.7 cycle #6 codex HIGH #1 fix — env 'on' 으로 master gate bypass 회피.
+    // env 는 force-OFF 만 가능 (안전한 disable). force-ON 시도해도 master 가 OFF 면
+    // effective OFF. CLI 등 외부에서 hybrid 강제 활성 의도면 master toggle 도 ON 의무.
+    const envHybrid = process.env.WIKEY_HYBRID_MODE
+    const effectiveHybrid =
+      this.settings.advancedQueryTuningEnabled && this.settings.searchHybridEnabled
+    const hybridMode: 'on' | 'off' =
+      envHybrid === 'off' ? 'off' : effectiveHybrid ? 'on' : 'off'
+    const envRrfK = process.env.WIKEY_RRF_K
+    const rrfKParsed = envRrfK ? Number.parseInt(envRrfK, 10) : (this.settings.searchRrfK ?? 60)
+    const rrfK = Number.isFinite(rrfKParsed) && rrfKParsed > 0 ? rrfKParsed : 60
     return {
       WIKEY_BASIC_MODEL: this.settings.basicModel,
       WIKEY_SEARCH_BACKEND: 'basic',
       WIKEY_SEARCH_ENGINE: searchEngine,
+      WIKEY_HYBRID_MODE: hybridMode,
+      WIKEY_RRF_K: rrfK,
       WIKEY_MODEL: validatedModel,
       WIKEY_QMD_TOP_N: 5,
       WIKEY_SEARCH_TOP_N: 5,

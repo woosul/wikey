@@ -11,7 +11,8 @@ import {
   getOramaIndex,
   defaultOramaCachePath,
 } from './search/orama-index-singleton.js'
-import type { KoreanTokenizerHandle } from './search/orama-index.js'
+import type { KoreanTokenizerHandle, EmbedderFn } from './search/orama-index.js'
+import { createQwen3Loader, type Qwen3Loader } from './embeddings/qwen3-loader.js'
 import type { QueryIntentFilter } from './search/query-intent-filter.js'
 import type { QueryRewriter } from './search/query-rewriter.js'
 import type { QueryExpander } from './search/query-expander.js'
@@ -20,6 +21,35 @@ import type { VaultQueryHint } from './config/vault-query-config.js'
 const execFileAsync = promisify(execFile)
 
 const QMD_COLLECTION = 'wikey-wiki'
+
+// §5.7.7 cycle #2 — module-scope cached Qwen3 loader. createQwen3Loader 자체는 lazy
+// connect (factory call 시 endpoint 미호출, 첫 embed() 호출 시 1회 health check).
+// OLLAMA_URL 변경 시 reset 필요 — 현재 single-user 가정으로 process lifetime 내 1 URL.
+let cachedQwen3Loader: Qwen3Loader | null = null
+let cachedQwen3Url: string | null = null
+
+function getQwen3Embedder(ollamaUrl?: string): EmbedderFn {
+  const url = ollamaUrl ?? 'http://localhost:11434'
+  if (!cachedQwen3Loader || cachedQwen3Url !== url) {
+    cachedQwen3Loader = createQwen3Loader({ ollamaUrl: url })
+    cachedQwen3Url = url
+  }
+  const loader = cachedQwen3Loader
+  // I3 graceful disconnect: loader.embed returns undefined when ollama unavailable.
+  // EmbedderFn signature requires Float32Array (non-undefined) — caller (orama-index)
+  // wraps in try/catch + fail-open. We throw on undefined to trigger that path.
+  return async (text: string) => {
+    const vec = await loader.embed(text)
+    if (!vec) throw new Error('Qwen3 embed unavailable (ollama disconnected)')
+    return vec
+  }
+}
+
+/** §5.7.7 cycle #2 — test/reset hook. */
+export function resetQwen3EmbedderForTest(): void {
+  cachedQwen3Loader = null
+  cachedQwen3Url = null
+}
 
 export interface QueryOptions {
   readonly basePath?: string
@@ -436,9 +466,21 @@ export async function execOramaSearch(
     console.warn('[Wikey] execOramaSearch: tokenizer not provided — returning empty results')
     return []
   }
+  // §5.7.7 cycle #2 codex HIGH #1 fix — hybrid wiring. WIKEY_HYBRID_MODE=on 시 lazy
+  // module-scope cached Qwen3 embedder 주입 (I17 lazy load). I7 fail-open: embedder
+  // throw → BM25-only fallback (orama-index.ts internal). I3 graceful disconnect:
+  // ollama 미동작 → embedder return undefined → fallback.
+  const hybridOn = config.WIKEY_HYBRID_MODE === 'on'
+  const rrfK = config.WIKEY_RRF_K ?? 60
+  const ollamaUrl = config.OLLAMA_URL ?? 'http://localhost:11434'
+  const embedder = hybridOn ? getQwen3Embedder(ollamaUrl) : undefined
   const handle = await getOramaIndex({
     cachePath: opts?.oramaCachePath ?? defaultOramaCachePath(),
     tokenizer,
+    embedder,
+    // §5.7.7 cycle #4 codex HIGH #1 — stable embedder key for singleton invalidation.
+    // ollamaUrl 변경 시 cache invalidate (이전 cycle 의 boolean key 미감지 hole).
+    embedderKey: hybridOn ? `qwen3:${ollamaUrl}` : '',
   })
 
   // §5.7.4 codex cycle #1 MED-4 fix — empty cache detection via docCount() (zero-cost
@@ -455,8 +497,12 @@ export async function execOramaSearch(
   // §5.7.8 — propagate optional filter / rewriter / expander / vaultHint when supplied.
   // Absent → legacy single-query path (Spec invariant I7). Each layer is fail-open inside
   // `orama-index.search` (Spec invariant I8).
+  // §5.7.7 cycle #2 — pass mode='hybrid' + rrfK when WIKEY_HYBRID_MODE=on. embedder absence
+  // (handle creation 시 결정) 시에도 mode='hybrid' 는 inert (I6 backward compat).
   return handle.search(term, {
     topN,
+    mode: hybridOn ? 'hybrid' : 'fulltext',
+    rrfK,
     filter: opts?.filter,
     rewriter: opts?.rewriter,
     expander: opts?.expander,

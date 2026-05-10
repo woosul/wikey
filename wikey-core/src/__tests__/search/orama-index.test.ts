@@ -5,7 +5,8 @@
  * AC-I2.a: ingestAll(wikiDir) fixture 5~10 docs → docCount = N, ms ≤ 100.
  * AC-I3: search('BM25', { topN: 5 }) → SearchResult[] ≥ 1, shape { path, score, snippet }.
  * AC-I4: persist() → 새 handle 의 restore() → 동일 query 결과 재현.
- * AC-V1: schema 의 embedding: 'vector[768]' column + mock vector hybrid round-trip.
+ * AC-V1: schema 의 embedding: 'vector[1024]' column + mock vector hybrid round-trip
+ *        (§5.7.7 Inew dimension lock — `EMBEDDING_DIM` 단일 source).
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -146,14 +147,14 @@ describe('orama-index', () => {
     )
   })
 
-  it('AC-V1: schema accepts vector[768] column + 768D vector hybrid round-trip', async () => {
+  it('AC-V1: schema accepts vector[1024] column + 1024D vector hybrid round-trip', async () => {
     writeFixturePages()
     const handle = await createOramaIndex({
       cachePath,
       tokenizer: makeMockTokenizer(),
     })
-    // Ingest with synthetic 768D embedding to confirm schema column.
-    const vec = new Array(768).fill(0).map((_, i) => (i % 2 === 0 ? 0.5 : -0.5))
+    // Ingest with synthetic 1024D embedding to confirm schema column (§5.7.7 EMBEDDING_DIM).
+    const vec = new Array(1024).fill(0).map((_, i) => (i % 2 === 0 ? 0.5 : -0.5))
     const inserted = await handle.upsertWithEmbedding({
       id: 'concepts/test-vec.md',
       title: 'Vec Test',

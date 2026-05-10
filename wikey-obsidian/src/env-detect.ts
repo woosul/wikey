@@ -22,6 +22,10 @@ export interface EnvStatus {
   hasDocling: boolean
   doclingVersion: string
   hasUnhwp: boolean
+  /** §5.7.7 — wikey in-process search engine (Orama npm dep + Kiwi WASM vendor). required. */
+  hasWikiNlp: boolean
+  /** §5.7.7 — `dengcao/Qwen3-Embedding-0.6B:Q8_0` installed via Ollama. optional. */
+  hasQwen3Embedding: boolean
   ready: boolean
   issues: string[]
 }
@@ -43,6 +47,8 @@ const DEFAULT_STATUS: EnvStatus = {
   hasDocling: false,
   doclingVersion: '',
   hasUnhwp: false,
+  hasWikiNlp: false,
+  hasQwen3Embedding: false,
   ready: false,
   issues: [],
 }
@@ -307,6 +313,10 @@ export async function detectEnvironment(
   status.hasGemma4 = ollama.models.some((n) => n.includes('gemma4'))
   status.hasQwen3 = ollama.models.some((n) => /^qwen3:[0-9]/.test(n))
   status.hasQwen36 = ollama.models.some((n) => n.includes('qwen3.6'))
+  // §5.7.7 — Qwen3-Embedding 0.6B (hybrid search optional dep).
+  status.hasQwen3Embedding = ollama.models.some((n) =>
+    n.startsWith('dengcao/Qwen3-Embedding-0.6B'),
+  )
   if (!ollama.running) {
     issues.push('Ollama is not running. Run: ollama serve')
   }
@@ -330,9 +340,35 @@ export async function detectEnvironment(
   // 10. unhwp (HWP/HWPX 전용, 옵셔널 — .hwp 소스를 다루는 경우만 필요)
   status.hasUnhwp = await checkUnhwp(status.pythonPath, env)
 
+  // 11. §5.7.7 — wikey in-process search engine (Orama + Kiwi WASM). required.
+  // basePath/wikey-core/vendor/kiwi-nlp/dist/kiwi-wasm.wasm 존재 + plugin 자체 import 가능 시 ok.
+  status.hasWikiNlp = checkWikiNlp(basePath)
+  if (!status.hasWikiNlp) {
+    issues.push('Kiwi WASM vendor 부재 — wikey-core/vendor/kiwi-nlp/ 확인.')
+  }
+
   status.issues = issues
   status.ready = issues.length === 0
   return status
+}
+
+/** §5.7.7 — verify in-process search engine assets (Kiwi WASM vendor + Orama dep). */
+function checkWikiNlp(basePath: string): boolean {
+  // Plugin bundle 환경에서는 vendor 가 wikey-core 안에 위치. dev 환경 = workspace root.
+  const candidates = [
+    join(basePath, 'wikey-core', 'vendor', 'kiwi-nlp', 'dist', 'kiwi-wasm.wasm'),
+    join(basePath, 'vendor', 'kiwi-nlp', 'dist', 'kiwi-wasm.wasm'),
+    join(basePath, '..', 'wikey-core', 'vendor', 'kiwi-nlp', 'dist', 'kiwi-wasm.wasm'),
+  ]
+  for (const p of candidates) {
+    try {
+      accessSync(p)
+      return true
+    } catch {
+      // continue
+    }
+  }
+  return false
 }
 
 /**

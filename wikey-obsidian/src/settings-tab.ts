@@ -276,6 +276,116 @@ export class WikeySettingTab extends PluginSettingTab {
           await this.plugin.runQueryAnalysis()
         }),
       )
+
+    // ── §5.7.7 Hybrid search (BM25 + Qwen3-Embedding + RRF) ──
+    // Sub-control of master toggle (Q9 LOCKED v1.2). Default OFF (Spec I15 backward
+    // compat). Toggle 단일 (Q10 LOCKED v1.1) — mode dropdown 폐기, binary state 충분.
+    containerEl.createEl('h4', { text: 'Hybrid search (BM25 + vector)' })
+    containerEl.createDiv({
+      cls: 'wikey-settings-status-desc',
+      text:
+        'Combine BM25 keyword + Qwen3-Embedding 0.6B vector search via RRF fusion.' +
+        ' Requires Ollama + dengcao/Qwen3-Embedding-0.6B:Q8_0 (639MB, Apache-2.0, 1024D).' +
+        ' Cold reindex p95 ≤ 5min (CPU). Default OFF (existing BM25-only path preserved).',
+    })
+
+    new Setting(containerEl)
+      .setName('Enable hybrid search')
+      .setDesc('OFF (default) — BM25-only. ON — adds Qwen3 embedding generation per page + per query, then RRF-fuses both rankings.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.searchHybridEnabled)
+          .onChange(async (v) => {
+            this.plugin.settings.searchHybridEnabled = v
+            await this.plugin.saveSettings()
+            // §5.7.7 cycle #2 codex MED #5 fix — I19 download status reactive.
+            // OFF → idle (cleanup). ON → checkInstallStatus 후 status 갱신. ensureInstalled
+            // 미동작 (auto-pull)은 명시 button 으로 분리 (사용자 실수 통제 + ollama pull 시간).
+            // ollama 미동작 시 status='failed' + auto OFF (사용자 mental model 명확화).
+            if (!v) {
+              this.plugin.settings.searchQwen3DownloadStatus = 'idle'
+              await this.plugin.saveSettings()
+            } else {
+              try {
+                const { createQwen3Loader } = await import('wikey-core')
+                const loader = createQwen3Loader({ ollamaUrl: this.plugin.settings.ollamaUrl })
+                // §5.7.7 cycle #3 codex MED #3 fix — ensureInstalled (auto-pull) 사용.
+                // checkInstallStatus 만 하면 model 부재 시 'idle' 반환 → 'installed' 외 모두
+                // 인지 가능하나 'idle' 상태에서 Hybrid ON 가능 → 첫 query 시 BM25 silent
+                // fallback. ensureInstalled 가 자동 ollama pull 진행 (Q5 LOCKED v1.2). 'failed'
+                // 또는 'idle' (pull 후에도 미설치) → auto-OFF + Notice.
+                this.plugin.settings.searchQwen3DownloadStatus = 'downloading'
+                await this.plugin.saveSettings()
+                // §5.7.7 cycle #4 codex HIGH #3 fix — UI badge 즉시 표시 (pull 분 단위).
+                this.refreshPreservingScroll()
+                const st = await loader.ensureInstalled()
+                this.plugin.settings.searchQwen3DownloadStatus = st
+                if (st !== 'installed') {
+                  // 'idle'/'failed' — auto-OFF (user mental model: "Hybrid ON requires Qwen3").
+                  this.plugin.settings.searchHybridEnabled = false
+                }
+                await this.plugin.saveSettings()
+              } catch (err) {
+                this.plugin.settings.searchQwen3DownloadStatus = 'failed'
+                this.plugin.settings.searchHybridEnabled = false
+                await this.plugin.saveSettings()
+                // eslint-disable-next-line no-console
+                console.warn('[wikey] Qwen3 ensureInstalled failed:', err)
+              }
+            }
+            this.refreshPreservingScroll()
+          }),
+      )
+
+    if (this.plugin.settings.searchHybridEnabled) {
+      new Setting(containerEl)
+        .setName('RRF k value')
+        .setDesc('Reciprocal Rank Fusion constant (default 60, 논문 권고). Smaller k → top ranks weighted more.')
+        .addText((t) =>
+          t
+            .setValue(String(this.plugin.settings.searchRrfK))
+            .onChange(async (v) => {
+              const n = Number(v)
+              if (Number.isInteger(n) && n >= 1 && n <= 200) {
+                this.plugin.settings.searchRrfK = n
+                await this.plugin.saveSettings()
+              }
+            }),
+        )
+
+      // Qwen3 model download status badge (4 phase: idle / downloading / installed / failed).
+      const statusRow = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
+      const statusLabelWrap = statusRow.createDiv({ cls: 'wikey-settings-status-label-wrap' })
+      statusLabelWrap.createEl('span', {
+        text: 'Qwen3-Embedding 0.6B',
+        cls: 'wikey-settings-status-label',
+      })
+      statusLabelWrap.createEl('span', {
+        text: 'Embedding model (Q8_0, 1024D, 639MB). Auto-pull via `ollama pull` on first hybrid query.',
+        cls: 'wikey-settings-status-desc',
+      })
+      const status = this.plugin.settings.searchQwen3DownloadStatus
+      const statusBadgeCls =
+        status === 'installed'
+          ? 'wikey-status-ok'
+          : status === 'downloading'
+            ? 'wikey-status-neutral'
+            : status === 'failed'
+              ? 'wikey-status-error'
+              : 'wikey-status-neutral'
+      const statusText =
+        status === 'installed'
+          ? 'Installed'
+          : status === 'downloading'
+            ? 'Downloading...'
+            : status === 'failed'
+              ? 'Failed (check Ollama)'
+              : 'Not installed'
+      statusRow.createEl('span', {
+        text: statusText,
+        cls: `wikey-settings-status-badge ${statusBadgeCls}`,
+      })
+    }
   }
 
   // ── Section: Reset (Phase 4.5.2) ──
@@ -340,14 +450,19 @@ export class WikeySettingTab extends PluginSettingTab {
     }
 
     const items: Array<{ label: string; value: string; ok: boolean; desc: string; optional?: boolean }> = [
-      { label: 'Node.js', value: env.nodePath || 'Not found', ok: !!env.nodePath, desc: 'Runtime for qmd search engine' },
+      { label: 'Node.js', value: env.nodePath || 'Not found', ok: !!env.nodePath, desc: 'Runtime for wikey-core search engine' },
       { label: 'Python3', value: env.pythonPath || 'Not found', ok: !!env.pythonPath, desc: 'Required for Korean tokenizer & PDF processing' },
       { label: 'kiwipiepy', value: env.hasKiwipiepy ? 'Installed' : 'Not installed', ok: env.hasKiwipiepy, desc: 'Korean morpheme analyzer for search accuracy' },
-      { label: 'qmd', value: env.qmdPath || 'Not found', ok: !!env.qmdPath, desc: 'Hybrid search engine (BM25 + vector)' },
+      // §5.7.7 — wikey in-process search engine (Orama + Kiwi WASM). required.
+      { label: 'wikiNLP', value: env.hasWikiNlp ? 'Installed' : 'Not found', ok: env.hasWikiNlp, desc: 'In-process search engine: Orama BM25 + Kiwi WASM tokenizer (1024D vector ready)' },
+      // §5.7.7 — qmd 격하 (legacy fallback, opt-in via Search engine setting).
+      { label: 'qmd', value: env.qmdPath || 'Not configured', ok: !!env.qmdPath, optional: true, desc: 'Legacy fallback search engine (opt-in via Search engine setting)' },
       { label: 'Ollama', value: env.ollamaRunning ? `Running (${env.ollamaModels.length} models)` : 'Not running', ok: env.ollamaRunning, desc: 'Local LLM server for private inference' },
       { label: 'Qwen3 8B', value: env.hasQwen3 ? 'Installed' : 'Optional', ok: env.hasQwen3, optional: true, desc: 'Ingest option (5.2GB, fast, JSON reliable)' },
       { label: 'Qwen3.6:35b-a3b', value: env.hasQwen36 ? 'Installed' : 'Optional', ok: env.hasQwen36, optional: true, desc: 'Ingest high-quality option (24GB MoE, ≥48GB RAM)' },
       { label: 'Gemma4', value: env.hasGemma4 ? 'Installed' : 'Optional', ok: env.hasGemma4, optional: true, desc: 'Query/CR synthesis option (not used for ingest)' },
+      // §5.7.7 — Qwen3-Embedding 0.6B (hybrid search vector embedding).
+      { label: 'Qwen3-Embedding 0.6B', value: env.hasQwen3Embedding ? 'Installed' : 'Optional', ok: env.hasQwen3Embedding, optional: true, desc: 'Hybrid search vector embedding (Q8_0, 1024D, 639MB). Required when Hybrid search ON' },
       { label: 'Docling', value: env.hasDocling ? `v${env.doclingVersion}` : 'Not installed', ok: env.hasDocling, desc: 'Main converter — PDF/DOCX/PPTX/XLSX/HTML/image (TableFormer + ocrmac). uv tool install docling' },
       { label: 'unhwp', value: env.hasUnhwp ? 'Installed' : 'Optional', ok: env.hasUnhwp, optional: true, desc: 'HWP/HWPX (Hangul) converter. pip install unhwp' },
       { label: 'MarkItDown', value: env.hasMarkitdown ? 'Installed' : 'Optional', ok: env.hasMarkitdown, optional: true, desc: 'Fallback converter (used when docling is unavailable)' },
@@ -1202,7 +1317,9 @@ export class WikeySettingTab extends PluginSettingTab {
     containerEl.createEl('h3', { text: 'Wiki Tools' })
 
     const basePath = (this.plugin.app.vault.adapter as any).basePath ?? ''
-    const env = this.plugin.getExecEnv()
+    // §5.7.7 cycle #4 codex MED #4 fix — env capture inside each button handler so
+    // recent setting changes (Hybrid toggle, OLLAMA_URL) reach reindex subprocess
+    // without tab rerender. Previously env was computed once at render time.
 
     // --- Reindex ---
     const reindexBox = containerEl.createDiv({ cls: 'wikey-settings-result-box' })
@@ -1213,6 +1330,7 @@ export class WikeySettingTab extends PluginSettingTab {
       btn.setButtonText('Check Index').onClick(async () => {
         btn.setButtonText('Checking...')
         btn.setDisabled(true)
+        const env = this.plugin.getExecEnv()
         const result = await reindexCheck(basePath, env)
         reindexBox.empty()
         reindexBox.createEl('pre', {
@@ -1229,6 +1347,7 @@ export class WikeySettingTab extends PluginSettingTab {
         btn.setDisabled(true)
         reindexBox.empty()
         reindexBox.createEl('span', { text: 'Full reindex running... (up to 2 min)', cls: 'wikey-settings-result-placeholder' })
+        const env = this.plugin.getExecEnv()
         const result = await reindexWiki(basePath, env, 'full')
         reindexBox.empty()
         reindexBox.createEl('pre', {
@@ -1251,6 +1370,7 @@ export class WikeySettingTab extends PluginSettingTab {
       btn.setButtonText('Validate Wiki').onClick(async () => {
         btn.setButtonText('Validating...')
         btn.setDisabled(true)
+        const env = this.plugin.getExecEnv()
         const result = await validateWiki(basePath, env)
         validateBox.empty()
         validateBox.createEl('pre', {
@@ -1267,6 +1387,7 @@ export class WikeySettingTab extends PluginSettingTab {
       btn.setButtonText('PII Scan').onClick(async () => {
         btn.setButtonText('Scanning...')
         btn.setDisabled(true)
+        const env = this.plugin.getExecEnv()
         const result = await checkPii(basePath, env)
         validateBox.empty()
         validateBox.createEl('pre', {

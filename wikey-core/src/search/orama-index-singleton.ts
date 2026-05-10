@@ -14,13 +14,26 @@ import {
   createOramaIndex,
   type OramaIndexHandle,
   type KoreanTokenizerHandle,
+  type EmbedderFn,
 } from './orama-index.js'
 
 let cached: OramaIndexHandle | null = null
 // §5.7.4 codex cycle #5 MED-13 fix — cross-process invalidation key.
 // 별 process (./scripts/reindex.sh CLI) 가 같은 cache 파일을 rewrite 시 in-process query 가
 // stale handle 을 반환하던 회귀 회피. mtime + size 둘 다 비교 — same-second reset 도 detect.
-let cachedKey: { cachePath: string; mtimeMs: number; size: number } | null = null
+//
+// §5.7.7 cycle #3 codex HIGH #1 fix — embedder identity 도 invalidation key 의 일부.
+// BM25 first query 후 사용자가 Settings 에서 Hybrid ON 하면 caller (query-pipeline) 가
+// embedder 를 새로 주입. 이전 cached handle 은 embedder closure 가 없어 mode='hybrid' inert.
+// §5.7.7 cycle #4 codex HIGH #1 fix — boolean (presence) 만 비교 시 ollamaUrl 변경 감지
+// 못하던 hole. caller 가 stable string key 전달 — `qwen3:${ollamaUrl}` 패턴.
+// 미주입 ('') = BM25-only path.
+let cachedKey: {
+  cachePath: string
+  mtimeMs: number
+  size: number
+  embedderKey: string
+} | null = null
 
 function statCacheKey(cachePath: string): { mtimeMs: number; size: number } {
   try {
@@ -38,6 +51,18 @@ export function defaultOramaCachePath(): string {
 export interface OramaSingletonOptions {
   readonly cachePath?: string
   readonly tokenizer: KoreanTokenizerHandle
+  /**
+   * §5.7.7 cycle #2 codex HIGH #1 fix — hybrid wiring. embedder 주입 시 search() 의
+   * `mode: 'hybrid'` path 활성. embedder 미주입 → 기존 BM25-only path (I6 backward compat).
+   * Plugin onload 1회 inject (lazy createQwen3Loader 후 () => loader.embed(text, {signal}) 형태).
+   */
+  readonly embedder?: EmbedderFn
+  /**
+   * §5.7.7 cycle #4 codex HIGH #1 fix — stable string key for invalidation.
+   * caller 가 backend identity 결정 (예: `qwen3:${ollamaUrl}`). 미지정 + embedder 있음
+   * 시 default key = 'embedder' (legacy). embedder 없으면 빈 문자열 ''.
+   */
+  readonly embedderKey?: string
 }
 
 /**
@@ -49,22 +74,25 @@ export async function getOramaIndex(
 ): Promise<OramaIndexHandle> {
   const cp = opts.cachePath ?? defaultOramaCachePath()
   const cur = statCacheKey(cp)
+  const embedderKey = opts.embedderKey ?? (opts.embedder ? 'embedder' : '')
   if (
     cached &&
     cachedKey &&
     cachedKey.cachePath === cp &&
     cachedKey.mtimeMs === cur.mtimeMs &&
-    cachedKey.size === cur.size
+    cachedKey.size === cur.size &&
+    cachedKey.embedderKey === embedderKey
   ) {
     return cached
   }
   const handle = await createOramaIndex({
     cachePath: cp,
     tokenizer: opts.tokenizer,
+    embedder: opts.embedder,
   })
   await handle.restore()
   cached = handle
-  cachedKey = { cachePath: cp, ...cur }
+  cachedKey = { cachePath: cp, ...cur, embedderKey }
   return handle
 }
 

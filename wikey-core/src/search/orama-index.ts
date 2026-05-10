@@ -40,6 +40,11 @@ import type { QueryIntentFilter, FilterDecision } from './query-intent-filter.js
 import type { QueryRewriter, RewriteDecision } from './query-rewriter.js'
 import type { QueryExpander, ExpandDecision } from './query-expander.js'
 import type { VaultQueryHint } from '../config/vault-query-config.js'
+import { EMBEDDING_DIM } from '../embeddings/embedding-config.js'
+import { rrfFuse } from './rrf-fusion.js'
+
+/** §5.7.7 Spec 1 — query / ingest embedder (text → 1024D Float32Array). */
+export type EmbedderFn = (text: string) => Promise<Float32Array>
 
 // Re-export production tokenizer handle (single canonical type identity).
 export type { KoreanTokenizerHandle }
@@ -49,13 +54,19 @@ export interface OramaWikiDoc {
   readonly id: string
   readonly title: string
   readonly body: string
-  /** 768D Qwen3-Embedding (벡터 ingest 시점에서 주입; 본 cycle 안 BM25-only path 우선). */
+  /** 1024D Qwen3-Embedding (§5.7.7 Inew dimension lock — `EMBEDDING_DIM` constant). */
   readonly embedding?: number[]
 }
 
 export interface OramaSearchOptions {
   readonly topN: number
   readonly mode?: 'fulltext' | 'hybrid'
+  /**
+   * §5.7.7 cycle #2 codex HIGH #1 fix — caller-supplied RRF k override. mode='hybrid'
+   * 일 때 사용. 미지정 시 factory option `rrfK` (default 60). settings UI customizable
+   * (Spec invariant I12 — k externalized).
+   */
+  readonly rrfK?: number
   /**
    * §5.7.8 Spec 2 — optional query intent filter wrapper. When omitted the search call
    * runs through the legacy code path (Spec invariant I7 — backward compat).
@@ -102,7 +113,7 @@ export interface OramaIndexHandle {
   restore(): Promise<void>
   /** 모든 wiki/*.md 를 frontmatter 파싱 + insertMultiple. */
   ingestAll(wikiDir: string): Promise<OramaIngestResult>
-  /** §5.7.4 AC-V1 — 768D vector 직접 upsert (hybrid mode 사전 검증용). */
+  /** §5.7.7 — 1024D vector 직접 upsert. body 미지정 시 embedder 가 `${title}\n\n${body}` 호출 (Q4). */
   upsertWithEmbedding(doc: OramaWikiDoc): Promise<boolean>
   /**
    * §5.7.4 codex cycle #1 MED-4 fix — index 문서 수 직접 조회. query path 의 empty
@@ -116,6 +127,15 @@ export interface OramaIndexFactoryOptions {
   readonly cachePath: string
   /** Korean tokenizer (production: createKoreanTokenizer; test: mock). */
   readonly tokenizer: KoreanTokenizerHandle
+  /**
+   * §5.7.7 Spec 2 — optional Qwen3-Embedding query/ingest embedder. When present:
+   *  - ingestAll() pre-computes embeddings for every doc (Q4 — `${title}\n\n${body}`).
+   *  - search({ mode: 'hybrid' }) runs BM25 + vector concurrently and fuses via RRF.
+   * Absent → BM25-only path preserved (Spec I6 backward compat).
+   */
+  readonly embedder?: EmbedderFn
+  /** §5.7.7 — RRF k constant (default 60, Q3 LOCKED). */
+  readonly rrfK?: number
 }
 
 interface FrontmatterAndBody {
@@ -277,6 +297,12 @@ export async function createOramaIndex(
   opts: OramaIndexFactoryOptions,
 ): Promise<OramaIndexHandle> {
   const tokenizer = opts.tokenizer
+  const embedder = opts.embedder
+  const rrfK = opts.rrfK ?? 60
+
+  // §5.7.7 Inew (dimension lock) — Orama schema string literal must be `vector[N]`.
+  // EMBEDDING_DIM imported from embeddings/embedding-config.ts (single source).
+  const VECTOR_FIELD = `vector[${EMBEDDING_DIM}]` as `vector[${number}]`
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const buildDb = async (): Promise<any> => {
@@ -285,7 +311,7 @@ export async function createOramaIndex(
         id: 'string',
         title: 'string',
         body: 'string',
-        embedding: 'vector[768]',
+        embedding: VECTOR_FIELD,
       },
       components: {
         tokenizer: {
@@ -314,6 +340,7 @@ export async function createOramaIndex(
         ? uniqueQueries(question, [pipeline.effectiveQuery, ...pipeline.multiQueries])
         : uniqueQueries(pipeline.effectiveQuery, pipeline.multiQueries)
 
+      // BM25 union (multi-query) — same shape across fulltext + hybrid.
       const seen = new Map<string, ReturnType<typeof hitToSearchResult>>()
       for (const q of queries) {
         const r = await oramaSearch(db, {
@@ -328,12 +355,52 @@ export async function createOramaIndex(
           if (!prev || sr.score > prev.score) seen.set(sr.path, sr)
         }
       }
-
-      const ordered = Array.from(seen.values())
+      const bm25Ordered = Array.from(seen.values())
         .sort((a, b) => b.score - a.score)
         .slice(0, searchOpts.topN)
 
-      return attachLayerMetadata(ordered, pipeline)
+      // §5.7.7 Spec 2 — hybrid path. Vector single embed source = `effectiveQuery` only
+      // (Spec 1.2 Inputs Finding 2 v1.1: multi-queries → BM25 union 전용). I7 fail-open:
+      // embedder throw → BM25-only fallback + console warn.
+      const effectiveRrfK = searchOpts.rrfK ?? rrfK
+      if (searchOpts.mode === 'hybrid' && embedder) {
+        let queryVec: Float32Array | undefined
+        try {
+          queryVec = await embedder(pipeline.effectiveQuery)
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('[orama-index] hybrid query embed failed, falling back to BM25-only:', err)
+          return attachLayerMetadata(bm25Ordered, pipeline)
+        }
+        if (!queryVec || queryVec.length !== EMBEDDING_DIM) {
+          // eslint-disable-next-line no-console
+          console.warn('[orama-index] hybrid query vector dim mismatch — BM25-only fallback')
+          return attachLayerMetadata(bm25Ordered, pipeline)
+        }
+        let vectorOrdered: SearchResult[] = []
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const vRes: any = await oramaSearch(db, {
+            mode: 'vector',
+            vector: { value: Array.from(queryVec), property: 'embedding' },
+            similarity: 0,
+            limit: searchOpts.topN,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          } as any)
+          for (const hit of vRes.hits ?? []) vectorOrdered.push(hitToSearchResult(hit))
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('[orama-index] vector search threw, falling back to BM25-only:', err)
+          vectorOrdered = []
+        }
+        const fused = rrfFuse(bm25Ordered, vectorOrdered, {
+          k: effectiveRrfK,
+          topN: searchOpts.topN,
+        })
+        return attachLayerMetadata(fused, pipeline)
+      }
+
+      return attachLayerMetadata(bm25Ordered, pipeline)
     },
 
     async persist(persistOpts?: OramaPersistOptions) {
@@ -378,6 +445,7 @@ export async function createOramaIndex(
 
     async ingestAll(wikiDir) {
       const t0 = Date.now()
+      // Walk + frontmatter parse first (cheap, sync).
       const docs: OramaWikiDoc[] = []
       for (const full of walkMarkdownFiles(wikiDir)) {
         const rel = relative(wikiDir, full).split('\\').join('/')
@@ -385,18 +453,60 @@ export async function createOramaIndex(
         const { title, body } = parseFrontmatter(raw, basename(full, '.md'))
         docs.push({ id: rel, title, body })
       }
+      // §5.7.7 Spec 2 I9 — embedder 가 있으면 page-level embedding pre-compute.
+      // Q4 LOCKED v1.1: source text = `${title}\n\n${body}` union (BM25 source mirror,
+      // frontmatter 미포함 — PII surface 회피, markdown H1 패턴).
+      // I10 dim consistency — dim ≠ EMBEDDING_DIM 시 해당 page hybrid skip + BM25 정상
+      // insert (페이지별 fail-open). embedder throw → 동일.
+      const embeddedDocs: OramaWikiDoc[] = []
+      if (embedder) {
+        for (const d of docs) {
+          const sourceText = `${d.title}\n\n${d.body}`
+          try {
+            const vec = await embedder(sourceText)
+            if (vec && vec.length === EMBEDDING_DIM) {
+              embeddedDocs.push({ ...d, embedding: Array.from(vec) })
+            } else {
+              // eslint-disable-next-line no-console
+              console.warn(
+                `[orama-index] page ${d.id} embedding dim mismatch (got ${vec?.length ?? 'undefined'}) — hybrid skip, BM25-only`,
+              )
+              embeddedDocs.push(d)
+            }
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.warn(`[orama-index] page ${d.id} embed failed — hybrid skip, BM25-only:`, err)
+            embeddedDocs.push(d)
+          }
+        }
+      } else {
+        embeddedDocs.push(...docs)
+      }
       // Re-create db before bulk insert (idempotent ingest — clears prior index).
       db = await buildDb()
-      if (docs.length > 0) {
-        await oramaInsertMultiple(db, docs)
+      if (embeddedDocs.length > 0) {
+        await oramaInsertMultiple(db, embeddedDocs)
       }
       const ms = Date.now() - t0
-      return { docCount: docs.length, ms }
+      return { docCount: embeddedDocs.length, ms }
     },
 
     async upsertWithEmbedding(doc) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const inputDoc: any = { ...doc }
+      // §5.7.7 Spec 2 I9 — embedding 미지정 + embedder 가 있으면 자동 생성 (Q4 union source).
+      if (!inputDoc.embedding && embedder) {
+        const sourceText = `${doc.title}\n\n${doc.body}`
+        try {
+          const vec = await embedder(sourceText)
+          if (vec && vec.length === EMBEDDING_DIM) {
+            inputDoc.embedding = Array.from(vec)
+          }
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn(`[orama-index] upsert ${doc.id} embed failed — BM25-only insert:`, err)
+        }
+      }
       // Orama expects Float32Array-like for vector; arrays accepted in v3.
       await oramaInsert(db, inputDoc)
       return true

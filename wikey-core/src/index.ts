@@ -337,3 +337,15 @@ export type {
 } from './update/upstream-checker.js'
 export { analyzeUpdate } from './update/update-analyzer.js'
 export type { UpdateAnalysis, AnalyzeUpdateOptions } from './update/update-analyzer.js'
+
+// §5.7.7 — Qwen3-Embedding loader + RRF fusion + dimension lock constants.
+export { createQwen3Loader } from './embeddings/qwen3-loader.js'
+export type { Qwen3Loader, Qwen3LoaderOptions, Qwen3InstallStatus } from './embeddings/qwen3-loader.js'
+export {
+  EMBEDDING_DIM,
+  EMBEDDING_MODEL_DEFAULT,
+  QWEN3_LICENSE,
+} from './embeddings/embedding-config.js'
+export { rrfFuse } from './search/rrf-fusion.js'
+export type { RrfFuseOptions } from './search/rrf-fusion.js'
+export type { EmbedderFn } from './search/orama-index.js'

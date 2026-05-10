@@ -1,25 +1,43 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-10 session 34 — §5.7.7 plan APPROVE v1.2** (Q1~Q10 LOCKED + codex Mode D 5 finding master fix + 사용자 일괄 APPROVE) + §5.7.8 v1.5 + §5.7.9 v1.0 종결 + Settings UI 재구성.
+> 최신 갱신: **2026-05-11 session 35 — §5.7.7 SDD+TDD ✅ 종결** (Step A~F 완료 + codex post-impl 7 cycle / NEEDS_REVISION 6 → cycle #7 APPROVE / master fix loop 18 finding 모두 close + 라이브 master cold reindex 117/117 docs embedding 1024D + 51 query benchmark Top-3 +11.7%p / MRR +0.060 / Spec I24 target 88% 정확 달성).
 >
-> ## 다음 세션 첫 액션 (Session 35) — §5.7.7 SDD+TDD impl 진입 (post-/compact)
+> ## 다음 세션 첫 액션 (Session 36)
 >
-> **§5.7.7 v1.2 plan APPROVE 상태**:
-> - 단일 소스: [`plan/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](./phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.2 (status: approved)
-> - paradigm: BM25 + Qwen3-Embedding-0.6B-GGUF (1024D 실측, ollama `dengcao/Qwen3-Embedding-0.6B:Q8_0`) + RRF (k=60) 융합
-> - 5 spec / 25 invariant / 32 AC / 8 risk / Open Q1~Q10 모두 LOCKED
-> - 사용자 추가 요구사항 settings UI 통합 = §5.7.8 Advanced query tuning section 안 hybrid toggle (sub-control of master toggle)
-> - 변경 면 추정: ~1,220 LOC (코드 ~540 + test ~580 + docs ~80 + config/script ~20)
-> - codex Mode D 검증 5 finding (3 MED + 2 LOW) master fix v1.1 → 사용자 일괄 APPROVE v1.2
-> - 환경 사전 점검 ✅: ollama running + dengcao/Qwen3-Embedding-0.6B:Q8_0 (639 MB) pulled + endpoint 1024D 실측 + Orama @3.1.18 vector ready + schema field placeholder (`vector[768]` line 288 — 본 cycle 정정 대상)
+> **Phase 5 잔여 4 subject 결정** (§5.7 항목 모두 종결):
+> - §5.5 (지식 그래프 · 시각화 — NetworkX + Leiden + vis.js / Obsidian Graph View, P3)
+> - §5.6 (성능·엔진 확장 — llama.cpp PoC / rapidocr Linux, P3)
+> - §5.8 (Phase 4 D.0.l 잔여 — dedup / classify variance / reindex exit, P4)
+> - §5.9 (Variance 기여도·diagnostic — 4-points ablation / Ollama baseline, P4)
 >
-> ## Session 35 첫 액션 (post-/compact impl 진입)
+> 사용자 결정 의뢰 — Phase 5 잔여 우선순위 + 진행 vs Phase 6 (웹 환경) 진입.
 >
-> 1. **Step B — TDD RED (failing tests 작성)**: B0 `vector\[768\]` + `768D Qwen3` grep + 영향 ≤ 3 file 정정 / B1 `qwen3-loader.test.ts` 신규 (Spec 1, 7 AC) / B2 `rrf-fusion.test.ts` 신규 (Spec 3, 6 AC) / B3 `orama-hybrid.test.ts` 신규 (Spec 2, 6 AC) / B4 `settings-hybrid.test.ts` 신규 (Spec 4, 6 AC) / B5 `npm test` RED 확증.
-> 2. **Step C — TDD GREEN**: C0 `embedding-config.ts` (Inew dimension lock single source) / C1 `qwen3-loader.ts` (ollama API path) / C2 `rrf-fusion.ts` / C3 `orama-index.ts::search()` hybrid 분기 + dim 정정 / C4 ingest path embedding populate (`title + "\n\n" + body` union) / C5 `WikeySettings` 3 field 추가 / C6 settings-tab.ts hybrid toggle / C7 config env override / C8 reindex script / C9 benchmark mode flag.
-> 3. **Step D — 회귀 검증 + Phase 3a/3b**.
-> 4. **Step E — 라이브 master 직접** (CDP smoke + cold reindex + 51 query benchmark hybrid mode + §5.7.8 10 query 재측정 ablation).
-> 5. **Step F — codex post-impl review + doc sweep + commit/push**.
+> **§5.7.9 candidate #3~#5 별 cycle 예약** (session 34 deferred):
+> - #3: vault hygiene (한↔영 alias 통합)
+> - #4: HyDE false positive 회피
+> - #5: 답변 LLM citation 우선순위 정렬
+>
+> **§5.7.7 후속 cycle 후보** (session 35 deferred, low priority):
+> - reranker (Stage 3 LLM rerank) — Top-1 / MRR target 미달 보강
+> - query embedding cache — query embedding ~50~150ms (cold) / ~10ms (warm) 향상
+> - cloud embedding API (Gemini text-embedding-004 등) BYOAI 확장
+>
+> ## §5.7.7 SDD+TDD 종결 종합 (session 35, 2026-05-11)
+>
+> - **Step A**: plan v1.2 APPROVE (session 34) → Q1~Q10 LOCKED
+> - **Step B**: tester agent 위임 → 4 신규 test file 25 RED (qwen3-loader 7 + rrf-fusion 6 + orama-hybrid 6 + settings-hybrid 6)
+> - **Step C**: developer agent 위임 → 신규 3 + 변경 9 file (~570 LOC). 25 RED → GREEN, 회귀 0
+> - **사용자 정정 정책 통합**: wikiNLP required + qmd optional 격하 + Qwen3-Embedding optional 신규 (settings-tab Environment items + EnvStatus 신규 2 field + checkWikiNlp 헬퍼)
+> - **Step F codex post-impl 7 cycle** (master fix loop):
+>   - cycle #1: 5 finding (3H+2M) — caller path wiring 누락 → fix
+>   - cycle #2: 3 finding (2H+1M) — singleton cache embedder presence + getExecEnv WIKEY_HYBRID_MODE + ensureInstalled → fix
+>   - cycle #3: 4 finding (3H+1M) — embedderKey stable string + persistence + stream:false + env capture → fix
+>   - cycle #4: 2 finding (1H+1M) — Q9 sub-control gate + wikey.conf load read back → fix
+>   - cycle #5: 2 finding (1H+1M) — env force-OFF only + auto-promote → fix
+>   - cycle #6: 1 finding (1M) — auto-promote scope (mode='off' 강제) → fix
+>   - cycle #7: ✅ APPROVE (Findings: none)
+> - **Step E 라이브 master cold reindex** (cycle #8 timeout 60s fix 후): 117/117 docs embedding 1024D 채워짐 (cache 6.5MB), 51 query benchmark Top-3 76.5 → 88.2% (+11.7%p), MRR 0.753 → 0.813 (+0.060). I24 target 88% 정확 달성.
+> - test: wikey-core 803/806 PASS / wikey-obsidian 108/108 PASS / typecheck + build 0 / validate-wiki PASS.
 >
 > **§5.7.8 v1.5 + §5.7.9 v1.0 종결 + Settings UI 재구성 종합 (session 34)**:
 > - §5.7.8 paradigm = query intent filter + rewriter + expander + vault customize + auto-extend + manual trigger
