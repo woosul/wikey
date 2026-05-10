@@ -1,8 +1,41 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-10 session 32 — §5.7.6 ABANDON (paradigm violation) + §5.7.8 신설 (LLM per-query dynamic stopword paradigm)**. commit `932151a`.
+> 최신 갱신: **2026-05-10 session 33 — §5.7.8 v1.3 plan APPROVE_WITH_NOTES (codex Cycle #1~#6 fix loop 수렴) + 디렉토리 재구성 (plan/+activity/ phase 서브디렉토리)**. commits `630a1ed` (재구성) + `922cd6d` (§5.7.8 v1.3).
 >
-> ## 다음 세션 첫 액션 (Session 33) — **§5.7.8 spec/todox 작성 진입 vs Phase 5 잔여 우선순위 결정**
+> ## 다음 세션 첫 액션 (Session 34) — §5.7.8 SDD+TDD 진입 vs Phase 5 잔여 우선순위 결정
+>
+> **§5.7.8 v1.3 plan APPROVE 상태** (commit `922cd6d`):
+> - paradigm: 51 baseline + auto-extend mechanism (query+answer LLM 자동 분석 → suite 자동 등록) + 수동 trigger ("Run query analysis" command) + vault customize + Advanced query tuning settings UI
+> - hardcoded domain list 0건 (anchor (k) 강화) — 사용자 raise paradigm violation fix 결과
+> - AC 20 (단위 14 + 통합 5 + 라이브 1) / Risk 15 / Open Q 6 LOCKED (Q1 provider+model 2 dropdown / Q2 SQLite / Q3 5s timeout / Q4 opt-in / Q5 안내문구 / Q6 N=5 default)
+> - 변경 면 ≤ 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main + sidebar-chat / repo root 1: .github/workflows/benchmark.yml)
+> - 신규 dep 2 (better-sqlite3 + 기존 yaml 재사용)
+> - codex 6-cycle fix loop 점진 수렴 (7→6→6→3→2→1 finding) → APPROVE_WITH_NOTES
+>
+> ## §5.7.8 SDD+TDD 진입 시 첫 액션 (Session 34)
+>
+> 1. **Step A — 환경 세팅**: 사용자 결정 6건 (Q1~Q6) 잠금 확증 + LLMClient API + orama-index search opts + better-sqlite3 dep + settings UI 패턴 (`renderModelDropdown`) + vault config parser + `.github/workflows/` (repo root) fact-check
+> 2. **Step B — TDD RED → GREEN → BLUE**: AC-F1~F9 + AC-S1~S4 + AC-A1 단위 test (RED) → 18 file 변경 면 구현 (GREEN) → 회귀 + refactor (BLUE 3a/3b)
+> 3. **Step C — 라이브 cycle smoke**: master 직접 — 51 baseline + auto-extend evidence + AC-I2 real LLM prompt + AC-I3 rewriter+expander real LLM + AC-L1 benchmark
+> 4. **Step D — 문서 동기화** + commit/push
+>
+> ## 디렉토리 재구성 결과 (commit `630a1ed`, 2026-05-10 session 33)
+>
+> - plan/ root: plan-full.md, session-wrap-followups.md (핵심 유지)
+> - plan/ref/: decisions.md, plan_wikey-enterprise-kb.md (phase 무관)
+> - plan/phase-{1~6,a}/: 각 phase 별 todo·todox·spec·full
+> - activity/phase-{1~5}/: 각 phase 별 result·resultx
+> - 참조 갱신: 127 file (외부 docs + 변수형 + 이동 file 안 link 깊이 +1 + sibling 복원 + sub-dir README.md fix)
+> - 회귀 PASS: validate-wiki / wikey-core 738 / wikey-obsidian 46 / build 0 errors
+> - memory feedback 신규: `feedback_user_request_via_master.md` (사용자 추가/변경 요청은 master 통해)
+>
+> ## §5.7.6 ABANDON 학습 mirror (영구)
+>
+> 사용자 raise (2026-05-10): "하드코딩 금지 — 설계에서부터 주지" + "stopword 일방적 삭제는 위험, query 유형 별 LLM 의미론적 판정 의무" + "의료/법률 등 정해진게 아니라 구축된 wiki 지식에 따라 어떻게 생성될지 모르는 부분, Karpathy 원칙에도 어긋남". memory `feedback_no_hardcoding_general.md` + analyst.md anchor (k) 등록 — 모든 SDD+TDD cycle 의 spec/todox 단계부터 hardcoded set/list/rule 검출 의무.
+
+---
+
+> ## 이전 세션 (Session 32, commit `932151a`) — §5.7.6 ABANDON 요약
 >
 > **§5.7.6 ABANDON 결과** (Session 32, commit `932151a`):
 > - paradigm violation 인지 (사용자 raise): "stopword 일방적 삭제는 위험. 질문 유형에 따라 결정. LLM답지 않음"

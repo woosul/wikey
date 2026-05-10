@@ -1773,6 +1773,63 @@ revert (paradigm 위반):
 - **§5.7.7 (HYBRID vector reroute) 관계**: §5.7.7 paradigm = vector embedding (static stopword 무관, violation 없음) — 보존 + §5.7.8 우선 진입 후 결정 (사용자 결정 2026-05-10).
 - **본 cycle 산출 도구 보존 가치**: benchmark suite 51 query 의 도메인 균형 + expected slug 검증 + Top-1/Top-3/MRR 계산 = paradigm-neutral 도구. §5.7.8 + §5.7.7 모두 quality measurement 로 활용.
 
+### 5.7.8 LLM per-query dynamic stopword paradigm — plan APPROVE (P3, session 33, 2026-05-10)
+> tag: #search, #quality-tuning, #llm-dynamic-stopword, #paradigm-correction, #plan-approve
+
+#### 5.7.8.0 진행 상태 (commit `922cd6d`, 2026-05-10 session 33)
+
+- **plan APPROVE_WITH_NOTES** — codex Cycle #1~#5 NEEDS_REVISION → master Cycle #1~#5 fix loop (점진 수렴 7→6→6→3→2→1 finding) → Cycle #6 APPROVE_WITH_NOTES.
+- 단일 소스: [`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.3 + [`plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.3.
+
+#### 5.7.8.1 paradigm v1.3 핵심
+
+사용자 raise 2건 영구 mirror:
+- "환경설정에 추가: Advanced query tuning ON/OFF + threshold + 안내문구 추가" + "어떤 LLM 을 사용할지에 대한 설정도 추가" (v1.1)
+- "의료/법률 등 정해진게 아니라 구축된 wiki 지식에 따라 어떻게 생성될지 모르는 부분. Karpathy 원칙에도 어긋나고. query pattern 가 답변에 대한 결과를 분석해서 자동등록되어야해" (v1.3 paradigm shift)
+
+paradigm:
+- tokenizer = pure tokenize (semantic 0)
+- query 단계 LLM 호출 → per-query intent 분석 (4 역할: domain-marker / intent-core / generic-noise / disambiguator) → 단어별 keep/drop 판정
+- query rewrite (의미 보존, edit distance ≤ 50%) + query 확장 (HyDE / multi-query)
+- vault customize (`.wikey/query-filter.yaml` + vault prompt override)
+- Advanced query tuning settings UI (provider+model 2 dropdown / timeout / cache size / temperature / max_tokens / 안내문구 + per-query override `!nofilter` + metadata badge)
+- **auto-extend mechanism (v1.3 신규)**: query+answer 5건 누적 시 background batch LLM 분석 → benchmark suite 자동 등록 + LLM 자율 domain 분류 (hardcoded list 0)
+- **수동 trigger**: wikey-obsidian "Run query analysis" command/button (즉시 batch)
+
+#### 5.7.8.2 Open Q 6 LOCKED
+
+- Q1: provider+model 2 dropdown selectbox (기존 `addModelSelector` 패턴 mirror, default = `DEFAULT`)
+- Q2: SQLite cache (`~/.cache/wikey/query-intent-cache.sqlite`, LRU 1000 entries)
+- Q3: filter timeout 5s default
+- Q4: opt-in (default OFF, I7 backward compat)
+- Q5: §1.4 안내문구 default 권고 본문 잠금 (master 결정)
+- Q6 v1.3: auto-extend trigger N=5 default + settings 1~50 조정
+
+#### 5.7.8.3 plan metric 정합
+
+- AC 20 (단위 14: F1~F9 + S1~S4 + A1 / 통합 5: I1~I5 / 라이브 1: L1)
+- Risk 15 (Risk #8 ABANDON paradigm violation + 신규 #15 trigger 빈도)
+- Open Questions 6 LOCKED
+- 변경 면 ≤ 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main + sidebar-chat / repo root 1: .github/workflows/benchmark.yml)
+- 신규 dep 2 (better-sqlite3 + 기존 yaml 재사용)
+- fail-open invariants 5 (I1 filter / I8 search / I11 auto-extend / I23 rewrite-expand / I27 vault parse)
+- §7.5 P1~P6 + §7.6 F1~F7 cross-check 표 v1.3 신규
+
+#### 5.7.8.4 codex 6-cycle fix loop 학습
+
+| Cycle | findings | master fix |
+|-------|----------|-----------|
+| #1 | 3H + 3M + 1L | F1 v1.2 sweep / F2 변경 면 정확 카운트 / F3 AC-S4+A1 매핑 / F4 schema 호환 / F5 CI root / F6 P1~P6+F1~F7 표 |
+| #2 | 2H + 3M + 1L | AC-A1 schema expected_top1+top3 / wikey-obsidian 2→3 / D4 commit / AC-I2/I3/I5 명시 / grep query-analyzer |
+| #3 | 2H + 1M + 1L + 신규 2M+1L | expected_top3 필수 / §3.1+§3.2 본문 6+4 / invariant 번호 충돌 해소 (Spec 4 I14~I18→I16~I20, Spec 5 I19~I22→I21~I24, Spec 6 I23~I25→I25~I27) / activity 경로 / 표 통합 |
+| #4 | 2 finding + 1L | query-analyzer.ts §3.1 위치 / invariant stale ref / footer |
+| #5 | 2 finding | AC-F3 I13 / Risk #11 I27 / self-check (c) 정확 list / footer cycle status |
+| **#6** | **APPROVE_WITH_NOTES** | 잔존 LOW 1 (cycle-tracking) sweep 완료 |
+
+#### 5.7.8.5 다음 단계
+
+사용자 승인 시 SDD+TDD 진입 (Step A 환경 → Step B TDD RED/GREEN/BLUE → Step C 라이브 cycle smoke → Step D 문서 동기화). 또는 Phase 5 잔여 (§5.5 / §5.6 / §5.7.7 / §5.8 / §5.9) 우선순위 사용자 결정.
+
 ---
 
 ## 5.8 Phase 4 D.0.l 이관 과제 — 잔여 (P4)

@@ -1357,7 +1357,17 @@ sub-목표:
 
 ---
 
-## 5.7.8 LLM per-query dynamic stopword — paradigm shift (P3, 2026-05-10 신설 후보, §5.7.6 abandon 결과)
+## 5.7.8 LLM per-query dynamic stopword — paradigm shift (P3, 2026-05-10 신설 후보 → **plan APPROVE 2026-05-10 session 33**)
+
+> **plan 단일 소스 (v1.3 APPROVE)**: [`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](./phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.3 (Spec, AC 20 + Risk 15 + Open Q 6 LOCKED) + [`plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](./phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.3 (Todo, Step A~D + 변경 면 ≤ 18 file).
+>
+> **검증 결과 (commit `922cd6d`, 2026-05-10 session 33)**: codex Cycle #1~#5 NEEDS_REVISION → master Cycle #1~#5 fix loop (점진 수렴 7→6→6→3→2 finding) → **codex Cycle #6 APPROVE_WITH_NOTES** (잔존 LOW 1 — cycle-tracking stale — sweep 완료).
+>
+> **paradigm v1.3 핵심**: 사용자 raise (2026-05-10) 따라 Q6 v1.2 (의료/법률 query 사전 결정) ABANDON paradigm violation + auto-extend mechanism 도입 (query+answer LLM 자동 분석 → benchmark suite 자동 등록 + LLM 자율 domain 분류 + 수동 trigger "Run query analysis"). hardcoded domain list 0건 (anchor (k) 강화).
+>
+> **Open Q 6 LOCKED**: Q1 provider+model 2 dropdown / Q2 SQLite cache / Q3 5s timeout / Q4 opt-in / Q5 §1.4 안내문구 잠금 / Q6 v1.3 auto-extend trigger N=5 default.
+>
+> **다음 단계**: 사용자 승인 시 SDD+TDD 진입 (Step A 환경 → Step B TDD RED/GREEN/BLUE → Step C 라이브 cycle smoke → Step D 문서 동기화). 또는 Phase 5 잔여 (§5.5 / §5.6 / §5.7.7 / §5.8 / §5.9) 우선순위 사용자 결정.
 > tag: #search, #stopword, #llm-judgment, #per-query, #paradigm-shift, #phase5-deferred
 
 > **상태**: 신설 후보 — §5.7.6 (static stopword paradigm) abandon 후 *올바른 paradigm* 으로 신설. 사용자 명시 (2026-05-10): "stopword 등록된 단어라 하더라도, 질문의 유형에 따라 넣고 빼고가 결정되어야 함. 등록 단어의 일방적 삭제는 위험."
