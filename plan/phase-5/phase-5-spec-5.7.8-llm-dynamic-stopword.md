@@ -5,30 +5,30 @@ title: LLM per-query dynamic stopword paradigm — query intent filter + rewrite
 status: planning
 created: 2026-05-10
 updated: 2026-05-10
-version: v1.2
+version: v1.3
 ---
 
 # Phase 5 §5.7.8 LLM per-query dynamic stopword paradigm — query intent filter + rewrite + expand + vault customize (Spec, WHAT)
 
 > **상위 문서**: [`plan/phase-5/phase-5-todo.md §5.7.8`](./phase-5-todo.md) (실행 단일 소스, 체크박스) · [`plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](./phase-5-todox-5.7.8-llm-dynamic-stopword.md) (Todo, HOW — mirror) · [`plan/phase-5/phase-5-spec-5.7.6-search-quality-tuning.md`](./phase-5-spec-5.7.6-search-quality-tuning.md) v1.2 (선행 ABANDON cycle, paradigm violation 학습 source)
 >
-> **버전 이력**: 본 v1.2 = 사용자 결정 5건 (Q1~Q5) 잠금 + Out of Scope 9 항목 본 cycle 통합 (§5.7.7 만 별 cycle 유지). v1 / v1.1 history 는 §변경 이력 참조.
+> **버전 이력**: 본 v1.3 = Q6 v1.2 (의료/법률 query 결정) **ABANDON paradigm violation** + auto-extend mechanism 도입 (query+answer LLM 자동 분석 → suite 자동 등록 + 수동 trigger button). hardcoded domain list 0건 (anchor (k) 강화). v1 / v1.1 / v1.2 history 는 §변경 이력 참조.
 
 ## 0. Context
 
 **목적**: §5.7.6 (static stopword) ABANDON 후, wikey 철학 ("LLM 참여형 다층 검색", `wikey.schema.md` §"검색 코어의 안정성") 에 부합하는 query 전처리 paradigm 도입. 정적 단어 list 가 아니라 *query 별 LLM 의미론적 판정* 으로 token keep/drop 결정 + 동의어 치환 (rewrite) + HyDE / multi-query 확장 (expand) + vault 도메인 hint customize. wikey schema §"LLM 참여형 다층 검색" 1단계 ("쿼리 이해·확장 = LLM") 완전 구현.
 
 **이득**:
-- 정량 — **70+ query benchmark** (51 → 70+, 의료 10 + 법률 10 추가) Top-1 ≥ 70% / Top-3 ≥ 88% / Mean MRR ≥ 0.85 (현 baseline Top-1 66.7% / Top-3 86.3% / MRR 0.829 대비 향상). PMBOK 도메인 회귀 0 보장 + 의료 / 법률 도메인 cover.
+- 정량 — **51 query benchmark baseline + auto-extend** (query pattern + answer LLM 자동 분석 → suite 자동 등록 + 수동 trigger button). aggregate Top-1 ≥ 70% / Top-3 ≥ 88% / Mean MRR ≥ 0.85 (현 baseline Top-1 66.7% / Top-3 86.3% / MRR 0.829 대비 향상). 회귀 0 보장. **hardcoded 도메인 list 0건** — domain 자체 LLM 자율 분류, wiki 지식 변화에 따라 자동 적응.
 - 정성 — wikey schema §"LLM 참여형 다층 검색" line 374~389 의 "쿼리 이해·확장 = LLM" 단계 *완전* 충족 (filter / rewrite / expand 3단). 기존 BM25-only path 의 generic word saturation 회피 + 동의어 hit 향상 + HyDE 가 vector 검색 가산 가능.
-- 도메인 비-특정 — PMBOK / 의료 / 법률 / IT / 학술 / 일반 한국어 모든 도메인 query 대응 (LLM 의미론적 판정 + vault hint 보조).
+- 도메인 비-특정 — 모든 도메인 query 대응 (LLM 의미론적 판정 + vault hint 보조). 도메인 정의 자체가 *wiki 지식에 따라 자동 분류* — 의료 / 법률 같은 사전 fixed list 0 (anchor (k) 강화).
 - 사용자 customize — settings UI (provider override + dropdown) + vault config (`.wikey/query-filter.yaml`) + vault prompt override 로 BYOAI + Yours + File over app 강화.
 - CI 자동 회귀 detect — GitHub Actions workflow + PR diff metric 비교.
 
 **Trade-off**:
 - query 당 LLM 호출 최대 3회 추가 (filter 1 + rewrite 1 + expand 1). cache hit 시 0 cost — 80%+ hit rate 시 amortized cost 미미. 사용자가 settings UI 에서 각 단계 (filter / rewrite / expand) ON/OFF 독립 제어 가능 (비용/효익 trade-off 사용자 결정).
 - LLM unavailable / timeout 시 degrade → original query 그대로 (검색 0 회귀 보장 = fail-open invariant 모든 단계 적용).
-- 변경 면 ≤ 14 file (wikey-core ≤ 12 + wikey-obsidian 2) — Karpathy #2 Simplicity 와 표면적 충돌이지만 사용자 명시 "Out of Scope 모두 본 cycle 통합 — 분리하지 말고 자연스러운 흐름" 결정 (2026-05-10 session 33). §5.7.7 (vector embedding hybrid) 만 검색 코어 인프라 영역으로 별 cycle 유지.
+- 변경 면 ≤ 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main + sidebar-chat / repo root 1: .github/workflows/benchmark.yml) — Karpathy #2 Simplicity 와 표면적 충돌이지만 사용자 명시 "Out of Scope 모두 본 cycle 통합 — 분리하지 말고 자연스러운 흐름" 결정 (2026-05-10 session 33). §5.7.7 (vector embedding hybrid) 만 검색 코어 인프라 영역으로 별 cycle 유지.
 - LLM 의 판정 정확도가 prompt + provider 에 의존 — settings UI 에서 filter 전용 LLM provider 별도 지정 가능 (search-time critical path 분리).
 
 **배경**: §5.7.6 static stopword cycle (session 32, commit `932151a` ABANDON) 에서 사용자 raise 인지 — "stopword 일방적 삭제는 위험. 질문 유형에 따라 결정. LLM답지 않음". PMBOK 36% Top-1 회귀가 paradigm 결함 실증 (`프로젝트` / `관리` 일방 drop 시 PMBOK 도메인 marker 손실). 본 §5.7.8 = paradigm 차별점 = tokenizer 는 pure tokenize 유지 (semantic 0), query 단계 LLM 호출 → per-query intent 분석 → 단어별 keep/drop 판정 + 동의어 치환 + HyDE 확장. wikey 철학 = "지능 레이어 LLM 담당" (`wikey.schema.md`).
@@ -109,39 +109,51 @@ version: v1.2
 - **Out of Scope (본 spec 1.2 scope 외)**: 없음 — 본 spec 통합 후 search 통합 spec 의 모든 영역 cover.
 - **Dependencies**: `wikey-core/src/search/orama-index.ts` (`OramaIndexHandle.search` line 67~191 실재 확증).
 
-### 1.3 Spec 3: 70+ query benchmark 측정 + per-domain regression 검증 + CI 통합
+### 1.3 Spec 3: 51 baseline benchmark + auto-extend mechanism (query pattern + answer LLM 자동 분석 → 자동 등록) + 수동 trigger + CI 통합
 
-**목적**: §5.7.6 보존 도구 (51 query) 를 70+ 로 확장 (의료 10 + 법률 10 추가, 도메인 비-특정 paradigm 정량 검증 강화) + paradigm 적용 전후 정량 비교 + GitHub Actions CI workflow 로 자동 회귀 detect.
-**이득**: 정량 정당화 + per-domain regression 자동 detect (PMBOK 36% 회귀 같은 paradigm 결함 사전 catch) + PR diff 안 metric 비교로 회귀 PR merge 차단.
-**Trade-off**: master 직접 실행 1회 (Step C live smoke) + CI workflow 작성 비용 (~30~50 LOC YAML). benchmark suite 확장 ~20 query 추가 작업.
+**목적**: §5.7.6 보존 도구 (51 query) 를 *baseline* 으로 유지 + **auto-extend mechanism** 신규 — 사용자 query + 답변 결과 를 LLM 이 분석하여 benchmark suite entry 를 자동 등록 + 수동 fallback (`Run query analysis` button) + GitHub Actions CI workflow.
+**이득**: 정량 정당화 + 회귀 자동 detect + **wiki 지식 변화에 자동 적응** (도메인 분포가 사전 fixed 가 아니라 wiki 본문 + 사용자 query 패턴 따라 자동 분류). hardcoded 도메인 list 0건 (anchor (k) 강화). PR diff 안 metric 비교로 회귀 PR merge 차단.
+**Trade-off**: master 직접 실행 1회 (Step C live smoke) + CI workflow 작성 비용 (~30~50 LOC YAML) + auto-extend analyzer 신규 (~150 LOC + LLM prompt).
 
-- **Goal**: 51 query benchmark suite → 70+ 확장 (의료 10 + 법률 10) + filter+rewriter+expander wrapper inject + Top-1 / Top-3 / Mean MRR / per-domain breakdown 측정 + GitHub Actions PR regression alert.
+- **Goal**: 51 query baseline 보존 + filter+rewriter+expander wrapper inject + auto-extend (query 후 LLM 자동 분석 + suite 자동 등록 + domain 자동 분류 LLM) + 수동 button trigger + GitHub Actions PR regression alert.
 - **Inputs**:
-  - `wikey-core/eval/benchmark-suite.json` (확장 51 → 70+, 도메인 추가 `medical` / `legal`).
+  - `wikey-core/eval/benchmark-suite.json` (51 baseline 보존 + auto-extend 후 entry 자동 추가, domain field = LLM 분류 결과).
   - `runBenchmark({ suitePath, searchFn })` — paradigm-neutral injection.
   - `searchFn` = filter+rewriter+expander wrapper.
-  - `wikey-core/.github/workflows/benchmark.yml` (신규) — push / PR trigger + npm run benchmark:search + threshold check + comment PR.
+  - `.github/workflows/benchmark.yml (repo root)` (신규) — push / PR trigger + npm run benchmark:search + threshold check + comment PR.
+  - **auto-extend trigger** (신규):
+    - 자동 — 사용자 query + answer 5개 누적 시 background batch 분석 (fail-open, cache).
+    - 수동 — wikey-obsidian "Run query analysis" command / button (settings UI 또는 dashboard panel).
 - **Outputs**:
-  - stdout — `# Total: 71` (71 = 51 + 의료 10 + 법률 10) / `# Top-1: N/71` / `# Top-3: N/71` / `# Mean MRR: 0.XXX` / `# Per domain: ...`.
+  - stdout — `# Total: N` (N = baseline 51 + auto-extend M) / `# Top-1: N/N` / `# Top-3: N/N` / `# Mean MRR: 0.XXX` / `# Per domain: ...` (domain 은 LLM 자율 분류, list 사전 fixed 0).
   - exit code — 0 (pass) / 1 (regression). `WIKEY_BENCHMARK_TOP1_MIN` / `TOP3_MIN` env 임계.
-  - 활동 evidence — `activity/phase-5-resultx-5.7.8-llm-dynamic-stopword-<date>.md` 안 baseline vs filter+rewriter+expander applied 비교 표.
+  - 활동 evidence — `activity/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-<date>.md` 안 baseline vs filter+rewriter+expander applied 비교 표 + auto-extend 적용 query 수.
   - CI artifact — PR comment 안 baseline vs PR metric 비교 표.
 - **Invariants**:
-  - I10 (도메인 비-특정 검증): 7 도메인 (`pmbok` / `itil` / `obsidian` / `korean-general` / `english-mixed` / `medical` / `legal`) 모두 Top-1 ≥ 60%.
-  - I11 (baseline 대비 향상): aggregate Top-1 ≥ 70% / Top-3 ≥ 88% / MRR ≥ 0.85.
-  - I12 (cache hit rate): 71+ query 1회 fresh 후 동일 query 재실행 시 cache hit rate ≥ 80%.
-  - I13 (CI regression alert): main branch baseline 대비 Top-1 / Top-3 / MRR drop ≥ 5%p 시 PR fail.
+  - I10 (도메인 비-특정 검증): aggregate Top-1 ≥ 70% / Top-3 ≥ 88% / MRR ≥ 0.85 — domain 자체는 LLM 자율 분류 (hardcoded list 0). per-domain breakdown 은 사후 분석 (사전 임계 X — wiki 지식 변화 적응).
+  - I11 (auto-extend mechanism): query + answer 5건 누적 시 background batch — LLM 분석 → benchmark suite entry 자동 등록. **schema 호환** (codex F4 fix): 기존 `runBenchmark` 가 인식하는 `{id, query, expected_top1, expected_top3, domain}` schema 그대로 + 추가 field `source: 'auto-extended'` + `created_at: ISO timestamp` (extra field 는 runner 가 ignore — 호환). LLM 이 expected_top1/top3 (slug list) + domain 자율 분류. fail-open (analyzer fail 시 silent skip + log). 사용자 명시 disable 옵션.
+  - I12 (manual trigger): wikey-obsidian command "Run query analysis" — 사용자 click 시 즉시 batch 분석 + suite 갱신 + console log.
+  - I13 (cache hit rate): 동일 query 재실행 시 cache hit rate ≥ 80%.
+  - I14 (CI regression alert): main branch baseline 대비 Top-1 / Top-3 / MRR drop ≥ 5%p 시 PR fail.
+  - I15 (anchor (k) 강화): auto-extend analyzer prompt + 분류 기준 모두 LLM 결정 — hardcoded domain list / category mapping 0건. domain 결과는 LLM 응답 그대로 (사후 inspection 만, 사용자 직접 결정 의뢰 X).
 - **Acceptance Scenarios**:
-  - **Happy**: filter+rewriter+expander wrapper inject + `npm run benchmark:search` 1회 → Top-1 ≥ 70% + Top-3 ≥ 88% + MRR ≥ 0.85 + 7 도메인 모두 Top-1 ≥ 60% + exit 0.
+  - **Happy (baseline)**: filter+rewriter+expander wrapper inject + `npm run benchmark:search` 1회 → Top-1 ≥ 70% + Top-3 ≥ 88% + MRR ≥ 0.85 + exit 0.
+  - **Happy (auto-extend)**: 사용자 query 5건 누적 → background batch → LLM 분석 → benchmark suite 안 5 entry 자동 추가 (domain field = LLM 분류, source = `'auto-extended'`).
+  - **Happy (manual trigger)**: 사용자가 wikey-obsidian "Run query analysis" command 호출 → 누적 query batch 즉시 분석 + suite 갱신 + Notice "X queries analyzed, Y added to benchmark suite".
   - **Edge (cache hit)**: 동일 suite 2회 → 2회차 latency ≤ 1회차의 30%.
   - **Edge (CI PR diff)**: PR 안 변경된 코드가 metric drop 시 GitHub Actions check fail + PR comment.
-  - **Error (도메인 회귀)**: 어떤 도메인 Top-1 < 60% → exit 1 + console error → master 회고.
-- **Out of Scope (본 spec 1.3 scope 외)**: 없음 — benchmark + CI 모두 본 spec 통합.
+  - **Edge (auto-extend disabled)**: 사용자 settings disable → background batch X (수동 trigger 만 동작).
+  - **Error (analyzer fail)**: LLM 분석 fail / timeout → fail-open (suite 변경 0) + console warn. 검색 path 영향 0.
+  - **Error (regression)**: 어떤 query Top-1 미달 → master 회고 (개별 query 분석, domain list 자체는 평가 대상 외).
+- **Out of Scope (본 spec 1.3 scope 외)**: 없음 — benchmark + auto-extend + 수동 trigger + CI 모두 본 spec 통합.
 - **Dependencies**:
-  - `wikey-core/eval/benchmark-suite.json` (보존, 확장 의무).
+  - `wikey-core/eval/benchmark-suite.json` (51 baseline 보존, auto-extend 추가만).
   - `wikey-core/src/scripts/benchmark-search.ts` (보존, `runBenchmark` export).
-  - master 의 fresh `./scripts/reindex.sh` 의무 (의료 / 법률 corpus 가 wiki/ 안 부재 시 — Step A2 fact-check + 사용자 결정. 부재 시 mock corpus 또는 expected_match 만 검증).
-  - `.github/workflows/` 디렉토리 생성 (wikey-core 내 또는 repo root, Step A2 fact-check).
+  - `wikey-core/src/search/query-analyzer.ts` (신규) — query + answer LLM 분석 + suite append + domain 자율 분류.
+  - `wikey-core/src/prompts/query-analyzer.prompt.md` (신규) — query + answer → benchmark entry 변환 prompt (domain 자율 분류, hardcoded list 0).
+  - `wikey-obsidian/src/main.ts` "run-query-analysis" command (신규) — 수동 trigger.
+  - master 의 fresh `./scripts/reindex.sh` 의무 (필요 시 — tokenizer 변경 0 이므로 보통 불필요, Step A2 fact-check).
+  - `.github/workflows/` 디렉토리 (repo root —  위치 mirror, GitHub Actions 가 root 만 인식).
 
 ### 1.4 Spec 4: Advanced query tuning settings UI 노출 (사용자 customize) + provider/model 2 dropdown + per-query override + advanced section
 
@@ -159,11 +171,11 @@ version: v1.2
   - settings 패널 UI — `Advanced query tuning` section.
   - search result panel — keep/drop token badge (filter applied 시).
 - **Invariants**:
-  - I14 (default OFF): `advancedQueryTuningEnabled` default = `false` — Spec 1.2 I7 backward compat. 기존 사용자 영향 0.
-  - I15 (settings persist): 변경 시 `data.json` 갱신 + plugin reload 시 복원.
-  - I16 (안내문구 명시): UI description text 가 본 paradigm 의 (a) 무엇을 위한 것인지 (b) 각 옵션 의미 (c) 비용 / 효익 trade-off (d) provider 선택의 의미 명시.
-  - I17 (provider 별 격리): provider override active 시 filter 용 LLMClient 만 영향 — 다른 wikey LLM 호출 영역 (canonicalizer / mention extractor / answer generation) 은 `WIKEY_BASIC_MODEL` 그대로.
-  - I18 (per-query override): 사용자가 query 입력 시 `!nofilter` syntax 또는 chat 패널 토글 → 해당 query 만 filter off. 다른 query 는 settings 따름.
+  - I16 (default OFF): `advancedQueryTuningEnabled` default = `false` — Spec 1.2 I7 backward compat. 기존 사용자 영향 0.
+  - I17 (settings persist): 변경 시 `data.json` 갱신 + plugin reload 시 복원.
+  - I18 (안내문구 명시): UI description text 가 본 paradigm 의 (a) 무엇을 위한 것인지 (b) 각 옵션 의미 (c) 비용 / 효익 trade-off (d) provider 선택의 의미 명시.
+  - I19 (provider 별 격리): provider override active 시 filter 용 LLMClient 만 영향 — 다른 wikey LLM 호출 영역 (canonicalizer / mention extractor / answer generation) 은 `WIKEY_BASIC_MODEL` 그대로.
+  - I20 (per-query override): 사용자가 query 입력 시 `!nofilter` syntax 또는 chat 패널 토글 → 해당 query 만 filter off. 다른 query 는 settings 따름.
 - **Acceptance Scenarios**:
   - **Happy (default OFF)**: 신규 사용자 설치 → toggle = OFF default 확인. 기존 path 동작.
   - **Happy (toggle ON)**: 사용자가 toggle ON → save → search 호출 시 filter inject + `Advanced query tuning ON` evidence.
@@ -239,10 +251,10 @@ Per-query override
   - `RewriteDecision` = `{ originalQuery: string, rewrittenQuery: string, changes: Array<{ from: string, to: string, reason: string }>, latencyMs: number, cacheHit: boolean, fallback: 'none' | 'llm-fail' | 'timeout' | 'minimal-change' }`.
   - `ExpandDecision` = `{ originalQuery: string, hypotheticalDoc?: string, multiQueries?: string[], latencyMs: number, cacheHit: boolean, fallback: 'none' | 'llm-fail' | 'timeout' }`.
 - **Invariants**:
-  - I19 (rewrite 의미 보존 — minimal change): rewrite 가 의미 변경 시 keep but minimal — rewriter prompt 안 "의미 유지" 강제 + edit distance ≤ 50% 검증 (token 단위). 위반 시 fallback `'minimal-change'` (original 반환).
-  - I20 (expand 부가 — original query 보존): expand 결과는 *추가* (original 대체 X) — multi-query union 으로 검색 → RRF 융합 (Orama hybrid mode 시).
-  - I21 (fail-open): rewrite / expand 단계 fail 시 직전 단계 결과 그대로 진행 (filter only / filter+rewrite only). 검색 0 회귀.
-  - I22 (cache 별 layer): rewriteCache / expandCache 각 별도 SQLite table (filter cache 와 분리, key drift 방지).
+  - I21 (rewrite 의미 보존 — minimal change): rewrite 가 의미 변경 시 keep but minimal — rewriter prompt 안 "의미 유지" 강제 + edit distance ≤ 50% 검증 (token 단위). 위반 시 fallback `'minimal-change'` (original 반환).
+  - I22 (expand 부가 — original query 보존): expand 결과는 *추가* (original 대체 X) — multi-query union 으로 검색 → RRF 융합 (Orama hybrid mode 시).
+  - I23 (fail-open): rewrite / expand 단계 fail 시 직전 단계 결과 그대로 진행 (filter only / filter+rewrite only). 검색 0 회귀.
+  - I24 (cache 별 layer): rewriteCache / expandCache 각 별도 SQLite table (filter cache 와 분리, key drift 방지).
 - **Acceptance Scenarios**:
   - **Happy (rewrite)**: filteredTokens = `["당뇨", "합병증", "예방"]` → rewriter → rewritten = `"당뇨병 합병증 예방"` (동의어 `당뇨` → `당뇨병` keep both 형태로 union). changes 1건.
   - **Happy (expand HyDE)**: filteredTokens 동일 → expander → hypotheticalDoc = `"당뇨병 환자의 합병증 예방을 위한 가이드라인..."` (가상 답변 ~50~100자) → vector 검색 가산.
@@ -282,9 +294,9 @@ Per-query override
   - `vaultHint: VaultQueryHint` = `{ domainMarkers: string[], priorityKeep: string[] }` — 부재 시 empty.
   - `effectivePrompt: string` — vault override 우선, 부재 시 wikey-core default.
 - **Invariants**:
-  - I23 (사용자 input 정당성): `.wikey/query-filter.yaml` 안 list 는 사용자가 직접 작성한 hint — anchor (k) hardcoded list 아님. analyst.md anchor (k) 본문 mirror — "권장 패턴: LLM 호출 + cache + config = LLM 판정 결과 cache 영역 (사용자 inspection 외)" 에 부합 (사용자 명시 input).
-  - I24 (vault config 우선): vault override 있으면 wikey-core default 무시. 없으면 default. 부분 override (예: yaml 만 있고 prompt 없음) 가능.
-  - I25 (parse fail = fallback): YAML parse fail / schema invalid → log warn + empty hint + default prompt 진행. 검색 0 회귀.
+  - I25 (사용자 input 정당성): `.wikey/query-filter.yaml` 안 list 는 사용자가 직접 작성한 hint — anchor (k) hardcoded list 아님. analyst.md anchor (k) 본문 mirror — "권장 패턴: LLM 호출 + cache + config = LLM 판정 결과 cache 영역 (사용자 inspection 외)" 에 부합 (사용자 명시 input).
+  - I26 (vault config 우선): vault override 있으면 wikey-core default 무시. 없으면 default. 부분 override (예: yaml 만 있고 prompt 없음) 가능.
+  - I27 (parse fail = fallback): YAML parse fail / schema invalid → log warn + empty hint + default prompt 진행. 검색 0 회귀.
 - **Acceptance Scenarios**:
   - **Happy (yaml hint)**: vault 안 `.wikey/query-filter.yaml` 안 `domainMarkers: [PMBOK]` → query `"PMBOK 비용"` filter 시 prompt 안 hint inject → LLM 이 `PMBOK` keep 우선.
   - **Happy (priority keep)**: yaml 안 `priorityKeep: ["프로젝트"]` → LLM 이 `프로젝트` 를 generic 분류해도 hint 로 keep override.
@@ -296,9 +308,9 @@ Per-query override
   - `wikey-core/src/config/vault-query-config.ts` (신규).
   - YAML parser dep — wikey-core 기존 dep `yaml` 또는 `js-yaml` 재사용 (Step A2 fact-check, 기존 ingest pipeline / schema parser 안 사용 패턴 mirror).
 
-## 2. Open Questions (모두 LOCKED — 신규 Q6 추가)
+## 2. Open Questions (모두 LOCKED — Q6 v1.2 ABANDON 후 신규 Q6 v1.3)
 
-**목적**: 사용자 결정 5건 잠금 (v1.2) + 신규 Q6 (의료/법률 도메인 query 결정).
+**목적**: 사용자 결정 5건 잠금 (v1.2 그대로) + Q6 v1.2 (의료/법률 query 결정) **ABANDON paradigm violation** + Q6 v1.3 신규 (auto-extend trigger 빈도).
 **이득**: spec 승인 후 신규 분기 회피.
 **Trade-off**: 해소까지 spec freeze.
 
@@ -306,29 +318,32 @@ Per-query override
 - **Q2 LOCKED**: cache 영구 저장 = **SQLite** — `~/.cache/wikey/query-intent-cache.sqlite` (wikey-core 기존 `~/.cache/wikey/` 패턴 mirror). schema = `query_intent_cache (key TEXT PRIMARY KEY, decision_json TEXT, created_at INTEGER, accessed_at INTEGER)` + LRU eviction (default capacity 1,000 entries). plugin/process restart 모두에서 cache 보존. rewrite/expand cache 도 별 table 같은 SQLite 안.
 - **Q3 LOCKED**: filter timeout default = **5s** (Gemini-2.5-flash p99 ≈ 3s safety margin).
 - **Q4 LOCKED**: filter 적용 = **opt-in** (default OFF — settings UI toggle 사용자가 명시 ON). I7 backward compat 보장.
-- **Q5 LOCKED**: 안내문구 final wording = **§1.4 default 권고 본문 잠금** (master 결정). UI control type = toggle (ON/OFF) + text input (timeout, cache size, advanced section 의 temperature / max_tokens) + provider dropdown + model dropdown (`addModelSelector` 패턴) + per-query override (`!nofilter` syntax + chat 패널 토글).
-- **Q6 (신규, v1.2 추가)**: 의료 / 법률 도메인 query 20건 결정 — 사용자가 직접 작성 vs analyst 가 wiki/ 안 의료/법률 페이지 부재 시 *expected_match 만* 작성 (mock corpus). analyst v1.2 권고 = **expected_match 만 작성** (실 corpus 부재 사실 명시) + Step A1 안 사용자 final 결정. 별 corpus 추가는 §5.5 (지식 그래프) 범위 — 본 cycle scope 외.
+- **Q5 LOCKED**: 안내문구 final wording = **§1.4 default 권고 본문 잠금** (master 결정). UI control type = toggle (ON/OFF) + text input (timeout, cache size, advanced section 의 temperature / max_tokens) + provider dropdown + model dropdown (`addModelSelector` 패턴) + per-query override (`!nofilter` syntax + chat 패널 토글) + "Run query analysis" 수동 trigger button (Spec 3 I12 mirror).
+- **~~Q6 v1.2 ABANDON (2026-05-10 session 33, 사용자 raise)~~**: ~~의료/법률 도메인 query 20건 결정~~ — paradigm violation. 사용자 명시: "의료/법률 등 정해진게 아니라 구축된 wiki 지식에 따라 어떻게 생성될지 모르는 부분. Karpathy 원칙에도 어긋나고." 도메인 fixed list = anchor (k) 위반. **ABANDON + paradigm shift to auto-extend (Spec 3 I11)**.
+- **Q6 LOCKED (v1.3 신규)**: auto-extend trigger 빈도 — 사용자 query + answer 누적 N 건 후 background batch 분석 시점. master 권고 = **N=5 default + 사용자 settings 으로 조정 가능 (1~50 range)**. 수동 trigger ("Run query analysis" button) 은 무관 — 즉시 분석.
 
-## Acceptance Criteria — 총 18개 (단위 12 + 통합 5 + 라이브 1) — v1.2
+## Acceptance Criteria — 총 20개 (단위 14 + 통합 5 + 라이브 1) — v1.3
 
 > 본 cycle AC 는 §1.1~1.6 invariant 와 직접 연결.
 
-### 단위 AC (RED → GREEN 의무, 12개)
+### 단위 AC (RED → GREEN 의무, 14개)
 
 | # | AC | 검증 |
 |---|----|------|
 | **AC-F1** | `QueryIntentFilter` 클래스 — `filter(query, vaultHint?)` 시그니처. mock LLM 으로 happy / 모든 token keep / 모든 token drop / single token / mixed 영문 / vault hint 6 case PASS. hardcoded role mapping 0건. | wikey-core unit test (`wikey-core/src/__tests__/search/query-intent-filter.test.ts`). |
 | **AC-F2** | I1 fail-open — mock LLM throw / timeout (AbortController) / invalid JSON 3 case → fail-open + fallback marker. | unit test, mock LLM. |
-| **AC-F3** | I2 cache key normalization + I12 cache hit + SQLite persist — 동일 query 2회 호출 시 2회차 LLM 호출 0회 (mock LLM call counter). lowercase / trim / sorted token join. SQLite file 저장 + reload 후 cache hit. capacity 1000 default + LRU eviction. | unit test + temp dir SQLite file. |
+| **AC-F3** | I2 cache key normalization + I13 cache hit + SQLite persist — 동일 query 2회 호출 시 2회차 LLM 호출 0회 (mock LLM call counter). lowercase / trim / sorted token join. SQLite file 저장 + reload 후 cache hit. capacity 1000 default + LRU eviction. | unit test + temp dir SQLite file. |
 | **AC-F4** | I3 + I4 + I5 + I6 — `role` LLM 응답 그대로 (소스 grep `KOREAN_STOPWORDS` / `STOPWORDS` / `KEEP_LIST` / `Set([...])` 단어 list 0건). LLM 신규 token 생성 시 keep 결과에서 제외. all-drop-guard 동작. | unit test + 소스 grep. |
 | **AC-F5** | `OramaIndexHandle.search(query, { filter, rewriter, expander })` 통합 — 3 layer 모두 inject 시 metadata field populated. layer 부재 시 기존 path 100% 동일. | unit test. |
 | **AC-F6** (Spec 5) | `QueryRewriter` — minimal change invariant (edit distance ≤ 50%). 동의어 치환 happy + edit distance violation fallback case. | unit test (`query-rewriter.test.ts`). |
 | **AC-F7** (Spec 5) | `QueryExpander` — HyDE 응답 길이 (50~200자) + multiQueries 변형 N=3 default + fallback chain (expand fail → rewrite only → filter only → original). | unit test (`query-expander.test.ts`). |
 | **AC-F8** (Spec 6) | `VaultQueryConfig` — `.wikey/query-filter.yaml` parse + domainMarkers/priorityKeep field validation + parse fail 시 empty hint + log warn. | unit test (`vault-query-config.test.ts`). |
 | **AC-F9** (Spec 6) | vault prompt override — `.wikey/prompts/query-intent-filter.prompt.md` 존재 시 우선 / 부재 시 wikey-core default. 부분 override (yaml only / prompt only) 가능. | unit test. |
-| **AC-S1** (Spec 4 settings UI) | `Advanced query tuning` section + 5+ control (toggle / timeout text / cache size text / **provider dropdown + model dropdown 2 control, Q1 LOCKED, `addModelSelector` helper 사용 line 320~366 mirror**) + advanced section (temperature / max_tokens 2 control) + 안내문구 description text 본문 (§1.4 default 권고 mirror). default OFF (I14). settings persist (I15) — 신규 8~10 field. 안내문구 (a)~(d) 명시 (I16). provider override 시 wikey-core 다른 LLM 영역 영향 0 (I17). | wikey-obsidian unit test (`wikey-obsidian/src/__tests__/settings-tab-query-tuning.test.ts`). |
-| **AC-S2** (Spec 4 per-query override + metadata UI) | (a) chat 패널 안 `!nofilter <query>` syntax 처리 → 해당 query 만 filter skip (I18). (b) chat 패널 토글 동등 효과. (c) search result panel 안 keep/drop badge 시각화 — `filterDecision` metadata 가 source. | wikey-obsidian unit test (`sidebar-chat-query-override.test.ts`). |
-| **AC-S3** (Spec 3 CI) | `.github/workflows/benchmark.yml` 신규 — push / PR trigger + npm run benchmark:search + threshold check + PR comment. baseline drop ≥ 5%p 시 fail (I13). YAML lint PASS. | YAML lint (yamllint or actionlint) + workflow dry-run. |
+| **AC-S1** (Spec 4 settings UI) | `Advanced query tuning` section + 5+ control (toggle / timeout text / cache size text / **provider dropdown + model dropdown 2 control, Q1 LOCKED, `addModelSelector` helper 사용 line 320~366 mirror**) + advanced section (temperature / max_tokens 2 control) + 안내문구 description text 본문 (§1.4 default 권고 mirror). default OFF (I16). settings persist (I17) — 신규 8~10 field. 안내문구 (a)~(d) 명시 (I18). provider override 시 wikey-core 다른 LLM 영역 영향 0 (I19). | wikey-obsidian unit test (`wikey-obsidian/src/__tests__/settings-tab-query-tuning.test.ts`). |
+| **AC-S2** (Spec 4 per-query override + metadata UI) | (a) chat 패널 안 `!nofilter <query>` syntax 처리 → 해당 query 만 filter skip (I20). (b) chat 패널 토글 동등 효과. (c) search result panel 안 keep/drop badge 시각화 — `filterDecision` metadata 가 source. | wikey-obsidian unit test (`sidebar-chat-query-override.test.ts`). |
+| **AC-S3** (Spec 3 CI) | `.github/workflows/benchmark.yml` 신규 — push / PR trigger + npm run benchmark:search + threshold check + PR comment. baseline drop ≥ 5%p 시 fail (I14). YAML lint PASS. | YAML lint (yamllint or actionlint) + workflow dry-run. |
+| **AC-S4** (Spec 3 manual trigger UI) | wikey-obsidian command "Run query analysis" — 사용자 click 시 누적 query batch 즉시 분석 + suite 갱신 + Notice (I12). settings UI 안 또는 dashboard panel 안 button 노출. fail-open (analyzer fail 시 silent skip + log). | wikey-obsidian unit test (`run-query-analysis-command.test.ts`). |
+| **AC-A1** (Spec 3 auto-extend) | `QueryAnalyzer.analyze(queryAnswerPairs)` — mock LLM 으로 N 건 input → benchmark suite N entry append (`{id, query, expected_top1, expected_top3, domain (LLM 자율 분류), source: 'auto-extended', created_at}` (기존 `runBenchmark` schema 호환 + extra field)) + hardcoded domain list 0건 grep. fail-open: mock LLM throw / timeout / invalid JSON → suite append 0 + log warn (I11 mirror). | unit test (`wikey-core/src/__tests__/search/query-analyzer.test.ts`). |
 
 ### 통합 AC (real index + real LLM 또는 stub LLM, 5개)
 
@@ -337,14 +352,14 @@ Per-query override
 | **AC-I1** | 회귀 보호 — wikey-core 738+ tests / wikey-obsidian 46+ tests / `npm run build` 0 errors / `./scripts/validate-wiki.sh` PASS / `./scripts/check-licenses.sh` PASS / `./scripts/check-kiwi-vendor-sync.sh` PASS. | master 직접 (Step B3 BLUE 3a). |
 | **AC-I2** | filter prompt 정합 — `wikey-core/src/prompts/query-intent-filter.prompt.md` (default) + `.wikey/prompts/query-intent-filter.prompt.md` (vault override 가능, Spec 6) 안 prompt 본문 + 응답 schema (JSON: `{tokens: [{token, role, keep}]}`) 명시 + role enum 4. real Gemini 1회 호출 후 valid JSON 응답 받기. | master 직접. |
 | **AC-I3** | rewriter+expander prompt 정합 — `query-rewriter.prompt.md` + `query-expander.prompt.md` (default + vault override 가능) 본문 + 응답 schema. real LLM 1회. | master 직접. |
-| **AC-I4** | benchmark runner 통합 — `runBenchmark` 의 `searchFn` 으로 filter+rewriter+expander wrapper inject + 기존 `npm run benchmark:search` 호환. 70+ query suite 확장 (의료 10 + 법률 10) — Q6 결정 mirror. | unit test 또는 master 직접. |
+| **AC-I4** | benchmark runner 통합 — `runBenchmark` 의 `searchFn` 으로 filter+rewriter+expander wrapper inject + 기존 `npm run benchmark:search` 호환. 51 baseline + auto-extend mechanism (Spec 3 I11): query+answer LLM 분석 → suite append + domain LLM 자율 분류. 사용자 query 5건 누적 시 자동 batch + 수동 "Run query analysis" trigger. hardcoded domain list 0건. | unit test (`query-analyzer.test.ts` mock LLM + suite append assert) + master 직접. |
 | **AC-I5** (Spec 6 vault config) | vault config 통합 — wikey-obsidian 이 vault root 의 `.wikey/query-filter.yaml` 읽기 → wikey-core filter 에 vaultHint 전달 → LLM prompt 에 hint inject. wikey-obsidian + wikey-core 통합 test. | 통합 test (mock vault fs). |
 
 ### 라이브 cycle smoke AC (master 직접, 1개)
 
 | # | AC | 검증 |
 |---|----|------|
-| **AC-L1** | 70+ query benchmark — `./scripts/reindex.sh` (필요 시) → `npm run benchmark:search` 1회 + filter+rewriter+expander applied. 기준: aggregate Top-1 ≥ 70% / Top-3 ≥ 88% / Mean MRR ≥ 0.85 + 7 도메인 모두 Top-1 ≥ 60% (PMBOK + 의료 + 법률 회귀 0). 활동 evidence (`activity/phase-5-resultx-5.7.8-llm-dynamic-stopword-<date>.md`). | master 직접. |
+| **AC-L1** | 51 baseline benchmark + auto-extend evidence — `./scripts/reindex.sh` (필요 시) → `npm run benchmark:search` 1회 + filter+rewriter+expander applied. 기준: aggregate Top-1 ≥ 70% / Top-3 ≥ 88% / Mean MRR ≥ 0.85 (도메인 list 사전 fixed 임계 X — 도메인 자체가 LLM 자율 분류, per-domain breakdown 은 사후 분석 evidence). PMBOK 도메인 회귀 0 보장 (§5.7.6 36% 회귀 회피). 활동 evidence (`activity/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-<date>.md`) 안 baseline + auto-extend 적용 query 수 명시. | master 직접. |
 
 ## 3. Risk grid + 완화
 
@@ -354,26 +369,27 @@ Per-query override
 
 | # | Risk | Severity | 확률 | 완화 | AC |
 |---|------|----------|------|------|-----|
-| 1 | LLM 판정 정확도 부족 — Gemini-2.5-flash 의미 분류 fail | HIGH | MED | (a) prompt 안 4 역할 정의 + 5 도메인 example (PMBOK + 의료 + 법률 + IT + 일반) few-shot. (b) 70+ query benchmark per-domain 검증. (c) regression detect 시 prompt 재조정 또는 cycle abandon. | AC-L1, AC-I2 |
+| 1 | LLM 판정 정확도 부족 — Gemini-2.5-flash 의미 분류 fail | HIGH | MED | (a) prompt 안 4 역할 정의 + 다양한 도메인 example few-shot (LLM judgment 보조용 예시 — hardcoded domain list 아님, prompt 안 "도메인 자체는 LLM 자율 분류" 명시). (b) 51 baseline + auto-extend benchmark 정량 검증. (c) regression detect 시 prompt 재조정 또는 cycle abandon. | AC-L1, AC-I2 |
 | 2 | LLM 호출 latency 누적 — query 당 ≤ 1500ms p95 미달 (filter + rewrite + expand 3 layer) | MED | MED | cache hit rate ≥ 80%. cache miss 시 timeout 5s 각 layer. settings UI 에서 layer 별 disable 가능 (mode='off' / 'rewrite-only' / 'expand-only' / 'both'). | AC-F3, AC-L1 |
-| 3 | 도메인 비-특정 paradigm 의 도메인별 prompt 균형 — example 쏠림 risk | HIGH | MED | prompt 안 5 도메인 example + 4 역할 추상 정의. spec §1.1 acceptance scenarios mirror. | AC-L1 |
+| 3 | 도메인 비-특정 paradigm 의 prompt example 쏠림 risk | HIGH | MED | prompt 안 다양한 도메인 example (judgment 보조용) + 4 역할 추상 정의 + "도메인 자체 LLM 자율 분류" 명시. spec §1.1 acceptance scenarios = LLM judgment 표현 (hardcoded list 아님). | AC-L1 |
 | 4 | LLM 응답 schema drift — invalid JSON / missing field | MED | MED | I1 fail-open + AC-F2. extractJsonObject (§5.7.5 학습) markdown wrap 처리. | AC-F2 |
 | 5 | SQLite cache table 손상 / migration | LOW | LOW | schema migration 0 (v1 schema 단일) + LRU eviction trigger. corruption detect 시 rebuild from scratch. | AC-F3 |
 | 6 | filter 가 backend index 재생성 의무 | MED | LOW | filter 는 query path only — index 변경 0. tokenizer 변경 0 → reindex 불필요. master 가 Step A2 안 잠금. | AC-I4 |
 | 7 | hardcoded list 잔재 — paradigm violation 재발 risk | HIGH | LOW | spec §self-check + master 1차 grep + AC-F4 sourcecode grep. vault config (Spec 6) 의 사용자 hint 는 hardcoded 아님 (anchor (k) 본문 mirror). | AC-F4, self-check (k) |
-| 8 | benchmark suite 도메인 cover 부족 — 의료/법률 corpus 부재 | MED | HIGH (현 wiki/ 안 의료/법률 페이지 0) | (a) Q6 결정 — expected_match 만 작성 (mock corpus, 사용자 final 결정). (b) AC-L1 안 의료/법률 도메인 ≥ 60% 임계 — corpus 부재 시 AC-L1 의료/법률 부분 별 평가 (per-domain breakdown). (c) §5.5 (지식 그래프) 범위에서 corpus 추가. | AC-L1 |
-| 9 | rewrite 의미 변경 false positive — 검색 정확도 회귀 | HIGH | MED | I19 minimal change invariant — edit distance ≤ 50% + LLM prompt "의미 유지" 강제. fallback `'minimal-change'` 시 original. | AC-F6, AC-L1 |
+| 8 | ~~benchmark suite 도메인 cover 부족 — 의료/법률 corpus 부재~~ **ABANDON v1.3 (paradigm violation)** → 재정의: auto-extend analyzer LLM 의 domain 분류 정확도 부족 | MED | MED | (a) auto-extend = wiki 지식 변화에 자동 적응 — 사전 fixed corpus 결정 0. (b) analyzer prompt 안 "domain 자율 분류" 명시 + few-shot example (단어 자체가 아니라 query *역할* 기준). (c) fail-open — 분류 fail 시 silent skip. (d) per-domain breakdown 은 사후 분석 evidence (사전 임계 X). | AC-A1, AC-L1 |
+| 9 | rewrite 의미 변경 false positive — 검색 정확도 회귀 | HIGH | MED | I21 minimal change invariant — edit distance ≤ 50% + LLM prompt "의미 유지" 강제. fallback `'minimal-change'` 시 original. | AC-F6, AC-L1 (I21) |
 | 10 | expand HyDE 응답 길이 폭증 — vector 검색 latency 회귀 | MED | LOW | HyDE 응답 길이 50~200자 cap + max_tokens 500 default. 위반 시 truncate. | AC-F7 |
-| 11 | vault config YAML schema drift — 사용자 잘못된 yaml | LOW | MED | I25 parse fail = fallback + log warn. yaml schema validation 추가 (zod 또는 yup, wikey-core 기존 사용 dep mirror). | AC-F8 |
-| 12 | settings UI 변경 면 폭증 — Karpathy #2 충돌 | MED | HIGH (8~10 신규 field) | 사용자 명시 결정 (2026-05-10 session 33) — "Out of Scope 모두 본 cycle 통합". I14 default OFF + I7 backward compat 보장 — 기존 사용자 영향 0. | AC-S1, AC-S2 |
+| 11 | vault config YAML schema drift — 사용자 잘못된 yaml | LOW | MED | I27 parse fail = fallback + log warn. yaml schema validation 추가 (zod 또는 yup, wikey-core 기존 사용 dep mirror). | AC-F8 |
+| 12 | settings UI 변경 면 폭증 — Karpathy #2 충돌 | MED | HIGH (8~10 신규 field) | 사용자 명시 결정 (2026-05-10 session 33) — "Out of Scope 모두 본 cycle 통합". I16 default OFF + I7 backward compat 보장 — 기존 사용자 영향 0. | AC-S1, AC-S2 |
 | 13 | per-query override syntax 충돌 — `!nofilter` 가 다른 syntax 와 conflict | LOW | LOW | wikey 기존 chat panel syntax grep (Step A4) + `!nofilter` prefix 단순. metadata badge 시각화로 사용자가 적용 여부 확인. | AC-S2 |
 | 14 | CI workflow regression alert false positive — flaky LLM | MED | MED | (a) CI 안 stub LLM 사용 (deterministic). (b) drop ≥ 5%p threshold (단일 query 변동 흡수). (c) PR comment 안 per-domain breakdown 포함 — false positive detect 용이. | AC-S3 |
+| 15 (v1.3 신규) | auto-extend trigger 빈도 결정 — 너무 잦으면 LLM 비용 누적, 너무 드물면 wiki 변화 적응 지연 | MED | MED | Q6 LOCKED — N=5 default + settings 으로 1~50 조정 가능. cache hit 시 LLM 호출 X. fail-open. | AC-A1 |
 
 ## 4. Out of Scope (별 cycle / 별 phase) — §5.7.7 만 잔존
 
 **목적**: §5.7.8 의 minimal scope 명시 — paradigm 도입 + 사용자 결정 (2026-05-10 session 33) 으로 Out of Scope 9 항목 본 cycle 통합. **§5.7.7 (vector embedding hybrid) 만 검색 코어 인프라 영역으로 별 cycle 유지**.
 **이득**: 변경 면 격리 + cycle 종결 시점 명확.
-**Trade-off**: 사용자 결정으로 본 cycle 변경 면 ≤ 14 file (Karpathy #2 와 표면적 충돌이지만 사용자 명시).
+**Trade-off**: 사용자 결정으로 본 cycle 변경 면 ≤ 18 file (Karpathy #2 와 표면적 충돌이지만 사용자 명시).
 
 - **§5.7.7 HYBRID Stage 2 vector reroute** (별 cycle, 검색 코어 인프라 영역) — Qwen3-Embedding 768D 통합 + Orama hybrid mode (RRF 융합). 본 §5.7.8 종결 후 결과 측정 → §5.7.7 진입. orthogonal — §5.7.8 의 filter 결과는 §5.7.7 vector 검색에도 동일 적용 가능.
 
@@ -393,7 +409,7 @@ Per-query override
 - [x] wikey-core LLMClient stable (`call(prompt, opts)` line 14, 실재 확증).
 - [x] settings UI 패턴 fact-check — `renderStandardDropdown` (line 297~317) + `renderModelDropdown` (line 323~366, dynamic fetch + DEFAULT 옵션 line 342) + `cloudModel` clear-on-provider-change (line 270~273) 실재 확증.
 - [x] `WikeySettings` interface 실재 확증 (`wikey-obsidian/src/main.ts` line 42).
-- [ ] **사용자 승인** — 본 spec v1.2 + Q1~Q5 LOCKED 확인 + Q6 (의료/법률 query) Step A1 잠금.
+- [ ] **사용자 승인** — 본 spec v1.3 + Q1~Q5 LOCKED 확인 + Q6 v1.3 (auto-extend trigger N=5 default) 확인. Q6 v1.2 (의료/법률 query) **ABANDON** mirror.
 
 ### 5.2 후속 cycle 순서
 
@@ -413,9 +429,9 @@ Per-query override
 
 본 spec 의 검증 단계 = todox §3 의 Step A~D mirror:
 
-- **Step A — Spec lock + 환경 fact-check**: 사용자 결정 6건 (Q1~Q6) 잠금 + LLMClient API / orama-index search opts / SQLite dep / settings UI 패턴 / vault config parser / .github/workflows/ 디렉토리 fact-check.
-- **Step B — TDD RED → GREEN → BLUE 3a → BLUE 3b**: AC-F1~F9 + AC-S1~S3 단위 test 작성 → FAIL → 14 file 변경 면 구현 → PASS → 회귀 + refactor.
-- **Step C — 라이브 cycle smoke**: AC-L1 (70+ query benchmark) master 직접 실행 + per-domain regression detect.
+- **Step A — Spec lock + 환경 fact-check**: 사용자 결정 6건 (Q1~Q5 LOCKED + Q6 v1.3 auto-extend trigger N=5) 잠금 + LLMClient API / orama-index search opts / SQLite dep / settings UI 패턴 / vault config parser / .github/workflows/ 디렉토리 / query-analyzer 기존 wikey-core 영역 (`update-analyzer.ts` 패턴 mirror) fact-check.
+- **Step B — TDD RED → GREEN → BLUE 3a → BLUE 3b**: AC-F1~F9 + AC-S1~S4 + AC-A1 단위 test 작성 → FAIL → 18 file 변경 면 구현 → PASS → 회귀 + refactor.
+- **Step C — 라이브 cycle smoke**: AC-L1 (51 baseline + auto-extend evidence) master 직접 실행 + auto-extend mechanism 동작 + 수동 trigger 동작.
 - **Step D — 문서 동기화 + commit**: phase-5-result + resultx + memory + plan-full §5.7 갱신.
 
 각 step Phase 3a (회귀) + 3b (BLUE refactor) 분리 의무.
@@ -429,11 +445,11 @@ Per-query override
 | # | Anchor | 결과 | 검증 |
 |---|--------|------|------|
 | (a) | 시그니처 일관성 — `QueryIntentFilter` / `QueryRewriter` / `QueryExpander` / `VaultQueryConfig` / `FilterDecision` / `RewriteDecision` / `ExpandDecision` / `runBenchmark` cross-section 동일 | PASS | grep cross-check |
-| (b) | state/data 표 형식 — Spec 6 / AC 18 (단위 12 + 통합 5 + 라이브 1) / Risk 14 / Open Questions 6 (Q1~Q5 LOCKED + Q6 신규) / Out of Scope 1 (§5.7.7 만) count drift 0 | PASS | count 검증 |
-| (c) | builder/parser 분기 — fail-open (I1, I21) / cache hit (I2, I22) / all-drop-guard (I6) / filter optional (I7~I9) / vault hint optional (I24) / minimal change (I19) 분기 모두 §1.1~1.6 + AC 명시 | PASS | line-by-line |
-| (d) | AC ↔ §1 목표 1:1 매핑 | PASS — Spec 1 → AC-F1~F4 / Spec 2 → AC-F5 / Spec 3 → AC-I4, AC-S3, AC-L1 / Spec 4 → AC-S1, AC-S2 / Spec 5 → AC-F6, AC-F7 / Spec 6 → AC-F8, AC-F9, AC-I5 / 회귀 → AC-I1 / prompt → AC-I2, AC-I3 | line-by-line |
-| (e) | self-check 모든 행 drift 없음 (v1.2 작성 직후) | PASS | 본 §7 line read |
-| (f) | footer + version + 변경 이력 — frontmatter `version: v1.2` ↔ §변경 이력 마지막 row v1.2 ↔ footer 일관 | PASS | `grep -nE "^version: v1\.2$"` exact match |
+| (b) | state/data 표 형식 — Spec 6 / AC 20 (단위 14 + 통합 5 + 라이브 1, v1.3 +AC-S4 manual trigger + AC-A1 auto-extend) / Risk 15 (v1.3 Risk #8 ABANDON paradigm violation + 신규 #15 trigger 빈도) / Open Questions 6 (Q1~Q5 LOCKED + Q6 v1.3 신규 — Q6 v1.2 ABANDON mirror) / Out of Scope 1 (§5.7.7 만) count drift 0 | PASS | count 검증 |
+| (c) | builder/parser 분기 — fail-open invariants 5 (I1 filter / I8 search / I11 auto-extend / I23 rewrite-expand / I27 vault parse) / cache hit (I2 normalization, I13 rate) / all-drop-guard (I6) / filter optional (I7~I9) / vault hint optional (I26) / minimal change (I21) / expand original preserve (I22) 분기 모두 §1.1~1.6 + AC 명시 | PASS | line-by-line |
+| (d) | AC ↔ §1 목표 1:1 매핑 | PASS — Spec 1 → AC-F1~F4 / Spec 2 → AC-F5 / Spec 3 → AC-I4, AC-S3, AC-S4, AC-A1, AC-L1 / Spec 4 → AC-S1, AC-S2 / Spec 5 → AC-F6, AC-F7 / Spec 6 → AC-F8, AC-F9, AC-I5 / 회귀 → AC-I1 / prompt → AC-I2, AC-I3 | line-by-line |
+| (e) | self-check 모든 행 drift 없음 (v1.3 master Cycle #3 fix 직후) | PASS | 본 §7 line read |
+| (f) | footer + version + 변경 이력 — frontmatter `version: v1.3` ↔ §변경 이력 마지막 row v1.3 ↔ footer 일관 | PASS | `grep -nE "^version: v1\.3$"` exact match |
 | (g) | 코드 ↔ test exact phrase — `QueryIntentFilter` / `QueryRewriter` / `QueryExpander` / `domain-marker` / `intent-core` / `generic-noise` / `disambiguator` / `'llm-fail'` / `'timeout'` / `'all-drop-guard'` / `'minimal-change'` AC 내 일치 | PASS | `grep -F` cross-check |
 
 ### 7.2 wikey override anchor (h, i, j, k)
@@ -441,7 +457,7 @@ Per-query override
 | # | Anchor | 결과 | 검증 |
 |---|--------|------|------|
 | (h) schema 4 원칙 일치 | (Explicit) filter/rewrite/expand decision LLM 응답 가시화 + metadata UI 시각화 / (Yours) wikey config 통합 LLMClient + SQLite local cache + vault config local file / (File over app) prompt = markdown file (default + vault override) + vault config = YAML / (BYOAI) 2 dropdown selectbox provider+model 자유 (Q1 LOCKED) | PASS | wikey.schema.md cross-check |
-| (i) 3계층 경계 준수 | raw / wiki / schema 권한 위반 0. 변경 면 = wikey-core ≤ 12 (`query-intent-filter.ts` 신규 / `query-rewriter.ts` 신규 / `query-expander.ts` 신규 / `query-filter-cache.ts` SQLite 신규 / `vault-query-config.ts` 신규 / `prompts/*.prompt.md` 3 신규 / `orama-index.ts` 변경 / `types.ts` 변경 / `package.json` 변경 / `eval/benchmark-suite.json` 확장 / `.github/workflows/benchmark.yml` 신규) + wikey-obsidian 2 (`settings-tab.ts` 변경 / `main.ts` 변경 / `sidebar-chat.ts` per-query override). raw / wiki / wikey.schema.md 변경 0. | PASS | grep diff 0 |
+| (i) 3계층 경계 준수 | raw / wiki / schema 권한 위반 0. 변경 면 = wikey-core ≤ 14 (`query-intent-filter.ts` / `query-rewriter.ts` / `query-expander.ts` / `query-filter-cache.ts` SQLite / `vault-query-config.ts` / **`query-analyzer.ts` v1.3 신규** / `prompts/*.prompt.md` **4 신규 — filter/rewriter/expander + v1.3 query-analyzer** / `orama-index.ts` 변경 / `types.ts` 변경 / `package.json` 변경 / `eval/benchmark-suite.json` baseline 보존 + auto-extend append) + wikey-obsidian 3 (`settings-tab.ts` 변경 + run-query-analysis command UI / `main.ts` 변경 + run-query-analysis command 등록 / `sidebar-chat.ts` per-query override + metadata badge) + repo root 1 (`.github/workflows/benchmark.yml`). raw / wiki / wikey.schema.md 변경 0. | PASS | grep diff 0 |
 | (j) 워크플로우 4 일관 | (ingest) tokenizer 변경 0 → 영향 0. (query) schema §"LLM 참여형 다층 검색" 1단계 ("쿼리 이해·확장 = LLM") *완전 충족* (filter / rewrite / expand 3단). (lint / 삭제·수정) 변경 0. | PASS | wikey.schema.md cross-check |
 | (k) 하드코딩 금지 (2026-05-10 영구 정책) | spec §3 변경 면 / §3.N sample / AC literal 안 hardcoded set / list / rule **0건**. role enum 4 string literal = LLM 응답 schema 정의 (LLM 자유 판정). cache capacity / timeout / threshold = numeric config (rule 아님). vault config (Spec 6) 의 `domainMarkers` / `priorityKeep` list = *사용자 명시 input* — analyst.md anchor (k) 본문 "권장 패턴: LLM 호출 + cache + config" 부합 (사용자 inspection 영역). 위반 패턴 (`KOREAN_STOPWORDS = Set([...])` / `KNOWN_GENERIC_NOUNS` / rule-based classifier / hardcoded category mapping / hardcoded slug list) 0건. "사용자 결정 의뢰 — list 정확도 평가" 류 항목 0건. | **PASS** | grep `Set\s*\(\s*\[` / `KOREAN_` / `STOPWORDS` / `KEEP_LIST` 0 hit |
 
@@ -450,18 +466,41 @@ Per-query override
 | 원칙 | 결과 |
 |------|------|
 | #1 Think Before Coding | §5.7.6 ABANDON 학습 mirror. Open Questions Q1~Q5 LOCKED + Q6 신규. 사용자 결정 (2026-05-10 session 33) "Out of Scope 모두 본 cycle 통합" 명시 mirror. |
-| #2 Simplicity First | 변경 면 ≤ 14 file (wikey-core ≤ 12 + wikey-obsidian 2) — 사용자 명시 결정 ("분리하지 말고 자연스러운 흐름") 으로 통합. 신규 dep ≤ 2 (`better-sqlite3` + 기존 yaml dep 재사용). §5.7.7 만 별 cycle 유지. |
+| #2 Simplicity First | 변경 면 ≤ 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main + sidebar-chat / repo root 1: .github/workflows/benchmark.yml) — 사용자 명시 결정 ("분리하지 말고 자연스러운 흐름") 으로 통합. 신규 dep ≤ 2 (`better-sqlite3` + 기존 yaml dep 재사용). §5.7.7 만 별 cycle 유지. |
 | #3 Surgical Changes | search path 변경 면 최소 (1 file 안 ~20 LOC opts 추가, I7 backward compat). 기존 738+ test 회귀 0 보장. settings UI 변경 면 격리 (advanced section 새 영역). |
-| #4 Goal-Driven Execution | AC 18 모두 정량 (Top-1 ≥ 70% / Top-3 ≥ 88% / MRR ≥ 0.85 / per-domain ≥ 60% / cache hit ≥ 80% / latency p95 ≤ 1500ms / edit distance ≤ 50% / HyDE 50~200자). |
+| #4 Goal-Driven Execution | AC 20 모두 정량 (Top-1 ≥ 70% / Top-3 ≥ 88% / MRR ≥ 0.85 / cache hit ≥ 80% / latency p95 ≤ 1500ms / edit distance ≤ 50% / HyDE 50~200자 / auto-extend trigger N=5 / analyzer fail-open). per-domain 임계 X — domain LLM 자율 분류 사후 evidence. |
 
 ### 7.4 사용자 4 의무사항 mirror
 
 | # | 의무사항 | 본 spec 안 mirror 위치 |
 |---|---------|----------------------|
-| 2.1 범용 설계 관점 | §1.1 acceptance scenarios — PMBOK + 의료 + 법률 + IT + 일반 5 도메인 happy path. 4 역할 추상 정의. Risk #3 (도메인 균형) 명시. AC-L1 7 도메인 검증. |
+| 2.1 범용 설계 관점 | §1.1 acceptance scenarios — PMBOK + 의료 + 법률 + IT + 일반 (LLM judgment 보조용 example, hardcoded domain list 아님). 4 역할 추상 정의. Risk #3 (도메인 균형) 명시. AC-L1 51 baseline + auto-extend evidence. |
 | 2.2 §5.7.6 paradigm violation 학습 | §0 Context Trade-off + 배경 — ABANDON 사실 + paradigm 차별점 + wikey 철학 부합. |
 | 2.3 anchor (k) 하드코딩 금지 | §7.2 (k) 검증 — hardcoded set / list / rule 0건. role enum 4 literal = LLM 응답 schema. vault config list = 사용자 input (paradigm rule 아님). |
 | 2.4 §5.7.7 orthogonal 공존 | §4 Out of Scope — §5.7.7 만 잔존. orthogonal — filter 결과 vector 검색에도 동일 적용. |
+
+### 7.5 codex 6 검증 패턴 (P1~P6) cross-check (v1.3 신규, codex Cycle #1 F6 fix)
+
+| # | Pattern | 적용 결과 |
+|---|---------|----------|
+| **P1** fact-check (referenced file 실재) | PASS — Step A2 fact-check 의무 명시 (LLMClient `call()` line 14 / orama-index `search` line 67~191 / settings `renderStandardDropdown` line 297~317 + `renderModelDropdown` line 323~366 / `~/.cache/wikey/` 패턴 `convert-cache.ts`+`capability-map.ts` 참조 / `release.yml` repo root 위치 mirror). |
+| **P2** cross-file consistency (Spec ↔ Todo) | PASS — Spec AC 20 (단위 14 + 통합 5 + 라이브 1) ↔ todox AC-F1~F9 + AC-S1~S4 + AC-A1 1:1. 변경 면 18 file 일치. Q1~Q5 LOCKED + Q6 v1.3 LOCKED 일관. |
+| **P3** byte-for-byte mirror (header/body) | PASS — frontmatter `version: v1.3` ↔ 본문 v1.3 / footer v1.3 / 변경 이력 v1.3 row 일관. todox header line 13 의 spec v1.3 reference 일관. |
+| **P4** implementation feasibility | PASS — 변경 면 18 file (wikey-core 14 + wikey-obsidian 3 + repo root 1) / 신규 dep 2 (`better-sqlite3` MIT + 기존 yaml 재사용) / Karpathy #2 와 표면적 충돌 명시 + 사용자 명시 결정 mirror / fail-open invariants 5 (I1+I8+I11+I23+I27) — 검색 0 회귀 보장. |
+| **P5** legal / license | PASS — `better-sqlite3` MIT / 기존 wikey-core dep mirror (yaml/js-yaml MIT) / 새 GPL/AGPL dep 도입 0. |
+| **P6** numeric consistency | PASS — AC 20 / Risk 15 / Open Q 6 / 변경 면 18 file / 사용자 결정 6건 (Q1~Q5 + Q6 v1.3) / fail-open invariants 5 (I1+I8+I11+I23+I27) / role enum 4 / per-domain 임계 X (사후 evidence). |
+
+### 7.6 master fix 7 모드 (F1~F7) cross-check (v1.3 신규, codex Cycle #1 F6 fix)
+
+| # | Mode | v1.3 적용 결과 |
+|---|------|---------------|
+| **F1** partial replacement (sweep 누락) | PASS — codex Cycle #1 [HIGH] Finding 1+7 fix: todox 안 v1.2 잔재 (`70+ query` / `71` / `7 도메인` / `per-domain ≥ 60%` / `18 AC` / `14 file` / `Spec v1.2 mirror` / `Phase 0 spec lock v1.2`) 모두 v1.3 sweep 완료. |
+| **F2** cascading mismatch (변경 면 카운트 drift) | PASS — codex Cycle #1 [HIGH] Finding 2 fix: 변경 면 ≤ 14 (옛) / ≤ 16 (v1.3 초안) / ≤ 18 (정확) drift 정리 — 정확 카운트 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main + sidebar-chat / repo root 1: .github/workflows/benchmark.yml). |
+| **F3** Header/Body drift | PASS — frontmatter / 본문 / footer / 변경 이력 v1.3 일관. |
+| **F4** implementation feasibility (schema 호환) | PASS — codex Cycle #1 [MED] Finding 4 fix: auto-extend entry schema = 기존 `{id, query, expected_top1, expected_top3, domain}` 호환 + 추가 field `source` / `created_at` (runner ignore — extra field 무시). I11 본문 명시. |
+| **F5** path / location | PASS — codex Cycle #1 [MED] Finding 5 fix: CI workflow `.github/workflows/benchmark.yml` (repo root) 잠금 — GitHub Actions 가 root `.github/workflows` 만 인식, 기존 `release.yml` 위치 mirror. |
+| **F6** numeric drift | PASS — AC 20 / Risk 15 / Open Q 6 / 변경 면 18 / 사용자 결정 6건 일관. |
+| **F7** self-check missing | PASS — codex Cycle #1 [MED] Finding 6 fix: 본 §7.5 + §7.6 cross-check 표 v1.3 신규 추가. AC-S4 + AC-A1 매핑 verification plan / todox RED + GREEN + self-check 안 명시 (codex Cycle #1 [HIGH] Finding 3 fix). |
 
 ## 변경 이력
 
@@ -469,10 +508,11 @@ Per-query override
 |------|------|------|
 | **v1** | 2026-05-10 session 32 (analyst 작성) | 초안 — §5.7.6 ABANDON 직후 신설. paradigm = LLM per-query dynamic filter. 변경 면 = wikey-core 4 file. spec 6요소 (Spec 1~3). AC 9. Risk 8. Open Questions 4. |
 | **v1.1** | 2026-05-10 session 32 (사용자 추가 — Advanced query tuning settings UI + LLM provider override) | Spec 4 신규 (settings UI). Q5 추가. AC-S1 추가 (총 AC 10). 변경 면 +wikey-obsidian 2 file. |
-| **v1.2** | 2026-05-10 session 33 (사용자 결정 잠금 + Out of Scope 통합) | (a) Q1~Q5 LOCKED — provider+model 2 dropdown selectbox / SQLite cache `~/.cache/wikey/query-intent-cache.sqlite` / 5s timeout / opt-in default / 안내문구 §1.4 잠금. (b) Out of Scope 9 항목 §5.7.7 제외 모두 본 cycle 통합 — Spec 5 신규 (rewrite + expand HyDE/multi-query) + Spec 6 신규 (vault customize `.wikey/query-filter.yaml` + vault prompt override) + §1.2 metadata 노출 흡수 + §1.3 70+ benchmark 확장 (의료 10 + 법률 10) + CI workflow 흡수 + §1.4 advanced section (temperature/max_tokens) + per-query override (`!nofilter` syntax) + metadata UI 시각화 흡수. (c) Q6 신규 (의료/법률 query 결정 — Step A1 사용자 final). (d) AC 10 → 18 (단위 6 → 12 + 통합 3 → 5 + 라이브 1). Risk 8 → 14. 변경 면 ≤ 14 file (wikey-core ≤ 12 + wikey-obsidian 2). 사용자 의도 (2026-05-10 session 33) = "Out of Scope 모두 본 cycle 안 통합 — 별 cycle 분리해서 작업량 부풀리지 말자". §5.7.7 (vector embedding hybrid) 만 별 cycle 유지 — 검색 코어 인프라 영역 (도메인 상이). master fix / codex cycle 미진입 — v1.2 = analyst 재작성 직후 상태. |
+| **v1.2** | 2026-05-10 session 33 (사용자 결정 잠금 + Out of Scope 통합) | (a) Q1~Q5 LOCKED — provider+model 2 dropdown selectbox / SQLite cache `~/.cache/wikey/query-intent-cache.sqlite` / 5s timeout / opt-in default / 안내문구 §1.4 잠금. (b) Out of Scope 9 항목 §5.7.7 제외 모두 본 cycle 통합 — Spec 5 신규 (rewrite + expand HyDE/multi-query) + Spec 6 신규 (vault customize `.wikey/query-filter.yaml` + vault prompt override) + §1.2 metadata 노출 흡수 + §1.3 70+ benchmark 확장 (의료 10 + 법률 10) + CI workflow 흡수 + §1.4 advanced section (temperature/max_tokens) + per-query override (`!nofilter` syntax) + metadata UI 시각화 흡수. (c) Q6 신규 (의료/법률 query 결정 — Step A1 사용자 final). (d) AC 10 → 18 (단위 6 → 12 + 통합 3 → 5 + 라이브 1). Risk 8 → 14. 변경 면 ≤ 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main + sidebar-chat / repo root 1: .github/workflows/benchmark.yml). 사용자 의도 (2026-05-10 session 33) = "Out of Scope 모두 본 cycle 안 통합 — 별 cycle 분리해서 작업량 부풀리지 말자". §5.7.7 (vector embedding hybrid) 만 별 cycle 유지 — 검색 코어 인프라 영역 (도메인 상이). master fix / codex cycle 미진입 — v1.2 = analyst 재작성 직후 상태. |
+| **v1.3** | 2026-05-10 session 33 (사용자 raise paradigm violation — master fix) | (a) **Q6 v1.2 ABANDON** — 사용자 명시 (2026-05-10): "의료/법률 등 정해진게 아니라 구축된 wiki 지식에 따라 어떻게 생성될지 모르는 부분. Karpathy 원칙에도 어긋나고." 도메인 fixed list = anchor (k) 위반. (b) **§1.3 Spec 3 paradigm shift** — 51 baseline + auto-extend 확장 (의료 10 + 법률 10) → **51 baseline + auto-extend mechanism** (query + answer LLM 자동 분석 → benchmark suite 자동 등록 + domain LLM 자율 분류, hardcoded list 0). (c) **수동 trigger** — wikey-obsidian "Run query analysis" command/button (settings UI 또는 dashboard) — 사용자 click 시 즉시 batch 분석. (d) **Q6 LOCKED v1.3** — auto-extend trigger 빈도 = N=5 default + settings 으로 1~50 조정. (e) AC 갱신 — AC-I4 + AC-L1 + AC-S3 갱신 + AC-S4 (manual trigger) + AC-A1 (auto-extend analyzer) 신규 (총 AC 18 → 20). (f) Risk 갱신 — Risk #8 (의료/법률 corpus 부재) ABANDON paradigm violation + 신규 #15 (trigger 빈도). Risk #1 / #3 prompt example 표현 갱신 (LLM judgment 보조용 — hardcoded list 아님 명시). (g) 변경 면 ≤ 14 → ≤ 18 file (정확 카운트, codex Cycle #1 F2 fix) (`query-analyzer.ts` + `query-analyzer.prompt.md` 신규). (h) anchor (k) 강화 — *모든* 도메인 결정 LLM 자율 / 사용자 inspection 만, 사용자 직접 결정 의뢰 X. **codex Cycle #1 NEEDS_REVISION (3 HIGH + 3 MED + 1 LOW) → master Cycle #1 fix**: F1 todox v1.2 잔재 sweep (70+/71/7 도메인/per-domain ≥60%/18 AC/14 file/v1.2 mirror 모두 제거) / F2 변경 면 ≤14→≤18 정확 카운트 / F3 AC-S4+AC-A1 verification plan + todox RED/GREEN/self-check 명시 / F4 auto-extend entry schema = `{id, query, expected_top1, expected_top3, domain}` 호환 + extra field 호환 / F5 CI workflow `.github/workflows/benchmark.yml` (repo root) 잠금 / F6 §7.5 P1~P6 + §7.6 F1~F7 cross-check 표 신규. master Cycle #1~#5 fix loop (점진 수렴) 후 codex Cycle #6 APPROVE_WITH_NOTES. |
 
 ---
 
-> **footer (cycle 추적)**: §5.7.8 spec **v1.2** 작성 완료 (analyst, 2026-05-10 session 33). codex Mode D Panel cycle 미진입 (master 1차 검증 후 송부 예정).
+> **footer (cycle 추적)**: §5.7.8 spec **v1.3** 작성 완료 (master fix paradigm violation + codex Cycle #1~#5 fix, 2026-05-10 session 33). codex Cycle #1~#5 NEEDS_REVISION → master Cycle #1~#5 fix 완료 → codex Cycle #6 APPROVE_WITH_NOTES.
 >
-> Self-check: analyst 글로벌 7-anchor PASS / wikey override (h, i, j, k) PASS / Karpathy 4원칙 PASS / 사용자 4 의무사항 mirror 4/4 / hardcoded list 0건 (vault config 사용자 input + 안내문구 description text + provider/model dropdown 후보 = paradigm rule 아님) / 변경 면 ≤ 14 file (wikey-core ≤ 12 + wikey-obsidian 2) / AC 18 / dep 추가 ≤ 2 (`better-sqlite3` + 기존 yaml 재사용) / Open Questions 6 (Q1~Q5 LOCKED + Q6 신규).
+> Self-check: analyst 글로벌 7-anchor PASS / wikey override (h, i, j, k) PASS / Karpathy 4원칙 PASS / 사용자 4 의무사항 mirror 4/4 / hardcoded domain list 0건 (auto-extend = LLM 자율 분류 + vault config 사용자 input + 안내문구 description text + provider/model dropdown 후보 = paradigm rule 아님) / 변경 면 ≤ 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main.ts + sidebar-chat / repo root 1: .github/workflows/benchmark.yml) / AC 20 / dep 추가 ≤ 2 (`better-sqlite3` + 기존 yaml 재사용) / Open Questions 6 (Q1~Q5 LOCKED + Q6 v1.3 신규 / Q6 v1.2 ABANDON mirror).
