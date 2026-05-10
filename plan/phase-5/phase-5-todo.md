@@ -1205,14 +1205,24 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 
 ---
 
-## 5.7.7 HYBRID Stage 2 vector reroute — 검색 quality 격상 후보 (P3, 2026-05-10 신설 후보)
-> tag: #search, #hybrid, #vector, #qwen3-embedding, #rrf, #stage2, #phase5-deferred
+## 5.7.7 HYBRID Stage 2 vector reroute — BM25 + Qwen3-Embedding hybrid + RRF (P3, **plan APPROVE v1.2 2026-05-10 session 34**)
+> tag: #search, #hybrid, #vector, #qwen3-embedding, #rrf, #stage2, #plan-approve
 
-> **상태**: 신설 후보 — 본 §5.7.6 (Q5 stopword + 50+ query benchmark) 종결 후 진입 결정. **사용자 결정 영역** = 본 §5.7.6 의 50+ query benchmark 결과 (Top-1 / Top-3 / MRR) + cross-lingual / 의미 유사 query 회수 욕구 평가 후 진입.
->
-> **단일 소스**: 본 todo 섹션 §5.7.7.0 (Background / Decision rationale) + §5.7.7.1~6 (Spec preview). 진입 결정 시 별 spec/todox 작성: `plan/phase-5-spec-5.7.7-hybrid-search.md` + `plan/phase-5-todox-5.7.7-hybrid-search.md`.
->
-> **선행 cycle**: §5.7.4 = `embedding: vector[768]` Orama schema column 추가 (sanity, mock vector round-trip 만 검증, 실 호출 라인 reroute 보류). §5.7.6 = BM25-only 의 quality 한계 정량화 (50+ query suite Top-1 / Top-3 / MRR baseline).
+> **상태**: **plan APPROVE v1.2 (2026-05-10 session 34)**. SDD+TDD impl 진입 대기 (post-/compact, Session 35).
+
+> **단일 소스 (v1.2 — 2026-05-10)**: [`plan/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](./phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.2 (status: approved, spec/todox 합본 — testing.md §3 mid-sized 패턴 mirror). 본 todo 섹션 §5.7.7.0~6 = preview only — 단일 소스 = spec file v1.2.
+
+> **선행 cycle**: §5.7.4 = `embedding: vector[768]` Orama schema column 추가 (sanity, mock vector round-trip 만 검증) — 본 cycle 시 `vector[1024]` 정정 (master 사전 점검 실측). §5.7.8 v1.5 = 51 query benchmark + 라이브 비교 결과 (PASS-B 향상 1 / 회귀 2 — vector layer 부재 인지). §5.7.9 v1.0 = gemini thinking fix.
+
+> **검증 history v1.2**:
+> - v1.0 (analyst, 2026-05-10) → master 1차 검증 (Layer 1~3 anchor 20 ALL PASS) → codex Mode D Panel review
+> - v1.0 → v1.1 master fix (5 finding: 3 MED + 2 LOW) — typo dim 768→1024 / expand×hybrid semantics / Q4 source text / UI 단일화 / metadata shape
+> - v1.1 → v1.2 사용자 일괄 APPROVE (Q2~Q9 7건 LOCKED) — Hybrid default OFF / RRF k=60 / 자동 download / progress+cancel / cross-lingual 1-pass / 기존 storage path / sub-control of master toggle.
+
+> **SDD+TDD impl 진입 점검 (Session 35)**:
+> - 환경 ✅: ollama running + dengcao/Qwen3-Embedding-0.6B:Q8_0 (639 MB) + endpoint 1024D 실측 + Orama @3.1.18 ready
+> - Step B (TDD RED) → C (GREEN) → D (회귀 + 3a/3b) → E (라이브 master 직접) → F (codex post-impl)
+> - 변경 면 ~1,220 LOC (코드 ~540 + test ~580 + docs ~80 + config/script ~20)
 
 ### 5.7.7.0 Background / Decision rationale (분리 정당화 + 목적 + 이득 + trade-off + 진입 결정 기준)
 

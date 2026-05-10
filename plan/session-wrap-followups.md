@@ -1,8 +1,25 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-10 session 34 — §5.7.8 v1.5 + §5.7.9 v1.0 종결 + Settings UI 재구성** (단일 commit 종합).
+> 최신 갱신: **2026-05-10 session 34 — §5.7.7 plan APPROVE v1.2** (Q1~Q10 LOCKED + codex Mode D 5 finding master fix + 사용자 일괄 APPROVE) + §5.7.8 v1.5 + §5.7.9 v1.0 종결 + Settings UI 재구성.
 >
-> ## 다음 세션 첫 액션 (Session 35) — §5.7.8 라이브 비교 재측정 + Phase 5 잔여 결정
+> ## 다음 세션 첫 액션 (Session 35) — §5.7.7 SDD+TDD impl 진입 (post-/compact)
+>
+> **§5.7.7 v1.2 plan APPROVE 상태**:
+> - 단일 소스: [`plan/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](./phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.2 (status: approved)
+> - paradigm: BM25 + Qwen3-Embedding-0.6B-GGUF (1024D 실측, ollama `dengcao/Qwen3-Embedding-0.6B:Q8_0`) + RRF (k=60) 융합
+> - 5 spec / 25 invariant / 32 AC / 8 risk / Open Q1~Q10 모두 LOCKED
+> - 사용자 추가 요구사항 settings UI 통합 = §5.7.8 Advanced query tuning section 안 hybrid toggle (sub-control of master toggle)
+> - 변경 면 추정: ~1,220 LOC (코드 ~540 + test ~580 + docs ~80 + config/script ~20)
+> - codex Mode D 검증 5 finding (3 MED + 2 LOW) master fix v1.1 → 사용자 일괄 APPROVE v1.2
+> - 환경 사전 점검 ✅: ollama running + dengcao/Qwen3-Embedding-0.6B:Q8_0 (639 MB) pulled + endpoint 1024D 실측 + Orama @3.1.18 vector ready + schema field placeholder (`vector[768]` line 288 — 본 cycle 정정 대상)
+>
+> ## Session 35 첫 액션 (post-/compact impl 진입)
+>
+> 1. **Step B — TDD RED (failing tests 작성)**: B0 `vector\[768\]` + `768D Qwen3` grep + 영향 ≤ 3 file 정정 / B1 `qwen3-loader.test.ts` 신규 (Spec 1, 7 AC) / B2 `rrf-fusion.test.ts` 신규 (Spec 3, 6 AC) / B3 `orama-hybrid.test.ts` 신규 (Spec 2, 6 AC) / B4 `settings-hybrid.test.ts` 신규 (Spec 4, 6 AC) / B5 `npm test` RED 확증.
+> 2. **Step C — TDD GREEN**: C0 `embedding-config.ts` (Inew dimension lock single source) / C1 `qwen3-loader.ts` (ollama API path) / C2 `rrf-fusion.ts` / C3 `orama-index.ts::search()` hybrid 분기 + dim 정정 / C4 ingest path embedding populate (`title + "\n\n" + body` union) / C5 `WikeySettings` 3 field 추가 / C6 settings-tab.ts hybrid toggle / C7 config env override / C8 reindex script / C9 benchmark mode flag.
+> 3. **Step D — 회귀 검증 + Phase 3a/3b**.
+> 4. **Step E — 라이브 master 직접** (CDP smoke + cold reindex + 51 query benchmark hybrid mode + §5.7.8 10 query 재측정 ablation).
+> 5. **Step F — codex post-impl review + doc sweep + commit/push**.
 >
 > **§5.7.8 v1.5 + §5.7.9 v1.0 종결 + Settings UI 재구성 종합 (session 34)**:
 > - §5.7.8 paradigm = query intent filter + rewriter + expander + vault customize + auto-extend + manual trigger
