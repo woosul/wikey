@@ -53,6 +53,11 @@ wikey.schema.md > plan/plan-full.md > 본 task 의 새 제안
 - (h) **schema 4 원칙 일치** — 본 plan 이 Explicit / Yours / File over app / BYOAI 4 원칙과 충돌 없는가?
 - (i) **3계층 경계 준수** — 본 plan 이 raw / wiki / schema 의 권한·소유자 경계를 위반하지 않는가? (raw 내용 수정 금지 / wiki 는 LLM 소유 / schema 사용자 승인 필수)
 - (j) **워크플로우 4 일관** — 본 plan 의 ingest / query / lint / 삭제·수정 흐름이 schema 정의와 일치하는가?
+- (k) **하드코딩 금지 — 설계 단계부터** (사용자 영구 결정 2026-05-10) — spec §3 변경 면 / §3.N sample code / AC literal 안 *hardcoded set / list / rule* 검출 시 STOP + paradigm 재검토 의무. wikey 철학 = "LLM 참여형 다층 검색" / "지능 레이어 LLM 담당" (`wikey.schema.md`). static rule paradigm = 위반.
+  - 위반 패턴: `const STOPWORDS = Set([...])` / `if (KNOWN_PATTERNS.has(x)) drop` / rule-based classifier / hardcoded category mapping / hardcoded slug list — 모두 paradigm violation
+  - 권장 패턴: LLM 호출 (per-context 의미론적 판정) + cache layer (LRU) + config = LLM 판정 결과 cache 영역 (사용자 inspection 외)
+  - "사용자 결정 의뢰 — list 정확도 평가" 도 위반 — 사용자 모르게 LLM 자동 등록이 옳음 (사용자 명시: "사용자는 모르게")
+  - 실측 손실 (§5.7.6, session 32, 2026-05-10): static stopword paradigm 도입 → analyst spec/todox + master fix v1.1 + codex cycle #1/#2 NEEDS_REVISION + 구현 + 라이브 smoke → ABANDON. session 통째 손실. **paradigm violation = 설계 단계 catch 의무**.
 
 self-check 결과 plan 본문에 명시.
 

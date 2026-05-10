@@ -1,8 +1,47 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-10 session 31 — §5.7.5 종결 (Step A/B/C/D 모두 완료 + codex 6 cycle (#1~#6) 모두 APPROVE 도달 + 라이브 smoke AC-V1/V2/V3 PASS + 라이브 actual bug 2건 master 직접 fix)**.
+> 최신 갱신: **2026-05-10 session 32 — §5.7.6 ABANDON (paradigm violation) + §5.7.8 신설 (LLM per-query dynamic stopword paradigm)**. commit `932151a`.
 >
-> ## 다음 세션 첫 액션 (Session 32) — **Phase 5 잔여 5 subject 중 진입 결정**
+> ## 다음 세션 첫 액션 (Session 33) — **§5.7.8 spec/todox 작성 진입 vs Phase 5 잔여 우선순위 결정**
+>
+> **§5.7.6 ABANDON 결과** (Session 32, commit `932151a`):
+> - paradigm violation 인지 (사용자 raise): "stopword 일방적 삭제는 위험. 질문 유형에 따라 결정. LLM답지 않음"
+> - PMBOK 36% Top-1 회귀 = static stopword 결함 실증 (`프로젝트`/`관리` drop 부작용)
+> - Q5 회복 (1/10 → 1/1) ✓ — 가설 유효, LLM dynamic 적용 시 자연 회복 예상
+> - 라이브 smoke: Top-1 66.7% / Top-3 86.3% / Mean MRR 0.829 (51 query, 5 도메인)
+> - revert: orama-korean-tokenizer.ts + korean-tokenize.py + stopwords-korean.default.json + analyze-stopwords.ts + stopword test
+> - 회귀 verified: 738 PASS / 3 skipped + build 0 errors (baseline §5.7.5 일치)
+>
+> **§5.7.8 평가 도구 보존** (paradigm-neutral):
+> - `wikey-core/eval/benchmark-suite.json` (51 query, 5 도메인 균형)
+> - `wikey-core/src/scripts/benchmark-search.ts` (export `runBenchmark` + searchFn injection, codex MED #4 적용)
+> - tsx devDep + `npm run benchmark:search` script
+>
+> **§5.7.6 codex 검증 history**: master 1차 NEEDS_FIX (8) → fix v1.1 → cycle #1 NEEDS_REVISION (8) → fix v1.2 → cycle #2 NEEDS_REVISION (4) → 사용자 즉시 구현 결정 → 라이브 smoke → paradigm violation 인지 → ABANDON.
+>
+> **§5.7.7 ↔ §5.7.8 관계** (사용자 결정 2026-05-10): orthogonal 공존
+> - §5.7.7 = vector embedding (Qwen3 768D + Orama hybrid + RRF) — 검색 코어 인프라
+> - §5.7.8 = query 단계 LLM filter — query 전처리
+> - 우선순위: §5.7.8 진입 → 결과 측정 후 §5.7.7 결정
+>
+> ## §5.7.8 진입 시 첫 액션 (사용자 결정 시)
+>
+> 1. analyst 위임 — `plan/phase-5-spec-5.7.8-llm-dynamic-stopword.md` + `phase-5-todox-5.7.8-llm-dynamic-stopword.md`
+> 2. spec 안 §5.7.6 paradigm violation 학습 mirror (static rule 위반 → LLM dynamic decision)
+> 3. master 1차 검증 + codex Mode D Panel review + 사용자 승인
+> 4. SDD+TDD 구현 — query-stopword-filter module + LLM 호출 + LRU cache
+> 5. 51 query benchmark (§5.7.6 결과물) 활용 quality measurement (PMBOK 회복 + Q5 유지)
+>
+> ## Phase 5 잔여 subject (6 candidates, 사용자 우선순위 결정 필요)
+>
+> 1. **§5.7.8 신설 후보** (LLM per-query dynamic stopword) — *올바른 paradigm*, 사용자 우선 진입 권고
+> 2. **§5.7.7 신설 후보** (HYBRID vector reroute) — Qwen3 768D + Orama hybrid + RRF, §5.7.8 결과 후 결정
+> 3. **§5.5 지식 그래프 · 시각화** (P3) — NetworkX + Leiden + vis.js / Obsidian Graph View
+> 4. **§5.6 성능·엔진 확장** (P3) — Ollama vs llama.cpp / rapidocr Linux baseline
+> 5. **§5.8 Phase 4 D.0.l 잔여** (P4)
+> 6. **§5.9 Variance diagnostic** (P4)
+>
+> ## (이전 갱신) Session 31 §5.7.5 종결 사항 — history 보존
 >
 > **§5.7.5 Session 31 종결 commits** (7개, b6dc201..c908943):
 > - `62f6992` 선행: wikey.schema.md 검색 코어 4 영역 갱신 (Orama default + qmd fallback + Kiwi WASM)
