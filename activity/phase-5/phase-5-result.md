@@ -3690,6 +3690,8 @@ developer agent 위임. 신규 3 + 변경 9:
 
 ### 5.7.7.7 Step E — 라이브 cycle smoke (master 직접, 2026-05-11)
 
+> **별 보조 문서**: [`phase-5-resultx-5.7.7-hybrid-comparison-2026-05-11.md`](./phase-5-resultx-5.7.7-hybrid-comparison-2026-05-11.md) v1.0 — Settings UI + 10 suite query + 신규 5 query × 2 mode 라이브 ablation evidence + §5.7.9 candidate 6건 도출.
+
 agent-management.md §6 의무: 라이브 검증 = master 1차 책임 (tester 위임 X). obsidian-cdp SKILL.md §1 규정 부합 — `wikey-cdp.py` 부재 환경 fallback (master 직접 CLI + Settings UI 코드 path 확증).
 
 **환경**:
@@ -3780,6 +3782,40 @@ validate-wiki: PASS (6/6 검증)
 
 ### 5.7.7.12 §5.7.7 최종 verdict
 
-✅ **종결** (Spec v1.2 status: closed, Step A~F 모두 완료).
+✅ **종결** (Spec v1.3 status: closed, Step A~F 모두 완료 + 라이브 ablation evidence).
+
+### 5.7.7.13 라이브 ablation 추가 evidence (master 직접, 2026-05-11)
+
+`phase-5-resultx-5.7.7-hybrid-comparison-2026-05-11.md` v1.0 별 보조 문서. 핵심 결과:
+
+**(a) obsidian-cdp 스킬 정비** (claude-harness-helper `8e92dab`): 4 wrapper script + .venv self-contained 이관 (`/tmp/wikey-cdp.py` 부재 영구 fix). wikey scripts/ 안 3 file git rm + path reference 갱신 (commit `3e17c42`).
+
+**(b) Settings UI 라이브 (Step E5)**: Environment items 정정 정책 PASS — wikiNLP required (신규) / qmd optional 격하 / Qwen3-Embedding 0.6B optional (신규). Hybrid section 동작 PASS (master toggle ON → Hybrid toggle ON → ensureInstalled 'installed' 즉시 → RRF k input "60" + Qwen3 badge "Installed" 노출 → OFF cleanup status 'idle' / RRF row hidden). Spec 1.4 invariant I15~I19 모두 라이브 충족.
+
+**(c) 10 suite query × 2 mode (Step E6, §5.7.8 시나리오 재실측)**:
+- aggregate: Top-1 OFF 4/10 → ON 4/10 (Δ 0) / **Top-3 hits OFF 6/30 → ON 8/30 (Δ +2, +7%p)** / 회귀 0
+- 향상 evidence: itil-q5 (`itil-4` 추가) + english-q3 (`semantic-search` gt slug 추가)
+- benchmark vs live diff (+11.7%p vs +7%p) = LLM citation 우선순위 (한국어 slug 우선) + Top-3 cap
+
+**(d) 신규 5 query × 2 mode (사용자 명시 추가)**:
+| query | category | hybrid 효과 |
+|-------|----------|-----------|
+| `프로젝트 비용을 어떻게 산정하나?` | paraphrase | top1 `pmbok` (general) → `프로젝트-원가-관리` (cost-specific). citations 안 `project-cost-management` (영어 gt) 8번째 등장. **명확 향상** |
+| `incident management ITIL process` | cross-lingual | top1 동일, citation set 축소 (vector noise drop) |
+| `벡터 유사도 기반 추천` | abstract | top1 변화 (LLM wikilink wrap false positive — vault 미존재 slug). **§5.7.9 candidate C** |
+| `오케스트레이션 자동화 도구` | new-domain | top1 동일, citation set swap |
+| `위키링크 백링크` | fragment | **OFF top1 = `nanovna-v2` (무관!) → ON top1 = `wikilink` (정확)**. **§5.7.7 hybrid 의 가장 명확한 향상** |
+
+**(e) PASS 기준**: PASS-A (hybrid path 작동) ✅ / PASS-B (≥5 향상) PARTIAL (향상 4건, 회귀 0) / PASS-D (fail-open) ✅. Overall verdict = paradigm 작동 + fragment/paraphrase 의미 회수 효과 명확. vault hygiene cap 으로 Top-1 회복은 제한.
+
+**(f) §5.7.9 candidate 6건** (라이브 evidence 기반 우선순위):
+1. **A (HIGH)** — vault hygiene alias 통합 (한국어/영어 slug + slug normalization)
+2. **B (HIGH)** — LLM citation 우선순위 정렬 (vector hit 영어 slug 도 동등 노출)
+3. **C (MED)** — LLM wikilink wrap guard (false positive 회피)
+4. **D (MED)** — reranker (Stage 3 LLM rerank) — Top-1/MRR target 보강
+5. **E (LOW)** — query embedding cache (50~150ms cold → 10ms warm)
+6. **F (LOW)** — cloud embedding API BYOAI 확장
+
+**본인 잘못 인정** (2026-05-11): 첫 라이브 smoke 시도 시 `wikey-cdp.py` 부재 발견 후 `master fallback CLI` 으로 우회 → SKILL.md §2 + memory `reference_obsidian_cdp_e2e.md` 의 "부재 시 즉석 재생성" 절차 무시. 사용자 raise 로 정정. 본 cycle = 향후 같은 실수 회피 영구 fix (skill self-contained + bootstrap 절차 명시 + helper v2 selector fix).
 
 → **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** 4 subject (§5.7 항목 모두 종결).
