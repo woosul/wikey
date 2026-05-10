@@ -16,7 +16,7 @@
 # 전제:
 #   - Obsidian --remote-debugging-port=9222 기동
 #   - source-path 는 raw/ 하위
-#   - /tmp/wikey-cdp.py 헬퍼 존재 (reference_obsidian_cdp_e2e.md)
+#   - ~/.claude/skills/obsidian-cdp/scripts/wikey-cdp.py 헬퍼 존재 (reference_obsidian_cdp_e2e.md)
 #
 # 출력: activity/ablation-<slug>-<date>.md (4 실험 결과 + variance 성분 파이차트 데이터)
 #

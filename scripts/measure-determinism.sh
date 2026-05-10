@@ -89,8 +89,8 @@ if [[ "$SRC_SIZE" -lt "$MIN_SIZE" && "$FORCE" -ne 1 ]]; then
 fi
 
 # CDP 헬퍼 확인
-if [[ ! -f /tmp/wikey-cdp.py ]]; then
-  echo "ERROR: /tmp/wikey-cdp.py 없음 (memory: reference_obsidian_cdp_e2e.md 참고하여 생성)" >&2
+if [[ ! -f ~/.claude/skills/obsidian-cdp/scripts/wikey-cdp.py ]]; then
+  echo "ERROR: ~/.claude/skills/obsidian-cdp/scripts/wikey-cdp.py 없음 (memory: reference_obsidian_cdp_e2e.md 참고하여 생성)" >&2
   exit 1
 fi
 
@@ -390,7 +390,7 @@ rm -f "${TMPJS}.bak"
 # §4.5.1.7.3: per-run timeout 10분 → 15분 (JS 내부 timer 와 동기).
 echo "[measure-determinism] CDP 호출 중 (최대 ${N_RUNS} × 15분 = $((N_RUNS * 15))분 타임아웃)..."
 timeout_sec=$((N_RUNS * 900))
-RAW_RESULTS=$(python3 /tmp/wikey-cdp.py file "$TMPJS" await "$timeout_sec")
+RAW_RESULTS=$(python3 ~/.claude/skills/obsidian-cdp/scripts/wikey-cdp.py file "$TMPJS" await "$timeout_sec")
 
 # Parse results JSON — CDP Runtime.evaluate returnByValue wraps as {result: {result: {type, value}}}
 echo "$RAW_RESULTS" > /tmp/wikey-determinism-raw.json
