@@ -2,9 +2,12 @@
  * §5.7.5 RED — settings-tab developer section + renderUpdateRow.
  *
  * AC-U3: developerMode toggle off → 섹션 부재, true → 'Developer (advanced)' heading 표시.
- * AC-U5: hasUpdate=true → '[upgrade]' active 뱃지, false → 회색 ('--none' 또는 dimmed).
- * AC-U7: hasUpdate=false → '[분석]' button disabled.
+ * AC-U5: hasUpdate=true → 'upgrade' active 뱃지, false → 회색 ('--none' 또는 dimmed).
+ * AC-U7: hasUpdate=false → '분석' button disabled.
  * AC-U8: devRequired=true → '[개발필요]' mark + reason text 1줄 표시.
+ *
+ * 2026-05-10 갱신: 사용자 raise — '[upgrade]' / '[분석]' 대괄호 표기 삭제 (UI
+ * cosmetic). invariant (badge 활성 / button disabled 의무) 는 동일.
  */
 
 import { describe, it, expect } from 'vitest'
@@ -57,9 +60,9 @@ describe('§5.7.5 settings-tab developer section', () => {
   it('AC-U5: hasUpdate=true shows active [upgrade] badge; hasUpdate=false shows dimmed', () => {
     const cAct = document.createElement('div')
     renderUpdateRow(cAct, ITEM_WITH_UPDATE, { onAnalyze: () => undefined })
-    expect(cAct.textContent ?? '').toContain('[upgrade]')
-    const activeBadge = cAct.querySelector('.wikey-settings-upgrade-badge--active')
+    const activeBadge = cAct.querySelector('.wikey-settings-upgrade-badge--active') as HTMLElement | null
     expect(activeBadge).not.toBeNull()
+    expect((activeBadge!.textContent ?? '').trim()).toBe('upgrade')
 
     const cNone = document.createElement('div')
     renderUpdateRow(cNone, ITEM_NO_UPDATE, { onAnalyze: () => undefined })
@@ -67,13 +70,13 @@ describe('§5.7.5 settings-tab developer section', () => {
     expect(noneBadge).not.toBeNull()
   })
 
-  it('AC-U7: hasUpdate=false disables [분석] button; hasUpdate=true enables', () => {
+  it('AC-U7: hasUpdate=false disables Analyze button; hasUpdate=true enables', () => {
     const cYes = document.createElement('div')
     renderUpdateRow(cYes, ITEM_WITH_UPDATE, { onAnalyze: () => undefined })
     const btnYes = cYes.querySelector('button.wikey-settings-developer-analyze') as HTMLButtonElement | null
     expect(btnYes).not.toBeNull()
     expect(btnYes!.disabled).toBe(false)
-    expect(btnYes!.textContent ?? '').toContain('[분석]')
+    expect((btnYes!.textContent ?? '').trim()).toBe('Analyze')
 
     const cNo = document.createElement('div')
     renderUpdateRow(cNo, ITEM_NO_UPDATE, { onAnalyze: () => undefined })
@@ -81,7 +84,7 @@ describe('§5.7.5 settings-tab developer section', () => {
     expect(btnNo!.disabled).toBe(true)
   })
 
-  it('AC-U8: devRequired=true → [개발필요] mark + reason text rendered', () => {
+  it('AC-U8: devRequired=true → [dev required] mark + reason text rendered', () => {
     const c = document.createElement('div')
     renderUpdateRow(
       c,
@@ -95,7 +98,7 @@ describe('§5.7.5 settings-tab developer section', () => {
         },
       },
     )
-    expect(c.textContent ?? '').toContain('[개발필요]')
+    expect(c.textContent ?? '').toContain('[dev required]')
     expect(c.textContent ?? '').toContain('tokenizer interface')
   })
 })

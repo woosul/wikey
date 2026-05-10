@@ -64,6 +64,25 @@ describe('LLMClient — Gemini', () => {
     const llm = new LLMClient(client, config)
     await expect(llm.call('test', { provider: 'gemini' })).rejects.toThrow(/API/)
   })
+
+  // §5.7.9 AC-1 — gemini-2.5 thinking budget propagation.
+  it('thinkingBudget=0 → generationConfig.thinkingConfig.thinkingBudget = 0', async () => {
+    const { client, calls } = mockHttpClient(geminiResponse)
+    const llm = new LLMClient(client, baseConfig)
+    await llm.call('test', { provider: 'gemini', thinkingBudget: 0 })
+    const body = JSON.parse(calls[0].opts.body!)
+    expect(body.generationConfig.thinkingConfig).toEqual({ thinkingBudget: 0 })
+  })
+
+  // §5.7.9 AC-2 — without thinkingBudget, generationConfig.thinkingConfig is omitted
+  // so other gemini use cases (ingest, canonicalize) keep their default behavior.
+  it('thinkingBudget undefined → generationConfig.thinkingConfig key absent', async () => {
+    const { client, calls } = mockHttpClient(geminiResponse)
+    const llm = new LLMClient(client, baseConfig)
+    await llm.call('test', { provider: 'gemini' })
+    const body = JSON.parse(calls[0].opts.body!)
+    expect(body.generationConfig).not.toHaveProperty('thinkingConfig')
+  })
 })
 
 describe('LLMClient — Anthropic', () => {
@@ -88,6 +107,17 @@ describe('LLMClient — Anthropic', () => {
     const llm = new LLMClient(client, baseConfig)
     const result = await llm.call('test', { provider: 'anthropic' })
     expect(result).toBe('Anthropic says hello')
+  })
+
+  // §5.7.9 AC-4 — non-gemini providers ignore thinkingBudget (no payload pollution).
+  it('thinkingBudget=0 ignored by Anthropic (no thinking-related body keys)', async () => {
+    const { client, calls } = mockHttpClient(anthropicResponse)
+    const llm = new LLMClient(client, baseConfig)
+    await llm.call('test', { provider: 'anthropic', thinkingBudget: 0 })
+    const body = JSON.parse(calls[0].opts.body!)
+    expect(body).not.toHaveProperty('thinking')
+    expect(body).not.toHaveProperty('thinkingBudget')
+    expect(body).not.toHaveProperty('thinkingConfig')
   })
 
   it('throws on missing Anthropic API key', async () => {

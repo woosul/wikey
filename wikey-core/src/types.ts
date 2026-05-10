@@ -125,6 +125,14 @@ export interface LLMCallOptions {
   readonly timeout?: number
   readonly responseMimeType?: string
   readonly jsonMode?: boolean
+  /**
+   * §5.7.9 — gemini-2.5 thinking budget. When set to 0, callGemini emits
+   * `generationConfig.thinkingConfig = { thinkingBudget: 0 }` so the model
+   * skips its hidden chain-of-thought (otherwise gemini-2.5-* eats most of
+   * `maxTokens` on thinking and truncates short JSON outputs). Other
+   * providers ignore this field.
+   */
+  readonly thinkingBudget?: number
 }
 
 // ── Wiki ──

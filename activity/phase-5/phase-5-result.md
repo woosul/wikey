@@ -1773,13 +1773,14 @@ revert (paradigm 위반):
 - **§5.7.7 (HYBRID vector reroute) 관계**: §5.7.7 paradigm = vector embedding (static stopword 무관, violation 없음) — 보존 + §5.7.8 우선 진입 후 결정 (사용자 결정 2026-05-10).
 - **본 cycle 산출 도구 보존 가치**: benchmark suite 51 query 의 도메인 균형 + expected slug 검증 + Top-1/Top-3/MRR 계산 = paradigm-neutral 도구. §5.7.8 + §5.7.7 모두 quality measurement 로 활용.
 
-### 5.7.8 LLM per-query dynamic stopword paradigm — plan APPROVE (P3, session 33, 2026-05-10)
-> tag: #search, #quality-tuning, #llm-dynamic-stopword, #paradigm-correction, #plan-approve
+### 5.7.8 LLM per-query dynamic stopword paradigm — SDD+TDD 종결 (P3, session 33~34, 2026-05-10)
+> tag: #search, #quality-tuning, #llm-dynamic-stopword, #paradigm-correction, #sdd-tdd-completed, #completed
 
-#### 5.7.8.0 진행 상태 (commit `922cd6d`, 2026-05-10 session 33)
+#### 5.7.8.0 진행 상태 (session 34 종결, 2026-05-10)
 
-- **plan APPROVE_WITH_NOTES** — codex Cycle #1~#5 NEEDS_REVISION → master Cycle #1~#5 fix loop (점진 수렴 7→6→6→3→2→1 finding) → Cycle #6 APPROVE_WITH_NOTES.
-- 단일 소스: [`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.3 + [`plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.3.
+- **plan APPROVE_WITH_NOTES (v1.3, session 33, commit `922cd6d`)** → **SDD+TDD impl 진입 (session 34)** → **post-impl codex multi-cycle fix loop** (점진 수렴, 모든 finding closed — 정확 history = spec/todox v1.4 변경 이력 + resultx) → **종결 (v1.4)**.
+- 단일 소스: [`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 + [`plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.4 + [`activity/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md`](./phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md).
+- 검증 결과: wikey-core 781/784 + wikey-obsidian 100/100 PASS / tsc strict + build 0 errors / validate-wiki + check-licenses + check-kiwi-vendor-sync PASS / anchor (k) hardcoded 0 hit / baseline 회귀 0 (Top-1 66.7% / Top-3 86.3% / MRR 0.829, §5.7.6 baseline byte-equal). augmented path 코드 구현 (`WIKEY_BENCHMARK_LAYERS=filter,rewrite,expand` env flag) — 임계 측정 (Top-1 ≥ 70%) 사용자 수동 (real Gemini API + credentials.json 보안 정책 deferral).
 
 #### 5.7.8.1 paradigm v1.3 핵심
 
@@ -1799,7 +1800,7 @@ paradigm:
 #### 5.7.8.2 Open Q 6 LOCKED
 
 - Q1: provider+model 2 dropdown selectbox (기존 `addModelSelector` 패턴 mirror, default = `DEFAULT`)
-- Q2: SQLite cache (`~/.cache/wikey/query-intent-cache.sqlite`, LRU 1000 entries)
+- Q2: ~~SQLite cache~~ → file-based JSON LRU cache (`~/.cache/wikey/query-intent-cache/<namespace>.json`, LRU 1000 entries) — option B 채택 (v1.4 deviation, 신규 native dep 0)
 - Q3: filter timeout 5s default
 - Q4: opt-in (default OFF, I7 backward compat)
 - Q5: §1.4 안내문구 default 권고 본문 잠금 (master 결정)
@@ -1810,25 +1811,92 @@ paradigm:
 - AC 20 (단위 14: F1~F9 + S1~S4 + A1 / 통합 5: I1~I5 / 라이브 1: L1)
 - Risk 15 (Risk #8 ABANDON paradigm violation + 신규 #15 trigger 빈도)
 - Open Questions 6 LOCKED
-- 변경 면 ≤ 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main + sidebar-chat / repo root 1: .github/workflows/benchmark.yml)
-- 신규 dep 2 (better-sqlite3 + 기존 yaml 재사용)
+- 변경 면 (v1.4 final): wikey-core 16 (신규 7 src + 신규 4 prompt + 변경 5 + eval 보존) / wikey-obsidian 4 (settings-tab + main + sidebar-chat + commands) / repo root 1 (.github/workflows/benchmark.yml) + tsconfig 1 = 코드/config 22 file. 활동/문서 3 별도. spec self-check ≤20 = wikey-obsidian 3 정의 spec scope (commands.ts cycle fix 추가).
+- 신규 dep 0 (option B file-based JSON LRU 채택, SQLite 도입 회피)
 - fail-open invariants 5 (I1 filter / I8 search / I11 auto-extend / I23 rewrite-expand / I27 vault parse)
 - §7.5 P1~P6 + §7.6 F1~F7 cross-check 표 v1.3 신규
 
-#### 5.7.8.4 codex 6-cycle fix loop 학습
+#### 5.7.8.4 plan cycle #1~#6 fix loop 학습 (history, session 33)
 
-| Cycle | findings | master fix |
-|-------|----------|-----------|
-| #1 | 3H + 3M + 1L | F1 v1.2 sweep / F2 변경 면 정확 카운트 / F3 AC-S4+A1 매핑 / F4 schema 호환 / F5 CI root / F6 P1~P6+F1~F7 표 |
-| #2 | 2H + 3M + 1L | AC-A1 schema expected_top1+top3 / wikey-obsidian 2→3 / D4 commit / AC-I2/I3/I5 명시 / grep query-analyzer |
-| #3 | 2H + 1M + 1L + 신규 2M+1L | expected_top3 필수 / §3.1+§3.2 본문 6+4 / invariant 번호 충돌 해소 (Spec 4 I14~I18→I16~I20, Spec 5 I19~I22→I21~I24, Spec 6 I23~I25→I25~I27) / activity 경로 / 표 통합 |
-| #4 | 2 finding + 1L | query-analyzer.ts §3.1 위치 / invariant stale ref / footer |
-| #5 | 2 finding | AC-F3 I13 / Risk #11 I27 / self-check (c) 정확 list / footer cycle status |
-| **#6** | **APPROVE_WITH_NOTES** | 잔존 LOW 1 (cycle-tracking) sweep 완료 |
+session 33 plan 검증 cycle (v1.3 도달 단계). v1.3 APPROVE_WITH_NOTES 시점 6-cycle 학습 — 별 history 보존.
 
-#### 5.7.8.5 다음 단계
+#### 5.7.8.5 post-impl multi-cycle fix loop (session 34, 종결)
 
-사용자 승인 시 SDD+TDD 진입 (Step A 환경 → Step B TDD RED/GREEN/BLUE → Step C 라이브 cycle smoke → Step D 문서 동기화). 또는 Phase 5 잔여 (§5.5 / §5.6 / §5.7.7 / §5.8 / §5.9) 우선순위 사용자 결정.
+post-impl codex multi-cycle fix loop (점진 수렴, 모든 finding closed). 상세 narrative = `activity/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md` 안 cycle별 fix mapping table.
+
+#### 5.7.8.6 다음 단계
+
+§5.7.8 종결 + §5.7.9 진입. Phase 5 잔여 (§5.5 / §5.6 / §5.7.7 / §5.8 / §5.9) 결정 보류.
+
+#### 5.7.8.7 라이브 비교 검증 (master 직접, 2026-05-10 session 34)
+
+10 query × 3 mode (OFF / ON cold / ON warm) CDP 실측 결과 — `activity/phase-5/phase-5-resultx-5.7.8-query-comparison-scenario-2026-05-10.md` v1.1 (analyst 시나리오 + master 측정값).
+
+verdict: paradigm 작동 자체는 PASS — cache 생성 / token classification / vault hint / fail-open 정상. 단 PASS-A 7/10 (gemini-2.5-flash thinking 모드 default maxTokens=500 소진 → 응답 절단 → fail-open). PASS-B 1 향상 + 2 회귀 (정확도 향상 미관찰). PASS-C 정의 모호 (분석 LLM only vs 답변 LLM 포함). PASS-D PASS.
+
+**§5.7.9 candidate 5건 도출** (#1 CRITICAL gemini thinkingBudget / #2 HIGH Spec I8 정의 / #3~#5 vault hygiene + HyDE FP + citation 우선순위).
+
+---
+
+## 5.7.9 gemini-2.5 thinking compatibility + Spec I8 정의 명확화 (P3, session 34, 2026-05-10) ✅ 종결
+
+> tag: #search, #llm-compatibility, #gemini-2.5, #spec-clarification, #completed
+
+#### 5.7.9.0 진행 상태
+
+§5.7.8 라이브 비교 검증 결과 (PASS-A 7/10 + PASS-C 정의 모호) → §5.7.9 신설 → master 직접 SDD+TDD (mid-sized 합본 spec/todo). impl 직후 fresh CDP verify ALL PASS.
+
+- 단일 소스: [`plan/phase-5/phase-5-spec-5.7.9-gemini-thinking-and-latency-clarify.md`](../../plan/phase-5/phase-5-spec-5.7.9-gemini-thinking-and-latency-clarify.md) v1.0
+- §5.7.8 spec mirror: v1.4 → v1.5 (line 91 trade-off + line 235 안내 본문에 *"분석 LLM only — 답변 LLM 별 측정"* 명시)
+
+#### 5.7.9.1 — gemini-2.5 thinkingBudget=0 (CRITICAL)
+
+**핵심 paradigm**: gemini-2.5 시리즈 (flash / pro) 의 default thinking 모드가 maxTokens 안에서 thinking tokens 소비 → 짧은 JSON 응답 (≤ 500 tokens) 모두 절단. wikey advanced query tuning 4 layer (filter / rewriter / expander / analyzer) 는 결정적 짧은 JSON output → thinking 무용 + cost 손해 → thinkingBudget=0 명시 의무.
+
+코드 변경 (4 file):
+- `wikey-core/src/types.ts` — `LLMCallOptions { thinkingBudget?: number }` 추가
+- `wikey-core/src/llm-client.ts` — `callGemini` generationConfig 안 `thinkingConfig: { thinkingBudget: opts.thinkingBudget }` (caller 명시 시만 — 다른 use case neutral)
+- `wikey-obsidian/src/main.ts` — `buildFilterCallOptionsFromSettings` 결과에 `thinkingBudget: 0` 항상 추가 / `FilterCallOptionsResult.thinkingBudget?: number` 확장
+- 신규 native dep / 사용자 setting / UI 변경 0
+
+test 추가 (5건):
+- `wikey-core` AC-1 (payload propagation), AC-2 (undefined → key 부재), AC-4 (Anthropic ignore — 다른 provider neutral)
+- `wikey-obsidian` AC-3 (DEFAULT 항상 0), explicit override 시도 항상 0
+
+#### 5.7.9.2 — Spec 5.7.8 v1.5 I8 정의 명확화 (HIGH)
+
+`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md` v1.4 → v1.5:
+- line 91 Trade-off 본문 + line 235 안내문구에 *"분석 LLM (filter/rewriter/expander) only — 답변 LLM (chat synthesis) 은 본 target 적용 X — 별 측정"* 명시
+- 변경 이력 v1.5 row 추가 / footer cycle # 갱신 / frontmatter version v1.5 + status: completed
+- invariant / AC 변경 0 (mirror-only)
+
+#### 5.7.9.3 검증 결과
+
+| 영역 | 결과 |
+|------|------|
+| wikey-core test | 784/787 PASS (기존 781 + 신규 3) |
+| wikey-obsidian test | 102/102 PASS (기존 100 + 신규 2) |
+| tsc --noEmit (production) | 0 errors |
+| build (core + obsidian) | 0 errors |
+| validate-wiki | PASS |
+| **CDP 라이브 verify (default maxTokens=500)** | latency **1293ms** (≤ 1500ms target) / raw **214 chars** (full JSON) / fallback **'none'** / cache **filter.json 생성** |
+
+before / after 비교 (단일 query `프로젝트 비용 관리`):
+
+| Metric | before (thinking on, maxTokens=500) | after (thinkingBudget=0, maxTokens=500) |
+|--------|-------------------------------------|-----------------------------------------|
+| Latency | 3384ms | **1293ms** |
+| raw_len | 40 chars (truncated) | **214 chars** |
+| fallback | 'llm-fail' | **'none'** |
+| cache file | 0 | **1** |
+
+**Karpathy #2 simplicity** — 사용자 settings 변경 0, default 값 (500/5000ms) 그대로 작동.
+
+#### 5.7.9.4 다음 단계
+
+§5.7.9.1 + .2 종결. §5.7.9 candidate #3~#5 (vault hygiene 한↔영 alias / HyDE false positive / citation 우선순위) = 별 cycle. 사용자 결정 의뢰.
+
+§5.7.9 종결 후 *수정된 thinking off paradigm* 으로 §5.7.8 라이브 비교 batch (10 query × 3 mode) 재측정 권고 — 정확도 향상 가설 (H1~H3) 재검증 source.
 
 ---
 

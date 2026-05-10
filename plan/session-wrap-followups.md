@@ -1,23 +1,22 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-10 session 33 — §5.7.8 v1.3 plan APPROVE_WITH_NOTES (codex Cycle #1~#6 fix loop 수렴) + 디렉토리 재구성 (plan/+activity/ phase 서브디렉토리)**. commits `630a1ed` (재구성) + `922cd6d` (§5.7.8 v1.3).
+> 최신 갱신: **2026-05-10 session 34 — §5.7.8 v1.5 + §5.7.9 v1.0 종결 + Settings UI 재구성** (단일 commit 종합).
 >
-> ## 다음 세션 첫 액션 (Session 34) — §5.7.8 SDD+TDD 진입 vs Phase 5 잔여 우선순위 결정
+> ## 다음 세션 첫 액션 (Session 35) — §5.7.8 라이브 비교 재측정 + Phase 5 잔여 결정
 >
-> **§5.7.8 v1.3 plan APPROVE 상태** (commit `922cd6d`):
-> - paradigm: 51 baseline + auto-extend mechanism (query+answer LLM 자동 분석 → suite 자동 등록) + 수동 trigger ("Run query analysis" command) + vault customize + Advanced query tuning settings UI
-> - hardcoded domain list 0건 (anchor (k) 강화) — 사용자 raise paradigm violation fix 결과
-> - AC 20 (단위 14 + 통합 5 + 라이브 1) / Risk 15 / Open Q 6 LOCKED (Q1 provider+model 2 dropdown / Q2 SQLite / Q3 5s timeout / Q4 opt-in / Q5 안내문구 / Q6 N=5 default)
-> - 변경 면 ≤ 18 file (wikey-core 14: 신규 6 src + 신규 4 prompt + 변경 3 + eval 1 / wikey-obsidian 3: settings-tab + main + sidebar-chat / repo root 1: .github/workflows/benchmark.yml)
-> - 신규 dep 2 (better-sqlite3 + 기존 yaml 재사용)
-> - codex 6-cycle fix loop 점진 수렴 (7→6→6→3→2→1 finding) → APPROVE_WITH_NOTES
+> **§5.7.8 v1.5 + §5.7.9 v1.0 종결 + Settings UI 재구성 종합 (session 34)**:
+> - §5.7.8 paradigm = query intent filter + rewriter + expander + vault customize + auto-extend + manual trigger
+> - §5.7.8 라이브 비교 (10 query × 3 mode, master CDP 직접): paradigm 작동 PASS / PASS-A 7/10 (gemini thinking 절단) / PASS-B 1 향상 + 2 회귀 / PASS-C 정의 모호 / PASS-D PASS → §5.7.9 candidate 5건 도출 (#1 CRITICAL gemini thinkingBudget=0 / #2 HIGH Spec I8 정의 / #3~#5 별 cycle)
+> - §5.7.9.1 fix: `wikey-core/src/types.ts` LLMCallOptions { thinkingBudget? } / `llm-client.ts` callGemini generationConfig 안 thinkingConfig / `wikey-obsidian/src/main.ts` buildFilterCallOptionsFromSettings 안 thinkingBudget: 0 default. CDP verify default maxTokens=500 latency 1293ms (≤ 1500ms target).
+> - §5.7.9.2 mirror: §5.7.8 spec v1.4 → v1.5, latency target = "분석 LLM only" 명시.
+> - Settings UI 재구성 (사용자 raise 다단계): provider+model 1-row helper / Advanced query tuning expand-collapse / Update items grid-line / scroll preserve / 한글→영문 / nav-item-background-active 카드 / Developer (advanced) section 안 master toggle.
+> - test: wikey-core 784/787 + wikey-obsidian 102/102 / tsc + build 0 / validate-wiki PASS.
 >
-> ## §5.7.8 SDD+TDD 진입 시 첫 액션 (Session 34)
+> ## Session 35 첫 액션
 >
-> 1. **Step A — 환경 세팅**: 사용자 결정 6건 (Q1~Q6) 잠금 확증 + LLMClient API + orama-index search opts + better-sqlite3 dep + settings UI 패턴 (`renderModelDropdown`) + vault config parser + `.github/workflows/` (repo root) fact-check
-> 2. **Step B — TDD RED → GREEN → BLUE**: AC-F1~F9 + AC-S1~S4 + AC-A1 단위 test (RED) → 18 file 변경 면 구현 (GREEN) → 회귀 + refactor (BLUE 3a/3b)
-> 3. **Step C — 라이브 cycle smoke**: master 직접 — 51 baseline + auto-extend evidence + AC-I2 real LLM prompt + AC-I3 rewriter+expander real LLM + AC-L1 benchmark
-> 4. **Step D — 문서 동기화** + commit/push
+> 1. **§5.7.8 라이브 비교 재측정** (선택, master 직접 CDP) — §5.7.9 thinking fix 적용 후 정확도 향상 가설 (H1 noise / H2 rewrite alias / H3 HyDE) 재검증. helper `/tmp/wikey-bench-runner.sh` 재사용. 10 query × 3 mode batch.
+> 2. **§5.7.9 candidate #3~#5 결정** — vault hygiene (한↔영 alias 통합) / HyDE false positive 회피 / 답변 LLM citation 우선순위 정렬. 신규 spec 작성 또는 별 cycle 보류 결정.
+> 3. **Phase 5 잔여 우선순위 결정**: §5.5 (지식 그래프) / §5.6 (성능) / §5.7.7 (HYBRID Stage 2 vector reroute) / §5.8 (Phase 4 D.0.l 잔여) / §5.9 (Variance diagnostic)
 >
 > ## 디렉토리 재구성 결과 (commit `630a1ed`, 2026-05-10 session 33)
 >

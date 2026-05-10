@@ -35,33 +35,38 @@ export function renderUpdateRow(
   row.classList.add('wikey-settings-developer-row')
   parent.appendChild(row)
 
-  // Display name + version comparison
+  // Left: display name + version comparison
   const head = document.createElement('div')
   head.classList.add('wikey-settings-developer-head')
   head.textContent = `${item.displayName}: ${item.currentVersion}` +
-    (item.upstreamVersion ? ` → ${item.upstreamVersion}` : '')
+    (item.upstreamVersion ? ` -> ${item.upstreamVersion}` : '')
   row.appendChild(head)
 
-  // Upgrade badge
-  const badge = document.createElement('span')
-  if (item.hasUpdate) {
-    badge.classList.add('wikey-settings-upgrade-badge', 'wikey-settings-upgrade-badge--active')
-    badge.textContent = '[upgrade]'
-  } else {
-    badge.classList.add('wikey-settings-upgrade-badge', 'wikey-settings-upgrade-badge--none')
-    badge.textContent = '[upgrade]'
-  }
-  row.appendChild(badge)
+  // Right: badge + analyze button (right-aligned cluster)
+  const actions = document.createElement('div')
+  actions.classList.add('wikey-settings-developer-actions')
+  row.appendChild(actions)
 
-  // [분석] button
+  // Upgrade badge (no brackets — text only)
+  const badge = document.createElement('span')
+  badge.classList.add('wikey-settings-upgrade-badge')
+  badge.classList.add(
+    item.hasUpdate
+      ? 'wikey-settings-upgrade-badge--active'
+      : 'wikey-settings-upgrade-badge--none',
+  )
+  badge.textContent = 'upgrade'
+  actions.appendChild(badge)
+
+  // Analyze button (no brackets)
   const btn = document.createElement('button')
   btn.classList.add('wikey-settings-developer-analyze')
-  btn.textContent = '[분석]'
+  btn.textContent = 'Analyze'
   btn.disabled = !item.hasUpdate
   btn.addEventListener('click', () => opts.onAnalyze(item))
-  row.appendChild(btn)
+  actions.appendChild(btn)
 
-  // Analysis result (when available)
+  // Analysis result (when available — full-width below)
   if (opts.analysis) {
     const analysisBox = document.createElement('div')
     analysisBox.classList.add('wikey-settings-developer-analysis')
@@ -71,8 +76,8 @@ export function renderUpdateRow(
     if (opts.analysis.devRequired) {
       const mark = document.createElement('div')
       mark.classList.add('wikey-settings-developer-required')
-      const reason = opts.analysis.devRequiredReason ?? '근거 미상'
-      mark.textContent = `[개발필요] ${reason}`
+      const reason = opts.analysis.devRequiredReason ?? 'reason unknown'
+      mark.textContent = `[dev required] ${reason}`
       row.appendChild(mark)
     }
   }
@@ -86,6 +91,25 @@ export function renderUpdateRow(
   }
 
   return row
+}
+
+/**
+ * Render the update items list only (no heading / allow toggle / master toggle).
+ * Caller handles surrounding container so the list can be embedded inside the
+ * Environment status group instead of a standalone Developer section.
+ */
+export function renderDeveloperUpdateItems(
+  parent: HTMLElement,
+  opts: {
+    readonly items: readonly UpdateItemDescriptor[]
+    readonly onAnalyze: (item: UpdateItemDescriptor) => void
+    readonly analyses?: ReadonlyMap<string, UpdateAnalysis>
+  },
+): void {
+  for (const item of opts.items) {
+    const cached = opts.analyses?.get(item.kind)
+    renderUpdateRow(parent, item, { onAnalyze: opts.onAnalyze, analysis: cached })
+  }
 }
 
 /** Render the entire developer section (heading + allow-toggle + rows). */
@@ -107,10 +131,10 @@ export function renderDeveloperSection(
   const desc = document.createElement('p')
   desc.classList.add('wikey-settings-status-desc')
   desc.textContent =
-    '재시작 시 자동 갱신 (network 동의 시). update 있으면 [upgrade] 활성화, 없으면 회색.'
+    'Auto-refresh on restart when network consent is granted. Items with a new upstream version show an active "upgrade" badge; up-to-date items appear dimmed.'
   section.appendChild(desc)
 
-  // Allow upstream update check toggle (default off — opt-in)
+  // Allow upstream update check toggle (right-aligned label + checkbox)
   const allowRow = document.createElement('div')
   allowRow.classList.add('wikey-settings-developer-allow-row')
   const allowLabel = document.createElement('label')
@@ -118,16 +142,18 @@ export function renderDeveloperSection(
   allowRow.appendChild(allowLabel)
   const allowInput = document.createElement('input')
   allowInput.type = 'checkbox'
+  allowInput.classList.add('wikey-settings-developer-allow-toggle')
   allowInput.checked = opts.allowUpdateCheck
   allowInput.addEventListener('change', () => opts.onToggleAllow(allowInput.checked))
   allowRow.appendChild(allowInput)
   section.appendChild(allowRow)
 
   // Update item rows
-  for (const item of opts.items) {
-    const cached = opts.analyses?.get(item.kind)
-    renderUpdateRow(section, item, { onAnalyze: opts.onAnalyze, analysis: cached })
-  }
+  renderDeveloperUpdateItems(section, {
+    items: opts.items,
+    onAnalyze: opts.onAnalyze,
+    analyses: opts.analyses,
+  })
 
   return section
 }

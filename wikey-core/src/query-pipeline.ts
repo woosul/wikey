@@ -12,6 +12,10 @@ import {
   defaultOramaCachePath,
 } from './search/orama-index-singleton.js'
 import type { KoreanTokenizerHandle } from './search/orama-index.js'
+import type { QueryIntentFilter } from './search/query-intent-filter.js'
+import type { QueryRewriter } from './search/query-rewriter.js'
+import type { QueryExpander } from './search/query-expander.js'
+import type { VaultQueryHint } from './config/vault-query-config.js'
 
 const execFileAsync = promisify(execFile)
 
@@ -41,6 +45,18 @@ export interface QueryOptions {
    * onload 시 createKoreanTokenizer + 본 옵션 forward.
    */
   readonly tokenizerOverride?: KoreanTokenizerHandle
+  /**
+   * §5.7.8 Spec 2 — optional query intent filter. When present, the Orama search call
+   * runs the LLM-driven token role classifier before BM25. Absent → legacy path
+   * (Spec invariant I7 backward compat).
+   */
+  readonly filter?: QueryIntentFilter
+  /** §5.7.8 Spec 5 — optional rewriter (synonym substitution). Requires `filter`. */
+  readonly rewriter?: QueryRewriter
+  /** §5.7.8 Spec 5 — optional expander (HyDE / multi-query). Independent of rewriter. */
+  readonly expander?: QueryExpander
+  /** §5.7.8 Spec 6 — vault-supplied hint forwarded to the filter LLM. */
+  readonly vaultHint?: VaultQueryHint
 }
 
 export async function query(
@@ -436,7 +452,16 @@ export async function execOramaSearch(
     }
   }
 
-  return handle.search(term, { topN })
+  // §5.7.8 — propagate optional filter / rewriter / expander / vaultHint when supplied.
+  // Absent → legacy single-query path (Spec invariant I7). Each layer is fail-open inside
+  // `orama-index.search` (Spec invariant I8).
+  return handle.search(term, {
+    topN,
+    filter: opts?.filter,
+    rewriter: opts?.rewriter,
+    expander: opts?.expander,
+    vaultHint: opts?.vaultHint,
+  })
 }
 
 export function parseQmdOutput(stdout: string): readonly SearchResult[] {

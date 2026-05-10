@@ -1357,22 +1357,28 @@ sub-목표:
 
 ---
 
-## 5.7.8 LLM per-query dynamic stopword — paradigm shift (P3, 2026-05-10 신설 후보 → **plan APPROVE 2026-05-10 session 33**)
+## 5.7.8 LLM per-query dynamic stopword — paradigm shift (P3, 2026-05-10 신설 후보 → **plan APPROVE → SDD+TDD 종결 v1.4 2026-05-10 session 34**)
 
-> **plan 단일 소스 (v1.3 APPROVE)**: [`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](./phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.3 (Spec, AC 20 + Risk 15 + Open Q 6 LOCKED) + [`plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](./phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.3 (Todo, Step A~D + 변경 면 ≤ 18 file).
+> **plan + impl 단일 소스 (v1.4)**: [`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](./phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 (Spec, AC 20 + Risk 15 + Open Q 6 LOCKED) + [`plan/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](./phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.4 (Todo, Step A~D + 변경 면 ≤ 20 file). 활동 evidence: [`activity/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md`](../../activity/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md).
 >
-> **검증 결과 (commit `922cd6d`, 2026-05-10 session 33)**: codex Cycle #1~#5 NEEDS_REVISION → master Cycle #1~#5 fix loop (점진 수렴 7→6→6→3→2 finding) → **codex Cycle #6 APPROVE_WITH_NOTES** (잔존 LOW 1 — cycle-tracking stale — sweep 완료).
+> **post-impl 검증 결과 (2026-05-10 session 34)**: codex multi-cycle fix loop (점진 수렴, 모든 finding closed) → 종결. 정확 cycle/finding history = `phase-5-spec-5.7.8-llm-dynamic-stopword.md` v1.4 변경 이력 row + `activity/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md`.
 >
-> **paradigm v1.3 핵심**: 사용자 raise (2026-05-10) 따라 Q6 v1.2 (의료/법률 query 사전 결정) ABANDON paradigm violation + auto-extend mechanism 도입 (query+answer LLM 자동 분석 → benchmark suite 자동 등록 + LLM 자율 domain 분류 + 수동 trigger "Run query analysis"). hardcoded domain list 0건 (anchor (k) 강화).
+> **paradigm v1.4 핵심**:
+> - LLM per-query intent filter + rewriter (synonym substitution) + expander (HyDE / multi-query) — wikey schema "LLM 참여형 다층 검색" 1단계 완전 구현
+> - vault customize (`.wikey/query-filter.yaml` + `.wikey/prompts/*.prompt.md`) — Yours / File over app 강화
+> - Advanced query tuning settings UI — 2 dropdown provider+model + advanced section + per-query override (`!nofilter` syntax) + metadata badge
+> - auto-extend mechanism (query+answer LLM 자동 분석 + 수동 trigger "Run query analysis", N=5 default + cursor-based race-free)
+> - file-based JSON LRU cache (`~/.cache/wikey/query-intent-cache/<namespace>.json`) — option B 채택, 신규 native dep 0
+> - hardcoded domain list 0건 (anchor (k) 강화)
 >
-> **Open Q 6 LOCKED**: Q1 provider+model 2 dropdown / Q2 SQLite cache / Q3 5s timeout / Q4 opt-in / Q5 §1.4 안내문구 잠금 / Q6 v1.3 auto-extend trigger N=5 default.
+> **검증 evidence**: wikey-core 781/784 + wikey-obsidian 100/100 PASS / tsc strict + build clean / validate-wiki + check-licenses + check-kiwi-vendor-sync PASS / anchor (k) 0 hit / baseline 회귀 0 (Top-1 66.7% / Top-3 86.3% / MRR 0.829 — §5.7.6 baseline byte-equal). augmented path 코드 구현 (`WIKEY_BENCHMARK_LAYERS=filter,rewrite,expand` env) — 임계 측정 (Top-1 ≥ 70%) 사용자 수동 (real Gemini API + credentials.json 보안 정책).
 >
-> **다음 단계**: 사용자 승인 시 SDD+TDD 진입 (Step A 환경 → Step B TDD RED/GREEN/BLUE → Step C 라이브 cycle smoke → Step D 문서 동기화). 또는 Phase 5 잔여 (§5.5 / §5.6 / §5.7.7 / §5.8 / §5.9) 우선순위 사용자 결정.
-> tag: #search, #stopword, #llm-judgment, #per-query, #paradigm-shift, #phase5-deferred
+> **다음 단계**: Phase 5 잔여 (§5.5 / §5.6 / §5.7.7 / §5.8 / §5.9) 진행 결정.
+> tag: #search, #stopword, #llm-judgment, #per-query, #paradigm-shift, #vault-customize, #ci-integration, #sdd-tdd-completed
 
-> **상태**: 신설 후보 — §5.7.6 (static stopword paradigm) abandon 후 *올바른 paradigm* 으로 신설. 사용자 명시 (2026-05-10): "stopword 등록된 단어라 하더라도, 질문의 유형에 따라 넣고 빼고가 결정되어야 함. 등록 단어의 일방적 삭제는 위험."
+> **상태**: 🟢 SDD+TDD 종결 (v1.4, 2026-05-10 session 34). §5.7.6 (static stopword paradigm) abandon 후 *올바른 paradigm* 으로 신설 → impl + post-impl codex multi-cycle fix loop → 모든 finding closed. 사용자 명시 (2026-05-10): "stopword 등록된 단어라 하더라도, 질문의 유형에 따라 넣고 빼고가 결정되어야 함. 등록 단어의 일방적 삭제는 위험."
 >
-> **단일 소스**: 본 todo 섹션 (paradigm 정의 + spec preview). 진입 결정 시 별 spec/todox (`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md` + `phase-5-todox-5.7.8-llm-dynamic-stopword.md`) 작성 의무.
+> **단일 소스**: spec/todox (`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md` v1.4 + `phase-5-todox-5.7.8-llm-dynamic-stopword.md` v1.4) + 활동 evidence (`activity/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md`). 본 todo section = phase-5-todo 안 §5.7.8 paradigm 정의 reference (cycle history = spec/todox v1.4 history rows + resultx fix mapping + phase-5-result §5.7.8 entry).
 >
 > **선행 cycle**: §5.7.6 abandon 결과물 — 51 query benchmark suite (`wikey-core/eval/benchmark-suite.json`, 5 도메인 균형) + benchmark runner (`wikey-core/src/scripts/benchmark-search.ts`, export injection 분리) + tsx devDep + npm script `benchmark:search`. 본 §5.7.8 가 평가 도구로 활용.
 
@@ -1474,7 +1480,39 @@ sub-목표:
 - benchmark runner (`benchmark-search.ts`) ✅ (§5.7.6 결과물)
 - Ollama local + model (gemma4 또는 qwen3.6) ✅
 
-후속 cycle: §5.5 / §5.6 / §5.7.7 (HYBRID) / §5.8 / §5.9 와 독립.
+후속 cycle: §5.5 / §5.6 / §5.7.7 (HYBRID) / §5.8 / §5.9 와 독립. **§5.7.9 신설 (gemini thinking + Spec I8 정의 명확화) — 본 §5.7.8 라이브 비교 검증 결과 trigger.**
+
+---
+
+## 5.7.9 gemini-2.5 thinking compatibility + Spec I8 정의 명확화 (P3, 2026-05-10 session 34) ✅ 종결
+
+> **단일 소스**: [`plan/phase-5/phase-5-spec-5.7.9-gemini-thinking-and-latency-clarify.md`](./phase-5-spec-5.7.9-gemini-thinking-and-latency-clarify.md) v1.0 (mid-sized 합본 spec/todo). 활동 evidence: [`activity/phase-5/phase-5-result.md`](../../activity/phase-5/phase-5-result.md) §5.7.9.
+
+> **Trigger**: §5.7.8 v1.5 라이브 비교 검증 (10 query × 3 mode, master CDP 직접) 결과 PASS-A 7/10 (gemini-2.5-flash thinking 모드 default maxTokens=500 소진 → 응답 절단) + PASS-C 정의 모호 → §5.7.9.1 (CRITICAL) + §5.7.9.2 (HIGH) 합본 cycle.
+
+### 5.7.9.0 종결 상태
+
+- 5 step (type extend / callGemini config / advanced tuning callOptions / Spec I8 mirror / 회귀+CDP verify) 모두 PASS
+- 4 invariant (I1 thinking opt-out / I2 advanced tuning default / I3 other provider neutral / I4 Spec I8 mirror) 충족
+- 5 AC (AC-1~5) 충족
+- 변경 면: wikey-core 2 file (types.ts + llm-client.ts) + wikey-obsidian 1 file (main.ts) + spec 1 file (5.7.8 v1.5 mirror) + test 2 file = 6 file
+- test: wikey-core 784/787 + wikey-obsidian 102/102 / tsc strict + build 0 / CDP 라이브 verify default maxTokens=500 latency 1293ms ≤ 1500ms target / fallback 'none' / cache filter.json 생성
+
+### 5.7.9.1 candidate #1 (CRITICAL) — gemini-2.5 thinkingBudget=0 ✅ 종결
+
+§5.7.9 spec 본문 참조. 요약: gemini-2.5 시리즈의 default thinking 모드가 maxTokens 안에서 소비 → wikey advanced query tuning 4 layer 의 짧은 JSON 응답 절단. callGemini generationConfig 안 `thinkingConfig: { thinkingBudget: 0 }` 명시 시 정상 동작. 다른 provider neutral.
+
+### 5.7.9.2 candidate #2 (HIGH) — Spec I8 latency 정의 명확화 ✅ 종결
+
+§5.7.8 spec v1.4 → v1.5 mirror: line 91 trade-off + line 235 안내 본문에 *"분석 LLM (filter/rewriter/expander) only — 답변 LLM (chat synthesis) 별 측정"* 명시. invariant / AC 변경 0.
+
+### 5.7.9.3 candidate #3~#5 별 cycle 예약 (사용자 결정 의뢰)
+
+- **#3 HIGH** — vault hygiene: 한↔영 slug alias 통합 (`프로젝트-원가-관리` ↔ `project-cost-management` 등). `.wikey/schema.yaml aliases:` 활용.
+- **#4 MED** — HyDE expand false positive 회피 (e.g., `semantic search` → `hallucination-guard` 회귀 사례). vault index context injection 또는 confidence threshold.
+- **#5 MED** — 답변 LLM citation 우선순위 정렬 (rewrite layer hit 보장).
+
+후속 cycle: §5.5 / §5.6 / §5.7.7 (HYBRID) / §5.8 / §5.9 / §5.7.9 candidate #3~#5 결정 의뢰 보류.
 
 ---
 

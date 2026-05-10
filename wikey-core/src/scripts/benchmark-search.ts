@@ -14,7 +14,7 @@
  * Spec: phase-5-spec-5.7.6-search-quality-tuning.md §3.4.
  */
 
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -26,7 +26,22 @@ import {
   defaultOramaCachePath,
   disposeOramaIndex,
 } from '../search/orama-index-singleton.js'
-import type { SearchResult } from '../types.js'
+import type { HttpClient, HttpRequestOptions, HttpResponse, SearchResult, WikeyConfig } from '../types.js'
+import { LLMClient } from '../llm-client.js'
+import { loadConfig } from '../config.js'
+import { QueryFilterCache } from '../search/query-filter-cache.js'
+import {
+  QueryIntentFilter,
+  BUNDLED_QUERY_INTENT_FILTER_PROMPT,
+} from '../search/query-intent-filter.js'
+import {
+  QueryRewriter,
+  BUNDLED_QUERY_REWRITER_PROMPT,
+} from '../search/query-rewriter.js'
+import {
+  QueryExpander,
+  BUNDLED_QUERY_EXPANDER_PROMPT,
+} from '../search/query-expander.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -124,19 +139,80 @@ export async function runBenchmark(
     results.push(computeQueryResult(q, hits))
   }
 
-  const { top1, top3 } = reportResults(opts.suitePath, results)
+  const { top1, top3, meanMrr } = reportResults(opts.suitePath, results)
 
   const total = results.length
   const top1Min = Number(process.env.WIKEY_BENCHMARK_TOP1_MIN ?? '0.7')
   const top3Min = Number(process.env.WIKEY_BENCHMARK_TOP3_MIN ?? '0.85')
-  const pass =
-    total > 0 && top1 / total >= top1Min && top3 / total >= top3Min
+  // §5.7.8 Finding 4 fix — MRR threshold gate. Spec §1.3 baseline: ≥ 0.85 augmented;
+  // CI baseline (filter OFF) protects against ≥ 0.8 regression. env override lets
+  // augmented runs raise the bar without code change.
+  const mrrMin = Number(process.env.WIKEY_BENCHMARK_MRR_MIN ?? '0.85')
+  const top1Pass = total > 0 && top1 / total >= top1Min
+  const top3Pass = total > 0 && top3 / total >= top3Min
+  const mrrPass = total > 0 && meanMrr >= mrrMin
+  const pass = top1Pass && top3Pass && mrrPass
   if (!pass) {
     console.error(
-      `[FAIL] Regression — Top-1=${top1}/${total} (min ${top1Min}) or Top-3=${top3}/${total} (min ${top3Min})`,
+      `[FAIL] Regression — Top-1=${top1}/${total} (min ${top1Min}) / Top-3=${top3}/${total} (min ${top3Min}) / MRR=${meanMrr.toFixed(3)} (min ${mrrMin})`,
     )
   }
   return { pass, results }
+}
+
+/**
+ * §5.7.8 AC-L1 — minimal Node-native HttpClient for the augmented benchmark path.
+ * Only implements what `LLMClient.callGemini` exercises (POST + JSON body + timeout).
+ */
+class NodeHttpClient implements HttpClient {
+  async request(url: string, opts: HttpRequestOptions): Promise<HttpResponse> {
+    const ctrl = new AbortController()
+    const timer = opts.timeout ? setTimeout(() => ctrl.abort(), opts.timeout) : null
+    try {
+      const res = await fetch(url, {
+        method: opts.method,
+        headers: opts.headers,
+        body: opts.body,
+        signal: ctrl.signal,
+      })
+      const body = await res.text()
+      return { status: res.status, body }
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
+  }
+}
+
+/**
+ * §5.7.8 AC-L1 — augmented benchmark path. Activated by env
+ *   WIKEY_BENCHMARK_LAYERS=filter,rewrite,expand
+ * Each layer is constructed lazily; missing GEMINI_API_KEY → skip with warning.
+ */
+function buildLayerStack(httpClient: HttpClient, config: WikeyConfig) {
+  const layers = (process.env.WIKEY_BENCHMARK_LAYERS ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+  if (layers.length === 0) return undefined
+  if (!config.GEMINI_API_KEY) {
+    console.warn('[benchmark] WIKEY_BENCHMARK_LAYERS set but GEMINI_API_KEY missing — augmented path skipped.')
+    return undefined
+  }
+  const llm = new LLMClient(httpClient, config)
+  const cacheRoot = join(homedir(), '.cache/wikey/query-intent-cache-bench')
+  mkdirSync(cacheRoot, { recursive: true })
+  const cache = new QueryFilterCache({ root: cacheRoot, capacity: 5000 })
+  const callOptions = { provider: 'gemini' as const, temperature: 0, maxTokens: 800, timeout: 5000 }
+  // simple tokenize — used only by cache-key normalization; backend Orama search uses Kiwi.
+  const tokenize = (q: string) => q.toLowerCase().split(/\s+/).filter(Boolean)
+  const filter = layers.includes('filter')
+    ? new QueryIntentFilter({ llm, cache, promptTemplate: BUNDLED_QUERY_INTENT_FILTER_PROMPT, llmCallOptions: callOptions, tokenize })
+    : undefined
+  const rewriter = layers.includes('rewrite')
+    ? new QueryRewriter({ llm, cache, promptTemplate: BUNDLED_QUERY_REWRITER_PROMPT, llmCallOptions: callOptions })
+    : undefined
+  const expander = layers.includes('expand')
+    ? new QueryExpander({ llm, cache, promptTemplate: BUNDLED_QUERY_EXPANDER_PROMPT, llmCallOptions: callOptions })
+    : undefined
+  console.log(`[benchmark] augmented path: filter=${!!filter} rewrite=${!!rewriter} expand=${!!expander}`)
+  return { filter, rewriter, expander }
 }
 
 async function defaultSearchFn(): Promise<RunBenchmarkOpts['searchFn']> {
@@ -168,6 +244,14 @@ async function defaultSearchFn(): Promise<RunBenchmarkOpts['searchFn']> {
     tokenizer,
   })
   await handle.restore()
+  // §5.7.8 AC-L1 — when WIKEY_BENCHMARK_LAYERS env present, wrap search with the
+  // filter/rewriter/expander layers (uses the live Gemini API). Otherwise legacy.
+  const httpClient = new NodeHttpClient()
+  const config = loadConfig(process.cwd())
+  const layerOpts = buildLayerStack(httpClient, config)
+  if (layerOpts) {
+    return async (query, topN) => handle.search(query, { topN, ...layerOpts })
+  }
   return async (query, topN) => handle.search(query, { topN })
 }
 

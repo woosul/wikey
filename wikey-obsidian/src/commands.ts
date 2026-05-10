@@ -95,6 +95,17 @@ export function registerCommands(plugin: WikeyPlugin): void {
   // §5.7.5 — §5.7.2 PoC commands cleaned up (Karpathy Simplicity, master 잠금).
   // 3 commands (`wikey-poc-orama-test`, `wikey-poc-kiwi-orama`, `wikey-poc-orama-benchmark`)
   // 제거 + wikey-obsidian deps (`kiwi-nlp`, `@orama/orama`) 제거.
+
+  // §5.7.8 Spec 3 / AC-S4 — manual "Run query analysis" trigger. Pulls accumulated
+  // (query, answer) pairs from chat history, calls the analyzer LLM, and appends
+  // schema-compatible entries to `wikey-core/eval/benchmark-suite.json`. Fail-open.
+  plugin.addCommand({
+    id: 'wikey-run-query-analysis',
+    name: 'Wikey: Run query analysis (auto-extend benchmark suite)',
+    callback: () => {
+      void plugin.runQueryAnalysis()
+    },
+  })
 }
 
 

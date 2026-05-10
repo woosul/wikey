@@ -149,6 +149,20 @@ export class TFolder {
 
 export class Vault {
   private files = new Map<string, string>()
+  // §5.7.8 — minimal `adapter` surface used by the plugin's `basePath` lookup and
+  // `runQueryAnalysis` prompt-override read. Tests can mutate `adapter.basePath`
+  // directly; `exists/read` default to "no override" so production paths are taken.
+  adapter: {
+    basePath: string
+    exists: (p: string) => Promise<boolean>
+    read: (p: string) => Promise<string>
+    write: (p: string, c: string) => Promise<void>
+  } = {
+    basePath: '',
+    async exists() { return false },
+    async read() { throw new Error('mock vault adapter read — not stubbed') },
+    async write() { /* no-op */ },
+  }
 
   async read(file: TFile): Promise<string> {
     const content = this.files.get(file.path)
@@ -270,6 +284,25 @@ export class Plugin {
   registerInterval(_id: number): void { /* no-op */ }
   addCommand(_cmd: unknown): void { /* no-op */ }
   addRibbonIcon(_icon: string, _title: string, _cb: () => void): void { /* no-op */ }
+  addSettingTab(_tab: unknown): void { /* no-op */ }
+  registerView(_type: string, _factory: (leaf: unknown) => ItemView): void { /* no-op */ }
+  registerObsidianProtocolHandler(_action: string, _cb: (params: Record<string, string>) => void): void { /* no-op */ }
+  async loadData(): Promise<unknown> { return {} }
+  async saveData(_data: unknown): Promise<void> { /* no-op */ }
+}
+
+// §5.7.8 — minimal `PluginSettingTab` stub so `main.ts → settings-tab.ts` import chain
+// resolves under happy-dom. The tab class is never opened in unit tests (we assert on
+// settings-tab source via grep). Constructor + display() are sufficient.
+export class PluginSettingTab {
+  app: App
+  containerEl: HTMLElement
+  constructor(app: App, _plugin: unknown) {
+    this.app = app
+    this.containerEl = document.createElement('div')
+  }
+  display(): void { /* override */ }
+  hide(): void { /* override */ }
 }
 
 export class Modal {

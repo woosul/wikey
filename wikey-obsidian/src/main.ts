@@ -17,6 +17,23 @@ import {
   disposeOramaIndex,
   detectUpstreamUpdates,
   analyzeUpdate,
+  QueryAnalyzer,
+  appendEntriesToSuite,
+  QueryIntentFilter,
+  QueryRewriter,
+  QueryExpander,
+  QueryFilterCache,
+  loadVaultQueryConfig,
+  EMPTY_VAULT_QUERY_HINT,
+  BUNDLED_QUERY_INTENT_FILTER_PROMPT,
+  BUNDLED_QUERY_REWRITER_PROMPT,
+  BUNDLED_QUERY_EXPANDER_PROMPT,
+  BUNDLED_QUERY_ANALYZER_PROMPT,
+  resolveProvider,
+  type QueryAnswerPair,
+  type AnalyzeResult,
+  type VaultQueryHint,
+  type LoadVaultQueryConfigResult,
 } from 'wikey-core'
 import type {
   KoreanTokenizerHandle,
@@ -95,6 +112,26 @@ interface WikeySettings {
   // allowUpdateCheck = plugin onload 시 외부 source fetch 동의 (default false).
   developerMode: boolean
   allowUpdateCheck: boolean
+  // ── §5.7.8 Advanced query tuning (LLM per-query dynamic stopword paradigm) ──
+  // All eight fields are opt-in (default OFF / DEFAULTS) so existing users see no
+  // behavior change (Spec invariant I7 / I16). See `renderAdvancedQueryTuningSection`
+  // in settings-tab.ts and the §1.4 default 권고 안내문구 for control semantics.
+  advancedQueryTuningEnabled: boolean
+  advancedQueryTuningMode: 'off' | 'filter-only' | 'filter-rewrite' | 'filter-rewrite-expand'
+  advancedQueryTuningTimeoutMs: number
+  advancedQueryTuningCacheSize: number
+  advancedQueryTuningProvider: string
+  advancedQueryTuningModel: string
+  advancedQueryTuningTemperature: number
+  advancedQueryTuningMaxTokens: number
+  /** §5.7.8 Spec 3 Q6 v1.3 — auto-extend trigger threshold (1~50). */
+  advancedQueryTuningAutoExtendThreshold: number
+  /**
+   * §5.7.8 Spec 3 I11 — high-water mark cursor. Index into `chatHistory` immediately
+   * past the last (query, answer) pair already analysed. Used by the auto-extend
+   * trigger to avoid double-analysing pairs across reloads. Default 0.
+   */
+  advancedQueryTuningLastAnalyzedIndex: number
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -132,9 +169,169 @@ const DEFAULT_SETTINGS: WikeySettings = {
   searchEngine: 'orama',
   developerMode: false,
   allowUpdateCheck: false,
+  // §5.7.8 — advanced query tuning defaults. OFF / DEFAULTS to preserve I7 backward compat.
+  advancedQueryTuningEnabled: false,
+  advancedQueryTuningMode: 'filter-only',
+  advancedQueryTuningTimeoutMs: 5000,
+  advancedQueryTuningCacheSize: 1000,
+  advancedQueryTuningProvider: '',
+  advancedQueryTuningModel: '',
+  advancedQueryTuningTemperature: 0.0,
+  advancedQueryTuningMaxTokens: 500,
+  advancedQueryTuningAutoExtendThreshold: 5,
+  advancedQueryTuningLastAnalyzedIndex: 0,
 }
 
 export type { WikeySettings }
+
+/**
+ * §5.7.8 Spec 3 I11 helper — count the (user → assistant) pairs in `history` whose
+ * *user* index is ≥ `cursor`. Exported (and pure) so the auto-extend trigger and unit
+ * tests share one definition. Returning a number rather than the pairs themselves
+ * keeps the trigger path allocation-free for the common "below threshold" case.
+ */
+export function countQueryAnswerPairs(
+  history: ReadonlyArray<{ role: 'user' | 'assistant' | 'error'; content: string }>,
+  cursor: number,
+): number {
+  let count = 0
+  for (let i = Math.max(0, cursor); i < history.length - 1; i += 1) {
+    const cur = history[i]
+    const next = history[i + 1]
+    if (
+      cur.role === 'user' &&
+      next.role === 'assistant' &&
+      cur.content.trim().length > 0 &&
+      next.content.trim().length > 0
+    ) {
+      count += 1
+    }
+  }
+  return count
+}
+
+/**
+ * §5.7.8 Spec 4 + Cycle #1 Finding 1 + Cycle #2 Finding 2 — pure helper that resolves
+ * the filter LLMCallOptions from settings + base wikey config. Extracted from
+ * `WikeyPlugin.buildFilterCallOptions` so the test surface exercises the *real* logic
+ * (Q1 LOCKED DEFAULT inherit) and a regression in either branch is caught by unit tests.
+ *
+ * Provider/model precedence:
+ *   1. Explicit override (`advancedQueryTuningProvider` non-empty) → use as-is.
+ *   2. DEFAULT (override empty) → `resolveProvider('default', baseConfig)` so the user's
+ *      `WIKEY_BASIC_MODEL` (ollama / claude-code / gemini …) is inherited verbatim
+ *      instead of LLMClient's hardcoded `'gemini'` fallback.
+ *
+ * Settings shape is narrow (only the 5 advanced-query-tuning fields the helper needs)
+ * to keep the public signature stable across future settings additions.
+ */
+export interface FilterCallOptionsInputs {
+  readonly advancedQueryTuningProvider: string
+  readonly advancedQueryTuningModel: string
+  readonly advancedQueryTuningTemperature: number
+  readonly advancedQueryTuningMaxTokens: number
+  readonly advancedQueryTuningTimeoutMs: number
+}
+
+export interface FilterCallOptionsResult {
+  provider?: 'gemini' | 'anthropic' | 'openai' | 'ollama'
+  model?: string
+  temperature: number
+  maxTokens: number
+  timeout: number
+  /** §5.7.9 I2 — gemini-2.5 thinking opt-out for advanced query tuning. */
+  thinkingBudget?: number
+}
+
+/**
+ * §5.7.8 Cycle #3 F1 — `runQueryAnalysis` return shape. Carries the analyzer's own
+ * outcome AND the suite-append result so the auto-extend trigger does not have to
+ * read a plugin-global field (which races under concurrent runs).
+ */
+export interface RunQueryAnalysisResult {
+  readonly entries: AnalyzeResult['entries']
+  // Cycle #6 F1 — fallback union widened to include `'invalidated'` (returned when
+  // the append-time generation guard aborts side effects). Forward declaration of
+  // AnalyzerFallbackTag below — TypeScript hoists the type alias through the file.
+  readonly fallback: AnalyzerFallbackTag
+  readonly latencyMs: number
+  readonly appendOutcome: SuiteAppendOutcome
+  readonly entriesAppended: number
+}
+
+/**
+ * §5.7.8 Cycle #2 Finding 1 — cursor-advance decision for auto-extend.
+ *
+ * Returns true only when the analyzer reports `'none'` (success) AND the suite append
+ * (when entries were produced) raised no error. `runQueryAnalysis` swallows append
+ * errors via `console.warn`, so we additionally require the caller to pass the
+ * observed append outcome.
+ *
+ * Pure helper — exposed for unit tests and the auto-extend trigger to share one
+ * definition. No I/O / no side effects.
+ */
+export type AnalyzerFallbackTag = 'none' | 'llm-fail' | 'timeout' | 'invalidated'
+export type SuiteAppendOutcome = 'ok' | 'append-error' | 'no-entries' | 'skipped'
+
+export function shouldAdvanceAutoExtendCursor(
+  analyzerFallback: AnalyzerFallbackTag,
+  suiteAppend: SuiteAppendOutcome,
+): boolean {
+  if (analyzerFallback !== 'none') return false
+  if (suiteAppend === 'append-error') return false
+  if (suiteAppend === 'skipped') return false
+  return true
+}
+
+/**
+ * §5.7.8 Cycle #6 F1 — generation token for `runQueryAnalysis`. The auto-extend
+ * trigger captures its dispatch generation and asks the analyzer to abort the
+ * suite-append + Notice side effects when the live counter has drifted (e.g. by
+ * a `clearChat()` between dispatch and analyzer resolution).
+ *
+ * The token is intentionally simple — caller-supplied `gen` snapshot + `current()`
+ * accessor so the analyzer reads the fresh value at the moment of the check.
+ * Manual triggers (commands.ts / settings-tab.ts) omit the token → never aborted.
+ */
+export interface GenerationToken {
+  readonly gen: number
+  readonly current: () => number
+}
+
+export function buildFilterCallOptionsFromSettings(
+  settings: FilterCallOptionsInputs,
+  baseConfig: WikeyConfig,
+): FilterCallOptionsResult {
+  const overrideProvider = settings.advancedQueryTuningProvider
+  const overrideModel = settings.advancedQueryTuningModel
+  let provider: FilterCallOptionsResult['provider']
+  let model: string | undefined
+
+  if (overrideProvider) {
+    provider = overrideProvider as FilterCallOptionsResult['provider']
+    model = overrideModel || undefined
+  } else {
+    // DEFAULT — inherit vault's basic model via resolveProvider.
+    try {
+      const resolved = resolveProvider('default', baseConfig)
+      provider = resolved.provider
+      model = overrideModel || resolved.model
+    } catch (err) {
+      // resolveProvider should never throw on 'default'; this is paranoia.
+      console.warn('[Wikey] resolveProvider("default") failed:', err)
+    }
+  }
+  return {
+    provider,
+    model,
+    temperature: settings.advancedQueryTuningTemperature,
+    maxTokens: settings.advancedQueryTuningMaxTokens,
+    timeout: settings.advancedQueryTuningTimeoutMs,
+    // §5.7.9 I2 — advanced query tuning 4 layer (filter / rewriter / expander /
+    // analyzer) 모두 결정적 짧은 JSON. thinking off 로 gemini-2.5-* 호환 + cost 절약.
+    thinkingBudget: 0,
+  }
+}
 
 /**
  * Heuristic check: does `model` belong to `provider`'s model family?
@@ -182,6 +379,27 @@ export default class WikeyPlugin extends Plugin {
   // Phase 4 D.0.e (v6 §4.3) — idempotent flag. onLayoutReady 가 한 번 이상 호출될 수 있고,
   // 1500ms fallback 이 실제 layout-ready 보다 먼저 돌 수 있어 재진입 방어 필요.
   private startupReconcileDone = false
+
+  // §5.7.8 — lazy plugin-scope singletons for the LLM-driven query layers. Constructed
+  // on first ON-toggled query; nullified on settings change so a new provider/model
+  // takes effect without an Obsidian reload. Cache file root persists across reloads.
+  private queryFilterCache: QueryFilterCache | null = null
+  private queryFilterCacheCapacity = 0
+  private queryFilterInstance: QueryIntentFilter | null = null
+
+  // §5.7.8 Cycle #5 F1 (a) — auto-extend generation counter. Bumped at every dispatch
+  // and at every invalidation event (e.g. `clearChat`). Each in-flight analyzer captures
+  // its generation at dispatch time; the success path writes the cursor only when the
+  // captured generation still matches `autoExtendGeneration` — late-completing runs from
+  // an invalidated session no-op cleanly.
+  autoExtendGeneration = 0
+  private queryRewriterInstance: QueryRewriter | null = null
+  private queryExpanderInstance: QueryExpander | null = null
+  private queryFilterLLMSignature = '' // provider|model|temp|maxTokens — invalidates layers on change.
+  private vaultQueryConfigCache: LoadVaultQueryConfigResult | null = null
+  // (§5.7.8 Cycle #2 F1 plugin-global `lastQueryAnalysisAppendOutcome` field removed
+  // in Cycle #3 F1 — replaced by per-call return value on `runQueryAnalysis` to avoid
+  // races when concurrent auto-extend runs overlap.)
 
   // §5.7.4 codex cycle #1 HIGH-1 fix — production query 의 Korean tokenizer lazy promise
   // cache. 첫 query 시 init (1~2s), 후속 호출은 await 만. onunload 시 close.
@@ -627,6 +845,19 @@ export default class WikeyPlugin extends Plugin {
 
     // 4. 대화 히스토리는 세션별 초기화 (재시작/reload 시 빈 상태 — §4.0 요구)
     this.chatHistory = []
+
+    // §5.7.8 Cycle #4 F1 — auto-extend cursor recovery. The cursor is an absolute
+    // index into `chatHistory`; after the per-session reset above (or any external
+    // mutation that shrinks history), a stale cursor would silently disable the
+    // auto-extend trigger. Cap to current length defensively + persist.
+    const cursor = this.settings.advancedQueryTuningLastAnalyzedIndex ?? 0
+    if (cursor > this.chatHistory.length) {
+      this.settings = {
+        ...this.settings,
+        advancedQueryTuningLastAnalyzedIndex: this.chatHistory.length,
+      }
+      await this.saveData(this.buildPluginOnlyData())
+    }
   }
 
   async saveSettings() {
@@ -640,6 +871,14 @@ export default class WikeyPlugin extends Plugin {
     await this.saveData(this.buildPluginOnlyData())
 
     this.llmClient = new LLMClient(this.httpClient, this.buildConfig())
+
+    // §5.7.8 — invalidate the cached vault config + filter layers so a settings change
+    // (provider override, mode toggle, vault yaml edit) takes effect on the next query.
+    this.vaultQueryConfigCache = null
+    this.queryFilterInstance = null
+    this.queryRewriterInstance = null
+    this.queryExpanderInstance = null
+    this.queryFilterLLMSignature = ''
   }
 
   private get credentialsPath(): string {
@@ -742,6 +981,18 @@ export default class WikeyPlugin extends Plugin {
       // §5.7.5 — Developer mode (settings 토글, opt-in).
       developerMode: this.settings.developerMode,
       allowUpdateCheck: this.settings.allowUpdateCheck,
+      // §5.7.8 — Advanced query tuning (8 fields). Persisted in data.json so each
+      // plugin reload restores the user-chosen mode / provider / threshold values.
+      advancedQueryTuningEnabled: this.settings.advancedQueryTuningEnabled,
+      advancedQueryTuningMode: this.settings.advancedQueryTuningMode,
+      advancedQueryTuningTimeoutMs: this.settings.advancedQueryTuningTimeoutMs,
+      advancedQueryTuningCacheSize: this.settings.advancedQueryTuningCacheSize,
+      advancedQueryTuningProvider: this.settings.advancedQueryTuningProvider,
+      advancedQueryTuningModel: this.settings.advancedQueryTuningModel,
+      advancedQueryTuningTemperature: this.settings.advancedQueryTuningTemperature,
+      advancedQueryTuningMaxTokens: this.settings.advancedQueryTuningMaxTokens,
+      advancedQueryTuningAutoExtendThreshold: this.settings.advancedQueryTuningAutoExtendThreshold,
+      advancedQueryTuningLastAnalyzedIndex: this.settings.advancedQueryTuningLastAnalyzedIndex,
     }
   }
 
@@ -784,11 +1035,444 @@ export default class WikeyPlugin extends Plugin {
     if (!this.settings.persistChatHistory) return
     if (this.chatSaveTimer) clearTimeout(this.chatSaveTimer)
     this.chatSaveTimer = setTimeout(() => {
-      const MAX = 100
-      const trimmed = this.chatHistory.length > MAX ? this.chatHistory.slice(-MAX) : [...this.chatHistory]
-      this.settings = { ...this.settings, savedChatHistory: trimmed }
-      this.saveData(this.buildPluginOnlyData())
+      this.commitChatSave()
     }, 2000)
+  }
+
+  /**
+   * §5.7.8 — synchronous chat-save commit. Used both by the 2s debounce timer (above)
+   * and by `maybeTriggerAutoExtend` to flush any pending pair durable-save *before*
+   * advancing the auto-extend cursor — avoiding the race where a crash leaves the
+   * cursor advanced but the (query, answer) pair window unsaved (Cycle #2 F1 fix).
+   */
+  private commitChatSave(): Promise<void> {
+    if (this.chatSaveTimer) {
+      clearTimeout(this.chatSaveTimer)
+      this.chatSaveTimer = null
+    }
+    if (!this.settings.persistChatHistory) return Promise.resolve()
+    const MAX = 100
+    const trimmed = this.chatHistory.length > MAX ? this.chatHistory.slice(-MAX) : [...this.chatHistory]
+    this.settings = { ...this.settings, savedChatHistory: trimmed }
+    return Promise.resolve(this.saveData(this.buildPluginOnlyData())).then(() => undefined)
+  }
+
+  /**
+   * §5.7.8 Spec 3 — extract `(query, answer)` pairs from the in-memory chat history.
+   * Pairs are formed by adjacent `user` → `assistant` messages; orphans are skipped.
+   *
+   * Cycle #3 F2 fix — accepts a `fromIndex` cursor so callers can request only the
+   * post-cursor window. Without this, the auto-extend trigger would re-feed every
+   * already-analysed pair into the LLM after each cursor advance.
+   */
+  collectChatPairs(fromIndex: number = 0): QueryAnswerPair[] {
+    const pairs: QueryAnswerPair[] = []
+    const start = Math.max(0, fromIndex)
+    for (let i = start; i < this.chatHistory.length - 1; i += 1) {
+      const cur = this.chatHistory[i]
+      const next = this.chatHistory[i + 1]
+      if (cur.role === 'user' && next.role === 'assistant' && cur.content.trim() && next.content.trim()) {
+        pairs.push({ query: cur.content.trim(), answer: next.content.trim() })
+      }
+    }
+    return pairs
+  }
+
+  /**
+   * §5.7.8 — vault-local auto-extended suite. Lives at `<vault>/.wikey/auto-extended-suite.json`
+   * so the 51-query `wikey-core/eval/benchmark-suite.json` baseline (committed, regression
+   * gate) is never mutated by runtime usage. Both files share the runner schema, so a
+   * future merge step can union them.
+   */
+  private autoExtendedSuiteAbsolutePath(): string {
+    const path = require('node:path') as typeof import('node:path')
+    return path.join(this.basePath, '.wikey', 'auto-extended-suite.json')
+  }
+
+  /**
+   * Ensure the auto-extended suite file exists with the runner-compatible shape so that
+   * `appendEntriesToSuite` can mutate it without bootstrapping logic each call.
+   */
+  private ensureAutoExtendedSuite(suitePath: string): void {
+    const fs = require('node:fs') as typeof import('node:fs')
+    const path = require('node:path') as typeof import('node:path')
+    if (fs.existsSync(suitePath)) return
+    fs.mkdirSync(path.dirname(suitePath), { recursive: true })
+    fs.writeFileSync(
+      suitePath,
+      JSON.stringify({
+        version: 1,
+        collection: 'wikey-wiki',
+        created: new Date().toISOString().slice(0, 10),
+        _doc: '§5.7.8 Spec 3 — auto-extended benchmark entries from real chat sessions. Mirrors the runner schema so it can be unioned with the canonical 51-query suite.',
+        queries: [],
+      }, null, 2),
+      'utf-8',
+    )
+  }
+
+  /**
+   * §5.7.8 Spec 3 + AC-S4 — run the LLM analyzer on accumulated chat pairs and append
+   * any returned entries to the **vault-local** auto-extended suite. The 51-query
+   * canonical baseline at `wikey-core/eval/benchmark-suite.json` is never mutated.
+   *
+   * Provider/model resolution (Cycle #1 F1):
+   *   - When the user has not chosen an override (advancedQueryTuningProvider/Model
+   *     both empty), `resolveProvider('default', config)` inherits the vault's basic
+   *     model — so a user with `basicModel='ollama'` runs the analyzer locally.
+   *   - When the override is set, the explicit provider/model is honoured (BYOAI).
+   *
+   * Cycle #3 fixes:
+   *   - F1: returns `RunQueryAnalysisResult` (the analyzer output **plus** the
+   *     append outcome and entriesAppended count) so `maybeTriggerAutoExtend` reads
+   *     its own run's outcome — no plugin-global field, no race when concurrent
+   *     auto-extend runs overlap.
+   *   - F2: accepts `fromIndex` cursor and forwards to `collectChatPairs`. The
+   *     auto-extend trigger now passes the high-water mark so previously analysed
+   *     pairs do not enter the LLM again.
+   *
+   * Cycle #6 F1 — optional `generationToken`. When supplied (auto-extend path), the
+   * analyzer re-checks the token immediately before mutating the vault suite file or
+   * showing a Notice. A `clearChat()` (or other invalidation) between dispatch and
+   * analyzer resolution drifts the live counter; the side effects are skipped and the
+   * caller receives `fallback='invalidated'` + `appendOutcome='skipped'`. Manual
+   * triggers (commands.ts / settings-tab.ts) omit the token and always run end-to-end.
+   *
+   * Fail-open: any analyzer or filesystem error is swallowed + Notice + console.warn.
+   */
+  async runQueryAnalysis(
+    suitePath?: string,
+    fromIndex?: number,
+    generationToken?: GenerationToken,
+  ): Promise<RunQueryAnalysisResult> {
+    const pairs = this.collectChatPairs(fromIndex)
+    if (pairs.length === 0) {
+      new Notice('[Wikey] No (query, answer) pairs in chat history to analyze.')
+      return {
+        entries: [],
+        fallback: 'none',
+        latencyMs: 0,
+        appendOutcome: 'no-entries',
+        entriesAppended: 0,
+      }
+    }
+    // Vault override → bundled fallback. Spec 6 lets users ship their own prompt at
+    // `.wikey/prompts/query-analyzer.prompt.md`; absent, the inlined bundle is used.
+    let promptTemplate = BUNDLED_QUERY_ANALYZER_PROMPT
+    try {
+      const overridePath = '.wikey/prompts/query-analyzer.prompt.md'
+      if (await this.wikiFS.exists(overridePath)) {
+        promptTemplate = await this.wikiFS.read(overridePath)
+      }
+    } catch (err) {
+      console.warn('[Wikey] query-analyzer prompt override read failed, using bundled:', err)
+    }
+    const callOptions = this.buildFilterCallOptions()
+    const analyzer = new QueryAnalyzer({
+      llm: this.buildFilterLLMClient(),
+      promptTemplate,
+      llmCallOptions: callOptions,
+    })
+    let result: AnalyzeResult
+    try {
+      result = await analyzer.analyze(pairs)
+    } catch (err) {
+      console.warn('[Wikey] runQueryAnalysis analyzer threw:', err)
+      new Notice('[Wikey] Query analysis failed — see console.')
+      return {
+        entries: [],
+        fallback: 'llm-fail',
+        latencyMs: 0,
+        appendOutcome: 'no-entries',
+        entriesAppended: 0,
+      }
+    }
+    // Cycle #6 F1 — re-check generation **before** any side effect. If the dispatch
+    // generation has drifted (e.g. clearChat() bumped the counter), skip the suite
+    // append + Notice and surface `'invalidated'` + `'skipped'` to the caller. Vault
+    // file is left untouched; the user does not see a stale "X queries analyzed" toast
+    // for a session they already cleared.
+    if (generationToken && generationToken.gen !== generationToken.current()) {
+      console.info(
+        `[Wikey] auto-extend invalidated before append (gen ${generationToken.gen} != ${generationToken.current()}); skip suite mutation + Notice.`,
+      )
+      return {
+        entries: result.entries,
+        fallback: 'invalidated',
+        latencyMs: result.latencyMs,
+        appendOutcome: 'skipped',
+        entriesAppended: 0,
+      }
+    }
+    // Default suite path — vault-local auto-extended file. Caller may still override.
+    const targetSuite = suitePath ?? this.autoExtendedSuiteAbsolutePath()
+    let added = 0
+    let appendOutcome: SuiteAppendOutcome = 'no-entries'
+    if (result.entries.length > 0) {
+      try {
+        this.ensureAutoExtendedSuite(targetSuite)
+        added = appendEntriesToSuite(targetSuite, result.entries).added
+        appendOutcome = 'ok'
+      } catch (err) {
+        console.warn('[Wikey] appendEntriesToSuite failed:', err)
+        appendOutcome = 'append-error'
+      }
+    }
+    new Notice(
+      `[Wikey] Query analysis: ${pairs.length} pairs analyzed, ${result.entries.length} entries, ${added} added to suite.`,
+    )
+    return {
+      entries: result.entries,
+      fallback: result.fallback,
+      latencyMs: result.latencyMs,
+      appendOutcome,
+      entriesAppended: added,
+    }
+  }
+
+  /**
+   * §5.7.8 Spec 3 I11 — auto-extend trigger. Called after each chat completion. Counts
+   * (query, answer) pairs accumulated since the last analysis and, when the threshold
+   * is reached, kicks off a fire-and-forget analyzer run.
+   *
+   * Cursor advancement (Cycle #2 F1 fix):
+   *   - The cursor advances **only when the analyzer reports success**
+   *     (`fallback === 'none'`). On `'llm-fail'` / `'timeout'` / append errors the
+   *     window of pairs stays available for the next attempt.
+   *   - Before advancing the cursor we flush any pending chat-save debounce so the
+   *     pair-window is durably persisted *before* the cursor move — avoiding the
+   *     crash race where a cursor moves past pairs that were never written to disk.
+   *
+   * Fail-open: catches every error path + warns; never throws (Spec invariant I8).
+   */
+  maybeTriggerAutoExtend(): void {
+    if (!this.settings.advancedQueryTuningEnabled) return
+    if (this.settings.advancedQueryTuningMode === 'off') return
+
+    // Cycle #4 F1 / Cycle #5 F1 (c) defensive — reset the cursor when it has run past
+    // chatHistory.length (loadSettings cap missed, external data.json edit) AND when a
+    // chat reset wiped history but a stale (non-zero) cursor remains. Both states leave
+    // the trigger silently disabled.
+    let cursor = this.settings.advancedQueryTuningLastAnalyzedIndex
+    const cursorOutOfRange = cursor > this.chatHistory.length
+    const cursorLeftBehind = this.chatHistory.length === 0 && cursor !== 0
+    if (cursorOutOfRange || cursorLeftBehind) {
+      console.warn(
+        `[Wikey] auto-extend cursor (${cursor}) inconsistent with chatHistory.length (${this.chatHistory.length}); resetting to 0.`,
+      )
+      cursor = 0
+      this.settings = { ...this.settings, advancedQueryTuningLastAnalyzedIndex: 0 }
+      void this.saveData(this.buildPluginOnlyData())
+    }
+    const newPairs = countQueryAnswerPairs(this.chatHistory, cursor)
+    const threshold = Math.max(1, this.settings.advancedQueryTuningAutoExtendThreshold || 5)
+    if (newPairs < threshold) return
+
+    const snapshotLength = this.chatHistory.length
+    // Cycle #5 F1 (a) — capture the generation at dispatch time. If `clearChat` (or any
+    // future invalidation) bumps `autoExtendGeneration` while this run is in flight,
+    // the success path will see a mismatch and exit without writing the cursor.
+    const myGen = ++this.autoExtendGeneration
+    // Cycle #6 F1 — pass the generation token through to `runQueryAnalysis` so the
+    // suite mutation + Notice are also skipped on invalidation, not just the cursor
+    // write. `current` is a closure that reads the *live* counter at the moment the
+    // analyzer is about to mutate the vault file.
+    const generationToken: GenerationToken = {
+      gen: myGen,
+      current: () => this.autoExtendGeneration,
+    }
+    // Cycle #3 F2 — pass the cursor so the analyzer only sees pairs accumulated since
+    // the last successful run. Cycle #3 F1 — read the append outcome from the per-call
+    // return value (no plugin-global field; concurrent runs do not interfere).
+    void this.runQueryAnalysis(undefined, cursor, generationToken)
+      .then(async (result) => {
+        // Cycle #5 F1 (a) — invalidation guard. A `clearChat()` (or any other event that
+        // bumps the generation counter) between dispatch and resolution means this run's
+        // snapshot no longer reflects the live history. Drop silently.
+        if (myGen !== this.autoExtendGeneration) {
+          console.info(
+            `[Wikey] auto-extend run invalidated (gen ${myGen} != ${this.autoExtendGeneration}); cursor unchanged.`,
+          )
+          return
+        }
+        if (!shouldAdvanceAutoExtendCursor(result.fallback, result.appendOutcome)) {
+          console.info(
+            `[Wikey] auto-extend skipped cursor advance (fallback=${result.fallback}, append=${result.appendOutcome}); window preserved.`,
+          )
+          return
+        }
+        // Flush any pending chat-save debounce *before* moving the cursor. This avoids
+        // a crash race where the cursor lands ahead of an unsaved pair window.
+        try { await this.commitChatSave() } catch { /* best-effort */ }
+        // Cycle #5 F1 (b) — monotonic guard. With overlapping runs, a slow earlier run
+        // could otherwise resolve after a faster later run and clobber the cursor with
+        // a smaller value. We only advance when the new snapshot is strictly greater
+        // than the persisted cursor.
+        const currentCursor = this.settings.advancedQueryTuningLastAnalyzedIndex
+        if (snapshotLength <= currentCursor) {
+          console.info(
+            `[Wikey] auto-extend cursor regression skipped (snapshot=${snapshotLength}, cursor=${currentCursor}); monotonic invariant preserved.`,
+          )
+          return
+        }
+        this.settings = {
+          ...this.settings,
+          advancedQueryTuningLastAnalyzedIndex: snapshotLength,
+        }
+        await this.saveData(this.buildPluginOnlyData())
+      })
+      .catch((err) => {
+        console.warn('[Wikey] auto-extend background run failed:', err)
+      })
+  }
+
+  /**
+   * §5.7.8 Spec 2 / Spec 4 / Spec 6 — build the per-call `QueryOptions` overlay that
+   * routes the query through the LLM filter / rewriter / expander layers.
+   *
+   *  - Returns an empty object when the master toggle is OFF, mode='off', or the
+   *    caller passed `skipFilter` (e.g. `!nofilter` per-query override). This preserves
+   *    the legacy single-query BM25 path (Spec invariant I7).
+   *  - Each layer is constructed lazily; provider / model / temperature / maxTokens
+   *    changes invalidate the cached instances via the LLM signature.
+   *  - Vault config is loaded once and reused. Both `.wikey/query-filter.yaml` and
+   *    the optional `.wikey/prompts/*.prompt.md` overrides are honoured.
+   *  - All construction failures are swallowed + logged (Spec invariant I8 — search
+   *    must never error out because of layer setup).
+   */
+  async getQueryLayerOpts(skipFilter = false): Promise<{
+    filter?: QueryIntentFilter
+    rewriter?: QueryRewriter
+    expander?: QueryExpander
+    vaultHint?: VaultQueryHint
+  }> {
+    if (skipFilter) return {}
+    if (!this.settings.advancedQueryTuningEnabled) return {}
+    if (this.settings.advancedQueryTuningMode === 'off') return {}
+
+    try {
+      const cache = this.ensureQueryFilterCache()
+      const filterLLM = this.buildFilterLLMClient()
+      const signature = this.computeFilterLLMSignature()
+      if (signature !== this.queryFilterLLMSignature) {
+        this.queryFilterInstance = null
+        this.queryRewriterInstance = null
+        this.queryExpanderInstance = null
+        this.queryFilterLLMSignature = signature
+      }
+
+      const vaultConfig = await this.ensureVaultQueryConfig()
+      const callOptions = this.buildFilterCallOptions()
+      const filter = (this.queryFilterInstance ??= new QueryIntentFilter({
+        llm: filterLLM,
+        cache,
+        promptTemplate: vaultConfig.filterPromptOverride ?? BUNDLED_QUERY_INTENT_FILTER_PROMPT,
+        tokenize: (q: string) => q.split(/\s+/u).filter((t) => t.length > 0),
+        llmCallOptions: callOptions,
+        timeoutMs: this.settings.advancedQueryTuningTimeoutMs,
+      }))
+
+      const mode = this.settings.advancedQueryTuningMode
+      let rewriter: QueryRewriter | undefined
+      let expander: QueryExpander | undefined
+
+      if (mode === 'filter-rewrite' || mode === 'filter-rewrite-expand') {
+        rewriter = (this.queryRewriterInstance ??= new QueryRewriter({
+          llm: filterLLM,
+          cache,
+          promptTemplate: vaultConfig.rewriterPromptOverride ?? BUNDLED_QUERY_REWRITER_PROMPT,
+          llmCallOptions: callOptions,
+          timeoutMs: this.settings.advancedQueryTuningTimeoutMs,
+        }))
+      }
+      if (mode === 'filter-rewrite-expand') {
+        expander = (this.queryExpanderInstance ??= new QueryExpander({
+          llm: filterLLM,
+          cache,
+          promptTemplate: vaultConfig.expanderPromptOverride ?? BUNDLED_QUERY_EXPANDER_PROMPT,
+          llmCallOptions: callOptions,
+          timeoutMs: this.settings.advancedQueryTuningTimeoutMs,
+        }))
+      }
+
+      return { filter, rewriter, expander, vaultHint: vaultConfig.hint }
+    } catch (err) {
+      // I8 fail-open — layer setup failure must not block search.
+      console.warn('[Wikey] getQueryLayerOpts setup failed, falling back to legacy path:', err)
+      return {}
+    }
+  }
+
+  /**
+   * §5.7.8 Spec 4 + Finding 1 fix (Cycle #1) — thin wrapper over the pure
+   * `buildFilterCallOptionsFromSettings` helper (Cycle #2 F2 fix).
+   * Logic + tests live with the helper; this method only forwards plugin state.
+   */
+  private buildFilterCallOptions(): FilterCallOptionsResult {
+    return buildFilterCallOptionsFromSettings(this.settings, this.buildConfig())
+  }
+
+  /**
+   * §5.7.8 — compute a string signature of the filter-LLM-affecting settings. When the
+   * user changes provider / model / temperature / maxTokens / timeout, the cached
+   * `QueryIntentFilter` (etc.) instances are invalidated so the next query rebuilds them.
+   */
+  private computeFilterLLMSignature(): string {
+    return [
+      this.settings.advancedQueryTuningProvider,
+      this.settings.advancedQueryTuningModel,
+      this.settings.advancedQueryTuningTemperature,
+      this.settings.advancedQueryTuningMaxTokens,
+      this.settings.advancedQueryTuningTimeoutMs,
+    ].join('|')
+  }
+
+  /** Lazy-init the per-namespace LRU cache rooted at `~/.cache/wikey/query-intent-cache`. */
+  private ensureQueryFilterCache(): QueryFilterCache {
+    const capacity = Math.max(1, this.settings.advancedQueryTuningCacheSize || 1000)
+    if (!this.queryFilterCache || capacity !== this.queryFilterCacheCapacity) {
+      const os = require('node:os') as typeof import('node:os')
+      const path = require('node:path') as typeof import('node:path')
+      const root = path.join(os.homedir(), '.cache', 'wikey', 'query-intent-cache')
+      this.queryFilterCache = new QueryFilterCache({ root, capacity })
+      this.queryFilterCacheCapacity = capacity
+    }
+    return this.queryFilterCache
+  }
+
+  /**
+   * Build the filter-specific LLMClient. When the user chose a provider/model override
+   * we route through a *separate* LLMClient instance so other wikey LLM call sites
+   * (canonicalizer, ingest, answer synthesis) keep their own providers (Spec I19).
+   */
+  private buildFilterLLMClient(): LLMClient {
+    const providerOverride = this.settings.advancedQueryTuningProvider
+    const modelOverride = this.settings.advancedQueryTuningModel
+    if (!providerOverride && !modelOverride) return this.llmClient
+    const baseConfig = this.buildConfig()
+    const overriddenConfig: WikeyConfig = {
+      ...baseConfig,
+      WIKEY_BASIC_MODEL: providerOverride || baseConfig.WIKEY_BASIC_MODEL,
+      WIKEY_MODEL: modelOverride || baseConfig.WIKEY_MODEL,
+    }
+    return new LLMClient(this.httpClient, overriddenConfig)
+  }
+
+  /** Cache the vault `.wikey/query-filter.yaml` + prompt overrides for the session. */
+  private async ensureVaultQueryConfig(): Promise<LoadVaultQueryConfigResult> {
+    if (this.vaultQueryConfigCache) return this.vaultQueryConfigCache
+    try {
+      this.vaultQueryConfigCache = await loadVaultQueryConfig({
+        exists: (p: string) => this.wikiFS.exists(p),
+        read: (p: string) => this.wikiFS.read(p),
+      })
+    } catch (err) {
+      console.warn('[Wikey] loadVaultQueryConfig failed, using empty hint:', err)
+      this.vaultQueryConfigCache = {
+        hint: EMPTY_VAULT_QUERY_HINT,
+      }
+    }
+    return this.vaultQueryConfigCache
   }
 
   buildConfig(): WikeyConfig {

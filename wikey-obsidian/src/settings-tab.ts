@@ -11,7 +11,7 @@ import type { LLMProvider, ResetScope } from 'wikey-core'
 import type WikeyPlugin from './main'
 import { ResetImpactModal } from './reset-modals'
 import { executeReset } from './commands'
-import { renderDeveloperSection } from './settings-tab-developer'
+import { renderDeveloperUpdateItems } from './settings-tab-developer'
 
 export class WikeySettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: WikeyPlugin) {
@@ -32,29 +32,250 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderGeneralSection(containerEl)
     this.renderApiKeysSection(containerEl)
     this.renderSearchSection(containerEl)
+    this.renderAdvancedQueryTuningSection(containerEl)
     this.renderCostSection(containerEl)
     this.renderToolsSection(containerEl)
     this.renderResetSection(containerEl)
     this.renderAdvancedSection(containerEl)
-    // §5.7.5 — settings *맨 마지막* 에 [developer] 섹션 (사용자 결정 #1 (A) settings 토글 잠금).
+    // Developer (advanced) — settings 맨 하단. developerMode ON 시만 표시.
     this.renderDeveloperSection(containerEl)
   }
 
-  // ── §5.7.5 Section: Developer (advanced) ──
+  /**
+   * Re-render the entire settings tab while preserving the user's current
+   * scroll position. Toggles that change visible-control count (Advanced query
+   * tuning master toggle, Developer mode, OCR provider, Per-task LLM Override,
+   * provider/model swaps) call this instead of `this.display()` to avoid
+   * the page jumping back to the top after a click.
+   */
+  private refreshPreservingScroll(): void {
+    const scroller = this.containerEl.closest('.vertical-tab-content') as HTMLElement | null
+      ?? (this.containerEl.parentElement as HTMLElement | null)
+    const top = scroller?.scrollTop ?? 0
+    this.display()
+    if (scroller) scroller.scrollTop = top
+  }
+
+  // ── Section: Developer (advanced) ──
+  // Heading + master toggle 항상 표시. master toggle ON 시에만 Allow toggle +
+  // Update items 가 expand. (사용자 raise 2026-05-10: master ON/OFF 가 Developer
+  // section 안에 있어야 자연스러움 — General 으로부터 분리)
   private renderDeveloperSection(containerEl: HTMLElement): void {
-    renderDeveloperSection(containerEl, {
-      developerMode: this.plugin.settings.developerMode,
-      allowUpdateCheck: this.plugin.settings.allowUpdateCheck,
-      items: this.plugin.updateCheckResult?.items ?? [],
-      onAnalyze: (item) => {
-        void this.plugin.runUpdateAnalysis(item).then(() => this.display())
-      },
-      onToggleAllow: async (next) => {
-        this.plugin.settings.allowUpdateCheck = next
+    const section = containerEl.createDiv({ cls: 'wikey-settings-developer-section' })
+    section.createEl('h3', { text: 'Developer (advanced)' })
+
+    new Setting(section)
+      .setName('Developer mode')
+      .setDesc('OFF (default) — hide vendor / dep / model upstream update tracking. ON — reveal the items below.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.developerMode)
+          .onChange(async (value) => {
+            this.plugin.settings.developerMode = value
+            await this.plugin.saveSettings()
+            this.refreshPreservingScroll()
+          }),
+      )
+
+    if (!this.plugin.settings.developerMode) return
+
+    new Setting(section)
+      .setName('Allow upstream update check (network)')
+      .setDesc('OFF (default) — skip external network calls. ON — fetch npm registry / GitHub releases / Ollama tags once on restart.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.allowUpdateCheck)
+          .onChange(async (value) => {
+            this.plugin.settings.allowUpdateCheck = value
+            await this.plugin.saveSettings()
+          }),
+      )
+
+    const items = this.plugin.updateCheckResult?.items ?? []
+    if (items.length === 0) {
+      section.createEl('p', {
+        text: 'No update items reported (allow-toggle off or first launch).',
+        cls: 'wikey-settings-status-desc',
+      })
+    } else {
+      renderDeveloperUpdateItems(section, {
+        items,
+        analyses: this.plugin.updateAnalyses,
+        onAnalyze: (item) => {
+          void this.plugin.runUpdateAnalysis(item).then(() => this.refreshPreservingScroll())
+        },
+      })
+    }
+  }
+
+  // ── §5.7.8 Section: Advanced query tuning (LLM per-query dynamic stopword paradigm) ──
+  // Spec §1.4 default 권고 (Q5 LOCKED) — toggle / mode / timeout / cache size / provider
+  // dropdown + model dropdown / advanced (temperature, max_tokens) / auto-extend threshold.
+  // Default OFF (I16 / I7 backward compat). Provider override scoped to the filter LLM
+  // only — other wikey LLM call sites (canonicalizer, ingest, etc.) are unaffected (I19).
+  private renderAdvancedQueryTuningSection(containerEl: HTMLElement): void {
+    containerEl.createEl('h3', { text: 'Advanced query tuning' })
+    containerEl.createDiv({
+      cls: 'wikey-settings-status-desc wikey-advanced-query-tuning-desc',
+      text:
+        'LLM analyzes each query semantically (domain marker / intent core / generic noise / disambiguator)' +
+        ' to drop words that do not help retrieval, and improves recall with synonym rewrite and a HyDE-style answer expansion.' +
+        ' Unlike static stoplists, the same word can be kept or dropped depending on the query intent.' +
+        ' Budget: < 600 LLM tokens per query, p95 latency ≤ 1500ms (0 on cache hit).',
+    })
+
+    // Master toggle — ON/OFF. OFF 시 하단 controls 미표시 (expand/collapse).
+    new Setting(containerEl)
+      .setName('Enable advanced query tuning')
+      .setDesc('OFF (default) — keeps the existing BM25 path. ON — adds 1~3 LLM calls per query and expands the options below.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.advancedQueryTuningEnabled)
+          .onChange(async (v) => {
+            this.plugin.settings.advancedQueryTuningEnabled = v
+            await this.plugin.saveSettings()
+            this.refreshPreservingScroll()
+          }),
+      )
+
+    if (!this.plugin.settings.advancedQueryTuningEnabled) return
+
+    this.renderStandardDropdown(
+      containerEl,
+      'Mode',
+      'Layer combination — off / filter-only / filter+rewrite / filter+rewrite+expand.',
+      [
+        { value: 'off', label: 'off' },
+        { value: 'filter-only', label: 'filter-only' },
+        { value: 'filter-rewrite', label: 'filter + rewrite' },
+        { value: 'filter-rewrite-expand', label: 'filter + rewrite + expand' },
+      ],
+      this.plugin.settings.advancedQueryTuningMode,
+      async (v) => {
+        this.plugin.settings.advancedQueryTuningMode =
+          v as typeof this.plugin.settings.advancedQueryTuningMode
         await this.plugin.saveSettings()
       },
-      analyses: this.plugin.updateAnalyses,
-    })
+    )
+
+    new Setting(containerEl)
+      .setName('Filter timeout (ms)')
+      .setDesc('LLM call timeout per layer. Exceed → fail-open + original query.')
+      .addText((t) =>
+        t
+          .setValue(String(this.plugin.settings.advancedQueryTuningTimeoutMs))
+          .onChange(async (v) => {
+            const n = Number(v)
+            if (Number.isFinite(n) && n > 0) {
+              this.plugin.settings.advancedQueryTuningTimeoutMs = n
+              await this.plugin.saveSettings()
+            }
+          }),
+      )
+
+    new Setting(containerEl)
+      .setName('Cache size (entries)')
+      .setDesc('Per-namespace LRU capacity (filter / rewrite / expand each).')
+      .addText((t) =>
+        t
+          .setValue(String(this.plugin.settings.advancedQueryTuningCacheSize))
+          .onChange(async (v) => {
+            const n = Number(v)
+            if (Number.isFinite(n) && n > 0) {
+              this.plugin.settings.advancedQueryTuningCacheSize = n
+              await this.plugin.saveSettings()
+            }
+          }),
+      )
+
+    // Filter LLM — provider + model in one row (matches Default / Ingest / OCR).
+    const filterProvider =
+      (this.plugin.settings.advancedQueryTuningProvider ||
+        this.plugin.settings.basicModel ||
+        'ollama') as LLMProvider
+    this.renderProviderModelPair(
+      containerEl,
+      'Filter LLM Provider / Model',
+      'BYOAI — used only for the search-time filter. DEFAULT inherits the Default Model.',
+      [
+        { value: '', label: 'DEFAULT' },
+        { value: 'ollama', label: 'Local (Ollama)' },
+        { value: 'gemini', label: 'Google Gemini' },
+        { value: 'anthropic', label: 'Anthropic Claude' },
+        { value: 'openai', label: 'OpenAI Codex' },
+      ],
+      this.plugin.settings.advancedQueryTuningProvider,
+      async (v) => {
+        const prev = this.plugin.settings.advancedQueryTuningProvider
+        this.plugin.settings.advancedQueryTuningProvider = v
+        if (v !== prev) {
+          this.plugin.settings.advancedQueryTuningModel = ''
+          new Notice('Filter model cleared (provider changed).')
+        }
+        await this.plugin.saveSettings()
+        this.refreshPreservingScroll()
+      },
+      filterProvider,
+      this.plugin.settings.advancedQueryTuningModel || '',
+      async (v) => {
+        this.plugin.settings.advancedQueryTuningModel = v
+        await this.plugin.saveSettings()
+      },
+    )
+
+    new Setting(containerEl)
+      .setName('Temperature')
+      .setDesc('Temperature for filter / rewrite / expand calls. 0.0 = deterministic.')
+      .addText((t) =>
+        t
+          .setValue(String(this.plugin.settings.advancedQueryTuningTemperature))
+          .onChange(async (v) => {
+            const n = Number(v)
+            if (Number.isFinite(n) && n >= 0) {
+              this.plugin.settings.advancedQueryTuningTemperature = n
+              await this.plugin.saveSettings()
+            }
+          }),
+      )
+
+    new Setting(containerEl)
+      .setName('Max tokens')
+      .setDesc('LLM response max_tokens. 500 default.')
+      .addText((t) =>
+        t
+          .setValue(String(this.plugin.settings.advancedQueryTuningMaxTokens))
+          .onChange(async (v) => {
+            const n = Number(v)
+            if (Number.isFinite(n) && n > 0) {
+              this.plugin.settings.advancedQueryTuningMaxTokens = n
+              await this.plugin.saveSettings()
+            }
+          }),
+      )
+
+    new Setting(containerEl)
+      .setName('Auto-extend threshold (queries)')
+      .setDesc('Append the LLM analysis result to the benchmark suite automatically once this many (query, answer) pairs accumulate. Recommended: 1~50.')
+      .addText((t) =>
+        t
+          .setValue(String(this.plugin.settings.advancedQueryTuningAutoExtendThreshold))
+          .onChange(async (v) => {
+            const n = Number(v)
+            if (Number.isInteger(n) && n >= 1 && n <= 50) {
+              this.plugin.settings.advancedQueryTuningAutoExtendThreshold = n
+              await this.plugin.saveSettings()
+            }
+          }),
+      )
+
+    new Setting(containerEl)
+      .setName('Run query analysis (manual trigger)')
+      .setDesc('Analyze accumulated (query, answer) pairs from chat now and append the result to the benchmark suite.')
+      .addButton((b) =>
+        b.setButtonText('Run now').onClick(async () => {
+          await this.plugin.runQueryAnalysis()
+        }),
+      )
   }
 
   // ── Section: Reset (Phase 4.5.2) ──
@@ -251,10 +472,10 @@ export class WikeySettingTab extends PluginSettingTab {
   private renderBasicModelSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: 'Default Model' })
 
-    this.renderStandardDropdown(
+    this.renderProviderModelPair(
       containerEl,
-      'Provider',
-      'Default LLM provider for all tasks. Can be overridden per-task in Advanced settings.',
+      'Provider / Model',
+      'Default LLM for all tasks. Per-task overrides live in Advanced settings.',
       [
         { value: 'ollama', label: 'Local (Ollama)' },
         { value: 'gemini', label: 'Google Gemini' },
@@ -273,14 +494,8 @@ export class WikeySettingTab extends PluginSettingTab {
           new Notice('Default model cleared (provider changed).')
         }
         await this.plugin.saveSettings()
-        this.display()
+        this.refreshPreservingScroll()
       },
-    )
-
-    this.renderModelDropdown(
-      containerEl,
-      'Model',
-      'Specific model for the selected provider. Loaded dynamically from the provider API.',
       this.plugin.settings.basicModel as LLMProvider,
       this.plugin.settings.cloudModel || '',
       async (value) => {
@@ -288,6 +503,77 @@ export class WikeySettingTab extends PluginSettingTab {
         await this.plugin.saveSettings()
       },
     )
+  }
+
+  /**
+   * Render a single Setting row that holds two `.wikey-select` controls side by
+   * side — provider on the left, model on the right. Mirrors the chat panel
+   * provider/model header bar so the same pattern applies across all settings
+   * (Default Model / Ingest Model / Filter LLM / OCR).
+   */
+  private renderProviderModelPair(
+    containerEl: HTMLElement,
+    name: string,
+    desc: string,
+    providerOptions: ReadonlyArray<{ value: string; label: string }>,
+    currentProvider: string,
+    onProviderChange: (value: string) => Promise<void>,
+    effectiveProvider: LLMProvider,
+    currentModel: string,
+    onModelChange: (value: string) => Promise<void>,
+  ): void {
+    const setting = new Setting(containerEl).setName(name).setDesc(desc)
+
+    // Provider select (static options)
+    const providerEl = document.createElement('select')
+    providerEl.classList.add('wikey-select', 'wikey-select-provider')
+    for (const opt of providerOptions) {
+      const o = new Option(opt.label, opt.value)
+      if (opt.value === currentProvider) o.selected = true
+      providerEl.appendChild(o)
+    }
+    providerEl.addEventListener('change', async () => {
+      await onProviderChange(providerEl.value)
+    })
+    setting.controlEl.appendChild(providerEl)
+
+    // Model select (dynamic via fetchModelList)
+    const modelEl = document.createElement('select')
+    modelEl.classList.add('wikey-select', 'wikey-select-model')
+    modelEl.disabled = true
+    modelEl.appendChild(new Option('(loading...)', ''))
+    setting.controlEl.appendChild(modelEl)
+
+    void (async () => {
+      try {
+        const models = await fetchModelList(
+          effectiveProvider,
+          this.plugin.buildConfig(),
+          this.plugin.httpClient,
+        )
+        modelEl.innerHTML = ''
+        modelEl.appendChild(new Option('DEFAULT', ''))
+        let matched = false
+        for (const m of models) {
+          const opt = new Option(m, m)
+          if (m === currentModel) { opt.selected = true; matched = true }
+          modelEl.appendChild(opt)
+        }
+        if (currentModel && !matched) {
+          const opt = new Option(`${currentModel} (custom)`, currentModel)
+          opt.selected = true
+          modelEl.appendChild(opt)
+        }
+        modelEl.disabled = false
+        modelEl.addEventListener('change', async () => {
+          await onModelChange(modelEl.value)
+        })
+      } catch {
+        modelEl.innerHTML = ''
+        modelEl.appendChild(new Option('(API unavailable)', ''))
+        modelEl.disabled = true
+      }
+    })()
   }
 
   /**
@@ -369,10 +655,11 @@ export class WikeySettingTab extends PluginSettingTab {
   private renderIngestModelSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: 'Ingest Model' })
 
-    this.renderStandardDropdown(
+    const effectiveIngestProvider = (this.plugin.settings.ingestProvider || this.plugin.settings.basicModel) as LLMProvider
+    this.renderProviderModelPair(
       containerEl,
-      'Provider',
-      'Provider for document ingestion. Leave empty to use Default Model.',
+      'Provider / Model',
+      'Provider + model for document ingestion. DEFAULT inherits Default Model.',
       [
         { value: '', label: 'DEFAULT' },
         { value: 'ollama', label: 'Local (Ollama)' },
@@ -389,15 +676,8 @@ export class WikeySettingTab extends PluginSettingTab {
           new Notice('Ingest model cleared (provider changed).')
         }
         await this.plugin.saveSettings()
-        this.display()
+        this.refreshPreservingScroll()
       },
-    )
-
-    const effectiveIngestProvider = (this.plugin.settings.ingestProvider || this.plugin.settings.basicModel) as LLMProvider
-    this.renderModelDropdown(
-      containerEl,
-      'Model',
-      'Model for ingestion, dynamically loaded from the provider API. Leave at DEFAULT to inherit wikey-core defaults.',
       effectiveIngestProvider,
       this.plugin.settings.ingestModel || '',
       async (value) => {
@@ -676,20 +956,6 @@ export class WikeySettingTab extends PluginSettingTab {
           }),
       )
 
-    // §5.7.5 — Developer mode 토글 (사용자 결정 #1 (A) settings 토글 잠금).
-    new Setting(containerEl)
-      .setName('Show developer section')
-      .setDesc('Reveal the [developer] section at the bottom of settings (advanced — vendor / dep / model upstream update tracking).')
-      .addToggle((toggle) =>
-        toggle
-          .setValue(this.plugin.settings.developerMode)
-          .onChange(async (value) => {
-            this.plugin.settings.developerMode = value
-            await this.plugin.saveSettings()
-            this.display()
-          }),
-      )
-
     // ── Phase 4 D.0.c (v6 §4.1.4): PII 2-layer gate — Basic ──
     new Setting(containerEl)
       .setName('Allow ingest when PII is detected')
@@ -745,17 +1011,13 @@ export class WikeySettingTab extends PluginSettingTab {
       },
     )
 
-    // OCR fallback (markitdown-ocr) — falls back to basicModel when blank.
-    const ocrDesc = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
-    ocrDesc.createEl('span', {
-      text: 'OCR fallback (markitdown-ocr). Leave blank to inherit basic model.',
-      cls: 'wikey-settings-status-label',
-    })
-
-    this.renderStandardDropdown(
+    // OCR fallback (markitdown-ocr) — vision-capable provider+model when
+    // text-layer extraction fails. DEFAULT inherits Default Model.
+    const effectiveOcrProvider = (this.plugin.settings.ocrProvider || this.plugin.settings.basicModel) as LLMProvider
+    this.renderProviderModelPair(
       containerEl,
-      'OCR Provider',
-      'Vision model provider used when text-layer extraction fails. Leave at DEFAULT to inherit basic model.',
+      'OCR Provider / Model',
+      'Vision-capable LLM used when text-layer extraction fails. DEFAULT inherits Default Model.',
       [
         { value: '', label: 'DEFAULT' },
         { value: 'ollama', label: 'Local (Ollama)' },
@@ -772,15 +1034,8 @@ export class WikeySettingTab extends PluginSettingTab {
           new Notice('OCR model cleared (provider changed).')
         }
         await this.plugin.saveSettings()
-        this.display()
+        this.refreshPreservingScroll()
       },
-    )
-
-    const effectiveOcrProvider = (this.plugin.settings.ocrProvider || this.plugin.settings.basicModel) as LLMProvider
-    this.renderModelDropdown(
-      containerEl,
-      'OCR Model',
-      'Vision-capable model for OCR fallback, dynamically loaded from the provider API. Leave at DEFAULT to inherit wikey-core defaults.',
       effectiveOcrProvider,
       this.plugin.settings.ocrModel || '',
       async (value) => {
@@ -1056,7 +1311,7 @@ export class WikeySettingTab extends PluginSettingTab {
           .onChange(async (value) => {
             this.plugin.settings.advancedLLM = value
             await this.plugin.saveSettings()
-            this.display()
+            this.refreshPreservingScroll()
           }),
       )
 

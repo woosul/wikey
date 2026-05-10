@@ -41,6 +41,12 @@ export class LLMClient {
     }
     if (opts?.seed !== undefined) generationConfig.seed = opts.seed
     if (opts?.responseMimeType) generationConfig.responseMimeType = opts.responseMimeType
+    // §5.7.9 I1 — gemini-2.5 thinking opt-out. caller 가 thinkingBudget 명시 시
+    // (advanced query tuning = 0 default) generationConfig 에 thinkingConfig 추가.
+    // 미명시 시 key 자체 omit 하여 다른 use case 의 gemini default 동작 보존.
+    if (opts?.thinkingBudget !== undefined) {
+      generationConfig.thinkingConfig = { thinkingBudget: opts.thinkingBudget }
+    }
 
     const payload: Record<string, unknown> = {
       contents: [{ parts: [{ text: prompt }] }],

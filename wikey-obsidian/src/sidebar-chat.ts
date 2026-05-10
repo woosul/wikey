@@ -72,6 +72,44 @@ export function computeRowPct(step: number, subStep?: number, subTotal?: number)
   return weights[step] ?? Math.round((step / 4) * 100)
 }
 
+// §5.7.8 Spec 4 — per-query override syntax. `!nofilter <query>` strips the `!nofilter`
+// prefix and signals the caller to skip the LLM filter for *this* query only. Settings
+// stay unchanged. Returned shape: `{ effectiveQuery, skipFilter }` (immutable).
+export interface ChatCommandParseResult {
+  readonly effectiveQuery: string
+  readonly skipFilter: boolean
+}
+
+export function parseChatCommand(input: string): ChatCommandParseResult {
+  const trimmed = input.trim()
+  // Match the `!nofilter` prefix anchored to start, optionally followed by whitespace.
+  const m = trimmed.match(/^!nofilter\b\s*(.*)$/u)
+  if (m) return { effectiveQuery: m[1].trim(), skipFilter: true }
+  return { effectiveQuery: trimmed, skipFilter: false }
+}
+
+// §5.7.8 Spec 4 — render filter-decision metadata as keep/drop badges into the search
+// result panel. Pure DOM helper — caller is responsible for placing the row container.
+export interface RenderableTokenDecision {
+  readonly token: string
+  readonly keep: boolean
+}
+
+export function renderFilterMetadataBadges(
+  container: HTMLElement,
+  tokens: readonly RenderableTokenDecision[],
+): void {
+  if (tokens.length === 0) return
+  const wrapper = container.createDiv({ cls: 'wikey-filter-metadata' })
+  for (const t of tokens) {
+    const badge = wrapper.createSpan({
+      cls: t.keep ? 'wikey-filter-badge-keep' : 'wikey-filter-badge-drop',
+      text: `${t.token} (${t.keep ? 'keep' : 'drop'})`,
+    })
+    badge.setAttribute('title', t.keep ? 'kept by filter' : 'dropped by filter')
+  }
+}
+
 // §5.16: audit row 의 ingest error 표시는 별도 line (createDiv) 대신 `wikey-audit-path`
 // (= 분류 hint, 예: `노트/기사`) span 의 text 를 override + error class 추가. row line height
 // 증가 0 — UI 레이아웃 안정. fallback: `wikey-audit-path` 미존재 시 기존 createDiv 패턴.
@@ -381,7 +419,18 @@ export class WikeyChatView extends ItemView {
 
   private clearChat() {
     this.plugin.chatHistory = []
-    this.plugin.settings = { ...this.plugin.settings, savedChatHistory: [] }
+    // §5.7.8 Cycle #4 F1 — chat is wiped, so the auto-extend cursor (an absolute index
+    // into chatHistory) must be reset to 0; otherwise post-clear queries land below
+    // the stale cursor and the trigger never fires (Spec I11 violation).
+    // §5.7.8 Cycle #5 F1 (a) — bump the generation counter so any in-flight analyzer
+    // run from the pre-clear session no-ops on completion (cannot resurrect the old
+    // snapshotLength as the new cursor).
+    this.plugin.autoExtendGeneration += 1
+    this.plugin.settings = {
+      ...this.plugin.settings,
+      savedChatHistory: [],
+      advancedQueryTuningLastAnalyzedIndex: 0,
+    }
     this.plugin.saveSettings()
     this.messagesEl.empty()
     if (this.activePanel !== 'chat') {
@@ -416,14 +465,24 @@ export class WikeyChatView extends ItemView {
   }
 
   private async handleSend() {
-    const question = this.inputEl.value.trim()
-    if (!question) return
+    const rawInput = this.inputEl.value.trim()
+    if (!rawInput) return
 
-    if (question === '/clear') {
+    if (rawInput === '/clear') {
       this.inputEl.value = ''
       this.clearChat()
       return
     }
+
+    // §5.7.8 — strip `!nofilter` prefix (per-query override). `skipFilter` is forwarded
+    // to `plugin.getQueryLayerOpts(skipFilter)` so the layer wrapper is bypassed for
+    // exactly this query while leaving settings + cache state untouched.
+    const { effectiveQuery, skipFilter } = parseChatCommand(rawInput)
+    if (skipFilter) {
+      console.info('[wikey] !nofilter override: filter skipped for this query')
+    }
+    const question = effectiveQuery
+    if (!question) return
 
     this.messagesEl.querySelector('.wikey-chat-welcome')?.remove()
 
@@ -446,6 +505,10 @@ export class WikeyChatView extends ItemView {
       // null 반환 시 (Kiwi 사전/wasm 부재) execOramaSearch 가 warn + 빈 결과로 graceful.
       const tokenizerOverride =
         config.WIKEY_SEARCH_ENGINE === 'qmd' ? undefined : (await this.plugin.getKoreanTokenizer()) ?? undefined
+      // §5.7.8 — build the filter / rewriter / expander overlay (no-op when the master
+      // toggle is OFF or the user opted out via `!nofilter`). Each layer is fail-open
+      // inside wikey-core/orama-index — getQueryLayerOpts itself catches setup failures.
+      const layerOpts = await this.plugin.getQueryLayerOpts(skipFilter)
       const result = await query(question, config, this.plugin.httpClient, {
         basePath, wikiFS: this.plugin.wikiFS,
         execEnv: this.plugin.getExecEnv(),
@@ -454,6 +517,8 @@ export class WikeyChatView extends ItemView {
         originalLinkMode: this.plugin.settings.originalLinkMode,
         // §5.7.4 — production Korean tokenizer (lazy plugin-scope singleton).
         tokenizerOverride,
+        // §5.7.8 — runtime layer wiring (filter / rewriter / expander / vaultHint).
+        ...layerOpts,
       })
       loadingEl.remove()
       const assistantMsg: ChatMessage = {
@@ -463,6 +528,20 @@ export class WikeyChatView extends ItemView {
       this.plugin.chatHistory.push(assistantMsg)
       this.plugin.scheduleChatSave()
       this.renderMessage(assistantMsg)
+
+      // §5.7.8 Finding 5 fix — render keep/drop badges from the layer metadata
+      // attached to the first hit. SearchResultWithMetadata is sparse-populated only
+      // when at least one layer was active, so this block no-ops on the legacy path.
+      const firstResultWithMeta = result.sources?.[0] as { filterDecision?: { tokens: ReadonlyArray<{ token: string; keep: boolean }> } } | undefined
+      const tokens = firstResultWithMeta?.filterDecision?.tokens
+      if (tokens && tokens.length > 0) {
+        renderFilterMetadataBadges(this.messagesEl, tokens.map((t) => ({ token: t.token, keep: t.keep })))
+        this.scrollToBottom()
+      }
+
+      // §5.7.8 Finding 3 fix — auto-extend trigger. Fire-and-forget; cursor advance +
+      // persist happens inside `maybeTriggerAutoExtend` after the analyzer settles.
+      this.plugin.maybeTriggerAutoExtend()
     } catch (err: any) {
       loadingEl.remove()
       console.error('[Wikey] query error:', err)

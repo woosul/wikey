@@ -230,7 +230,102 @@ export {
   resetOramaIndexForTest,
   disposeOramaIndex,
 } from './search/orama-index-singleton.js'
-export type { OramaIndexHandle, OramaWikiDoc, OramaSearchOptions } from './search/orama-index.js'
+export type {
+  OramaIndexHandle,
+  OramaWikiDoc,
+  OramaSearchOptions,
+  SearchResultWithMetadata,
+} from './search/orama-index.js'
+
+// §5.7.8 — LLM per-query dynamic stopword paradigm (filter + rewrite + expand + analyzer +
+// vault customise). Public surface for wikey-obsidian to inject the layers into the
+// existing search call path.
+export {
+  QueryIntentFilter,
+  parseFilterResponse,
+  DEFAULT_FILTER_TIMEOUT_MS,
+  BUNDLED_QUERY_INTENT_FILTER_PROMPT,
+} from './search/query-intent-filter.js'
+export type {
+  FilterDecision,
+  TokenDecision,
+  TokenRole,
+  FilterFallback,
+  QueryIntentFilterOptions,
+  FilterLLM,
+} from './search/query-intent-filter.js'
+
+export {
+  QueryRewriter,
+  parseRewriteResponse,
+  tokenEditRatio,
+  DEFAULT_REWRITE_TIMEOUT_MS,
+  MAX_REWRITE_EDIT_RATIO,
+  BUNDLED_QUERY_REWRITER_PROMPT,
+} from './search/query-rewriter.js'
+export type {
+  RewriteDecision,
+  RewriteChange,
+  RewriteFallback,
+  QueryRewriterOptions,
+} from './search/query-rewriter.js'
+
+export {
+  QueryExpander,
+  parseExpandResponse,
+  clampHydeLength,
+  DEFAULT_EXPAND_TIMEOUT_MS,
+  HYDE_MIN_CHARS,
+  HYDE_MAX_CHARS,
+  MULTI_QUERY_DEFAULT_N,
+  BUNDLED_QUERY_EXPANDER_PROMPT,
+} from './search/query-expander.js'
+export type {
+  ExpandDecision,
+  ExpandFallback,
+  QueryExpanderOptions,
+} from './search/query-expander.js'
+
+export {
+  QueryAnalyzer,
+  parseAnalyzerResponse,
+  appendEntriesToSuite,
+  AUTO_EXTENDED_SOURCE,
+  DEFAULT_ANALYZER_TIMEOUT_MS,
+  BUNDLED_QUERY_ANALYZER_PROMPT,
+} from './search/query-analyzer.js'
+export type {
+  QueryAnswerPair,
+  AutoExtendedEntry,
+  AnalyzeResult,
+  QueryAnalyzerOptions,
+} from './search/query-analyzer.js'
+
+export {
+  QueryFilterCache,
+  normalizeCacheKey,
+  DEFAULT_CACHE_CAPACITY,
+} from './search/query-filter-cache.js'
+export type {
+  CacheNamespace,
+  QueryFilterCacheOptions,
+} from './search/query-filter-cache.js'
+
+export {
+  parseVaultQueryHintYaml,
+  buildVaultHintPromptBlock,
+  loadVaultQueryConfig,
+  EMPTY_VAULT_QUERY_HINT,
+  VAULT_QUERY_CONFIG_PATH,
+  VAULT_FILTER_PROMPT_PATH,
+  VAULT_REWRITER_PROMPT_PATH,
+  VAULT_EXPANDER_PROMPT_PATH,
+} from './config/vault-query-config.js'
+export type {
+  VaultQueryHint,
+  VaultFileReader,
+  LoadVaultQueryConfigResult,
+} from './config/vault-query-config.js'
 
 // §5.7.5 — upstream update detect (재시작 1회) + LLM 분석 ([분석] 버튼).
 export { detectUpstreamUpdates } from './update/upstream-checker.js'
