@@ -1,19 +1,19 @@
 ---
 name: result-doc-writer
-description: Write or update phase/session result documents (activity/phase-*-result.md) and their todo mirrors (plan/phase-*-todo.md) in wikey's canonical structure. Use whenever the user asks to record a work result, add session findings, reorganize a result doc, regroup sections by subject, renumber headings to N/N.M, tag subjects with #category, or keep todo/result in sync. Triggers: "결과 기록", "activity 문서", "세션 정리", "phase result", "주제별로 묶어", "번호 체계 정리", "태그 추가", "result 문서 작성".
+description: Write or update phase/session result documents (activity/phase-N/phase-N-result.md) and their todo mirrors (plan/phase-N/phase-N-todo.md) in wikey's canonical structure. Use whenever the user asks to record a work result, add session findings, reorganize a result doc, regroup sections by subject, renumber headings to N/N.M, tag subjects with #category, or keep todo/result in sync. Triggers: "결과 기록", "activity 문서", "세션 정리", "phase result", "주제별로 묶어", "번호 체계 정리", "태그 추가", "result 문서 작성".
 ---
 
-# Result Doc Writer — `activity/phase-N-result.md` 작성 규칙
+# Result Doc Writer — `activity/phase-N/phase-N-result.md` 작성 규칙
 
-wikey 프로젝트에서 작업 결과를 `activity/phase-N-result.md`에 기록하거나 재구성할 때 따를 원칙. 이 규칙은 사용자가 2026-04-20에 영구 고정한 것이며, CLAUDE.md 대신 이 스킬에서 관리한다.
+wikey 프로젝트에서 작업 결과를 `activity/phase-N/phase-N-result.md`에 기록하거나 재구성할 때 따를 원칙. 이 규칙은 사용자가 2026-04-20에 영구 고정한 것이며, CLAUDE.md 대신 이 스킬에서 관리한다.
 
 ## ⚠️ 전제 — 파일 명명규칙·조직화는 `CLAUDE.md §문서 명명규칙·조직화` 에서 관리 (2026-04-24)
 
 본 스킬은 result **내용 작성 규칙** 만 담당. 보조 문서 파일명·디렉터리 배치·역참조 block·중심 문서 `관련 문서` 섹션 규칙은 프로젝트 rule (`CLAUDE.md`) 에 있다. 요약:
 
-- 중심: `activity/phase-N-result.md` · `plan/phase-N-todo.md`
-- 보조 result: `activity/phase-N-resultx-<section>-<topic>-<date>.md`
-- 보조 plan: `plan/phase-N-todox-<section>-<topic>.md`
+- 중심: `activity/phase-N/phase-N-result.md` · `plan/phase-N/phase-N-todo.md`
+- 보조 result: `activity/phase-N/phase-N-resultx-<section>-<topic>-<date>.md`
+- 보조 plan: `plan/phase-N/phase-N-todox-<section>-<topic>.md`
 - `x` 접미사는 alphabet-sort 에서 중심 문서가 맨 앞에 오도록 하기 위함. `_` / `-` 금지.
 - 모든 보조 문서는 타이틀 아래에 `> **상위 문서**: ...` 역참조 블록 유지.
 - 중심 문서는 meta 블록 직후 `## 관련 문서` 섹션으로 보조 문서 전체를 section 번호 순 나열.
@@ -82,7 +82,7 @@ Result 문서의 가치는 "그 당시 무엇이 일어났는지"를 나중에 �
 
 ### 4. (파생) Todo와 Result의 관계
 
-`plan/phase-N-todo.md`는 result의 subject 구조를 **1:1 미러하는 체크리스트**다.
+`plan/phase-N/phase-N-todo.md`는 result의 subject 구조를 **1:1 미러하는 체크리스트**다.
 
 - Subject 구성이 바뀌면 **result 먼저 고치고, todo가 그 구조를 따라간다**.
 - Todo는 간결 (한 줄 체크박스), result는 상세.
@@ -176,7 +176,7 @@ Result 문서의 가치는 "그 당시 무엇이 일어났는지"를 나중에 �
 
 ## 대응되는 todo 파일 체크리스트
 
-`plan/phase-N-todo.md`:
+`plan/phase-N/phase-N-todo.md`:
 
 1. meta 블록 (result와 동일하되 "번호 계층·mirror" 안내 포함)
 2. `---`

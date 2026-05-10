@@ -1029,12 +1029,12 @@ v1 시점에는 wikilink 뒤 `[원본]` / 📄 보조 마커가 chat UI 에 atta
 - [`docs/wikey-ingest-pipeline.md`](./wikey-ingest-pipeline.md) — v1 (이전 버전, 2026-05-05)
 - [`docs/ingest-decomposition.md`](./ingest-decomposition.md) — 분해 전략 예시·운영 원칙
 - [`plan/plan-full.md`](../plan/plan-full.md) — 전체 로드맵 + Phase 별 spec
-- [`plan/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5-todox-5.10-graph-emergent-ontology.md) — D-wide paradigm shift
-- [`plan/phase-5-todox-5.11-page-promotion-threshold.md`](../plan/phase-5-todox-5.11-page-promotion-threshold.md) — Page Promotion Threshold v2
-- [`plan/phase-5-todox-5.12-source-wikilink-format.md`](../plan/phase-5-todox-5.12-source-wikilink-format.md) — Source Wikilink Format
-- [`plan/phase-5-todox-5.13-residual-followups.md`](../plan/phase-5-todox-5.13-residual-followups.md) — A1+B2+C4+D 5 follow-up
-- [`plan/phase-5-todox-5.14-retrospective-blue-refactor.md`](../plan/phase-5-todox-5.14-retrospective-blue-refactor.md) — TDD-BLUE refactor + 본체 종결
-- [`activity/phase-5-result.md`](../activity/phase-5-result.md) — Phase 5 진행 timeline
+- [`plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — D-wide paradigm shift
+- [`plan/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../plan/phase-5/phase-5-todox-5.11-page-promotion-threshold.md) — Page Promotion Threshold v2
+- [`plan/phase-5/phase-5-todox-5.12-source-wikilink-format.md`](../plan/phase-5/phase-5-todox-5.12-source-wikilink-format.md) — Source Wikilink Format
+- [`plan/phase-5/phase-5-todox-5.13-residual-followups.md`](../plan/phase-5/phase-5-todox-5.13-residual-followups.md) — A1+B2+C4+D 5 follow-up
+- [`plan/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md`](../plan/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md) — TDD-BLUE refactor + 본체 종결
+- [`activity/phase-5/phase-5-result.md`](../activity/phase-5/phase-5-result.md) — Phase 5 진행 timeline
 
 ---
 

@@ -1,6 +1,6 @@
 // Phase 5 §5.10.1.3 AC-C1.1 — `convertSourceToMarkdown` pure conversion entry.
 //
-// Spec: plan/phase-5-todox-5.10-graph-emergent-ontology.md §10.4 (line 401~437) + §10.5 AC-C1.1.
+// Spec: plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md §10.4 (line 401~437) + §10.5 AC-C1.1.
 // 5 분기 (PDF / HWP / DOCX-Docling / PPTX-Docling / md/txt) 통합. vault write 0 보장.
 // External process (docling / unhwp / python) 호출은 cache hit 시나리오로 우회 — pre-set 후 호출.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'

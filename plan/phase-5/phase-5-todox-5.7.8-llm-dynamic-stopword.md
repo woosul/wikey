@@ -1,0 +1,296 @@
+---
+phase: 5
+section: 5.7.8
+title: LLM per-query dynamic stopword paradigm — query intent filter + rewrite + expand + vault customize (Todo, HOW)
+status: planning
+created: 2026-05-10
+updated: 2026-05-10
+version: v1.2
+---
+
+# Phase 5 §5.7.8 LLM per-query dynamic stopword paradigm — query intent filter + rewrite + expand + vault customize (Todo, HOW)
+
+> **상위 문서**: [`plan/phase-5/phase-5-todo.md §5.7.8`](./phase-5-todo.md) (실행 단일 소스 — 체크박스 mirror) · [`plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](./phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.2 (Spec, WHAT — 6요소 + AC 18 + Risk 14 + Open Questions 6) · [`plan/phase-5/phase-5-spec-5.7.6-search-quality-tuning.md`](./phase-5-spec-5.7.6-search-quality-tuning.md) v1.2 (선행 ABANDON cycle, paradigm violation 학습 source)
+>
+> **버전 이력**: 본 v1.2 = spec v1.2 mirror (사용자 결정 5건 LOCKED + Out of Scope 9 통합 + Spec 5/6 신규). v1 / v1.1 history 는 §변경 이력.
+>
+> **wiki 재생성 없음 확증**: 본 §5.7.8 = wikey-core 안 query 전처리 layer (filter / rewriter / expander / vault config) + Orama search path 의 opts 확장. wiki/ 본문 / frontmatter / 페이지 자체 변경 0. canonicalizer / mention extractor / ingest pipeline 변경 0. 검색 코어 (Orama backend + Kiwi WASM) 변경 0 — 외부 wrapper layer + benchmark suite 확장만. **Reindex 의무 = 없음** (tokenizer 변경 0, indexing path 영향 0). Step A2 fact-check 안 잠금.
+>
+> **실행 단일 소스**: `plan/phase-5/phase-5-todo.md §5.7.8` (체크박스 = 진행 상태). 본 문서는 step-by-step 분해 + 검증 의무.
+
+---
+
+## 1. 진행 구조 — SDD + TDD 강제
+
+**Spec-Driven + Test-Driven 의무 흐름** (Phase 0~9):
+
+```
+Phase 0  Spec lock (phase-5-spec-5.7.8 v1.2) → master 1차 self-check (7-anchor + h/i/j/k) → codex Mode D Panel (cycle #1 plan APPROVE)
+Phase 1  Step A — 환경 세팅 (사용자 결정 6건 잠금 Q1~Q6 + 코드 변경 위치 fact-check + SQLite/yaml dep / settings UI 패턴 / .github/workflows/ 디렉토리 결정)
+Phase 2  Step B — TDD RED: 단위 test 신규 case 작성 (AC-F1~F9 + AC-S1~S3 모두) → 모두 FAIL 확증
+Phase 3  Step B — TDD GREEN: §3 변경 면 14 file 모두 구현 → 단위 + 기존 회귀 모두 PASS
+Phase 4  Step B — TDD BLUE Phase 3a: 회귀 검증 (npm test + npm run build + ./scripts/validate-wiki.sh + ./scripts/check-licenses.sh + ./scripts/check-kiwi-vendor-sync.sh)
+Phase 5  Step B — TDD BLUE Phase 3b: refactor (함수 분해 / Naming / DRY / 가독성), CLAUDE.md 정책 의무
+Phase 6  Step C — 라이브 cycle smoke (master 직접 — npm run benchmark:search 1회 실행 + per-domain regression detect + cache hit rate 측정 — 70+ query)
+Phase 7  Step B 코드 + Step C smoke 결과 → codex Mode D Panel (cycle #2 post-impl)
+Phase 8  Step D — 문서 동기화 (activity/phase-5-result + resultx + plan-full §5.7 + memory + commit)
+Phase 9  최종 master 1차 검증 + 사용자 사전 보고
+```
+
+**선행 의무 (Phase 0 직전)**:
+1. §5.7.6 ABANDON evidence read — paradigm violation 학습 mirror
+2. §5.7.6 평가 도구 보존 확증 — `wikey-core/eval/benchmark-suite.json` (51 query) + `wikey-core/src/scripts/benchmark-search.ts` (`runBenchmark` export)
+3. wikey-core LLMClient API 확인 (`call(prompt, opts)` line 14)
+4. settings UI 패턴 확인 (`renderStandardDropdown` line 297~317 + `renderModelDropdown` line 323~366 + DEFAULT clear-on-provider-change line 270~273 + line 386~389)
+5. 사용자 결정 6건 (Q1~Q6) 잠금 — Step A1 의무
+
+---
+
+## 2. 검증 의무 매트릭스 (rules.md §10 + agent-management.md §7)
+
+| 단계 | master 1차 | codex 2차 (Mode D Panel) | tester | 라이브 smoke |
+|------|-----------|--------------------------|--------|--------------|
+| Phase 0 spec lock | spec §7 self-check 7-anchor + h/i/j/k grep | cycle #1 (plan APPROVE) | — | — |
+| Phase 1 Step A | 사용자 결정 6건 (Q1~Q6) 잠금 + LLMClient API + orama-index search opts + SQLite dep + settings UI 패턴 + vault config parser + `.github/workflows/` 디렉토리 fact-check | — | — | — |
+| Phase 2~3 TDD RED/GREEN | 매 RED/GREEN 후 fresh `npm test` (wikey-core + wikey-obsidian) | — | (master 직접) | — |
+| Phase 4~5 BLUE 3a + 3b | 회귀 + refactor 후 fresh test/build/validate-wiki/check-licenses/check-kiwi-vendor-sync | — | — | — |
+| Phase 6 라이브 smoke | `npm run benchmark:search` 1회 (70+ query) + per-domain regression detect + cache hit rate **master 직접** | — | — | **의무 (1 시나리오: AC-L1)** |
+| Phase 7 post-impl | grep diff + Karpathy 4원칙 cross-check + hardcoded list 0건 grep + CI workflow YAML lint | cycle #2 (코드 + smoke evidence APPROVE) | — | — |
+| Phase 9 최종 | **18 AC** line-by-line 증거 매핑 (단위 12 + 통합 5 + 라이브 1) | — | — | — |
+
+**검증 도구**:
+- master 1차: `npm test` (wikey-core + wikey-obsidian fresh) / `npm run build` / `./scripts/validate-wiki.sh` / `./scripts/check-licenses.sh` / `./scripts/check-kiwi-vendor-sync.sh` / `actionlint .github/workflows/benchmark.yml` / 7-anchor + h/i/j/k grep
+- codex 2차: `cmux send` Mode D Panel — fresh-pick + close-after-cycle (agent-management.md §2)
+- 라이브 smoke: master 직접 — `npm run benchmark:search` 1회 + 도메인별 결과 활동 evidence
+
+**hardcoded list 0건 grep 의무 (anchor (k))**:
+```
+grep -rnE "KOREAN_STOPWORDS|STOPWORDS\s*[=:]|KEEP_LIST|KNOWN_GENERIC|Set\s*\(\s*\[" wikey-core/src/search/query-intent-filter.ts wikey-core/src/search/query-rewriter.ts wikey-core/src/search/query-expander.ts wikey-core/src/config/vault-query-config.ts
+# 결과 = 0 hit (LRU capacity / timeout 같은 numeric config + role enum 4 literal 은 검증 대상 외)
+```
+
+---
+
+## 3. 4 단계 (Step A 환경 → B 코드 → C 검증 → D 동기화)
+
+### Step A — 환경 세팅 + 사용자 결정 6건 잠금 + 코드 변경 위치 fact-check (Phase 1)
+
+**목적**: 본 cycle 시작 전 사용자 결정 6건 (Q1~Q6) 잠금 + LLMClient API / orama-index search opts / SQLite dep / settings UI 패턴 / vault config parser / `.github/workflows/` 디렉토리 결정.
+
+**A1. 사용자 결정 6건 잠금** (spec §2 Open Questions mirror)
+
+- [x] **결정 Q1 LOCKED (2026-05-10 session 33)**: filter 전용 LLM provider+model = **2 dropdown selectbox** (기존 `renderStandardDropdown` line 297~317 + `renderModelDropdown` line 323~366 패턴 100% mirror). default = `DEFAULT` (model dropdown 첫 옵션, line 342, wikey-core `WIKEY_BASIC_MODEL` inherit). provider override toggle 없음 — 항상 dropdown 2개 노출.
+- [x] **결정 Q2 LOCKED**: cache 영구 저장 = **SQLite** — `~/.cache/wikey/query-intent-cache.sqlite` (wikey-core 기존 `~/.cache/wikey/` 패턴 mirror — `convert-cache.ts` / `capability-map.ts` 참조). schema = `query_intent_cache (key TEXT PRIMARY KEY, decision_json TEXT, created_at INTEGER, accessed_at INTEGER)` + LRU eviction (default 1,000 entries). plugin/process restart 모두에서 cache 보존. rewrite/expand cache 도 별 table 같은 SQLite 안.
+- [x] **결정 Q3 LOCKED**: filter timeout default = **5s** (Gemini-2.5-flash p99 ≈ 3s safety margin).
+- [x] **결정 Q4 LOCKED**: filter 적용 = **opt-in** (default OFF — settings UI toggle 사용자 명시 ON). I7 backward compat 보장.
+- [x] **결정 Q5 LOCKED**: 안내문구 final wording = **§1.4 default 권고 본문 잠금** (master 결정). UI control = toggle (ON/OFF) + text input (timeout, cache size, advanced section temperature/max_tokens) + provider dropdown + model dropdown (`addModelSelector` 패턴) + per-query override (`!nofilter` syntax + chat 패널 토글) + metadata badge.
+- [ ] **결정 Q6 (신규, v1.2)**: 의료 / 법률 도메인 query 20건 결정 — analyst v1.2 권고 = **expected_match 만 작성 (mock corpus)** + Step A1 안 사용자 final 결정. 별 corpus 추가는 §5.5 (지식 그래프) 범위 — 본 cycle scope 외.
+- [ ] **사용자 승인** — 본 spec v1.2 + Q6 결정.
+
+**A2. 진입 조건 + 코드 fact-check** (master fresh grep 의무, 구현 시점 잠금)
+
+- [x] §5.7.6 ABANDON 종결 (commit `932151a`).
+- [x] §5.7.6 평가 도구 보존 — `wikey-core/eval/benchmark-suite.json` 51 query (확증 결과: pmbok 11 / itil 10 / obsidian 10 / korean-general 10 / english-mixed 10) + `runBenchmark` export.
+- [x] §5.7.6 baseline — Top-1 66.7% / Top-3 86.3% / MRR 0.829.
+- [x] wikey-core LLMClient stable — `call(prompt: string, opts?: LLMCallOptions): Promise<string>` (line 14).
+- [ ] `wikey-core/src/search/orama-index.ts` `OramaIndexHandle.search(query, { topN })` (line 67~191) 시그니처 + `SearchOpts` 정의 위치 line 53 (`readonly topN: number`) 확인.
+- [ ] `wikey-core/package.json` SQLite dep (`better-sqlite3` 또는 동등) 존재 여부 확인 — 부재 시 신규 추가 결정. license 호환 (MIT) 확증.
+- [ ] `wikey-core/package.json` YAML parser dep (`yaml` 또는 `js-yaml`) 존재 여부 확인 — 기존 사용 dep 재사용 우선.
+- [ ] `wikey-core/src/prompts/` 디렉토리 — 기존 `ingest_prompt_basic.md` 만 존재. `query-intent-filter.prompt.md` / `query-rewriter.prompt.md` / `query-expander.prompt.md` 3 신규 작성.
+- [ ] `wikey-core/eval/benchmark-suite.json` 51 query 보존 + 의료 10 + 법률 10 추가 (Q6 결정 따름) → 71 query.
+- [ ] `wikey-core/src/scripts/benchmark-search.ts` `runBenchmark` export + `searchFn` injection 시그니처 보존 확증.
+- [ ] `.github/workflows/` 디렉토리 위치 결정 — repo root vs wikey-core monorepo. 사용자 final + Step A1 잠금. analyst 권고 = `wikey-core/.github/workflows/benchmark.yml` (monorepo subdir CI 패턴).
+
+**A3. wikey-obsidian settings UI 변경 위치 fact-check** (Q5 사용자 결정 mirror)
+
+- [x] `wikey-obsidian/src/settings-tab.ts` `renderStandardDropdown` (line 297~317) + `renderModelDropdown` (line 323~366) 패턴 확증. dynamic fetch + DEFAULT 첫 옵션 (line 342) + (custom) 잔존 옵션 (line 351).
+- [x] `wikey-obsidian/src/settings-tab.ts` `Default Model` section (line 251~291) + `Ingest Model` section (line 369~) 의 provider clear-on-change 패턴 (line 270~273 / line 386~389) 확증.
+- [x] `wikey-obsidian/src/main.ts` `WikeySettings` interface (line 42) + default (line 102) + conf merge (line 680) + effectiveProvider (line 795) 확증. 신규 8~10 field 추가:
+  - `advancedQueryTuningEnabled: boolean` (default false)
+  - `advancedQueryTuningTimeoutMs: number` (default 5000)
+  - `advancedQueryTuningCacheSize: number` (default 1000)
+  - `advancedQueryTuningProvider: string` (default '' = DEFAULT)
+  - `advancedQueryTuningModel: string` (default '' = DEFAULT)
+  - `advancedQueryTuningTemperature: number` (default 0.0)
+  - `advancedQueryTuningMaxTokens: number` (default 500)
+  - `advancedQueryTuningMode: 'off' | 'filter-only' | 'filter-rewrite' | 'filter-rewrite-expand'` (default 'filter-only', mode='off' = master switch OFF)
+- [ ] `wikey-obsidian/src/sidebar-chat.ts` 안 chat input 처리 위치 확인 — `!nofilter` prefix 처리 + per-query override toggle UI 추가 위치 + metadata badge 시각화 위치 결정.
+
+**A4. vault config + prompt override fact-check** (Spec 6)
+
+- [ ] `wikey-obsidian/src/main.ts` 안 vault root 접근 패턴 확인 (`this.app.vault.adapter.basePath` 또는 동등) — `.wikey/` 디렉토리 read 가능 여부.
+- [ ] vault adapter read API 확인 — `vault.adapter.read(path)` / `vault.adapter.exists(path)` 사용 패턴 grep.
+- [ ] yaml parser dep (`yaml` 또는 `js-yaml`) wikey-obsidian / wikey-core 안 기존 사용 grep — 재사용 우선.
+
+### Step B — TDD RED → GREEN → BLUE (Phase 2~5)
+
+**목적**: AC-F1~F9 + AC-S1~S3 단위 test 작성 + RED 확증 → §3 변경 면 14 file 구현 → GREEN → 회귀 + refactor.
+
+**B1. TDD RED** (Phase 2)
+
+- [ ] **AC-F1 RED**: `wikey-core/src/__tests__/search/query-intent-filter.test.ts` 신규 — `QueryIntentFilter.filter(query, vaultHint?)` mock LLM 으로 6 case (PMBOK / 의료 / 법률 / single token / mixed 영문 / vault hint 적용). 모두 FAIL.
+- [ ] **AC-F2 RED**: 동 file fail-open 3 case (mock LLM throw / timeout / invalid JSON). FAIL.
+- [ ] **AC-F3 RED**: 동 file SQLite cache test — 동일 query 2회 호출 시 mock LLM call counter (2회차 = 0) + temp dir SQLite file 저장 + reload 후 cache hit + capacity 1000 + LRU eviction. FAIL.
+- [ ] **AC-F4 RED**: 동 file invariant test (I3~I6) + 소스 grep self-check (`KOREAN_STOPWORDS` / `STOPWORDS` / `KEEP_LIST` / `Set([...])` 단어 list 0건). FAIL.
+- [ ] **AC-F5 RED**: `wikey-core/src/__tests__/search/orama-index-filter.test.ts` 신규 — `OramaIndexHandle.search(query, { filter, rewriter, expander })` 통합 + 3 layer 모두 inject 시 metadata field populated + 부재 시 기존 path. FAIL.
+- [ ] **AC-F6 RED**: `wikey-core/src/__tests__/search/query-rewriter.test.ts` 신규 — minimal change invariant (edit distance ≤ 50%) + happy + violation fallback. FAIL.
+- [ ] **AC-F7 RED**: `wikey-core/src/__tests__/search/query-expander.test.ts` 신규 — HyDE 길이 (50~200자) + multiQueries N=3 + fallback chain. FAIL.
+- [ ] **AC-F8 RED**: `wikey-core/src/__tests__/config/vault-query-config.test.ts` 신규 — `.wikey/query-filter.yaml` parse + schema validation + parse fail fallback. FAIL.
+- [ ] **AC-F9 RED**: 동 file 안 vault prompt override test — vault `.wikey/prompts/*.prompt.md` 존재 시 우선 / 부재 시 default. FAIL.
+- [ ] **AC-S1 RED**: `wikey-obsidian/src/__tests__/settings-tab-query-tuning.test.ts` 신규 — Advanced query tuning section 신규 + 5+ control 렌더 (provider+model 2 dropdown `renderModelDropdown` 사용 assert) + advanced section + 안내문구 substring + default OFF + persist. FAIL.
+- [ ] **AC-S2 RED**: `wikey-obsidian/src/__tests__/sidebar-chat-query-override.test.ts` 신규 — `!nofilter` syntax + chat 토글 + metadata badge 시각화. FAIL.
+- [ ] **AC-S3 RED**: `wikey-core/.github/workflows/benchmark.yml` 신규 작성 + `actionlint` 실행 → YAML 문법 PASS + workflow 의 step 시퀀스 (checkout / setup-node / npm ci / npm run benchmark:search / threshold check / PR comment) 명시. (RED = workflow file 부재 상태에서 actionlint fail.)
+- [ ] **fresh 실행 evidence**: `npm test --prefix wikey-core` + `npm test --prefix wikey-obsidian` 실행 후 신규 test 모두 FAIL + 기존 738+ test PASS 확증.
+
+**B2. TDD GREEN** (Phase 3)
+
+변경 면 ≤ 14 file (wikey-core ≤ 12 + wikey-obsidian 2):
+
+- [ ] **§3.1 구현 — wikey-core 신규 file 5**:
+  - `wikey-core/src/search/query-intent-filter.ts` — `QueryIntentFilter` class + `FilterDecision` / `TokenDecision` types + LLMClient injection + AbortController timeout + extractJsonObject parse + vault hint inject.
+  - `wikey-core/src/search/query-rewriter.ts` — `QueryRewriter` class + `RewriteDecision` + minimal change invariant (edit distance ≤ 50%).
+  - `wikey-core/src/search/query-expander.ts` — `QueryExpander` class + `ExpandDecision` + HyDE / multi-query.
+  - `wikey-core/src/search/query-filter-cache.ts` — SQLite-backed cache (filter / rewrite / expand 별 table 분리, LRU eviction).
+  - `wikey-core/src/config/vault-query-config.ts` — `.wikey/query-filter.yaml` parser + `VaultQueryHint` type + prompt override path resolver.
+
+- [ ] **§3.2 구현 — wikey-core prompt 신규 file 3**:
+  - `wikey-core/src/prompts/query-intent-filter.prompt.md` — 4 역할 정의 + 5 도메인 example (PMBOK + 의료 + 법률 + IT + 일반) + 응답 schema + vault hint inject 슬롯.
+  - `wikey-core/src/prompts/query-rewriter.prompt.md` — 동의어 치환 + 의미 유지 invariant + edit distance constraint + 응답 schema.
+  - `wikey-core/src/prompts/query-expander.prompt.md` — HyDE 가상 답변 (50~200자) + multi-query 변형 N=3 + 응답 schema.
+
+- [ ] **§3.3 구현 — wikey-core 변경 file 3**:
+  - `wikey-core/src/search/orama-index.ts` — `SearchOpts` 안 `filter?: QueryIntentFilter` / `rewriter?: QueryRewriter` / `expander?: QueryExpander` field 추가 + `search` 메서드 안 3 layer wrapper (~20 LOC, fail-open + token rejoin + multi-query union) + `SearchResult` 안 `filterDecision?` / `rewriteDecision?` / `expandDecision?` optional field.
+  - `wikey-core/src/types.ts` — `QueryIntentFilter` / `QueryRewriter` / `QueryExpander` interface export + `FilterDecision` / `RewriteDecision` / `ExpandDecision` type export + `VaultQueryHint` type.
+  - `wikey-core/package.json` — `better-sqlite3` dep 추가 (Step A2 fact-check 결과 부재 시) + `yaml` 또는 `js-yaml` dep 재사용 (기존 dep 부재 시 추가).
+
+- [ ] **§3.4 구현 — wikey-core eval 확장**:
+  - `wikey-core/eval/benchmark-suite.json` 확장 (51 → 71): 의료 10 query (Q6 결정 mirror, expected_match 만 작성) + 법률 10 query.
+
+- [ ] **§3.5 구현 — wikey-core CI workflow 신규**:
+  - `wikey-core/.github/workflows/benchmark.yml` — push / PR trigger + `actions/checkout@v4` + `actions/setup-node@v4` + `npm ci` + `npm run benchmark:search` + threshold check (Top-1 / Top-3 / MRR 임계 + per-domain ≥ 60% 검사) + baseline drop ≥ 5%p 시 fail + PR comment (per-domain breakdown 포함).
+
+- [ ] **§3.6 구현 — wikey-obsidian settings UI 변경**:
+  - `wikey-obsidian/src/settings-tab.ts` — `renderAdvancedQueryTuningSection` private method 신규 (~80~120 LOC):
+    - **toggle**: `Advanced query tuning ON/OFF` (default OFF, opt-in / I7 backward compat).
+    - **mode dropdown**: `Mode` (off / filter-only / filter-rewrite / filter-rewrite-expand).
+    - **text input**: `Filter timeout (ms)` (default 5000).
+    - **text input**: `Cache size (entries)` (default 1000).
+    - **provider dropdown** (Q1 LOCKED): `Filter LLM provider` — `renderStandardDropdown` 사용, line 254~278 mirror, default = `DEFAULT`.
+    - **model dropdown** (Q1 LOCKED): `Filter LLM model` — `renderModelDropdown` 사용, line 280~290 mirror, dynamic fetch.
+    - **advanced section text inputs**: `Temperature` (default 0.0) + `Max tokens` (default 500).
+    - **안내문구 (description text)**: §1.4 default 권고 본문 mirror (Q5 LOCKED) — paradigm 의도 + 각 옵션 의미 + provider 선택 의미 + 비용/효익.
+    - provider/model clear-on-change 패턴 mirror (line 270~273 / line 386~389) — provider 변경 시 model 초기화.
+
+- [ ] **§3.7 구현 — wikey-obsidian main + sidebar 변경**:
+  - `wikey-obsidian/src/main.ts` — `WikeySettings` interface 8~10 field 추가 (Step A3 mirror) + default (line 102) + conf merge (line 680) + plugin search 호출 path 안 `advancedQueryTuningEnabled true` 시 filter+rewriter+expander wrapper 적용 (mode 결정 따름) + provider override active 시 filter 전용 LLMClient 인스턴스 별도 생성 (I17 mirror — 다른 wikey LLM 호출 영역 격리) + vault config loader inject (`.wikey/query-filter.yaml` + `.wikey/prompts/*.prompt.md` read).
+  - `wikey-obsidian/src/sidebar-chat.ts` — `!nofilter` prefix syntax 처리 (해당 query 만 filter skip) + chat 패널 안 per-query override toggle 추가 + search result panel 안 `filterDecision` / `rewriteDecision` / `expandDecision` metadata 시각화 (token keep/drop badge).
+
+- [ ] **fresh 실행 evidence**: `npm test --prefix wikey-core` + `npm test --prefix wikey-obsidian` 모두 PASS + 신규 test 모두 GREEN.
+
+**B3. BLUE Phase 3a — 회귀 검증** (Phase 4)
+
+- [ ] `npm test --prefix wikey-core` (738+ tests) PASS — exit 0
+- [ ] `npm test --prefix wikey-obsidian` (46+ tests) PASS — exit 0
+- [ ] `npm run build --prefix wikey-core` 0 errors
+- [ ] `npm run build --prefix wikey-obsidian` 0 errors
+- [ ] `./scripts/validate-wiki.sh` PASS
+- [ ] `./scripts/check-licenses.sh` PASS (`better-sqlite3` MIT + `yaml` MIT 신규 dep NOTICE 갱신)
+- [ ] `./scripts/check-kiwi-vendor-sync.sh` PASS (Kiwi 영역 변경 0)
+- [ ] `actionlint wikey-core/.github/workflows/benchmark.yml` PASS (YAML lint).
+
+**B4. BLUE Phase 3b — Refactor** (Phase 5)
+
+- [ ] **함수 분해**: `QueryIntentFilter.filter` / `QueryRewriter.rewrite` / `QueryExpander.expand` 가 50+ LOC 면 sub fn 분리 (cache lookup / LLM call / parse / merge / fallback 분기).
+- [ ] **Naming**: `filter` / `rewrite` / `expand` / `decision` / `keep` / `role` 일관 — clarity 우선.
+- [ ] **DRY**: extractJsonObject 호출 패턴 + cache layer 패턴 — `query-filter-cache.ts` 안 generic LRU class 로 통일 (filter / rewrite / expand 모두 사용). YAML parse + schema validation 패턴 — vault-query-config.ts 안 helper extract.
+- [ ] **주석 quality**: TODO/FIXME 0, prompt schema link, fail-open invariant 명시, edit distance constraint 명시.
+- [ ] **가독성**: nested arrow / magic number 제거 (timeout / cache capacity / edit distance threshold / HyDE 길이 cap 모두 named const).
+- [ ] **회귀 재검증**: B3 모든 PASS 재실행.
+
+### Step C — 라이브 cycle smoke (Phase 6)
+
+**목적**: AC-L1 (70+ query benchmark) master 직접 실행 + per-domain regression detect + cache hit rate 측정.
+
+- [ ] **Pre-check**: 사용자 결정 Q1~Q6 잠금 확증 + LLM provider key 존재 (`~/.config/wikey/credentials.json` `geminiApiKey` 길이만, Read 금지) + `wikey-core/eval/benchmark-suite.json` 71 query 보존.
+- [ ] **fresh reindex 의무 여부**: tokenizer 변경 0 → reindex 불필요 가설. master 가 Step A2 fact-check 결과 잠금. (의료/법률 corpus 부재 시 mock corpus 또는 expected_match 만 검증.)
+- [ ] **첫 실행 (cold cache)**: `cd wikey-core && npm run benchmark:search` 1회 실행 + filter+rewriter+expander applied (searchFn = 3 layer wrap). 결과 console log:
+  - aggregate Top-1 ≥ 70%
+  - aggregate Top-3 ≥ 88%
+  - aggregate Mean MRR ≥ 0.85
+  - 7 도메인 모두 Top-1 ≥ 60% (PMBOK + 의료 + 법률 회귀 0)
+- [ ] **2회차 실행 (warm cache)**: 동 command 즉시 재실행 + latency 비교 (cache hit rate ≥ 80% — SQLite persist 확증).
+- [ ] **회귀 detect 시 분기**: 어떤 도메인 Top-1 < 60% → exit 1 + console error → master 회고 (prompt 재조정 시도 OR cycle abandon → 사용자 보고).
+- [ ] **활동 evidence 보존**: `activity/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md` 신규 — baseline (Top-1 66.7% / Top-3 86.3% / MRR 0.829) vs 3 layer applied 비교 표 + per-domain breakdown (7 도메인) + cache hit rate + LLM 호출 latency (filter / rewrite / expand 별).
+
+### Step D — 문서 동기화 (Phase 8)
+
+**목적**: result + resultx + memory + plan-full §5.7 갱신 + commit.
+
+**D1. activity 문서**
+
+- [ ] `activity/phase-5/phase-5-result.md` §5.7.8 entry 신규 — Step A~C 결과 요약 + AC 18 line-by-line 증거 매핑 + Karpathy 4원칙 cross-check.
+- [ ] `activity/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md` 신규 — Step C live smoke 상세 (baseline vs 3 layer 비교 + per-domain + cache hit rate + LLM 호출 latency 분포).
+
+**D2. plan 문서**
+
+- [ ] `plan/phase-5/phase-5-todo.md` §5.7.8 entry 신규 — 본 todox v1.2 mirror (체크박스 = 진행 상태) + tag 추가 (`#search`, `#quality-tuning`, `#llm-dynamic-stopword`, `#orama`, `#paradigm-correction`, `#vault-customize`, `#ci-integration`).
+- [ ] `plan/plan-full.md` §5.7 row 갱신 — §5.7.8 ⬜ → ✅ + AC 18/18 PASS evidence.
+
+**D3. memory 문서**
+
+- [ ] `~/.claude/projects/-Users-denny-Project-wikey/memory/MEMORY.md` `Phase 5 Scope` entry 갱신 — §5.7.8 종결 mirror.
+- [ ] `~/.claude/projects/-Users-denny-Project-wikey/memory/project_phase5_status.md` 갱신 — Phase 5 잔여 = §5.5 / §5.6 / §5.7.7 / §5.8 / §5.9 (§5.7.8 종결).
+
+**D4. commit + push**
+
+- [ ] git add wikey-core 신규 5 file + 변경 3 file + prompt 3 file + benchmark 확장 + workflow + wikey-obsidian 변경 2 file + sidebar 변경 + plan + activity + memory 신규
+- [ ] commit message: `feat(§5.7.8): LLM per-query dynamic stopword paradigm — query intent filter + rewrite + expand + vault customize + Advanced query tuning settings + CI workflow (AC 18/18 PASS)`
+- [ ] push
+
+---
+
+## 4. Self-check (analyst 글로벌 7-anchor + wikey override h/i/j/k)
+
+### 4.1 글로벌 7-anchor (rules.md §10)
+
+| # | Anchor | 결과 | 검증 |
+|---|--------|------|------|
+| (a) | 시그니처 일관성 — `QueryIntentFilter` / `QueryRewriter` / `QueryExpander` / `VaultQueryConfig` / `FilterDecision` / `RewriteDecision` / `ExpandDecision` / `runBenchmark` cross-step 동일 | PASS | grep cross-check |
+| (b) | state/data 표 형식 — Step A 6건 (Q1~Q6) / Step B 4 phase / 변경 면 14 file (wikey-core ≤ 12 + wikey-obsidian 2) / AC 18 (단위 12 + 통합 5 + 라이브 1) / Risk 14 count drift 0 | PASS | count 검증 |
+| (c) | builder/parser 분기 — fail-open / cache hit / all-drop-guard / filter optional / vault hint optional / minimal change 모두 Step B 명시 | PASS | line-by-line |
+| (d) | AC ↔ Step 1:1 매핑 | PASS — AC-F1~F9 → Step B1+B2 / AC-S1~S3 → Step B1+B2 / AC-I1 → Step B3 / AC-I2~I5 → Step B3+C / AC-L1 → Step C | line-by-line |
+| (e) | self-check 모든 행 drift 없음 (v1.2 작성 직후) | PASS | 본 §4 line read |
+| (f) | footer + version + 변경 이력 — frontmatter `version: v1.2` ↔ §변경 이력 마지막 row v1.2 ↔ footer 일관 | PASS | `grep -nE "^version: v1\.2$"` |
+| (g) | 코드 ↔ test exact phrase — `QueryIntentFilter` / `QueryRewriter` / `QueryExpander` / `domain-marker` / `intent-core` / `generic-noise` / `disambiguator` / `'llm-fail'` / `'timeout'` / `'all-drop-guard'` / `'minimal-change'` 일치 | PASS | `grep -F` cross-check |
+
+### 4.2 wikey override anchor (h, i, j, k)
+
+| # | Anchor | 결과 | 검증 |
+|---|--------|------|------|
+| (h) schema 4 원칙 일치 | (Explicit) 3 layer decision LLM 응답 가시화 + metadata UI 시각화 / (Yours) wikey config 통합 LLMClient + SQLite local cache + vault config local file / (File over app) prompt = markdown file (default + vault override) + vault config = YAML / (BYOAI) provider+model 2 dropdown 자유 (Q1 LOCKED) | PASS | wikey.schema.md cross-check |
+| (i) 3계층 경계 준수 | raw / wiki / schema 권한 위반 0. 변경 면 = wikey-core ≤ 12 (신규 5 + 변경 3 + prompt 3 + eval 1 + workflow 0~1) + wikey-obsidian 2 (settings-tab + main, sidebar-chat 변경 = 2 file 안 영역). raw / wiki / wikey.schema.md 변경 0. | PASS | grep diff 0 |
+| (j) 워크플로우 4 일관 | (ingest) tokenizer 변경 0 → 영향 0. (query) schema §"LLM 참여형 다층 검색" 1단계 *완전 충족* (filter / rewrite / expand 3단). (lint / 삭제·수정) 변경 0. | PASS | wikey.schema.md cross-check |
+| (k) 하드코딩 금지 (2026-05-10 영구 정책) | Step B GREEN 안 hardcoded set / list / rule **0건** 강제. 4 역할 enum (`domain-marker` / `intent-core` / `generic-noise` / `disambiguator`) = LLM 응답 schema 정의 (LLM 자유 판정). cache capacity / timeout / threshold = numeric config. vault config (Spec 6) 의 `domainMarkers` / `priorityKeep` list = *사용자 명시 input* (paradigm rule 아님, anchor (k) 본문 부합). 안내문구 description text = 사용자 readable (paradigm rule 아님). 위반 패턴 (`KOREAN_STOPWORDS = Set([...])` / `KNOWN_GENERIC_NOUNS` / hardcoded category mapping / hardcoded slug list) 0건. "사용자 결정 의뢰 — list 정확도 평가" 류 항목 0건. | **PASS** — Step B GREEN 변경 면 단어 list / set 0건 의무. master 1차 grep `Set\s*\(\s*\[` 0 hit 검증 (`query-intent-filter.ts` / `query-rewriter.ts` / `query-expander.ts` / `vault-query-config.ts`). | grep self-check |
+
+### 4.3 사용자 4 의무사항 mirror
+
+| # | 의무사항 | 본 todox 안 mirror 위치 |
+|---|---------|----------------------|
+| 2.1 범용 설계 관점 | Step B2 §3.2 prompt 구현 (5 도메인 example: PMBOK + 의료 + 법률 + IT + 일반) + Step C 안 71 query 7 도메인 검증 (도메인 비-특정 paradigm 보장). |
+| 2.2 §5.7.6 paradigm violation 학습 | Phase 0 선행 의무 #1 (ABANDON evidence read) + Step C 안 PMBOK 회귀 0 보장 (per-domain ≥ 60%). |
+| 2.3 anchor (k) 하드코딩 금지 | Step B GREEN hardcoded 0건 강제 + master 1차 grep 의무 + AC-F4 source grep self-check + vault config 사용자 input 영역 명시. |
+| 2.4 §5.7.7 orthogonal 공존 | spec §4 Out of Scope mirror — §5.7.7 만 잔존 (검색 코어 인프라 영역). 본 §5.7.8 종결 후 결과 측정 → §5.7.7 진입 결정. |
+
+## 5. 변경 이력
+
+| 버전 | 일시 | 변경 |
+|------|------|------|
+| **v1** | 2026-05-10 session 32 (analyst 작성) | 초안 — SDD+TDD 흐름 mirror + 검증 의무 매트릭스 + Step A~D. AC 9. 사용자 결정 4건 (Q1~Q4). |
+| **v1.1** | 2026-05-10 session 32 (사용자 추가 — Advanced query tuning settings UI + LLM provider override) | spec v1.1 mirror — Q5 추가 + Step A4 + Step B2 §3.5/§3.6. AC-S1 (총 AC 10). 변경 면 ≤ 7 file. |
+| **v1.2** | 2026-05-10 session 33 (사용자 결정 잠금 + Out of Scope 통합) | spec v1.2 mirror. (a) Q1~Q5 LOCKED — 2 dropdown / SQLite cache `~/.cache/wikey/query-intent-cache.sqlite` / 5s timeout / opt-in / 안내문구 §1.4 잠금. (b) Out of Scope 9 항목 §5.7.7 제외 모두 본 cycle 통합 → Step B2 §3.1 (5 신규 file: filter / rewriter / expander / cache / vault-config) + §3.2 (3 prompt file) + §3.3 (3 변경 file) + §3.4 (eval 확장 51 → 71) + §3.5 (workflow 신규) + §3.6 (settings UI 8~10 field + 5+ control + advanced section + 안내문구) + §3.7 (main + sidebar per-query override + metadata UI). (c) Q6 신규 (의료/법률 query 결정). (d) AC 10 → 18. Risk 8 → 14. (e) 변경 면 ≤ 14 file (wikey-core ≤ 12 + wikey-obsidian 2). 사용자 의도 (2026-05-10 session 33) = "Out of Scope 모두 본 cycle 안 통합 — 별 cycle 분리해서 작업량 부풀리지 말자". §5.7.7 만 별 cycle 유지 (검색 코어 인프라 영역). master fix / codex cycle 미진입 — v1.2 = analyst 재작성 직후 상태. |
+
+---
+
+> **footer (cycle 추적)**: §5.7.8 todox **v1.2** 작성 완료 (analyst, 2026-05-10 session 33). codex Mode D Panel cycle 미진입. 사용자 결정 6건 (Q1~Q6) 잠금 후 SDD+TDD 진입.
+>
+> Self-check: analyst 글로벌 7-anchor PASS / wikey override (h, i, j, k) PASS / Karpathy 4원칙 PASS / 사용자 4 의무사항 mirror 4/4 / hardcoded list 0건 (Step B GREEN 의무, vault config 사용자 input 영역 명시) / 변경 면 ≤ 14 file (wikey-core ≤ 12 + wikey-obsidian 2) / AC 18 / dep 추가 ≤ 2 (`better-sqlite3` + 기존 yaml 재사용).

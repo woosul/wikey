@@ -26,7 +26,7 @@
 >
 > ## §5.7.8 진입 시 첫 액션 (사용자 결정 시)
 >
-> 1. analyst 위임 — `plan/phase-5-spec-5.7.8-llm-dynamic-stopword.md` + `phase-5-todox-5.7.8-llm-dynamic-stopword.md`
+> 1. analyst 위임 — `plan/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md` + `phase-5-todox-5.7.8-llm-dynamic-stopword.md`
 > 2. spec 안 §5.7.6 paradigm violation 학습 mirror (static rule 위반 → LLM dynamic decision)
 > 3. master 1차 검증 + codex Mode D Panel review + 사용자 승인
 > 4. SDD+TDD 구현 — query-stopword-filter module + LLM 호출 + LRU cache
@@ -88,9 +88,9 @@
 > ## Session 30 (2026-05-09) §5.7.5 plan APPROVE 종결
 >
 > **plan 산출** (단일 commit):
-> - `plan/phase-5-spec-5.7.5-orama-update-sync.md` (v1.4, 472줄, Spec WHAT)
-> - `plan/phase-5-todox-5.7.5-orama-update-sync.md` (v1.4, 308줄, Todo HOW)
-> - `plan/phase-5-todo.md §5.7.5` mirror (분류 11/9/7=27 + 사용자 결정 5건 + 부가 4건 + AC 20)
+> - `plan/phase-5/phase-5-spec-5.7.5-orama-update-sync.md` (v1.4, 472줄, Spec WHAT)
+> - `plan/phase-5/phase-5-todox-5.7.5-orama-update-sync.md` (v1.4, 308줄, Todo HOW)
+> - `plan/phase-5/phase-5-todo.md §5.7.5` mirror (분류 11/9/7=27 + 사용자 결정 5건 + 부가 4건 + AC 20)
 > - `claude-harness-helper/common/skills/master-validation/SKILL.md` anchor (f) exact match 보강 (사용자 승인)
 >
 > **Cycle 누적** (codex Mode D Panel):
@@ -121,7 +121,7 @@
 > ## Session 28 (2026-05-09) §5.7.4 spec/todo v8 작성 (참조)
 >
 > session 28 에서 §5.7.4 spec/todo 종결.
-> (a) §5.7.4 spec/todo 종결 — `plan/phase-5-spec-5.7.4-orama-migration.md` (v8, 781 lines) + `plan/phase-5-todox-5.7.4-orama-migration.md` (v8, 270 lines). 28 AC + 14 Risk + 20 anchor self-check.
+> (a) §5.7.4 spec/todo 종결 — `plan/phase-5/phase-5-spec-5.7.4-orama-migration.md` (v8, 781 lines) + `plan/phase-5/phase-5-todox-5.7.4-orama-migration.md` (v8, 270 lines). 28 AC + 14 Risk + 20 anchor self-check.
 > (b) **codex Mode D Panel 7 cycle 누적** — #1 NEEDS_REVISION (9) → #2 (6) → #3 (6) → #4 (7) → #5 (3, HIGH 0 첫) → #6 (4, HIGH 0) → **#7 APPROVE_WITH_CHANGES (1 LOW only, fix 완료)**. finding 88% 감소 (9→1).
 > (c) **사용자 결정 영구 등록 (2026-05-09 session 28)**:
 >   - **B-2 sparse vendor**: `wikey-core/vendor/kiwi-nlp/` = `bab2min/Kiwi/bindings/wasm/package/` subdir + 본가 root LICENSE 별 fetch (코드 내재화 의도 직접 충족)
@@ -135,12 +135,12 @@
 > 2. **Step A (환경 세팅)** — Kiwi 사전 cache 확증 (`~/.cache/wikey/kiwi-models/cong/base/` 9 파일 104MB) + WIKEY_SEARCH_ENGINE config 키 도입 (types.ts:30 + config.ts:13 + main.ts:513/641) + kiwi-nlp B-2 sparse vendor (`bab2min/Kiwi` git tag archive 의 `bindings/wasm/package/` subdir + root LICENSE 별 fetch)
 > 3. **Step B (TDD RED→GREEN→BLUE)** — RED 21 case (T1~T3 / I1, I2.a, I3, I4 / Q1~Q5 / R1~R3 / V1, V2 / W1 / F1.a, F1.b) → GREEN A1~A8 + vendor 구현 → BLUE Phase 3a 회귀 (npm test + build + validate-wiki) + Phase 3b refactor
 > 4. **Step C (라이브 cycle smoke, master 직접)** — obsidian-cdp full ingest cycle + sidebar-chat 한+영 query (search-only p95 ≤ 200ms) + WIKEY_SEARCH_ENGINE=qmd toggle 검증
-> 5. **Step D (문서 동기화)** — LICENSE + NOTICE (6 항목 spec AC-D2 byte-mirror) + README.md `## Third-party software` + `## Search engine rollback` + wikey.schema.md 검색 코어 섹션 갱신 + activity/phase-5-result.md §5.7.4 entry + commit
+> 5. **Step D (문서 동기화)** — LICENSE + NOTICE (6 항목 spec AC-D2 byte-mirror) + README.md `## Third-party software` + `## Search engine rollback` + wikey.schema.md 검색 코어 섹션 갱신 + activity/phase-5/phase-5-result.md §5.7.4 entry + commit
 > 6. **§5.7.5 별 spec 작성** (B 그룹 7 deferred — Orama upstream sync 자동화) — 본 §5.7.4 종결 후 별 cycle
 >
-> 단일 진실 source: spec → todox → master phase-5-todo cascade ([phase-5-spec-5.7.4-orama-migration.md](./phase-5-spec-5.7.4-orama-migration.md) + [phase-5-todox-5.7.4-orama-migration.md](./phase-5-todox-5.7.4-orama-migration.md) + [phase-5-todo.md](./phase-5-todo.md) §5.7.4).
+> 단일 진실 source: spec → todox → master phase-5-todo cascade ([phase-5-spec-5.7.4-orama-migration.md](./phase-5/phase-5-spec-5.7.4-orama-migration.md) + [phase-5-todox-5.7.4-orama-migration.md](./phase-5/phase-5-todox-5.7.4-orama-migration.md) + [phase-5-todo.md](./phase-5/phase-5-todo.md) §5.7.4).
 >
-> 직전 session 27 (2026-05-09) 에서 §5.7.3 research + PoC 4 단계 (Kiwi WASM sandbox / Orama Electron renderer / Kiwi+Orama 통합 / 10 query benchmark) 모두 PASS + 7 dimension 비교 (6/7 Orama 우세) + 사용자 §5.7.4 진입 결정. 결과 문서: [`activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../activity/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md).
+> 직전 session 27 (2026-05-09) 에서 §5.7.3 research + PoC 4 단계 (Kiwi WASM sandbox / Orama Electron renderer / Kiwi+Orama 통합 / 10 query benchmark) 모두 PASS + 7 dimension 비교 (6/7 Orama 우세) + 사용자 §5.7.4 진입 결정. 결과 문서: [`activity/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../activity/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md).
 >
 > 직전 session 26 (2026-05-08) §5.7.1 종결 + §5.7.2 abandon 처리. (process 결함 4 항목 master 의무 영구 등록 — architecture 변경 시 5분 PoC / runtime limitation web search / baseline measurement / codex 정적 한계 인지)
 >
@@ -185,7 +185,7 @@
 > | commands.ts `runIngest` | 113 | (cleanly structured) | 0 | 의도적 유지 |
 >
 > **다음 세션 첫 액션 옵션** (session 24 §5.15.C 종결 후 갱신):
-> 1. **§5.15.B 진행** ★ — PROMOTION_THRESHOLD override (`.wikey/promotion-threshold.yaml`). 200~300 LOC / 1 cycle. UX flexibility — 사용자 도메인별 wiki noise 정책 조정. plan: `plan/phase-5-todox-5.15-pipeline-v2-followups.md §2.2 / AC-B1~B6`
+> 1. **§5.15.B 진행** ★ — PROMOTION_THRESHOLD override (`.wikey/promotion-threshold.yaml`). 200~300 LOC / 1 cycle. UX flexibility — 사용자 도메인별 wiki noise 정책 조정. plan: `plan/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §2.2 / AC-B1~B6`
 > 2. **§5.15.A 진행** — UI E2E test 인프라 (vitest + Obsidian API mock + jsdom). 1000~1600 LOC / 3~5 cycle. §5.14 잔존 4 항목 deep split enabler. 큰 작업.
 > 3. **Phase 6 (웹 환경) 진입** — Phase 5 본체 종결 충족, plan-full §3.3.6 진입 조건 검토.
 > 4. **Phase 5 P3 (§5.5 / §5.6) 또는 P4 (§5.7~§5.9) 진입** — 우선순위 낮은 잔여 subject 진행.
@@ -270,7 +270,7 @@
 > **§5.10.4 cycle #8 APPROVE 후 잔재 P3** (cosmetic, 차기 검토):
 > - DESIGN.md Suggestions 패널 — fix 완료
 > - run-convergence-pass.mjs orphan import — fix 완료 (D-wide deprecation banner + exit)
-> - parent activity/phase-5-result.md §5.10.4 mirror — 본 cycle 에서 갱신
+> - parent activity/phase-5/phase-5-result.md §5.10.4 mirror — 본 cycle 에서 갱신
 > - 본 session-wrap-followups historical entries — 본 갱신
 >
 > **§5.10.4 cycle 중 사용자 raise 신규 issue** (D-wide 직교, 후속 plan 등록):
@@ -298,7 +298,7 @@
 > - `wikey-core/scripts/run-convergence-pass.mjs`: deprecation banner 가 아니라 file 자체 삭제
 > - `scripts/qmd-embeddings-export.mjs`: deprecation banner — 본 script 는 mention-history.json export 가 dead 라 의미 없음. 삭제 검토
 > - `wikey-core/src/index.ts`: IngestRecord type export 도 §5.4 mention-history 외 사용처 grep 후 정리
-> - `plan/phase-5-todox-5.4-integration.md` + `plan/phase-5-todox-5.4.1-self-extending.md`: archive note 추가
+> - `plan/phase-5/phase-5-todox-5.4-integration.md` + `plan/phase-5/phase-5-todox-5.4.1-self-extending.md`: archive note 추가
 >
 > **검증**: npm test 604 PASS 유지 (skipped 157 → 7 file × ~10 case 제거 후 새 baseline). build 0 errors. master 직접 라이브 smoke (1 fixture ingest cycle) 회귀 0 확증.
 >
@@ -311,7 +311,7 @@
 > **Background** (사용자 raise 2026-05-05 session 17 + 첨부 image 분석):
 > "wiki 생성이 <15인거는 알겠는데, 생성조건이 궁금할 정도임. '전라남도 테크노파크' 같은 고유명사는 일단 생성하고 보는건지? 전체 내용에서 의미가 있는 내용이 아닌 단순 출처 정도인데 굿이 wiki페이지로 생성되어야 하는지 궁금할 정도."
 >
-> **Root cause** (`activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md §10.2`):
+> **Root cause** (`activity/phase-5/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md §10.2`):
 > 현재 mention extractor + canonicalizer 가 mention 1회 + evidence 1 문장만 있어도 LLM 이 entity/concept 으로 promote. 명시 거부 패턴은 UI 라벨 / 기능명 / 비즈니스 객체 / 한국어 일반 명사. 그러나 *고유명사* 는 거부 안 됨 → 단순 행사 장소 / 출처 (jeonnam-technopark 같은) 도 자체 wiki 페이지 생성.
 >
 > **개선 방향 후보** (정식 plan 에서 evaluation):
@@ -345,7 +345,7 @@
 >
 > ### 4순위 — Phase 5 본체 §5.2.6 / §5.4.7 잔재 검토
 >
-> 다른 본체 미처리 항목들 (`plan/phase-5-todo.md` grep 78 unchecked):
+> 다른 본체 미처리 항목들 (`plan/phase-5/phase-5-todo.md` grep 78 unchecked):
 > - **§5.2.6 H2 섹션 의미 활용** (line 162-167) — wikey 페이지의 표준 H2 (`## 출처` / `## 관련` / `## 분류`) 가 검색·답변에 의미적으로 활용되는지 탐구. 1 unchecked.
 > - **§5.4.10 미처리 후속** (self-extending 의 진짜 의미 — 자동 ontology 확장) — D-wide 채택으로 archived. 본 §5.4 cleanup 1순위 와 함께 archive note 추가.
 > - **§5.4.7 v2 deferral** — 다음 세션 첫 액션 표시. D-wide 채택으로 archived (Stage 4 실 qmd embeddings 통합 등은 Stage 4 자체 폐기로 무관).
@@ -368,7 +368,7 @@
 - `scripts/qmd-embeddings-export.mjs` — read-only SELECT, Float32 BLOB 디코딩, chunk 평균
 - `.wikey/qmd-embeddings.json` (1.4 MB) — 59 / 59 slug × 1024-dim
 - `.wikey/converged-decompositions.json` 갱신 (실 embeddings) + `.mock-baseline.json` 보관
-- 활동 기록: `activity/phase-5-result.md §5.4.8`. mini plan: `plan/phase-5-todox-5.4-integration.md §10`.
+- 활동 기록: `activity/phase-5/phase-5-result.md §5.4.8`. mini plan: `plan/phase-5/phase-5-todox-5.4-integration.md §10`.
 
 **의미 보존 spot-check**: PMBOK 4 areas 0.59~0.66 / COBIT 5 도메인 0.58~**0.91** (evaluate-direct ↔ monitor-evaluate 0.91 의미 강결합) / 보안 vs PM 0.20~0.36 / CIA triad 0.63. 도메인 내부 ≫ 도메인 간 → 의미 보존 확증.
 
@@ -461,7 +461,7 @@
 | 4 | §5.2.2 답변 prompt 강화 (wikilink 1-hop 활용 + 첫 등장 [[페이지명]] + 1-hop 참고 블록 지시) | 3 unit | PASS |
 | 5 | §5.2.3 검색 graph expansion (extractWikilinkBasenames + expandWithOneHopWikilinks helpers + 4-카테고리 resolve, cap 5) | 9 unit | PASS |
 | 6 | §5.2.4 TOP_N 5 → 8 (config.ts + wikey.conf + query-pipeline fallback) | (regression) | PASS |
-| 7 | plan/phase-5-todox-5.2.1-crosslink.md 신설 (analyst v2 — codex P1 3건 정정) + phase-5-todo.md `## 관련 문서` 등재 | — | — |
+| 7 | plan/phase-5/phase-5-todox-5.2.1-crosslink.md 신설 (analyst v2 — codex P1 3건 정정) + phase-5-todo.md `## 관련 문서` 등재 | — | — |
 | 8 | §5.2.8 검증 (cycle smoke) — tester 분기 완료 → 4 PASS / 1 PARTIAL (495→fix) / 1 FAIL (observability ✓, qmd exit=1 = §5.8.3) | — | 4P/1Pa/1F |
 | 9 | §5.2.5 + §5.2.2 fix (commit `7ae636f`) — reindex.sh stderr 보존 + buildSynthesisPrompt "충분히 풍부하게" 지시 | regression | 다음 cycle smoke 재측정 |
 | 10 | §5.2.9 root cause = better-sqlite3 ABI mismatch (commit `f3dbbfa`) — `scripts/rebuild-qmd-deps.sh` 신규 + plugin defense Notice (NODE_MODULE_VERSION 패턴 감지 → specific 안내) | — | master CLI 환경 등가 검증 OK |
@@ -607,7 +607,7 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
 
 ## 2026-04-25 session 9 종료 시점 — **Phase 5 §5.1 (P0 긴급) 구현 완료 + 스킬·agent 인프라 정비**
 
-**상태**: `plan/phase-5-todo.md §5.1.1.1~10` 전부 `[x]`. 537/537 tests pass · build ok · FP baseline 0/30 · 하드코딩 0 hits. E1 live smoke 만 Obsidian CDP 미구동으로 deferred.
+**상태**: `plan/phase-5/phase-5-todo.md §5.1.1.1~10` 전부 `[x]`. 537/537 tests pass · build ok · FP baseline 0/30 · 하드코딩 0 hits. E1 live smoke 만 Obsidian CDP 미구동으로 deferred.
 
 **세션 9 성과**:
 
@@ -620,7 +620,7 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
    - **codex/claude-panel/gemini-panel SKILL.md**: "완료 자동 알림 패턴" (run_in_background + task-notification 자동 수신, Monitor polling 금지) · "패널 이름 필수 지정" · "master 1차 검증 필수" 섹션 추가. crosslink to cmux-control.
    - **claude-panel/panel-dispatch.sh**: role-based permission-mode 자동 분기 (developer/tester/ui-designer/refactor-cleaner/doc-updater/build-error-resolver → acceptEdits, 그 외 plan), output-format default `text` (이전 stream-json 의 JSON raw 가독성 문제 해결).
    - **agent 정의 (analyst/reviewer/developer/tester/ui-designer)**: master 1차 sanity 의무 + run_in_background 호출 의무 명시.
-6. **plan/plan-full.md 분리**: 기존 `prompt_plan.md` (Phase 3 Obsidian 플러그인 설계서) → `plan/phase-3-full.md` 로 이전. `plan/plan-full.md` 신규 (전체 6-Phase 로드맵 + Agents 운영 체제 + 문서 조직 규칙).
+6. **plan/plan-full.md 분리**: 기존 `prompt_plan.md` (Phase 3 Obsidian 플러그인 설계서) → `plan/phase-3/phase-3-full.md` 로 이전. `plan/plan-full.md` 신규 (전체 6-Phase 로드맵 + Agents 운영 체제 + 문서 조직 규칙).
 
 **다음 세션 진입점**:
 
@@ -634,15 +634,15 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
   - `panel-dispatch.sh pick` 의 `--direction right` 고정이 grid 규칙 위반 → master 가 매번 재배치. 자동화 검토.
   - **자동 세션 핸드오프 (PreCompact hook)** — 다음 세션에서 update-config 스킬로 settings.json 에 hook 추가.
 - **읽기 권장**:
-  - `plan/phase-5-todox-5.1-structural-pii.md` v4 (계획서 단일 소스, codex PASS)
-  - `activity/phase-5-result.md §5.1` (구현 결과 타임라인)
+  - `plan/phase-5/phase-5-todox-5.1-structural-pii.md` v4 (계획서 단일 소스, codex PASS)
+  - `activity/phase-5/phase-5-result.md §5.1` (구현 결과 타임라인)
   - `~/.claude/skills/cmux-control/SKILL.md` (panel 운영 공통 레퍼런스)
 
 ---
 
 ## 2026-04-24 session 8 종료 시점 — **Phase 4 본체 완성 + PII 엔진 도입**. 다음 = Phase 5
 
-**상태**: `plan/phase-4-todo.md` D.0.a~o 전부 `[x]`, D.1~D.5 본체 완성 선언 블록 완료. `activity/phase-4-result.md §4.8` 블록 append. 525 tests / 0 build errors.
+**상태**: `plan/phase-4/phase-4-todo.md` D.0.a~o 전부 `[x]`, D.1~D.5 본체 완성 선언 블록 완료. `activity/phase-4/phase-4-result.md §4.8` 블록 append. 525 tests / 0 build errors.
 
 **세션 8 성과**:
 1. D.0.k codex Panel Mode D 재검증: 1차 REJECT / CRITICAL: 1 → 3건 수정 (commit `c2f4165`) → 재검증 APPROVE / CRITICAL: 0.
@@ -657,22 +657,22 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
 - **§5.2 검색 재현율 + §5.3 인제스트 증분 (P1 핵심)** — Anthropic contextual chunk / hash 기반 증분 재인제스트.
 - **§5.4.1 Stage 1 schema.yaml 로더화 (P2 비전 gate)** — PMBOK 하드코딩 외재화. self-extending 로드맵의 첫 실 구현 단계.
 - **읽기 권장**:
-  - `plan/phase-5-todo.md` § 우선순위 가이드 + §5.1 + §5.4 + §5.8
-  - `activity/phase-4-result.md §4.8` (완성 선언 증거)
-  - `activity/phase-4-resultx-4.6-smoke-2026-04-24-v2/README.md` (smoke PARTIAL ACCEPT 상세)
+  - `plan/phase-5/phase-5-todo.md` § 우선순위 가이드 + §5.1 + §5.4 + §5.8
+  - `activity/phase-4/phase-4-result.md §4.8` (완성 선언 증거)
+  - `activity/phase-4/phase-4-resultx-4.6-smoke-2026-04-24-v2/README.md` (smoke PARTIAL ACCEPT 상세)
   - memory `feedback_pii_no_hardcoding.md` (PII 코딩 원칙)
 
 ---
 
 ## 2026-04-24 session 7 종료 시점 — (완료 → session 8 으로 계승)
 
-**Todo 단일 소스 = `plan/phase-4-todo.md` D.0 블록 (D.0.a~o) + D 본체 완성 선언 블록.** 여기에는 세션별 진입 맥락 · 명령어 hint · 변경 snapshot 만 기록.
+**Todo 단일 소스 = `plan/phase-4/phase-4-todo.md` D.0 블록 (D.0.a~o) + D 본체 완성 선언 블록.** 여기에는 세션별 진입 맥락 · 명령어 hint · 변경 snapshot 만 기록.
 
 ### 진입 맥락
 
-- 구현 상세: `activity/phase-4-result.md §4.7`.
-- 구현 계획·경계: `plan/phase-4-todox-4.6-critical-fix-plan.md` v6 (구현 완료된 diff 기준으로 codex 재검증 필요).
-- 체크박스 상태: `plan/phase-4-todo.md` — a~j `[x]` / k~o `[ ]` / D.1~5 (본체 완성 선언) `[ ]` (2026-04-24 session 7).
+- 구현 상세: `activity/phase-4/phase-4-result.md §4.7`.
+- 구현 계획·경계: `plan/phase-4/phase-4-todox-4.6-critical-fix-plan.md` v6 (구현 완료된 diff 기준으로 codex 재검증 필요).
+- 체크박스 상태: `plan/phase-4/phase-4-todo.md` — a~j `[x]` / k~o `[ ]` / D.1~5 (본체 완성 선언) `[ ]` (2026-04-24 session 7).
 
 ### 다음 세션 목표 — **단일 세션에서 Phase 4 본체 완성 선언**
 
@@ -683,7 +683,7 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
 3. D.0.m — PDF sidecar redact grep (`***` 확인, ~10min)
 4. D.0.n — 런타임 sanity (`capabilities.json` 생성 + `reindex.sh --check --json` 3-status 수동 유도, ~15min)
 5. D.0.o — `activity/phase-4-resultx-4.6-smoke-<DATE>-v2/README.md` 작성 (~30min)
-6. D.1~D.5 — `activity/phase-4-result.md` 맨 아래 "Phase 4 본체 완성 선언" 블록 + todo 상단 "본체 완성" 상태 + Phase 5 §5.6 Stage 1 착수점 고정 + memory "완료" + 단일 commit `feat(phase-4): 본체 완성 선언 ...` + push (~45min)
+6. D.1~D.5 — `activity/phase-4/phase-4-result.md` 맨 아래 "Phase 4 본체 완성 선언" 블록 + todo 상단 "본체 완성" 상태 + Phase 5 §5.6 Stage 1 착수점 고정 + memory "완료" + 단일 commit `feat(phase-4): 본체 완성 선언 ...` + push (~45min)
 
 **분할 조건**: D.0.k 에서 codex 가 CRITICAL 발견 → 구현 수정 필요 → 그 시점에만 세션 분할. 그 외 경우는 **연속 완주가 기본**.
 
@@ -713,7 +713,7 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
 - 신규 (5): `wikey-core/src/pii-redact.ts`, `wikey-core/src/capability-map.ts`, 3 test 파일 (`pii-redact.test.ts`, `capability-map.test.ts`, `scripts-runner.test.ts`)
 - 수정 (12): `wikey-core/src/{ingest-pipeline, scripts-runner, source-resolver, query-pipeline, index}.ts`, `wikey-core/src/__tests__/query-pipeline.test.ts`, `wikey-obsidian/src/{main, commands, settings-tab, ingest-modals, sidebar-chat}.ts`, `wikey-obsidian/styles.css`, `scripts/audit-ingest.py`, `scripts/reindex.sh`
 - 빌드 산출물 (2): `wikey-obsidian/main.js`, `wikey-obsidian/styles.css`
-- 문서 (6): `activity/phase-4-result.md` (§4.7 append), `plan/phase-4-todo.md` (D.0 체크박스 + 상단 상태), `plan/phase-4-todox-4.6-critical-fix-plan.md` §7 (todo 이관 — phase-4-todo 참조로 대체), `wiki/log.md` (신규 엔트리), `plan/session-wrap-followups.md` (본 섹션 갱신), memory 2개
+- 문서 (6): `activity/phase-4/phase-4-result.md` (§4.7 append), `plan/phase-4/phase-4-todo.md` (D.0 체크박스 + 상단 상태), `plan/phase-4/phase-4-todox-4.6-critical-fix-plan.md` §7 (todo 이관 — phase-4-todo 참조로 대체), `wiki/log.md` (신규 엔트리), `plan/session-wrap-followups.md` (본 섹션 갱신), memory 2개
 
 ---
 
@@ -721,24 +721,24 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
 
 ### ⭐ 다음 세션 플레이북 (4.5~7 시간, 세션 분할 권장)
 
-**진입점**: Phase 4 본체 완성 체크리스트의 **A (Phase 1~4 통합 smoke, 2-pass)**. **단일 소스 = `plan/phase-4-todox-4.6-integrated-test.md` (v6, codex Panel Mode D APPROVE-WITH-CHANGES)**. 실행 주체 = **Claude (CDP localhost:9222 + wikey-cdp.py)**. 사용자 개입 없음. 6종 파일 × 3-stage × 2-pass → 리포트 → D (완성 선언) 실행.
+**진입점**: Phase 4 본체 완성 체크리스트의 **A (Phase 1~4 통합 smoke, 2-pass)**. **단일 소스 = `plan/phase-4/phase-4-todox-4.6-integrated-test.md` (v6, codex Panel Mode D APPROVE-WITH-CHANGES)**. 실행 주체 = **Claude (CDP localhost:9222 + wikey-cdp.py)**. 사용자 개입 없음. 6종 파일 × 3-stage × 2-pass → 리포트 → D (완성 선언) 실행.
 
 | 블록 | 상태 | 작업 |
 |------|------|------|
-| **A** | 🔴 대기 | Phase 1~4 통합 smoke 2-pass (Claude CDP 자동). Pass A (Ingest 패널, 6파일, Ingest+Move 2-step) → smoke-reset → Pass B (Audit 패널, 6파일, Ingest 1-step 자동 이동) → §4.C 덤 smoke. 상세: `plan/phase-4-todox-4.6-integrated-test.md` v3. |
+| **A** | 🔴 대기 | Phase 1~4 통합 smoke 2-pass (Claude CDP 자동). Pass A (Ingest 패널, 6파일, Ingest+Move 2-step) → smoke-reset → Pass B (Audit 패널, 6파일, Ingest 1-step 자동 이동) → §4.C 덤 smoke. 상세: `plan/phase-4/phase-4-todox-4.6-integrated-test.md` v3. |
 | **B** | 🟢 완료 | §4.5.2 삭제 안전장치 — `reset.ts::computeDeletionImpact` + `DeleteImpactModal` + `registerDeleteCommand` 2 palette entries (462→474 tests) |
 | **C** | 🟢 완료 | §4.5.2 초기화 기능 — `reset.ts::previewReset` + `ResetImpactModal` + `registerResetCommand` 5 palette entries + `renderResetSection` Settings Tab |
-| **D** | 🔴 A 뒤 | 본체 완성 선언 — result 끝 "Phase 4 본체 완성 선언" 블록 + todo 상단 상태 라인 "본체 완성" 갱신 + `plan/phase-5-todo.md §5.6 Stage 1` 첫 착수점 고정 + memory + 단일 commit push |
+| **D** | 🔴 A 뒤 | 본체 완성 선언 — result 끝 "Phase 4 본체 완성 선언" 블록 + todo 상단 상태 라인 "본체 완성" 갱신 + `plan/phase-5/phase-5-todo.md §5.6 Stage 1` 첫 착수점 고정 + memory + 단일 commit push |
 
-**Session 5 완료 내역** (detail: `activity/phase-4-result.md §4.5.2` + `plan/phase-4-todox-4.6-integrated-test.md`):
+**Session 5 완료 내역** (detail: `activity/phase-4/phase-4-result.md §4.5.2` + `plan/phase-4/phase-4-todox-4.6-integrated-test.md`):
 - **§4.5.2.1 삭제 안전장치** — `wikey-core/src/reset.ts::computeDeletionImpact` + 6 vitest. `wikey-obsidian/src/reset-modals.ts::DeleteImpactModal` + `commands.ts::registerDeleteCommand` (raw source picker + wiki-page active file). `DEL <id>` 타이핑 확인.
 - **§4.5.2.2 초기화 기능** — `reset.ts::previewReset` + `ResetScope` 5-way + 6 vitest (unknown scope 방어 포함). `ResetImpactModal` + `registerResetCommand` 5 palette entries + `settings-tab.ts::renderResetSection`. `RESET <SCOPE>` 타이핑 확인.
-- **통합 smoke 계획서 v2 수립** — `plan/phase-4-todox-4.6-integrated-test.md` 556 라인. codex Panel Mode D 피어리뷰: 초기 REJECT 4 P1 → v2 반영 후 APPROVE-WITH-CHANGES. 6종 파일 (llm-wiki.md / 사업자등록증 PDF (PII) / SK바이오텍 계약서 6p / PMS 31p / HWP / HWPX) × 3-stage 반복.
+- **통합 smoke 계획서 v2 수립** — `plan/phase-4/phase-4-todox-4.6-integrated-test.md` 556 라인. codex Panel Mode D 피어리뷰: 초기 REJECT 4 P1 → v2 반영 후 APPROVE-WITH-CHANGES. 6종 파일 (llm-wiki.md / 사업자등록증 PDF (PII) / SK바이오텍 계약서 6p / PMS 31p / HWP / HWPX) × 3-stage 반복.
 - **검증**: `npm test` 22 files / 474 tests passed · `npm run build` 0 errors · commits `188a507` + `9e9407b`.
 
 ### 🔴 A 통합 smoke 절차 (v3, 2-pass, Claude CDP 자동)
 
-**실행 단일 소스**: `plan/phase-4-todox-4.6-integrated-test.md` v3. 상세는 계획서 참조.
+**실행 단일 소스**: `plan/phase-4/phase-4-todox-4.6-integrated-test.md` v3. 상세는 계획서 참조.
 
 1. **환경 준비**: Obsidian `--remote-debugging-port=9222 --remote-allow-origins=*` 로 기동 → `curl localhost:9222/json` 응답 확인 → `cp -a raw/0_inbox/ /tmp/wikey-smoke-inbox-backup/` 로 백업 → `scripts/smoke-reset.sh` 초기화 → Settings baseline (Ingest Briefs=Always, Verify=ON, Auto Ingest=OFF) → Cmd+R.
 2. **§4.0 UI pre-smoke** (Pass A 진입 전 1회만): Chat/Ingest/Audit 패널 · provider/model 편집 · DEFAULT 라벨 · 500px 폭 · `/clear`.
@@ -767,7 +767,7 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
 
 ### ⭐ 다음 세션 플레이북 (한 세션 내 완결 목표)
 
-**진입점**: 이 세션은 **Phase 4 본체 완성 선언 세션**. `plan/phase-4-todo.md` 맨 아래 **"Phase 4 본체 완성 체크리스트"** 를 단일 소스로 따른다. 3 블록 (A/B/C) 모두 완료 후 D (완성 선언) 실행.
+**진입점**: 이 세션은 **Phase 4 본체 완성 선언 세션**. `plan/phase-4/phase-4-todo.md` 맨 아래 **"Phase 4 본체 완성 체크리스트"** 를 단일 소스로 따른다. 3 블록 (A/B/C) 모두 완료 후 D (완성 선언) 실행.
 
 | 블록 | 작업 | 예상 시간 |
 |------|------|----------|
@@ -778,13 +778,13 @@ wiki 재생성 없음 확증        →  [ ] 코드 1단 추가 (collectStructur
 
 **시작 체크**: Obsidian 1.12.7 구동 가능 여부 + `~/.codex/` 전역 세션 충돌 없음 (`bash ~/.claude/skills/codex/preflight.sh` exit 0 확인) + Gemini API 키 quota 잔량.
 
-**수동 UI smoke 가 A 의 유일한 리스크**: Obsidian 플러그인 리로드 필요 (`Cmd+R`), 인제스트 1 건 ~5 분 + citation 클릭 3경로 확인 ~10 분. 실패 시 `activity/phase-4-result.md §4.3.smoke` 에 재현 방법 기록 + `plan/phase-4-todo.md` fix 항목 추가 → 수정 후 재시도.
+**수동 UI smoke 가 A 의 유일한 리스크**: Obsidian 플러그인 리로드 필요 (`Cmd+R`), 인제스트 1 건 ~5 분 + citation 클릭 3경로 확인 ~10 분. 실패 시 `activity/phase-4/phase-4-result.md §4.3.smoke` 에 재현 방법 기록 + `plan/phase-4/phase-4-todo.md` fix 항목 추가 → 수정 후 재시도.
 
-### Session 4 완료 내역 요약 (detail: `activity/phase-4-result.md §4.3.1 / §4.3.2.3 / §4.3.codex-verify`)
+### Session 4 완료 내역 요약 (detail: `activity/phase-4/phase-4-result.md §4.3.1 / §4.3.2.3 / §4.3.codex-verify`)
 
-Session 4 에서 **§4.3.2 Part B (source-resolver + citations + sidebar 보조 링크)** + **§4.3.1 (3-stage prompt override)** 구현 완료. plan v3 가 완료 스냅샷 + codex 2차 timeout 기록 + v2 self-review 4건 ↔ 실구현 1:1 매핑 제공 (`plan/phase-4-todox-4.3-plan.md §12`).
+Session 4 에서 **§4.3.2 Part B (source-resolver + citations + sidebar 보조 링크)** + **§4.3.1 (3-stage prompt override)** 구현 완료. plan v3 가 완료 스냅샷 + codex 2차 timeout 기록 + v2 self-review 4건 ↔ 실구현 1:1 매핑 제공 (`plan/phase-4/phase-4-todox-4.3-plan.md §12`).
 
-**Session 4 완료 내역** (detail: `activity/phase-4-result.md §4.3.1 / §4.3.2 Part B`):
+**Session 4 완료 내역** (detail: `activity/phase-4/phase-4-result.md §4.3.1 / §4.3.2 Part B`):
 - **Part B — 쿼리 응답 원본 backlink**
   - `wikey-core/src/source-resolver.ts` 신규 (~165 라인) + 11 vitest (happy / bare id / absolutePath / 미등록 / 부재 / 빈 입력 / tombstone / PARA 이동 / external uri-hash / sync / sync miss)
   - `query-pipeline.ts` citations 구조화 + 6 vitest (buildCitationFromContent 4 + collectCitationsWithWikiFS 2)
@@ -801,7 +801,7 @@ Session 4 에서 **§4.3.2 Part B (source-resolver + citations + sidebar 보조 
 
 ### 🔴 §4.3 통합 smoke — Obsidian UI 수동 확인 (다음 세션)
 
-`plan/phase-4-todox-4.3-plan.md §12.4` 에 5개 체크리스트. 요점:
+`plan/phase-4/phase-4-todox-4.3-plan.md §12.4` 에 5개 체크리스트. 요점:
 
 ```
 1. Part B 보조 링크 렌더 — 소스 인제스트 → 답변 wikilink 뒤 📄 → 클릭 시 원본 열림
@@ -811,11 +811,11 @@ Session 4 에서 **§4.3.2 Part B (source-resolver + citations + sidebar 보조 
 5. §4.3.3 source 페이지 본문 strip — 인제스트 후 wiki/sources/source-*.md 에 깨진 wikilink 없음
 ```
 
-확인 후 결과를 `activity/phase-4-result.md §4.3.x.smoke` 에 기록.
+확인 후 결과를 `activity/phase-4/phase-4-result.md §4.3.x.smoke` 에 기록.
 
-Session 3 는 `plan/phase-4-todox-4.3-plan.md` v2 확정 (codex rescue 가 analysis 턴에서 최종 응답 캡처 실패 → self-review 4건 보강) + **Part A (Provenance data model)** + **§4.3.3 (stripBrokenWikilinks source 페이지 재후처리)** 완료. **다음 세션 진입점은 §4.3.2 Part B (source-resolver + citations + sidebar 렌더) + §4.3.1 (Stage 2/3 prompt override + settings UI)** — Phase 4 본체 완성 직전 마지막 단계.
+Session 3 는 `plan/phase-4/phase-4-todox-4.3-plan.md` v2 확정 (codex rescue 가 analysis 턴에서 최종 응답 캡처 실패 → self-review 4건 보강) + **Part A (Provenance data model)** + **§4.3.3 (stripBrokenWikilinks source 페이지 재후처리)** 완료. **다음 세션 진입점은 §4.3.2 Part B (source-resolver + citations + sidebar 렌더) + §4.3.1 (Stage 2/3 prompt override + settings UI)** — Phase 4 본체 완성 직전 마지막 단계.
 
-**Session 3 완료 내역** (detail: `activity/phase-4-result.md §4.3`):
+**Session 3 완료 내역** (detail: `activity/phase-4/phase-4-result.md §4.3`):
 - **plan v2 수립**: Part A / Part B / §4.3.1 / §4.3.3 설계. self-review 4건 (Obsidian Electron API / canonicalizer 시그니처 optional / Preview 모달 순서 / Stage 1 override 가이드) + open question 5건 decision.
 - **Part A** (§4.3.2): `types.ts ProvenanceType union + ProvenanceEntry` + `wiki-ops.ts::injectProvenance` (dedupe + frontmatter 보존, vitest +3) + `ingest-pipeline.ts` Stage 2/3 배선 (canonicalize 모든 페이지에 `{type:extracted, ref:sources/<id>}` 자동 주입) + `index.ts` export.
 - **§4.3.3**: ingest-pipeline 에서 canonicalize 완료 후 + Preview 모달 호출 이전 `stripBrokenWikilinks(source_page.content, keepBases)` 배선. Preview/저장본 bit-identical 보장.
@@ -824,11 +824,11 @@ Session 3 는 `plan/phase-4-todox-4.3-plan.md` v2 확정 (codex rescue 가 analy
 
 ### 📜 Session 3 아카이브 참조 (아래는 session 3 마무리 시점의 후속 작업 원본 — 완료된 항목 포함)
 
-> ⚠ **session 4 재설계 주의**: 이 아카이브의 "S3-3 Audit Re-classify 토글 UI" + "S3-4 CLASSIFY.md 피드백 append" 는 2026-04-23 session 4 (commit `54f05b9`) 에 **전량 철회**되었습니다. 최종 구현은 `classify.ts::ClassifyFileOptions.paraRoot` 옵션 + `swapParaRoot` + LLM prompt 필수 제약 블록 3축으로 단순화. 현행 기능/UI 상태는 `plan/phase-4-todo.md §4.2.3` + `activity/phase-4-result.md §4.2.3.3/§4.2.3.4` 를 단일 소스로 참조.
+> ⚠ **session 4 재설계 주의**: 이 아카이브의 "S3-3 Audit Re-classify 토글 UI" + "S3-4 CLASSIFY.md 피드백 append" 는 2026-04-23 session 4 (commit `54f05b9`) 에 **전량 철회**되었습니다. 최종 구현은 `classify.ts::ClassifyFileOptions.paraRoot` 옵션 + `swapParaRoot` + LLM prompt 필수 제약 블록 3축으로 단순화. 현행 기능/UI 상태는 `plan/phase-4/phase-4-todo.md §4.2.3` + `activity/phase-4/phase-4-result.md §4.2.3.3/§4.2.3.4` 를 단일 소스로 참조.
 
 ### 🔴 Part B — 쿼리 응답 원본 backlink 렌더링 (다음 세션 착수)
 
-상세 설계: `plan/phase-4-todox-4.3-plan.md §3`. 의존성: Part A + §4.2 source-registry — 둘 다 완료.
+상세 설계: `plan/phase-4/phase-4-todox-4.3-plan.md §3`. 의존성: Part A + §4.2 source-registry — 둘 다 완료.
 
 ```
 1. wikey-core/src/source-resolver.ts 신규
@@ -850,7 +850,7 @@ Session 3 는 `plan/phase-4-todox-4.3-plan.md` v2 확정 (codex rescue 가 analy
 
 ### 🔴 §4.3.1 — Stage 2/3 prompt override (다음 세션 Part B 뒤)
 
-상세 설계: `plan/phase-4-todox-4.3-plan.md §4 + §4.5`. Part A/§4.3.3 와 독립 — 순서 유연.
+상세 설계: `plan/phase-4/phase-4-todox-4.3-plan.md §4 + §4.5`. Part A/§4.3.3 와 독립 — 순서 유연.
 
 ```
 1. loadEffectiveStage2Prompt / loadEffectiveStage3Prompt 헬퍼 (wiki-ops 또는 ingest-pipeline)
@@ -871,7 +871,7 @@ Session 3 는 `plan/phase-4-todox-4.3-plan.md` v2 확정 (codex rescue 가 analy
 ### 🎯 다음 세션 실행 체크리스트
 
 ```
-1. plan/phase-4-todox-4.3-plan.md 재확인 (§3 Part B + §4 §4.3.1 상세)
+1. plan/phase-4/phase-4-todox-4.3-plan.md 재확인 (§3 Part B + §4 §4.3.1 상세)
 2. source-resolver.ts TDD (vitest 4, RED → GREEN)
 3. query-pipeline citations (vitest +2)
 4. sidebar-chat 답변 렌더 + CSS (수동 smoke)
@@ -895,7 +895,7 @@ Session 3 는 `plan/phase-4-todox-4.3-plan.md` v2 확정 (codex rescue 가 analy
 
 | 항목 | 상태 | 테스트 / 증거 | 비고 |
 |------|------|---------------|------|
-| 계획 v2 (`plan/phase-4-todox-4.3-plan.md`) | ✅ 확정 | 11개 섹션, self-review 4건, open question 5건 decision | codex rescue 는 session 3 시점 미작동 (timeout) |
+| 계획 v2 (`plan/phase-4/phase-4-todox-4.3-plan.md`) | ✅ 확정 | 11개 섹션, self-review 4건, open question 5건 decision | codex rescue 는 session 3 시점 미작동 (timeout) |
 | §4.3.2 Part A (Provenance data model) | ✅ 완료 (session 3) | wiki-ops +3 green (types + inject + dedupe + YAML scalar) | MVP — 모든 페이지 `extracted` type 자동. `inferred`/`ambiguous` 구분은 Phase 5 §5.4 |
 | §4.3.3 stripBrokenWikilinks | ✅ 완료 (session 3) | 기존 unit tests 재사용 + ingest-pipeline 배선 | Preview/저장본 bit-identical |
 | §4.3.2 Part B (쿼리 backlink) | ⏳ 다음 세션 | source-resolver 4 + query-pipeline +2 + sidebar 수동 | Part A/§4.2 모두 완료 — 바로 착수 가능 |
@@ -908,9 +908,9 @@ Session 3 는 `plan/phase-4-todox-4.3-plan.md` v2 확정 (codex rescue 가 analy
 
 Session 2 의 Stage 3+4 완료 직후 사용자 요청으로 `result-doc-writer` 스킬 규칙에 따라 문서 구조를 정비. 이전에 result `§4.2.3 = Stage 2` / todo `§4.2.3 = Stage 3` 로 번호가 어긋나 있던 문제를 해소:
 
-- `activity/phase-4-result.md §4.2` — 번호 mirror 로 재정렬: §4.2.1 Stage 1 / §4.2.2 Stage 2 (Integration + Session 1 evidence 흡수) / §4.2.3 Stage 3 / §4.2.4 Stage 4 (링크 안정성 회귀선 .7/.8 + Session 2 evidence .9 흡수) / §4.2.5 호환성 전략 / §4.2.6 범위 밖 — Phase 5 이관. 각 섹션에 `> tag: #...` 라인 추가, 구 §4.2.7 "Stage 3/4 잔여 작업 상세 설계" 는 실제 구현 완료로 흡수 제거.
-- `plan/phase-4-todox-4.2-plan.md` — Stage 1/2/3/4 각 섹션에 "완료 확증" 블록 추가, §6 세션 실행 기록 리라이트, §8 검증 기준 표에 실제 증거 컬럼 추가 (테스트 434 / +82 / 실측 증거), §10 codex finding 표에 ✅ 컬럼, §11 "본 계획 완결 선언" 신규.
-- `plan/phase-4-todo.md` — 구조는 이미 올바름 (§4.2.1/2/3/4 전량 [x]). 상태 라인 일관성만 확인.
+- `activity/phase-4/phase-4-result.md §4.2` — 번호 mirror 로 재정렬: §4.2.1 Stage 1 / §4.2.2 Stage 2 (Integration + Session 1 evidence 흡수) / §4.2.3 Stage 3 / §4.2.4 Stage 4 (링크 안정성 회귀선 .7/.8 + Session 2 evidence .9 흡수) / §4.2.5 호환성 전략 / §4.2.6 범위 밖 — Phase 5 이관. 각 섹션에 `> tag: #...` 라인 추가, 구 §4.2.7 "Stage 3/4 잔여 작업 상세 설계" 는 실제 구현 완료로 흡수 제거.
+- `plan/phase-4/phase-4-todox-4.2-plan.md` — Stage 1/2/3/4 각 섹션에 "완료 확증" 블록 추가, §6 세션 실행 기록 리라이트, §8 검증 기준 표에 실제 증거 컬럼 추가 (테스트 434 / +82 / 실측 증거), §10 codex finding 표에 ✅ 컬럼, §11 "본 계획 완결 선언" 신규.
+- `plan/phase-4/phase-4-todo.md` — 구조는 이미 올바름 (§4.2.1/2/3/4 전량 [x]). 상태 라인 일관성만 확인.
 
 다음 세션 진입점은 아래 블록 그대로 §4.3.
 
@@ -922,7 +922,7 @@ Session 2 의 Stage 3+4 완료 직후 사용자 요청으로 `result-doc-writer`
 
 Session 2 는 §4.2 Stage 3 (LLM 분류 정제) + Stage 4 (vault listener + startup reconcile) 를 같은 세션에 묶어 완료. §4.1.1.9 두 번째 체크박스도 자동 해소. **다음 세션 진입점은 §4.3 본체 인제스트** — 본체 완료 선언 직전 마지막 data model 변경 (frontmatter `provenance` + 쿼리 응답 원본 backlink 렌더링).
 
-**완료 내역** (detail: `activity/phase-4-result.md §4.2.8 / §4.2.9 / §4.2.10`):
+**완료 내역** (detail: `activity/phase-4/phase-4-result.md §4.2.8 / §4.2.9 / §4.2.10`):
 - **Stage 3 (S3-1~S3-4)**: `classifyWithLLM` 4차 slug 힌트 inject + `CLASSIFY_PROVIDER`/`MODEL` 키 + Audit Re-classify 체크박스 + CLASSIFY.md 피드백 로그. (S3-3/S3-4 는 session 4 에 재설계 — 체크박스+피드백 철회 · paraRoot 옵션 도입, commit `54f05b9`.)
 - **Stage 4 (S4-1~S4-4)**: `vault-events.ts` (RenameGuard · reconcileExternalRename · handleExternalDelete) + `source-registry.reconcile` 확장 (tombstone/restore) + main.ts 이벤트 라우팅 + onload reconcile + path API deprecation warn.
 - **링크 안정성 회귀선** (사용자 2026-04-23 지적 반영): `integration-pair-move.test.ts` +2 — entity/concept 페이지 `[[source-xxx]]` wikilink 가 파일 이동 후에도 bit-identical 유지됨을 명시적으로 회귀 방지.
@@ -947,7 +947,7 @@ Stage 4 는 단위/통합 테스트 전량 green 이지만 수동 UI smoke 는 �
 ### 🎯 다음 세션 실행 체크리스트 (§4.3 본체 인제스트)
 
 ```
-1. plan/phase-4-todox-4.2-plan.md 패턴 따라 §4.3 계획 초안 작성 (codex rescue 2차 검증 사이클 권장)
+1. plan/phase-4/phase-4-todox-4.2-plan.md 패턴 따라 §4.3 계획 초안 작성 (codex rescue 2차 검증 사이클 권장)
 2. Part A (frontmatter provenance): entities/concepts/analyses 공통 스키마 확장 + wiki-ops helper + 기존 페이지 migration (fresh vault 이므로 no-op)
 3. Part B (원본 backlink 렌더링): query-pipeline citations 구조화 + source-resolver (source_id → current_path/uri/mime_type) + sidebar-chat 답변 렌더 (internal/external/tombstone 클릭 핸들러)
 4. §4.3.1 3-stage 프롬프트 override (Stage 1/2/3 각각 override 지원 — 현재 Stage 1 만 지원)
@@ -974,9 +974,9 @@ Stage 4 는 단위/통합 테스트 전량 green 이지만 수동 UI smoke 는 �
 
 2026-04-23 세션은 §4.2 Stage 1 (URI/registry foundation) + Stage 2 (pair move + frontmatter rewrite) 완료로 마감. **다음 세션 진입점**은 Stage 3 · Stage 4 — 그 뒤 §4.3 (3-stage prompt override + Provenance tracking + stripBrokenWikilinks) 로 이어진다.
 
-**완료 내역** (detail: `activity/phase-4-result.md §4.2`):
+**완료 내역** (detail: `activity/phase-4/phase-4-result.md §4.2`):
 - plan v1→v2→v3 진화, codex rescue 2차 검증 FAIL gate 6 concern (Critical 2 · High 2 · Medium 3) 전부 반영.
-- 신규: `uri.ts`, `source-registry.ts`, `move-pair.test.ts`, `integration-pair-move.test.ts`, `registry-update.mjs`, `migrate-ingest-map.mjs`, `pair-move.smoke.sh`, `plan/phase-4-todox-4.2-plan.md`.
+- 신규: `uri.ts`, `source-registry.ts`, `move-pair.test.ts`, `integration-pair-move.test.ts`, `registry-update.mjs`, `migrate-ingest-map.mjs`, `pair-move.smoke.sh`, `plan/phase-4/phase-4-todox-4.2-plan.md`.
 - 변경: `classify.ts (+movePair)`, `wiki-ops.ts (+injectSourceFrontmatter/rewriteSourcePageMeta)`, `ingest-pipeline.ts (buildV3SourceMeta)`, `commands.ts / sidebar-chat.ts (movePair 전환)`, `classify-inbox.sh / classify-hint.sh (pair + sidecar 표시)`, `measure-determinism.sh (registry cleanup)`.
 - 증거: wikey-core 352→**399 PASS (+47)**. bash smoke 6/6. build 0 errors.
 
@@ -1003,7 +1003,7 @@ Stage 4 는 단위/통합 테스트 전량 green 이지만 수동 UI smoke 는 �
 
 ### 🎯 다음 세션 실행 체크리스트
 
-**옵션 A: Stage 3 단독 (~3h)** — 단독 진입 가능, Stage 1/2 와 독립. 상세: `phase-4-todo.md §4.2.3` + `plan/phase-4-todox-4.2-plan.md §4` + `activity/phase-4-result.md §4.2.7.1`.
+**옵션 A: Stage 3 단독 (~3h)** — 단독 진입 가능, Stage 1/2 와 독립. 상세: `phase-4-todo.md §4.2.3` + `plan/phase-4/phase-4-todox-4.2-plan.md §4` + `activity/phase-4/phase-4-result.md §4.2.7.1`.
 
 ```
 1. S3-1 classifyWithLLM 프롬프트 4차 slug 힌트 (vitest 4, RED→GREEN)
@@ -1019,7 +1019,7 @@ Stage 4 는 단위/통합 테스트 전량 green 이지만 수동 UI smoke 는 �
 7. 문서 동기화 + 단일 commit
 ```
 
-**옵션 B: Stage 4 단독 (~4h + 측정)** — 별도 세션 필수. Stage 1 의 reconcile / Stage 2 의 movePair 의존. 상세: `phase-4-todo.md §4.2.4` + `plan/phase-4-todox-4.2-plan.md §5` + `activity/phase-4-result.md §4.2.7.2`.
+**옵션 B: Stage 4 단독 (~4h + 측정)** — 별도 세션 필수. Stage 1 의 reconcile / Stage 2 의 movePair 의존. 상세: `phase-4-todo.md §4.2.4` + `plan/phase-4/phase-4-todox-4.2-plan.md §5` + `activity/phase-4/phase-4-result.md §4.2.7.2`.
 
 ```
 1. S4-1 vault.on('rename') + expectedRenames queue 프로토콜 (unit test 3)
@@ -1093,7 +1093,7 @@ Phase 4 (본체) 에 남는 항목:
 - §4.5.1 결정성 (§4.5.1.7.2/7.3 실측 대기)
 - §4.5.2 본체 운영 안전 (삭제 안전장치 + 초기화만)
 
-Phase 5 신규 (튜닝·고도화·개선·확장, `plan/phase-5-todo.md`):
+Phase 5 신규 (튜닝·고도화·개선·확장, `plan/phase-5/phase-5-todo.md`):
 - §5.1 검색 재현율 고도화 (←§4.4.1 contextual chunk)
 - §5.2 지식 그래프·시각화 (←§4.4.2 NetworkX / §4.4.3 AST)
 - §5.3 인제스트 증분 업데이트 (←§4.3.3)
@@ -1102,13 +1102,13 @@ Phase 5 신규 (튜닝·고도화·개선·확장, `plan/phase-5-todo.md`):
 - **§5.6 표준 분해 self-extending (←§4.5.5, 현재 §4.5.1.7.2 PMBOK 하드코딩이 Stage 0)**
 - §5.7 운영 인프라 포팅 (←§4.5.2 일부)
 
-Phase 6 (`plan/phase-6-todo.md`): 기존 Phase 5 웹 환경 전체 이관.
+Phase 6 (`plan/phase-6/phase-6-todo.md`): 기존 Phase 5 웹 환경 전체 이관.
 
 ### 🆕 §5.6 표준 분해 규칙 self-extending 구조 (2026-04-22 신규, §4.5.1.7.2 실측 gated)
 
 §4.5.1.7.2 의 PMBOK 10 영역 하드코딩은 **Stage 0 사전 검증**. 철학 선언은 `wiki/analyses/self-extending-wiki.md` (wiki 본체 analysis 페이지) 에 정식 기록됨.
 
-**4 단계 로드맵 (상세: `plan/phase-5-todo.md §5.6`)**:
+**4 단계 로드맵 (상세: `plan/phase-5/phase-5-todo.md §5.6`)**:
 1. **Stage 1** — `.wikey/schema.yaml` `standard_decompositions` 필드 + canonicalizer 로더화. 두 번째 표준 등장 시 즉시 착수.
 2. **Stage 2** — extraction graph 기반 suggestion. Audit UI "표준 분해로 등록하시겠습니까?" carding.
 3. **Stage 3** — 소스 본문의 "표준 개요 섹션" 을 section-index 가 감지해 runtime decomposition 자동 생성.
@@ -1137,13 +1137,13 @@ Phase 6 (`plan/phase-6-todo.md`): 기존 Phase 5 웹 환경 전체 이관.
   - **`defaultOcrEngine()` + `defaultOcrLangForEngine()`** — platform 별 engine/lang 자동 매핑
   - `scripts/benchmark-tier-4-1-3.mjs` — 5 코퍼스 회귀 + sidecar 저장
   - Tests 315 → **351 PASS** (+36)
-- 5 코퍼스 최종 매핑 (`activity/phase-4-resultx-4.1.3-benchmark-2026-04-22.md`):
+- 5 코퍼스 최종 매핑 (`activity/phase-4/phase-4-resultx-4.1.3-benchmark-2026-04-22.md`):
   - PMS → `1a-docling-no-ocr` raw (UI 스크린샷)
   - ROHM → `1b-force-ocr-kloss` raw (diagram)
   - RP1 → `1-docling` raw
   - GOODSTREAM → `1b-force-ocr-scan` stripped 393 chars ✓
   - CONTRACT → `1b-force-ocr-scan` stripped 6024 chars, **한글 0 → 2810 복원** ✓
-- PMS 10-run clean baseline (`activity/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`):
+- PMS 10-run clean baseline (`activity/phase-4/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`):
   - Total CV 10.3% / Entities 2.3% / Concepts 24.6%
 
 ---
@@ -1160,11 +1160,11 @@ Phase 6 (`plan/phase-6-todo.md`): 기존 Phase 5 웹 환경 전체 이관.
   - `extractPdfText` Tier 1a (`--no-ocr`) escalation + score 비교 (false positive 방어)
   - `scripts/benchmark-tier-4-1-3.mjs` — 4 코퍼스 회귀 + sidecar `.md` 저장
   - Tests 315 → 335 PASS
-- 4 코퍼스 회귀 (`activity/phase-4-resultx-4.1.3-benchmark-2026-04-22.md`):
+- 4 코퍼스 회귀 (`activity/phase-4/phase-4-resultx-4.1.3-benchmark-2026-04-22.md`):
   - PMS: Tier 1 retry-no-ocr → Tier 1a accept, lines **1922 → 532 (−72%)**, koreanChars 18654 → 15549 (OCR 파편 3,105자 제거), score 0.53 → 0.91
   - ROHM: Tier 1 retry → Tier 1b force-ocr accept (koreanLoss 경로)
   - RP1/GOODSTREAM: Tier 1 accept
-- PMS 10-run clean measurement (`activity/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`):
+- PMS 10-run clean measurement (`activity/phase-4/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`):
   - **Total CV 10.3%** (mean 42.20, range 36–46, {36, 44, 46} 3 값 양자화)
   - **Entities CV 2.3%** (mean 22.60, range 22–23) — 거의 결정적
   - **Concepts CV 24.6%** (mean 18.60, range 12–22) — PMBOK 9 영역 진동
@@ -1227,7 +1227,7 @@ CV 10.3% 는 "5–10%" 와 ">10%" 경계. 각 sub-task 필요성 재정리:
 
 ### 🔴 다음 세션 최우선 후보 (하나 선택)
 
-1. **§4.5.1.7 variance 분해 + prompt 개선 + 측정 인프라** — §4.5.1.6 종료 후 3 축 잔여 작업 (7 sub-task). 상세: `plan/phase-4-todo.md §4.5.1.7`. 핵심 필요성:
+1. **§4.5.1.7 variance 분해 + prompt 개선 + 측정 인프라** — §4.5.1.6 종료 후 3 축 잔여 작업 (7 sub-task). 상세: `plan/phase-4/phase-4-todo.md §4.5.1.7`. 핵심 필요성:
    - (attribution) 3 레버 기여도 미분리 → Ollama (seed 미지원) 환경에서 canon 만으로 <10% 가능한지 답 없음
    - (Concepts 27% 잔여) PMBOK 9 sub-area 결정화 필요 — prompt-level 변경
    - (infra) run 30 outlier edge case 재발 방지 — N≥30 대규모 측정 신뢰성 확보
@@ -1278,7 +1278,7 @@ git checkout -- wiki/entities/goodstream-co-ltd.md wiki/index.md wiki/log.md
 - **잔여 variance 75%**: (a) LLM 수준 (temperature=0.1/seed 미설정) + (b) canonicalizer 미도달 패턴 (`alimtalk` 5-variant, ERP/SCM/MES 3-variant, BOM 5-variant, E/C 경계 왕복)
 - **Selective rollback 불필요**: Phase A/B/C 유지 (철학적 근거 `wikey.schema.md §19·§21` + 25% 감소 증거 + 290 PASS)
 - **측정 infra 개선**: `scripts/measure-determinism.sh` panel refresh 패치 (`selectPanel` re-click guard 우회 — audit→chat→audit routing)
-- **산출물**: `activity/phase-4-resultx-4.5.1.5-pms-30run-2026-04-22.md` (30-run 원본), `activity/phase-4-result.md §4.5.1.5.11~.14`
+- **산출물**: `activity/phase-4/phase-4-resultx-4.5.1.5-pms-30run-2026-04-22.md` (30-run 원본), `activity/phase-4/phase-4-result.md §4.5.1.5.11~.14`
 
 → 후속 작업으로 §4.5.1.6 신규 생성 (위 섹션 참조).
 
@@ -1290,7 +1290,7 @@ git checkout -- wiki/entities/goodstream-co-ltd.md wiki/index.md wiki/log.md
 
 **현재 상태**: Phase 4 §4.1 완료 (Docling 메인화 + unhwp + MarkItDown fallback 강등 + 자동 force-ocr 감지 + 5개 코퍼스 실증 + UI override 완전 제거). 251 tests PASS. 4개 커밋 누적 (`e9af2bb → 708f9fc → d6f9a93 → f648e72`).
 
-**핵심 결과** (`activity/phase-4-resultx-4.1-converter-benchmark.md` 참조):
+**핵심 결과** (`activity/phase-4/phase-4-resultx-4.1-converter-benchmark.md` 참조):
 - **Docling 212 headings + 294 실제 tables vs MarkItDown 0/0** — 계획서 +20% 기준 수십 배 초과
 - **OMRON vector-only PDF 결정적 케이스**: MarkItDown 1 byte / pdftotext 48 bytes 실패 vs Docling `--force-ocr` 9.2KB 성공 → `isLikelyScanPdf` 자동 감지 정당성 실증
 - **자동 판정 3신호** (UI override 대체): `koreanLongTokenRatio > 30%` (ROHM) + `isLikelyScanPdf` (OMRON) + `hasKoreanRegression`/`hasBodyRegression` (PMS·TWHB force-ocr 독성 방어)
@@ -1301,9 +1301,9 @@ git checkout -- wiki/entities/goodstream-co-ltd.md wiki/index.md wiki/log.md
 - `wikey-obsidian/src/{env-detect,settings-tab,sidebar-chat,commands}.ts` — Docling/unhwp 감지 + 설정 UI
 - `scripts/vendored/unhwp-convert.py` + `scripts/benchmark-converters.sh`
 - `docs/samples/{rp1-peripherals,Examples.hwpx,스마트공장...hwp,GOODSTREAM...md,ROHM_Wi-SUN.*}`
-- `activity/phase-4-resultx-4.1-converter-benchmark.md` (5개 코퍼스 종합 리포트)
-- `activity/phase-4-result.md §4.1` 전체 + §4.1.2 완료 선언
-- `plan/phase-4-todox-4.1-agile-crystal.md` 계획서 (이번 Phase 시작 시 작성)
+- `activity/phase-4/phase-4-resultx-4.1-converter-benchmark.md` (5개 코퍼스 종합 리포트)
+- `activity/phase-4/phase-4-result.md §4.1` 전체 + §4.1.2 완료 선언
+- `plan/phase-4/phase-4-todox-4.1-agile-crystal.md` 계획서 (이번 Phase 시작 시 작성)
 
 ### 🔴 최우선 다음 작업: §4.5.1.5 LLM extraction variance 재측정
 
@@ -1368,8 +1368,8 @@ cat ~/.cache/wikey/convert/index.json | python3 -m json.tool | head -30
 - `wikey-obsidian/src/main.ts` (+14/-4): `initialSidebarWidthApplied` + `applyInitialSidebarWidth()` + savedChatHistory 복원 제거
 - `wikey-obsidian/src/settings-tab.ts` (라벨 일괄 치환): `(use Default Model)`/`(provider default)` → `DEFAULT`
 - `wikey-obsidian/styles.css` (+30/-8): readonly-model-bar 신규, header-btn-active focus 변형, provider-model-bar 자연 너비·좌측·min-width, dashboard/help flex+border 정비, chat-model-row field-sizing
-- `activity/phase-4-result.md` §4.0 (신규 9개 하위 섹션)
-- `plan/phase-4-todo.md` §4.0 체크박스 모두 `[x]`
+- `activity/phase-4/phase-4-result.md` §4.0 (신규 9개 하위 섹션)
+- `plan/phase-4/phase-4-todo.md` §4.0 체크박스 모두 `[x]`
 
 **바로 시작 가능한 작업**:
 
@@ -1378,7 +1378,7 @@ cat ~/.cache/wikey/convert/index.json | python3 -m json.tool | head -30
    - HWP/HWPX는 unhwp로 위임
    - MarkItDown 체인을 fallback(tier 3)으로 강등
    - 설치 경로, `extractPdfText` 체인 재정렬, `env-detect.ts` 보강, 설정 탭 상태 라인
-   - 상세: `plan/phase-4-todo.md` §4.1.1.1~8
+   - 상세: `plan/phase-4/phase-4-todo.md` §4.1.1.1~8
 2. **🔵 §4.5.1.5 LLM extraction variance 원인 분석** (Docling 전환 후)
 3. **🔵 §4.2 URI 기반 안정 참조** (독립 가능, PARA 이동 내성)
 
@@ -1395,10 +1395,10 @@ cat ~/.cache/wikey/convert/index.json | python3 -m json.tool | head -30
 **산출물**:
 - `wikey-core/src/canonicalizer.ts` — SLUG_ALIASES + FORCED_CATEGORIES + applyForcedCategories
 - `wikey-core/src/__tests__/canonicalizer.test.ts` — 11 new tests (197 tests total PASS)
-- `activity/phase-4-resultx-4.5.1-determinism-pms-v7-4514-prompt-attempt-2026-04-21.md` — prompt 힌트 시도 결과 (기각)
-- `activity/phase-4-resultx-4.5.1-determinism-pms-v7-4514-2026-04-21.md` — 후처리만 시도 결과 (최종)
-- `activity/phase-4-result.md` §4.5.1.4 — 솔직 보고 + 결정 로그
-- `plan/phase-4-todo.md` §4.5.1.5 신규 생성 (variance 원인 분석 이관)
+- `activity/phase-4/phase-4-resultx-4.5.1-determinism-pms-v7-4514-prompt-attempt-2026-04-21.md` — prompt 힌트 시도 결과 (기각)
+- `activity/phase-4/phase-4-resultx-4.5.1-determinism-pms-v7-4514-2026-04-21.md` — 후처리만 시도 결과 (최종)
+- `activity/phase-4/phase-4-result.md` §4.5.1.4 — 솔직 보고 + 결정 로그
+- `plan/phase-4/phase-4-todo.md` §4.5.1.5 신규 생성 (variance 원인 분석 이관)
 
 **바로 시작 가능한 작업**:
 
@@ -1448,9 +1448,9 @@ export const FORCED_CATEGORIES = {
 **현재 상태**: Phase 4 진행중. §4.5.1 결정성 측정 인프라 정비 완료. `scripts/measure-determinism.sh` 전면 개편 — selector class-swap 대응, snapshot-diff 기반 cleanup, 15KB 최소 크기 가드, CDP 응답 추출 경로 수정. PMS PDF 5-run 자동 측정 성공 (Total CV 5.7%, 수동 드라이브와 동일 분포 범위 재현). 자동 스크립트가 수동 드라이브 대체 가능 확증.
 
 **산출물**:
-- `activity/phase-4-result.md` (신규) — Phase 4 result 문서 시작, §4.5 섹션 첫 기록
-- `activity/phase-4-resultx-4.5.1-determinism-pms-auto-2026-04-21.md` — 5-run 자동 측정 결과
-- `plan/phase-4-todo.md` — §4.5.1.1/1.2/1.3 체크박스 전부 완료 + `## 4.0~4.5` #tag 부착
+- `activity/phase-4/phase-4-result.md` (신규) — Phase 4 result 문서 시작, §4.5 섹션 첫 기록
+- `activity/phase-4/phase-4-resultx-4.5.1-determinism-pms-auto-2026-04-21.md` — 5-run 자동 측정 결과
+- `plan/phase-4/phase-4-todo.md` — §4.5.1.1/1.2/1.3 체크박스 전부 완료 + `## 4.0~4.5` #tag 부착
 
 **바로 시작 가능한 작업**:
 
@@ -1490,7 +1490,7 @@ export const FORCED_CATEGORIES = {
 
 ### ⭐ 다음 세션 시작점
 
-**현재 상태**: Phase 3 사실상 완료. 8 commits (`f35d3b1`~`61c7830`), 159 tests pass. OMRON HEM-7600T 인제스트 + tier 6 page-render Vision OCR + WikiFS hidden folder fix + wiki/ self-cycle guard + 결정성 자동 측정 도구(`scripts/measure-determinism.sh`) + Gemini model dropdown 정리 + schema decision tree 모두 반영. `activity/phase-3-result.md` §14에 상세.
+**현재 상태**: Phase 3 사실상 완료. 8 commits (`f35d3b1`~`61c7830`), 159 tests pass. OMRON HEM-7600T 인제스트 + tier 6 page-render Vision OCR + WikiFS hidden folder fix + wiki/ self-cycle guard + 결정성 자동 측정 도구(`scripts/measure-determinism.sh`) + Gemini model dropdown 정리 + schema decision tree 모두 반영. `activity/phase-3/phase-3-result.md` §14에 상세.
 
 **바로 시작 가능한 작업**:
 
@@ -1514,7 +1514,7 @@ export const FORCED_CATEGORIES = {
 
 ### Phase 3에서 발견한 Phase 4 후보 (4건)
 
-`activity/phase-3-result.md` §14.13 참조:
+`activity/phase-3/phase-3-result.md` §14.13 참조:
 1. brief generation + ingest의 OCR 중복 제거 (캐싱) — §14.2
 2. canonicalize에 stripBrokenWikilinks 적용 (source_page 한국어 wikilink 자동 정리) — §14.5
 3. Stage 2 mention extraction + Stage 3 canonicalize에 사용자 prompt override 지원 — §14.3
@@ -1578,9 +1578,9 @@ export const FORCED_CATEGORIES = {
 - 테스트 97 → **143** (+46): schema.test.ts (20) + canonicalizer.test.ts (12) + wiki-ops.test.ts (+13)
 
 **문서**:
-- `plan/phase-3-todox-3.C-ingest-core-rebuild.md` 신규 (Plan 본체 + v6 결과 + v6.1 실험 분석)
-- `activity/phase-3-resultx-3.C-ingest-comparison/README.md` 갱신 (v1~v6 종합 비교 표)
-- `activity/phase-3-resultx-3.C-ingest-comparison/v3-file-list.txt` 신규
+- `plan/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md` 신규 (Plan 본체 + v6 결과 + v6.1 실험 분석)
+- `activity/phase-3/phase-3-resultx-3.C-ingest-comparison/README.md` 갱신 (v1~v6 종합 비교 표)
+- `activity/phase-3/phase-3-resultx-3.C-ingest-comparison/v3-file-list.txt` 신규
 - CLAUDE.md 갱신 (canonicalizer.ts, schema.ts, ingest-modals.ts 경로 추가)
 
 ---
@@ -1593,7 +1593,7 @@ export const FORCED_CATEGORIES = {
 
 1. Obsidian **Cmd+R** (새 빌드 로드) → Audit 패널 → `raw/0_inbox/PMS_제품소개_R10_20220815.pdf` (이미 inbox에 복원됨) 선택 → Ingest
 2. 생성 파일 수·UI 라벨 여부·업계 표준 보존·log/index 등재율·시간/토큰 측정
-3. 결과를 `activity/phase-3-resultx-3.C-ingest-comparison/README.md` v2 섹션에 기록
+3. 결과를 `activity/phase-3/phase-3-resultx-3.C-ingest-comparison/README.md` v2 섹션에 기록
 4. v1(581) vs v2 정량 비교 표 완성
 
 **이전 세션부터 누적된 잔여**:
@@ -1657,7 +1657,7 @@ export const FORCED_CATEGORIES = {
 - 과다 유형: UI 메뉴·기능명(`announcement`, `address-book`, `all-services` 등)이 concept 승격
 - 정상 유지: 업계 표준 용어(`pmbok`, `wbs`, `gantt-chart`, `erp`, `mes` 등 14개)
 - 현재: v1 파일 전부 원복(삭제) + PDF inbox 복귀 + chunk 프롬프트 새 버전(v2) 빌드
-- 비교 데이터 저장: `activity/phase-3-resultx-3.C-ingest-comparison/{README.md, v1-file-list.txt, v1-concepts-sample.txt}`
+- 비교 데이터 저장: `activity/phase-3/phase-3-resultx-3.C-ingest-comparison/{README.md, v1-file-list.txt, v1-concepts-sample.txt}`
 
 ---
 
@@ -1771,7 +1771,7 @@ export const FORCED_CATEGORIES = {
 
 ### ⭐ 다음 세션 핵심 작업: Phase 3 잔여 검증
 
-**파일**: `plan/phase-3-todo.md` §B-1 + §B-2
+**파일**: `plan/phase-3/phase-3-todo.md` §B-1 + §B-2
 
 #### B-1 Phase 3 원래 잔여
 1. Audit 패널 인제스트 E2E (UI 클릭 흐름)
@@ -1785,7 +1785,7 @@ export const FORCED_CATEGORIES = {
 
 ### 이번 세션 완료 (커밋됨, 7개)
 - `92c9637` fix(ingest): OCR fallback + 4 이슈 수정 (race / logging / Ollama 404 / UI race)
-- `7809d8f` docs: Phase 3 Obsidian E2E 테스트 결과 (`activity/phase-3-resultx-3.B-test-results.md`)
+- `7809d8f` docs: Phase 3 Obsidian E2E 테스트 결과 (`activity/phase-3/phase-3-resultx-3.B-test-results.md`)
 - `0421d7c` config(wikey): default 모델 변경 (basic=gemini, ollama=qwen3.6:35b-a3b)
 - `79a458e` wiki: E2E 테스트 인제스트 아티팩트 + 자동 정리 (16E+12C)
 - `ef63156` refactor(ingest-prompt): 단일 프롬프트 모델 + 모달 편집 UI
@@ -1807,7 +1807,7 @@ export const FORCED_CATEGORIES = {
 | S2 | `diagnostic-logger.ts` 유틸 | 파이프라인 단계별 console.info 헬퍼 + 누락 필드 warn (ingest-pipeline.ts에 적용한 패턴 재사용) |
 | S4 | `wiki-validate-cleanup` 스킬 | validate-wiki.sh + audit-ingest.py 체이닝 + 자동 수정 (dupe 제거, 깨진 링크 변환, log 형식, index 등재) |
 
-### 추가 follow-up (이번 세션 발견, plan/phase-4-todo.md 또는 phase-3-todo.md §B에 통합 예정)
+### 추가 follow-up (이번 세션 발견, plan/phase-4/phase-4-todo.md 또는 phase-3-todo.md §B에 통합 예정)
 
 | ID | 작업 | 우선 |
 |----|------|------|
@@ -1843,7 +1843,7 @@ CLAUDE.md(30KB, 모놀리식)를 분리:
 - `AGENTS.md` — "wikey.schema.md 읽으라" + Codex 특화 지시
 - `local-llm/system-prompt.md` — 스키마 요약 + 로컬 LLM 제약
 
-참고: `plan/phase-1-todo.md` Step 1 (1-1 ~ 1-4)
+참고: `plan/phase-1/phase-1-todo.md` Step 1 (1-1 ~ 1-4)
 
 ### 2. [HIGH] Step 2: 디렉토리 구조 + Git 초기화
 
@@ -1873,7 +1873,7 @@ CLAUDE.md(30KB, 모놀리식)를 분리:
 
 ## 현재 프로젝트 상태 요약
 
-- 파일: CLAUDE.md, llm-wiki.md, llm-wiki-kor.md, idea-comment.md, plan/phase-3-full.md, plan/
+- 파일: CLAUDE.md, llm-wiki.md, llm-wiki-kor.md, idea-comment.md, plan/phase-3/phase-3-full.md, plan/
 - 미생성: wikey.schema.md, AGENTS.md, local-llm/, scripts/, .gitignore, Git
 - wiki/, raw/: 빈 디렉토리 (콘텐츠 없음)
 - 도구: Obsidian 1.12.7 + CLI 활성화, kepano/obsidian-skills 설치, Ollama 설치, Codex CLI 설치

@@ -8,13 +8,13 @@
 > 본 파일은 **Karpathy 의 [llm-wiki.md](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 철학** 을 wikey 프로젝트에 고스란히 녹여둔 *유일한 단일 진실 소스* 이다. 따라서:
 >
 > 1. **모든 작업 / 계획 / 구현의 시작점**: master / analyst / developer / tester / reviewer 모든 에이전트는 작업 진입 시 본 파일을 첫 read 대상으로 삼는다.
-> 2. **계획서 작성 시 필수 참고**: `plan/phase-N-todo.md` / `plan/phase-N-todox-*.md` / 신규 issue 등록 / paradigm shift 검토 — 모든 plan 산출물은 본 파일의 4 원칙 (Explicit / Yours / File over app / BYOAI) + 3계층 + 워크플로우 + 페이지 컨벤션과 일치하는지 검증 후 작성.
+> 2. **계획서 작성 시 필수 참고**: `plan/phase-N/phase-N-todo.md` / `plan/phase-N/phase-N-todox-*.md` / 신규 issue 등록 / paradigm shift 검토 — 모든 plan 산출물은 본 파일의 4 원칙 (Explicit / Yours / File over app / BYOAI) + 3계층 + 워크플로우 + 페이지 컨벤션과 일치하는지 검증 후 작성.
 > 3. **architecture 결정의 단일 기준**: 코드 / schema / data model / UI 변경 시 본 파일과 충돌하면 본 파일이 우선. 본 파일 자체 수정은 사용자 승인 필수 (CLAUDE.md 쓰기 규칙).
 >
 > Karpathy 의 핵심 통찰 4 가지 — 본 파일 §"LLM Wiki 개인화의 4가지 장점 (Karpathy)" 섹션 참조. 모든 architecture 결정의 epistemology base.
 >
 > **본 파일이 다루지 않는 것** (분리 원칙):
-> - 개발 단계 history / 진행 중 issue / phase 별 구현 상태 → `plan/plan-full.md`, `plan/phase-N-todo.md`, `activity/phase-N-result.md`
+> - 개발 단계 history / 진행 중 issue / phase 별 구현 상태 → `plan/plan-full.md`, `plan/phase-N/phase-N-todo.md`, `activity/phase-N/phase-N-result.md`
 > - 도구별 사용법 / 실행 체크리스트 → `CLAUDE.md`, `AGENTS.md`, `local-llm/system-prompt.md`
 > - 디자인 시스템 / CSS 토큰 → `DESIGN.md`
 
@@ -189,7 +189,7 @@ PMBOK / ISO 27001 / ITIL 같이 component 가 정형화된 외부 표준 자료�
 > 2. "굳이 어려운 말 써가면서 지식을 분류할 필요 없잖아. LLM 이라는 든든한 백 위에서 움직이는 건데."
 > → 결론: §5.4 Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion-detector / self-declaration / convergence) 모두 폐기. Suggestions panel UI 폐기 (sidebar 6→5 패널). schema.yaml 의 보존 영역은 **`aliases` (canonical slug normalization) 만**. PII custom rule 은 별도 file (`.wikey/pii-patterns.yaml` + `~/.config/wikey/pii-patterns.yaml`) 의 `patterns: - id/kind/mask` shape 으로 관리 (PII engine 별 layer).
 >
-> 이전 정책 (Phase 5 §5.4 self-extending) 의 history reference: `plan/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 + `activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md`.
+> 이전 정책 (Phase 5 §5.4 self-extending) 의 history reference: `plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 + `activity/phase-5/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md`.
 
 `.wikey/schema.yaml` 보존 section:
 - `aliases:` — canonical slug variant mapping (다국어 / 동명이인 / 약어). `canonicalizer.canonicalizeSlug` 가 이를 SLUG_ALIASES 와 merge 하여 dedup.
@@ -200,8 +200,8 @@ PII custom rule 은 본 schema.yaml 에 두지 **않음**. 별 file:
 - shape: `patterns: - id: <name>\n  kind: regex|structural\n  ...`. 상세는 `wikey-core/src/pii-patterns.ts`.
 
 > 진행 상태 / 구현 commit / paradigm shift 검토는 schema 가 다루지 않음. 진입점:
-> - `plan/phase-5-todo.md` §5.10 (D-wide regroup Phase 1~4)
-> - `activity/phase-5-result.md` §5.10 + `activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md` (D-wide cycle evidence)
+> - `plan/phase-5/phase-5-todo.md` §5.10 (D-wide regroup Phase 1~4)
+> - `activity/phase-5/phase-5-result.md` §5.10 + `activity/phase-5/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md` (D-wide cycle evidence)
 
 ## 시스템 워크플로우 (전체 흐름)
 

@@ -6,7 +6,7 @@
 >
 > 결론 요약 (당시 분석): Step 8 은 **외부 정형 표준 (PMBOK / ISO 27001 / ITIL) ingest 시 component 분해 정확도 보조** 라는 좁은 가치만 제공한다. wikey 의 *본질 6 기능* (raw → wiki 분해 / 누적 / 멱등 갱신 / 검색 / 답변 합성 / 그래프) 은 모두 Step 1~7 + Step Q 에 위치하므로 **Step 8 전체 폐기 후에도 wikey 는 100% 작동한다**. 회귀 테스트 영향: 732 PASS → ~604 (실측 폐기 후, ~110 cases 폐기/skip — §5.4 전용 + schema-yaml-writer).
 >
-> **D-wide 채택 후 실측**: 본 문서의 모든 가설 (Stage 1~4 폐기 안전, 본질 6 기능 영향 0) 이 §5.10.4 라이브 cycle smoke 로 확증됨. PMBOK 10 knowledge areas 가 schema 명시 없이도 LLM 자율로 정확히 10/10 분해 (activity/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md §6.2 L.1 evidence).
+> **D-wide 채택 후 실측**: 본 문서의 모든 가설 (Stage 1~4 폐기 안전, 본질 6 기능 영향 0) 이 §5.10.4 라이브 cycle smoke 로 확증됨. PMBOK 10 knowledge areas 가 schema 명시 없이도 LLM 자율로 정확히 10/10 분해 (activity/phase-5/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md §6.2 L.1 evidence).
 
 ---
 
@@ -264,7 +264,7 @@ wikey.schema.md "핵심 원칙" 5 가지:
 
 - [`wikey.schema.md §표준 분해 self-extending 구조`](../wikey.schema.md) — 현재 상태 사실 기록
 - [`docs/wikey-ingest-pipeline.md §9`](./wikey-ingest-pipeline.md) — Step 8 운영 위치
-- [`plan/phase-5-todox-5.4-integration.md`](../plan/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10 codex APPROVE)
-- [`plan/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5-todox-5.10-graph-emergent-ontology.md) — paradigm shift 보조 plan
-- [`activity/phase-5-result.md §5.4 / §5.10`](../activity/phase-5-result.md) — 진행 timeline + issue 등록 trace
+- [`plan/phase-5/phase-5-todox-5.4-integration.md`](../plan/phase-5/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10 codex APPROVE)
+- [`plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — paradigm shift 보조 plan
+- [`activity/phase-5/phase-5-result.md §5.4 / §5.10`](../activity/phase-5/phase-5-result.md) — 진행 timeline + issue 등록 trace
 - [`llm-wiki.md`](../llm-wiki.md) — Karpathy 원문 (Step 8 같은 layer 미언급, *원형 정합 근거*)

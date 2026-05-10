@@ -2,7 +2,7 @@
 
 > **역할**: wikey 프로젝트의 전체 로드맵·운영 체제·기술 스택·문서 체계 + **각 Phase 의 목표·핵심 spec 상세** 를 단일 진입점으로 정리. README.md 갱신 시 본 문서 + `wikey.schema.md` + `CLAUDE.md` 3 핵심 문서를 source 로 사용.
 > **최종 개정**: 2026-05-07 (session 22 — §5.13 잔존 5 follow-up 종결 + sidebar-chat narrow BLUE refactor)
-> **이력**: 2026-04-25 기존 Phase 3 설계서였던 `plan/plan-full.md` 를 `plan/phase-3-full.md` 로 분리하고, 본 파일을 전체 계획 문서로 신규 작성. 2026-04-26 session 14: §3 Phase 별 상세 spec 추가 + Phase 5 진행 반영. 2026-05-04 session 15: §5.10 paradigm shift v5.4 (D-wide + C5) 종결 + SDD+TDD todo 변환 + 4 phase regroup. 2026-05-05 session 17: §5.10.4 Phase 4 D-wide implementation 종결 (codex cycle #8 APPROVE, b9130f5). 2026-05-05 session 18: 본체 implementation 잔재 모두 처리 (4 atomic commit b1fac99 → c311561) + §5.11 Issue B 구현.
+> **이력**: 2026-04-25 기존 Phase 3 설계서였던 `plan/plan-full.md` 를 `plan/phase-3/phase-3-full.md` 로 분리하고, 본 파일을 전체 계획 문서로 신규 작성. 2026-04-26 session 14: §3 Phase 별 상세 spec 추가 + Phase 5 진행 반영. 2026-05-04 session 15: §5.10 paradigm shift v5.4 (D-wide + C5) 종결 + SDD+TDD todo 변환 + 4 phase regroup. 2026-05-05 session 17: §5.10.4 Phase 4 D-wide implementation 종결 (codex cycle #8 APPROVE, b9130f5). 2026-05-05 session 18: 본체 implementation 잔재 모두 처리 (4 atomic commit b1fac99 → c311561) + §5.11 Issue B 구현.
 
 ## 1. 프로젝트 정체성
 
@@ -64,12 +64,12 @@ wikey 는 크게 **데이터 3계층** 과 **코드 2계층** 으로 구성됩�
 
 | Phase | 범위 | 상태 | 중심 문서 |
 |-------|------|------|----------|
-| Phase 1 | CLI 인프라 · 스키마 · validate/pii · BYOAI 검증 · 로컬 LLM | 완료 (2026-04-11) | [`phase-1-todo.md`](./phase-1-todo.md) · [`phase-1-result.md`](../activity/phase-1-result.md) |
-| Phase 2 | PARA 재구조화 · qmd 하이브리드 검색 · 한국어 형태소 · Contextual Retrieval · Qwen3-Embedding | 완료 (2026-04-18) | [`phase-2-todo.md`](./phase-2-todo.md) · [`phase-2-result.md`](../activity/phase-2-result.md) |
-| Phase 3 | Obsidian 플러그인 (`wikey-core` + `wikey-obsidian`) — 사이드바 채팅·인제스트 UI·v6 파이프라인 | 완료 (2026-04-24 session 8) | [`phase-3-todo.md`](./phase-3-todo.md) · [`phase-3-full.md`](./phase-3-full.md) (설계서) · [`phase-3-result.md`](../activity/phase-3-result.md) |
-| Phase 4 | 본체 완성 — 원본 → wiki ingest 고정 + Docling 메인화 + PII 패턴 엔진 + D.0 Critical Fix | 완료 (2026-04-24 session 8) | [`phase-4-todo.md`](./phase-4-todo.md) · [`phase-4-result.md`](../activity/phase-4-result.md) |
-| Phase 5 | 튜닝·고도화·개선·확장 (9 subject, P0~P4 우선순위) | **진행 중** (2026-04-25~) | [`phase-5-todo.md`](./phase-5-todo.md) · [`phase-5-result.md`](../activity/phase-5-result.md) |
-| Phase 6 | 웹 환경 (Next.js/SvelteKit · REST/tRPC · Docker · 클라우드) | 대기 | [`phase-6-todo.md`](./phase-6-todo.md) |
+| Phase 1 | CLI 인프라 · 스키마 · validate/pii · BYOAI 검증 · 로컬 LLM | 완료 (2026-04-11) | [`phase-1-todo.md`](./phase-1/phase-1-todo.md) · [`phase-1-result.md`](../activity/phase-1/phase-1-result.md) |
+| Phase 2 | PARA 재구조화 · qmd 하이브리드 검색 · 한국어 형태소 · Contextual Retrieval · Qwen3-Embedding | 완료 (2026-04-18) | [`phase-2-todo.md`](./phase-2/phase-2-todo.md) · [`phase-2-result.md`](../activity/phase-2/phase-2-result.md) |
+| Phase 3 | Obsidian 플러그인 (`wikey-core` + `wikey-obsidian`) — 사이드바 채팅·인제스트 UI·v6 파이프라인 | 완료 (2026-04-24 session 8) | [`phase-3-todo.md`](./phase-3/phase-3-todo.md) · [`phase-3-full.md`](./phase-3/phase-3-full.md) (설계서) · [`phase-3-result.md`](../activity/phase-3/phase-3-result.md) |
+| Phase 4 | 본체 완성 — 원본 → wiki ingest 고정 + Docling 메인화 + PII 패턴 엔진 + D.0 Critical Fix | 완료 (2026-04-24 session 8) | [`phase-4-todo.md`](./phase-4/phase-4-todo.md) · [`phase-4-result.md`](../activity/phase-4/phase-4-result.md) |
+| Phase 5 | 튜닝·고도화·개선·확장 (9 subject, P0~P4 우선순위) | **진행 중** (2026-04-25~) | [`phase-5-todo.md`](./phase-5/phase-5-todo.md) · [`phase-5-result.md`](../activity/phase-5/phase-5-result.md) |
+| Phase 6 | 웹 환경 (Next.js/SvelteKit · REST/tRPC · Docker · 클라우드) | 대기 | [`phase-6-todo.md`](./phase-6/phase-6-todo.md) |
 
 ### 3.1 Phase 4 "본체 완성" 정의 (2026-04-22)
 
@@ -181,7 +181,7 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 - C. 관망 (현 상태 유지)
 - **★ D. LLM-only** — Stage 1~4 전체 deprecate, qmd embedding + LLM 답변만 신뢰. wikey 의 LLM-백 위 4 layer (raw → wiki organization / canonical alias / LLM retrieval / UI) 만 유지. **사용자 통찰 가장 정확 반영**.
 
-정당성 검증 (`plan/phase-5-todox-5.10-graph-emergent-ontology.md §9`): §5.4 가 없어도 wikey 정상 작동 (raw → wiki / 검색 / 답변 / wikilink / PII / incremental reingest 모두 §5.4 무관). §5.4 의 *유일한* 가치 = 외부 정형 표준 component 분해 정확도 +10~15% 보조.
+정당성 검증 (`plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md §9`): §5.4 가 없어도 wikey 정상 작동 (raw → wiki / 검색 / 답변 / wikilink / PII / incremental reingest 모두 §5.4 무관). §5.4 의 *유일한* 가치 = 외부 정형 표준 component 분해 정확도 +10~15% 보조.
 
 **진입 조건**: Phase 4 본체 완성 (§4.1/§4.2/§4.3/§4.5.1/§4.5.2 + Concepts CV <15% + Total CV <10%) — session 8 충족.
 
@@ -273,8 +273,8 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 
 ### 6.1 중심 문서 vs 보조 문서
 
-- **중심**: `plan/phase-N-todo.md` · `activity/phase-N-result.md` (단일 소스)
-- **보조**: `plan/phase-N-todox-<section>-<topic>.md` · `activity/phase-N-resultx-<section>-<topic>-<date>.md`
+- **중심**: `plan/phase-N/phase-N-todo.md` · `activity/phase-N/phase-N-result.md` (단일 소스)
+- **보조**: `plan/phase-N/phase-N-todox-<section>-<topic>.md` · `activity/phase-N/phase-N-resultx-<section>-<topic>-<date>.md`
 - 접미사 `x` 가 alphabet-sort 에서 중심 문서를 맨 앞으로 보장 (`_`·`-` 금지)
 
 ### 6.2 필수 블록
@@ -290,7 +290,7 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 
 사용자가 "문서 동기화", "sync docs", "관련 문서 정리", "result/todo 업데이트" 유사 요청을 하면 **반드시 다음 순서**:
 
-1. **result/todo 먼저** — `result-doc-writer` 스킬 invoke 로 `activity/phase-*-result.md` + `plan/phase-*-todo.md` 구조·번호·제목·태그·mirror 점검
+1. **result/todo 먼저** — `result-doc-writer` 스킬 invoke 로 `activity/phase-N/phase-N-result.md` + `plan/phase-N/phase-N-todo.md` 구조·번호·제목·태그·mirror 점검
 2. **관련 문서 동기화** — `wiki/log.md` 엔트리, `plan/session-wrap-followups.md` 다음 세션 시작점, `~/.claude/projects/-Users-denny-Project-wikey/memory/` phase status, 필요 시 `wikey.schema.md`·`README.md`
 3. **단일 논리적 commit/push** — 이 turn 미커밋 변경 전체를 "docs 동기화 + 관련 문서" 메시지로 묶음
 
@@ -335,13 +335,13 @@ Phase 4 는 "원본 → wiki ingest 프로세스가 **더 이상 wiki 를 초기
 
 ## 9. 참조 · 통합 계획
 
-- [`plan/plan_wikey-enterprise-kb.md`](./plan_wikey-enterprise-kb.md) (2026-04-10) — enterprise KB 장기 비전. 현재 실행 단위 아님. 향후 Phase 6+ 또는 별도 프로젝트 scope 로 재평가 예정.
-- [`plan/decisions.md`](./decisions.md) — 설계 의사결정 누적
+- [`plan/ref/plan_wikey-enterprise-kb.md`](./ref/plan_wikey-enterprise-kb.md) (2026-04-10) — enterprise KB 장기 비전. 현재 실행 단위 아님. 향후 Phase 6+ 또는 별도 프로젝트 scope 로 재평가 예정.
+- [`plan/ref/decisions.md`](./ref/decisions.md) — 설계 의사결정 누적
 - [`plan/session-wrap-followups.md`](./session-wrap-followups.md) — 세션 간 이어받는 다음 시작점
-- [`plan/phase-3-full.md`](./phase-3-full.md) — Phase 3 Obsidian 플러그인 상세 구현 설계서 (2026-04-12 원본)
+- [`plan/phase-3/phase-3-full.md`](./phase-3/phase-3-full.md) — Phase 3 Obsidian 플러그인 상세 구현 설계서 (2026-04-12 원본)
 - [`wikey.schema.md`](../wikey.schema.md) — 프로바이더 독립 마스터 스키마 (단일 진실 소스)
 - [`CLAUDE.md`](../CLAUDE.md) — Claude Code 프로바이더 설정 (도구 사용 패턴 + 동기화 플로우)
 
 ---
 
-> **Phase 재편 이력 요약** (2026-04-22 ~ 2026-04-24): 2026-04-22 Phase 재편으로 기존 Phase 5 (웹 환경) 를 Phase 6 으로 이동하고 Phase 4 의 일부 고도화 항목 (§4.4.1/.2/.3, §4.5.1.7.x, §4.5.2/.3/.4 일부) 을 신규 Phase 5 로 이관. 2026-04-24 session 8 에서 Phase 5 9 subject 를 우선순위 기반 P0~P4 3축으로 전면 재번호 (§5.1 PII / §5.2 검색 / §5.3 증분 / §5.4 self-extending / §5.5 그래프 / §5.6 엔진 / §5.7 운영 / §5.8 D.0.l 잔여 / §5.9 Variance). 세부 before→after 매핑은 각 `plan/phase-5-todo.md §섹션 "이전 번호"` 주석 참조.
+> **Phase 재편 이력 요약** (2026-04-22 ~ 2026-04-24): 2026-04-22 Phase 재편으로 기존 Phase 5 (웹 환경) 를 Phase 6 으로 이동하고 Phase 4 의 일부 고도화 항목 (§4.4.1/.2/.3, §4.5.1.7.x, §4.5.2/.3/.4 일부) 을 신규 Phase 5 로 이관. 2026-04-24 session 8 에서 Phase 5 9 subject 를 우선순위 기반 P0~P4 3축으로 전면 재번호 (§5.1 PII / §5.2 검색 / §5.3 증분 / §5.4 self-extending / §5.5 그래프 / §5.6 엔진 / §5.7 운영 / §5.8 D.0.l 잔여 / §5.9 Variance). 세부 before→after 매핑은 각 `plan/phase-5/phase-5-todo.md §섹션 "이전 번호"` 주석 참조.

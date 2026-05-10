@@ -696,9 +696,9 @@ const rawAnswer = await llm.call(prompt, { provider, model })
 - [`docs/ingest-decomposition.md`](./ingest-decomposition.md) — 분해 전략 예시·운영 원칙
 - [`docs/graphify-analysis.md`](./graphify-analysis.md) — wiki 그래프 구조 분석
 - [`plan/plan-full.md`](../plan/plan-full.md) — 전체 로드맵 + Phase 별 spec
-- [`plan/phase-5-todox-5.4-integration.md`](../plan/phase-5-todox-5.4-integration.md) — §5.4 4 Stage 통합 plan
-- [`plan/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5-todox-5.10-graph-emergent-ontology.md) — paradigm shift 보조 plan
-- [`activity/phase-5-result.md`](../activity/phase-5-result.md) — Phase 5 진행 timeline (§5.4 / §5.10)
+- [`plan/phase-5/phase-5-todox-5.4-integration.md`](../plan/phase-5/phase-5-todox-5.4-integration.md) — §5.4 4 Stage 통합 plan
+- [`plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — paradigm shift 보조 plan
+- [`activity/phase-5/phase-5-result.md`](../activity/phase-5/phase-5-result.md) — Phase 5 진행 timeline (§5.4 / §5.10)
 
 ---
 
