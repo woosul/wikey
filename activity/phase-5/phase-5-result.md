@@ -3954,7 +3954,7 @@ new (5 × 2 = 10 runs):
 
 ---
 
-## 5.17 Ingest 분해 결과 밸런싱 calibration — promotion threshold ceiling + write 성능 ✅ 종결 (2026-05-12 session 37) #ingest #promotion #threshold #performance #done
+## 5.17 Ingest 분해 결과 밸런싱 calibration — promotion threshold ceiling + write 성능 ✅ 종결 (Session 37, 2026-05-12)
 
 > 라이브 evidence: case A 복제본 ingest 59 proposed → 51 selected (cap formula `floor(77505/1500)=51` 정확 발화) + write latency 180s → 63s (-65%). codex 3 cycle: #1 NEEDS_REVISION 6 finding → developer fix → #2 NEEDS_REVISION 3 finding → master fix → #3 APPROVE.
 >

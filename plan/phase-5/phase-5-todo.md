@@ -2460,7 +2460,7 @@ Phase 6: master verdict + commit + push + result 문서
 
 ---
 
-## 5.17 Ingest 분해 결과 밸런싱 calibration — promotion threshold ceiling + write 성능 ✅ 종결 (2026-05-12 session 37)
+## 5.17 Ingest 분해 결과 밸런싱 calibration — promotion threshold ceiling + write 성능 ✅ 종결 (Session 37, 2026-05-12)
 > tag: #ingest, #promotion, #threshold, #performance, #done
 > **종결 v0.3 (2026-05-12)** — case A 라이브 smoke 83 → 51 page (-38.6%) + write latency 180s → 63s (-65%) 확증. spec v0.3 sync + codex 3 cycle APPROVE.
 >
