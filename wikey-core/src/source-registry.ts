@@ -380,3 +380,34 @@ export async function reconcile(
   }
   return next
 }
+
+/**
+ * §5.16 Spec 2 (B2) — ingest pipeline 완료 hook 용 reconcile wrapper.
+ *
+ * 기존 `reconcile()` 가 case 4 (restoreTombstone) 까지 처리하나, 호출처 (ingest pipeline /
+ * commands.runIngest 완료 콜백) 가 어떤 record 가 stale tombstone 에서 복구됐는지 추적할
+ * 방법이 없음. 본 wrapper 는 reconcile 전·후 tombstone 상태를 비교하여 restoredIds 를
+ * 반환 → caller 가 telemetry log + sidebar refresh trigger 결정 가능.
+ *
+ * Invariants (spec §1.2):
+ *   - I5: 내부 reconcile 이 case 4 restoreTombstone 발화 (기존 동작 보존).
+ *   - I6: ingest pipeline 완료 직후 1회 호출 — 본 helper 는 호출 가능한 단일 entry point.
+ *   - I7: idempotent — 2회 연속 호출 시 두 번째의 restoredIds = [] (이미 1회차 복구).
+ *   - I8: walker hash match + path mismatch → reconcile 내부 recordMove 자동 발화 (case 2).
+ */
+export async function reconcileAfterIngest(
+  reg: SourceRegistry,
+  walker: () => Promise<readonly WalkerEntry[]>,
+): Promise<{ registry: SourceRegistry; restoredIds: string[] }> {
+  const before = new Set<string>()
+  for (const [id, record] of Object.entries(reg)) {
+    if (record.tombstone) before.add(id)
+  }
+  const registry = await reconcile(reg, walker)
+  const restoredIds: string[] = []
+  for (const id of before) {
+    const next = registry[id]
+    if (next && !next.tombstone) restoredIds.push(id)
+  }
+  return { registry, restoredIds }
+}

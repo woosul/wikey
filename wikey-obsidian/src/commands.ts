@@ -27,7 +27,7 @@ import {
   sanitizeWikilinkTarget,
 } from 'wikey-core'
 import { ConflictModal, type ConflictChoice } from './conflict-modal'
-import { WIKEY_CHAT_VIEW } from './sidebar-chat'
+import { WikeyChatView, WIKEY_CHAT_VIEW, triggerPanelRefresh } from './sidebar-chat'
 import { IngestFlowModal } from './ingest-modals'
 import { DeleteImpactModal, ResetImpactModal } from './reset-modals'
 
@@ -336,7 +336,35 @@ export interface IngestRunOptions {
   // - 캐시 무효화 → 필요 시 ~/.cache/wikey/convert/ 직접 삭제
 }
 
+/**
+ * §5.16 Spec 3 (B3) — sidebar 가 마운트된 경우 WikeyChatView instance 반환.
+ * 사이드바 닫힘 / 다른 leaf 활성 시 null. triggerPanelRefresh 가 null-safe.
+ */
+function getWikeyChatView(plugin: WikeyPlugin): WikeyChatView | null {
+  const leaves = plugin.app.workspace.getLeavesOfType(WIKEY_CHAT_VIEW)
+  for (const leaf of leaves) {
+    const view = leaf.view
+    if (view instanceof WikeyChatView) return view
+  }
+  return null
+}
+
 export async function runIngest(
+  plugin: WikeyPlugin,
+  sourcePath: string,
+  onProgress?: (step: number, total: number, message: string, subStep?: number, subTotal?: number) => void,
+  runOpts?: IngestRunOptions,
+): Promise<IngestRunResult> {
+  try {
+    return await runIngestInner(plugin, sourcePath, onProgress, runOpts)
+  } finally {
+    // §5.16 Spec 3 (B3) Invariant I9 — success / error / cancel 분기 모두에서 panel
+    // 자동 refresh. try/finally 로 단일 entry point 보장 (DRY). null-safe (사이드바 닫힘 OK).
+    triggerPanelRefresh(getWikeyChatView(plugin))
+  }
+}
+
+async function runIngestInner(
   plugin: WikeyPlugin,
   sourcePath: string,
   onProgress?: (step: number, total: number, message: string, subStep?: number, subTotal?: number) => void,

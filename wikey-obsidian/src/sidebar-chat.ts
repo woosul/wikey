@@ -200,6 +200,23 @@ function renderConverterCapabilityWarning(
  * 를 audit 카운트에서 제외 + recountAuditAfterPairedExclude 로 totals 재계산.
  * 원본 audit 객체는 변경 X — 새 객체 반환 (immutable).
  */
+/**
+ * §5.16 Spec 1 (B1) — `hasSidecar` lookup set 정합 helper.
+ *
+ * I1 (set basis): rawAudit (paired-sidecar dedup *전*) 의 files ∪ ingested_files ∪
+ * unsupported_files. `applyPairedSidecarToAudit` 결과 (auditData) 를 입력으로 받으면
+ * paired sidecar `<base>.<ext>.md` 가 이미 dedup 되어 set 에서 사라지므로 hasSidecar
+ * lookup 이 영원히 false → badge 미표시 결함. 따라서 본 helper 는 **dedup *전* rawAudit
+ * 만 받음** (caller 가 적절한 입력 강제).
+ */
+export function buildAuditLookupAllSet(rawAudit: AuditScriptOutput): Set<string> {
+  return new Set<string>([
+    ...rawAudit.files,
+    ...(rawAudit.ingested_files ?? []),
+    ...(rawAudit.unsupported_files ?? []),
+  ])
+}
+
 export function applyPairedSidecarToAudit(audit: AuditScriptOutput): AuditScriptOutput {
   const auditAllSet = new Set<string>([
     ...audit.files,
@@ -221,6 +238,26 @@ export function applyPairedSidecarToAudit(audit: AuditScriptOutput): AuditScript
     unsupported: unsupported_files.length,
     total_documents: ingested_files.length + files.length + unsupported_files.length,
   }
+}
+
+/**
+ * §5.16 Spec 3 (B3) — runIngest 완료 후 Audit + Dashboard 패널 자동 재마운트 trigger.
+ *
+ * 단일 entry point — commands.ts:runIngest 의 success / error / cancel 분기 모두 본 helper
+ * 1회 호출 (I9 호출 완전성). view 가 null/undefined (사이드바 닫힘) 이거나 두 method 중
+ * 하나만 존재하는 partial drift 환경에서도 throw 0 (typeof guard).
+ *
+ * 호출 후 panel 의 loadAuditScriptOutput 가 fresh subprocess spawn (I10), reconcile 가
+ * runIngest 안에서 발화한 직후 호출되어 (I11) registry 최신 상태로 row 재구성.
+ */
+export function triggerPanelRefresh(
+  view: WikeyChatView | null | undefined,
+): void {
+  if (!view) return
+  const auditFn = (view as { refreshAuditPanel?: () => void }).refreshAuditPanel
+  if (typeof auditFn === 'function') auditFn.call(view)
+  const dashFn = (view as { refreshDashboard?: () => void }).refreshDashboard
+  if (typeof dashFn === 'function') dashFn.call(view)
 }
 
 export class WikeyChatView extends ItemView {
@@ -859,6 +896,26 @@ Click [[page name]] in answers to navigate to the wiki page.
     this.renderAuditSection(this.auditPanel)
   }
 
+  /**
+   * §5.16 Spec 3 (B3) — Public refresh API. ingest pipeline 완료 후 caller (commands.ts
+   * runIngest/runIngestCore 의 success/error/cancel 분기) 가 triggerPanelRefresh 를 통해
+   * 호출. 패널이 마운트되지 않은 상태 (사용자가 다른 패널 활성) 면 no-op.
+   *
+   * Invariant I10 (fresh spawn): renderAuditSection 내부 loadAuditScriptOutput 호출이
+   * 매번 fresh subprocess spawn — refresh = stale 폐기 + fresh data 로 재마운트.
+   */
+  public refreshAuditPanel(): void {
+    if (!this.auditPanel) return
+    this.auditPanel.empty()
+    this.renderAuditSection(this.auditPanel)
+  }
+
+  public refreshDashboard(): void {
+    if (!this.dashboardPanel) return
+    this.dashboardPanel.empty()
+    this.renderDashboardContent(this.dashboardPanel)
+  }
+
   private auditSelections: Set<string> = new Set()
 
   private renderAuditSection(container: HTMLElement) {
@@ -880,12 +937,10 @@ Click [[page name]] in answers to navigate to the wiki page.
     // ingested 안 됨). badge 오렌지로 시각 경고.
     const ingestedSet = new Set<string>(auditData.ingested_files)
     const unsupportedSet = new Set(auditData.unsupported_files ?? [])
-    // §5.2.0 hasSidecar lookup 용 — paired 제외 후 남은 audit 파일들의 union.
-    const auditAllSet = new Set<string>([
-      ...auditData.files,
-      ...auditData.ingested_files,
-      ...(auditData.unsupported_files ?? []),
-    ])
+    // §5.16 B1: hasSidecar lookup 은 paired dedup *전* rawAudit 기반이어야 sidecar
+    // `<base>.<ext>.md` 가 set 에 살아 있어 badge 매칭 성공. auditData 기반 (이전 결함)
+    // 은 paired sidecar 가 이미 dedup → hasSidecar 영원히 false → badge 미표시.
+    const auditAllSet = buildAuditLookupAllSet(rawAudit)
 
     // ── Audit UI state (filter/view/search) ──
     type AuditMode = 'all' | 'missing' | 'ingested'

@@ -138,6 +138,7 @@ export {
   recordDelete as registryRecordDelete,
   restoreTombstone as registryRestoreTombstone,
   reconcile as registryReconcile,
+  reconcileAfterIngest,
   REGISTRY_PATH,
 } from './source-registry.js'
 export type { SourceRecord, SourceRegistry, PathHistoryEntry, WalkerEntry } from './source-registry.js'
