@@ -13,6 +13,7 @@ import {
   movePair,
   loadRegistry,
   saveRegistry,
+  reconcileAfterIngest,
   registryRecordDelete,
   computeDeletionImpact,
   previewReset,
@@ -356,11 +357,57 @@ export async function runIngest(
   runOpts?: IngestRunOptions,
 ): Promise<IngestRunResult> {
   try {
-    return await runIngestInner(plugin, sourcePath, onProgress, runOpts)
+    const result = await runIngestInner(plugin, sourcePath, onProgress, runOpts)
+    // §5.16 Spec 2 (B2) Invariant I6 — ingest success 직후 reconcile 1회.
+    // walker → registry hash 일치 시 case 4 restoreTombstone 자동 발화로
+    // stale tombstone (registry mismatch) 즉시 복구. failure 시 WARN 만, 검색 영향 0.
+    await runReconcileAfterIngest(plugin).catch((err) =>
+      console.warn('[Wikey] §5.16 B2 reconcileAfterIngest failed:', err),
+    )
+    return result
   } finally {
     // §5.16 Spec 3 (B3) Invariant I9 — success / error / cancel 분기 모두에서 panel
     // 자동 refresh. try/finally 로 단일 entry point 보장 (DRY). null-safe (사이드바 닫힘 OK).
     triggerPanelRefresh(getWikeyChatView(plugin))
+  }
+}
+
+/**
+ * §5.16 Spec 2 (B2) Invariant I6 — ingest 직후 registry reconcile.
+ *
+ * walker = vault.getFiles() raw/ scope + 50MB cap (main.ts:runStartupReconcile mirror).
+ * `reconcileAfterIngest` 가 case 4 restoreTombstone + case 2 recordMove 적용 후 변경된
+ * registry 와 restoredIds 반환. 변경된 경우만 saveRegistry (no-op write 회피).
+ *
+ * I7 idempotent — 2회 연속 호출 시 두 번째 restoredIds=[].
+ */
+async function runReconcileAfterIngest(plugin: WikeyPlugin): Promise<void> {
+  const MAX_BYTES = 50 * 1024 * 1024
+  const reg = await loadRegistry(plugin.wikiFS)
+  if (Object.keys(reg).length === 0) return
+  const walker = async () => {
+    const out: Array<{ vault_path: string; bytes: Uint8Array }> = []
+    const files = plugin.app.vault.getFiles()
+    for (const f of files) {
+      if (!f.path.startsWith('raw/')) continue
+      if (f.stat && f.stat.size > MAX_BYTES) continue
+      try {
+        const buf = await plugin.app.vault.readBinary(f)
+        out.push({ vault_path: f.path, bytes: new Uint8Array(buf) })
+      } catch (err) {
+        console.warn('[Wikey] §5.16 B2 reconcile readBinary failed:', f.path, err)
+      }
+    }
+    return out
+  }
+  const { registry, restoredIds } = await reconcileAfterIngest(reg, walker)
+  if (registry !== reg) {
+    await saveRegistry(plugin.wikiFS, registry)
+    if (restoredIds.length > 0) {
+      console.info(
+        `[Wikey] §5.16 B2 reconcileAfterIngest restored=${restoredIds.length} ids=${restoredIds.slice(0, 3).join(',')}${restoredIds.length > 3 ? '...' : ''}`,
+      )
+    }
   }
 }
 

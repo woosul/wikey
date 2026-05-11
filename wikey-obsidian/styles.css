@@ -856,38 +856,43 @@
 
 /* §5.2.0 — paired sidecar.md badge on original source row.
    Indicates a derived <base>.<ext>.md sidecar exists for this source.
-   Read-only block (no click handler); hover title shows sidecar name + created. */
+   Read-only block (no click handler); hover title shows sidecar name + created.
+   §5.16 follow-up (사용자 요청 2026-05-11): healthy paired sidecar 도 오렌지
+   배경 — paired pair 존재 자체를 강하게 시각화. broken 은 한 단계 더 강한
+   warning-strong 으로 구분. */
 .wikey-pair-sidecar-badge {
   font-size: 0.72em;
   font-weight: 600;
   letter-spacing: 0.5px;
   padding: 1px 5px;
   border-radius: 3px;
-  background: var(--background-modifier-hover);
-  color: var(--text-faint);
-  border: 1px solid var(--background-modifier-border);
+  background: var(--wk-color-status-warning);
+  color: var(--wk-color-text-on-accent);
+  border: 1px solid var(--wk-color-status-warning-strong);
   flex-shrink: 0;
   cursor: help;
   text-transform: uppercase;
 }
 
 .wikey-pair-sidecar-badge:hover {
-  color: var(--text-muted);
-  background: var(--background-modifier-active-hover);
+  background: var(--wk-color-status-warning-strong);
+  color: var(--wk-color-text-on-accent);
 }
 
 /* §5.2.0 v2 (사용자 요청 2026-04-25): paired (sidecar.md 존재) 인데 audit 가
    missing 분류 = broken state (registry/wiki reset 됐거나 ingest 결과 깨짐).
-   사용자 시각 경고 — 오렌지 배경 + 진한 글자. */
+   §5.16 follow-up (2026-05-11): healthy = orange / broken = red 로 구분. */
 .wikey-pair-sidecar-badge-broken {
-  background: var(--wk-color-status-warning);
+  background: var(--text-error);
   color: var(--wk-color-text-on-accent);
-  border-color: var(--wk-color-status-warning-strong);
+  border-color: var(--text-error);
 }
 
 .wikey-pair-sidecar-badge-broken:hover {
-  background: var(--wk-color-status-warning-strong);
+  background: var(--text-error);
   color: var(--wk-color-text-on-accent);
+  border-color: var(--text-error);
+  filter: brightness(1.15);
 }
 
 .wikey-audit-path-line {
