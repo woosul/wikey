@@ -2567,3 +2567,25 @@ a.internal-link.wikey-broken-link,
   min-width: 140px;
   margin-left: 6px;
 }
+
+/* §5.18 Spec 2 — backlink section (details/summary collapse default).
+   §5.18 Spec 3 I9b — MismatchDiagnosticModal block layout. */
+.wikey-chat-message details > summary {
+  cursor: pointer;
+  font-weight: 500;
+  padding: 4px 0;
+}
+
+.wikey-chat-message details[open] > summary {
+  margin-bottom: 4px;
+}
+
+.wikey-mismatch-block {
+  margin-bottom: 1rem;
+}
+
+.wikey-mismatch-block h3 {
+  font-size: 0.95em;
+  font-family: var(--font-monospace);
+  margin: 0 0 4px;
+}

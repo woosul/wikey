@@ -279,6 +279,18 @@ function basenameWithoutExt(path: string): string {
  * rawVaultPath 는 current vault_path 우선, fallback 으로 path_history 마지막 유효 entry.
  * 둘 다 없으면 resolve 실패로 간주.
  */
+/**
+ * §5.18 Spec 1 I2 — extension badge dynamic derive (hardcoded mapping 0건).
+ * 마지막 '.' 위치가 마지막 '/' 또는 '\\' 보다 뒤일 때만 ext 인정 (path/.dotfile 회피).
+ * 빈 ext → 'file' fallback. lowercase 일관 매칭.
+ */
+function deriveExtBadge(vaultPath: string): string {
+  const dotIdx = vaultPath.lastIndexOf('.')
+  const slashIdx = Math.max(vaultPath.lastIndexOf('/'), vaultPath.lastIndexOf('\\'))
+  const ext = dotIdx > slashIdx && dotIdx >= 0 ? vaultPath.slice(dotIdx + 1).toLowerCase() : ''
+  return ext || 'file'
+}
+
 export async function appendOriginalLinks(
   answer: string,
   citations: readonly Citation[],
@@ -302,23 +314,32 @@ export async function appendOriginalLinks(
           vaultName: opts.vaultName ?? '',
           registry,
         })
-        if (!resolved || !resolved.rawVaultPath) continue
+        if (!resolved || !resolved.rawVaultPath) {
+          // §5.18 Spec 3 I8 — registry mismatch WARN log (sensitive content X).
+          // 포함: sourceId raw form + wiki page path. 제외: raw vault path, 답변 본문, query.
+          console.warn(
+            `[wikey citation] sourceId=${sourceId} not found in registry (page=${citation.wikiPagePath})`,
+          )
+          continue
+        }
         const target =
           mode === 'sidecar' ? deriveSidecarPath(resolved.rawVaultPath) : resolved.rawVaultPath
         if (seen.has(target)) continue
         seen.add(target)
         // display = raw 파일명 basename (한국어 보존, §5.15.D vault rename 후).
         const display = basenameWithoutExt(resolved.rawVaultPath)
-        links.push(`[[${target}|${display}]]`)
+        const badge = deriveExtBadge(resolved.rawVaultPath)
+        links.push(`- [[${target}|${display}]] (${badge})`)
       } catch {
-        // single citation resolve 실패는 건너뜀 — 전체가 실패해야 WARN 처리.
+        // single citation resolve 실패는 건너뜀 — 전체가 실패해야 fallback 발화.
       }
     }
   }
   if (links.length === 0) {
     return `${trimmed}\n\n원본: (해석 실패 — registry 점검 필요)`
   }
-  return `${trimmed}\n\n원본: ${links.join(', ')}`
+  // §5.18 Spec 1 I3 — 답변 본문 ≤ 1줄 공백 후 `원본:` heading + 줄바꿈 list.
+  return `${trimmed}\n\n원본:\n${links.join('\n')}`
 }
 
 /** Extract provenance refs from a single page's frontmatter. Public for unit testing. */

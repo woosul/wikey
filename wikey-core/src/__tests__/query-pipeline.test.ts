@@ -325,7 +325,8 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     await fs.write(REGISTRY_PATH, JSON.stringify(registry))
     // wiki/sources/source-foo.md 가 *없으면* fallback display = basename without ext
     const out = await appendOriginalLinks('답변 본문', [citation([ID_FOO])], { wikiFS: fs })
-    expect(out).toContain('원본: [[raw/2_areas/foo.pdf|foo]]')
+    // §5.18 Spec 1 I3 sweep: inline format → list format with ext badge
+    expect(out).toContain('원본:\n- [[raw/2_areas/foo.pdf|foo]] (pdf)')
     expect(out).toContain('답변 본문')
   })
 
@@ -346,8 +347,9 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
       `---\ntitle: AI로 자연어 질의를 SQL로\ntype: source\nsource_id: ${ID_FOO}\n---\n\n# 본문`,
     )
     const out = await appendOriginalLinks('답변', [citation([ID_FOO])], { wikiFS: fs })
+    // §5.18 Spec 1 I3 sweep: list format
     // raw 파일명 basename = 한국어 그대로 (sanitize 적용된 vault rename 후 형태)
-    expect(out).toContain('원본: [[raw/3_resources/60_note/AI 기반 자연어 데이터 질의 - finetree-SQL.md|AI 기반 자연어 데이터 질의 - finetree-SQL]]')
+    expect(out).toContain('원본:\n- [[raw/3_resources/60_note/AI 기반 자연어 데이터 질의 - finetree-SQL.md|AI 기반 자연어 데이터 질의 - finetree-SQL]] (md)')
     // frontmatter title (부제) 은 사용 안 함
     expect(out).not.toContain('AI로 자연어 질의를 SQL로')
   })
@@ -359,7 +361,8 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     }
     await fs.write(REGISTRY_PATH, JSON.stringify(registry))
     const out = await appendOriginalLinks('답변', [citation([ID_FOO])], { wikiFS: fs })
-    expect(out).toContain('원본: [[raw/2_areas/foo.pdf|foo]]')
+    // §5.18 Spec 1 I3 sweep
+    expect(out).toContain('원본:\n- [[raw/2_areas/foo.pdf|foo]] (pdf)')
   })
 
   it('current vault_path 비어 있고 path_history 존재 — 마지막 유효 entry fallback', async () => {
@@ -375,8 +378,9 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     }
     await fs.write(REGISTRY_PATH, JSON.stringify(registry))
     const out = await appendOriginalLinks('본문', [citation([ID_ARCHIVED])], { wikiFS: fs })
+    // §5.18 Spec 1 I3 sweep: list format
     // 마지막 유효 entry 가 우선
-    expect(out).toContain('원본: [[raw/4_archive/old.pdf|old]]')
+    expect(out).toContain('원본:\n- [[raw/4_archive/old.pdf|old]] (pdf)')
     expect(out).not.toContain('raw/0_inbox/old.pdf')
   })
 
@@ -405,8 +409,9 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
       wikiFS: fs,
       mode: 'sidecar',
     })
+    // §5.18 Spec 1 I3 sweep: list format
     // link target = sidecar md, display = raw basename without ext
-    expect(out).toContain('원본: [[raw/2_areas/foo.pdf.md|foo]]')
+    expect(out).toContain('원본:\n- [[raw/2_areas/foo.pdf.md|foo]] (pdf)')
   })
 
   it("mode='sidecar' — 단독 md 는 vault_path 자체 (자체가 sidecar 대용, display 는 ext 제거)", async () => {
@@ -419,7 +424,8 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
       wikiFS: fs,
       mode: 'sidecar',
     })
-    expect(out).toContain('원본: [[raw/3_resources/note.md|note]]')
+    // §5.18 Spec 1 I3 sweep: list format
+    expect(out).toContain('원본:\n- [[raw/3_resources/note.md|note]] (md)')
     // 단독 md 는 .md.md 가 되지 않아야 함
     expect(out).not.toContain('note.md.md')
   })
@@ -434,7 +440,8 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
       wikiFS: fs,
       mode: 'sidecar',
     })
-    expect(out).toContain('원본: [[raw/2_areas/plain.txt|plain]]')
+    // §5.18 Spec 1 I3 sweep: list format
+    expect(out).toContain('원본:\n- [[raw/2_areas/plain.txt|plain]] (txt)')
     expect(out).not.toContain('plain.txt.md')
   })
 
@@ -462,7 +469,8 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
       wikiFS: fs,
       mode: 'raw',
     })
-    expect(out).toContain('원본: [[raw/2_areas/foo.pdf|foo]]')
+    // §5.18 Spec 1 I3 sweep: list format
+    expect(out).toContain('원본:\n- [[raw/2_areas/foo.pdf|foo]] (pdf)')
   })
 
   it('display 에 디렉토리 경로가 포함되지 않음 (basename only)', async () => {
@@ -479,5 +487,190 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
     expect(m).not.toBeNull()
     expect(m![1]).toBe('file')
     expect(m![1]).not.toContain('/')
+  })
+})
+
+// §5.18 Step B (RED) — Query citation UX
+// Spec: plan/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.2
+// Tester: 13 신규 test 중 wikey-core 측 7개 (T1~T7). 13/13 = wikey-core 7 + wikey-obsidian 6.
+describe('§5.18 Spec 1 — appendOriginalLinks format (1줄 = 1 raw, ext badge, list)', () => {
+  const ID_A = 'sha256:1111111111111111'
+  const ID_B = 'sha256:2222222222222222'
+  const ID_C = 'sha256:3333333333333333'
+
+  function mkRecord(opts: Partial<SourceRecord>): SourceRecord {
+    return {
+      vault_path: '',
+      hash: 'x'.repeat(64),
+      size: 100,
+      first_seen: '2026-05-12T00:00:00Z',
+      ingested_pages: [],
+      path_history: [],
+      tombstone: false,
+      ...opts,
+    } as SourceRecord
+  }
+  const citation = (sourceIds: string[], pagePath = 'wiki/entities/foo.md'): Citation => ({
+    wikiPagePath: pagePath,
+    sourceIds,
+  })
+
+  // T1 ↔ Spec 1 Multi-source: 3 citations (md/pdf/hwp) — list format
+  it('T1: Multi-source (3 citations md/pdf/hwp) → \\n- list format with ext badge', async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_A]: mkRecord({ vault_path: 'raw/2_areas/a.md' }),
+      [ID_B]: mkRecord({ vault_path: 'raw/2_areas/b.pdf' }),
+      [ID_C]: mkRecord({ vault_path: 'raw/2_areas/c.hwp' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks(
+      '답변 본문',
+      [citation([ID_A, ID_B, ID_C])],
+      { wikiFS: fs },
+    )
+    // Spec 1 I3: 답변 본문 ≤ 1줄 공백 후 `원본:` heading + 줄바꿈 후 `- [[<target>|<display>]] (<ext>)` list
+    expect(out).toContain('\n\n원본:\n- [[raw/2_areas/a.md|a]] (md)\n- [[raw/2_areas/b.pdf|b]] (pdf)\n- [[raw/2_areas/c.hwp|c]] (hwp)')
+    // Spec 1 I3a — list 항목 순서 = citation 발견 순 (a → b → c)
+    expect(out).toMatch(/원본:\n- \[\[[^\]]*\|a\]\][^\n]*\n- \[\[[^\]]*\|b\]\][^\n]*\n- \[\[[^\]]*\|c\]\]/s)
+    // inline `, ` join 잔재 X (old format)
+    expect(out).not.toMatch(/원본: \[\[[^\]]+\]\], \[\[/)
+  })
+
+  // T2 ↔ Spec 1 Single-source: 1 citation → 동일 list format (1줄)
+  it('T2: Single-source (1 citation) → list format 1줄, inline ", " 사용 X', async () => {
+    const fs = new MemoryFS()
+    const registry: SourceRegistry = {
+      [ID_A]: mkRecord({ vault_path: 'raw/2_areas/a.md' }),
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks('답변', [citation([ID_A])], { wikiFS: fs })
+    expect(out).toContain('\n\n원본:\n- [[raw/2_areas/a.md|a]] (md)')
+    // Spec 1 I3 — old inline format 잔재 X
+    expect(out).not.toContain('원본: [[raw/2_areas/a.md|a]]')
+  })
+
+  // T3 ↔ Spec 1 Zero citation: empty → fallback "없음" (변경 X 유지)
+  it('T3: Zero citation → "원본: (없음 — 외부 근거 없음)" 유지', async () => {
+    const fs = new MemoryFS()
+    const out = await appendOriginalLinks('본문만', [], { wikiFS: fs })
+    expect(out).toContain('원본: (없음 — 외부 근거 없음)')
+  })
+
+  // T4 ↔ Spec 1 All resolve failed: registry mismatch → fallback + WARN log
+  // (WARN 검증은 T6/T7 와 함께. T4 는 fallback 문구 유지만)
+  it('T4: All resolve failed → "원본: (해석 실패 — registry 점검 필요)" 유지', async () => {
+    const fs = new MemoryFS()
+    await fs.write(REGISTRY_PATH, '{}') // empty registry
+    const out = await appendOriginalLinks(
+      '본문',
+      [citation(['sha256:nonexistent000000'])],
+      { wikiFS: fs },
+    )
+    expect(out).toContain('원본: (해석 실패 — registry 점검 필요)')
+  })
+
+  // T5 ↔ Spec 1 I2 extension badge dynamic derive (hardcoded mapping 0건)
+  it('T5: ext badge dynamic derive — .md/.pdf/.hwp/.unknown-ext lowercase + no-ext → (file)', async () => {
+    const fs = new MemoryFS()
+    const ID_README = 'sha256:4444444444444444'
+    const ID_UNKNOWN = 'sha256:5555555555555555'
+    const registry: SourceRegistry = {
+      [ID_A]: mkRecord({ vault_path: 'raw/2_areas/a.md' }),
+      [ID_B]: mkRecord({ vault_path: 'raw/2_areas/b.PDF' }), // uppercase ext → lowercase 'pdf'
+      [ID_C]: mkRecord({ vault_path: 'raw/2_areas/c.HwP' }), // mixed case → lowercase 'hwp'
+      [ID_README]: mkRecord({ vault_path: 'raw/3_resources/README' }), // no ext → (file)
+      [ID_UNKNOWN]: mkRecord({ vault_path: 'raw/2_areas/d.unknown-ext' }), // arbitrary ext
+    }
+    await fs.write(REGISTRY_PATH, JSON.stringify(registry))
+    const out = await appendOriginalLinks(
+      '답변',
+      [citation([ID_A, ID_B, ID_C, ID_README, ID_UNKNOWN])],
+      { wikiFS: fs },
+    )
+    expect(out).toMatch(/\[\[raw\/2_areas\/a\.md\|a\]\] \(md\)/)
+    expect(out).toMatch(/\[\[raw\/2_areas\/b\.PDF\|b\]\] \(pdf\)/)
+    expect(out).toMatch(/\[\[raw\/2_areas\/c\.HwP\|c\]\] \(hwp\)/)
+    expect(out).toMatch(/\[\[raw\/3_resources\/README\|README\]\] \(file\)/)
+    expect(out).toMatch(/\[\[raw\/2_areas\/d\.unknown-ext\|d\]\] \(unknown-ext\)/)
+  })
+})
+
+describe('§5.18 Spec 3 — registry mismatch WARN log (sensitive content X)', () => {
+  const ID_MISS = 'sha256:679cf2dd6db75e3a' // 실측 mismatch sourceId
+  const ID_OK = 'sha256:6666666666666666'
+
+  function mkRecord(opts: Partial<SourceRecord>): SourceRecord {
+    return {
+      vault_path: '',
+      hash: 'x'.repeat(64),
+      size: 100,
+      first_seen: '2026-05-12T00:00:00Z',
+      ingested_pages: [],
+      path_history: [],
+      tombstone: false,
+      ...opts,
+    } as SourceRecord
+  }
+  const citation = (sourceIds: string[], pagePath = 'wiki/entities/claude-code.md'): Citation => ({
+    wikiPagePath: pagePath,
+    sourceIds,
+  })
+
+  // T6 ↔ Spec 3 I7 WARN log format: mismatch sourceId 발생 시 console.warn 호출
+  it('T6: mismatch sourceId → console.warn called with sensitive-X format', async () => {
+    const fs = new MemoryFS()
+    await fs.write(REGISTRY_PATH, '{}') // empty registry → ID_MISS 미등록
+    const warnSpy: string[] = []
+    const origWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      warnSpy.push(args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '))
+    }
+    try {
+      await appendOriginalLinks(
+        '답변 본문 (사용자 conversational — 노출 금지)',
+        [citation([ID_MISS], 'wiki/entities/claude-code.md')],
+        { wikiFS: fs },
+      )
+    } finally {
+      console.warn = origWarn
+    }
+    // I7 format: [wikey citation] sourceId=<id> not found in registry (page=<wiki page path>)
+    const matched = warnSpy.find((m) =>
+      m.includes('[wikey citation]') &&
+      m.includes(ID_MISS) &&
+      m.includes('wiki/entities/claude-code.md'),
+    )
+    expect(matched).toBeTruthy()
+    // I7 sensitive-X: 답변 본문 / raw vault path 미포함 (registry empty 이므로 raw path 없음 보장
+    // — 단, 답변 본문이 절대 포함되지 않음 검증)
+    for (const m of warnSpy) {
+      expect(m).not.toContain('답변 본문 (사용자 conversational')
+    }
+  })
+
+  // T7 ↔ Spec 3 Mismatch detected: appendOriginalLinks 가 mismatch 시 fallback message + WARN 동시 발화
+  it('T7: mismatch detected → fallback "(해석 실패)" + WARN 동시 발화', async () => {
+    const fs = new MemoryFS()
+    await fs.write(REGISTRY_PATH, '{}')
+    const warnSpy: string[] = []
+    const origWarn = console.warn
+    console.warn = (...args: unknown[]) => {
+      warnSpy.push(args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '))
+    }
+    let out = ''
+    try {
+      out = await appendOriginalLinks(
+        '본문',
+        [citation([ID_MISS])],
+        { wikiFS: fs },
+      )
+    } finally {
+      console.warn = origWarn
+    }
+    // fallback message
+    expect(out).toContain('원본: (해석 실패 — registry 점검 필요)')
+    // WARN 도 발화
+    expect(warnSpy.some((m) => m.includes('[wikey citation]') && m.includes(ID_MISS))).toBe(true)
   })
 })

@@ -260,6 +260,58 @@ export function triggerPanelRefresh(
   if (typeof dashFn === 'function') dashFn.call(view)
 }
 
+// ─────────────────────────────────────────────────────────────
+//  §5.18 Spec 2 — wiki backlink section (resolvedLinks 역방향 lookup)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * 답변에 mention 된 wiki page (`mentioned`) 를 ref 하는 source page 들을 반환.
+ *
+ * - `resolvedLinks` shape = `Record<sourcePath, Record<targetPath, count>>`
+ *   (Obsidian `app.metadataCache.resolvedLinks` 직접 사용)
+ * - I7a self-reference 회피: source 가 `mentioned` 셋 에 포함되면 제외
+ *   (답변 본문 안 mention 된 page 자체는 backlink list 에서 노출 X).
+ * - 결과 unique + sort 안정 (alphabetic).
+ */
+export function collectBacklinks(
+  resolvedLinks: Record<string, Record<string, number>>,
+  mentioned: Set<string>,
+): string[] {
+  const backlinks = new Set<string>()
+  for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
+    // I7a — self-reference 회피
+    if (mentioned.has(sourcePath)) continue
+    for (const target of Object.keys(links)) {
+      if (mentioned.has(target)) {
+        backlinks.add(sourcePath)
+        break
+      }
+    }
+  }
+  return Array.from(backlinks).sort()
+}
+
+const BACKLINK_DISPLAY_LIMIT = 5
+
+/**
+ * backlink list → HTML `<details>` markup (default collapse).
+ *
+ * - I5a: default closed (`<details>` 에 `open` attribute 없음).
+ * - I5: `<summary>참조 페이지 (N)</summary>` 헤더.
+ * - I7: 5 항목 list + 초과 시 truncation 안내 텍스트 (modal/state 회피).
+ * - I6: 빈 array → 빈 string (section 미출력 trigger).
+ */
+export function buildBacklinkSection(backlinks: readonly string[]): string {
+  if (backlinks.length === 0) return ''
+  const total = backlinks.length
+  const head = backlinks.slice(0, BACKLINK_DISPLAY_LIMIT)
+  const items = head.map((p) => `- [[${p}]]`)
+  if (total > BACKLINK_DISPLAY_LIMIT) {
+    items.push(`- ... (총 ${total} 개, 모두 보려면 Obsidian backlink panel 참조)`)
+  }
+  return `<details><summary>참조 페이지 (${total})</summary>\n\n${items.join('\n')}\n</details>`
+}
+
 export class WikeyChatView extends ItemView {
   private messagesEl!: HTMLElement
   private inputEl!: HTMLTextAreaElement
@@ -558,9 +610,35 @@ export class WikeyChatView extends ItemView {
         ...layerOpts,
       })
       loadingEl.remove()
+      // §5.18 Spec 2 — wiki backlink section 통합.
+      // 1) result.answer 의 `[[wikilink]]` parse → target wiki page path set 구성
+      //    (alias `|display` 제외, `#heading` / `^block-id` anchor 제외).
+      // 2) metadataCache.getFirstLinkpathDest 로 linkpath → 실제 vault path 매핑
+      //    (resolvedLinks key/value 와 동일 path shape 보장).
+      // 3) collectBacklinks(resolvedLinks, mentioned) → backlink source page list.
+      // 4) buildBacklinkSection(backlinks) → `<details><summary>참조 페이지 (N)</summary>` markup.
+      //    (I6 — backlinks 0 개면 빈 string 반환 → section 미출력)
+      const mentioned = new Set<string>()
+      const wikilinkRe = /\[\[([^\]|#^]+)/g
+      for (const m of result.answer.matchAll(wikilinkRe)) {
+        const linkpath = m[1]?.trim()
+        if (!linkpath) continue
+        const dest = this.app.metadataCache.getFirstLinkpathDest(linkpath, '')
+        if (dest) mentioned.add(dest.path)
+      }
+      const backlinks = mentioned.size > 0
+        ? collectBacklinks(
+            this.app.metadataCache.resolvedLinks as Record<string, Record<string, number>>,
+            mentioned,
+          )
+        : []
+      const backlinkSection = buildBacklinkSection(backlinks)
+      const finalContent = backlinkSection
+        ? `${result.answer}\n\n${backlinkSection}`
+        : result.answer
       const assistantMsg: ChatMessage = {
         role: 'assistant',
-        content: result.answer,
+        content: finalContent,
       }
       this.plugin.chatHistory.push(assistantMsg)
       this.plugin.scheduleChatSave()

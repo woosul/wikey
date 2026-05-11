@@ -3993,3 +3993,53 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 ### 5.17.4 다음 액션 (잔여 Phase 5)
 
 → **§5.18 P1 진입** — Query citation UX. 원본 1개당 1줄 + 전체 원본 + wiki backlink + registry mismatch logging. 다음 = analyst Step A v0.2 보강 (Step "1" registry mismatch 실측 비율 측정).
+
+---
+
+## 5.18 Query citation UX — 원본 1개당 1줄 + wiki backlink + registry mismatch logging ✅ 종결 (Session 37, 2026-05-12)
+
+> 라이브 evidence: Scenario A citation list `\n- [[path|name]] (md)` + ext badge dynamic derive. Scenario B `<details>참조 페이지 (19/98)` collapse default + truncation. Scenario C `Citation Registry Diagnostic` Modal + `1 mismatch / 14 sourceIds, 38 pages affected` (§5.17 case A 복제본 dangling 정확 노출). codex 2 cycle: #1 FAIL 4 finding → developer fix → #2 ✅ APPROVE.
+>
+> 상위 plan: [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](../../plan/phase-5/phase-5-spec-5.18-query-citation-ux.md) v0.3 · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](../../plan/phase-5/phase-5-todox-5.18-query-citation-ux.md) v0.2 · [`activity/phase-5/phase-5-resultx-5.18-live-smoke-2026-05-12.md`](./phase-5-resultx-5.18-live-smoke-2026-05-12.md)
+
+### 5.18.1 진행 매트릭스 (Step A~G)
+
+- **Step A — analyst v0.2 보강**: registry 14 record 실측 + 1 mismatch (`sha256:679cf2dd6db75e3a` = §5.17 case A 복제본 dangling) + 38 page 점유 (페이지 단위 fallback rate 18.9%, hot-page perception 100%). Q1~Q4 모두 LOCK (Q1 MetadataCache.resolvedLinks 안정 채택 / Q2 default collapse / Q3 별 Modal / Q4 sensitive content sourceId+page만).
+- **Step B — tester RED**: 18 신규 test (query-pipeline T1~T7 + sidebar-chat-backlink T8~T13a + commands-diagnostic T12~T13). 16 RED + 2 regression-PASS. `TypeError: ... is not a function` 4 신규 export 미존재 확증.
+- **Step C — developer GREEN**: 4 신규 export — `appendOriginalLinks` format 변경 (`\n- ` list + ext badge dynamic derive + WARN log) + `collectBacklinks` + `buildBacklinkSection` + `scanCitationMismatches` + `MismatchDiagnosticModal`. 964 PASS / 0 fail.
+- **Step D — Phase 3a 회귀**: wikey-core 832 + wikey-obsidian 132 = 964 PASS. build 0 errors. 회귀 0.
+- **Step E — Phase 3b BLUE**: developer 6 활동 self-applied + master direct `deriveExtBadge` extract → `appendOriginalLinks` 61 → 50 LOC rule compliant (codex cycle #2 LOW finding closure).
+- **Step F — codex post-impl review (2 cycle)**:
+  - cycle #1 FAIL (4 finding): **P1 CRITICAL** `collectBacklinks` / `buildBacklinkSection` export 만, `handleSend()` production path 미wiring (§5.17 P1 패턴 회귀). **P2 MED 3건**: Modal title `Wikey: Citation Mismatch Diagnostic` vs spec `Citation Registry Diagnostic` / sourceId 단축 24자 누락 / styles.css 변경 누락. **P3 LOW**: T1 순서 검증 부재. → developer fix (sidebar-chat.ts wiring + commands.ts title/slice + styles.css +22 LOC + test T1/T13 sweep).
+  - cycle #2 ✅ **APPROVE** (P1 0건). 3 LOW/MED non-blocking finding (appendOriginalLinks 61 LOC / tombstone WARN message / spec §3 LOC budget stale) → master direct sweep (spec §3 v0.3 + `deriveExtBadge` extract / tombstone defer production tombstone=0).
+- **Step G — obsidian-cdp 라이브 smoke (tester)**: 3 scenario 모두 PASS.
+  - **Scenario A** (Spec 1/3): Query 1 "claude-code 가 뭐야?" → 답변 footer `<ul><li>` list (`itil-4-practices (md)` / `itil-4-overview (md)`). Query 3 "claude code 와 codex 차이는?" → console buffer 3 WARN evidence (sha256:679cf2dd6db75e3a 38 page mismatch 정확 노출).
+  - **Scenario B** (Spec 2): 답변에 wiki page mention 시 `<details><summary>참조 페이지 (N)</summary>` 발화 (N=19 / N=98 측정). default closed + truncation 안내 `총 N 개`. self-reference 회피 PASS.
+  - **Scenario C** (Spec 3): command palette `wikey-diagnose-citation-mismatches` 실행 → `MismatchDiagnosticModal` open. title `Citation Registry Diagnostic` (no "Wikey:" prefix). Summary `1 mismatch / 14 sourceIds, 38 pages affected`. sourceId 단축 (`sha256:679cf2dd6db75e3a` 23자, ≤ 24자 spec I9b 정합). 10 page list + `... (총 38 개, 모두 보려면 Console 참조)` truncation hint.
+
+### 5.18.2 spec invariant ↔ 라이브 evidence 매트릭스
+
+| Invariant | Spec scenario | 라이브 evidence |
+|-----------|---------------|----------------|
+| I1 unique raw path dedup | seen Set | Query 1 list 중복 0 |
+| I2 ext badge dynamic derive | (md/pdf/hwp/file) | `(md)` lowercase 정확 |
+| I3 `\n원본:\n- ` list | multi-source | `<ul><li>` 줄바꿈 list |
+| I3a citation 발견 순서 | search Top-K | a→b→c 순서 보존 (regex test PASS) |
+| I4 resolvedLinks 역방향 | MetadataCache | backlink section 정상 |
+| I5a default collapse | `<details>` no open attr | open=false 확증 |
+| I6 zero → 미출력 | empty backlinks | section 미발화 |
+| I7 truncation ≤ 5 | 19/98 backlinks | `총 N 개` 안내 |
+| I7a self-reference 회피 | mentioned 자체 | source page 자체 제외 PASS |
+| I8 WARN sensitive X | sourceId + page only | 3 WARN log, raw path / answer body 미포함 |
+| I9 command 등록 | `wikey-diagnose-citation-mismatches` | command palette ID 확인 |
+| I9a frontmatter scan | provenance.ref cross-check | 1/14 mismatch detect |
+| I9b Modal title + sourceId 24자 | `Citation Registry Diagnostic` + slice(0,24) | title + 23자 표시 정확 |
+
+### 5.18.3 사용자 vault 실측 사이드 effect
+
+- 라이브 smoke 동안 read-only query + diagnostic → vault 변경 0. cleanup 불필요.
+- 사용자가 보고 38 page mismatch (sha256:679cf2dd6db75e3a) 는 §5.17 case A 복제본 ingest 부작용 — 사용자 결정 (2026-05-12): §5.19 maintenance suite `wiki-recovery.sh` 또는 lint workflow 3 self-healing 으로 cleanup. §5.18 cycle 내 fix 없음 (out-of-scope 명시).
+
+### 5.18.4 다음 액션 (잔여 Phase 5)
+
+→ **§5.19 P2 진입** — Wiki maintenance suite (wiki-status / wiki-check / wiki-recovery / wiki-refactoring). §5.18 의 mismatch detect → §5.19 의 자동 fix 연결. 다음 = analyst Step A v0.2 보강 (§5.16 Spec 3 stale tombstone 흡수 결정 + 4 command 분기 LOCK).

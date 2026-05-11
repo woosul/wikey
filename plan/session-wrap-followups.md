@@ -1,17 +1,31 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-12 session 37 — §5.17 SDD+TDD ✅ 종결 + §5.18~§5.20 3 draft 잔존** (Ingest 분해 결과 밸런싱 calibration — promotion threshold ceiling + write 성능 fix 완료). codex 3 cycle (#1~#3) — cycle #1 NEEDS_REVISION 6 finding (P1 CRITICAL 통합 누락 + P2/P3) → developer fix → cycle #2 NEEDS_REVISION 3 finding (hygiene) → master fix → cycle #3 APPROVE. 라이브 evidence: case A 복제본 ingest 59 → 51 cap formula 발화 + latency 180s → 63s (-65%) 확증.
+> 최신 갱신: **2026-05-12 session 37 — §5.17 + §5.18 SDD+TDD ✅ 종결 + §5.19~§5.20 2 draft 잔존**. §5.17 (Ingest 분해 calibration) + §5.18 (Query citation UX) 동일 세션 내 완료. 사용자 진행 정책 (2026-05-12 LOCK): "승인할게 없으면 완료까지 승인없이 진행, 사용자 승인대기 5분 넘어가면 권고안 default 처리".
 >
-> 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재. 진행 순서 "2 > 1 > 2 업데이트 > 3" 사용자 결정 완료. §5.16 + §5.17 종결.
+> §5.18 codex 2 cycle (#1 FAIL 4 finding — P1 CRITICAL `collectBacklinks` production wiring 누락 + P2 modal title/sourceId/styles + P3 T1 → developer fix → #2 APPROVE). 라이브 evidence: Scenario A citation list `\n- (md)` + Scenario B `<details>참조 페이지 (19/98)` collapse + Scenario C `Citation Registry Diagnostic` Modal 38-page mismatch 정확 노출.
+>
+> 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재. §5.16/§5.17/§5.18 종결. 잔여 §5.19/§5.20.
 >
 > 이전 session 36 — §5.16 SDD+TDD ✅ 종결 (Audit/Ingest panel refresh + sidecar pair label).
 > 이전 session 35 — §5.7.7 SDD+TDD ✅ 종결 (vector-hybrid reroute, Top-3 +11.7%p).
 >
-> ## 다음 세션 첫 액션 (Session 38) — §5.18 SDD+TDD 진입
+> ## 다음 세션 첫 액션 (Session 38) — §5.19 SDD+TDD 진입
 >
-> **§5.18 Query citation UX (P1)** — 원본 1개당 1줄 + 전체 원본 + wiki backlink + registry mismatch logging.
+> **§5.19 Wiki maintenance suite (P2)** — wiki-status / wiki-check / wiki-recovery / wiki-refactoring 4 command + Dashboard health row. §5.18 의 mismatch detect → §5.19 의 자동 fix 연결.
 >
-> - 다음 단계: Step A analyst v0.2 (Step "1" registry mismatch 실측 비율 측정) → Step B tester RED → Step C developer GREEN.
+> - 다음 단계: Step A analyst v0.2 (§5.16 Spec 3 stale tombstone 흡수 결정 + 4 command 분기 LOCK) → Step B tester RED → Step C developer GREEN.
+>
+> ## §5.18 cycle 종결 종합 (session 37, 2026-05-12)
+>
+> - **Step A analyst v0.2**: registry 14 record 실측 → 1 mismatch (`sha256:679cf2dd6db75e3a` = §5.17 case A 복제본 dangling, 38 page 점유, 페이지 단위 fallback rate 18.9%, hot-page perception 100%). Q1~Q4 모두 LOCK.
+> - **Step B tester RED**: 18 신규 test (query-pipeline T1~T7 + sidebar-chat-backlink T8~T13a + commands-diagnostic T12~T13). 16 RED + 2 regression-PASS.
+> - **Step C developer GREEN**: 4 신규 export — `appendOriginalLinks` format + `collectBacklinks` + `buildBacklinkSection` + `scanCitationMismatches` + `MismatchDiagnosticModal`. wikey-core 832 + wikey-obsidian 132 = 964 PASS.
+> - **Step D/E 회귀+BLUE**: 964 PASS / build 0 errors. master direct `deriveExtBadge` extract (appendOriginalLinks 61 → 50 LOC rule compliant).
+> - **Step F codex post-impl 2 cycle**:
+>   - #1 FAIL (4 finding): P1 CRITICAL backlink production wiring 누락 (§5.17 P1 패턴 회귀) + P2 modal title/sourceId 24자/styles.css 누락 + P3 T1 순서 검증 부재 → developer fix (sidebar-chat.ts +26 LOC wiring + commands.ts title/slice + styles.css +22 LOC).
+>   - #2 ✅ APPROVE (P1 0건). 3 LOW/MED finding (appendOriginalLinks 61 LOC / tombstone WARN / spec §3 LOC budget) → master direct sweep.
+> - **Step G obsidian-cdp 라이브 smoke**: Scenario A citation format + ext badge + WARN log 3건 / Scenario B `<details>` collapse + truncation + self-ref / Scenario C Modal title + sourceId 24자 + 38-page mismatch evidence 모두 PASS.
+> - **사용자 vault 사이드 effect**: read-only smoke, vault 변경 0. 38 page mismatch dangling (sha256:679cf2dd6db75e3a) → §5.19 maintenance suite cleanup 예정.
 >
 > ## §5.17 cycle 종결 종합 (session 37, 2026-05-12)
 >

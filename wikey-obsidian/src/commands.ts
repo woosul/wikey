@@ -1,4 +1,4 @@
-import { FuzzySuggestModal, Notice, TFile } from 'obsidian'
+import { App, FuzzySuggestModal, Modal, Notice, TFile } from 'obsidian'
 import type WikeyPlugin from './main'
 import {
   generateBrief,
@@ -21,6 +21,7 @@ import {
   QMD_INDEX_MARKER,
   SETTINGS_MARKER,
   type ResetScope,
+  type SourceRegistry,
   reindexQuick,
   convertSourceToMarkdown,
   type ConversionResult,
@@ -105,6 +106,15 @@ export function registerCommands(plugin: WikeyPlugin): void {
     name: 'Wikey: Run query analysis (auto-extend benchmark suite)',
     callback: () => {
       void plugin.runQueryAnalysis()
+    },
+  })
+
+  // §5.18 Spec 3 I9 — diagnostic command for citation registry mismatch.
+  plugin.addCommand({
+    id: 'wikey-diagnose-citation-mismatches',
+    name: 'Wikey: Diagnose citation mismatches',
+    callback: () => {
+      void runDiagnoseCitationMismatches(plugin)
     },
   })
 }
@@ -828,4 +838,133 @@ async function sanitizeRawFilenameIfNeeded(
     console.warn(`[Wikey ingest] §5.15.D rename failed (continuing with original):`, err)
     return sourcePath
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  §5.18 Spec 3 — Citation registry mismatch diagnostic
+// ─────────────────────────────────────────────────────────────
+
+export interface MismatchScanResult {
+  /** Unique sourceId 총수 (frontmatter provenance.ref 추출 후 dedup). */
+  totalSourceIds: number
+  /** Registry 누락 / tombstoned sourceId 수. */
+  mismatchCount: number
+  /** Mismatch sourceId 가 영향 주는 wiki page 총수 (unique). */
+  affectedPageCount: number
+  /** Per-mismatch 상세: sourceId + 영향 page list (정렬). */
+  mismatches: Array<{ sourceId: string; pages: string[] }>
+}
+
+/**
+ * 각 wiki page frontmatter 의 `provenance.ref` (또는 `sources/<id>`) 에서 sourceId 를
+ * 추출 → registry active set 과 cross-check → mismatch sourceId 별 영향 page list 도출.
+ *
+ * - Pure 함수 (I/O X) — input map 으로 page content / registry 받음.
+ * - registry 의 tombstone=true 도 mismatch 로 간주 (active 만 valid).
+ */
+export function scanCitationMismatches(
+  pageContents: Map<string, string>,
+  registry: SourceRegistry,
+): MismatchScanResult {
+  const activeIds = new Set<string>()
+  for (const [id, record] of Object.entries(registry)) {
+    if (!record.tombstone) activeIds.add(id)
+  }
+  // sourceId → set of page paths
+  const sourceIdToPages = new Map<string, Set<string>>()
+  const REF_RE = /(?:^|[\s/'"])sources\/(sha256:[A-Za-z0-9]+)/g
+  for (const [pagePath, content] of pageContents.entries()) {
+    const fmEnd = content.indexOf('\n---', 4)
+    const frontmatter = content.startsWith('---\n') && fmEnd > 0 ? content.slice(0, fmEnd) : content
+    REF_RE.lastIndex = 0
+    let m: RegExpExecArray | null
+    while ((m = REF_RE.exec(frontmatter)) !== null) {
+      const sourceId = m[1]
+      let pages = sourceIdToPages.get(sourceId)
+      if (!pages) {
+        pages = new Set<string>()
+        sourceIdToPages.set(sourceId, pages)
+      }
+      pages.add(pagePath)
+    }
+  }
+  const mismatches: Array<{ sourceId: string; pages: string[] }> = []
+  const affectedPages = new Set<string>()
+  for (const [sourceId, pages] of sourceIdToPages.entries()) {
+    if (!activeIds.has(sourceId)) {
+      const pageList = Array.from(pages).sort()
+      mismatches.push({ sourceId, pages: pageList })
+      for (const p of pageList) affectedPages.add(p)
+    }
+  }
+  mismatches.sort((a, b) => a.sourceId.localeCompare(b.sourceId))
+  return {
+    totalSourceIds: sourceIdToPages.size,
+    mismatchCount: mismatches.length,
+    affectedPageCount: affectedPages.size,
+    mismatches,
+  }
+}
+
+const MISMATCH_PAGE_DISPLAY_LIMIT = 10
+
+/**
+ * Modal: registry mismatch 진단 결과 표시.
+ *
+ * Layout: title + summary line + per-mismatch block (sourceId + page list ≤ 10 + 더보기 hint).
+ * 기존 `WikeyStatsModal` (status-bar.ts) 패턴과 정합.
+ */
+export class MismatchDiagnosticModal extends Modal {
+  private readonly scanResult: MismatchScanResult
+
+  constructor(app: App, scanResult: MismatchScanResult) {
+    super(app)
+    this.scanResult = scanResult
+  }
+
+  onOpen(): void {
+    const { contentEl, titleEl } = this
+    titleEl.setText('Citation Registry Diagnostic')
+    const { totalSourceIds, mismatchCount, affectedPageCount, mismatches } = this.scanResult
+    contentEl.createEl('p', {
+      text: `${mismatchCount} mismatch / ${totalSourceIds} sourceIds, ${affectedPageCount} pages affected`,
+    })
+    if (mismatches.length === 0) {
+      contentEl.createEl('p', { text: '모든 sourceId 가 registry 에 등록되어 있습니다.' })
+      return
+    }
+    for (const entry of mismatches) {
+      const block = contentEl.createEl('div', { cls: 'wikey-mismatch-block' })
+      // §5.18 Spec 3 I9b — sourceId 단축 (앞 24 자) 표시.
+      block.createEl('h3', { text: entry.sourceId.slice(0, 24) })
+      const head = entry.pages.slice(0, MISMATCH_PAGE_DISPLAY_LIMIT)
+      const list = block.createEl('ul')
+      for (const p of head) list.createEl('li', { text: p })
+      if (entry.pages.length > MISMATCH_PAGE_DISPLAY_LIMIT) {
+        block.createEl('p', {
+          text: `... (총 ${entry.pages.length} 개, 모두 보려면 Console 참조)`,
+        })
+      }
+    }
+  }
+
+  onClose(): void {
+    this.contentEl.empty()
+  }
+}
+
+async function runDiagnoseCitationMismatches(plugin: WikeyPlugin): Promise<void> {
+  const registry = await loadRegistry(plugin.wikiFS).catch(() => ({} as SourceRegistry))
+  const pageContents = new Map<string, string>()
+  const mdFiles = plugin.app.vault.getMarkdownFiles().filter((f) => f.path.startsWith('wiki/'))
+  for (const file of mdFiles) {
+    try {
+      const content = await plugin.app.vault.read(file)
+      pageContents.set(file.path, content)
+    } catch {
+      // skip unreadable
+    }
+  }
+  const scanResult = scanCitationMismatches(pageContents, registry)
+  new MismatchDiagnosticModal(plugin.app, scanResult).open()
 }

@@ -28,7 +28,7 @@
   - [`plan/phase-5/phase-5-todox-5.7.5-orama-update-sync.md`](./phase-5-todox-5.7.5-orama-update-sync.md) — §5.7.5 Todo HOW v1.4 (308줄, codex 6 cycle 모두 APPROVE, **종결 Session 30~31 2026-05-09**)
   - [`plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](./phase-5-spec-5.16-audit-refresh-reliability.md) · [`plan/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](./phase-5-todox-5.16-audit-refresh-reliability.md) — §5.16 P0 (사용자 테스트 1-1·1-2·1-4, draft v0.1)
   - [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](./phase-5-spec-5.17-ingest-balance-calibration.md) · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](./phase-5-todox-5.17-ingest-balance-calibration.md) — §5.17 P0 (case A 83 → 51 cap + latency -65%, **종결 Session 37 2026-05-12**)
-  - [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](./phase-5-spec-5.18-query-citation-ux.md) · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](./phase-5-todox-5.18-query-citation-ux.md) — §5.18 P1 (사용자 테스트 1-3, draft v0.1)
+  - [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](./phase-5-spec-5.18-query-citation-ux.md) · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](./phase-5-todox-5.18-query-citation-ux.md) — §5.18 P1 (citation list + backlink + diagnostic, **종결 Session 37 2026-05-12**)
   - [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](./phase-5-spec-5.19-wiki-maintenance-suite.md) · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](./phase-5-todox-5.19-wiki-maintenance-suite.md) — §5.19 P2 (사용자 테스트 2-1, draft v0.1)
   - [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](./phase-5-spec-5.20-knowledge-gap-management.md) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](./phase-5-todox-5.20-knowledge-gap-management.md) — §5.20 P2 (사용자 테스트 2-2, Phase 6 → Phase 5 편입, draft v0.1)
 - **프로젝트 공통**: [`plan/ref/decisions.md`](../decisions.md) · [`plan/ref/plan_wikey-enterprise-kb.md`](../plan_wikey-enterprise-kb.md).
@@ -2476,19 +2476,19 @@ Phase 6: master verdict + commit + push + result 문서
 
 ---
 
-## 5.18 Query citation UX — 원본 1개당 1줄 + 전체 원본 + wiki backlink + registry mismatch logging (P1)
-> tag: #citation, #ux, #backlink, #registry
-> **draft v0.1 (2026-05-11)** — 사용자 테스트 1-3 통합.
+## 5.18 Query citation UX — 원본 1개당 1줄 + wiki backlink + registry mismatch logging ✅ 종결 (Session 37, 2026-05-12)
+> tag: #citation, #ux, #backlink, #registry, #done
+> **종결 v0.3 (2026-05-12)** — 라이브 smoke 3 scenario 모두 PASS (citation list format + backlink section + diagnostic modal). codex 2 cycle (#1 FAIL 4 finding → developer fix → #2 APPROVE).
 >
-> **상위 plan**: [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](./phase-5-spec-5.18-query-citation-ux.md) · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](./phase-5-todox-5.18-query-citation-ux.md)
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](./phase-5-spec-5.18-query-citation-ux.md) · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](./phase-5-todox-5.18-query-citation-ux.md) · [`activity/phase-5/phase-5-resultx-5.18-live-smoke-2026-05-12.md`](../../activity/phase-5/phase-5-resultx-5.18-live-smoke-2026-05-12.md)
 
-- [ ] **Step A — analyst v0.2** (Step "1" registry mismatch 실측 비율 측정)
-- [ ] **Step B — tester RED** (query-pipeline format + sidebar-chat backlink + diagnostic command test)
-- [ ] **Step C — developer GREEN** (format `, ` → `\n- ` + extension badge + backlink section + WARN log + command)
-- [ ] **Step D — Phase 3a 회귀**
-- [ ] **Step E — Phase 3b BLUE** (backlink section helper extract)
-- [ ] **Step F — codex post-impl review**
-- [ ] **Step G — master 라이브 cycle smoke** (PMS / multi-source / diagnostic command)
+- [x] **Step A — analyst v0.2** (Step "1" 실측: registry 14 record, 1 mismatch sha256:679cf2dd6db75e3a 38 page 점유, Q1~Q4 LOCK)
+- [x] **Step B — tester RED** (18 신규 test: query-pipeline T1-T7 + sidebar-chat-backlink T8-T13a + commands-diagnostic T12-T13)
+- [x] **Step C — developer GREEN** (4 신규 export: `appendOriginalLinks` format + `collectBacklinks` + `buildBacklinkSection` + `scanCitationMismatches` + `MismatchDiagnosticModal`, 964 PASS)
+- [x] **Step D — Phase 3a 회귀** (wikey-core 832 / wikey-obsidian 132 = 964 PASS / build 0 errors)
+- [x] **Step E — Phase 3b BLUE** (developer 6 활동 self-applied + master `deriveExtBadge` extract → `appendOriginalLinks` 61 → 50 LOC rule compliant)
+- [x] **Step F — codex post-impl review** (2 cycle — #1 FAIL 4 finding (P1 backlink wiring + P2 title/sourceId/styles + P3 T1) → developer fix → #2 ✅ APPROVE)
+- [x] **Step G — obsidian-cdp 라이브 smoke** (Scenario A citation format + Scenario B backlink section + Scenario C diagnostic modal 모두 PASS, 38-page mismatch evidence)
 
 ---
 
