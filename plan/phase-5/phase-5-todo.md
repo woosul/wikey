@@ -1282,15 +1282,15 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 | Cross-lingual 욕구 | 사용자 vault 한+영 mix + cross-lingual query 회수 fail | **진입 권고** (이득 #2 효과 큼) |
 | 중간 | Top-1 70~80% | **사용자 결정** (trade-off #1~#3 cost vs 이득 #1~#3) |
 
-**진입 시 first action**:
-1. analyst 위임 — `plan/phase-5-spec-5.7.7-hybrid-search.md` (Spec WHAT) + `plan/phase-5-todox-5.7.7-hybrid-search.md` (Todo HOW)
-2. spec 작성 시 본 §5.7.7.0 이득 / trade-off mirror 의무 + §5.7.7.1~6 spec preview byte mirror
-3. 4-question 검증 (필요성 / 역할 / Simplicity / Phase scope) — 특히 *대안 검토* (vector reroute vs LLM 리랭킹 강화 vs query 확장 정밀화 등)
-4. master 1차 검증 + codex Mode D Panel review + 사용자 승인
-5. SDD+TDD 구현
+**진입 시 first action** (historical — 본 §5.7.7 은 2026-05-11 session 35 에 종결됨):
+1. ~~analyst 위임 — `plan/phase-5-spec-5.7.7-hybrid-search.md` + `plan/phase-5-todox-5.7.7-hybrid-search.md`~~ → **실 산출 = [`plan/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](./phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.3 (status: closed, spec/todox 합본 — testing.md §3 mid-sized 패턴)**
+2. ~~spec 작성 시 본 §5.7.7.0 이득 / trade-off mirror 의무 + §5.7.7.1~6 spec preview byte mirror~~ → 완료 (analyst 합본 v1.0 → master fix v1.1 → 사용자 일괄 APPROVE v1.2 → 종결 v1.3)
+3. ~~4-question 검증~~ → 완료 (paradigm 정합성 + 사용자 추가 요구사항 통합 + §5.7.4 placeholder 정정 + Open Q 결정)
+4. ~~master 1차 검증 + codex Mode D Panel review~~ → 완료 (plan v1.2 APPROVE + post-impl 7 cycle NEEDS_REVISION 6 → cycle #7 APPROVE)
+5. ~~SDD+TDD 구현~~ → 완료 (Step A~F + 라이브 master smoke, Top-3 +11.7%p / I24 target 달성)
 
-**진입 미정당 결정 시 처리**:
-- 본 §5.7.7 = "deferral 영구" 마킹 (Phase 5 외 / Phase 6 후 / 미진행)
+**진입 미정당 결정 시 처리** (N/A — 진입 + 종결):
+- ~~본 §5.7.7 = "deferral 영구" 마킹~~ → 종결 (Session 35, commit `0cade51` + `3e17c42` + `fdd976b` + `5b73775` + `ae27c4d`)
 - 본 §5.7.6 의 BM25-only quality 가 사용자 만족 도달 = wikey 검색 코어 *영구 BM25-only* 정책 잠금
 - §5.7.4 의 `embedding: vector[768]` schema column 은 *역사적 자산* 으로 보존 (제거 X)
 - wikey.schema.md 의 §"LLM 참여형 다층 검색" 정의는 *별 layer (LLM 리랭킹)* 가 cover 한다고 명시
