@@ -56,7 +56,7 @@ describe('§5.16 Spec 1 (B1) — buildAuditLookupAllSet (rawAudit 기반 hasSide
   })
 
   it('AC-2 broken case: sidecar 있고 raw 가 ingested_files 에 없음 → hasSidecar=true + ingestedSet=false (red v0.3)', () => {
-    // ingest 결과는 잃었으나 sidecar 잔존 (registry/wiki reset 등). orange broken badge 트리거.
+    // ingest 결과는 잃었으나 sidecar 잔존 (registry/wiki reset 등). red broken badge 트리거 (v0.3 normalize).
     const rawPdf = 'raw/3_resources/30_manual/600_industry/abandoned.pdf'
     const sidecar = `${rawPdf}.md`
     const rawAudit: AuditScriptOutput = {
@@ -71,7 +71,7 @@ describe('§5.16 Spec 1 (B1) — buildAuditLookupAllSet (rawAudit 기반 hasSide
     expect(hasSidecar(rawPdf, lookupSet)).toBe(true) // AC-2 → broken badge 분기 진입
     const auditData = applyPairedSidecarToAudit(rawAudit)
     const ingestedSet = new Set<string>(auditData.ingested_files)
-    expect(ingestedSet.has(rawPdf)).toBe(false) // orange
+    expect(ingestedSet.has(rawPdf)).toBe(false) // I3 (v0.3): red (broken)
   })
 
   it('AC-3 sidecar 미존재: rawAudit 에 base 만, sidecar 없음 → hasSidecar=false (badge 미생성)', () => {
@@ -89,7 +89,7 @@ describe('§5.16 Spec 1 (B1) — buildAuditLookupAllSet (rawAudit 기반 hasSide
   })
 
   it('AC-4 tree view 동일 invariant: rawAudit 기반 set 가 list / tree 양쪽에서 동일 결과', () => {
-    // line 1112 (list view) + line 1220 (tree view) 가 동일 set 사용 → 동일 invariant.
+    // HEAD `:1167` (list view) + `:1275` (tree view) 가 동일 set 사용 → 동일 invariant (pre-fix `:1112`/`:1220`).
     // 본 helper 는 view-mode 무관 — pure rawAudit → set.
     const rawPdf = 'raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf'
     const sidecar = `${rawPdf}.md`

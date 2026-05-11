@@ -38,7 +38,14 @@ describe('§5.7.5 env-detect engine flag', () => {
     ).toBe(true)
   })
 
-  it('AC-C6.runtime: detectEnvironment with searchEngine="orama" returns qmdPath=""', async () => {
+  // §5.16 cycle #3 finding #1 (flaky 5s timeout in full suite, isolated 4.5s PASS):
+  // detectEnvironment 가 외부 probe (ollama HTTP + python3 / qmd / pandoc / docling 등) 를
+  // 병렬 호출하므로 cold start (특히 first run / CI 환경) 에서 5s 의 default vitest timeout
+  // 에 근접. timeout 10s 확장 — 본 test 의 결정성 (deterministic outcome) 은 detectEnvironment
+  // 가 어떤 probe 결과를 반환하든 qmdPath="" 로 일정 (engine="orama" 분기). flakiness
+  // 의 근본은 detectEnvironment 의 외부 의존도 — 본 §5.16 scope 외, 별 cycle (§5.7.5
+  // follow-up 또는 env-detect 안정화 cycle) 에서 mock probe 도입 후보.
+  it('AC-C6.runtime: detectEnvironment with searchEngine="orama" returns qmdPath=""', { timeout: 10_000 }, async () => {
     const { detectEnvironment } = await import('../env-detect.js')
     // Pass orama → qmd block must skip → qmdPath stays empty.
     // Pass an unreachable ollama URL to keep the run fast/deterministic.

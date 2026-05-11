@@ -51,17 +51,20 @@ const auditAllSet = buildAuditLookupAllSet(rawAudit)
 
 **Step "1" evidence (closed)**: 14 records 중 2 stale tombstone (case A MarkItDown / case B HWP 스마트공장). Step G master 라이브 smoke + commit `8c087aa` B2 hook 통합으로 ingest 직후 자동 복구 확증.
 
-**B2 production hook 통합 (commit `8c087aa`)**:
+**B2 production hook 통합 (commit `8c087aa` + cycle #2 finding #1 success-gate `653c08a`)**:
 ```typescript
 // commands.ts:runIngest try block
 try {
   const result = await runIngestInner(plugin, sourcePath, onProgress, runOpts)
-  await runReconcileAfterIngest(plugin).catch(err => 
-    console.warn('[Wikey] §5.16 B2 reconcileAfterIngest failed:', err))
+  // §5.16 cycle #2 finding #1 — success-gate (cancel/error 분기 reconcile skip, write-0 invariant 보존)
+  if (result.success) {
+    await runReconcileAfterIngest(plugin).catch(err =>
+      console.warn('[Wikey] §5.16 B2 reconcileAfterIngest failed:', err))
+  }
   return result
 } finally { triggerPanelRefresh(getWikeyChatView(plugin)) }
 ```
-`runReconcileAfterIngest` helper = `main.ts:runStartupReconcile` mirror (vault.getFiles() raw/ scope + 50MB cap + walker → reconcileAfterIngest → saveRegistry on change). error 분기는 reconcile 의무 X (fail-open, 검색 영향 0).
+`runReconcileAfterIngest` helper = `main.ts:runStartupReconcile` mirror (vault.getFiles() raw/ scope + 50MB cap + walker → reconcileAfterIngest → saveRegistry on change). cancel/error 분기 = reconcile skip (success-gate). fail-open (검색 영향 0).
 
 ### B3 — Panel refresh trigger 누락
 
@@ -84,7 +87,7 @@ view?.refreshDashboard()
 - **Q1**: B2 reconcile 호출 시점 — ingest-pipeline 완료 직후 single call vs runIngest 의 callback 에서 호출? → grep + 결정.
 - **Q2**: B3 `refreshAuditPanel()` 가 현재 public 인지 — sidebar-chat.ts grep 후 결정.
 - **Q3**: refresh trigger 가 fresh spawn (cache 0) 인지 확증 — `loadAuditScriptOutput` 가 매 호출 spawn.
-- **Q4**: cancel 분기 (AC-11) 의 reconcile 호출 여부 — cancel 시도 시 partial ingest 남아 있을 수 있어 reconcile 의무.
+- **Q4 (cycle #2 finding #1 closure)**: cancel/error 분기 = reconcile **skip** (success-gate). 이유: cancel 시 vault write-0 invariant (AC-C1.4) 보존 + spec wording "success 직후" 정합. stale tombstone 잔존 시 다음 ingest success 또는 plugin reload startup reconcile (`main.ts:652`) 으로 자동 복구.
 
 ## 변경 면 추정 (Karpathy #2 / #3)
 

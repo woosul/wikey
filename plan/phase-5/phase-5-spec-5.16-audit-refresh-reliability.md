@@ -75,7 +75,7 @@ version: v0.3
   - **AC-1 PMS 케이스 (Step "1" evidence)**: rawAudit 의 `ingested_files` 에 `raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf` + `files` 에 `..._R10_20220815.pdf.md` 양쪽 포함 → Audit row `PMS_..._R10_20220815.pdf` 의 nameWrap 안에 orange `md` badge 1개. broken-red X (ingestedSet 에 PMS PDF 포함).
   - **AC-2 broken case**: rawAudit `files` 에 sidecar `.pdf.md` 있고 `ingested_files` 에 raw PDF 누락 (ingest 결과 잃은 broken state) → red `md` badge (v0.3).
   - **AC-3 sidecar 미존재**: rawAudit `files` 에 base `.pdf` 만, sidecar `.pdf.md` 없음 → badge 미생성 (정상).
-  - **AC-4 tree view**: line 1220 의 tree view 분기에서도 동일 invariant 적용.
+  - **AC-4 tree view**: HEAD `:1275` (pre-fix `:1220`) 의 tree view 분기에서도 동일 invariant 적용.
 - **Out of Scope**: Audit script output schema 변경. paired sidecar dedup 정책 변경.
 
 ### Spec 2: B2 — Stale tombstone reconcile (false tombstone 자동 복구)
@@ -153,7 +153,7 @@ version: v0.3
 - **Step E — Phase 3b BLUE**: refresh trigger helper extract (3 호출처 dedup), reconcile 호출 시점 주석 명시.
 - **Step F — codex post-impl review** (cmux Mode D): spec ↔ test ↔ impl 4중 정합 review.
 - **Step G — master 라이브 cycle smoke (obsidian-cdp)**:
-  - PMS 케이스 — Audit 패널의 PMS PDF row 에 gray `md` badge 표시 확증.
+  - PMS 케이스 — Audit 패널의 PMS PDF row 에 orange `md` badge 표시 확증 (v0.3 normalize, healthy=orange).
   - case A/B 재 ingest → registry tombstone=false 자동 복구 확증.
   - ingest 후 panel 자동 refresh 확증 (plugin reload 없이 row 이동).
 
