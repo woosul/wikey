@@ -26,6 +26,11 @@
   - [`plan/phase-5/phase-5-todox-5.7.4-orama-migration.md`](./phase-5-todox-5.7.4-orama-migration.md) — §5.7.4 Todo HOW (Step A 환경 / Step B TDD / Step C 라이브 / Step D 문서, codex 7+6 cycle, **종결 Session 28~29 2026-05-09**)
   - [`plan/phase-5/phase-5-spec-5.7.5-orama-update-sync.md`](./phase-5-spec-5.7.5-orama-update-sync.md) — §5.7.5 Orama upstream sync + LOW 잔여 + PoC cleanup + Developer Update UI Spec WHAT v1.4 (472줄, **종결 Session 30~31 2026-05-09**)
   - [`plan/phase-5/phase-5-todox-5.7.5-orama-update-sync.md`](./phase-5-todox-5.7.5-orama-update-sync.md) — §5.7.5 Todo HOW v1.4 (308줄, codex 6 cycle 모두 APPROVE, **종결 Session 30~31 2026-05-09**)
+  - [`plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](./phase-5-spec-5.16-audit-refresh-reliability.md) · [`plan/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](./phase-5-todox-5.16-audit-refresh-reliability.md) — §5.16 P0 (사용자 테스트 1-1·1-2·1-4, draft v0.1)
+  - [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](./phase-5-spec-5.17-ingest-balance-calibration.md) · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](./phase-5-todox-5.17-ingest-balance-calibration.md) — §5.17 P0 (사용자 테스트 1-7, draft v0.1)
+  - [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](./phase-5-spec-5.18-query-citation-ux.md) · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](./phase-5-todox-5.18-query-citation-ux.md) — §5.18 P1 (사용자 테스트 1-3, draft v0.1)
+  - [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](./phase-5-spec-5.19-wiki-maintenance-suite.md) · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](./phase-5-todox-5.19-wiki-maintenance-suite.md) — §5.19 P2 (사용자 테스트 2-1, draft v0.1)
+  - [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](./phase-5-spec-5.20-knowledge-gap-management.md) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](./phase-5-todox-5.20-knowledge-gap-management.md) — §5.20 P2 (사용자 테스트 2-2, Phase 6 → Phase 5 편입, draft v0.1)
 - **프로젝트 공통**: [`plan/ref/decisions.md`](../decisions.md) · [`plan/ref/plan_wikey-enterprise-kb.md`](../plan_wikey-enterprise-kb.md).
 
 ## 우선순위 가이드 (2026-04-24 재조정)
@@ -2433,4 +2438,86 @@ Phase 6: master verdict + commit + push + result 문서
 
 ---
 
-> **§5.16 자리는 의도적으로 비어 있음** — 이전 inline media strip + audit row UI + wikilink whitelist sanitize 작업은 §5.15.D 로 통합. 이전 LLM provider strategy 작업은 §5.6.3 으로 이동 (LLM 엔진 영역 정리).
+> **§5.16~§5.20 신규 등재 (2026-05-11 session 36)** — 사용자 본체 완성 시점 테스트 보고 9 이슈 (INGEST 7 + MAINTENANCE 2) 를 5 subject 로 분류. Step "2 > 1 > 2 업데이트 > 3" 순서 (사용자 결정 2026-05-11): (a) 본 spec/todox 신규 등재 → (b) obsidian-cdp master test 로 P0 재현 + raw evidence 수집 → (c) Step "1" 결과로 v0.2 보강 → (d) SDD+TDD 구현.
+
+---
+
+## 5.16 Audit / Ingest panel refresh reliability + sidecar pair label 회귀 fix (P0)
+> tag: #audit, #refresh, #sidecar, #reliability
+> **draft v0.1 (2026-05-11)** — 사용자 테스트 1-1·1-2·1-4 통합. Step "1" obsidian-cdp test 결과로 v0.2 보강 예정.
+>
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](./phase-5-spec-5.16-audit-refresh-reliability.md) (Spec) · [`plan/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](./phase-5-todox-5.16-audit-refresh-reliability.md) (Todo)
+> **참조 evidence**: `plan/ref/pms.png` (1-1 Missing 오분류) · `plan/ref/ingest-confilct.png` (1-4 Conflict overwrite)
+
+- [x] **Step A — analyst v0.2 보강** (Step "1" raw evidence 기반 master 직접 작성, B1/B2/B3 3 결함 분리 + 11 AC 1:1)
+- [x] **Step B — tester RED** (3 신규 test file 18 test 모두 RED 확증, 회귀 0)
+- [x] **Step C — developer GREEN** (4 helper export + try/finally wrapper, 18 GREEN, src 4 file +50 LOC)
+- [x] **Step D — Phase 3a 회귀** (wikey-core 808 + wikey-obsidian 121 = 929 PASS / build 0)
+- [x] **Step E — Phase 3b BLUE** (developer self-apply: helper extract / naming / dedup / 주석)
+- [ ] **Step F — codex post-impl review** (cmux Mode D, 다음 단계)
+- [x] **Step G — master 라이브 cycle smoke (obsidian-cdp)** — B1/B2/B3 모두 라이브 PASS, [`activity/phase-5/phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md`](../../activity/phase-5/phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md)
+- [ ] **Deferred** — B2 `reconcileAfterIngest` 의 ingest pipeline 안 명시 hook 통합 (현재는 startup/rename reconcile 으로 자동 복구). 별 §5.x cycle 또는 §5.19 maintenance suite 안 통합 후보, P1.
+
+---
+
+## 5.17 Ingest 분해 결과 밸런싱 calibration — promotion threshold floor/ceiling + write 성능 (P0)
+> tag: #ingest, #promotion, #threshold, #performance
+> **draft v0.1 (2026-05-11)** — 사용자 테스트 1-7 두 케이스 양극단 (case A 109KB MD = 83 page 과다 / case B HWP = 0 page 과보수) 통합.
+>
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](./phase-5-spec-5.17-ingest-balance-calibration.md) · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](./phase-5-todox-5.17-ingest-balance-calibration.md)
+
+- [ ] **Step A — analyst v0.2** (Step "1" 측정값으로 1500 char/page 비율 검증 + ceiling default LOCK)
+- [ ] **Step B — tester RED** (promotion-config + canonicalizer + ingest-pipeline write batch test)
+- [ ] **Step C — developer GREEN** (ceiling/floor 분기 + WARN path + write batch)
+- [ ] **Step D — Phase 3a 회귀**
+- [ ] **Step E — Phase 3b BLUE**
+- [ ] **Step F — codex post-impl review**
+- [ ] **Step G — master 라이브 cycle smoke** (case A + case B 재 ingest + latency p95 측정)
+
+---
+
+## 5.18 Query citation UX — 원본 1개당 1줄 + 전체 원본 + wiki backlink + registry mismatch logging (P1)
+> tag: #citation, #ux, #backlink, #registry
+> **draft v0.1 (2026-05-11)** — 사용자 테스트 1-3 통합.
+>
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](./phase-5-spec-5.18-query-citation-ux.md) · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](./phase-5-todox-5.18-query-citation-ux.md)
+
+- [ ] **Step A — analyst v0.2** (Step "1" registry mismatch 실측 비율 측정)
+- [ ] **Step B — tester RED** (query-pipeline format + sidebar-chat backlink + diagnostic command test)
+- [ ] **Step C — developer GREEN** (format `, ` → `\n- ` + extension badge + backlink section + WARN log + command)
+- [ ] **Step D — Phase 3a 회귀**
+- [ ] **Step E — Phase 3b BLUE** (backlink section helper extract)
+- [ ] **Step F — codex post-impl review**
+- [ ] **Step G — master 라이브 cycle smoke** (PMS / multi-source / diagnostic command)
+
+---
+
+## 5.19 Wiki maintenance suite — wiki-status / wiki-check / wiki-recovery / wiki-refactoring (P2)
+> tag: #maintenance, #lint, #status, #recovery
+> **draft v0.1 (2026-05-11)** — 사용자 테스트 2-1 통합. schema §"워크플로우 3: 린트" 의 1-click 실행.
+>
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](./phase-5-spec-5.19-wiki-maintenance-suite.md) · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](./phase-5-todox-5.19-wiki-maintenance-suite.md)
+
+- [ ] **Step A — analyst v0.2** (§5.16 Spec 3 stale tombstone 흡수 결정 + 4 command 분기 LOCK)
+- [ ] **Step B — tester RED** (validate-wiki + 신규 script test)
+- [ ] **Step C — developer GREEN** (wiki-check.sh + wiki-recovery.sh + wiki-refactoring.sh + 4 command + Dashboard health row)
+- [ ] **Step D — Phase 3a 회귀**
+- [ ] **Step E — Phase 3b BLUE**
+- [ ] **Step F — codex post-impl review**
+- [ ] **Step G — master 라이브 cycle smoke** (사용자 vault 에서 4 command 실행)
+
+---
+
+## 5.20 Knowledge Gap management — query log 분석 + 자동 리포트 (P2)
+> tag: #knowledge-gap, #analytics, #report
+> **draft v0.1 (2026-05-11)** — 사용자 테스트 2-2 통합. Phase 6 candidate → Phase 5 편입 (사용자 결정 2026-05-11).
+>
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](./phase-5-spec-5.20-knowledge-gap-management.md) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](./phase-5-todox-5.20-knowledge-gap-management.md)
+
+- [ ] **Step A — analyst v0.2** (score formula calibration + privacy 정책 LOCK)
+- [ ] **Step B — tester RED** (knowledge-gap + query log capture test)
+- [ ] **Step C — developer GREEN** (log capture + score formula + report 생성 command + settings toggle)
+- [ ] **Step D — Phase 3a 회귀**
+- [ ] **Step E — Phase 3b BLUE**
+- [ ] **Step F — codex post-impl review**
+- [ ] **Step G — master 라이브 cycle smoke** (10 query 후 report 생성)

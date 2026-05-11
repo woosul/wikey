@@ -1,16 +1,34 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-11 session 35 — §5.7.7 SDD+TDD ✅ 종결** (Step A~F 완료 + codex post-impl 7 cycle / NEEDS_REVISION 6 → cycle #7 APPROVE / master fix loop 18 finding 모두 close + 라이브 master cold reindex 117/117 docs embedding 1024D + 51 query benchmark Top-3 +11.7%p / MRR +0.060 / Spec I24 target 88% 정확 달성).
+> 최신 갱신: **2026-05-11 session 36 — 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재** (INGEST 7 + MAINTENANCE 2). 진행 순서 "2 > 1 > 2 업데이트 > 3" 사용자 결정 — spec/todox draft v0.1 5건 (5.16/5.17/5.18/5.19/5.20) 등재 완료. 다음 = obsidian-cdp master test 로 P0 재현 + raw evidence 수집.
 >
-> ## 다음 세션 첫 액션 (Session 36)
+> 이전 session 35 — §5.7.7 SDD+TDD ✅ 종결 (Step A~F 완료 + codex post-impl 7 cycle / 라이브 master cold reindex 117/117 docs embedding 1024D + 51 query benchmark Top-3 +11.7%p / MRR +0.060 / Spec I24 target 88% 정확 달성).
 >
-> **Phase 5 잔여 4 subject 결정** (§5.7 항목 모두 종결):
+> ## 다음 세션 첫 액션 (Session 37) — Step "1" obsidian-cdp master test
+>
+> **P0 1-1, 1-2, 1-7 재현 + raw evidence 수집** (master 직접 CDP, schema §"라이브 검증 master 직접 책임"):
+>
+> 1. **1-1 (Audit Missing 오분류)**: `PMS_제품소개_R10_20220815.pdf` 케이스
+>    - `python3 scripts/audit-ingest.py --json` raw output 캡처
+>    - registry json 의 PMS_wpvnathro_R10 record (`tombstone` / `vault_path` / `sidecar_vault_path` / `hash`) 필드 캡처
+>    - `wiki/sources/source-lotus-pms-product-intro.md` 의 `## ⚠ 원본 삭제됨 (2026-05-08)` 블록 stale 여부 확인
+> 2. **1-2 (refresh 회귀)**: 임의 small source ingest 직후 panel refresh trigger 발화 여부 cdp trace
+> 3. **1-7 (분해 밸런싱)**: case A (109KB MD) + case B (HWP) 재 ingest 시 promotion 의 proposed vs selected count 측정. HWP 변환 결과 markdown body length 측정.
+>
+> 결과 → §5.16/§5.17/§5.18 spec v0.2 보강 (Step "2 업데이트") → SDD+TDD Step B 진입 (Step "3").
+>
+> ## Phase 5 잔여 우선순위 (사용자 결정 2026-05-11)
+>
+> **Phase 5 잔여 = §5.16~§5.20 5건 우선 처리** (Phase 6 웹환경 진입 보류):
+> - **P0**: §5.16 (Audit/Refresh Reliability), §5.17 (Ingest Balance Calibration)
+> - **P1**: §5.18 (Query Citation UX)
+> - **P2**: §5.19 (Wiki Maintenance Suite), §5.20 (Knowledge Gap Management — Phase 6 → Phase 5 편입)
+>
+> 기존 잔여 (P3~P4, deferred):
 > - §5.5 (지식 그래프 · 시각화 — NetworkX + Leiden + vis.js / Obsidian Graph View, P3)
 > - §5.6 (성능·엔진 확장 — llama.cpp PoC / rapidocr Linux, P3)
 > - §5.8 (Phase 4 D.0.l 잔여 — dedup / classify variance / reindex exit, P4)
 > - §5.9 (Variance 기여도·diagnostic — 4-points ablation / Ollama baseline, P4)
->
-> 사용자 결정 의뢰 — Phase 5 잔여 우선순위 + 진행 vs Phase 6 (웹 환경) 진입.
 >
 > **§5.7.9 candidate #3~#5 별 cycle 예약** (session 34 deferred):
 > - #3: vault hygiene (한↔영 alias 통합)
