@@ -3869,3 +3869,85 @@ new (5 × 2 = 10 runs):
 - **new-q1 paraphrase (`프로젝트 비용을 어떻게 산정하나?`)**: top1 `pmbok` (general) → `프로젝트-원가-관리` (cost-specific) + citations 안 `project-cost-management` (영어 gt) 8번째 등장. **자연어 paraphrase 의 의미 정밀도 향상**.
 
 → **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** 4 subject (§5.7 항목 모두 종결).
+
+---
+
+## 5.16 Audit / Ingest panel refresh reliability + sidecar pair label 회귀 fix ✅ (Session 36, 2026-05-11)
+
+> mirror: [`plan/phase-5/phase-5-todo.md §5.16`](../../plan/phase-5/phase-5-todo.md) · spec v0.3 ([`plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](../../plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md)) · todox v0.3 ([`plan/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](../../plan/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md)) · Step G live smoke v1.1 ([`phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md`](./phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md))
+>
+> 사용자 본체 완성 시점 테스트 (2026-05-11) 보고 9 이슈 중 INGEST P0 3건 (1-1·1-2·1-4) 통합 cycle. 진행 순서 "2 > 1 > 2 업데이트 > 3" (사용자 결정): spec/todox 신규 등재 → obsidian-cdp Step "1" master test → spec v0.2 보강 → SDD+TDD 진입.
+
+### 5.16 본질 — 사용자 raise + Step "1" raw evidence 3 결함 분리
+
+**사용자 보고 (pms.png + ingest-confilct.png)**:
+- 1-1: `PMS_제품소개_R10_20220815.pdf` ingested 상태인데 Audit Missing 분류 + sidecar pair 라벨 없음 + wiki source page tombstone banner
+- 1-2: ingest 정상 완료 후 Dashboard/Audit/Ingest 패널 미갱신, plugin reload 필요
+- 1-4: conflict overwrite 후 정상 진행 같지만 sidecar 라벨 미표시
+
+**Step "1" master obsidian-cdp raw evidence**:
+- PMS registry tombstone=False ✅, disk PDF + sidecar 모두 존재
+- audit-ingest.py `ingested_files` 에 PMS 포함, `entries[]` 에 sidecar status=missing (paired dedup 처리 대상)
+- 14 records 중 **2 stale tombstone** (case A MarkItDown 109KB MD + case B HWP 스마트공장, 둘 다 disk 존재)
+
+**3 결함 분리**:
+- **B1 hasSidecar set mismatch**: `sidebar-chat.ts` (HEAD `:943`, pre-fix `:884`) 의 `auditAllSet` 이 `auditData` (paired dedup *후*) 기반 → sidecar 영원히 false → badge 미표시.
+- **B2 stale tombstone (reconcile race)**: source-registry case 4 restoreTombstone 구현됨, ingest pipeline 안 hook 부재.
+- **B3 panel refresh trigger 누락**: runIngest 완료 콜백에서 sidebar refresh 호출 누락.
+
+### 5.16 진행 — SDD+TDD 7 Step + codex 4 cycle
+
+| Step | 결과 |
+|------|------|
+| A v0.2 (analyst) | master 직접 작성 — Step "1" evidence 기반 11 AC 1:1 매핑 |
+| B (tester RED) | 3 신규 test file 18 test (11 AC + 7 보조) 모두 RED 확증 |
+| C (developer GREEN) | 4 helper export + try/finally wrapper, 18 GREEN, src 4 file +50 LOC code + 72 JSDoc |
+| D (Phase 3a 회귀) | wikey-core 808 + wikey-obsidian 121 = **929 PASS**, build 0 errors |
+| E (Phase 3b BLUE) | developer self-apply (helper extract / naming / DRY / 주석) |
+| F (codex Mode D 4 cycle) | cycle #1 NEEDS_REVISION 5 finding → #2 NEEDS_REVISION 3 → #3 NEEDS_REVISION 3 → **#4 APPROVE** (Findings: none) |
+| G (master 라이브 obsidian-cdp) | B1/B2/B3 모두 라이브 PASS — orange `md` badge 2 / Audit chip Ingested 11→14 / public refresh API 라이브 노출 |
+
+### 5.16 신규 helper + production fix
+
+- `wikey-core/src/source-registry.ts:398-413` `reconcileAfterIngest(reg, walker)` — case 4 restoreTombstone wrapper + idempotent + restoredIds tracking.
+- `wikey-core/src/index.ts` — re-export.
+- `wikey-obsidian/src/sidebar-chat.ts:204` `buildAuditLookupAllSet(rawAudit)` — paired dedup *전* set 생성.
+- `wikey-obsidian/src/sidebar-chat.ts:243-261` `triggerPanelRefresh(view)` — null-safe + typeof guard.
+- `wikey-obsidian/src/sidebar-chat.ts` public `refreshAuditPanel()` / `refreshDashboard()` 신규.
+- `wikey-obsidian/src/commands.ts:343` `getWikeyChatView(plugin)` + try/finally wrapper + `runIngestInner` extract.
+- `wikey-obsidian/src/commands.ts:runIngest` try block 안 `if (result.success) await runReconcileAfterIngest(plugin).catch(...)` — success-gated (cancel/error 분기 reconcile skip, write-0 invariant 보존).
+- `wikey-obsidian/styles.css` badge color — healthy=orange (`--wk-color-status-warning`) / broken=red (`--text-error`), 사용자 결정.
+
+### 5.16 codex 4 cycle 11 finding closure 요약
+
+| Cycle | VERDICT | finding | closure |
+|-------|---------|---------|---------|
+| #1 | NEEDS_REVISION | 5 (HIGH B2 production hook + MED helper-dead + MED AC mapping + LOW line drift + LOW arithmetic) | `770106e` |
+| #2 | NEEDS_REVISION | 3 (MED success-gate + LOW snippet stale + LOW color normalize) | `653c08a` |
+| #3 | NEEDS_REVISION | 3 (MED env-detect timeout flaky + LOW snippet 잔재 + LOW spec/test stale) | `95819a3` |
+| **#4** | **APPROVE** | 0 | (종결) |
+
+### 5.16 commit chain (8개)
+
+| Commit | 내용 |
+|--------|------|
+| `c8af9be` | docs(plan §5.16~§5.20) — 5 spec/todox 신규 등재 |
+| `24d4fa5` | fix(§5.16) — B1/B2/B3 구현 + 18 신규 test |
+| `54c2b70` | chore(.wikey) — startup reconcile 부산물 |
+| `8c087aa` | fix(§5.16 follow-up) — B2 hook 통합 + badge color |
+| `770106e` | docs(§5.16) — codex cycle #1 5 finding closure |
+| `653c08a` | fix(§5.16) — codex cycle #2 3 finding closure (success-gate) |
+| `95819a3` | fix(§5.16) — codex cycle #3 3 finding closure (env-detect timeout) |
+| `540f7cf` | docs(§5.16) — codex cycle #4 APPROVE + session-wrap |
+
+### 5.16 사용자 가시화 효과 (라이브 확증)
+
+| 사용자 보고 증상 | fix 후 라이브 |
+|------------------|---------------|
+| Audit Missing 10 에 PMS 포함 | Missing 7 (PMS 정상 ingested 분류) |
+| sidecar pair 라벨 안 보임 | orange `md` badge 2 row 정확 표시 (PMS + 스마트공장 HWP) |
+| ingest 후 panel refresh 안됨 | refreshAuditPanel/Dashboard public + success/error/cancel try/finally 단일 entry |
+| "원본 삭제됨" stale 메시지 | startup reconcile + ingest hook reconcile 자동 복구 (case A/B 모두) |
+| (사용자 추가) badge color | healthy=orange / broken=red 정확 적용 |
+
+→ **§5.17 P0 진입** — Ingest 분해 결과 밸런싱 calibration. Step "1" case A (109KB MD 83 page 과다) / case B (HWP 0 page 과보수) 측정 완료, draft v0.1 등재. 다음 = analyst Step A v0.2 보강 (1500 char/page 비율 검증 + ceiling default LOCK).

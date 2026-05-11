@@ -68,7 +68,7 @@ wikey 는 크게 **데이터 3계층** 과 **코드 2계층** 으로 구성됩�
 | Phase 2 | PARA 재구조화 · qmd 하이브리드 검색 · 한국어 형태소 · Contextual Retrieval · Qwen3-Embedding | 완료 (2026-04-18) | [`phase-2-todo.md`](./phase-2/phase-2-todo.md) · [`phase-2-result.md`](../activity/phase-2/phase-2-result.md) |
 | Phase 3 | Obsidian 플러그인 (`wikey-core` + `wikey-obsidian`) — 사이드바 채팅·인제스트 UI·v6 파이프라인 | 완료 (2026-04-24 session 8) | [`phase-3-todo.md`](./phase-3/phase-3-todo.md) · [`phase-3-full.md`](./phase-3/phase-3-full.md) (설계서) · [`phase-3-result.md`](../activity/phase-3/phase-3-result.md) |
 | Phase 4 | 본체 완성 — 원본 → wiki ingest 고정 + Docling 메인화 + PII 패턴 엔진 + D.0 Critical Fix | 완료 (2026-04-24 session 8) | [`phase-4-todo.md`](./phase-4/phase-4-todo.md) · [`phase-4-result.md`](../activity/phase-4/phase-4-result.md) |
-| Phase 5 | 튜닝·고도화·개선·확장 (9 subject, P0~P4 우선순위) | **진행 중** (2026-04-25~) | [`phase-5-todo.md`](./phase-5/phase-5-todo.md) · [`phase-5-result.md`](../activity/phase-5/phase-5-result.md) |
+| Phase 5 | 튜닝·고도화·개선·확장 (9 기존 + §5.16~§5.20 5 신규 = 14 subject, P0~P4 우선순위) | **진행 중** (2026-04-25~) | [`phase-5-todo.md`](./phase-5/phase-5-todo.md) · [`phase-5-result.md`](../activity/phase-5/phase-5-result.md) |
 | Phase 6 | 웹 환경 (Next.js/SvelteKit · REST/tRPC · Docker · 클라우드) | 대기 | [`phase-6-todo.md`](./phase-6/phase-6-todo.md) |
 
 ### 3.1 Phase 4 "본체 완성" 정의 (2026-04-22)
