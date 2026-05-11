@@ -3818,4 +3818,54 @@ validate-wiki: PASS (6/6 검증)
 
 **본인 잘못 인정** (2026-05-11): 첫 라이브 smoke 시도 시 `wikey-cdp.py` 부재 발견 후 `master fallback CLI` 으로 우회 → SKILL.md §2 + memory `reference_obsidian_cdp_e2e.md` 의 "부재 시 즉석 재생성" 절차 무시. 사용자 raise 로 정정. 본 cycle = 향후 같은 실수 회피 영구 fix (skill self-contained + bootstrap 절차 명시 + helper v2 selector fix).
 
+### 5.7.7.14 라이브 smoke 상세 보강 (resultx v1.1, 사용자 명시 "result 상세히 기록")
+
+`phase-5-resultx-5.7.7-hybrid-comparison-2026-05-11.md` v1.1 안 §7~§9 추가 (이전 §5.7.7.13 의 짧은 mirror 보강).
+
+**Timeline (master 직접, 2026-05-11)**:
+- 00:35:07 — helper v1 batch start (selector `.wikey-message-assistant` mismatch)
+- 00:35:42 — v1 fail detect (latency_ms=190893 timeout, char_count=0, citations=[])
+- 00:36 — DOM grep 진단 → 실 selector `.wikey-chat-assistant`
+- 00:37:16 — helper v2 batch start (selector fix + `/clear` slash command reset)
+- 01:26:16 — suite batch 완료 (wall ~49분, per-query 평균 ~2.5분)
+- 01:27:30 — 신규 query 5건 batch start
+- 01:31:51 — 신규 batch 완료 (wall ~4분, per-query 평균 ~25초)
+- 01:34 — resultx v1.0 commit `fdd976b`
+- 09:02 — resultx v1.1 보강
+
+**환경 baseline 기록**:
+- OS Darwin 25.3.0 / Obsidian 1.12.7 / Ollama 4 models including `dengcao/Qwen3-Embedding-0.6B:Q8_0` / Orama cache 6.5MB (127/127 docs with 1024D embedding) / Wiki 127 .md files
+
+**Raw evidence file 영구 보존** (재현 가능):
+- `activity/phase-5/phase-5-resultx-5.7.7-hybrid-comparison-raw-suite.jsonl` (16.7 KB, 20 runs + v1 stale 1)
+- `activity/phase-5/phase-5-resultx-5.7.7-hybrid-comparison-raw-new.jsonl` (8.7 KB, 10 runs)
+
+**Helper script 명세**:
+- `/tmp/wikey-577-bench.sh` (md5 `cc70e957bd7478e2b83405083795a448`) — 10 suite × 2 mode
+- `/tmp/wikey-577-new-queries.sh` (md5 `fad287af867418c0f2c8f1f3380cad31`) — 5 신규 × 2 mode
+
+**Per-query 상세 분석 (resultx v1.1 §8.1~§8.15)** — 각 query 마다 OFF/ON citations[0..N] 전체 list + char_count + latency + 정성 분석 (why hybrid 가 향상/동등/false positive) + vault hygiene 영향 + LLM 응답 본문 sample (200 chars).
+
+**Raw aggregate (resultx v1.1 §9)**:
+```
+suite (10 × 2 = 20 runs):
+  Top-1 OFF 4/10 → ON 4/10 (Δ 0)
+  Top-3 OFF 6/30 (20%) → ON 8/30 (27%) — +2 (+7%p)
+  회귀 0
+  Latency avg OFF 19s → ON 19s (-1s, vector hidden by LLM dominant time)
+  Char count avg OFF 980 → ON 1110 (+13% 응답 풍부화)
+
+new (5 × 2 = 10 runs):
+  Top-1 변화 3 query (new-q1 / new-q3 / new-q5)
+  명확 향상 2 (new-q1 paraphrase precision ↑ / new-q5 fragment top1 회복 nanovna-v2 → wikilink)
+  false positive 1 (new-q3 abstract LLM wikilink wrap)
+  회귀 0
+  Latency avg OFF 22s → ON 24s (+2s)
+```
+
+**가장 명확한 hybrid 향상 evidence (정성)**:
+- **new-q5 fragment (`위키링크 백링크`)**: OFF top1 `nanovna-v2` (전혀 무관 noise hit) → ON top1 `wikilink` (정확). citations 안 `wikilink` / `index` / `엔티티` / `개념` 모두 wiki/Obsidian 도메인 페이지 정확 회수. **2-token fragment query 에서 BM25 단독 fail → vector layer 완전 회복**.
+- **suite english-q3 (`semantic search`)**: vector layer 가 영어 gt slug `semantic-search` 회수 → Top-3 3번째 진입. 한국어 slug `의미-기반-검색` 와 공존. **cross-lingual / paraphrase 의미 회수 evidence**.
+- **new-q1 paraphrase (`프로젝트 비용을 어떻게 산정하나?`)**: top1 `pmbok` (general) → `프로젝트-원가-관리` (cost-specific) + citations 안 `project-cost-management` (영어 gt) 8번째 등장. **자연어 paraphrase 의 의미 정밀도 향상**.
+
 → **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** 4 subject (§5.7 항목 모두 종결).
