@@ -358,12 +358,16 @@ export async function runIngest(
 ): Promise<IngestRunResult> {
   try {
     const result = await runIngestInner(plugin, sourcePath, onProgress, runOpts)
-    // §5.16 Spec 2 (B2) Invariant I6 — ingest success 직후 reconcile 1회.
-    // walker → registry hash 일치 시 case 4 restoreTombstone 자동 발화로
-    // stale tombstone (registry mismatch) 즉시 복구. failure 시 WARN 만, 검색 영향 0.
-    await runReconcileAfterIngest(plugin).catch((err) =>
-      console.warn('[Wikey] §5.16 B2 reconcileAfterIngest failed:', err),
-    )
+    // §5.16 Spec 2 (B2) Invariant I6 — ingest *success* 직후 reconcile 1회.
+    // success-gated (codex cycle #2 finding #1 closure): cancel/error 분기 (result.success=false)
+    // 에서는 reconcile skip — cancel write-0 invariant (AC-C1.4) 보존 + spec wording 정합.
+    // walker → registry hash 일치 시 case 4 restoreTombstone 자동 발화로 stale tombstone 즉시 복구.
+    // failure 시 .catch WARN 만, 검색 영향 0 (fail-open).
+    if (result.success) {
+      await runReconcileAfterIngest(plugin).catch((err) =>
+        console.warn('[Wikey] §5.16 B2 reconcileAfterIngest failed:', err),
+      )
+    }
     return result
   } finally {
     // §5.16 Spec 3 (B3) Invariant I9 — success / error / cancel 분기 모두에서 panel

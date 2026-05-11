@@ -33,14 +33,14 @@ version: v1.1
 
 ## 2. B1 라이브 확증 — paired sidecar `md` badge 표시
 
-**fix point**: `wikey-obsidian/src/sidebar-chat.ts:884` — `auditAllSet` 을 `auditData` (paired dedup *후*) 기반에서 `rawAudit` (paired dedup *전*) 기반으로 교체. 신규 helper `buildAuditLookupAllSet(rawAudit)` export.
+**fix point** (HEAD line, v1.1 정정): `wikey-obsidian/src/sidebar-chat.ts:943` `auditAllSet` (pre-fix `:884` v0.2 evidence) 을 `auditData` (paired dedup *후*) 기반에서 `rawAudit` (paired dedup *전*) 기반으로 교체. 신규 helper `buildAuditLookupAllSet(rawAudit)` export 위치 `:204`. `hasSidecar` 호출처 `:1167` (list view) + `:1275` (tree view).
 
 **라이브 측정 (Audit panel, Ingested mode 14 row)**:
 
 ```
 totalVisible: 14
-allBadges: 2          (gray .wikey-pair-sidecar-badge)
-brokenBadges: 0       (orange .wikey-pair-sidecar-badge-broken)
+allBadges: 2          (orange .wikey-pair-sidecar-badge, v0.3 normalize)
+brokenBadges: 0       (red .wikey-pair-sidecar-badge-broken, v0.3 normalize)
 
 sampled rows:
   스마트공장 보급확산 합동설명회 개최.hwp     hasBadge=true  isBroken=false  badgeText='md'
@@ -48,7 +48,7 @@ sampled rows:
   MarkItDown으로 모든 문서를 마크다운으로 변환하기.md  hasBadge=false  (정상 — .md 자체, paired 적용 X)
 ```
 
-**결론**: paired sidecar `<base>.<ext>.md` 가 disk 에 존재하는 raw 원본 PDF/HWP 두 행 모두 gray `md` badge 정확 표시. 사용자 보고 1-1 ("sidecar pair 라벨 안 보임") 회복.
+**결론**: paired sidecar `<base>.<ext>.md` 가 disk 에 존재하는 raw 원본 PDF/HWP 두 행 모두 orange `md` badge 정확 표시 (v0.3 normalize, 사용자 결정 "healthy=오렌지/broken=red"). 사용자 보고 1-1 ("sidecar pair 라벨 안 보임") 회복.
 
 ## 3. B2 라이브 확증 — stale tombstone 자동 복구
 
@@ -96,7 +96,7 @@ prototype methods (filter refresh/audit/dashboard):
 
 | 결함 | Spec § | unit test | 라이브 확증 | verdict |
 |------|--------|-----------|-------------|---------|
-| **B1** hasSidecar set mismatch | Spec 1 (AC-1~4 + I1) | 5/5 GREEN | PMS + HWP gray `md` badge | **PASS** |
+| **B1** hasSidecar set mismatch | Spec 1 (AC-1~4 + I1) | 5/5 GREEN | PMS + HWP orange `md` badge (v0.3 normalize) | **PASS** |
 | **B2** stale tombstone | Spec 2 (AC-5~8 + I7) | 5/5 GREEN | tombstoned 2 → 0 자동 복구 | **PASS (helper)** + ingest hook 통합 (commit `8c087aa`, codex cycle #1 finding #1+#2 closure) |
 | **B3** refresh trigger | Spec 3 (AC-9~12) | 8/8 GREEN | public method 라이브 노출 | **PASS** |
 

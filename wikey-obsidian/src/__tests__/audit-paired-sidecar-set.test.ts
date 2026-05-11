@@ -5,22 +5,22 @@
  *
  * Spec 1 Acceptance Scenarios → test 1:1 매핑:
  *   - AC-1 PMS 케이스 (Step "1" raw evidence) — rawAudit 기반 set 가 sidecar 포함 →
- *     hasSidecar(rawPdfPath) === true (gray badge 표시 invariant I3)
+ *     hasSidecar(rawPdfPath) === true (orange badge 표시 invariant I3, v0.3 normalize)
  *   - AC-2 broken case — sidecar 있고 raw 가 ingested_files 에 없음 → hasSidecar=true,
- *     ingestedSet=false → orange broken badge 분기 진입
+ *     ingestedSet=false → red broken badge 분기 진입 (v0.3)
  *   - AC-3 sidecar 미존재 → hasSidecar=false (badge 미생성)
- *   - AC-4 tree view (line 1220) 도 동일 invariant 보존 (helper 단위에서 검증)
+ *   - AC-4 tree view (HEAD `:1275`) 도 동일 invariant 보존 (helper 단위에서 검증)
  *
  * Spec 1 Invariants:
  *   - I1: hasSidecar 의 두 번째 인자 = rawAudit.{files ∪ ingested_files ∪ unsupported_files}
  *         (paired dedup *전*). auditData 기반 set 사용 금지.
  *   - I2: hasSidecar(file, rawAuditAllSet) == true 인 모든 row 는 `md` badge 1개.
- *   - I3: ingestedSet.has(file) == true → gray, false → orange.
+ *   - I3 (v0.3 normalize): ingestedSet.has(file) == true → orange `wikey-pair-sidecar-badge`, false → red `wikey-pair-sidecar-badge-broken`.
  *
  * RED 의도: 본 test 는 신규 helper `buildAuditLookupAllSet(rawAudit)` 를 sidebar-chat
  * 으로부터 import 한다. 현재 sidebar-chat 은 inline 으로 잘못된 set (auditData 기반) 을
  * 구성 → helper 미존재 → import-time RED. GREEN (developer) 단계에서 helper 를 export
- * + 호출처 (line 884) 를 helper 호출로 교체 → 본 test 모두 GREEN.
+ * + 호출처 (HEAD `:943` 재할당) 를 helper 호출로 교체 → 본 test 모두 GREEN.
  */
 
 import { describe, it, expect } from 'vitest'
@@ -32,7 +32,7 @@ import {
 import { hasSidecar } from 'wikey-core'
 
 describe('§5.16 Spec 1 (B1) — buildAuditLookupAllSet (rawAudit 기반 hasSidecar set)', () => {
-  it('AC-1 PMS 케이스: ingested_files 에 raw + files 에 sidecar → hasSidecar(rawPdf) === true (gray badge)', () => {
+  it('AC-1 PMS 케이스: ingested_files 에 raw + files 에 sidecar → hasSidecar(rawPdf) === true (orange badge v0.3)', () => {
     // Step "1" raw evidence:
     //   ingested_files: [..., 'raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf']
     //   files:          [..., 'raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf.md']
@@ -49,13 +49,13 @@ describe('§5.16 Spec 1 (B1) — buildAuditLookupAllSet (rawAudit 기반 hasSide
     const lookupSet = buildAuditLookupAllSet(rawAudit)
     expect(lookupSet.has(sidecar)).toBe(true) // I1: sidecar 가 set 에 살아있어야 hasSidecar 가 true 가능
     expect(hasSidecar(rawPdf, lookupSet)).toBe(true) // I2 + AC-1
-    // ingestedSet (post-applyPairedSidecarToAudit) 분기: gray 색
+    // ingestedSet (post-applyPairedSidecarToAudit) 분기: orange 색 (v0.3 normalize)
     const auditData = applyPairedSidecarToAudit(rawAudit)
     const ingestedSet = new Set<string>(auditData.ingested_files)
-    expect(ingestedSet.has(rawPdf)).toBe(true) // I3: gray (broken X)
+    expect(ingestedSet.has(rawPdf)).toBe(true) // I3 (v0.3): orange (broken-red X)
   })
 
-  it('AC-2 broken case: sidecar 있고 raw 가 ingested_files 에 없음 → hasSidecar=true + ingestedSet=false (orange)', () => {
+  it('AC-2 broken case: sidecar 있고 raw 가 ingested_files 에 없음 → hasSidecar=true + ingestedSet=false (red v0.3)', () => {
     // ingest 결과는 잃었으나 sidecar 잔존 (registry/wiki reset 등). orange broken badge 트리거.
     const rawPdf = 'raw/3_resources/30_manual/600_industry/abandoned.pdf'
     const sidecar = `${rawPdf}.md`

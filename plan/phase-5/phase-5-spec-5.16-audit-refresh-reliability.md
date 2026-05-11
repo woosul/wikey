@@ -36,13 +36,13 @@ version: v0.3
 | `audit-ingest.py ingested_files` PMS 포함 여부 | 포함 ✅ | 정상 |
 | `audit-ingest.py entries[]` PMS sidecar status | `missing` | sidebar-chat 의 paired dedup 처리 대상 |
 | `auditData.files` (post-applyPairedSidecarToAudit) sidecar 포함 | **포함 X** (dedup 결과) | 정상 |
-| `auditAllSet` (sidebar-chat.ts:884) 가 sidecar 포함 | **포함 X** (auditData 기반이므로) | **결함 — hasSidecar 검사 영원히 false** |
+| `auditAllSet` (v0.2 evidence, pre-fix sidebar-chat.ts:884; HEAD `:943` after fix) 가 sidecar 포함 | **포함 X** (auditData 기반이므로) | **결함 — hasSidecar 검사 영원히 false** |
 
-**3 결함 분리** (v0.2 신규):
+**3 결함 분리** (v0.2 신규 / line 인용 = pre-fix v0.2 evidence; HEAD line 은 §5 변경 이력 v0.3 참조):
 
-- **B1 `hasSidecar` set mismatch**: `wikey-obsidian/src/sidebar-chat.ts:884` 의 `auditAllSet` 은 `auditData` (= `applyPairedSidecarToAudit(rawAudit)` 결과 = paired sidecar dedup 됨) 의 `files` / `ingested_files` / `unsupported_files` 로 구성. line 1112/1220 `hasSidecar(filePath, auditAllSet)` 가 `${file}.md` (paired sidecar) 가 set에 있는지 검사 → 영원히 false → gray healthy badge / orange broken badge 양쪽 모두 미표시.
-- **B2 Stale tombstone (reconcile race)**: case A MarkItDown 109KB MD + case B HWP 스마트공장 — 둘 다 disk 파일 존재인데 `registry.tombstone=True`. `source-registry.ts:308` reconcile case 4 (`restoreTombstone` — tombstoned record's hash 가 walker 출력에 등장 시 자동 복구) 가 자동 발화해야 하나 실행되지 않음. ingest pipeline 의 reconcile 호출 시점이 stale 또는 walker → reconcile 사이 race.
-- **B3 Panel refresh trigger 누락**: 1-2 / 1-4 의 표현 — ingest 정상 완료 후 Dashboard / Audit / Ingest 패널 미갱신. plugin reload 시 반영. `wikey-obsidian/src/commands.ts:runIngest` 완료 콜백에서 `sidebar-chat.refreshAuditPanel()` / `refreshDashboard()` 호출 누락 또는 호출처 trigger 회귀.
+- **B1 `hasSidecar` set mismatch**: pre-fix v0.2 evidence — `wikey-obsidian/src/sidebar-chat.ts:884` 의 `auditAllSet` 은 `auditData` (= `applyPairedSidecarToAudit(rawAudit)` 결과 = paired sidecar dedup 됨) 의 `files` / `ingested_files` / `unsupported_files` 로 구성. line 1112/1220 (pre-fix) `hasSidecar(filePath, auditAllSet)` 가 `${file}.md` (paired sidecar) 가 set에 있는지 검사 → 영원히 false → healthy badge / broken badge 양쪽 모두 미표시. (HEAD line: `:204` helper / `:943` 재할당 / `:1167`+`:1275` hasSidecar 호출).
+- **B2 Stale tombstone (reconcile race)**: case A MarkItDown 109KB MD + case B HWP 스마트공장 — 둘 다 disk 파일 존재인데 `registry.tombstone=True`. `wikey-core/src/source-registry.ts` reconcile case 4 (HEAD line 339-353, v0.2 evidence prose at line 308; `restoreTombstone` — tombstoned record's hash 가 walker 출력에 등장 시 자동 복구) 가 자동 발화해야 하나 ingest pipeline 안 호출처 부재. commit `8c087aa` 으로 `runIngest` success branch 안 hook 통합.
+- **B3 Panel refresh trigger 누락**: 1-2 / 1-4 의 표현 — ingest 정상 완료 후 Dashboard / Audit / Ingest 패널 미갱신. plugin reload 시 반영. `wikey-obsidian/src/commands.ts:runIngest` 완료 콜백에서 `sidebar-chat.refreshAuditPanel()` / `refreshDashboard()` 호출 누락 또는 호출처 trigger 회귀. commit `24d4fa5` try/finally wrapper + public refresh API.
 
 **이득 (fix 후)**:
 - 정량 — paired sidecar badge 표시 정확도 100% (현 0% — 영원히 false). Audit Missing count = registry tombstone=true OR disk 미존재 만 (현 stale tombstone false positive 2건/14).
@@ -59,21 +59,21 @@ version: v0.3
 
 ### Spec 1: B1 — `hasSidecar` set 정합 (paired sidecar badge 복구)
 
-- **Goal**: paired sidecar 가 disk 에 존재하는 모든 raw 원본 row 가 sidebar Audit/Ingest 패널에서 `md` badge (gray = ingested-healthy / orange = broken) 정확 표시.
+- **Goal**: paired sidecar 가 disk 에 존재하는 모든 raw 원본 row 가 sidebar Audit/Ingest 패널에서 `md` badge (healthy=orange / broken=red — v0.3 사용자 결정) 정확 표시.
 - **Inputs**:
   - `rawAudit: AuditScriptOutput` — `loadAuditScriptOutput` 결과 (paired sidecar dedup 전, raw).
   - `auditData: AuditScriptOutput` — `applyPairedSidecarToAudit(rawAudit)` 결과 (paired dedup 후, 화면 행 enumeration 용).
 - **Outputs**:
   - Audit 패널의 각 raw 원본 row에 `md` badge — `hasSidecar(filePath, rawAuditAllSet)` true 시.
-  - `isBroken` 분기 (`!ingestedSet.has(filePath)`) — broken-orange badge.
+  - `isBroken` 분기 (`!ingestedSet.has(filePath)`) — broken=red badge.
 - **Invariants**:
   - I1 (set basis): `hasSidecar` 의 두 번째 인자 = `rawAudit.files ∪ rawAudit.ingested_files ∪ rawAudit.unsupported_files` (paired dedup *전*). `auditData` 기반 set 사용 금지.
   - I2 (badge presence): `hasSidecar(file, rawAuditAllSet) == true` 인 모든 row 는 `md` badge DOM 노드 1개 생성.
-  - I3 (badge color): `ingestedSet.has(file) == true` → gray `wikey-pair-sidecar-badge`. false → orange `wikey-pair-sidecar-badge-broken`.
+  - I3 (badge color, v0.3 사용자 결정 normalize): `ingestedSet.has(file) == true` → orange `wikey-pair-sidecar-badge` (`--wk-color-status-warning`). false → red `wikey-pair-sidecar-badge-broken` (`--text-error`).
   - I4 (paired sidecar row dedup 유지): paired sidecar `<base>.<ext>.md` 가 row 로 별도 enumerated 되지 않음 (= 기존 §5.2.0 v4 정책 보존).
 - **Acceptance Scenarios**:
-  - **AC-1 PMS 케이스 (Step "1" evidence)**: rawAudit 의 `ingested_files` 에 `raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf` + `files` 에 `..._R10_20220815.pdf.md` 양쪽 포함 → Audit row `PMS_..._R10_20220815.pdf` 의 nameWrap 안에 gray `md` badge 1개. broken-orange X (ingestedSet 에 PMS PDF 포함).
-  - **AC-2 broken case**: rawAudit `files` 에 sidecar `.pdf.md` 있고 `ingested_files` 에 raw PDF 누락 (ingest 결과 잃은 broken state) → orange `md` badge.
+  - **AC-1 PMS 케이스 (Step "1" evidence)**: rawAudit 의 `ingested_files` 에 `raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf` + `files` 에 `..._R10_20220815.pdf.md` 양쪽 포함 → Audit row `PMS_..._R10_20220815.pdf` 의 nameWrap 안에 orange `md` badge 1개. broken-red X (ingestedSet 에 PMS PDF 포함).
+  - **AC-2 broken case**: rawAudit `files` 에 sidecar `.pdf.md` 있고 `ingested_files` 에 raw PDF 누락 (ingest 결과 잃은 broken state) → red `md` badge (v0.3).
   - **AC-3 sidecar 미존재**: rawAudit `files` 에 base `.pdf` 만, sidecar `.pdf.md` 없음 → badge 미생성 (정상).
   - **AC-4 tree view**: line 1220 의 tree view 분기에서도 동일 invariant 적용.
 - **Out of Scope**: Audit script output schema 변경. paired sidecar dedup 정책 변경.
@@ -134,11 +134,11 @@ version: v0.3
 
 ## 3. Dependencies
 
-- `wikey-obsidian/src/sidebar-chat.ts:884` (`auditAllSet` 재구성), `:1112`, `:1220` (hasSidecar 호출처 — 변경 0, set만 변경).
-- `wikey-core/src/source-registry.ts:308` reconcile case 4 (호출 시점 검증).
-- `wikey-core/src/ingest-pipeline.ts` (reconcile 호출 hook 추가).
-- `wikey-obsidian/src/commands.ts:runIngest` (완료 콜백 → refresh trigger).
-- `wikey-obsidian/src/sidebar-chat.ts` (refresh API export — `refreshAuditPanel()` / `refreshDashboard()`).
+- `wikey-obsidian/src/sidebar-chat.ts` — `buildAuditLookupAllSet` 정의 `:204` / `auditAllSet` 재할당 `:943` / `hasSidecar` 호출처 `:1167`+`:1275` (HEAD line, v0.3 정정).
+- `wikey-core/src/source-registry.ts:339-353` reconcile case 4 implementation (v0.3 정정 line).
+- `wikey-obsidian/src/commands.ts:runIngest` — try block 안 `runReconcileAfterIngest(plugin)` success-gated 호출 (v0.3 cycle #2 finding #1 closure).
+- `wikey-obsidian/src/sidebar-chat.ts` — public refresh API (`refreshAuditPanel()` / `refreshDashboard()`).
+- `wikey-obsidian/styles.css` — badge color (healthy=orange `:863` / broken=red `:885`, v0.3).
 - 신규 test: `paired-sidecar.test.ts` (AC-1~AC-4) / `source-registry-reconcile.test.ts` (AC-5~AC-8) / `sidebar-chat-refresh.test.ts` (AC-9~AC-12).
 
 ## 4. 진행 순서 (SDD+TDD)

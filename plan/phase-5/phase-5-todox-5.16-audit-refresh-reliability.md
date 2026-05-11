@@ -15,7 +15,7 @@
   - source-registry-reconcile.test.ts — AC-5~AC-8 (stale tombstone 복구)
   - sidebar-chat-refresh.test.ts — AC-9~AC-12 (refresh trigger)
 - [ ] **Step C — developer GREEN**: B1/B2/B3 minimal fix.
-  - B1: sidebar-chat.ts:884 `auditAllSet` → rawAudit 기반 (~5 LOC).
+  - B1: sidebar-chat.ts (HEAD `:943` `auditAllSet`, pre-fix `:884` v0.2 evidence) → rawAudit 기반 (~5 LOC).
   - B2: ingest-pipeline.ts reconcile hook (~10 LOC).
   - B3: commands.ts:runIngest 완료 콜백 → refresh API (~10 LOC).
 - [ ] **Step D — Phase 3a 회귀**: `npm test` / `npm run build` / `./scripts/validate-wiki.sh` PASS.
