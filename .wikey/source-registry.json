@@ -225,5 +225,68 @@
     ],
     "tombstone": false,
     "last_action": "force"
+  },
+  "sha256:dcbe5dd3f5325d4b": {
+    "vault_path": "raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf",
+    "sidecar_vault_path": "raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf.md",
+    "hash": "dcbe5dd3f5325d4b288b3bf5b65eba21dc3c63da7d3ed1093e4c9667792da8a3",
+    "size": 3634821,
+    "first_seen": "2026-05-11T07:48:51.659Z",
+    "ingested_pages": [
+      "wiki/sources/source-lotus-pms-product-intro.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/3_resources/20_report/500_technology/PMS_제품소개_R10_20220815.pdf",
+        "at": "2026-05-11T07:48:51.659Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force",
+    "sidecar_hash": "d66c44b0c57a7513189986ed2144f8c95468c061677393886bb488d18fcccfda"
+  },
+  "sha256:85e8ca8fef1b74cf": {
+    "vault_path": "raw/3_resources/60_note/500_technology/MarkItDown으로 모든 문서를 마크다운으로 변환하기.md",
+    "hash": "85e8ca8fef1b74cf2e3870efa2c0ff4c72a7cb739a1f61be4de7335e58a075c9",
+    "size": 111742,
+    "first_seen": "2026-05-11T08:07:47.067Z",
+    "ingested_pages": [
+      "wiki/sources/source-markitdown-guide.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/MarkItDown으로 모든 문서를 마크다운으로 변환하기.md",
+        "at": "2026-05-11T08:07:47.067Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/MarkItDown으로 모든 문서를 마크다운으로 변환하기.md",
+        "at": "2026-05-11T08:08:58.705Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:b63bddfadc4cd812": {
+    "vault_path": "raw/3_resources/20_report/200_social/스마트공장 보급확산 합동설명회 개최.hwp",
+    "sidecar_vault_path": "raw/3_resources/20_report/200_social/스마트공장 보급확산 합동설명회 개최.hwp.md",
+    "hash": "b63bddfadc4cd812948d11e28e976e11b9a98b47dd5835531fa69424dac53cae",
+    "size": 16896,
+    "first_seen": "2026-05-11T08:13:04.211Z",
+    "ingested_pages": [
+      "wiki/sources/source-smart-factory-briefing.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/스마트공장 보급확산 합동설명회 개최.hwp",
+        "at": "2026-05-11T08:13:04.211Z"
+      },
+      {
+        "vault_path": "raw/3_resources/20_report/200_social/스마트공장 보급확산 합동설명회 개최.hwp",
+        "at": "2026-05-11T08:14:20.497Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force",
+    "sidecar_hash": "d0e4a853e5c1cb802598aca048958d74589485d3c02b6f3b58ca783764cc8cc1"
   }
 }
