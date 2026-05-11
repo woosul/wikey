@@ -1,21 +1,33 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-11 session 36 — 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재** (INGEST 7 + MAINTENANCE 2). 진행 순서 "2 > 1 > 2 업데이트 > 3" 사용자 결정 — spec/todox draft v0.1 5건 (5.16/5.17/5.18/5.19/5.20) 등재 완료. 다음 = obsidian-cdp master test 로 P0 재현 + raw evidence 수집.
+> 최신 갱신: **2026-05-11 session 36 — §5.16 SDD+TDD ✅ 종결 + §5.17~§5.20 4 draft 잔존** (Audit/Ingest panel refresh reliability + sidecar pair label 회귀 fix 완료). codex Mode D 4 cycle (#1~#4) — cycle #1~3 = NEEDS_REVISION 11 finding, master fix 후 cycle #4 APPROVE (Findings: none). 라이브 evidence Step G master 직접 obsidian-cdp + B1/B2/B3 모두 라이브 PASS + badge color (healthy=orange/broken=red) + B2 ingest hook 통합 (success-gated).
+>
+> 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재. 진행 순서 "2 > 1 > 2 업데이트 > 3" 사용자 결정 완료.
 >
 > 이전 session 35 — §5.7.7 SDD+TDD ✅ 종결 (Step A~F 완료 + codex post-impl 7 cycle / 라이브 master cold reindex 117/117 docs embedding 1024D + 51 query benchmark Top-3 +11.7%p / MRR +0.060 / Spec I24 target 88% 정확 달성).
 >
-> ## 다음 세션 첫 액션 (Session 37) — Step "1" obsidian-cdp master test
+> ## 다음 세션 첫 액션 (Session 37) — §5.17 SDD+TDD 진입
 >
-> **P0 1-1, 1-2, 1-7 재현 + raw evidence 수집** (master 직접 CDP, schema §"라이브 검증 master 직접 책임"):
+> **§5.17 Ingest 분해 결과 밸런싱 calibration (P0)** — Step "1" 시점 측정 완료, 다음 cycle:
 >
-> 1. **1-1 (Audit Missing 오분류)**: `PMS_제품소개_R10_20220815.pdf` 케이스
->    - `python3 scripts/audit-ingest.py --json` raw output 캡처
->    - registry json 의 PMS_wpvnathro_R10 record (`tombstone` / `vault_path` / `sidecar_vault_path` / `hash`) 필드 캡처
->    - `wiki/sources/source-lotus-pms-product-intro.md` 의 `## ⚠ 원본 삭제됨 (2026-05-08)` 블록 stale 여부 확인
-> 2. **1-2 (refresh 회귀)**: 임의 small source ingest 직후 panel refresh trigger 발화 여부 cdp trace
-> 3. **1-7 (분해 밸런싱)**: case A (109KB MD) + case B (HWP) 재 ingest 시 promotion 의 proposed vs selected count 측정. HWP 변환 결과 markdown body length 측정.
+> - case A: MarkItDown 109KB MD (gemini-2.5-flash) — Entities 64 + Concepts 19 = 83 page **과다 분해** (schema 권고 5~15 위반). ingest 8:30 + write 3분.
+> - case B: HWP 스마트공장 보급확산 — Entities/Concepts 0 (source 1만) **과보수** + index 갱신 지연 알람.
+> - 다음 단계: Step A analyst v0.2 (Step "1" 측정값으로 promotion threshold 1500 char/page 비율 검증 + ceiling default LOCK) → Step B tester RED → Step C developer GREEN.
 >
-> 결과 → §5.16/§5.17/§5.18 spec v0.2 보강 (Step "2 업데이트") → SDD+TDD Step B 진입 (Step "3").
+> ## §5.16 cycle 종결 종합 (session 36, 2026-05-11)
+>
+> - **Step A v0.2**: master 직접 작성 — Step "1" raw evidence (PMS registry tombstone=false, disk 정상, 14 records 중 2 stale tombstone) 기반 B1/B2/B3 3 결함 분리, 11 AC 1:1 매핑.
+> - **Step B tester RED**: 3 신규 test file 18 test 모두 RED 확증 (11 AC + 7 보조 invariant/safety).
+> - **Step C developer GREEN**: 4 helper export (`buildAuditLookupAllSet` / `reconcileAfterIngest` / `triggerPanelRefresh` / `getWikeyChatView`) + try/finally wrapper, 18 GREEN 회귀 0, src 4 file +50 LOC + 72 JSDoc.
+> - **Step D/E**: 회귀 PASS + BLUE 3b refactor self-apply.
+> - **Step F codex post-impl 4 cycle**:
+>   - #1: 5 finding (1 HIGH B2 production hook + 2 MED + 2 LOW) → commit `770106e` closure
+>   - #2: 3 finding (success-gate + line/color normalize) → commit `653c08a` closure
+>   - #3: 3 finding (env-detect timeout + 잔재 stale ref) → commit `95819a3` closure
+>   - #4: ✅ APPROVE (Findings: none)
+> - **Step G master 라이브 obsidian-cdp**: B1 PMS+HWP 두 row orange `md` badge / B2 tombstoned 2→0 자동 복구 + Audit chip Ingested 11→14 / B3 public refresh API 라이브 노출.
+> - **사용자 추가 fix**: badge color (healthy=orange / broken=red, 사용자 결정 2026-05-11), B2 hook 통합 (success-gated).
+> - test: wikey-core 808 + wikey-obsidian 121 = 929 PASS / build 0 errors / validate-wiki 30 pre-existing FAIL (코드 무관).
 >
 > ## Phase 5 잔여 우선순위 (사용자 결정 2026-05-11)
 >

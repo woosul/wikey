@@ -2454,7 +2454,7 @@ Phase 6: master verdict + commit + push + result 문서
 - [x] **Step C — developer GREEN** (4 helper export + try/finally wrapper, 18 GREEN, src 4 file +50 LOC)
 - [x] **Step D — Phase 3a 회귀** (wikey-core 808 + wikey-obsidian 121 = 929 PASS / build 0)
 - [x] **Step E — Phase 3b BLUE** (developer self-apply: helper extract / naming / dedup / 주석)
-- [x] **Step F — codex post-impl review cycle #1** (cmux Mode D) — VERDICT: NEEDS_REVISION 5 finding (1 HIGH + 2 MED + 2 LOW). master 동의 + 모두 closure 처리 (HIGH/MED 1+2 = commit `8c087aa` B2 hook 통합, MED 3 = AC mapping clarification spec v0.3, LOW 4-5 = doc 정정).
+- [x] **Step F — codex post-impl review** (cmux Mode D, 4 cycle) — cycle #1 NEEDS_REVISION 5 finding (`770106e` closure) → cycle #2 NEEDS_REVISION 3 finding (`653c08a` closure) → cycle #3 NEEDS_REVISION 3 finding (`95819a3` closure) → cycle #4 **APPROVE** (Findings: none). 총 11 finding closure + 929 PASS + build 0 + 라이브 evidence Step G. §5.16 cycle 종결 확증.
 - [x] **Step G — master 라이브 cycle smoke (obsidian-cdp)** — B1/B2/B3 모두 라이브 PASS + badge color follow-up (healthy=orange / broken=red), [`activity/phase-5/phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md`](../../activity/phase-5/phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md) v1.1
 - [x] **B2 ingest hook 통합** — commit `8c087aa` (commands.ts:runIngest try block 안 reconcileAfterIngest 호출 통합 + walker helper). codex finding #1+#2 closure.
 
