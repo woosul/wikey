@@ -3951,3 +3951,45 @@ new (5 × 2 = 10 runs):
 | (사용자 추가) badge color | healthy=orange / broken=red 정확 적용 |
 
 → **§5.17 P0 진입** — Ingest 분해 결과 밸런싱 calibration. Step "1" case A (109KB MD 83 page 과다) / case B (HWP 0 page 과보수) 측정 완료, draft v0.1 등재. 다음 = analyst Step A v0.2 보강 (1500 char/page 비율 검증 + ceiling default LOCK).
+
+---
+
+## 5.17 Ingest 분해 결과 밸런싱 calibration — promotion threshold ceiling + write 성능 ✅ 종결 (2026-05-12 session 37) #ingest #promotion #threshold #performance #done
+
+> 라이브 evidence: case A 복제본 ingest 59 proposed → 51 selected (cap formula `floor(77505/1500)=51` 정확 발화) + write latency 180s → 63s (-65%). codex 3 cycle: #1 NEEDS_REVISION 6 finding → developer fix → #2 NEEDS_REVISION 3 finding → master fix → #3 APPROVE.
+>
+> 상위 plan: [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](../../plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md) v0.3 · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](../../plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md) v0.3 · [`activity/phase-5/phase-5-resultx-5.17-live-smoke-2026-05-12.md`](./phase-5-resultx-5.17-live-smoke-2026-05-12.md)
+
+### 5.17.1 진행 매트릭스 (Step A~G)
+
+- **Step A — analyst v0.2 보강**: 9 corpus sample 실측 (case A 952 char/page, median 503, mean 1044) → 1,500 char/page ratio 외부화 (`.wikey/promotion-threshold.yaml` `ceiling.charsPerPage`) + ceiling default LOCK. Q1~Q4 모두 LOCK (Q2 HWP 변환 95% 손실 확증 → Spec 3 별 cycle 분리).
+- **Step B — tester RED**: 17 신규 test (T1~T4 promotion-config / T5~T12 canonicalizer Happy A/B/C + Edge + I3 hardcoded 0 + telemetry / T13~T17 ingest-pipeline batch yield + WARN). 모두 RED `TypeError: ... is not a function` 확증.
+- **Step C — developer GREEN**: 4 신규 export 추가 — `loadPromotionConfig` + `DEFAULT_CHARS_PER_PAGE=1500` + `DEFAULT_CEILING_MIN=8` + `applyCeilingCap<T>` + `writePagesWithBatchYield` + `assessConversionQuality`. 17 RED → GREEN, 825 PASS / 0 fail / 3 skipped.
+- **Step D — Phase 3a 회귀**: wikey-core 825 + wikey-obsidian 121 = 946 PASS. build 0 errors. validate-wiki 30 pre-existing FAIL (§5.16 unrelated).
+- **Step E — Phase 3b BLUE**: developer self-applied 6 활동 + codex cycle #2 P2 sweep (`assessConversionQuality` threshold 1,000 정합 + ceiling.mode 폐기 + ProposalForCeiling adapter inline + comment realism).
+- **Step F — codex post-impl review (3 cycle)**:
+  - cycle #1 (NEEDS_REVISION, 6 finding): P1 CRITICAL — 3 신규 함수 ingest 파이프라인 미통합 (단위 GREEN 만, 라이브 실 동작 변화 0). P2 — threshold 불일치 (spec 500 vs impl 1000) + ceiling.mode 미사용 + ProposalForCeiling 타입 adapter 누락. P3 — spec §I1 numeric (74 → 52) + LOC budget stale. → developer fix (spec v0.3 + ingest-pipeline.ts P1 통합 3 site + mode 필드 제거).
+  - cycle #2 (NEEDS_REVISION, 3 finding): P2 — test comment + todox stale "500 char" 잔존 (3 site + 3 site). LOW — `ingest-pipeline.ts:561` 주석 frontmatter 가정 현실화. → master 직접 fix (hygiene sweep).
+  - cycle #3 (APPROVE): all closure 검증 PASS, 4중 정합 PASS, Karpathy 4 원칙 PASS.
+- **Step G — obsidian-cdp 라이브 smoke (master 1차 + tester 위임)**: case A 복제본 (`raw/0_inbox/markitdown-test-5.17.md`) ingest → 59 → 51 cap formula 발화 + latency 63s + telemetry `'ceiling cap applied — 59 → 51, reason=formula-cap, charsPerPage=1500'` 확증. case B HWP 복제본은 dedup + 변환 무결성 환경 제약으로 라이브 차단 → 간접 evidence (production grep + T16/T17 unit + case A no-WARN telemetry) Spec 3 PASS.
+
+### 5.17.2 spec invariant ↔ 라이브 evidence 매트릭스
+
+| Invariant | Spec scenario | 라이브 evidence (case A 복제본) |
+|-----------|---------------|--------------------------------|
+| I1 ratio 외부화 | Happy A 79013/1500=52 | `inputCharLen=77505 → ceiling=51` (1% 이내 일치) |
+| I2 floor=1 source | 항상 source page 생성 | `wiki/sources/source-markitdown-guide-5-17.md` 생성 |
+| I3 hardcoded list 0 | random name PASS T11 | telemetry `reason=formula-cap` 단순 count cap |
+| I4 config override 우선 | yaml `ceiling.charsPerPage` override T4 | `charsPerPage=default` (yaml 미설정) |
+| I5 per-file atomic | vault.modify/create 그대로 | wiki write 무결 |
+| I6 batch yield | 매 10 page setTimeout(0) | latency 153ms for 52 pages |
+| I7 index/log batch flush | loop 외 1회 atomic | log.md / index.md 1회 갱신 |
+| Spec 3 WARN | body<1000 + raw>10KB | `bodyCharLen=77505` → WARN false (정상) |
+
+### 5.17.3 사용자 본체 부작용 처리
+
+case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept 페이지 frontmatter 에 `sources: [markitdown-test-5.17.md]` dangling reference 잔여. 사용자 결정 2026-05-12: **validate-wiki lint 자동 cleanup** (workflow 3 self-healing, 다음 lint cycle).
+
+### 5.17.4 다음 액션 (잔여 Phase 5)
+
+→ **§5.18 P1 진입** — Query citation UX. 원본 1개당 1줄 + 전체 원본 + wiki backlink + registry mismatch logging. 다음 = analyst Step A v0.2 보강 (Step "1" registry mismatch 실측 비율 측정).

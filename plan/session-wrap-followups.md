@@ -1,18 +1,31 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-11 session 36 — §5.16 SDD+TDD ✅ 종결 + §5.17~§5.20 4 draft 잔존** (Audit/Ingest panel refresh reliability + sidecar pair label 회귀 fix 완료). codex Mode D 4 cycle (#1~#4) — cycle #1~3 = NEEDS_REVISION 11 finding, master fix 후 cycle #4 APPROVE (Findings: none). 라이브 evidence Step G master 직접 obsidian-cdp + B1/B2/B3 모두 라이브 PASS + badge color (healthy=orange/broken=red) + B2 ingest hook 통합 (success-gated).
+> 최신 갱신: **2026-05-12 session 37 — §5.17 SDD+TDD ✅ 종결 + §5.18~§5.20 3 draft 잔존** (Ingest 분해 결과 밸런싱 calibration — promotion threshold ceiling + write 성능 fix 완료). codex 3 cycle (#1~#3) — cycle #1 NEEDS_REVISION 6 finding (P1 CRITICAL 통합 누락 + P2/P3) → developer fix → cycle #2 NEEDS_REVISION 3 finding (hygiene) → master fix → cycle #3 APPROVE. 라이브 evidence: case A 복제본 ingest 59 → 51 cap formula 발화 + latency 180s → 63s (-65%) 확증.
 >
-> 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재. 진행 순서 "2 > 1 > 2 업데이트 > 3" 사용자 결정 완료.
+> 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재. 진행 순서 "2 > 1 > 2 업데이트 > 3" 사용자 결정 완료. §5.16 + §5.17 종결.
 >
-> 이전 session 35 — §5.7.7 SDD+TDD ✅ 종결 (Step A~F 완료 + codex post-impl 7 cycle / 라이브 master cold reindex 117/117 docs embedding 1024D + 51 query benchmark Top-3 +11.7%p / MRR +0.060 / Spec I24 target 88% 정확 달성).
+> 이전 session 36 — §5.16 SDD+TDD ✅ 종결 (Audit/Ingest panel refresh + sidecar pair label).
+> 이전 session 35 — §5.7.7 SDD+TDD ✅ 종결 (vector-hybrid reroute, Top-3 +11.7%p).
 >
-> ## 다음 세션 첫 액션 (Session 37) — §5.17 SDD+TDD 진입
+> ## 다음 세션 첫 액션 (Session 38) — §5.18 SDD+TDD 진입
 >
-> **§5.17 Ingest 분해 결과 밸런싱 calibration (P0)** — Step "1" 시점 측정 완료, 다음 cycle:
+> **§5.18 Query citation UX (P1)** — 원본 1개당 1줄 + 전체 원본 + wiki backlink + registry mismatch logging.
 >
-> - case A: MarkItDown 109KB MD (gemini-2.5-flash) — Entities 64 + Concepts 19 = 83 page **과다 분해** (schema 권고 5~15 위반). ingest 8:30 + write 3분.
-> - case B: HWP 스마트공장 보급확산 — Entities/Concepts 0 (source 1만) **과보수** + index 갱신 지연 알람.
-> - 다음 단계: Step A analyst v0.2 (Step "1" 측정값으로 promotion threshold 1500 char/page 비율 검증 + ceiling default LOCK) → Step B tester RED → Step C developer GREEN.
+> - 다음 단계: Step A analyst v0.2 (Step "1" registry mismatch 실측 비율 측정) → Step B tester RED → Step C developer GREEN.
+>
+> ## §5.17 cycle 종결 종합 (session 37, 2026-05-12)
+>
+> - **Step A analyst v0.2**: 9 corpus sample 실측 (case A 952 char/page, median 503 char/page, mean 1044) → 1,500 char/page ratio 외부화 (`.wikey/promotion-threshold.yaml` `ceiling.charsPerPage`) + ceiling default LOCK. Q1~Q4 모두 LOCK (Q2 HWP 변환 95% 손실 확증 → Spec 3 별 cycle 분리).
+> - **Step B tester RED**: 17 신규 test (T1~T4 promotion-config / T5~T12 canonicalizer Happy A/B/C + Edge + I3 hardcoded 0 + telemetry / T13~T17 ingest-pipeline batch yield + WARN). 모두 RED `TypeError: ... is not a function` 확증, 808 기존 PASS 유지.
+> - **Step C developer GREEN**: 4 신규 export — `loadPromotionConfig` + `DEFAULT_CHARS_PER_PAGE=1500` + `DEFAULT_CEILING_MIN=8` + `applyCeilingCap<T>` + `writePagesWithBatchYield` + `assessConversionQuality`. 17 RED → GREEN. wikey-core 825 / wikey-obsidian 121 = 946 PASS.
+> - **Step D/E**: 회귀 PASS + BLUE 3b refactor self-apply + cycle #2 P2 sweep.
+> - **Step F codex post-impl 3 cycle**:
+>   - #1 NEEDS_REVISION (6 finding): P1 CRITICAL — 3 신규 함수 (`applyCeilingCap` / `writePagesWithBatchYield` / `assessConversionQuality`) ingest 파이프라인 미통합 (단위 GREEN 만, 라이브 실 동작 변화 0). P2 — threshold 불일치 (spec 500 vs impl 1000) + ceiling.mode 미사용 + ProposalForCeiling 타입 adapter 누락. P3 — spec §I1 numeric (74 → 52) + LOC budget stale. → developer fix (spec v0.3 + ingest-pipeline.ts P1 통합 3 site + mode 필드 제거).
+>   - #2 NEEDS_REVISION (3 finding): P2 — test comment + todox stale "500 char" 잔존. LOW — comment realism. → master 직접 fix (hygiene sweep).
+>   - #3 ✅ APPROVE (Findings: none).
+> - **Step G obsidian-cdp 라이브 smoke**: case A 복제본 `markitdown-test-5.17.md` ingest → 59 → 51 cap formula 발화 (`floor(77505/1500)=51`, 1% 이내 spec 일치) + write latency 63s (vs 기존 180s, -65%) + telemetry `ceiling cap applied — 59 → 51, reason=formula-cap, charsPerPage=1500` 확증. case B HWP 복제본은 dedup + 변환 무결성 환경 제약으로 라이브 차단 → 간접 evidence (production grep + T16/T17 unit + case A no-WARN telemetry) Spec 3 PASS.
+> - **사용자 추가 결정**: 38 entity/concept frontmatter dangling reference (case A 복제본 ingest 부작용) → **validate-wiki lint 자동 cleanup** (workflow 3 self-healing, 2026-05-12).
+> - test: wikey-core 825 + wikey-obsidian 121 = 946 PASS / build 0 errors / validate-wiki 30 pre-existing FAIL (코드 무관).
 >
 > ## §5.16 cycle 종결 종합 (session 36, 2026-05-11)
 >

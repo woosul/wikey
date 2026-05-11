@@ -1182,3 +1182,146 @@ describe('canonicalize — §5.11 v2 relevance/intent + 원문 언어 alias', ()
   })
 })
 
+
+/**
+ * §5.17 Step B (RED) — Spec 1: promotion threshold ceiling 의미 비례 outlier cap.
+ *
+ * Spec invariants:
+ *   I1 (ratio 외부화): ceiling = min(proposedCount, max(ceilingMin, floor(inputCharLen/charsPerPage)))
+ *   I2 (floor = 1 source): proposed 0 → selected 0 (error throw X)
+ *   I3 (hardcoded list 0): count cap 만, name list 없음 (random fixture 통과 must)
+ *   I4 (config override 우선): yaml `ceiling.absolute` / `ceiling.charsPerPage` 우선
+ *   Sort by confidence: cap 시 confidence desc + tie-break first-mention-position
+ *   Telemetry: decision 객체 {inputCharLen, proposedCount, selectedCount, ceiling, charsPerPage, reason}
+ *
+ * 통과 조건: 신규 export `applyCeilingCap` + `PromotionDecision` 가 implement 되어야 PASS.
+ * 현 코드 미구현 → import resolution / type / assertion FAIL.
+ */
+describe('§5.17 applyCeilingCap — Spec 1 ceiling outlier cap', () => {
+  // Lazy import — module 에 미구현 시 RED FAIL.
+  // 동적 import 로 RED 단계의 module-load 실패도 individual test FAIL 로 분리.
+  function makeProposal(name: string, confidence: number, position: number, aliases: string[] = []): {
+    name: string; confidence: number; mentionPosition: number; aliases: string[]
+  } {
+    return { name, confidence, mentionPosition: position, aliases }
+  }
+
+  // T5 ↔ Spec 1 Happy A (case A 109KB)
+  it('T5 ↔ Spec 1 Happy A: input 79013 char, proposed 83 → selected 52 (cap floor(79013/1500)=52)', async () => {
+    const { applyCeilingCap } = await import('../canonicalizer.js') as any
+    const proposed = Array.from({ length: 83 }, (_, i) => makeProposal(`p${i}`, 1 - i * 0.001, i))
+    const result = applyCeilingCap({
+      inputCharLen: 79013,
+      proposed,
+      config: { default: 2, ceiling: { charsPerPage: 1500 }, ceilingMin: 8 },
+    })
+    expect(result.selected).toHaveLength(52)
+    expect(result.decision.selectedCount).toBe(52)
+    expect(result.decision.proposedCount).toBe(83)
+  })
+
+  // T6 ↔ Spec 1 Happy B (mid corpus 11789 char, proposed 6)
+  it('T6 ↔ Spec 1 Happy B: input 11789, proposed 6 → selected 6 (no cap; formula 7 > proposed 6)', async () => {
+    const { applyCeilingCap } = await import('../canonicalizer.js') as any
+    const proposed = Array.from({ length: 6 }, (_, i) => makeProposal(`p${i}`, 0.9, i))
+    const result = applyCeilingCap({
+      inputCharLen: 11789,
+      proposed,
+      config: { default: 2, ceiling: { charsPerPage: 1500 }, ceilingMin: 8 },
+    })
+    expect(result.selected).toHaveLength(6)
+  })
+
+  // T7 ↔ Spec 1 Happy C (small 2707 char, proposed 9 → ceilingMin 8 적용)
+  it('T7 ↔ Spec 1 Happy C: input 2707, proposed 9 → selected 8 (ceilingMin 8 floor)', async () => {
+    const { applyCeilingCap } = await import('../canonicalizer.js') as any
+    const proposed = Array.from({ length: 9 }, (_, i) => makeProposal(`p${i}`, 0.9 - i * 0.01, i))
+    const result = applyCeilingCap({
+      inputCharLen: 2707,
+      proposed,
+      config: { default: 2, ceiling: { charsPerPage: 1500 }, ceilingMin: 8 },
+    })
+    // ceiling = min(9, max(8, floor(2707/1500)=1)) = min(9, 8) = 8
+    expect(result.selected).toHaveLength(8)
+  })
+
+  // T8 ↔ Spec 1 Edge — absolute hard cap override
+  it('T8 ↔ Spec 1 Edge: ceiling.absolute=30 override → selected 30 (formula 52 무시)', async () => {
+    const { applyCeilingCap } = await import('../canonicalizer.js') as any
+    const proposed = Array.from({ length: 83 }, (_, i) => makeProposal(`p${i}`, 1 - i * 0.001, i))
+    const result = applyCeilingCap({
+      inputCharLen: 79013,
+      proposed,
+      config: { default: 2, ceiling: { charsPerPage: 1500, absolute: 30 }, ceilingMin: 8 },
+    })
+    expect(result.selected).toHaveLength(30)
+  })
+
+  // T9 ↔ Spec 1 Edge — charsPerPage override 보수 (3000)
+  it('T9 ↔ Spec 1 Edge: ceiling.charsPerPage=3000 override → selected floor(79013/3000)=26', async () => {
+    const { applyCeilingCap } = await import('../canonicalizer.js') as any
+    const proposed = Array.from({ length: 83 }, (_, i) => makeProposal(`p${i}`, 1 - i * 0.001, i))
+    const result = applyCeilingCap({
+      inputCharLen: 79013,
+      proposed,
+      config: { default: 2, ceiling: { charsPerPage: 3000 }, ceilingMin: 8 },
+    })
+    expect(result.selected).toHaveLength(26)
+  })
+
+  // T10 ↔ Spec 1 I2 (floor — proposed 0 → selected 0)
+  it('T10 ↔ Spec 1 I2: proposed 0 → selected 0 (no throw, source page 만 wiki write)', async () => {
+    const { applyCeilingCap } = await import('../canonicalizer.js') as any
+    const result = applyCeilingCap({
+      inputCharLen: 5000,
+      proposed: [],
+      config: { default: 2, ceiling: { charsPerPage: 1500 }, ceilingMin: 8 },
+    })
+    expect(result.selected).toHaveLength(0)
+    expect(result.decision.proposedCount).toBe(0)
+    expect(result.decision.selectedCount).toBe(0)
+  })
+
+  // T11 ↔ Spec 1 I3 (hardcoded list 0): random entity name 도 통과
+  it('T11 ↔ Spec 1 I3: cap 시 어떤 entity drop 되는지 — confidence desc + first-mention tie-break, hardcoded list 무관', async () => {
+    const { applyCeilingCap } = await import('../canonicalizer.js') as any
+    // random gibberish names — 어떤 hardcoded category/alias/forced list 와도 매칭 안 됨
+    const proposed = [
+      makeProposal('zxqv-aaa', 0.5, 0),
+      makeProposal('zxqv-bbb', 0.9, 1), // 최고 confidence → 1순위
+      makeProposal('zxqv-ccc', 0.7, 2),
+      makeProposal('zxqv-ddd', 0.7, 3), // tie with ccc → mention position 2 < 3 이므로 ccc 우선
+    ]
+    // inputCharLen=4500 / charsPerPage=1500 → formula 3, ceilingMin 8 보다 작아 max=8, proposed 4 < 8 → 4 (no cap)
+    // cap 시나리오 위해 ceilingMin=2 + absolute=2 으로 강제
+    const result = applyCeilingCap({
+      inputCharLen: 4500,
+      proposed,
+      config: { default: 2, ceiling: { charsPerPage: 1500, absolute: 2 }, ceilingMin: 2 },
+    })
+    expect(result.selected).toHaveLength(2)
+    // confidence desc → bbb (0.9) 가 1순위, 그 다음 ccc/ddd 동률 — first-mention-position tie-break 으로 ccc (pos 2 < 3)
+    const selectedNames = result.selected.map((p: { name: string }) => p.name)
+    expect(selectedNames[0]).toBe('zxqv-bbb')
+    expect(selectedNames[1]).toBe('zxqv-ccc')
+  })
+
+  // T12 ↔ Spec 1 telemetry — decision struct fields
+  it('T12 ↔ Spec 1 telemetry: decision = { inputCharLen, proposedCount, selectedCount, ceiling, charsPerPage, reason }', async () => {
+    const { applyCeilingCap } = await import('../canonicalizer.js') as any
+    const proposed = Array.from({ length: 83 }, (_, i) => makeProposal(`p${i}`, 1 - i * 0.001, i))
+    const result = applyCeilingCap({
+      inputCharLen: 79013,
+      proposed,
+      config: { default: 2, ceiling: { charsPerPage: 1500 }, ceilingMin: 8 },
+    })
+    expect(result.decision).toMatchObject({
+      inputCharLen: 79013,
+      proposedCount: 83,
+      selectedCount: 52,
+      ceiling: 52,
+      charsPerPage: 1500,
+    })
+    expect(typeof result.decision.reason).toBe('string')
+  })
+})

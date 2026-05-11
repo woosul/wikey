@@ -27,7 +27,7 @@
   - [`plan/phase-5/phase-5-spec-5.7.5-orama-update-sync.md`](./phase-5-spec-5.7.5-orama-update-sync.md) — §5.7.5 Orama upstream sync + LOW 잔여 + PoC cleanup + Developer Update UI Spec WHAT v1.4 (472줄, **종결 Session 30~31 2026-05-09**)
   - [`plan/phase-5/phase-5-todox-5.7.5-orama-update-sync.md`](./phase-5-todox-5.7.5-orama-update-sync.md) — §5.7.5 Todo HOW v1.4 (308줄, codex 6 cycle 모두 APPROVE, **종결 Session 30~31 2026-05-09**)
   - [`plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](./phase-5-spec-5.16-audit-refresh-reliability.md) · [`plan/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](./phase-5-todox-5.16-audit-refresh-reliability.md) — §5.16 P0 (사용자 테스트 1-1·1-2·1-4, draft v0.1)
-  - [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](./phase-5-spec-5.17-ingest-balance-calibration.md) · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](./phase-5-todox-5.17-ingest-balance-calibration.md) — §5.17 P0 (사용자 테스트 1-7, draft v0.1)
+  - [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](./phase-5-spec-5.17-ingest-balance-calibration.md) · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](./phase-5-todox-5.17-ingest-balance-calibration.md) — §5.17 P0 (case A 83 → 51 cap + latency -65%, **종결 Session 37 2026-05-12**)
   - [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](./phase-5-spec-5.18-query-citation-ux.md) · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](./phase-5-todox-5.18-query-citation-ux.md) — §5.18 P1 (사용자 테스트 1-3, draft v0.1)
   - [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](./phase-5-spec-5.19-wiki-maintenance-suite.md) · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](./phase-5-todox-5.19-wiki-maintenance-suite.md) — §5.19 P2 (사용자 테스트 2-1, draft v0.1)
   - [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](./phase-5-spec-5.20-knowledge-gap-management.md) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](./phase-5-todox-5.20-knowledge-gap-management.md) — §5.20 P2 (사용자 테스트 2-2, Phase 6 → Phase 5 편입, draft v0.1)
@@ -2460,19 +2460,19 @@ Phase 6: master verdict + commit + push + result 문서
 
 ---
 
-## 5.17 Ingest 분해 결과 밸런싱 calibration — promotion threshold floor/ceiling + write 성능 (P0)
-> tag: #ingest, #promotion, #threshold, #performance
-> **draft v0.1 (2026-05-11)** — 사용자 테스트 1-7 두 케이스 양극단 (case A 109KB MD = 83 page 과다 / case B HWP = 0 page 과보수) 통합.
+## 5.17 Ingest 분해 결과 밸런싱 calibration — promotion threshold ceiling + write 성능 ✅ 종결 (2026-05-12 session 37)
+> tag: #ingest, #promotion, #threshold, #performance, #done
+> **종결 v0.3 (2026-05-12)** — case A 라이브 smoke 83 → 51 page (-38.6%) + write latency 180s → 63s (-65%) 확증. spec v0.3 sync + codex 3 cycle APPROVE.
 >
-> **상위 plan**: [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](./phase-5-spec-5.17-ingest-balance-calibration.md) · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](./phase-5-todox-5.17-ingest-balance-calibration.md)
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](./phase-5-spec-5.17-ingest-balance-calibration.md) · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](./phase-5-todox-5.17-ingest-balance-calibration.md) · [`activity/phase-5/phase-5-resultx-5.17-live-smoke-2026-05-12.md`](../../activity/phase-5/phase-5-resultx-5.17-live-smoke-2026-05-12.md)
 
-- [ ] **Step A — analyst v0.2** (Step "1" 측정값으로 1500 char/page 비율 검증 + ceiling default LOCK)
-- [ ] **Step B — tester RED** (promotion-config + canonicalizer + ingest-pipeline write batch test)
-- [ ] **Step C — developer GREEN** (ceiling/floor 분기 + WARN path + write batch)
-- [ ] **Step D — Phase 3a 회귀**
-- [ ] **Step E — Phase 3b BLUE**
-- [ ] **Step F — codex post-impl review**
-- [ ] **Step G — master 라이브 cycle smoke** (case A + case B 재 ingest + latency p95 측정)
+- [x] **Step A — analyst v0.2** (9 corpus sample 실측 → 1,500 char/page ratio 외부화 + ceiling default LOCK)
+- [x] **Step B — tester RED** (17 신규 test: promotion-config T1-T4 + canonicalizer T5-T12 + ingest-pipeline T13-T17)
+- [x] **Step C — developer GREEN** (4 신규 export: `loadPromotionConfig` + `applyCeilingCap` + `writePagesWithBatchYield` + `assessConversionQuality`, 825 PASS)
+- [x] **Step D — Phase 3a 회귀** (wikey-core 825 / wikey-obsidian 121 / build 0 errors / validate-wiki 30 pre-existing FAIL unrelated)
+- [x] **Step E — Phase 3b BLUE** (developer self-applied 6 활동 + cycle #2 P2 sweep)
+- [x] **Step F — codex post-impl review** (3 cycle — #1 NEEDS_REVISION 6 finding → developer fix → #2 NEEDS_REVISION 3 finding → master fix → #3 APPROVE)
+- [x] **Step G — obsidian-cdp 라이브 smoke** (case A 복제본 ingest: 59 → 51 cap formula 발화, latency 63s. case B HWP dedup 환경 제약 → unit T16/T17 + case A no-WARN telemetry 간접 PASS)
 
 ---
 

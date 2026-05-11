@@ -46,9 +46,9 @@ import {
   type ReingestDecision,
   type ConflictInfo,
 } from './incremental-reingest.js'
-import { canonicalize } from './canonicalizer.js'
+import { canonicalize, applyCeilingCap, type ProposalForCeiling } from './canonicalizer.js'
 import { loadUserAliases } from './schema.js'
-import { loadPromotionThreshold } from './promotion-config.js'
+import { loadPromotionThreshold, loadPromotionConfig } from './promotion-config.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
 } from './example-placeholders.js'
@@ -552,6 +552,25 @@ export async function ingest(
   const promotionThreshold = await loadPromotionThreshold(wikiFS)
   log(`promotion threshold = ${promotionThreshold} (§5.11 page promotion gate)`)
 
+  // §5.17 Spec 1 P1 integration — ceiling/charsPerPage/absolute config load (yaml override 우선).
+  // v0.3 codex cycle #1 P1 closure: applyCeilingCap 통합 의무.
+  const promotionConfig = await loadPromotionConfig(wikiFS)
+  log(`promotion ceiling — charsPerPage=${promotionConfig.ceiling?.charsPerPage ?? 'default'}, absolute=${promotionConfig.ceiling?.absolute ?? 'none'}, min=${promotionConfig.ceilingMin ?? 'default'}`)
+
+  // §5.17 Spec 3 P1 integration — HWP/PDF 변환 품질 WARN telemetry.
+  // bodyCharLen = sourceContent.length (PII gate + stripEmbeddedImages 후 — MD 소스는 frontmatter
+  //   포함 가능, spec §I1 의 "body char (frontmatter 제거 후)" 와 근사치. 정확한 frontmatter 제거는
+  //   향후 §5.18 cycle 에서 결정 필요 — 본 cycle 안에는 raw sourceContent.length 만).
+  // rawByteLen = rawDiskBytes.byteLength (변환 전 원본).
+  const conversionQuality = assessConversionQuality({
+    bodyCharLen: sourceContent.length,
+    rawByteLen: rawDiskBytes.byteLength,
+  })
+  if (conversionQuality.warn) {
+    console.warn(`[Wikey ingest] ${conversionQuality.message}`)
+    onProgress?.({ step: 1, total: 4, message: conversionQuality.message ?? '변환 품질 의심' })
+  }
+
   const today = formatLocalDate(new Date())
 
   // ── §4.5.1.5 v2 라우터 — FULL / SEGMENTED ──
@@ -645,6 +664,39 @@ export async function ingest(
 
   if (!parsed.source_page?.filename || !parsed.source_page?.content) {
     throw new Error(`LLM returned invalid structure — missing source_page. Keys: ${Object.keys(parsed).join(', ')}`)
+  }
+
+  // §5.17 Spec 1 P1 integration — applyCeilingCap (outlier 분해 후 합산 cap).
+  // adapter: WikiPage → ProposalForCeiling. WikiPage 는 confidence/mentionPosition 미보유 →
+  // fallback (confidence=1, mentionPosition=index in concatenated array). v0.3 codex cycle #1
+  // P2 adapter closure. cap 미적용 (proposedCount ≤ ceiling) 시 selected = [...proposed].
+  {
+    const allProposals: ReadonlyArray<ProposalForCeiling & { _kind: 'entity' | 'concept'; _idx: number }> = [
+      ...(parsed.entities ?? []).map((p, i) => ({
+        name: p.filename, confidence: 1, mentionPosition: i,
+        _kind: 'entity' as const, _idx: i,
+      })),
+      ...(parsed.concepts ?? []).map((p, i) => ({
+        name: p.filename, confidence: 1, mentionPosition: (parsed.entities?.length ?? 0) + i,
+        _kind: 'concept' as const, _idx: i,
+      })),
+    ]
+    const capResult = applyCeilingCap({
+      inputCharLen: sourceContent.length,
+      proposed: allProposals,
+      config: promotionConfig,
+    })
+    if (capResult.decision.selectedCount < capResult.decision.proposedCount) {
+      const selectedKeys = new Set(capResult.selected.map((p) => `${p._kind}:${p._idx}`))
+      const newEntities = (parsed.entities ?? []).filter((_, i) => selectedKeys.has(`entity:${i}`))
+      const newConcepts = (parsed.concepts ?? []).filter((_, i) => selectedKeys.has(`concept:${i}`))
+      log(`ceiling cap applied — ${capResult.decision.proposedCount} → ${capResult.decision.selectedCount} (ceiling=${capResult.decision.ceiling}, reason=${capResult.decision.reason}, charsPerPage=${capResult.decision.charsPerPage}, inputCharLen=${capResult.decision.inputCharLen})`)
+      parsed = {
+        ...parsed,
+        entities: newEntities,
+        concepts: newConcepts,
+      }
+    }
   }
 
   // §4.3.3 — source 페이지 본문의 깨진 wikilink 를 canonical 페이지 기준으로 plain text 로 강등.
@@ -797,21 +849,26 @@ export async function ingest(
     ? [{ type: 'extracted' as const, ref: `sources/${v3Meta.id}` }]
     : null
 
+  // §5.17 Spec 2 P1 integration — batch yield via writePagesWithBatchYield.
+  // v0.3 codex cycle #1 P1 closure: sequential `for...await` 대체. exists check 는
+  // pre-loop 에서 일괄 수행 (created/updated 추적 보존). pathPrefix='wiki/' 로 createPage 와 동일 path.
+  const entityWrites: BatchWritePage[] = []
   for (const entity of parsed.entities ?? []) {
     const content = provenanceEntry ? injectProvenance(entity.content, provenanceEntry) : entity.content
-    const page: WikiPage = { filename: entity.filename, content, category: 'entities' }
     const entityExists = await wikiFS.exists(`wiki/entities/${entity.filename}`)
-    await createPage(wikiFS, page)
     ;(entityExists ? updatedPages : createdPages).push(entity.filename)
+    entityWrites.push({ filename: entity.filename, content, category: 'entities' })
   }
-
+  const conceptWrites: BatchWritePage[] = []
   for (const concept of parsed.concepts ?? []) {
     const content = provenanceEntry ? injectProvenance(concept.content, provenanceEntry) : concept.content
-    const page: WikiPage = { filename: concept.filename, content, category: 'concepts' }
     const conceptExists = await wikiFS.exists(`wiki/concepts/${concept.filename}`)
-    await createPage(wikiFS, page)
     ;(conceptExists ? updatedPages : createdPages).push(concept.filename)
+    conceptWrites.push({ filename: concept.filename, content, category: 'concepts' })
   }
+  await writePagesWithBatchYield({
+    wikiFS, pages: [...entityWrites, ...conceptWrites], batchSize: 10, pathPrefix: 'wiki/',
+  })
 
   log(`pages written — created=${createdPages.length}, updated=${updatedPages.length}`)
 
@@ -2413,3 +2470,69 @@ async function runReindexAndWait(
 
 // §5.10.4 D-wide: Stage 2 self-extending suggestion finalization 폐기 (runSuggestionFinalize +
 // .wikey/suggestions.json + mention-history.json 메커니즘 모두 제거).
+
+// ── §5.17 Spec 2 — write phase batching + UI yield (cancellability) ──
+
+/** Minimal page shape used by `writePagesWithBatchYield` (decoupled from full WikiPage). */
+export interface BatchWritePage {
+  readonly filename: string
+  readonly category: string
+  readonly content: string
+}
+
+/**
+ * §5.17 Spec 2 I5/I6/I7/I8 — page write loop 을 batch 단위로 처리하며
+ * batch 사이 microtask yield (`setTimeout(0)`) 하여 UI thread 양보 + cancel 가능.
+ *   - I5: wikiFS.write 그대로 활용 (per-file atomic Obsidian Vault API 가 보장)
+ *   - I6: 매 batchSize page 후 yield → cancel signal 검사 가능
+ *   - I7: index.md / log.md 갱신은 호출측 책임 (본 함수 안에서 호출 X)
+ *   - I8: cancel 시 partial 보존 + AbortError throw (이미 write 된 page rollback X)
+ *
+ * Path format: `<category>/<filename>` (T13/T14/T15 fixture format 유지). 호출측이
+ * wiki/ 접두사 등 prefix 가 필요하면 `pathPrefix` (optional) 로 전달 — v0.3 codex cycle
+ * #1 P1 closure 시 createPage 동등 path (`wiki/<category>/<filename>`) 생성용.
+ */
+export async function writePagesWithBatchYield(args: {
+  readonly wikiFS: WikiFS
+  readonly pages: readonly BatchWritePage[]
+  readonly batchSize?: number
+  readonly signal?: AbortSignal
+  readonly pathPrefix?: string
+}): Promise<void> {
+  const { wikiFS, pages, batchSize = 10, signal, pathPrefix = '' } = args
+  const size = batchSize > 0 ? batchSize : 10
+  for (let i = 0; i < pages.length; i++) {
+    if (signal?.aborted) {
+      const err = new Error('writePagesWithBatchYield: aborted')
+      err.name = 'AbortError'
+      throw err
+    }
+    const page = pages[i]
+    await wikiFS.write(`${pathPrefix}${page.category}/${page.filename}`, page.content)
+    // I6 yield between batches (not after the very last page — avoids spurious tick).
+    if ((i + 1) % size === 0 && i + 1 < pages.length) {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    }
+  }
+}
+
+/**
+ * §5.17 Spec 3 — HWP/PDF 변환 후 본문 길이 vs 원본 크기 비교 → 손실 의심 시 WARN.
+ *   case B 실측 (842 char / 16896 B raw) → warn true
+ *   typical (5000 char / 10000 B = 9.8 KB) → warn false (raw < 10 KB)
+ *
+ * 임계 (heuristic, §5.17 spec 3): body < 1000 char AND raw > 10 KB → 의심.
+ */
+export function assessConversionQuality(args: {
+  readonly bodyCharLen: number
+  readonly rawByteLen: number
+}): { warn: boolean; message: string | null } {
+  const { bodyCharLen, rawByteLen } = args
+  const suspicious = bodyCharLen < 1000 && rawByteLen > 10 * 1024
+  if (!suspicious) return { warn: false, message: null }
+  const kb = Math.round(rawByteLen / 1024)
+  return {
+    warn: true,
+    message: `변환 품질 의심 — 본문 ${bodyCharLen}자 / 원본 ${kb}KB`,
+  }
+}

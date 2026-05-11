@@ -10,7 +10,12 @@ import {
   EXAMPLE_ORG_BASE, EXAMPLE_ORG_ALIAS, EXAMPLE_ORG_KO, EXAMPLE_ORG_DESC_KO,
   EXAMPLE_CONCEPT_BASE, EXAMPLE_CONCEPT_ALIAS,
 } from './example-placeholders.js'
-import { DEFAULT_PROMOTION_THRESHOLD } from './promotion-config.js'
+import {
+  DEFAULT_PROMOTION_THRESHOLD,
+  DEFAULT_CHARS_PER_PAGE,
+  DEFAULT_CEILING_MIN,
+  type PromotionThresholdConfig,
+} from './promotion-config.js'
 
 /**
  * Stage 3 Canonicalizer (D-wide). Single document-global LLM call that:
@@ -708,4 +713,71 @@ function extractJsonBlock(response: string): RawCanonical | null {
   const end = response.lastIndexOf('}')
   if (end < 0) return null
   try { return JSON.parse(response.slice(start, end + 1)) } catch { return null }
+}
+
+// ── §5.17 Spec 1 — promotion threshold ceiling outlier cap ──
+
+/** Minimal proposal shape used by `applyCeilingCap` (decoupled from full ProposalPage). */
+export interface ProposalForCeiling {
+  readonly name: string
+  readonly confidence: number
+  readonly mentionPosition: number
+  readonly aliases?: readonly string[]
+}
+
+/** Telemetry struct returned alongside `applyCeilingCap.selected` (Spec 1 T12). */
+export interface PromotionDecision {
+  readonly inputCharLen: number
+  readonly proposedCount: number
+  readonly selectedCount: number
+  readonly ceiling: number
+  readonly charsPerPage: number
+  readonly reason: string
+}
+
+/**
+ * §5.17 Spec 1 — typical 분해는 LLM 자율, large outlier (case A 류) 만 cap.
+ *   formula  = max(ceilingMin, floor(inputCharLen / charsPerPage))
+ *   ceiling  = absolute !== undefined ? min(absolute, formula) : formula
+ *   final    = min(proposedCount, ceiling)
+ *
+ * Cap 시 confidence 내림차순 + tie-break mentionPosition 오름차순 (first-mention 우선).
+ * I3 (hardcoded list 0건): name list / category mapping 사용 X — confidence/position 만.
+ */
+export function applyCeilingCap<T extends ProposalForCeiling>(args: {
+  readonly inputCharLen: number
+  readonly proposed: readonly T[]
+  readonly config: PromotionThresholdConfig
+}): { selected: T[]; decision: PromotionDecision } {
+  const { inputCharLen, proposed, config } = args
+  const charsPerPage = config.ceiling?.charsPerPage ?? DEFAULT_CHARS_PER_PAGE
+  const ceilingMin = config.ceilingMin ?? DEFAULT_CEILING_MIN
+  const absolute = config.ceiling?.absolute
+  const proposedCount = proposed.length
+
+  const formula = Math.max(ceilingMin, Math.floor(inputCharLen / charsPerPage))
+  const ceilingRaw = absolute !== undefined ? Math.min(absolute, formula) : formula
+  const ceiling = Math.min(proposedCount, ceilingRaw)
+
+  let selected: T[]
+  let reason: string
+  if (proposedCount <= ceilingRaw) {
+    selected = [...proposed]
+    reason = proposedCount === 0 ? 'no-proposal' : 'no-cap'
+  } else {
+    // confidence desc + mentionPosition asc tie-break.
+    selected = [...proposed].sort((a, b) => {
+      if (b.confidence !== a.confidence) return b.confidence - a.confidence
+      return a.mentionPosition - b.mentionPosition
+    }).slice(0, ceiling)
+    reason = absolute !== undefined && absolute < formula ? 'absolute-cap' : 'formula-cap'
+  }
+
+  return {
+    selected,
+    decision: {
+      inputCharLen, proposedCount, selectedCount: selected.length,
+      ceiling, charsPerPage, reason,
+    },
+  }
 }

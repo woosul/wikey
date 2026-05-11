@@ -16,3 +16,13 @@
 # raise 시 확장 (plan/phase-5-todox-5.15-pipeline-v2-followups.md §2.2 참조).
 
 default: 2
+
+# §5.17 — Ingest 분해 결과 ceiling (large source outlier cap).
+# entity+concept page 수가 `min(proposed, max(ceilingMin=8, floor(body_char / charsPerPage)))`
+# 안으로 수렴. typical 분해는 LLM 자율, large outlier (case A 109KB → 83 page 류) 만 cap.
+# 9 corpus 실측 median 503 char/page 보다 보수적 1500 default — 분해를 막지 않음.
+#
+# ceiling:
+#   charsPerPage: 1500    # body char ÷ N → ceiling N pages (formula). 부재 시 1500
+#   absolute: 30          # 절대 hard cap (선택). 부재 시 formula 만 적용
+#   mode: formula         # 'formula' (default) | 'absolute-fallback'

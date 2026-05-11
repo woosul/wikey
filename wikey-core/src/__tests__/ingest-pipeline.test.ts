@@ -564,3 +564,141 @@ describe('assertNotWikiPath', () => {
     }
   })
 })
+
+/**
+ * §5.17 Step B (RED) — Spec 2 + Spec 3 invariants
+ *
+ * Spec 2 (write phase batching):
+ *   I5 (per-file atomic 유지): WikiFS.write 각 호출은 atomic — 추가 layer X
+ *   I6 (batch progress yield): 매 5~10 page 마다 microtask yield (await Promise/setTimeout(0))
+ *   I7 (index/log batch flush): index.md / log.md 갱신은 loop 종료 후 1회 atomic write
+ *   I8 (cancel rollback): cancel 시 partial 보존 + log.md `cancelled` 표시
+ *
+ * Spec 3 (HWP 변환 품질 진단 WARN telemetry):
+ *   body < 1,000 char + raw > 10 KB → WARN log + Notice 발화 (v0.3 정정: 500 → 1,000)
+ *   case B: 842 char / 16896 B → WARN (case A typical: 5000 char / 10000 B → no WARN)
+ *
+ * 통과 조건: 신규 export `writePagesWithBatchYield` + `assessConversionQuality` 가
+ * implement 되어야 PASS. 현 코드 미구현 → RED FAIL.
+ */
+describe('§5.17 writePagesWithBatchYield — Spec 2 I6/I7/I8 + I5', () => {
+  // T13 ↔ Spec 2 I6 batch yield
+  it('T13 ↔ Spec 2 I6: 50 page write 시 매 5~10 page 마다 microtask yield 발생', async () => {
+    const { writePagesWithBatchYield } = await import('../ingest-pipeline.js') as any
+    const writes: string[] = []
+    const wikiFS: any = {
+      async write(path: string) { writes.push(path) },
+      async exists() { return false },
+      async read() { return '' },
+      async list() { return [] },
+    }
+    const pages = Array.from({ length: 50 }, (_, i) => ({
+      filename: `page-${i}.md`,
+      category: 'entities',
+      content: `# page ${i}\n`,
+    }))
+    // setTimeout spy — yield invocation count 측정
+    const setTimeoutSpy = vi.spyOn(global, 'setTimeout')
+    await writePagesWithBatchYield({ wikiFS, pages, batchSize: 10 })
+    // 50 page / batchSize 10 = 5 batch → yield 최소 4회 (마지막 batch 후 생략 가능)
+    const yieldCalls = setTimeoutSpy.mock.calls.filter((c: any[]) => c[1] === 0)
+    expect(yieldCalls.length).toBeGreaterThanOrEqual(4)
+    expect(writes).toHaveLength(50)
+    setTimeoutSpy.mockRestore()
+  })
+
+  // T14 ↔ Spec 2 I7 index/log batch flush
+  it('T14 ↔ Spec 2 I7: index/log 갱신은 page write 후 1회만 (loop 안에서 N회 호출 X)', async () => {
+    const { writePagesWithBatchYield } = await import('../ingest-pipeline.js') as any
+    const writes: string[] = []
+    const wikiFS: any = {
+      async write(path: string) { writes.push(path) },
+      async exists() { return false },
+      async read() { return '' },
+      async list() { return [] },
+    }
+    const pages = Array.from({ length: 20 }, (_, i) => ({
+      filename: `page-${i}.md`,
+      category: 'entities',
+      content: `# page ${i}\n`,
+    }))
+    await writePagesWithBatchYield({ wikiFS, pages, batchSize: 5 })
+    // page write loop 안에서는 index.md / log.md 에 write 일어나지 않아야 함
+    const indexWrites = writes.filter((p) => p.endsWith('index.md'))
+    const logWrites = writes.filter((p) => p.endsWith('log.md'))
+    expect(indexWrites).toHaveLength(0)
+    expect(logWrites).toHaveLength(0)
+    // 20 page 모두 write
+    expect(writes).toHaveLength(20)
+  })
+
+  // T15 ↔ Spec 2 I8 cancel partial
+  it('T15 ↔ Spec 2 I8: cancel signal mid-write → 이미 write 된 page 잔존 (rollback X)', async () => {
+    const { writePagesWithBatchYield } = await import('../ingest-pipeline.js') as any
+    const writes: string[] = []
+    const wikiFS: any = {
+      async write(path: string) { writes.push(path) },
+      async exists() { return false },
+      async read() { return '' },
+      async list() { return [] },
+    }
+    const pages = Array.from({ length: 30 }, (_, i) => ({
+      filename: `page-${i}.md`,
+      category: 'entities',
+      content: `# page ${i}\n`,
+    }))
+    const controller = new AbortController()
+    // 10 page write 후 cancel
+    let count = 0
+    const wikiFSWithCancel: any = {
+      async write(path: string) {
+        writes.push(path)
+        count++
+        if (count === 10) controller.abort()
+      },
+      async exists() { return false },
+      async read() { return '' },
+      async list() { return [] },
+    }
+    let cancelled = false
+    try {
+      await writePagesWithBatchYield({
+        wikiFS: wikiFSWithCancel,
+        pages,
+        batchSize: 5,
+        signal: controller.signal,
+      })
+    } catch (e) {
+      cancelled = (e as Error).name === 'AbortError' || (e as Error).message.includes('cancel') || (e as Error).message.includes('abort')
+    }
+    // partial 보존 — 이미 write 된 page 는 rollback 안 됨
+    expect(writes.length).toBeGreaterThanOrEqual(10)
+    expect(writes.length).toBeLessThan(30)
+    expect(cancelled).toBe(true)
+  })
+})
+
+describe('§5.17 assessConversionQuality — Spec 3 HWP 변환 품질 WARN telemetry', () => {
+  // T16 ↔ Spec 3 case B 842 char / 16896 B → WARN 발화
+  it('T16 ↔ Spec 3 case B: body < 1,000 char + raw > 10 KB → WARN ({warn: true, ...})', async () => {
+    const { assessConversionQuality } = await import('../ingest-pipeline.js') as any
+    const result = assessConversionQuality({
+      bodyCharLen: 842,
+      rawByteLen: 16896,
+    })
+    expect(result.warn).toBe(true)
+    expect(result.message).toMatch(/변환 품질 의심|conversion|quality/i)
+    // 본문 N자 / 원본 NKB 정량 포함
+    expect(result.message).toMatch(/842/)
+  })
+
+  // T17 ↔ Spec 3 typical case 5000 char / 10000 B → no WARN
+  it('T17 ↔ Spec 3 typical: body 5000 char / raw 10000 B → warn=false', async () => {
+    const { assessConversionQuality } = await import('../ingest-pipeline.js') as any
+    const result = assessConversionQuality({
+      bodyCharLen: 5000,
+      rawByteLen: 10000,
+    })
+    expect(result.warn).toBe(false)
+  })
+})
