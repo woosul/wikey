@@ -5,6 +5,7 @@
 > **버전 이력**:
 > - v0.1 (2026-05-11): draft (spec v0.1 mirror).
 > - v0.2 (2026-05-11): spec v0.2 (B1/B2/B3 분리) mirror. Step B 진입 준비.
+> - v0.3 (2026-05-11): codex review cycle #1 5 finding closure 반영. line drift 정정 + B2 hook 통합 (commit `8c087aa`) closure.
 
 ## 진행 매트릭스 (Step A~G)
 
@@ -24,44 +25,43 @@
 
 ## 3 결함 정확한 코드 위치 (Step C GREEN 시 참조)
 
-### B1 — hasSidecar set mismatch
+### B1 — hasSidecar set mismatch (v0.3 line 번호 fix HEAD 기준)
 
 **파일**: `wikey-obsidian/src/sidebar-chat.ts`
 
-**현 코드** (line 884~888):
+**현 HEAD line 번호** (v0.3 정정):
+- `buildAuditLookupAllSet` 정의: line 204 (helper export).
+- `auditAllSet` 재할당 (B1 fix point): line 943.
+- `hasSidecar` 호출처: line 1167 (list view) + line 1275 (tree view).
+
+**Fix 패턴** (적용 완료, commit `24d4fa5`):
 ```typescript
-// §5.2.0 hasSidecar lookup 용 — paired 제외 후 남은 audit 파일들의 union.
-const auditAllSet = new Set<string>([
-  ...auditData.files,
-  ...auditData.ingested_files,
-  ...(auditData.unsupported_files ?? []),
-])
+// §5.16 B1: hasSidecar lookup 은 paired dedup *전* rawAudit 기반이어야 sidecar
+// `<base>.<ext>.md` 가 set 에 살아 있어 badge 매칭 성공. auditData 기반 (이전 결함)
+// 은 paired sidecar 가 이미 dedup → hasSidecar 영원히 false → badge 미표시.
+const auditAllSet = buildAuditLookupAllSet(rawAudit)
 ```
 
-**문제**: `auditData` = `applyPairedSidecarToAudit(rawAudit)` 결과 (line 876) — paired sidecar `<base>.<ext>.md` 가 이미 dedup 됨. 따라서 `auditAllSet` 에 sidecar 영원히 없음 → `hasSidecar(filePath, auditAllSet)` (line 1112, 1220) 영원히 false.
+### B2 — Stale tombstone reconcile (v0.3 통합 완료 closure)
 
-**Fix** (≤ 5 LOC):
+**파일**:
+- `wikey-core/src/source-registry.ts:339-353` (case 4 restoreTombstone — 기존 구현, v0.3 정정 line).
+- `wikey-core/src/source-registry.ts:398-413` (`reconcileAfterIngest` wrapper, commit `24d4fa5`).
+- `wikey-obsidian/src/commands.ts:runIngest` try block + `runReconcileAfterIngest(plugin)` helper (commit `8c087aa`).
+
+**Step "1" evidence (closed)**: 14 records 중 2 stale tombstone (case A MarkItDown / case B HWP 스마트공장). Step G master 라이브 smoke + commit `8c087aa` B2 hook 통합으로 ingest 직후 자동 복구 확증.
+
+**B2 production hook 통합 (commit `8c087aa`)**:
 ```typescript
-// §5.16 B1: hasSidecar lookup 은 paired dedup *전* set 에서 검사해야 sidecar 보임.
-const auditAllSet = new Set<string>([
-  ...rawAudit.files,
-  ...(rawAudit.ingested_files ?? []),
-  ...(rawAudit.unsupported_files ?? []),
-])
+// commands.ts:runIngest try block
+try {
+  const result = await runIngestInner(plugin, sourcePath, onProgress, runOpts)
+  await runReconcileAfterIngest(plugin).catch(err => 
+    console.warn('[Wikey] §5.16 B2 reconcileAfterIngest failed:', err))
+  return result
+} finally { triggerPanelRefresh(getWikeyChatView(plugin)) }
 ```
-
-`rawAudit` 는 line 870 `const rawAudit = loadAuditScriptOutput(...)` 으로 같은 scope. variable 추가 0.
-
-### B2 — Stale tombstone reconcile
-
-**파일**: `wikey-core/src/source-registry.ts:308` (case 4 — restoreTombstone 이미 구현) + `wikey-core/src/ingest-pipeline.ts` (reconcile 호출 시점)
-
-**Step "1" evidence**: 14 records 중 2 stale tombstone (case A MarkItDown / case B HWP 스마트공장). 두 케이스 모두 disk 파일 존재, hash 일치 추정 → reconcile case 4 자동 발화해야 하나 미실행.
-
-**조사 필요 (Step B 진입 전)**:
-- `ingest-pipeline.ts` 의 `runReindexAndWait` (§5.14 layer 6) 가 reconcile 까지 포함하는지
-- 별도 `reconcileRegistry(registry, walker)` 호출 hook 이 ingest 완료 후 있는지
-- ingest 완료 후 reconcile 미실행이면 trigger 추가 (`reconcileRegistry` 1회 호출 ~10 LOC).
+`runReconcileAfterIngest` helper = `main.ts:runStartupReconcile` mirror (vault.getFiles() raw/ scope + 50MB cap + walker → reconcileAfterIngest → saveRegistry on change). error 분기는 reconcile 의무 X (fail-open, 검색 영향 0).
 
 ### B3 — Panel refresh trigger 누락
 

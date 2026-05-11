@@ -5,7 +5,7 @@ title: Audit / Ingest panel refresh reliability + sidecar pair label 회귀 fix 
 status: draft
 created: 2026-05-11
 updated: 2026-05-11
-version: v0.2
+version: v0.3
 ---
 
 # Phase 5 §5.16 Audit / Ingest panel refresh reliability + sidecar pair label 회귀 fix (Spec, WHAT)
@@ -15,6 +15,11 @@ version: v0.2
 > **버전 이력**:
 > - v0.1 (2026-05-11): draft 신규 (사용자 보고 1-1·1-2·1-4 통합).
 > - v0.2 (2026-05-11): Step "1" obsidian-cdp master test 결과 반영 — B1 (hasSidecar set mismatch), B2 (stale tombstone reconcile race), B3 (refresh trigger 누락) 3 결함 분리. 정확한 코드 위치 + AC 1:1 매핑.
+> - v0.3 (2026-05-11): codex post-impl review (cycle #1, VERDICT: NEEDS_REVISION) 5 finding closure 반영.
+>   - HIGH/MED finding 1+2 (B2 production hook + reconcileAfterIngest production-dead at 24d4fa5): commit `8c087aa` (B2 ingest hook 통합 + badge color follow-up) 으로 closure. AC-7 / I6 / I11 = production path 활성.
+>   - MED finding 3 (AC mapping weakness): AC mapping 명시 — unit test 의 AC 는 helper contract / branch invariant 만 cover. 실 ingest 호출 분기에서의 hook 발화 + refresh trigger 발화 = 라이브 Step G smoke 로 보강 (별 integration AC 추가 안 함, Karpathy Simplicity First).
+>   - LOW finding 4 (line drift): 본 spec 의 코드 위치 인용은 fix *후* HEAD 기준 line 번호로 갱신 — `sidebar-chat.ts:204` (`buildAuditLookupAllSet` 정의) + `:1167`/`:1275` (hasSidecar 호출), `source-registry.ts:339-353` (case 4 implementation).
+>   - LOW finding 5 (numeric drift): result doc v1.1 에서 산술 정정 — `Ingested 11 → 14 (+3)` = 2 stale tombstone restore + 1 newly registered PMS PDF record (registry first_seen=2026-05-11 의 신규 record).
 
 ## 0. Context
 
@@ -83,16 +88,17 @@ version: v0.2
   - `reconciled: SourceRegistry` — case 4 (restoreTombstone) 적용 완료된 새 registry.
   - `restoredIds: string[]` — 본 reconcile 이 복구한 source_id list (telemetry / log).
 - **Invariants**:
-  - I5 (restoreTombstone 발화): walker 의 어떤 entry 의 hash 가 registry record (tombstone=true) 의 hash 와 일치하면 `tombstone=false` 로 갱신. (이미 source-registry.ts:308 case 4 구현 — 호출 시점 검증).
-  - I6 (ingest pipeline 호출): `wikey-core/src/ingest-pipeline.ts` 의 ingest 완료 직후 reconcile 1회 의무 발화. 누락 시 다음 ingest 까지 stale 잔존.
+  - I5 (restoreTombstone 발화): walker 의 어떤 entry 의 hash 가 registry record (tombstone=true) 의 hash 와 일치하면 `tombstone=false` 로 갱신. `source-registry.ts:339-353` case 4 구현 (실제 line, v0.3 정정).
+  - I6 (ingest pipeline 호출): `wikey-obsidian/src/commands.ts:runIngest` try block 안 success 직후 `reconcileAfterIngest` 1회 의무 발화 (commit `8c087aa` 통합 완료). 누락 시 다음 ingest 또는 plugin reload 까지 stale 잔존. error 분기는 reconcile 의무 X (fail-open).
   - I7 (idempotent): reconcile N회 연속 호출 시 결과 동일 (race 회피).
   - I8 (path mismatch 처리): walker hash match + path 가 record.vault_path 와 다르면 `recordMove` (이미 case 2 구현) 발화.
-- **Acceptance Scenarios**:
-  - **AC-5 case A (Step "1" evidence)**: MarkItDown 109KB MD `raw/.../60_note/500_technology/MarkItDown으로 모든 문서를 마크다운으로 변환하기.md` 가 disk 존재 + registry tombstone=true → reconcile 1회 → tombstone=false 복구.
-  - **AC-6 case B (Step "1" evidence)**: HWP 스마트공장 보급확산 `raw/.../20_report/200_social/스마트공장 보급확산 합동설명회 개최.hwp` + sidecar 모두 disk 존재 + registry tombstone=true → reconcile 1회 → tombstone=false 복구.
-  - **AC-7 ingest pipeline 호출**: `runIngest` 정상 완료 후 reconcile 자동 호출 → restoredIds 가 0 이상이면 telemetry log + sidebar refresh trigger.
-  - **AC-8 idempotent**: reconcile 2회 연속 호출 → 두 번째 호출의 restoredIds = [] (이미 1회차 복구).
-- **Out of Scope**: walker 자체 변경 (paired sidecar 가 walker 에 포함되는지는 기존 정책 유지). registry record 다른 필드 (`duplicate_locations` 등) 변경.
+- **Acceptance Scenarios** (v0.3 AC mapping clarification — codex finding #3 closure):
+  - **AC-5 helper contract case A (Step "1" evidence)**: `reconcileAfterIngest(reg, walker)` 단위 test — record `tombstone=true, hash='X', vault_path='raw/.../MarkItDown.md'` + walker `[{path:'.../MarkItDown.md', hash:'X'}]` → 결과 record `tombstone=false` + `restoredIds=[id]`. **scope: helper contract**.
+  - **AC-6 helper contract case B**: HWP 스마트공장 sidecar 까지 포함 — `reconcileAfterIngest` 단위 test → tombstone=false 복구 + sidecar_vault_path 정합. **scope: helper contract**.
+  - **AC-7 helper return contract**: `runIngest` 의 hook entry 가 `reconcileAfterIngest` 의 return `{registry, restoredIds}` 를 caller 가 처리할 수 있는 형식 — telemetry log 1줄 (`console.info '[Wikey] §5.16 B2 reconcileAfterIngest restored=N'`). **scope: helper contract** (실 hook 발화 = 라이브 Step G smoke).
+  - **AC-8 idempotent**: reconcile 2회 연속 → 두 번째 호출의 restoredIds = []. **scope: helper contract**.
+  - **AC-Live-A (integration, 라이브 Step G smoke)**: plugin reload 또는 ingest 1회 후 stale tombstone 자동 복구 — registry tombstoned 2 → 0 / Audit chip `Ingested 11 → 14 / Missing 10 → 7`. **scope: live integration**.
+- **Out of Scope**: walker 자체 변경 (paired sidecar 가 walker 에 포함되는지는 기존 정책 유지). registry record 다른 필드 (`duplicate_locations` 등) 변경. 별 integration test (Karpathy Simplicity First — mock test 대신 라이브 Step G smoke 로 보강).
 
 ### Spec 3: B3 — Panel refresh trigger 정합
 
@@ -106,11 +112,12 @@ version: v0.2
   - I9 (호출 완전성): `runIngest` 의 success / error / cancel 분기 양쪽 모두에서 refresh API 호출.
   - I10 (fresh spawn): refresh 시 `loadAuditScriptOutput` 가 항상 fresh subprocess spawn (cache 0). subprocess timeout ≤ 5s, fail 시 stale-display + WARN.
   - I11 (reconcile 후 refresh): Spec 2 의 reconcile 가 ingest 완료 hook 안에서 발화하면, refresh trigger 는 reconcile 직후 호출 (registry 최신 상태로 패널 갱신).
-- **Acceptance Scenarios**:
-  - **AC-9 Happy path**: Audit 패널 → 1개 파일 선택 → Ingest 버튼 → Processing → Preview → Approve & Write → Write 완료 → panel 자동 refresh → 해당 row 가 `Ingested` 분류로 이동, paired sidecar badge 표시 (I3 gray).
-  - **AC-10 Conflict overwrite (1-4)**: ingest-confilct.png 흐름 Overwrite 분기 종료 + [new]/[update] 생성 → panel 자동 refresh + paired sidecar badge 표시.
-  - **AC-11 Cancel**: 사용자 cancel 시도 → runIngest 의 cancel 분기 → refresh 호출 (cancel 후 row 상태 복귀, processing 표시 제거).
-  - **AC-12 Error**: subprocess timeout 또는 LLM fail → refresh 호출 + row error message (`showRowError`, 기존 §5.15.D).
+- **Acceptance Scenarios** (v0.3 AC mapping clarification — codex finding #3 closure):
+  - **AC-9 helper contract (Happy path)**: `triggerPanelRefresh(view)` 단위 test — view.refreshAuditPanel + view.refreshDashboard spy 가 정확히 1회 호출. **scope: helper contract**.
+  - **AC-10 helper contract (overwrite branch)**: 동일 helper contract — overwrite 분기 모방 시나리오 spy 검증.
+  - **AC-11 helper contract (Cancel branch)**: 동일 helper contract — cancel 분기 모방 spy 검증.
+  - **AC-12 helper contract (Error branch)**: 동일 helper contract — error 분기 모방 spy 검증.
+  - **AC-Live-B (integration, 라이브 Step G smoke)**: 라이브 ingest cycle (Audit → Ingest → Processing → Preview → Approve & Write → Write 완료) 후 panel 자동 refresh + paired sidecar badge 표시. **scope: live integration** (별 mock test 없이 라이브 smoke 로 보강).
 
 ### Spec 4 (옵션): wiki/sources tombstone block stale cleanup
 
@@ -154,3 +161,8 @@ version: v0.2
 
 - v0.1 (2026-05-11): draft 신규.
 - v0.2 (2026-05-11): Step "1" master raw evidence 반영. B1/B2/B3 3 결함 분리, 11 AC (AC-1~AC-12) 1:1 매핑. Spec 4 (wiki page cleanup) out of scope 결정 (registry tombstone 복구 시 banner 자동 사라짐).
+- v0.3 (2026-05-11): codex post-impl review (cycle #1) 5 finding closure 반영.
+  - Finding 1+2 (HIGH/MED B2 production hook): commit `8c087aa` 으로 closure — `commands.ts:runIngest` try block 안 `reconcileAfterIngest` 호출 통합. I6 production path 활성.
+  - Finding 3 (MED AC mapping): AC 분리 명시 — AC-5~12 = helper/branch contract scope, AC-Live-A/B = live integration scope (라이브 Step G smoke 로 보강, 별 mock integration test 추가 안 함).
+  - Finding 4 (LOW line drift): 코드 위치 인용 정정 — `source-registry.ts:339-353` (case 4 실제 line) / `sidebar-chat.ts:204/943/1167/1275` (helper 정의 + auditAllSet 재할당 + hasSidecar 호출 2곳).
+  - Finding 5 (LOW numeric drift): result doc v1.1 산술 정정 — `Ingested 11 → 14 (+3) = 2 stale tombstone restore + 1 PMS PDF newly registered record`.
