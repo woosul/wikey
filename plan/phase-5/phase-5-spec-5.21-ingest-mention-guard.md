@@ -1,11 +1,11 @@
 ---
 phase: 5
 section: 5.21
-title: Ingest pipeline mention guard — broken wikilink 근본 원인 1+3 fix (Spec)
+title: Ingest pipeline mention guard — broken wikilink 근본 원인 1+2+3 fix (Spec)
 status: draft
 created: 2026-05-12
 updated: 2026-05-13
-version: v0.3
+version: v0.4
 ---
 
 # Phase 5 §5.21 Ingest pipeline mention guard (Spec, WHAT)
@@ -26,16 +26,18 @@ version: v0.3
 
 > **카테고리 overlap 주의**: 위 % 합은 wikilink 1건이 여러 카테고리에 동시 속할 수 있어 100% 초과 (예: `[[GPT-4o.pdf]]` = 확장자 + 대문자). 근본 원인 1+3 합 = 195+116 = 311 (53% before overlap). 실제 cover 는 union 으로 311 − overlap (extension ∩ uppercase ≈ 24 추정) ≈ 287 (~49%). spec 의 "49% 감소 예상" 은 union 기반 추정치.
 
-### §5.21 cover scope
+### §5.21 cover scope (v0.4 확장 — 3 근본 원인 모두 cover, ~100% 예방)
 
-- **근본 원인 1 (33%, 195건)**: ingest pipeline mention stage 에서 raw filename → wiki slug 변환 강제 + file extension 포함 wikilink reject
-- **근본 원인 3 (20%, 116건)**: LLM ingest 출력 의 wikilink 본문 canonicalizer 호출 강제 (case-insensitive normalize)
+- **근본 원인 1 (33%, 195건)**: ingest pipeline mention stage 에서 raw filename → wiki slug 변환 강제 + file extension 포함 wikilink reject (I1/I2)
+- **근본 원인 2 (67%, 390건)** — **v0.4 신규 cover**: mention only + page 미존재 wikilink → plain text 변환 (I9). promotion threshold 미통과 entity 의 broken wikilink 가 본문에 남지 않음. **§5.20 와 책임 분리**: §5.20 = mention-only 를 *진단/surface* (knowledge gap candidate), §5.21 = mention-only wikilink 를 *제거/clean* (broken 예방). 둘 다 동시 운영 가능.
+- **근본 원인 3 (20%, 116건)**: LLM ingest 출력 의 wikilink 본문 canonicalizer 호출 강제 (case-insensitive normalize) (I4)
 
 ### Out of Scope (§5.21)
 
-- **근본 원인 2 (67%, 390건)**: mention only + promotion 미통과 entity = **future §5.20 extension**. 현재 §5.20 spec 은 query log 기반 knowledge gap 만 cover — broken wikilink no-match candidates 추가는 §5.20 v0.3 후속 작업 (별 cycle, §5.21 종결 후 §5.20 spec 갱신 영역).
 - §5.19 wiki-check 의 cleanup detect (이미 종결 — 본 §5.21 은 *예방* 측면).
 - **canonicalizer `## 출처` 영역의 raw source link (§5.13)** — `[[<rawSourceFilename>|원문]]` 형식은 canonicalizer 가 의도적으로 emit (canonicalizer.ts:592-593). mention-guard scope 외 (HIGH-2 exempt, §1.7 참조).
+- **기존 wiki/ 의 retroactive broken cleanup** — §5.19 wiki-recovery Fix link 영역 (이미 종결). §5.21 은 *향후 ingest* 만 cover.
+- **§5.20 Knowledge Gap surface** — broken wikilink 제거 후 mention 자체는 plain text 로 남음. 사용자 의도 진단 (gap candidate 등재 / report 자동 생성) 은 §5.20 영역 (별 cycle).
 
 ## 1. Specs
 
@@ -65,6 +67,17 @@ version: v0.3
   - **AC-S2-1**: §5.19 broken category "대문자 차이" 116건 → 0 (canonicalize 후 자체 페이지 매치).
   - **AC-S2-2**: ingest test fixture (mixed case mention) → 결과 wikilink **target 모두 lowercase canonical**, alias 는 원형 보존.
   - **AC-S2-3**: idempotent — 동일 fixture 2회 ingest → wikilink 본문 byte-identical.
+
+### Spec 3: Vault page 미존재 wikilink → plain text (근본 원인 2, v0.4 신규)
+
+- **Goal**: LLM ingest 출력 의 wikilink target 이 vault wiki page set (이번 ingest 가 만들 entity/concept/source + 기존 wiki/entities + wiki/concepts + wiki/sources) 의 어디에도 매치 안 되면 plain text 변환. `[[claude-desktop]]` 본문에 있는데 `wiki/entities/claude-desktop.md` 미존재 → `claude-desktop` plain text + log entry. Scope = Spec 1 과 동일 (I7 exempt).
+- **Invariants** (v0.4 신규):
+  - I9 (vault membership check): 모든 wikilink target (extension/raw-filename/canonical 모두) 의 canonicalize 결과가 `existingBases` set 의 어디에도 매치 안 되면 plain text 변환 + reason `'mention-only'`. existingBases scope = `mentionGuardBases` = 이번 ingest set ∪ vault 기존 page set (3 카테고리).
+  - I10 (Spec 1/2 우선순위): extension (I1) / raw-filename (I2) / case-normalize+matched (I4) → 각자 자체 변환 후 종료. **I9 는 default fallback** — 위 분기 모두 통과한 already-canonical wikilink 가 vault page 미매치일 때 발동.
+- **Acceptance**:
+  - **AC-S3-1**: vault page set 미존재 wikilink (`[[unknown-entity]]`, vault 에 없음) → plain text 변환 (`unknown-entity` 또는 alias). log entry `reason: 'mention-only'`.
+  - **AC-S3-2**: vault page set 매치 wikilink (`[[claude]]`, `wiki/entities/claude.md` 존재) → 변환 0 (no-op). log entry 0.
+  - **AC-S3-3**: 신규 ingest 가 만들 entity 도 매치 (`[[new-entity]]` + 이번 ingest 가 `wiki/entities/new-entity.md` 생성 예정) → 변환 0. 매 cycle 의 mentionGuardBases 는 이번 ingest set + vault 기존 set 합집합.
 
 ## 1.5 의문점 LOCK 결정 v0.2 (Step A, 2026-05-13)
 
@@ -166,3 +179,4 @@ codex review (NEEDS_REVISION, 7 finding) 의 7 issue master 직접 fix 반영:
 - v0.1 (2026-05-12): draft 신규. §5.19 분석 결과 (3 근본 원인) cross-link. §5.20 와 책임 분리 (mention only entity = §5.20).
 - v0.2 (2026-05-13): Step A LOCK. Q1 (하이브리드) / Q2 (plain text + log) / Q3 (target 만) 결정 + 근거 + Karpathy 4 원칙 cross-check (§1.6). Spec 1 invariants 갱신 (I1 plain text 명시 / I3 prompt hint 신규) + AC-S1-3 신규 (mention-guard log entry 형식). Spec 2 invariants 갱신 (I4 → I4/I5/I6 분리, alias preserve 명시) + AC-S2-3 신규 (idempotent). Out of Scope 4번째 추가 (mention-guard log UI). Dependencies 갱신 (log.md append + analyses page 누적). Step A 종결 표기.
 - v0.3 (2026-05-13): codex Mode D Panel review NEEDS_REVISION 7 finding (HIGH 2 + MEDIUM 3 + LOW 2) master 직접 fix. (1) HIGH-1 recursive feedback 회피 — log 위치 `wiki/analyses/mention-guard-<date>.md` → `.wikey/mention-guard-<date>.jsonl` (wiki/ 외부); `wiki/log.md` summary 는 raw `[[X]]` 미포함 텍스트만 (§1.5 Q2 + AC-S1-3 갱신). (2) HIGH-2 §5.13 source link 충돌 회피 — Spec 1 Goal scope 명시 + I7 신규 (scope exempt) + AC-S1-4 신규 (`## 출처` exempt fixture). (3) MEDIUM-3 evidence path 정정 — `phase-5-result.md §5.19.7` (~4188+) 로 변경. (4) MEDIUM-4 §5.20 handoff wording "future §5.20 extension" 으로 약화. (5) MEDIUM-5 baseline 585 통일 + overlap math 명시 (53% before overlap, ~24 overlap, ~49% union). (6) LOW-6 Step A byte-mirror — spec § 4 AC-S2-3 명시 + todox v0.3 mirror. (7) LOW-7 신규 parser API I8 (`parseWikilinksWithRanges` returning `{ original, target, alias, range }`). Dependencies 갱신 (wiki-ops.ts:488 재사용 불가 명시). mention-guard.ts LOC 한계 200 → 250 (scope exempt + parser 추가).
+- v0.4 (2026-05-13): **사용자 raise — mention-only (67%, 390건) 도 §5.21 cover 영역 확장**. spec title "근본 원인 1+3" → "1+2+3". Spec 3 신규 (vault page 미존재 wikilink → plain text, I9/I10 + AC-S3-1~3). Out of Scope §5.20 wording 갱신 (§5.20 는 진단/surface, §5.21 은 제거/clean — 동시 운영). cover scope ~49% → **~100%** (deterministic). reason enum 에 `'mention-only'` 추가. existingBases scope 확장 — 이번 ingest set ∪ vault 기존 wiki/entities + wiki/concepts + wiki/sources base set (ingest-pipeline.ts:536-541 의 existingEntityBases/existingConceptBases 재사용 + wiki/sources list 추가).

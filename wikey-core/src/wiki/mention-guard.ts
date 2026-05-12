@@ -36,7 +36,7 @@ export interface MentionGuardOptions {
   readonly existingBases?: ReadonlySet<string>
 }
 
-export type MentionGuardReason = 'extension' | 'raw-filename' | 'case-normalize'
+export type MentionGuardReason = 'extension' | 'raw-filename' | 'case-normalize' | 'mention-only'
 
 export interface MentionGuardLogEntry {
   readonly phase: 'ingest'
@@ -164,7 +164,29 @@ function classifyLink(
     return buildPlainTextReplacement(link, 'raw-filename')
   }
 
-  return buildCanonicalReplacement(link, userAliases)
+  // I4/I5/I6 — case normalize when canonical differs from target.
+  const canonical = buildCanonicalReplacement(link, userAliases)
+  if (canonical !== null) {
+    // After canonicalization, verify vault membership (I9). When the
+    // canonical slug is absent from the existing page set, degrade to
+    // plain text instead of emitting a still-broken wikilink.
+    if (existingBases && existingBases.size > 0) {
+      const canonicalSlug = canonicalizeSlug(link.target.toLowerCase(), userAliases)
+      if (!existingBases.has(canonicalSlug)) {
+        return buildPlainTextReplacement(link, 'mention-only')
+      }
+    }
+    return canonical
+  }
+
+  // I9 — target is already canonical; degrade to plain text when the page
+  // does not exist in the vault page set (root cause 2, mention-only).
+  // When existingBases is unprovided (legacy callers / pure-function tests
+  // without context), preserve the wikilink to avoid false stripping.
+  if (existingBases && existingBases.size > 0 && !existingBases.has(link.target)) {
+    return buildPlainTextReplacement(link, 'mention-only')
+  }
+  return null
 }
 
 /**

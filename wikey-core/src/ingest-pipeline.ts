@@ -860,14 +860,21 @@ export async function ingest(
   const mentionGuardLog: MentionGuardLogEntry[] = []
   const guardedEntities = new Map<string, string>() // filename → guarded content
   const guardedConcepts = new Map<string, string>()
-  // Bases that exist in this ingest (entity / concept / source) for Spec 1 I2
-  // raw-filename slug → canonical wikilink fallback. Mirrors the per-block
-  // keepBases set used by stripBrokenWikilinks but lives in the broader scope
-  // so the post-process hook can pass it to mention-guard.
+  // §5.21 v0.4 — mention-guard existingBases set: this-ingest pages ∪ vault
+  // existing pages (entities + concepts + sources). I2 raw-filename fallback
+  // AND I9 mention-only fallback both consult this set. existingEntityBases /
+  // existingConceptBases are listed earlier (line ~536); wiki/sources is
+  // listed here once for completeness.
+  const existingSourceBases = (await wikiFS.list('wiki/sources').catch(() => []))
+    .filter((f) => f.endsWith('.md'))
+    .map((f) => f.replace(/\.md$/i, ''))
   const mentionGuardBases = new Set<string>()
   for (const e of parsed.entities ?? []) mentionGuardBases.add(normalizeBase(e.filename))
   for (const c of parsed.concepts ?? []) mentionGuardBases.add(normalizeBase(c.filename))
   mentionGuardBases.add(normalizeBase(parsed.source_page.filename))
+  for (const b of existingEntityBases) mentionGuardBases.add(normalizeBase(b))
+  for (const b of existingConceptBases) mentionGuardBases.add(normalizeBase(b))
+  for (const b of existingSourceBases) mentionGuardBases.add(normalizeBase(b))
   const guardedPageContent = (raw: string, page: string): string => {
     const res = applyMentionGuard(raw, { sourceSha: v3Meta.id, page, userAliases, existingBases: mentionGuardBases })
     if (res.log.length > 0) mentionGuardLog.push(...res.log)

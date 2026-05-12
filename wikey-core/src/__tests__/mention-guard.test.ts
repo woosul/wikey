@@ -85,7 +85,7 @@ describe('§5.21 mention-guard — Spec 1 (raw filename → plain text + log)', 
       expect(entry.page).toBe('concepts/sample-pdf')
       expect(typeof entry.original).toBe('string')
       expect(typeof entry.transformed).toBe('string')
-      expect(['extension', 'raw-filename', 'case-normalize']).toContain(entry.reason)
+      expect(['extension', 'raw-filename', 'case-normalize', 'mention-only']).toContain(entry.reason)
     }
     // At least one entry corresponds to the .pdf transformation.
     const pdfEntry = res.log.find((e) => e.original === '[[whitepaper.pdf]]')
@@ -160,6 +160,74 @@ describe('§5.21 mention-guard — Spec 2 (canonicalize target, preserve alias, 
     expect(second.content).toBe(first.content)
     // Second pass log is empty (nothing left to transform).
     expect(second.log.length).toBe(0)
+  })
+})
+
+describe('§5.21 mention-guard — Spec 3 (vault membership, mention-only fallback)', () => {
+  // existingBases mirrors mentionGuardBases from ingest-pipeline (this-ingest ∪ vault).
+  const existingBases = new Set<string>(['claude', 'source-existing'])
+
+  it('AC-S3-1: vault-absent wikilink target degrades to plain text with reason mention-only', () => {
+    // 근본 원인 2 (67%, 390건) — page 미존재 wikilink → plain text.
+    const input = loadFixture('mention-only.md')
+
+    const res = applyMentionGuard(input, {
+      sourceSha: 'sha-mo',
+      page: 'concepts/mention-only',
+      existingBases,
+    })
+
+    // `[[unknown-entity]]` is degraded (not in existingBases).
+    expect(res.content).not.toContain('[[unknown-entity]]')
+    expect(res.content).toContain('unknown-entity')
+    // `[[ghost-concept|Ghost Concept]]` degrades to its alias (display text).
+    expect(res.content).not.toContain('[[ghost-concept|Ghost Concept]]')
+    expect(res.content).toContain('Ghost Concept')
+    // `[[mythical-tool|레전드 도구]]` degrades to its alias.
+    expect(res.content).not.toContain('[[mythical-tool|')
+    expect(res.content).toContain('레전드 도구')
+
+    // log entries reference the missing-page wikilinks with reason 'mention-only'.
+    const missing = ['[[unknown-entity]]', '[[ghost-concept|Ghost Concept]]', '[[mythical-tool|레전드 도구]]']
+    for (const original of missing) {
+      const entry = res.log.find((e) => e.original === original)
+      expect(entry, `log entry for ${original}`).toBeDefined()
+      expect(entry?.reason).toBe('mention-only')
+    }
+  })
+
+  it('AC-S3-2: vault-present wikilink target is preserved (no-op)', () => {
+    // `[[claude]]` matches existingBases — no transformation, no log entry.
+    const input = loadFixture('mention-only.md')
+
+    const res = applyMentionGuard(input, {
+      sourceSha: 'sha-mo',
+      page: 'concepts/mention-only',
+      existingBases,
+    })
+
+    // [[claude]] survives because it is in existingBases.
+    expect(res.content).toContain('[[claude]]')
+    // No log entry references [[claude]] (matched, no transform).
+    expect(res.log.some((e) => e.original === '[[claude]]')).toBe(false)
+  })
+
+  it('AC-S3-3: this-ingest pages count as members of the existingBases set', () => {
+    // new page being created in this ingest should match too (caller composes the set).
+    const baseSet = new Set<string>(['claude', 'source-existing', 'unknown-entity'])
+    const input = loadFixture('mention-only.md')
+
+    const res = applyMentionGuard(input, {
+      sourceSha: 'sha-mo',
+      page: 'concepts/mention-only',
+      existingBases: baseSet,
+    })
+
+    // Now [[unknown-entity]] should survive (it is registered as a this-ingest page).
+    expect(res.content).toContain('[[unknown-entity]]')
+    expect(res.log.some((e) => e.original === '[[unknown-entity]]')).toBe(false)
+    // ghost-concept and mythical-tool remain missing → still degraded.
+    expect(res.log.some((e) => e.reason === 'mention-only')).toBe(true)
   })
 })
 

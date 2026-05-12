@@ -2,7 +2,7 @@
 
 > **상위 문서**: [`plan/phase-5/phase-5-todo.md §5.21`](./phase-5-todo.md) · [`plan/phase-5/phase-5-spec-5.21-ingest-mention-guard.md`](./phase-5-spec-5.21-ingest-mention-guard.md)
 >
-> **버전**: v0.3 (2026-05-13) — Step A LOCK + codex Mode D Panel review NEEDS_REVISION 7 finding fix 반영.
+> **버전**: v0.4 (2026-05-13) — Spec 3 (mention-only cover) 확장. 사용자 raise "mention-only 도 post-process 로 제거 가능". §5.21 cover ~49% → **~100%** (deterministic).
 
 ## 진행 매트릭스 (Step A~G)
 
@@ -70,3 +70,4 @@ Step A LOCK + codex v0.3 fix 완료. 다음 Step B 진행 가능. tester RED pro
 - v0.1 (2026-05-12): draft 신규.
 - v0.2 (2026-05-13): Step A LOCK. Q1/Q2/Q3 결정 + 근거 + Karpathy 4 원칙 cross-check 추가. 변경 면 추정 갱신 (fixture 4, AC 6, prompt hint + log entry 신규). Step A 체크박스 [x]. Step B 진행 가능 명시.
 - v0.3 (2026-05-13): codex Mode D Panel review NEEDS_REVISION 7 finding (HIGH 2 + MEDIUM 3 + LOW 2) master 직접 fix. log 위치 `.wikey/` 외부 변경 (HIGH-1 recursive feedback 회피) / §5.13 source link scope exempt I7 신규 (HIGH-2) / fixture 5 + AC 7 / 신규 parser API I8 / LOC 한계 200 → 250 / `wiki/log.md` summary raw `[[X]]` 미포함 명시.
+- v0.4 (2026-05-13): **사용자 raise — mention-only (67%, 390건) 도 post-process 로 cover 가능**. Spec 3 신규 (I9/I10 + AC-S3-1~3). reason enum 에 `'mention-only'` 추가. classifyLink default 분기 확장 — 모든 wikilink target 의 canonicalize 결과가 existingBases 미존재 시 plain text. existingBases scope 확장 — 이번 ingest set ∪ vault 기존 wiki/entities + wiki/concepts + wiki/sources (ingest-pipeline.ts existingEntityBases/existingConceptBases 재사용 + 신규 existingSourceBases). fixture 6 (mention-only) + test 3 (AC-S3-1~3) sweep 의무. cover 비율 ~49% → ~100% (deterministic).
