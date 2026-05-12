@@ -2840,11 +2840,24 @@ a.internal-link.wikey-broken-link,
 .wikey-maintenance-modal-step-3-running {
   font-style: italic;
   color: var(--text-muted);
+  margin-bottom: 16px;
 }
 
 .wikey-maintenance-modal-step-3 {
   font-weight: 500;
   color: var(--text-success, var(--text-normal));
+  margin-bottom: 16px;
+}
+
+/* §5.21 follow-up (사용자 raise 2026-05-13) — Select all / Deselect all toggle row. */
+.wikey-maintenance-modal-select-toggle {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.wikey-maintenance-modal-select-toggle button {
+  font-size: 0.85em;
+  padding: 4px 10px;
 }
 
 /* §5.19 cycle #3 Finding 3 — step-2 confirm checkbox UI (in-modal). */

@@ -724,11 +724,36 @@ function renderConfirmActions(
   shaCheckboxes: readonly ShaCheckbox[],
   autoCheckboxes: readonly BrokenCheckbox[],
   fuzzyControls: readonly FuzzyControl[],
-  // Manual rows currently feed an "intent only" log — no replacement slug is
-  // available, so the [실행] dispatch drops them (Batch 6 scope: surface them).
-  _manualCheckboxes: readonly ManualCheckbox[],
+  manualCheckboxes: readonly ManualCheckbox[],
   staleTombstoneCheckboxes: readonly StaleTombstoneCheckbox[],
 ): void {
+  // §5.21 follow-up (사용자 raise 2026-05-13) — Select all / Deselect all 토글.
+  // 수백 개 checkbox 수동 클릭 회피. 모든 section 의 checkbox + fuzzy select 행을
+  // 일괄 토글 (auto / fuzzy / manual / sha / stale-tombstone 모두 영향).
+  const allInputs: HTMLInputElement[] = [
+    ...shaCheckboxes.map((c) => c.input),
+    ...autoCheckboxes.map((c) => c.input),
+    ...fuzzyControls.map((c) => c.input),
+    ...manualCheckboxes.map((c) => c.input),
+    ...staleTombstoneCheckboxes.map((c) => c.input),
+  ]
+  if (allInputs.length > 0) {
+    const toggleRow = actionEl.createDiv({ cls: 'wikey-maintenance-modal-select-toggle' })
+    const selectAllBtn = toggleRow.createEl('button', {
+      text: `Select all (${allInputs.length})`,
+      cls: 'wikey-maintenance-modal-select-all-btn',
+    })
+    selectAllBtn.addEventListener('click', () => {
+      for (const inp of allInputs) inp.checked = true
+    })
+    const deselectAllBtn = toggleRow.createEl('button', {
+      text: 'Deselect all',
+      cls: 'wikey-maintenance-modal-deselect-all-btn',
+    })
+    deselectAllBtn.addEventListener('click', () => {
+      for (const inp of allInputs) inp.checked = false
+    })
+  }
   const btnRow = actionEl.createDiv({ cls: 'wikey-maintenance-modal-action-buttons' })
   const execBtn = btnRow.createEl('button', {
     text: 'Execute',
