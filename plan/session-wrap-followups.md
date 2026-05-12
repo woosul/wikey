@@ -1,10 +1,20 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-13 session 39 진행 중 — §5.22 + §5.19 v0.5 + v0.5 follow-up 모두 종결, §5.21 진입 예정**. 본 세션 누적: 4 commit (§5.22 / phase-5 sweep / §5.19 v0.5 / v0.5 follow-up). 1088 PASS / build 0. `wikey.schema.md §핵심 원칙 #6` + `CLAUDE.md §시스템 언어 = 영문` LOCK 신규. `/sync` 스킬 §0-4.5.5 (완료 체크박스 갱신 의무 v8.4) + CLAUDE.md §문서 동기화 플로우 Step 2 신규.
+> 최신 갱신: **2026-05-13 session 40 — §5.21 Ingest mention guard SDD+TDD 7 step 모두 종결**. 1095 PASS (1088 + 7 신규) / build 0 / validate-wiki 458 → 447 (-11). 라이브 CDP smoke 2 cycle PASS (cobit + Obsidian Web Clipper). codex 2 cycle review (Step A + Step F) 11 finding 모두 master 직접 fix.
 >
-> ## 다음 세션 첫 액션 (Session 40) — §5.21 SDD+TDD 진입
+> ## 다음 세션 첫 액션 (Session 41) — §5.20 Knowledge Gap SDD+TDD 진입
 >
-> **§5.21 Ingest mention guard (P2)** — broken wikilink 근본 원인 1+3 fix (raw filename guard + canonicalizer 호출 강제). §5.19 분석 결과 (390+195+116 broken = 49% 비율) cover. 다음 = analyst Step A v0.2 (Q1 LLM prompt vs post-process / Q2 reject vs plain text / Q3 canonicalizer scope LOCK).
+> **§5.20 Knowledge Gap management (P2)** — §5.21 종결 후 Phase 5 잔여 5 subject 중 우선. Spec scope = query log capture + privacy + gap score formula + auto-report. §5.21 의 근본 원인 2 (mention only entity, 390건 67%) 도 §5.20 후속 확장 영역. 다음 = analyst Step A v0.2 (Q1 query log 저장 위치 / Q2 topic clustering LLM / Q3 자동 schedule scope / Q4 gap score formula 단위 LOCK).
+
+## Session 40 종결 종합 (2026-05-13)
+
+**§5.21 Ingest pipeline mention guard (P2)** ✅ — broken wikilink 근본 원인 1+3 (raw filename + case-insensitive) cover. SDD+TDD 7 step 모두 통과. mention-guard.ts 228 LOC (pure function, 6 helper) + ingest-pipeline.ts hook + canonicalizer prompt hint. Karpathy 4 원칙 모두 충족. activity: `phase-5-resultx-5.21-ingest-mention-guard-2026-05-13.md`.
+
+**codex 2 cycle review** — Step A (NEEDS_REVISION 7 finding: HIGH 2 recursive feedback + scope exempt / MEDIUM 3 evidence + handoff + numeric / LOW 2 mirror + parser) + Step F post-impl (NEEDS_REVISION 4 finding: HIGH disk write + MEDIUM existingBases + MEDIUM guarded propagation + LOW canonicalizer prompt). 11 finding 모두 master 직접 fix.
+
+**master 라이브 CDP smoke 2 cycle** — test-stage3-cobit.md (54s preview + 65s write, source+concept new) + Obsidian Web Clipper.md (39s preview + 74s write, source new + obsidian entity update). broken 458 → 447 (-11). extension no-alias 195 baseline 유지 (회귀 0). source link 원문 I7 exempt 195 → 196 (보존 확증 — `[[Obsidian Web Clipper.md|원문]]` 정상 보존).
+
+**Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9 / §5.20** (5 subject).
 >
 > ## Session 39 종결 종합 (2026-05-12~13)
 >

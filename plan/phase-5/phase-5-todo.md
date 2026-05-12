@@ -2541,19 +2541,19 @@ v0.5 follow-up (Session 39, 2026-05-13):
 
 ---
 
-## 5.21 Ingest pipeline mention guard — broken wikilink 근본 원인 1+3 fix (P2)
-> tag: #ingest, #mention-guard, #canonicalizer
-> **draft v0.1 (2026-05-12)** — §5.19 v0.4 broken wikilink 585건 철저 분석 결과 신규 등재. 근본 원인 1 (raw filename 33%) + 근본 원인 3 (case-insensitive 20%) cover.
+## 5.21 Ingest pipeline mention guard — broken wikilink 근본 원인 1+3 fix (P2) ✅
+> tag: #ingest, #mention-guard, #canonicalizer, #done
+> **v0.3 종결 (2026-05-13 session 40)** — SDD+TDD 7 Step 모두 통과. codex 2 cycle review (Step A + Step F) 7+4 = 11 finding 모두 master 직접 fix. 단위 7/7 PASS + 회귀 1095 PASS + build 0 errors + 라이브 CDP 2 cycle smoke PASS. broken 458 → 447 (-11) / extension no-alias 195 baseline 유지 (회귀 0) / source link 원문 I7 exempt 195 → 196 (보존 확증).
 >
-> **상위 plan**: [`plan/phase-5/phase-5-spec-5.21-ingest-mention-guard.md`](./phase-5-spec-5.21-ingest-mention-guard.md) · [`plan/phase-5/phase-5-todox-5.21-ingest-mention-guard.md`](./phase-5-todox-5.21-ingest-mention-guard.md)
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.21-ingest-mention-guard.md`](./phase-5-spec-5.21-ingest-mention-guard.md) · [`plan/phase-5/phase-5-todox-5.21-ingest-mention-guard.md`](./phase-5-todox-5.21-ingest-mention-guard.md) · [`activity/phase-5/phase-5-resultx-5.21-ingest-mention-guard-2026-05-13.md`](../../activity/phase-5/phase-5-resultx-5.21-ingest-mention-guard-2026-05-13.md)
 
-- [ ] **Step A — analyst v0.2 LOCK** (Q1 위치 / Q2 강도 / Q3 canonicalizer scope LOCK + 근본 원인 1+3 scope 명확화)
-- [ ] **Step B — tester RED** (ingest fixture 2 case + AC-S1/S2 4 test)
-- [ ] **Step C — developer GREEN** (`wikey-core/src/wiki/mention-guard.ts` 신규 + Stage 2 hook)
-- [ ] **Step D — Phase 3a 회귀**
-- [ ] **Step E — Phase 3b BLUE**
-- [ ] **Step F — codex post-impl review**
-- [ ] **Step G — master 라이브 smoke** (실 source 재 ingest → broken count -49% 예상)
+- [x] **Step A — analyst v0.2 LOCK + codex review v0.3 fix** (2026-05-13)
+- [x] **Step B — tester RED** (2026-05-13: fixture 5 + test 7 + stub 1, 7/7 FAIL)
+- [x] **Step C — developer GREEN** (2026-05-13: mention-guard.ts 194 LOC + hook +23 LOC, 7/7 PASS)
+- [x] **Step D — Phase 3a 회귀** (2026-05-13: wikey-core 907 / wikey-obsidian 188 / build 0)
+- [x] **Step E — Phase 3b BLUE** (2026-05-13: helper rename + 주석 정리)
+- [x] **Step F — codex post-impl review** (2026-05-13: cycle #2 NEEDS_REVISION 4 finding master 직접 fix → disk write + I2 existingBases + guarded propagation + canonicalizer prompt hint)
+- [x] **Step G — master 라이브 smoke** (2026-05-13: CDP 2 cycle, broken 458 → 447, I7 source link exempt 195 → 196 보존)
 
 ---
 

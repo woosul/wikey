@@ -48,6 +48,7 @@ import {
 } from './incremental-reingest.js'
 import { canonicalize, applyCeilingCap, type ProposalForCeiling } from './canonicalizer.js'
 import { loadUserAliases } from './schema.js'
+import { applyMentionGuard, type MentionGuardLogEntry } from './wiki/mention-guard.js'
 import { loadPromotionThreshold, loadPromotionConfig } from './promotion-config.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
@@ -852,19 +853,51 @@ export async function ingest(
   // §5.17 Spec 2 P1 integration — batch yield via writePagesWithBatchYield.
   // v0.3 codex cycle #1 P1 closure: sequential `for...await` 대체. exists check 는
   // pre-loop 에서 일괄 수행 (created/updated 추적 보존). pathPrefix='wiki/' 로 createPage 와 동일 path.
+  // §5.21 mention-guard: deterministic post-process for raw filename / extension
+  // / case-normalize wikilink violations. Per Spec 1/2 (I1/I2/I4/I5/I6/I7/I8).
+  // Guarded content propagates to writtenPages + return payload so index.md /
+  // log.md autofill never reintroduce raw wikilinks (codex Step F MEDIUM #3).
+  const mentionGuardLog: MentionGuardLogEntry[] = []
+  const guardedEntities = new Map<string, string>() // filename → guarded content
+  const guardedConcepts = new Map<string, string>()
+  // Bases that exist in this ingest (entity / concept / source) for Spec 1 I2
+  // raw-filename slug → canonical wikilink fallback. Mirrors the per-block
+  // keepBases set used by stripBrokenWikilinks but lives in the broader scope
+  // so the post-process hook can pass it to mention-guard.
+  const mentionGuardBases = new Set<string>()
+  for (const e of parsed.entities ?? []) mentionGuardBases.add(normalizeBase(e.filename))
+  for (const c of parsed.concepts ?? []) mentionGuardBases.add(normalizeBase(c.filename))
+  mentionGuardBases.add(normalizeBase(parsed.source_page.filename))
+  const guardedPageContent = (raw: string, page: string): string => {
+    const res = applyMentionGuard(raw, { sourceSha: v3Meta.id, page, userAliases, existingBases: mentionGuardBases })
+    if (res.log.length > 0) mentionGuardLog.push(...res.log)
+    return res.content
+  }
+
   const entityWrites: BatchWritePage[] = []
   for (const entity of parsed.entities ?? []) {
-    const content = provenanceEntry ? injectProvenance(entity.content, provenanceEntry) : entity.content
+    const provenanced = provenanceEntry ? injectProvenance(entity.content, provenanceEntry) : entity.content
+    const content = guardedPageContent(provenanced, `entities/${normalizeBase(entity.filename)}`)
+    guardedEntities.set(entity.filename, content)
     const entityExists = await wikiFS.exists(`wiki/entities/${entity.filename}`)
     ;(entityExists ? updatedPages : createdPages).push(entity.filename)
     entityWrites.push({ filename: entity.filename, content, category: 'entities' })
   }
   const conceptWrites: BatchWritePage[] = []
   for (const concept of parsed.concepts ?? []) {
-    const content = provenanceEntry ? injectProvenance(concept.content, provenanceEntry) : concept.content
+    const provenanced = provenanceEntry ? injectProvenance(concept.content, provenanceEntry) : concept.content
+    const content = guardedPageContent(provenanced, `concepts/${normalizeBase(concept.filename)}`)
+    guardedConcepts.set(concept.filename, content)
     const conceptExists = await wikiFS.exists(`wiki/concepts/${concept.filename}`)
     ;(conceptExists ? updatedPages : createdPages).push(concept.filename)
     conceptWrites.push({ filename: concept.filename, content, category: 'concepts' })
+  }
+  if (mentionGuardLog.length > 0) {
+    log(`mention-guard: ${mentionGuardLog.length} variations applied`)
+    // §5.21 Spec 1 AC-S1-3 — persist JSON entries outside wiki/ to avoid the
+    // §5.19 v0.4 recursive-feedback pattern (analyses pages containing raw
+    // [[X]] caused the wiki-check loop). Path is vault-local hidden dir.
+    await persistMentionGuardLog(wikiFS, today, mentionGuardLog)
   }
   await writePagesWithBatchYield({
     wikiFS, pages: [...entityWrites, ...conceptWrites], batchSize: 10, pathPrefix: 'wiki/',
@@ -873,11 +906,12 @@ export async function ingest(
   log(`pages written — created=${createdPages.length}, updated=${updatedPages.length}`)
 
   // Phase A: Build writtenPages for deterministic index/log backfill.
-  // Every page actually written (regardless of whether the LLM mentioned it) is registered.
+  // §5.21 codex Step F MEDIUM #3 — use guarded content (matches disk write) so
+  // index.md / log.md autofill never reintroduce raw wikilinks.
   const writtenPages: WrittenPage[] = [
     { filename: sourcePage.filename, category: 'sources', content: sourcePage.content },
-    ...(parsed.entities ?? []).map((e) => ({ filename: e.filename, category: 'entities' as const, content: e.content })),
-    ...(parsed.concepts ?? []).map((c) => ({ filename: c.filename, category: 'concepts' as const, content: c.content })),
+    ...(parsed.entities ?? []).map((e) => ({ filename: e.filename, category: 'entities' as const, content: guardedEntities.get(e.filename) ?? e.content })),
+    ...(parsed.concepts ?? []).map((c) => ({ filename: c.filename, category: 'concepts' as const, content: guardedConcepts.get(c.filename) ?? c.content })),
   ]
 
   // Tag LLM-provided index_additions by category so wiki-ops places them in the right section.
@@ -899,9 +933,15 @@ export async function ingest(
   // log.md: always append an entry, using LLM body if available, else build deterministic header.
   // Auto-fill missing pages so the log reflects what was actually written.
   // (today already declared at top of ingest() for canonicalizer)
+  // §5.21 Spec §1.5 Q2 — mention-guard summary 1 line (raw [[X]] 미포함).
   const llmBody = parsed.log_entry?.trim() ?? ''
   const entryHeader = `## [${today}] ingest | ${sourceFilename}`
-  const entry = llmBody ? `${entryHeader}\n\n${llmBody}` : `${entryHeader}\n`
+  const mentionGuardSummary = mentionGuardLog.length > 0
+    ? `\n- mention-guard: ${mentionGuardLog.length} variations applied`
+    : ''
+  const entry = llmBody
+    ? `${entryHeader}\n\n${llmBody}${mentionGuardSummary}`
+    : `${entryHeader}${mentionGuardSummary}\n`
   await appendLog(wikiFS, entry, writtenPages)
   log(`log.md prepended`)
   log(`step 3 page write done in ${Date.now() - tStep3_0}ms (${createdPages.length} created, ${updatedPages.length} updated)`)
@@ -922,16 +962,43 @@ export async function ingest(
     sourcePage,
     entities: (parsed.entities ?? []).map((e) => ({
       filename: e.filename,
-      content: e.content,
+      content: guardedEntities.get(e.filename) ?? e.content,
       category: 'entities' as const,
     })),
     concepts: (parsed.concepts ?? []).map((c) => ({
       filename: c.filename,
-      content: c.content,
+      content: guardedConcepts.get(c.filename) ?? c.content,
       category: 'concepts' as const,
     })),
     indexAdditions: parsed.index_additions ?? [],
     logEntry: parsed.log_entry ?? '',
+  }
+}
+
+/**
+ * §5.21 Spec 1 AC-S1-3 — append mention-guard log entries (JSON Lines) to
+ * `.wikey/mention-guard-<YYYY-MM-DD>.jsonl`. Path is *outside* wiki/ so the
+ * §5.19 v0.4 recursive-feedback pattern (analyses pages containing raw
+ * `[[X]]` re-triggering broken-link detection) cannot recur.
+ *
+ * Failure here must not abort ingest — log persistence is observational.
+ */
+async function persistMentionGuardLog(
+  wikiFS: WikiFS,
+  today: string,
+  entries: readonly MentionGuardLogEntry[],
+): Promise<void> {
+  const path = `.wikey/mention-guard-${today}.jsonl`
+  try {
+    const existing = await wikiFS.read(path).catch(() => '')
+    const appended = entries.map((e) => JSON.stringify(e)).join('\n')
+    const next = existing.length > 0
+      ? `${existing.replace(/\n+$/, '')}\n${appended}\n`
+      : `${appended}\n`
+    await wikiFS.write(path, next)
+  } catch (err) {
+    // observational — debug log only.
+    console.warn(`[mention-guard] failed to persist log to ${path}:`, err)
   }
 }
 
@@ -1112,6 +1179,10 @@ Source: {{SOURCE_FILENAME}}
   ]
 }
 \`\`\`
+
+## 위키링크 규칙 (§5.21 — wikilink target)
+
+위키링크 target 은 canonical slug 만 사용. **파일 확장자 (\`.md\` / \`.pdf\` / \`.docx\` 등) 포함 금지**, raw filename 그대로 사용 금지 — 소문자·하이픈 구분의 canonical slug 로 변환된 형태만 emit.
 
 ## 청크 본문
 

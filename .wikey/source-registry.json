@@ -294,5 +294,47 @@
     "duplicate_locations": [
       "raw/0_inbox/smart-factory-test-5.17.hwp"
     ]
+  },
+  "sha256:a19faedc58facc20": {
+    "vault_path": "raw/3_resources/60_note/000_computer_science/cobit/test-stage3-cobit.md",
+    "hash": "a19faedc58facc2096709fd6ff37f59dbd44248deed0d3e2417f8d2fb8769852",
+    "size": 847,
+    "first_seen": "2026-05-12T16:38:30.282Z",
+    "ingested_pages": [
+      "wiki/sources/source-cobit-2019-overview.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/test-stage3-cobit.md",
+        "at": "2026-05-12T16:38:30.282Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/000_computer_science/cobit/test-stage3-cobit.md",
+        "at": "2026-05-12T16:39:41.206Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:40ffb05d4546c225": {
+    "vault_path": "raw/3_resources/60_note/500_technology/Obsidian Web Clipper.md",
+    "hash": "40ffb05d4546c225b1d51543755e9f7d9d98d096fc54aaefb03fa4481fccd68c",
+    "size": 1764,
+    "first_seen": "2026-05-12T16:41:57.193Z",
+    "ingested_pages": [
+      "wiki/sources/source-obsidian-web-clipper.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/Obsidian Web Clipper.md",
+        "at": "2026-05-12T16:41:57.193Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/Obsidian Web Clipper.md",
+        "at": "2026-05-12T16:43:11.177Z"
+      }
+    ],
+    "tombstone": false,
+    "last_action": "force"
   }
 }

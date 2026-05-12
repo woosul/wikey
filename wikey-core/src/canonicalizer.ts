@@ -288,6 +288,10 @@ ${guideBlock}
 
 ${mentionsBlock}
 
+## §5.21 wikilink rule (LLM 출력 description 본문 적용)
+
+description 본문 안 \`[[X]]\` wikilink 작성 시: target X 는 canonical slug (소문자, 하이픈 구분) 만 사용. raw filename 또는 file extension (\`.md\` / \`.pdf\` / \`.docx\` / \`.hwp\` / \`.pptx\` / \`.txt\`) 포함 금지. 공백 / 한글 raw 형식 금지. 예: \`[[gpt-4o]]\` ✅, \`[[GPT-4o]]\` ❌, \`[[some-source.pdf]]\` ❌.
+
 ## 출력 형식
 
 JSON only:

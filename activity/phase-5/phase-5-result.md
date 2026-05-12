@@ -4334,3 +4334,34 @@ Session 39 사용자 추가 명시: "시스템 언어는 '영문'을 기준 문�
 - [x] Step G — master 직접 obsidian-cdp 라이브 smoke (R1~R7 + follow-up)
 
 → **§5.19 v0.5 + follow-up 종결**. 다음 = §5.21 Ingest mention guard SDD+TDD 진입.
+
+## 5.21 Ingest pipeline mention guard — broken wikilink 근본 원인 1+3 fix (2026-05-13 session 40)
+
+> #ingest #mention-guard #canonicalizer #done
+
+상세 evidence: [`activity/phase-5/phase-5-resultx-5.21-ingest-mention-guard-2026-05-13.md`](./phase-5-resultx-5.21-ingest-mention-guard-2026-05-13.md). spec v0.3 + todox v0.3.
+
+§5.19 v0.4 broken wikilink 585건 (de-duped) 분석에서 도출된 3 근본 원인 중 **근본 원인 1 (raw filename, 195건 33%) + 근본 원인 3 (case-insensitive, 116건 20%)** 을 ingest pipeline deterministic post-process guard 로 cover.
+
+| 항목 | 결과 |
+|------|------|
+| SDD+TDD step | Step A~G 7 step 모두 통과 (codex 2 cycle review = Step A + Step F, 7+4 = 11 finding 모두 master 직접 fix) |
+| 신규 file | `wikey-core/src/wiki/mention-guard.ts` (228 LOC pure function, 6 helper) + test (`mention-guard.test.ts` 7 case) + fixture 5 |
+| 기존 edit | `ingest-pipeline.ts` (post-process hook + `.wikey/mention-guard-<date>.jsonl` persist + log.md summary) + `canonicalizer.ts` (prompt hint) |
+| 단위 test | 7/7 PASS (RED → GREEN 전환 확증) |
+| 회귀 | wikey-core 907 PASS / wikey-obsidian 188 PASS = 1095 PASS (이전 1088 + 7 신규) |
+| build | 0 errors |
+| validate-wiki | 458 → 447 (-11, 새 entity page 가 기존 broken 일부 satisfied) |
+| 라이브 CDP smoke | 2 cycle (test-stage3-cobit + Obsidian Web Clipper) PASS. extension no-alias 195 baseline 유지 (회귀 0) / source link 원문 I7 exempt 195 → 196 (보존 확증) |
+
+Invariants I1~I8 (extension reject / raw-filename slug + existingBases fallback / prompt hint / canonicalize / alias preserve / idempotent / §5.13 source link exempt / parser with ranges) 전부 implement. Karpathy 4 원칙 (Explicit log entry, Yours plain text fallback + alias preserve, File over app pure deterministic, BYOAI post-process safety net) 모두 충족.
+
+- [x] Step A — analyst v0.2 LOCK + codex review v0.3 fix (7 finding)
+- [x] Step B — tester RED (fixture 5 + test 7 + stub 1, 7/7 FAIL)
+- [x] Step C — developer GREEN (mention-guard.ts 194 LOC + hook +23 LOC, 7/7 PASS)
+- [x] Step D — Phase 3a 회귀 (1095 PASS / 0 build errors)
+- [x] Step E — Phase 3b BLUE refactor (helper rename + 주석 정리)
+- [x] Step F — codex post-impl review (NEEDS_REVISION 4 finding master 직접 fix → disk write + I2 existingBases + guarded propagation + canonicalizer prompt hint)
+- [x] Step G — master 라이브 obsidian-cdp smoke (2 cycle PASS, I7 라이브 보존 확증)
+
+→ **§5.21 v0.3 종결**. Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9 / §5.20 (5 subject).
