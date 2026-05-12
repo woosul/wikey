@@ -164,12 +164,12 @@ async function findCompatibleNode(
       await execFileAsync(nodePath, [
         '-e', `require('${nativeModule.replace(/'/g, "\\'")}')`,
       ], { timeout: 5000 })
-      console.log(`[Wikey] qmd 호환 node 발견: ${nodePath}`)
+      console.log(`[Wikey] qmd-compatible node found: ${nodePath}`)
       return nodePath
     } catch (err: any) {
       const msg = err?.message ?? ''
       if (msg.includes('MODULE_VERSION')) {
-        console.log(`[Wikey] node ABI 불일치: ${nodePath} — 건너뜀`)
+        console.log(`[Wikey] node ABI mismatch: ${nodePath} — skipped`)
         continue
       }
       // MODULE_VERSION 외 다른 에러면 사용 가능할 수 있음
@@ -277,7 +277,7 @@ export async function detectEnvironment(
   if (searchEngine === 'qmd') {
     status.nodePath = await findCompatibleNode(basePath, env)
     if (!status.nodePath) {
-      issues.push('node를 찾을 수 없습니다. Node.js를 설치하세요.')
+      issues.push('node not found. Install Node.js.')
     }
   } else {
     // Orama default — Kiwi WASM in-process, ABI scan 불요.
@@ -287,7 +287,7 @@ export async function detectEnvironment(
   // 3. python3
   status.pythonPath = await which('python3', env)
   if (!status.pythonPath) {
-    issues.push('python3를 찾을 수 없습니다 (한국어 검색 제한됨).')
+    issues.push('python3 not found (Korean search limited).')
   }
 
   // 4. qmd — searchEngine === 'qmd' 시만 inline detect. default 는 skip (qmdPath = '').
@@ -301,7 +301,7 @@ export async function detectEnvironment(
       if (systemQmd) {
         status.qmdPath = systemQmd
       } else {
-        issues.push('qmd를 찾을 수 없습니다. tools/qmd/를 확인하세요.')
+        issues.push('qmd not found. Check tools/qmd/.')
       }
     }
   }
@@ -344,7 +344,7 @@ export async function detectEnvironment(
   // basePath/wikey-core/vendor/kiwi-nlp/dist/kiwi-wasm.wasm 존재 + plugin 자체 import 가능 시 ok.
   status.hasWikiNlp = checkWikiNlp(basePath)
   if (!status.hasWikiNlp) {
-    issues.push('Kiwi WASM vendor 부재 — wikey-core/vendor/kiwi-nlp/ 확인.')
+    issues.push('Kiwi WASM vendor missing — check wikey-core/vendor/kiwi-nlp/.')
   }
 
   status.issues = issues

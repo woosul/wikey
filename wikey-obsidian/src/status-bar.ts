@@ -79,7 +79,7 @@ class WikeyStatsModal extends Modal {
 
   onOpen(): void {
     const { contentEl } = this
-    contentEl.createEl('h2', { text: 'Wikey 통계' })
+    contentEl.createEl('h2', { text: 'Wikey stats' })
 
     const stats = this.collectStats()
 
@@ -125,12 +125,12 @@ class WikeyStatsModal extends Modal {
     }
 
     return [
-      ['엔티티', counts.entities],
-      ['개념', counts.concepts],
-      ['소스', counts.sources],
-      ['분석', counts.analyses],
-      ['메타 (index, log 등)', metaCount],
-      ['총 위키 페이지', total + metaCount],
+      ['Entities', counts.entities],
+      ['Concepts', counts.concepts],
+      ['Sources', counts.sources],
+      ['Analyses', counts.analyses],
+      ['Meta (index, log, etc.)', metaCount],
+      ['Total wiki pages', total + metaCount],
     ]
   }
 }

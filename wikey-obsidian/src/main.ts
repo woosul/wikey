@@ -445,7 +445,7 @@ export default class WikeyPlugin extends Plugin {
         return null
       }
       if (!fs.existsSync(modelDir)) {
-        new Notice('[Wikey] Kiwi 사전이 없습니다. ./scripts/download-kiwi-models.sh 실행을 권고합니다.', 8000)
+        new Notice('[Wikey] Kiwi dictionary missing. Run ./scripts/download-kiwi-models.sh.', 8000)
         console.warn(`[Wikey] Kiwi modelDir not found at ${modelDir}`)
         return null
       }
@@ -580,18 +580,18 @@ export default class WikeyPlugin extends Plugin {
             console.log('[Wikey] auto-ingest queued:', relPath, 'interval=', this.settings.autoIngestInterval)
             scheduleAutoIngest()
           } else {
-            new Notice(`inbox에 새 파일: ${name} — [+] 버튼에서 인제스트하세요.`)
+            new Notice(`New file in inbox: ${name} — use the [+] button to ingest.`)
           }
         } else if (isDoc && !file.path.includes('/_')) {
           bypassBatch.push(name)
-          console.log('[Wikey] inbox 우회 감지:', file.path)
+          console.log('[Wikey] inbox bypass detected:', file.path)
           if (bypassTimer) clearTimeout(bypassTimer)
           bypassTimer = setTimeout(() => {
             const count = bypassBatch.length
             if (count === 1) {
-              new Notice(`⚠ ${bypassBatch[0]}이 inbox를 거치지 않고 추가됨.\n인제스트 없이는 검색되지 않습니다.`, 8000)
+              new Notice(`⚠ ${bypassBatch[0]} was added without going through inbox.\nNot searchable until ingested.`, 8000)
             } else {
-              new Notice(`⚠ ${count}개 문서가 inbox를 거치지 않고 추가됨.\n👁 아이콘에서 확인하세요.`, 8000)
+              new Notice(`⚠ ${count} documents added without going through inbox.\nClick the 👁 icon to review.`, 8000)
             }
             bypassBatch = []
           }, 2000)
@@ -693,7 +693,7 @@ export default class WikeyPlugin extends Plugin {
     const batch = queue.splice(0, queue.length)
     if (batch.length === 0) return
     console.info(`[Wikey] auto-ingest flushing ${batch.length} file(s)`)
-    new Notice(`Auto-ingest: ${batch.length}개 파일 처리 시작`)
+    new Notice(`Auto-ingest: processing ${batch.length} files`)
     let ok = 0
     let fail = 0
     for (const relPath of batch) {
@@ -707,7 +707,7 @@ export default class WikeyPlugin extends Plugin {
         fail++
       }
     }
-    new Notice(`Auto-ingest 완료: ${ok} 성공 / ${fail} 실패`)
+    new Notice(`Auto-ingest complete: ${ok} succeeded / ${fail} failed`)
   }
 
   onunload() {
@@ -733,7 +733,7 @@ export default class WikeyPlugin extends Plugin {
 
   async runEnvDetection() {
     const basePath = this.basePath
-    console.log('[Wikey] 환경 탐지 시작...')
+    console.log('[Wikey] Environment detection starting...')
     // §5.7.5 C6 — searchEngine 전달. orama default 시 qmd inline block + ABI scan skip.
     this.envStatus = await detectEnvironment(
       basePath,
@@ -751,7 +751,7 @@ export default class WikeyPlugin extends Plugin {
     }
     await this.saveData(this.buildPluginOnlyData())
 
-    console.log('[Wikey] 환경 탐지 완료:', {
+    console.log('[Wikey] Environment detection complete:', {
       node: this.envStatus.nodePath,
       python: this.envStatus.pythonPath,
       qmd: this.envStatus.qmdPath,

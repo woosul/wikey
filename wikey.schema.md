@@ -678,6 +678,7 @@ obsidian backlinks file="overview"
 3. **탐색은 축적된다** — 좋은 쿼리 결과는 위키에 다시 저장한다
 4. **인덱스를 항상 최신으로** — 페이지 변경 시 `index.md`를 반드시 업데이트한다
 5. **로그는 추가만** — `log.md`는 append-only, 과거 항목을 수정하지 않는다
+6. **시스템 언어 = 영문** (§5.22 LOCK 2026-05-12) — 모든 사용자 인터페이스 텍스트 (button label / panel title / Notice / Modal message / tooltip / settings 설명 / status message / placeholder) 는 영문 작성. 예외 (한글 허용): (a) 내부 코드 주석 / JSDoc / variable name (b) plan / activity / wiki / log / docs (개발자 documentation + 사용자 콘텐츠) (c) validate-wiki.sh / 기타 script output 의 parse regex (production output format 으로 고정된 한글 키워드) (d) wiki content (LLM 이 생성한 한글 page 본문).
 
 ## LLM Wiki 개인화의 4가지 장점 (Karpathy)
 

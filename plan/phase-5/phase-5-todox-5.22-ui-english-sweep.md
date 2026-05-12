@@ -6,13 +6,15 @@
 
 ## 진행 매트릭스 (Step A~G)
 
-- [ ] **Step A — 사용자 라벨 결정 LOCK**: 영문 매핑 사용자 1차 review 필수
-- [ ] **Step B — tester**: 각 panel 영문 expected fixture 갱신
-- [ ] **Step C — developer**: sed sweep + 영문 라벨 적용 (i18n 인프라 신규 안 함)
-- [ ] **Step D — Phase 3a 회귀**
-- [ ] **Step E — Phase 3b BLUE**
-- [ ] **Step F — codex post-impl review**
-- [ ] **Step G — master 라이브 cdp**: 각 panel grep `[가-힣]` = 0 확증
+- [-] **Step A — 사용자 라벨 결정 LOCK**: 사용자 "계획 필요 없음" 명시 → 스킵 (직접 sweep 진행)
+- [x] **Step B — tester fixture sweep**: sidebar-chat-helpers + sidebar-chat-backlink 7 expected 갱신
+- [x] **Step C — developer sweep**: 8 file Edit (sidebar-chat / commands / main / ingest-modals / settings-tab / status-bar / reset-modals / env-detect)
+- [x] **Step D — Phase 3a 회귀**: npm test 1065 PASS / npm run build 0 errors
+- [-] **Step E — Phase 3b BLUE**: 단순 string 변경 → BLUE 6 활동 무관 (의도적 생략)
+- [-] **Step F — codex post-impl review**: 사용자 "계획 필요 없음" → master 1차 검증으로 종결
+- [x] **Step G — master grep 확증**: UI string `[가-힣]` 0 (comment / regex / test description 제외)
+
+진행 완료 (v0.2). 결과: [`activity/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md`](../../activity/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md)
 
 ## 의문점 (Step A LOCK 대상)
 
@@ -31,3 +33,4 @@
 ## 변경 이력
 
 - v0.1 (2026-05-12): draft 신규.
+- v0.2 (2026-05-12 session 39): Step B/C/D/G 종결. Step A/E/F 의도적 스킵 (사용자 "계획 필요 없음"). 8 file UI string sweep + 2 test fixture sweep + wikey.schema.md §핵심 원칙 #6 + CLAUDE.md §시스템 언어 = 영문 LOCK 신규.

@@ -98,6 +98,18 @@ git diff --name-only HEAD~5 -- wiki/
 
 5개 세션 유형 (인제스트·쿼리·린트·소스 삭제·분류) + 대용량 소스 2단계 처리 절차는 **[`rules/session-checklists.md`](./rules/session-checklists.md)** 에 정리. 각 유형의 순차 단계·scripts 호출 순서를 필요 시 참조.
 
+## 시스템 언어 = 영문 (2026-05-12 LOCK)
+
+모든 사용자 인터페이스 텍스트 (button label / panel title / Notice / Modal message / tooltip / settings 설명 / status message / placeholder) 는 **영문** 작성. 단일 진실 소스: `wikey.schema.md §핵심 원칙 #6`.
+
+**예외 (한글 허용)**:
+- 내부 코드 주석 / JSDoc / variable name
+- `plan/` · `activity/` · `wiki/` · `wiki/log.md` · `docs/` (개발자 documentation + 사용자 콘텐츠)
+- `scripts/validate-wiki.sh` 등 script output 의 parse regex (production format 으로 고정된 한글 키워드 — 예: `깨진 위키링크`)
+- wiki content (LLM 이 생성한 한글 page 본문)
+
+**위반 시정**: 사용자 raise 시 즉시 sweep — UI string + 영향 test fixture 동시 변경 (Spec change sweep 절차, `rules/testing.md §5`).
+
 ## SDD+TDD 흐름 — Phase 3a/3b 분리 의무 (2026-05-06 영구 등록)
 
 모든 비-사소 SDD+TDD cycle 의 **Phase 3 는 두 단계로 분리**:
@@ -177,8 +189,9 @@ wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`
 사용자가 "문서 동기화", "sync docs", "관련 문서 정리", "result/todo 업데이트" 유사 요청을 하면 **반드시 다음 순서**로 진행한다 (2026-04-21 고정):
 
 1. **result/todo 먼저** — `result-doc-writer` 스킬을 invoke해서 `activity/phase-N/phase-N-result.md` + `plan/phase-N/phase-N-todo.md`의 구조·번호·제목·태그·mirror를 점검·보강. 신규 subject가 있으면 result에 먼저 반영하고 todo가 그 구조를 따른다.
-2. **관련 문서 동기화** — `wiki/log.md` (해당 작업 eval/ingest/lint 엔트리), `plan/session-wrap-followups.md` (다음 세션 시작점), `~/.claude/projects/-Users-denny-Project-wikey/memory/` (phase status, MEMORY.md 인덱스), 필요 시 `wikey.schema.md`·`README.md` 등 result가 참조되는 곳 모두 업데이트.
-3. **추가·변경 파일 포함 commit/push** — 이 turn에서 미커밋인 변경 전체를 하나의 논리적 커밋으로 묶어 메시지에 "docs 동기화 + 관련 문서" 취지를 명시한 뒤 push.
+2. **체크박스 갱신 의무** (2026-05-12 LOCK) — result/todo mirror 이후 **반드시** 이번 세션 종결 작업의 `plan/phase-N/phase-N-todo.md` + `plan/phase-N/phase-N-todox-<section>-<topic>.md` 체크박스 갱신: `[ ]` → `[x]` (완료) 또는 `[-]` (의도적 스킵). result 에 종결 표기했는데 todo 체크박스가 `[ ]` 그대로면 drift — mirror 미완성. 종결 cycle 의 경우 §section title 에 ✅ + tag `#done` 추가. 단일 진실 소스: `~/.claude/skills/sync/SKILL.md §0-4.5.5`.
+3. **관련 문서 동기화** — `wiki/log.md` (해당 작업 eval/ingest/lint 엔트리), `plan/session-wrap-followups.md` (다음 세션 시작점), `~/.claude/projects/-Users-denny-Project-wikey/memory/` (phase status, MEMORY.md 인덱스), 필요 시 `wikey.schema.md`·`README.md` 등 result가 참조되는 곳 모두 업데이트.
+4. **추가·변경 파일 포함 commit/push** — 이 turn에서 미커밋인 변경 전체를 하나의 논리적 커밋으로 묶어 메시지에 "docs 동기화 + 관련 문서" 취지를 명시한 뒤 push.
 
 예외: 단순 오타 수정·한 줄 코드 변경처럼 문서 mirror가 불필요한 경우는 이 플로우를 건너뛰어도 된다. 판단 기준은 "result에 기록할 새 작업인가" — 그렇다면 반드시 이 순서.
 

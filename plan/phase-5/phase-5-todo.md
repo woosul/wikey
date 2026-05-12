@@ -2542,16 +2542,16 @@ Phase 6: master verdict + commit + push + result 문서
 
 ---
 
-## 5.22 시스템 UI 영문화 sweep — 모든 사용자 인터페이스 텍스트 한글 → 영문 (P3)
-> tag: #ui, #i18n, #english
-> **draft v0.1 (2026-05-12)** — 사용자 명시 정책 (Session 38) 통합. §5.19 v0.4 cycle 안 maintenance UI 영문화 완료, 잔여 panel (Audit / Ingest / Citation Modal / Help guide / settings 등) 일괄 sweep.
+## 5.22 시스템 UI 영문화 sweep — 모든 사용자 인터페이스 텍스트 한글 → 영문 (P3) ✅
+> tag: #ui, #i18n, #english, #done
+> **v0.2 종결 (2026-05-12 session 39)** — 사용자 "계획 필요 없음" 명시 → SDD+TDD LOCK 단계 스킵 + 직접 sweep. 8 file (sidebar-chat / commands / main / ingest-modals / settings-tab / status-bar / reset-modals / env-detect) UI string + 2 test fixture (sidebar-chat-helpers / sidebar-chat-backlink) 갱신. 1065 PASS / build 0 errors. `wikey.schema.md §핵심 원칙 #6` + `CLAUDE.md §시스템 언어 = 영문` LOCK 등재.
 >
-> **상위 plan**: [`plan/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](./phase-5-spec-5.22-ui-english-sweep.md) · [`plan/phase-5/phase-5-todox-5.22-ui-english-sweep.md`](./phase-5-todox-5.22-ui-english-sweep.md)
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](./phase-5-spec-5.22-ui-english-sweep.md) · [`plan/phase-5/phase-5-todox-5.22-ui-english-sweep.md`](./phase-5-todox-5.22-ui-english-sweep.md) · [`activity/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md`](../../activity/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md)
 
-- [ ] **Step A — 사용자 라벨 결정 LOCK** (Spec 2 영문 매핑 1차 review 필수)
-- [ ] **Step B — tester** (각 panel 영문 expected fixture 갱신)
-- [ ] **Step C — developer** (sed sweep + 영문 라벨 적용)
-- [ ] **Step D — Phase 3a 회귀**
-- [ ] **Step E — Phase 3b BLUE**
-- [ ] **Step F — codex post-impl review**
-- [ ] **Step G — master 라이브 cdp** (각 panel grep `[가-힣]` = 0)
+- [-] **Step A — 사용자 라벨 결정 LOCK** (사용자 "계획 필요 없음" → 스킵)
+- [x] **Step B — tester fixture sweep** (sidebar-chat-helpers + sidebar-chat-backlink 7 expected)
+- [x] **Step C — developer sweep** (8 file Edit, 영문 매핑 직접 결정)
+- [x] **Step D — Phase 3a 회귀** (1065 PASS / build 0 errors)
+- [-] **Step E — Phase 3b BLUE** (단순 string 변경 → BLUE 6 활동 무관, 의도적 생략)
+- [-] **Step F — codex post-impl review** (사용자 "계획 필요 없음" → master 1차 검증 종결)
+- [x] **Step G — master grep 확증** (UI string `[가-힣]` 0, comment·regex 제외)

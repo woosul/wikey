@@ -139,7 +139,7 @@ describe('§5.15.A Cycle 2 — showRowCancelled (row cancel UX, §5.15.E F4)', (
 
     showRowCancelled(row)
 
-    expect(path.textContent).toBe('취소됨')
+    expect(path.textContent).toBe('Cancelled')
     expect(path.classList.contains('wikey-audit-path-cancelled')).toBe(true)
     // path-error 와 분리 — error class 가 동시에 붙지 않음
     expect(path.classList.contains('wikey-audit-path-error')).toBe(false)

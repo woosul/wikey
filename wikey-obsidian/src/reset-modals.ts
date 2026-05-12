@@ -37,9 +37,9 @@ export class DeleteImpactModal extends Modal {
     const impact = this.opts.impact
     const summary = contentEl.createEl('div')
     summary.createEl('p', {
-      text: `영향 페이지 ${impact.pages.length}건 / registry 레코드 ${
+      text: `Affected: ${impact.pages.length} pages / ${
         impact.registryRecord ? 1 : 0
-      }건 / backlink ${impact.backlinks}건`,
+      } registry records / ${impact.backlinks} backlinks`,
     })
 
     if (impact.pages.length > 0) {
@@ -47,18 +47,18 @@ export class DeleteImpactModal extends Modal {
       for (const p of impact.pages.slice(0, 20)) list.createEl('li', { text: p })
       if (impact.pages.length > 20) {
         summary.createEl('p', {
-          text: `… +${impact.pages.length - 20}건 더`,
+          text: `… +${impact.pages.length - 20} more`,
         })
       }
     }
 
     contentEl.createEl('p', {
-      text: `확인하려면 아래에 정확히 "${this.opts.confirmPhrase}" 를 입력하세요.`,
+      text: `Type exactly "${this.opts.confirmPhrase}" below to confirm.`,
     })
 
     let confirmBtn: HTMLButtonElement | null = null
     new Setting(contentEl)
-      .setName('확인 문자열')
+      .setName('Confirmation phrase')
       .addText((t) => {
         t.onChange((v) => {
           this.typed = v
@@ -77,10 +77,10 @@ export class DeleteImpactModal extends Modal {
             b.setDisabled(true)
             try {
               await this.opts.onConfirm()
-              new Notice('삭제 완료')
+              new Notice('Delete complete')
               this.close()
             } catch (err: any) {
-              new Notice(`삭제 실패: ${err?.message ?? err}`)
+              new Notice(`Delete failed: ${err?.message ?? err}`)
               b.setDisabled(false)
             }
           })
@@ -106,11 +106,11 @@ export interface ResetModalOpts {
 }
 
 const SCOPE_LABELS: Record<ResetScope, string> = {
-  'wiki+registry': 'wiki + registry (raw/ 유지)',
-  'wiki-only': 'wiki 만 (registry 유지)',
-  'registry-only': 'registry + source_id 만 (wiki 콘텐츠 유지)',
-  'qmd-index': 'qmd 인덱스만 (reindex 재빌드)',
-  settings: '설정만 (data.json → DEFAULT_SETTINGS)',
+  'wiki+registry': 'wiki + registry (raw/ kept)',
+  'wiki-only': 'wiki only (registry kept)',
+  'registry-only': 'registry + source_id only (wiki content kept)',
+  'qmd-index': 'qmd index only (rebuilt on reindex)',
+  settings: 'settings only (data.json → DEFAULT_SETTINGS)',
 }
 
 export class ResetImpactModal extends Modal {
@@ -126,27 +126,27 @@ export class ResetImpactModal extends Modal {
 
     const preview = this.opts.preview
     contentEl.createEl('p', {
-      text: `파일 ${preview.files.length}건${
+      text: `Affected: ${preview.files.length} files${
         preview.bytes > 0 ? ` / ${formatBytes(preview.bytes)}` : ''
-      } 영향`,
+      }`,
     })
 
     if (preview.files.length > 0) {
       const list = contentEl.createEl('ul')
       for (const p of preview.files.slice(0, 30)) list.createEl('li', { text: p })
       if (preview.files.length > 30) {
-        contentEl.createEl('p', { text: `… +${preview.files.length - 30}건 더` })
+        contentEl.createEl('p', { text: `… +${preview.files.length - 30} more` })
       }
     }
 
     const phrase = confirmPhraseForScope(this.opts.scope)
     contentEl.createEl('p', {
-      text: `확인하려면 "${phrase}" 를 정확히 입력하세요.`,
+      text: `Type exactly "${phrase}" to confirm.`,
     })
 
     let confirmBtn: HTMLButtonElement | null = null
     new Setting(contentEl)
-      .setName('확인 문자열')
+      .setName('Confirmation phrase')
       .addText((t) =>
         t.onChange((v) => {
           this.typed = v
@@ -165,10 +165,10 @@ export class ResetImpactModal extends Modal {
             b.setDisabled(true)
             try {
               await this.opts.onConfirm()
-              new Notice('리셋 완료')
+              new Notice('Reset complete')
               this.close()
             } catch (err: any) {
-              new Notice(`리셋 실패: ${err?.message ?? err}`)
+              new Notice(`Reset failed: ${err?.message ?? err}`)
               b.setDisabled(false)
             }
           })

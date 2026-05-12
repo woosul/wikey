@@ -113,27 +113,27 @@ describe('§5.18 Spec 2 — collectBacklinks (resolvedLinks 역방향 lookup)', 
 
 describe('§5.18 Spec 2 — buildBacklinkSection (HTML <details> 2 section 분리, v0.6)', () => {
   // T10 ↔ I5a — default collapse: <details> 에 open attribute 없음
-  it('T10: I5a — default collapse → <details> + 참고 summary + open attribute 없음', () => {
+  it('T10: I5a — default collapse → <details> + Referenced summary + open attribute 없음', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/a.md', 'wiki/entities/b.md', 'wiki/entities/c.md'],
       external: [],
     })
     expect(markup).toMatch(/<details>/)
-    expect(markup).toMatch(/<summary>참고/)
+    expect(markup).toMatch(/<summary>Referenced/)
     expect(markup).not.toMatch(/<details\s+[^>]*\bopen\b/)
   })
 
-  // T10b ↔ I5 — section header = `참고 (N)`
-  it('T10b: I5 — `참고` summary 에 wiki backlink count N 표시', () => {
+  // T10b ↔ I5 — section header = `Referenced (N)`
+  it('T10b: I5 — `Referenced` summary 에 wiki backlink count N 표시', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/a.md', 'wiki/entities/b.md', 'wiki/entities/c.md'],
       external: [],
     })
-    expect(markup).toMatch(/참고\s*\(3\)/)
+    expect(markup).toMatch(/Referenced\s*\(3\)/)
   })
 
   // T10c ↔ I7 — truncation: 8 backlink → 5 list + 안내 텍스트
-  it('T10c: I7 — 8 wiki backlink → 5 list 줄 + "총 8 개" truncation 안내', () => {
+  it('T10c: I7 — 8 wiki backlink → 5 list 줄 + "8 total" truncation 안내', () => {
     const wiki = [
       'wiki/entities/a.md', 'wiki/entities/b.md', 'wiki/entities/c.md',
       'wiki/entities/d.md', 'wiki/entities/e.md', 'wiki/entities/f.md',
@@ -144,7 +144,7 @@ describe('§5.18 Spec 2 — buildBacklinkSection (HTML <details> 2 section 분�
     expect(markup).toMatch(/\[\[wiki\/entities\/e\.md\]\]/)
     expect(markup).not.toMatch(/\[\[wiki\/entities\/f\.md\]\]/)
     expect(markup).not.toMatch(/\[\[wiki\/entities\/h\.md\]\]/)
-    expect(markup).toMatch(/총 8\s*개/)
+    expect(markup).toMatch(/8 total/)
     expect(markup).toMatch(/Obsidian backlink panel/)
   })
 
@@ -154,14 +154,14 @@ describe('§5.18 Spec 2 — buildBacklinkSection (HTML <details> 2 section 분�
     expect(markup).toBe('')
   })
 
-  // T16 ↔ Spec 2 I5 (v0.6) — 2 section 분리: `참고` (wiki) + `확장` (external)
-  it('T16: I5 (v0.6) — wiki + external 모두 있으면 `참고` + `확장` 두 section 분리 출현', () => {
+  // T16 ↔ Spec 2 I5 (v0.6) — 2 section 분리: `Referenced` (wiki) + `Extended` (external)
+  it('T16: I5 (v0.6) — wiki + external 모두 있으면 `Referenced` + `Extended` 두 section 분리 출현', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/jeff.md'],
       external: ['plan/phase-5/phase-5-todo.md', 'activity/phase-5/note.md'],
     })
-    expect(markup).toMatch(/<summary>참고\s*\(1\)/)
-    expect(markup).toMatch(/<summary>확장\s*\(2\)/)
+    expect(markup).toMatch(/<summary>Referenced\s*\(1\)/)
+    expect(markup).toMatch(/<summary>Extended\s*\(2\)/)
     // (+) badge 폐기 — section 자체로 구분
     expect(markup).not.toMatch(/\(\+\)/)
     // 각 section 안 entry 정확
@@ -170,23 +170,23 @@ describe('§5.18 Spec 2 — buildBacklinkSection (HTML <details> 2 section 분�
     expect(markup).toMatch(/\[\[activity\/phase-5\/note\.md\]\]/)
   })
 
-  // T17 ↔ Spec 2 I6 (v0.6) — wiki=0 + external>0 → `확장` 만 출현
-  it('T17: I6 — wiki=0 + external>0 → `참고` 미출력, `확장` 만 출현', () => {
+  // T17 ↔ Spec 2 I6 (v0.6) — wiki=0 + external>0 → `Extended` 만 출현
+  it('T17: I6 — wiki=0 + external>0 → `Referenced` 미출력, `Extended` 만 출현', () => {
     const markup = buildBacklinkSection({
       wiki: [],
       external: ['plan/phase-5/phase-5-todo.md'],
     })
-    expect(markup).not.toMatch(/<summary>참고/)
-    expect(markup).toMatch(/<summary>확장\s*\(1\)/)
+    expect(markup).not.toMatch(/<summary>Referenced/)
+    expect(markup).toMatch(/<summary>Extended\s*\(1\)/)
   })
 
-  // T18 ↔ Spec 2 I6 (v0.6) — wiki>0 + external=0 → `참고` 만 출현 (wiki scope default 케이스)
-  it('T18: I6 — wiki>0 + external=0 → `참고` 만 출현 (scope=wiki default 케이스)', () => {
+  // T18 ↔ Spec 2 I6 (v0.6) — wiki>0 + external=0 → `Referenced` 만 출현 (wiki scope default 케이스)
+  it('T18: I6 — wiki>0 + external=0 → `Referenced` 만 출현 (scope=wiki default 케이스)', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/jeff.md'],
       external: [],
     })
-    expect(markup).toMatch(/<summary>참고\s*\(1\)/)
-    expect(markup).not.toMatch(/<summary>확장/)
+    expect(markup).toMatch(/<summary>Referenced\s*\(1\)/)
+    expect(markup).not.toMatch(/<summary>Extended/)
   })
 })

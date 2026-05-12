@@ -4216,3 +4216,64 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 - **정책 LOCK 변경 (CLAUDE.md)**: Obsidian CDP UI smoke = **master 1차 책임** (tester 위임 폐기, 2026-05-12 사용자 명시).
 
 → **§5.19 v0.4 종결**. 다음 = §5.20 Knowledge Gap management 또는 §5.21 ingest pipeline mention guard (사용자 결정).
+
+
+## 5.22 시스템 UI 영문화 sweep — 모든 사용자 인터페이스 텍스트 영문화 ✅ 종결 (Session 39, 2026-05-12)
+
+> tag: #ui, #i18n, #english, #done
+>
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](../../plan/phase-5/phase-5-spec-5.22-ui-english-sweep.md) · [`plan/phase-5/phase-5-todox-5.22-ui-english-sweep.md`](../../plan/phase-5/phase-5-todox-5.22-ui-english-sweep.md)
+> **상세 cycle log**: [`activity/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md`](./phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md)
+
+### 5.22.1 결정 배경
+
+사용자 정책 명시 (Session 38, 2026-05-12): "시스템 인터페이스의 모든 문자는 영문". §5.19 v0.4 cycle 안 maintenance modal + Help 패널 maintenance section 영문화 부분 완료, 잔여 panel (Audit row / Citation Modal / settings / Notice / Modal / status bar) 일괄 sweep 필요.
+
+Session 39 사용자 결정: "5.22 처리(계획필요없음) > 5.21 진입" — SDD+TDD LOCK 단계 (Step A 영문 매핑 사용자 1차 review) 스킵 + 직접 sweep + 영문 매핑 master 결정.
+
+Session 39 사용자 추가 명시: "시스템 언어는 '영문'을 기준 문서에 명시" → `wikey.schema.md §핵심 원칙 #6` + `CLAUDE.md §시스템 언어 = 영문 (2026-05-12 LOCK)` 신규 등재.
+
+### 5.22.2 변경 면 (8 source + 2 test fixture + 3 기준 문서)
+
+**Source files (8)**:
+- `wikey-obsidian/src/sidebar-chat.ts` — `취소됨` → `Cancelled` / `참고`·`확장` → `Referenced`·`Extended` / dashboard tooltip / sidecar broken banner / unsupported tooltip / 2 Notice
+- `wikey-obsidian/src/commands.ts` — 12 Notice (ingest 완료/실패 / qmd 인덱스 / 설정 초기화 / ABI 불일치 / 인덱싱 실패 / 검색 인덱스 / hash-match 4 분기 / 인제스트 취소 / PII 감지 / 파일명 normalize) + Citation Modal text
+- `wikey-obsidian/src/main.ts` — 5 Notice + 3 console.log (환경 탐지 / inbox 우회)
+- `wikey-obsidian/src/ingest-modals.ts` — Schema type info text
+- `wikey-obsidian/src/settings-tab.ts` — RRF k value desc + Backlink scope dropdown 4 label
+- `wikey-obsidian/src/status-bar.ts` — Stats Modal title + 6 table label
+- `wikey-obsidian/src/reset-modals.ts` — Delete + Reset Modal text + 5-way SCOPE_LABELS
+- `wikey-obsidian/src/env-detect.ts` — 4 issues.push + 2 console.log
+
+**Test fixture (2)**:
+- `wikey-obsidian/src/__tests__/sidebar-chat-helpers.test.ts` — `취소됨` expected → `Cancelled`
+- `wikey-obsidian/src/__tests__/sidebar-chat-backlink.test.ts` — `참고`·`확장`·`총 N 개` expected → `Referenced`·`Extended`·`N total` (6 expect)
+
+**기준 문서 (3)**:
+- `wikey.schema.md §핵심 원칙 #6` — "시스템 언어 = 영문" LOCK + 4 예외 (코드 주석 / docs / parse regex / wiki content)
+- `CLAUDE.md §시스템 언어 = 영문 (2026-05-12 LOCK)` — schema 단일 진실 소스 reference + 위반 시정 절차
+- `CLAUDE.md §문서 동기화 플로우` — Step 2 신규 ("체크박스 갱신 의무", 2026-05-12 LOCK)
+
+**/sync 스킬 (1)**:
+- `~/.claude/skills/sync/SKILL.md §0-4.5.5` — 완료 체크박스 갱신 의무 v8.4 신규
+
+### 5.22.3 검증
+
+| Step | 결과 |
+|------|------|
+| Test (wikey-core + wikey-obsidian) | **1065 PASS** (66 + 20 test files, 3 skipped) |
+| Build (wikey-obsidian) | **0 errors** (kiwi-wasm warnings 만 — 기존 baseline) |
+| validate-wiki | 458 errors (§5.21 대상 broken wikilink baseline, §5.22 무관) |
+| `grep '[가-힣]' wikey-obsidian/src/**/*.ts` UI string | **0** (comment / regex / test description 제외) |
+
+### 5.22.4 SDD+TDD 단계 종결
+
+- [-] Step A — 사용자 라벨 결정 LOCK (사용자 "계획 필요 없음" 스킵)
+- [x] Step B — tester fixture sweep
+- [x] Step C — developer 8 file sweep
+- [x] Step D — Phase 3a 회귀
+- [-] Step E — Phase 3b BLUE (단순 string 변경, BLUE 6 활동 무관)
+- [-] Step F — codex post-impl review (사용자 결정 스킵)
+- [x] Step G — master grep 확증
+
+→ **§5.22 v0.2 종결**. 다음 = §5.21 Ingest mention guard SDD+TDD 진입.

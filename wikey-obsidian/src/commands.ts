@@ -53,8 +53,8 @@ export function registerCommands(plugin: WikeyPlugin): void {
         (s, t, m) => new Notice(`${s}/${t} ${m}`),
         { autoMoveFromInbox: autoMove },
       ).then((r) => {
-        if (r.success) new Notice(`인제스트 완료: ${r.createdPages.length}개 페이지`)
-        else new Notice(`인제스트 실패: ${r.error}`)
+        if (r.success) new Notice(`Ingest complete: ${r.createdPages.length} pages`)
+        else new Notice(`Ingest failed: ${r.error}`)
       })
       return true
     },
@@ -253,7 +253,7 @@ async function promptWikiPageDelete(plugin: WikeyPlugin, pagePath: string): Prom
 class DeleteSourceSuggestModal extends FuzzySuggestModal<TFile> {
   constructor(private readonly plugin: WikeyPlugin) {
     super(plugin.app)
-    this.setPlaceholder('삭제할 raw/ 소스를 선택하세요...')
+    this.setPlaceholder('Select a raw/ source to delete...')
   }
 
   getItems(): TFile[] {
@@ -336,7 +336,7 @@ export async function executeReset(
       try { fs.unlinkSync(abs) } catch (err: any) {
         if (err?.code !== 'ENOENT') throw err
       }
-      new Notice('qmd 인덱스 삭제됨. 다음 인제스트/쿼리 시 reindex 자동 실행됨.')
+      new Notice('qmd index deleted. Reindex will run automatically on next ingest/query.')
       return
     }
     case 'settings': {
@@ -344,7 +344,7 @@ export async function executeReset(
       try { fs.unlinkSync(abs) } catch (err: any) {
         if (err?.code !== 'ENOENT') throw err
       }
-      new Notice('설정 초기화됨. Obsidian 재시작 시 DEFAULT_SETTINGS 로 복원됨.')
+      new Notice('Settings reset. Will restore DEFAULT_SETTINGS on Obsidian restart.')
       return
     }
   }
@@ -631,19 +631,19 @@ async function runIngestCore(
           const isAbiMismatch = /NODE_MODULE_VERSION|ERR_DLOPEN_FAILED/.test(message)
           if (isAbiMismatch) {
             new Notice(
-              `qmd 네이티브 모듈 ABI 불일치 — 터미널에서 다음 실행 후 재시도:\n` +
+              `qmd native module ABI mismatch — run the following in terminal and retry:\n` +
               `  bash ./scripts/rebuild-qmd-deps.sh`,
               12000,
             )
             return
           }
-          const label = reason === 'reindex-failed' ? '인덱싱 실패' : '인덱스 갱신 지연'
-          new Notice(`${label} — 잠시 후 검색 가능 (${message.slice(0, 80)})`, 6000)
+          const label = reason === 'reindex-failed' ? 'Indexing failed' : 'Index refresh delayed'
+          new Notice(`${label} — search available shortly (${message.slice(0, 80)})`, 6000)
         },
         // §5.2.5: silent-fail 자체 제거 — 성공 시도 항상 짧은 Notice. 사용자가 reindex 가
         // 실제 호출됐는지 가시 확증.
         onFreshnessOk: (ms) => {
-          new Notice(`✓ 검색 인덱스 최신 (${(ms / 1000).toFixed(1)}s)`, 2000)
+          new Notice(`✓ Search index up to date (${(ms / 1000).toFixed(1)}s)`, 2000)
         },
       },
     )
@@ -652,10 +652,10 @@ async function runIngestCore(
     if ('skipped' in result) {
       const skipped = result as SkippedIngestResult
       const labels: Record<SkippedIngestResult['skipReason'], string> = {
-        'hash-match': '이미 인제스트 완료 (변경 없음)',
-        'hash-match-sidecar-seed': 'sidecar baseline 만 갱신 (LLM 호출 없음)',
-        'hash-match-sidecar-edit-noted': '사용자 sidecar 수정 보존 (raw 변경 없음)',
-        'duplicate-hash-other-path': `중복 detect — 동일 hash 가 ${skipped.duplicateOfId ?? '다른 경로'}`,
+        'hash-match': 'Already ingested (no change)',
+        'hash-match-sidecar-seed': 'Sidecar baseline updated (no LLM call)',
+        'hash-match-sidecar-edit-noted': 'User sidecar edits preserved (raw unchanged)',
+        'duplicate-hash-other-path': `Duplicate detected — same hash at ${skipped.duplicateOfId ?? 'another path'}`,
       }
       new Notice(`Wikey: ${labels[skipped.skipReason]}`, 4000)
       console.info(
@@ -727,13 +727,13 @@ async function runIngestCore(
     }
     if (err instanceof IngestCancelledByUserError) {
       console.info(`[Wikey ingest] cancelled at conflict modal: ${sourcePath}`)
-      new Notice('인제스트 취소됨 (충돌 modal)', 3000)
+      new Notice('Ingest cancelled (conflict modal)', 3000)
       return { success: false, sourcePath, createdPages: [], cancelled: true }
     }
     if (err instanceof PiiIngestBlockedError) {
       // Phase 4 D.0.c — PII 감지 + allowPiiIngest=false 조합. 사용자가 설정에서 허용해야 진행.
       const kinds = Array.from(new Set(err.matches.map((m) => m.kind))).join(', ')
-      const msg = `PII 감지 — ${err.matches.length}건 (${kinds}). 설정에서 "PII 감지 시 인제스트 진행" 을 켜거나 원본을 정리해 주세요.`
+      const msg = `PII detected — ${err.matches.length} items (${kinds}). Enable "Proceed on PII detection" in settings, or clean up the source.`
       console.warn(`[Wikey ingest] blocked by PII gate: ${sourcePath} — ${err.matches.length} matches`)
       new Notice(msg, 8000)
       return { success: false, sourcePath, createdPages: [], error: msg }
@@ -861,7 +861,7 @@ async function sanitizeRawFilenameIfNeeded(
     plugin.renameGuard?.register(newPath) // movePair 와 동일 패턴 — 자체 rename 이벤트 skip
     await plugin.app.fileManager.renameFile(file, newPath)
     new Notice(
-      `Wikey: 파일명 wikilink-safe 정규화 — ${filename} → ${candidate}`,
+      `Wikey: filename normalized to wikilink-safe — ${filename} → ${candidate}`,
       6000,
     )
     console.info(`[Wikey ingest] §5.15.D rename — ${sourcePath} → ${newPath}`)
@@ -962,7 +962,7 @@ export class MismatchDiagnosticModal extends Modal {
       text: `${mismatchCount} mismatch / ${totalSourceIds} sourceIds, ${affectedPageCount} pages affected`,
     })
     if (mismatches.length === 0) {
-      contentEl.createEl('p', { text: '모든 sourceId 가 registry 에 등록되어 있습니다.' })
+      contentEl.createEl('p', { text: 'All sourceIds are registered in the registry.' })
       return
     }
     for (const entry of mismatches) {
@@ -974,7 +974,7 @@ export class MismatchDiagnosticModal extends Modal {
       for (const p of head) list.createEl('li', { text: p })
       if (entry.pages.length > MISMATCH_PAGE_DISPLAY_LIMIT) {
         block.createEl('p', {
-          text: `... (총 ${entry.pages.length} 개, 모두 보려면 Console 참조)`,
+          text: `... (${entry.pages.length} total, see Console for the full list)`,
         })
       }
     }

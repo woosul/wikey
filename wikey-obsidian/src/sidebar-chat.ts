@@ -133,7 +133,7 @@ export function showRowError(row: HTMLElement, errorText: string, maxLen = 80): 
 export function showRowCancelled(row: HTMLElement): void {
   const pathEl = row.querySelector('.wikey-audit-path') as HTMLElement | null
   if (pathEl) {
-    pathEl.setText('취소됨')
+    pathEl.setText('Cancelled')
     pathEl.addClass('wikey-audit-path-cancelled')
   }
 }
@@ -192,7 +192,7 @@ function renderConverterCapabilityWarning(
   const parts: string[] = []
   if (!caps.doclingInstalled) parts.push('Docling (PDF/DOCX/PPTX/XLSX/HTML/image) — `uv tool install docling`')
   if (!caps.unhwpInstalled) parts.push('unhwp (HWP/HWPX) — `pip install unhwp`')
-  banner.setText(`⚠ 일부 포맷 변환기가 설치되지 않았습니다. 아래 빨간 행은 인제스트 불가: ${parts.join(' / ')}`)
+  banner.setText(`⚠ Some format converters are not installed. Red rows below cannot be ingested: ${parts.join(' / ')}`)
 }
 
 /**
@@ -340,7 +340,7 @@ function renderBacklinkBlock(label: string, items: readonly string[]): string {
   const head = items.slice(0, BACKLINK_DISPLAY_LIMIT)
   const lines = head.map((p) => `- [[${p}]]`)
   if (total > BACKLINK_DISPLAY_LIMIT) {
-    lines.push(`- ... (총 ${total} 개, 모두 보려면 Obsidian backlink panel 참조)`)
+    lines.push(`- ... (${total} total, see Obsidian backlink panel for the full list)`)
   }
   return `<details><summary>${label} (${total})</summary>\n\n${lines.join('\n')}\n</details>`
 }
@@ -358,8 +358,8 @@ export function buildBacklinkSection(input: BacklinkResult | readonly string[]):
     wiki = [...input.wiki]
     external = [...input.external]
   }
-  const wikiBlock = renderBacklinkBlock('참고', wiki)
-  const externalBlock = renderBacklinkBlock('확장', external)
+  const wikiBlock = renderBacklinkBlock('Referenced', wiki)
+  const externalBlock = renderBacklinkBlock('Extended', external)
   if (!wikiBlock && !externalBlock) return ''
   return [wikiBlock, externalBlock].filter(Boolean).join('\n')
 }
@@ -962,14 +962,14 @@ Click [[page name]] in answers to navigate to the wiki page.
       attr: {
         'aria-label': 'Why more pages than raw sources?',
         title:
-          '왜 Wiki > Raw인가?\n\n' +
-          'raw 소스 1개는 wiki 페이지 5~15개로 분해됩니다 (llm-wiki.md).\n\n' +
-          '• entities: 인물/제품/도구 (여러 소스에서 재사용)\n' +
-          '• concepts: 이론/방법론\n' +
-          '• sources: 원본 1개당 요약 1개\n' +
-          '• analyses: 쿼리 합성 결과\n\n' +
-          '분할 이유: 검색 정확도 + 재사용 + 백링크 그래프\n' +
-          '상세: docs/ingest-decomposition.md',
+          'Why Wiki > Raw?\n\n' +
+          'One raw source decomposes into 5–15 wiki pages (llm-wiki.md).\n\n' +
+          '• entities: people / products / tools (reused across sources)\n' +
+          '• concepts: theories / methodologies\n' +
+          '• sources: one summary per original source\n' +
+          '• analyses: query synthesis results\n\n' +
+          'Why split: search accuracy + reuse + backlink graph\n' +
+          'Details: docs/ingest-decomposition.md',
       },
     })
     wikiInfo.addEventListener('click', async () => {
@@ -977,7 +977,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       if (file) {
         await this.app.workspace.getLeaf(false).openFile(file as any)
       } else {
-        new Notice('docs/ingest-decomposition.md 없음')
+        new Notice('docs/ingest-decomposition.md not found')
       }
     })
 
@@ -1386,7 +1386,7 @@ Click [[page name]] in answers to navigate to the wiki page.
           cls: isUnsupported ? 'wikey-audit-row wikey-audit-row-unsupported' : 'wikey-audit-row',
         })
         if (isUnsupported) {
-          row.setAttr('title', '이 파일 형식을 변환할 converter 가 설치되지 않았습니다. 상단 경고 참조.')
+          row.setAttr('title', 'No converter installed for this file format. See warning above.')
         }
         rowMap.set(filePath, row)
 
@@ -1407,7 +1407,7 @@ Click [[page name]] in answers to navigate to the wiki page.
           const isBroken = !ingestedSet.has(filePath)
           const baseTooltip = this.buildSidecarTooltip(sidecarFull, `${name}.md`)
           const tooltip = isBroken
-            ? `⚠ ingest 결과 (registry/wiki) 없음 — sidecar 만 남은 broken state\n${baseTooltip}`
+            ? `⚠ No ingest result (registry/wiki) — only sidecar remains (broken state)\n${baseTooltip}`
             : baseTooltip
           nameSpan.setAttr('title', tooltip)
           const badgeCls = isBroken
@@ -1501,7 +1501,7 @@ Click [[page name]] in answers to navigate to the wiki page.
             cls: isUnsupported ? 'wikey-audit-tree-file wikey-audit-row-unsupported' : 'wikey-audit-tree-file',
           })
           if (isUnsupported) {
-            row.setAttr('title', '이 파일 형식을 변환할 converter 가 설치되지 않았습니다. 상단 경고 참조.')
+            row.setAttr('title', 'No converter installed for this file format. See warning above.')
           }
           row.style.paddingLeft = `${depth * 14 + 14}px`
           const cb = row.createEl('input', { attr: { type: 'checkbox' }, cls: 'wikey-audit-cb' })
@@ -1515,7 +1515,7 @@ Click [[page name]] in answers to navigate to the wiki page.
             const isBroken = !ingestedSet.has(fullRel)
             const baseTooltip = this.buildSidecarTooltip(sidecarFull, `${fileName}.md`)
             const tooltip = isBroken
-              ? `⚠ ingest 결과 (registry/wiki) 없음 — sidecar 만 남은 broken state\n${baseTooltip}`
+              ? `⚠ No ingest result (registry/wiki) — only sidecar remains (broken state)\n${baseTooltip}`
               : baseTooltip
             treeName.setAttr('title', tooltip)
             const badgeCls = isBroken
@@ -1632,7 +1632,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       const selected = rawSelected.filter((f) => !unsupportedSet.has(f))
       const skipped = rawSelected.length - selected.length
       if (skipped > 0) {
-        new Notice(`미지원 파일 ${skipped}개 건너뜀 — docling/unhwp 설치 후 재시도`, 5000)
+        new Notice(`Skipped ${skipped} unsupported files — install docling/unhwp and retry`, 5000)
         for (const f of rawSelected) {
           if (unsupportedSet.has(f)) this.auditSelections.delete(f)
         }
@@ -2572,7 +2572,7 @@ Click [[page name]] in answers to navigate to the wiki page.
       if (dest) {
         this.app.workspace.openLinkText(href, '')
       } else {
-        new Notice('위키에 없는 페이지 — 자동 생성 차단')
+        new Notice('Page not in wiki — auto-create blocked')
         link.classList.add('wikey-broken-link')
       }
     }

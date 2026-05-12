@@ -502,7 +502,7 @@ export class IngestFlowModal extends Modal {
     // §5.10.4 D-wide: 7-type 강제 표시 폐기 → LLM 자율 type 분류 안내.
     const schemaLine = this.bodyEl.createDiv({ cls: 'wikey-modal-schema-line' })
     schemaLine.createSpan({ cls: 'wikey-modal-schema-label', text: 'Type classification: ' })
-    schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: 'LLM 자율 (예: organization / person / methodology / algorithm / dataset / event 등)' })
+    schemaLine.createSpan({ cls: 'wikey-modal-schema-types', text: 'LLM autonomous (e.g. organization / person / methodology / algorithm / dataset / event)' })
 
     const guideLabel = this.bodyEl.createEl('div', { cls: 'wikey-modal-label', text: 'Focus / direction' })
     guideLabel.createEl('span', { cls: 'wikey-modal-hint', text: ' (optional)' })
