@@ -1,9 +1,10 @@
 ---
 phase: 5
 section: 5.21
-title: Ingest pipeline mention guard — broken wikilink 근본 원인 1+3 fix (Result)
+title: Ingest pipeline mention guard — broken wikilink 근본 원인 1+2+3 + Stage 2 efficiency + basename collision (Result v0.5)
 created: 2026-05-13
-version: v0.1
+updated: 2026-05-13
+version: v0.5
 ---
 
 # Phase 5 §5.21 Ingest pipeline mention guard — Result (2026-05-13 session 40)
@@ -161,6 +162,45 @@ version: v0.1
 - **§5.20 Knowledge Gap** (Phase 5 잔여): 근본 원인 2 (mention only 67%, 390건) cover. broken wikilink no-match → knowledge gap candidate surface. §5.20 spec 갱신 영역
 - **Phase 5 잔여 6 subject**: §5.5 / §5.6 / §5.8 / §5.9 / §5.20
 
-## 7. 변경 이력
+## 7. v0.4 / v0.5 확장 (Session 40 후반, paradigm fix)
 
-- v0.1 (2026-05-13): §5.21 종결 (Session 40). SDD+TDD 7 Step 모두 통과 + codex 2 cycle review (Step A + Step F) 7+4 finding 모두 master 직접 fix + master 라이브 CDP smoke 2 cycle 통과.
+### v0.4 — mention-only cover (사용자 raise)
+
+`[[claude-desktop]]` 처럼 vault page 미존재 wikilink → plain text 변환. 원래 §5.20 future extension 이라 했으나 사용자 정정 — post-process 로 cover 가능. Spec 3 + I9/I10 + AC-S3-1~3 신규. fixture 6 + test 3 추가. **cover 비율 ~49% → ~100% deterministic**. commit `deda7ce`.
+
+### v0.5 — paradigm 사전 차단 (사용자 raise 3건)
+
+| 사용자 raise | Fix |
+|------------|-----|
+| "mention 쓸데없이 많이 뽑아놓고 후처리 — 자원 낭비" | `preFilterMentionsByOccurrence` (Stage 2 LLM 호출 *전* substring count threshold drop). FULL + SEGMENTED 두 route hook. |
+| "basename 기존 있으면 중복 생성 금지" | `filterBasenameCollisions` (canonicalize 결과의 entity/concept filename 이 raw inbox basename 과 충돌 시 pre-write drop). raw/0_inbox + raw/_delayed top-level scope. |
+| "사전 차단이 최선" | LLM 호출 전 + 후 다층 방어 — pre-filter (Stage 2 token 절약) + applyMentionGuard (post-process safety net). |
+
+**라이브 CDP smoke 확증** (iso-27001-annex-a-detail.md 재 ingest, v0.5 적용):
+- 이전 abort 시 (v0.4): CONCEPTS 8 + index +20 entries
+- v0.5: CONCEPTS 2 + index +2 entries
+- **~75% emit 감소 라이브 발동**
+- iso-27001-control body wikilink 0 (LLM 출력 깨끗)
+- `## 출처 [[iso-27001-annex-a-detail.md|원문]]` 보존 (I7 exempt 라이브)
+- **validate-wiki: PASS — 모든 검증 통과 (0 errors)** 🎯
+
+test 4 신규 (preFilter 2 + collision 2). wikey-core 914 PASS / wikey-obsidian 188 PASS = **1102 PASS**. build 0 errors. commit `834d50e`.
+
+### plugin UI follow-up (commit `cd745d4`)
+
+사용자 raise 2건 — Select all/Deselect all 토글 row + Step 2/3 결과 ↔ 버튼 16px gap.
+
+### wiki cleanup 부산물 (vault local)
+
+404 → 0 errors (542 broken cleanup, master direct script + plugin UI fuzzy 95 fix + 41 broken source line 제거 + `wiki/concepts/llm-wiki.md → llm-wiki-pattern.md` rename).
+
+## 8. 다음 세션 후속 작업
+
+- **Phase 5 잔여**: §5.5 / §5.6 / §5.8 / §5.9 / §5.20 (5 subject)
+- **§5.20 Knowledge Gap** = mention-only 진단/surface (gap candidate report), §5.21 = 제거/clean — 동시 운영
+- **§5.21 self-extension**: 향후 다수 source ingest 누적 후 `.wikey/mention-guard-*.jsonl` 데이터 분석
+
+## 9. 변경 이력
+
+- v0.1 (2026-05-13): §5.21 v0.3 종결 (Session 40). SDD+TDD 7 Step + codex 2 cycle 11 finding fix + CDP 2 cycle smoke.
+- v0.5 (2026-05-13): §5.21 v0.4 (mention-only cover) + v0.5 (paradigm 사전 차단) + plugin UI follow-up + wiki cleanup 부산물. 4 commit (e97a828 / deda7ce / cd745d4 / 834d50e). 라이브 CDP smoke 추가 cycle (iso) PASS — Stage 2 pre-filter ~75% emit 감소 발동 확증. validate-wiki 모든 검증 통과 0 errors.
