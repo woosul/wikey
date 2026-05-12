@@ -2541,9 +2541,9 @@ v0.5 follow-up (Session 39, 2026-05-13):
 
 ---
 
-## 5.21 Ingest pipeline mention guard — broken wikilink 근본 원인 1+3 fix (P2) ✅
-> tag: #ingest, #mention-guard, #canonicalizer, #done
-> **v0.3 종결 (2026-05-13 session 40)** — SDD+TDD 7 Step 모두 통과. codex 2 cycle review (Step A + Step F) 7+4 = 11 finding 모두 master 직접 fix. 단위 7/7 PASS + 회귀 1095 PASS + build 0 errors + 라이브 CDP 2 cycle smoke PASS. broken 458 → 447 (-11) / extension no-alias 195 baseline 유지 (회귀 0) / source link 원문 I7 exempt 195 → 196 (보존 확증).
+## 5.21 Ingest pipeline mention guard — 근본 원인 1+2+3 + Stage 2 efficiency + basename collision (P2) ✅
+> tag: #ingest, #mention-guard, #canonicalizer, #paradigm, #done
+> **v0.5 종결 (2026-05-13 session 40)** — SDD+TDD 7 step + codex 2 cycle 11 finding fix + v0.4 mention-only cover + v0.5 paradigm 사전 차단 (Stage 2 pre-filter + basename collision) + plugin UI follow-up (Select all + 16px gap) + wiki cleanup 부산물 (404 → 0 errors). 5 commit (e97a828 / deda7ce / cd745d4 / 834d50e / 26aa912). 회귀 1102 PASS / build 0. cover ~49% → **~100% deterministic**. iso 라이브 CDP smoke 추가 cycle: Stage 2 pre-filter **~75% emit 감소 라이브 발동 확증** (8 → 2 concepts / 20 → 2 entries). validate-wiki **모든 검증 통과 (0 errors)**.
 >
 > **상위 plan**: [`plan/phase-5/phase-5-spec-5.21-ingest-mention-guard.md`](./phase-5-spec-5.21-ingest-mention-guard.md) · [`plan/phase-5/phase-5-todox-5.21-ingest-mention-guard.md`](./phase-5-todox-5.21-ingest-mention-guard.md) · [`activity/phase-5/phase-5-resultx-5.21-ingest-mention-guard-2026-05-13.md`](../../activity/phase-5/phase-5-resultx-5.21-ingest-mention-guard-2026-05-13.md)
 
