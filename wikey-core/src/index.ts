@@ -165,6 +165,9 @@ export {
   // §5.19 v0.4 Batch 5 (R8 / G1) — broken wikilink fix (mode a).
   detectBrokenWikilinks,
   applyBrokenWikilinkFix,
+  // §5.19 v0.5 R4/R6 — 5 카테고리 fix path 추가 (stale-tombstone / refactoring archive).
+  applyStaleTombstoneCleanup,
+  applyRefactoringArchive,
 } from './wiki/maintenance.js'
 export type {
   WikiStatus,
@@ -183,6 +186,11 @@ export type {
   BrokenWikilinkCandidate,
   BrokenWikilinkFixRequest,
   BrokenWikilinkFixReport,
+  // §5.19 v0.5 R4/R6 — new apply option/report types.
+  ApplyStaleTombstoneCleanupOptions,
+  StaleTombstoneCleanupReport,
+  ApplyRefactoringArchiveOptions,
+  RefactoringArchiveReport,
 } from './wiki/maintenance.js'
 // §5.10.4 D-wide: §5.4 self-extending (suggestion / self-declaration / convergence) 메커니즘 폐기.
 export {

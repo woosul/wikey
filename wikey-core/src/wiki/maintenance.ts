@@ -48,6 +48,20 @@ export type {
   GetRefactoringSuggestionsOptions,
 } from './maintenance/refactoring.js'
 
+// §5.19 v0.5 R4 — stale tombstone purge (5 카테고리 fix path 중 stale-tombstone 분기).
+export { applyStaleTombstoneCleanup } from './maintenance/tombstone-cleanup.js'
+export type {
+  ApplyStaleTombstoneCleanupOptions,
+  StaleTombstoneCleanupReport,
+} from './maintenance/tombstone-cleanup.js'
+
+// §5.19 v0.5 R6 — refactoring archive (duplicates / lowUtility → wiki/archive/).
+export { applyRefactoringArchive } from './maintenance/refactoring-archive.js'
+export type {
+  ApplyRefactoringArchiveOptions,
+  RefactoringArchiveReport,
+} from './maintenance/refactoring-archive.js'
+
 // §5.19 v0.4 (R6/R10/I-HEALTH-1) — Health predicates shared by Status +
 // Refactoring modals (and any future Dashboard pill). Re-exported here so
 // `wikey-obsidian` can import via the maintenance barrel.

@@ -11,10 +11,12 @@ import { App, Modal } from 'obsidian'
 import {
   appendProgressLine as renderProgressLine,
   renderFindingsList,
+  renderRefactoringStep2,
   renderStep2Confirm,
   renderStep3Complete,
   renderStep3InProgress,
   renderUnhealthySummary,
+  type RefactoringStep2Data,
   type UnhealthyIssue,
 } from './maintenance-modal-views'
 
@@ -72,6 +74,30 @@ export interface MaintenanceRunner {
     },
   ) => Promise<{ changedFiles: number; changedLinks: number }>
   runRefactoring?: (signal: AbortSignal) => Promise<Record<string, unknown>>
+  /**
+   * §5.19 v0.5 R4 — stale-tombstone purge. confirm gate lives in the core
+   * helper (`applyStaleTombstoneCleanup`) so the runner just forwards the
+   * selection. Runner missing → mode silently skipped (legacy bundles).
+   */
+  runStaleTombstoneFix?: (
+    signal: AbortSignal,
+    payload: { tombstoneIds: readonly string[] },
+  ) => Promise<{ removedIds: readonly string[] }>
+  /**
+   * §5.19 v0.5 R6 — refactoring archive. `archivePaths` are full `wiki/…`
+   * paths; the core helper mirrors them to `wiki/archive/…` and writes a
+   * log entry.
+   */
+  runRefactoringApply?: (
+    signal: AbortSignal,
+    payload: { archivePaths: readonly string[] },
+  ) => Promise<{ archived: readonly string[] }>
+  /**
+   * §5.19 v0.5 R6 — wiki page index used to map duplicate slugs to full paths
+   * during the Refactoring Step 2 selection. Runner missing → duplicate
+   * archive section is empty (low-utility section still works via raw paths).
+   */
+  listWikiPages?: (signal: AbortSignal) => Promise<readonly string[]>
 }
 
 export interface MaintenanceModalOptions {
@@ -95,6 +121,12 @@ export class MaintenanceModal extends Modal {
   private actionEl: HTMLElement | null = null
   private running = false
   private collectedFindings: readonly MaintenanceFinding[] = []
+  /**
+   * §5.19 v0.5 R6 — Refactoring suggestion payload captured during the
+   * key-value run. Reused when the user clicks the unhealthy-summary Execute
+   * button to enter the Step 2 archive selection (avoids re-fetching).
+   */
+  private refactoringResult: Record<string, unknown> | null = null
 
   constructor(app: App, _plugin: unknown, opts: MaintenanceModalOptions) {
     super(app)
@@ -161,6 +193,9 @@ export class MaintenanceModal extends Modal {
     this.markRunning(true)
     const result = await runner(this.abortController.signal)
     this.markRunning(false)
+    // §5.19 v0.5 R6 — keep the refactoring result for the Step 2 dispatch
+    // (the unhealthy Execute button reuses it instead of re-running the suite).
+    if (this.mode === 'refactoring') this.refactoringResult = result
     for (const [k, v] of Object.entries(result)) {
       const display = Array.isArray(v) ? v.length : String(v)
       this.appendProgressLine(`${k}: ${display}`)
@@ -222,9 +257,95 @@ export class MaintenanceModal extends Modal {
   private renderUnhealthy(issues: readonly UnhealthyIssue[]): void {
     if (!this.actionEl) return
     this.actionEl.empty()
+    // §5.19 v0.5 R6 — Refactoring mode gets an Execute hook so the user can
+    // step into archive selection. Status stays Close-only (read-only metrics).
+    if (this.mode === 'refactoring') {
+      renderUnhealthySummary(this.actionEl, issues, {
+        onClose: () => {
+          this.close()
+        },
+        onExecute: () => {
+          void this.enterRefactoringStep2()
+        },
+      })
+      return
+    }
     renderUnhealthySummary(this.actionEl, issues, () => {
       this.close()
     })
+  }
+
+  /**
+   * §5.19 v0.5 R6 — Refactoring Step 2 entry. Builds the slug→path lookup
+   * once (via `runner.listWikiPages`) and hands the captured suggestions to
+   * `renderRefactoringStep2`. Cancel returns to the unhealthy summary.
+   */
+  private async enterRefactoringStep2(): Promise<void> {
+    if (!this.actionEl) return
+    const result = this.refactoringResult
+    if (!result) return
+    const duplicates = (result.duplicates as RefactoringStep2Data['duplicates'] | undefined) ?? []
+    const lowUtility = (result.lowUtility as RefactoringStep2Data['lowUtility'] | undefined) ?? []
+
+    const slugToPath = await this.buildSlugToPathLookup()
+    renderRefactoringStep2(
+      this.actionEl,
+      { duplicates, lowUtility, slugToPath },
+      {
+        onExecute: (payload) => {
+          void this.executeRefactoringArchive(payload.archivePaths)
+        },
+        onCancel: () => {
+          const issues = this.collectUnhealthyIssues(result)
+          this.renderUnhealthy(issues)
+        },
+      },
+    )
+  }
+
+  private async buildSlugToPathLookup(): Promise<ReadonlyMap<string, string>> {
+    const out = new Map<string, string>()
+    const list = this.runner.listWikiPages
+    if (!list) return out
+    try {
+      const paths = await list(this.abortController.signal)
+      for (const p of paths) {
+        // wiki/entities/foo.md → foo
+        const m = p.match(/\/([^/]+)\.md$/)
+        if (m) out.set(m[1]!, p)
+      }
+    } catch (err) {
+      if ((err as { name?: string })?.name === 'AbortError') return out
+      this.appendProgressLine(`[refactor lookup error] ${String(err)}`)
+    }
+    return out
+  }
+
+  private async executeRefactoringArchive(
+    archivePaths: readonly string[],
+  ): Promise<void> {
+    if (!this.actionEl) return
+    renderStep3InProgress(this.actionEl)
+    this.markRunning(true)
+    let archivedCount = 0
+    try {
+      if (archivePaths.length > 0 && this.runner.runRefactoringApply) {
+        const result = await this.runner.runRefactoringApply(
+          this.abortController.signal,
+          { archivePaths },
+        )
+        archivedCount = result.archived.length
+        this.appendProgressLine(`[refactor archive] ${archivedCount} pages archived`)
+      }
+      this.markRunning(false)
+      renderStep3Complete(this.actionEl, archivedCount, () => {
+        this.close()
+      })
+    } catch (err) {
+      this.markRunning(false)
+      if ((err as { name?: string })?.name === 'AbortError') return
+      this.appendProgressLine(`[refactor archive error] ${String(err)}`)
+    }
   }
 
   private async runFindingsMode(): Promise<void> {
@@ -300,6 +421,7 @@ export class MaintenanceModal extends Modal {
   private async executeFix(payload: {
     selectedShas: readonly string[]
     brokenFixes: readonly { source: string; brokenTarget: string; replacement: string }[]
+    staleTombstoneIds: readonly string[]
   }): Promise<void> {
     if (!this.actionEl) return
     renderStep3InProgress(this.actionEl)
@@ -330,6 +452,20 @@ export class MaintenanceModal extends Modal {
         } catch (err) {
           if ((err as { name?: string })?.name === 'AbortError') throw err
           this.appendProgressLine(`[recovery error] ${String(err)}`)
+        }
+      }
+      // §5.19 v0.5 R4 — stale-tombstone purge. Same partial-state policy as
+      // recovery + fix-link: per-runner error logs without aborting the others.
+      if (payload.staleTombstoneIds.length > 0 && this.runner.runStaleTombstoneFix) {
+        try {
+          const result = await this.runner.runStaleTombstoneFix(this.abortController.signal, {
+            tombstoneIds: payload.staleTombstoneIds,
+          })
+          totalChangedFiles += result.removedIds.length
+          this.appendProgressLine(`[stale-tombstone] ${result.removedIds.length} entries purged`)
+        } catch (err) {
+          if ((err as { name?: string })?.name === 'AbortError') throw err
+          this.appendProgressLine(`[stale-tombstone error] ${String(err)}`)
         }
       }
       this.markRunning(false)

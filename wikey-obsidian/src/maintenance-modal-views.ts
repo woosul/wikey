@@ -46,6 +46,16 @@ export function renderFindingsList(
     renderHealthyView(actionEl, hooks.onClose)
     return
   }
+  // §5.19 v0.5 R1/R2/R3 — Step 1 guidance text. The previous Step 1 listed
+  // findings without telling the user what the next click does; users reported
+  // (master cdp 2026-05-12) confusion about how to fix issues. The guidance
+  // line (English-only per §5.22 LOCK) sits above the accordion + Apply button
+  // so the workflow ("review → Apply fix → select items → Execute") is one
+  // glance away.
+  actionEl.createEl('div', {
+    cls: 'wikey-maintenance-modal-step-1-guidance',
+    text: 'Review findings below, then click "Apply fix" to select items and execute.',
+  })
   renderFindingsTable(actionEl, findings)
   const btnRow = actionEl.createDiv({ cls: 'wikey-maintenance-modal-action-buttons' })
   const applyBtn = btnRow.createEl('button', {
@@ -82,11 +92,28 @@ export interface UnhealthyIssue {
   readonly count: number
 }
 
+export interface UnhealthySummaryHooks {
+  readonly onClose: () => void
+  /**
+   * §5.19 v0.5 R6 — Refactoring mode supplies `onExecute` so the user can
+   * advance from the summary into the Step 2 archive selection. Status mode
+   * omits it (read-only metrics — no Execute path), in which case the helper
+   * renders only the Close button.
+   */
+  readonly onExecute?: () => void
+}
+
 export function renderUnhealthySummary(
   actionEl: HTMLElement,
   issues: readonly UnhealthyIssue[],
-  onClose: () => void,
+  hooksOrClose: UnhealthySummaryHooks | (() => void),
 ): void {
+  // Back-compat: legacy signature `(actionEl, issues, onClose)` still works —
+  // tests + Status mode pass the bare callback. Refactoring + future callers
+  // pass the full hooks object with `onExecute`.
+  const hooks: UnhealthySummaryHooks =
+    typeof hooksOrClose === 'function' ? { onClose: hooksOrClose } : hooksOrClose
+
   const firing = issues.filter((i) => i.count > 0)
   const summary = firing.length === 0
     ? 'Issues found'
@@ -95,12 +122,21 @@ export function renderUnhealthySummary(
     text: summary,
     cls: 'wikey-maintenance-modal-unhealthy',
   })
+  if (hooks.onExecute) {
+    const execBtn = actionEl.createEl('button', {
+      text: 'Execute',
+      cls: 'wikey-maintenance-modal-execute-btn',
+    })
+    execBtn.addEventListener('click', () => {
+      hooks.onExecute!()
+    })
+  }
   const closeBtn = actionEl.createEl('button', {
     text: 'Close',
     cls: 'wikey-maintenance-modal-close-btn',
   })
   closeBtn.addEventListener('click', () => {
-    onClose()
+    hooks.onClose()
   })
 }
 
@@ -310,6 +346,12 @@ export interface BrokenFixRequest {
 export interface ConfirmExecutePayload {
   readonly selectedShas: readonly string[]
   readonly brokenFixes: readonly BrokenFixRequest[]
+  /**
+   * §5.19 v0.5 R4 — selected stale-tombstone ids the user wants to purge.
+   * Sourced from the `stale-tombstone` findings rendered in their own Step 2
+   * section. Empty when no stale-tombstone findings exist or none are checked.
+   */
+  readonly staleTombstoneIds: readonly string[]
 }
 
 export interface ConfirmViewHooks {
@@ -454,6 +496,9 @@ export function renderStep2Confirm(
 
   const shaGroups = groupDanglingFindingsBySha(findings)
   const brokenRows = collectBrokenLinkRows(findings)
+  // §5.19 v0.5 R4 — stale-tombstone rows surfaced as their own section so the
+  // user can opt-in per id (active records are protected core-side regardless).
+  const staleTombstoneRows = collectStaleTombstoneRows(findings)
 
   const autoRows = brokenRows.filter((r) => r.fixKind === 'case-insensitive' && !!r.autoFixSlug)
   const fuzzyRows = brokenRows.filter((r) => r.fixKind === 'fuzzy' && r.candidates.length > 0)
@@ -471,6 +516,7 @@ export function renderStep2Confirm(
   const autoCheckboxes: BrokenCheckbox[] = []
   const fuzzyControls: FuzzyControl[] = []
   const manualCheckboxes: ManualCheckbox[] = []
+  const staleTombstoneCheckboxes: StaleTombstoneCheckbox[] = []
 
   const sections: Array<() => void> = []
   if (shaGroups.length > 0) {
@@ -484,6 +530,11 @@ export function renderStep2Confirm(
   }
   if (manualRows.length > 0) {
     sections.push(() => manualCheckboxes.push(...renderBrokenManualSection(actionEl, manualRows)))
+  }
+  if (staleTombstoneRows.length > 0) {
+    sections.push(() =>
+      staleTombstoneCheckboxes.push(...renderStaleTombstoneSection(actionEl, staleTombstoneRows)),
+    )
   }
 
   sections.forEach((render, i) => {
@@ -500,6 +551,7 @@ export function renderStep2Confirm(
     autoCheckboxes,
     fuzzyControls,
     manualCheckboxes,
+    staleTombstoneCheckboxes,
   )
 }
 
@@ -670,6 +722,7 @@ function renderConfirmActions(
   // Manual rows currently feed an "intent only" log — no replacement slug is
   // available, so the [실행] dispatch drops them (Batch 6 scope: surface them).
   _manualCheckboxes: readonly ManualCheckbox[],
+  staleTombstoneCheckboxes: readonly StaleTombstoneCheckbox[],
 ): void {
   const btnRow = actionEl.createDiv({ cls: 'wikey-maintenance-modal-action-buttons' })
   const execBtn = btnRow.createEl('button', {
@@ -695,7 +748,227 @@ function renderConfirmActions(
         replacement: c.select.value,
       })
     }
-    hooks.onExecute({ selectedShas, brokenFixes })
+    const staleTombstoneIds = staleTombstoneCheckboxes
+      .filter((c) => c.input.checked)
+      .map((c) => c.id)
+    hooks.onExecute({ selectedShas, brokenFixes, staleTombstoneIds })
+  })
+  const cancelBtn = btnRow.createEl('button', {
+    text: 'Cancel',
+    cls: 'wikey-maintenance-modal-cancel-btn',
+  })
+  cancelBtn.addEventListener('click', () => {
+    hooks.onCancel()
+  })
+}
+
+// ─── §5.19 v0.5 R4 — stale-tombstone collection + render ────────────────────
+
+interface StaleTombstoneRow {
+  readonly id: string
+  readonly note: string | undefined
+}
+
+interface StaleTombstoneCheckbox {
+  readonly input: HTMLInputElement
+  readonly id: string
+}
+
+/**
+ * Extract `sha256:<id>` tokens out of stale-tombstone findings. `check.ts`
+ * emits both hash-equality (helper-exact) and path-based variants — the latter
+ * arrive with a ` (path-based)` suffix on the detail string. We split the
+ * suffix off as a separate `note` so the UI can disambiguate without re-
+ * parsing.
+ */
+function collectStaleTombstoneRows(
+  findings: readonly MaintenanceFinding[],
+): readonly StaleTombstoneRow[] {
+  const out: StaleTombstoneRow[] = []
+  const seen = new Set<string>()
+  for (const f of findings) {
+    if (f.kind !== 'stale-tombstone') continue
+    const raw = (f.detail ?? '').trim()
+    if (!raw) continue
+    // sha256:<hex-or-test-id> with optional ` (path-based)` suffix produced by
+    // `check.ts`. Test fixtures use slug-style ids (`sha256:stale-1`) so the
+    // pattern intentionally accepts hyphens/underscores alongside hex.
+    const m = raw.match(/^(sha256:[A-Za-z0-9_-]+)(?:\s+\((.+)\))?$/)
+    if (!m) continue
+    const id = m[1]!
+    if (seen.has(id)) continue
+    seen.add(id)
+    out.push({ id, note: m[2] ?? undefined })
+  }
+  return out
+}
+
+function renderStaleTombstoneSection(
+  actionEl: HTMLElement,
+  rows: readonly StaleTombstoneRow[],
+): readonly StaleTombstoneCheckbox[] {
+  const section = createSection(actionEl, `Stale Tombstone (${rows.length})`)
+  const list = section.createEl('ul', { cls: 'wikey-maintenance-modal-stale-tombstone-list' })
+  const out: StaleTombstoneCheckbox[] = []
+  for (const r of rows) {
+    const li = list.createEl('li', { cls: 'wikey-maintenance-modal-stale-tombstone-row' })
+    const label = li.createEl('label', { cls: 'wikey-maintenance-modal-confirm-row' })
+    const input = label.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement
+    // Default checked — matches the sha-grouped (dangling) row default. Users
+    // entered Step 2 by clicking "Apply fix" with the stale-tombstone findings
+    // already surfaced, so opt-out per row is the consistent behaviour.
+    // Core-side `applyStaleTombstoneCleanup` still guards against active
+    // records via the `protectedIds` invariant (I-PURGE-4).
+    input.checked = true
+    const suffix = r.note ? ` (${r.note})` : ''
+    label.appendChild(document.createTextNode(` ${r.id}${suffix}`))
+    out.push({ input, id: r.id })
+  }
+  return out
+}
+
+// ─── §5.19 v0.5 R6 — Refactoring archive Step 2 ────────────────────────────
+
+/**
+ * Refactoring archive selection payload — pages the user opted to move under
+ * `wiki/archive/`. Duplicates contribute the second (lexicographically later)
+ * slug of each pair so the canonical winner stays in place; users who want a
+ * different winner can edit pages manually then re-run the modal.
+ */
+export interface RefactoringArchivePayload {
+  readonly archivePaths: readonly string[]
+}
+
+export interface RefactoringStep2Hooks {
+  readonly onExecute: (payload: RefactoringArchivePayload) => void
+  readonly onCancel: () => void
+}
+
+export interface RefactoringStep2Data {
+  /**
+   * Duplicate pairs — slug-level (no full path). The UI archives the `b` side
+   * of each pair (later in collation); we map `b` → `wiki/<category>/<b>.md`
+   * via the caller-supplied `slugToPathHint` lookup so the core archive helper
+   * gets a full path. Pairs without a path hint are skipped (silent — the
+   * archive helper is a no-op on missing files anyway).
+   */
+  readonly duplicates: readonly { readonly a: string; readonly b: string; readonly similarity: number }[]
+  /** Low-utility paths surfaced directly by `getRefactoringSuggestions`. */
+  readonly lowUtility: readonly { readonly path: string; readonly lastUpdated: string; readonly backlinkCount: number }[]
+  /**
+   * `slug → wiki/<category>/<slug>.md` lookup. Caller computes it once from
+   * the `WikiFS.walk('wiki')` result so the view stays IO-free.
+   */
+  readonly slugToPath: ReadonlyMap<string, string>
+}
+
+interface RefactorCheckbox {
+  readonly input: HTMLInputElement
+  readonly path: string
+}
+
+export function renderRefactoringStep2(
+  actionEl: HTMLElement,
+  data: RefactoringStep2Data,
+  hooks: RefactoringStep2Hooks,
+): void {
+  actionEl.empty()
+  actionEl.createEl('div', {
+    cls: 'wikey-maintenance-modal-step-2 wikey-maintenance-modal-step-2-header',
+    text: 'Step 2 — Select pages to archive:',
+  })
+
+  const dupCheckboxes: RefactorCheckbox[] = []
+  const lowUtilCheckboxes: RefactorCheckbox[] = []
+  const sections: Array<() => void> = []
+  if (data.duplicates.length > 0) {
+    sections.push(() =>
+      dupCheckboxes.push(...renderRefactorDuplicatesSection(actionEl, data.duplicates, data.slugToPath)),
+    )
+  }
+  if (data.lowUtility.length > 0) {
+    sections.push(() =>
+      lowUtilCheckboxes.push(...renderRefactorLowUtilitySection(actionEl, data.lowUtility)),
+    )
+  }
+  sections.forEach((render, i) => {
+    if (i > 0) {
+      actionEl.createEl('hr', { cls: 'wikey-maintenance-modal-section-divider' })
+    }
+    render()
+  })
+
+  renderRefactoringStep2Actions(actionEl, hooks, dupCheckboxes, lowUtilCheckboxes)
+}
+
+function renderRefactorDuplicatesSection(
+  actionEl: HTMLElement,
+  duplicates: RefactoringStep2Data['duplicates'],
+  slugToPath: ReadonlyMap<string, string>,
+): readonly RefactorCheckbox[] {
+  const section = createSection(actionEl, `Duplicate pages (${duplicates.length})`)
+  const list = section.createEl('ul', {
+    cls: 'wikey-maintenance-modal-refactor-duplicates-list',
+  })
+  const out: RefactorCheckbox[] = []
+  for (const pair of duplicates) {
+    // Archive the `b` slug — keep `a` as the canonical winner (lexicographic).
+    const path = slugToPath.get(pair.b)
+    if (!path) continue
+    const li = list.createEl('li', { cls: 'wikey-maintenance-modal-refactor-row' })
+    const label = li.createEl('label', { cls: 'wikey-maintenance-modal-confirm-row' })
+    const input = label.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement
+    input.checked = true
+    label.appendChild(
+      document.createTextNode(
+        ` Keep [[${pair.a}]], archive [[${pair.b}]] (similarity ${pair.similarity.toFixed(2)})`,
+      ),
+    )
+    out.push({ input, path })
+  }
+  return out
+}
+
+function renderRefactorLowUtilitySection(
+  actionEl: HTMLElement,
+  lowUtility: RefactoringStep2Data['lowUtility'],
+): readonly RefactorCheckbox[] {
+  const section = createSection(actionEl, `Low-utility pages (${lowUtility.length})`)
+  const list = section.createEl('ul', {
+    cls: 'wikey-maintenance-modal-refactor-low-utility-list',
+  })
+  const out: RefactorCheckbox[] = []
+  for (const entry of lowUtility) {
+    const li = list.createEl('li', { cls: 'wikey-maintenance-modal-refactor-row' })
+    const label = li.createEl('label', { cls: 'wikey-maintenance-modal-confirm-row' })
+    const input = label.createEl('input', { attr: { type: 'checkbox' } }) as HTMLInputElement
+    input.checked = true
+    label.appendChild(
+      document.createTextNode(
+        ` ${entry.path} (updated ${entry.lastUpdated}, ${entry.backlinkCount} backlinks)`,
+      ),
+    )
+    out.push({ input, path: entry.path })
+  }
+  return out
+}
+
+function renderRefactoringStep2Actions(
+  actionEl: HTMLElement,
+  hooks: RefactoringStep2Hooks,
+  dupCheckboxes: readonly RefactorCheckbox[],
+  lowUtilCheckboxes: readonly RefactorCheckbox[],
+): void {
+  const btnRow = actionEl.createDiv({ cls: 'wikey-maintenance-modal-action-buttons' })
+  const execBtn = btnRow.createEl('button', {
+    text: 'Execute',
+    cls: 'wikey-maintenance-modal-execute-btn',
+  })
+  execBtn.addEventListener('click', () => {
+    const archivePaths: string[] = []
+    for (const c of dupCheckboxes) if (c.input.checked) archivePaths.push(c.path)
+    for (const c of lowUtilCheckboxes) if (c.input.checked) archivePaths.push(c.path)
+    hooks.onExecute({ archivePaths })
   })
   const cancelBtn = btnRow.createEl('button', {
     text: 'Cancel',

@@ -56,6 +56,24 @@ interface CoreApi {
       signal?: AbortSignal
     },
   ) => Promise<{ changedFiles: number; changedLinks: number }>
+  // §5.19 v0.5 R4 — stale tombstone purge.
+  applyStaleTombstoneCleanup?: (
+    wikiFS: unknown,
+    opts: {
+      confirm: boolean
+      tombstoneIds: readonly string[]
+      signal?: AbortSignal
+    },
+  ) => Promise<{ removedIds: readonly string[] }>
+  // §5.19 v0.5 R6 — refactoring archive.
+  applyRefactoringArchive?: (
+    wikiFS: unknown,
+    opts: {
+      confirm: boolean
+      archivePaths: readonly string[]
+      signal?: AbortSignal
+    },
+  ) => Promise<{ archived: readonly string[] }>
 }
 
 function loadCore(): CoreApi | null {
@@ -129,6 +147,36 @@ export function createMaintenanceRunner(plugin: WikeyPlugin): MaintenanceRunner 
       const core = loadCore()
       if (!core?.getRefactoringSuggestions) return {}
       return await core.getRefactoringSuggestions(wikiFS, { signal })
+    },
+    // §5.19 v0.5 R4 — stale tombstone purge runner.
+    async runStaleTombstoneFix(signal, payload) {
+      const core = loadCore()
+      if (!core?.applyStaleTombstoneCleanup) return { removedIds: [] }
+      const report = await core.applyStaleTombstoneCleanup(wikiFS, {
+        confirm: true,
+        tombstoneIds: payload.tombstoneIds,
+        signal,
+      })
+      return { removedIds: report.removedIds }
+    },
+    // §5.19 v0.5 R6 — refactoring archive runner.
+    async runRefactoringApply(signal, payload) {
+      const core = loadCore()
+      if (!core?.applyRefactoringArchive) return { archived: [] }
+      const report = await core.applyRefactoringArchive(wikiFS, {
+        confirm: true,
+        archivePaths: payload.archivePaths,
+        signal,
+      })
+      return { archived: report.archived }
+    },
+    // §5.19 v0.5 R6 — wiki page index for slug→path resolution in Step 2.
+    async listWikiPages(signal) {
+      const fs = wikiFS as { walk?: (dir: string) => Promise<readonly string[]> }
+      if (typeof fs.walk !== 'function') return []
+      if (signal.aborted) return []
+      const all = await fs.walk('wiki')
+      return all.filter((p) => p.endsWith('.md'))
     },
   }
 }

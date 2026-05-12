@@ -2806,10 +2806,19 @@ a.internal-link.wikey-broken-link,
   font-weight: 500;
 }
 
-/* §5.19 v0.4 (R6/R10) — unhealthy summary line (Status / Refactoring modes). */
+/* §5.19 v0.5 (R6/R7/R10) — unhealthy summary line (Status / Refactoring modes).
+   margin-bottom: 16px to separate summary text from action buttons below. */
 .wikey-maintenance-modal-unhealthy {
   color: var(--text-warning, var(--text-error));
   font-weight: 500;
+  margin-bottom: 16px;
+}
+
+/* §5.19 v0.5 (R6) — Refactoring mode action bar holding [Execute] + [Close]. */
+.wikey-maintenance-modal-unhealthy-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 /* §5.19 v0.4 (R11) — Help panel section divider. */
