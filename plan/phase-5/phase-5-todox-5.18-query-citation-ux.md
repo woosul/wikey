@@ -83,3 +83,7 @@ for (const [sourcePath, links] of Object.entries(resolved)) {
 
 - v0.1 (2026-05-11): draft 신규.
 - v0.2 (2026-05-12 analyst): Q1~Q4 LOCK + 변경 면 재추정 + Step A 완료 표기.
+- v0.3 (2026-05-12 master): codex post-impl cycle #2 sweep — LOC budget 정정, threshold 1,000 char 정합. spec v0.3 sync.
+- v0.4 (2026-05-12 master): wikey 3계층 위반 fix — collectBacklinks scope filter 'wiki' (default) / 'vault' opt-in + WikeySettings `backlinkScope` 토글. spec v0.4 sync.
+- v0.5 (2026-05-12 master): raw/ 제외 + (+) entry badge + 헤더 `참조 페이지` → `참고` + `'vault'` → `'extended'` rename. spec v0.5 sync.
+- v0.6 (2026-05-12 master): 답변 footer 3 layer 분리 — `원본:` / `참고 (N)` / `확장 (M)`. collectBacklinks `BacklinkResult` + buildBacklinkSection 2 section. (+) badge 폐기. spec v0.6 sync. 137 PASS.

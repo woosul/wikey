@@ -3998,9 +3998,9 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 
 ## 5.18 Query citation UX — 원본 1개당 1줄 + wiki backlink + registry mismatch logging ✅ 종결 (Session 37, 2026-05-12)
 
-> 라이브 evidence: Scenario A citation list `\n- [[path|name]] (md)` + ext badge dynamic derive. Scenario B `<details>참조 페이지 (19/98)` collapse default + truncation. Scenario C `Citation Registry Diagnostic` Modal + `1 mismatch / 14 sourceIds, 38 pages affected` (§5.17 case A 복제본 dangling 정확 노출). codex 2 cycle: #1 FAIL 4 finding → developer fix → #2 ✅ APPROVE.
+> 라이브 evidence: Scenario A citation list `\n- [[path|name]] (md)` + ext badge dynamic derive. Scenario B `<details>참조 페이지 (19/98)` collapse default + truncation. Scenario C `Citation Registry Diagnostic` Modal + `1 mismatch / 14 sourceIds, 38 pages affected` (§5.17 case A 복제본 dangling 정확 노출). codex 2 cycle: #1 FAIL 4 finding → developer fix → #2 ✅ APPROVE. **추가 사용자 raise 3 cycle (v0.4/v0.5/v0.6)** — wiki/ 3계층 scope filter → raw/ 제외 + (+) badge + "참고" reword → 답변 footer 3 layer 분리 (`원본:` / `참고:` / `확장:`).
 >
-> 상위 plan: [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](../../plan/phase-5/phase-5-spec-5.18-query-citation-ux.md) v0.3 · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](../../plan/phase-5/phase-5-todox-5.18-query-citation-ux.md) v0.2 · [`activity/phase-5/phase-5-resultx-5.18-live-smoke-2026-05-12.md`](./phase-5-resultx-5.18-live-smoke-2026-05-12.md)
+> 상위 plan: [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](../../plan/phase-5/phase-5-spec-5.18-query-citation-ux.md) v0.6 · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](../../plan/phase-5/phase-5-todox-5.18-query-citation-ux.md) v0.2 · [`activity/phase-5/phase-5-resultx-5.18-live-smoke-2026-05-12.md`](./phase-5-resultx-5.18-live-smoke-2026-05-12.md)
 
 ### 5.18.1 진행 매트릭스 (Step A~G)
 
@@ -4039,6 +4039,42 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 
 - 라이브 smoke 동안 read-only query + diagnostic → vault 변경 0. cleanup 불필요.
 - 사용자가 보고 38 page mismatch (sha256:679cf2dd6db75e3a) 는 §5.17 case A 복제본 ingest 부작용 — 사용자 결정 (2026-05-12): §5.19 maintenance suite `wiki-recovery.sh` 또는 lint workflow 3 self-healing 으로 cleanup. §5.18 cycle 내 fix 없음 (out-of-scope 명시).
+
+### 5.18.3a 추가 사용자 raise 3 cycle (v0.4 / v0.5 / v0.6, 2026-05-12)
+
+본체 cycle 종결 commit `a8129a7` 후 사용자가 wikey 3계층 철학 + UI 개선 raise 3건 추가:
+
+- **v0.4 (commit `e6fd0ab`)**: wikey 3계층 위반 fix — `collectBacklinks` + `mentioned` 가 vault 전체 (resolvedLinks + getFirstLinkpathDest) 사용 → raw/, plan/, activity/, .obsidian/ 가 backlink 로 포함됨. wikey.schema.md "wiki/ 는 LLM-made knowledge layer" 위반. 신규 invariant I4a (scope filter): `collectBacklinks(scope: 'wiki' | 'vault')` + WikeySettings `backlinkScope` 토글 (default 'wiki'). 라이브 smoke `참조 페이지 (98)` 가 vault 전체 source 포함 가능성 확증. 다른 vault enum 사이트 5건 (commands.ts:404/778/959 + main.ts:661 + sidebar-chat.ts:1738) 은 이미 의도된 scope filter 적용 — §5.18 backlink 만 단일 누락. wikey-obsidian 132 → 134 PASS.
+- **v0.5 (commit `0527b04`)**: raw/ 제외 + (+) badge + 헤더 "참고" reword — (a) `'vault'` → `'extended'` rename. (b) raw/ 모든 scope 에서 항상 제외 (wiki/ ingest 후 raw sidecar 의 wikilink 가 wiki page 와 dup). (c) I5b 신규 entry badge: wiki/ plain / 외부 폴더 `(+)`. (d) header `참조 페이지 (N)` → `참고 (N)`. (e) handleSend mentioned 셋 wiki/ filter. 134 → 135 PASS. 본질 질문 답변: ingest = raw → wiki LLM 분해 + 검색 인덱싱 (wiki/ 만). 단순 참조 = backlink 가시화 only, 검색 인덱스 비대상.
+- **v0.6 (commit `3acc5be`)**: 답변 footer 3 layer 분리 — `원본:` (raw) / `참고 (N)` (wiki) / `확장 (M)` (external, extended opt-in 시만). collectBacklinks signature `string[]` → `BacklinkResult { wiki, external }`. buildBacklinkSection 2 section `<details>` 분리 (renderBacklinkBlock 추출). (+) badge 폐기 — section header 가 동일 정보 더 명확. I6 갱신: wiki=0 → 참고 생략 / external=0 → 확장 생략. 신규 T17/T18. 135 → **137 PASS** / build 0 errors.
+
+### 5.18.3b 답변 footer 최종 구조 (v0.6)
+
+```
+[답변 본문]
+
+원본:                                ← Spec 1 (raw 파일 link, registry resolve)
+- [[<raw path>|<basename>]] (md)
+
+<details><summary>참고 (N)</summary>      ← Spec 2 wiki/ backlink (정식 지식)
+- [[wiki/entities/...]]                    (scope 무관, 항상 잠재적 출현)
+</details>
+
+<details><summary>확장 (M)</summary>      ← Spec 2 external backlink (단순 참조)
+- [[plan/phase-5/...]]                     (extended scope opt-in 시만)
+</details>
+```
+
+### 5.18.3c 인덱싱 layer 명확화 (사용자 본질 질문 답변)
+
+| Layer | wiki/ | raw/ | 외부 폴더 (단순 참조) |
+|-------|-------|------|---------------------|
+| qmd/Orama 검색 인덱스 | ✓ | ✗ | **✗ 인덱싱 안 됨** |
+| query 답변 retrieval | ✓ | ✗ | **✗** |
+| backlink section 노출 | ✓ `참고` (정식) | 항상 제외 | ✓ `확장` (단순 참조, extended opt-in) |
+| LLM 답변에 내용 포함 | ✓ | ✗ | **✗** (graph reference 만) |
+
+외부 폴더 page 는 backlink list 의 link 로만 노출. 사용자가 클릭 시 Obsidian native 가 page 직접 열어줌 — wikey 답변 LLM 은 그 내용 모름. 검색 대상 만들려면 raw/ 로 옮겨 ingest → wiki/ 분해 의무.
 
 ### 5.18.4 다음 액션 (잔여 Phase 5)
 
