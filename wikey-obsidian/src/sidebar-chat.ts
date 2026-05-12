@@ -270,67 +270,98 @@ export function triggerPanelRefresh(
  * - `resolvedLinks` shape = `Record<sourcePath, Record<targetPath, count>>`
  *   (Obsidian `app.metadataCache.resolvedLinks` 직접 사용)
  * - **I4a scope filter (v0.5, 사용자 raise 2026-05-12)**:
- *   - `scope='wiki'` (default) — `sourcePath.startsWith('wiki/')` 만. wikey 3계층
- *     knowledge layer (wiki/ = LLM-made 지식 자산).
- *   - `scope='extended'` (opt-in) — wiki/ + 다른 폴더 (plan/ / activity/ /
- *     사용자 메모 등). **raw/ 는 항상 제외** (wiki/ 와 중복 — ingest 된 raw
- *     sidecar 의 wikilink 가 wiki page 를 가리키면 self-reference dup).
- *     "단순 참조로서의 지식" 가시화 용도, 검색 인덱스 (qmd/Orama) 와 무관.
+ *   - `scope='wiki'` (default) — wiki/ source 만 (`wiki` array 채움, `external`
+ *     빈 array). wikey 3계층 knowledge layer (wiki/ = LLM-made 지식 자산).
+ *   - `scope='extended'` (opt-in) — wiki/ source 는 `wiki` array, 외부 폴더
+ *     (plan/, activity/, 사용자 메모) source 는 `external` array 로 분리.
+ *     **raw/ 는 항상 제외** (wiki/ 와 중복: ingest 후 raw sidecar 의 wikilink 가
+ *     wiki page 와 self-reference dup, 사용자 결정 2026-05-12).
+ * - **v0.6 (사용자 raise 2026-05-12)**: section 분리 — 답변 footer 가
+ *   `원본:` (raw) / `참고:` (wiki backlink) / `확장:` (external backlink) 3 layer 로
+ *   사용자가 명확 구분. (v0.5 `(+)` badge 폐기, section 자체로 구분.)
  * - I7a self-reference 회피: source 가 `mentioned` 셋 에 포함되면 제외
  *   (답변 본문 안 mention 된 page 자체는 backlink list 에서 노출 X).
  * - 결과 unique + sort 안정 (alphabetic).
  */
 export type BacklinkScope = 'wiki' | 'extended'
 
+export interface BacklinkResult {
+  wiki: string[]
+  external: string[]
+}
+
 export function collectBacklinks(
   resolvedLinks: Record<string, Record<string, number>>,
   mentioned: Set<string>,
   opts: { scope?: BacklinkScope } = {},
-): string[] {
+): BacklinkResult {
   const scope: BacklinkScope = opts.scope ?? 'wiki'
-  const backlinks = new Set<string>()
+  const wikiSet = new Set<string>()
+  const externalSet = new Set<string>()
   for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
-    // I4a — raw/ 는 모든 scope 에서 제외 (wiki/ 와 중복: ingest 후 raw sidecar
-    // 안 wikilink 는 wiki/ 페이지와 동일 reference, 사용자 결정 2026-05-12).
+    // I4a — raw/ 는 모든 scope 에서 제외 (wiki/ 와 중복)
     if (sourcePath.startsWith('raw/')) continue
-    // I4a — scope filter: 'wiki' = wiki/ only, 'extended' = raw/ 제외 vault 전체
-    if (scope === 'wiki' && !sourcePath.startsWith('wiki/')) continue
     // I7a — self-reference 회피
     if (mentioned.has(sourcePath)) continue
+    const isWiki = sourcePath.startsWith('wiki/')
+    // scope='wiki' 면 외부 폴더 source skip
+    if (!isWiki && scope === 'wiki') continue
     for (const target of Object.keys(links)) {
       if (mentioned.has(target)) {
-        backlinks.add(sourcePath)
+        ;(isWiki ? wikiSet : externalSet).add(sourcePath)
         break
       }
     }
   }
-  return Array.from(backlinks).sort()
+  return {
+    wiki: Array.from(wikiSet).sort(),
+    external: Array.from(externalSet).sort(),
+  }
 }
 
 const BACKLINK_DISPLAY_LIMIT = 5
 
 /**
- * backlink list → HTML `<details>` markup (default collapse).
+ * backlink result → HTML `<details>` markup (default collapse, 2 section 분리).
+ *
+ * v0.6 (사용자 raise 2026-05-12) — 답변 footer 3 layer 명확 구분:
+ *   - `원본:` (Spec 1 appendOriginalLinks, raw)
+ *   - `참고:` (wiki/ backlink, 정식 지식 layer)
+ *   - `확장:` (external backlink, extended scope opt-in 시만 — 단순 참조)
  *
  * - I5a: default closed (`<details>` 에 `open` attribute 없음).
- * - I5: `<summary>참고 (N)</summary>` 헤더 (사용자 표현 2026-05-12).
- * - **I5b (v0.5)**: entry badge — wiki/ 정식 지식은 plain `[[path]]`, 외부 폴더
- *   (extended scope opt-in 시) 는 `[[path]] (+)` 로 단순 참조 표시 (사용자 결정).
- * - I7: 5 항목 list + 초과 시 truncation 안내 텍스트 (modal/state 회피).
- * - I6: 빈 array → 빈 string (section 미출력 trigger).
+ * - I5: `<summary>참고 (N)</summary>` + `<summary>확장 (M)</summary>` 분리.
+ * - I7: 각 section 5 항목 + 초과 시 truncation 안내 텍스트.
+ * - I6: 빈 array → section 미출력 (wiki 0 이면 `참고` 생략, external 0 이면 `확장` 생략).
  */
-export function buildBacklinkSection(backlinks: readonly string[]): string {
-  if (backlinks.length === 0) return ''
-  const total = backlinks.length
-  const head = backlinks.slice(0, BACKLINK_DISPLAY_LIMIT)
-  const items = head.map((p) => {
-    const badge = p.startsWith('wiki/') ? '' : ' (+)'
-    return `- [[${p}]]${badge}`
-  })
+function renderBacklinkBlock(label: string, items: readonly string[]): string {
+  if (items.length === 0) return ''
+  const total = items.length
+  const head = items.slice(0, BACKLINK_DISPLAY_LIMIT)
+  const lines = head.map((p) => `- [[${p}]]`)
   if (total > BACKLINK_DISPLAY_LIMIT) {
-    items.push(`- ... (총 ${total} 개, 모두 보려면 Obsidian backlink panel 참조)`)
+    lines.push(`- ... (총 ${total} 개, 모두 보려면 Obsidian backlink panel 참조)`)
   }
-  return `<details><summary>참고 (${total})</summary>\n\n${items.join('\n')}\n</details>`
+  return `<details><summary>${label} (${total})</summary>\n\n${lines.join('\n')}\n</details>`
+}
+
+export function buildBacklinkSection(input: BacklinkResult | readonly string[]): string {
+  // legacy signature (string[]) 호환: wiki/ 시작이면 wiki, 아니면 external 로 분류.
+  // (v0.5 이전 호출처 보호 — 새 코드는 BacklinkResult 직접 전달 권장.)
+  let wiki: string[]
+  let external: string[]
+  if (Array.isArray(input)) {
+    wiki = []
+    external = []
+    for (const p of input) (p.startsWith('wiki/') ? wiki : external).push(p)
+  } else {
+    wiki = [...input.wiki]
+    external = [...input.external]
+  }
+  const wikiBlock = renderBacklinkBlock('참고', wiki)
+  const externalBlock = renderBacklinkBlock('확장', external)
+  if (!wikiBlock && !externalBlock) return ''
+  return [wikiBlock, externalBlock].filter(Boolean).join('\n')
 }
 
 export class WikeyChatView extends ItemView {
@@ -652,13 +683,14 @@ export class WikeyChatView extends ItemView {
       const backlinkScope =
         (this.plugin?.settings as { backlinkScope?: BacklinkScope } | undefined)?.backlinkScope ??
         'wiki'
-      const backlinks = mentioned.size > 0
-        ? collectBacklinks(
-            this.app.metadataCache.resolvedLinks as Record<string, Record<string, number>>,
-            mentioned,
-            { scope: backlinkScope },
-          )
-        : []
+      const backlinks: BacklinkResult =
+        mentioned.size > 0
+          ? collectBacklinks(
+              this.app.metadataCache.resolvedLinks as Record<string, Record<string, number>>,
+              mentioned,
+              { scope: backlinkScope },
+            )
+          : { wiki: [], external: [] }
       const backlinkSection = buildBacklinkSection(backlinks)
       const finalContent = backlinkSection
         ? `${result.answer}\n\n${backlinkSection}`

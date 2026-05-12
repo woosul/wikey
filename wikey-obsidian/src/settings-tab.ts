@@ -1126,17 +1126,18 @@ export class WikeySettingTab extends PluginSettingTab {
       },
     )
 
-    // §5.18 v0.5 — backlink section scope (wiki/ vs extended; raw/ always excluded)
+    // §5.18 v0.6 — backlink section scope (wiki/ vs extended; raw/ always excluded)
     this.renderStandardDropdown(
       containerEl,
       'Backlink section scope',
-      'Which folders count as backlink sources in the answer "참고" section. ' +
-        'wiki — only pages under wiki/ (default, wikey 3-layer knowledge: wiki/ is the LLM-curated asset). ' +
-        'extended — wiki/ + other folders (plan/, activity/, your notes…). External pages get a "(+)" badge ' +
-        'to mark them as informal references. raw/ is always excluded (would duplicate wiki/ ingest result).',
+      'Answer footer backlink layers. ' +
+        'wiki — only `참고 (N)` section under wiki/ (default, wikey 3-layer knowledge asset). ' +
+        'extended — `참고 (N)` (wiki/) + `확장 (M)` (other folders: plan/, activity/, your notes) — ' +
+        'two separate sections so wiki/ formal knowledge vs. informal references are clearly distinguished. ' +
+        'raw/ is always excluded (would duplicate wiki/ ingest result).',
       [
-        { value: 'wiki', label: 'wiki/ only (default)' },
-        { value: 'extended', label: 'extended (wiki/ + 외부 폴더, raw/ 제외)' },
+        { value: 'wiki', label: 'wiki/ only — `참고` (default)' },
+        { value: 'extended', label: 'extended — `참고` + `확장` (raw/ 제외)' },
       ],
       this.plugin.settings.backlinkScope,
       async (value) => {
