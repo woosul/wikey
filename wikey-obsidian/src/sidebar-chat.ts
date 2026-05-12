@@ -269,16 +269,25 @@ export function triggerPanelRefresh(
  *
  * - `resolvedLinks` shape = `Record<sourcePath, Record<targetPath, count>>`
  *   (Obsidian `app.metadataCache.resolvedLinks` 직접 사용)
+ * - **I4a scope filter (v0.4)**: `scope='wiki'` 면 wiki/ 시작 source 만 (default,
+ *   wikey 3계층 knowledge layer 원칙 — 사용자 raise 2026-05-12). `scope='vault'`
+ *   면 vault 전체 (raw/ sidecar 의 wikilink mention 등 포함, 사용자 opt-in).
  * - I7a self-reference 회피: source 가 `mentioned` 셋 에 포함되면 제외
  *   (답변 본문 안 mention 된 page 자체는 backlink list 에서 노출 X).
  * - 결과 unique + sort 안정 (alphabetic).
  */
+export type BacklinkScope = 'wiki' | 'vault'
+
 export function collectBacklinks(
   resolvedLinks: Record<string, Record<string, number>>,
   mentioned: Set<string>,
+  opts: { scope?: BacklinkScope } = {},
 ): string[] {
+  const scope: BacklinkScope = opts.scope ?? 'wiki'
   const backlinks = new Set<string>()
   for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
+    // I4a — scope filter (default wiki/ 만, opt-in vault 전체)
+    if (scope === 'wiki' && !sourcePath.startsWith('wiki/')) continue
     // I7a — self-reference 회피
     if (mentioned.has(sourcePath)) continue
     for (const target of Object.keys(links)) {
@@ -626,10 +635,14 @@ export class WikeyChatView extends ItemView {
         const dest = this.app.metadataCache.getFirstLinkpathDest(linkpath, '')
         if (dest) mentioned.add(dest.path)
       }
+      const backlinkScope =
+        (this.plugin?.settings as { backlinkScope?: BacklinkScope } | undefined)?.backlinkScope ??
+        'wiki'
       const backlinks = mentioned.size > 0
         ? collectBacklinks(
             this.app.metadataCache.resolvedLinks as Record<string, Record<string, number>>,
             mentioned,
+            { scope: backlinkScope },
           )
         : []
       const backlinkSection = buildBacklinkSection(backlinks)

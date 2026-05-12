@@ -1126,6 +1126,26 @@ export class WikeySettingTab extends PluginSettingTab {
       },
     )
 
+    // §5.18 v0.4 — backlink section scope (wiki/ vs vault 전체)
+    this.renderStandardDropdown(
+      containerEl,
+      'Backlink section scope',
+      'Which folders count as backlink sources in the answer "참조 페이지" section. ' +
+        'wiki — only pages under wiki/ (default, wikey 3-layer knowledge principle). ' +
+        'vault — every markdown file in the vault (raw/ sidecars, plan/, activity/, .obsidian/ … ' +
+        'opt-in for vaults that already use wikilinks broadly outside wiki/).',
+      [
+        { value: 'wiki', label: 'wiki/ only (default)' },
+        { value: 'vault', label: 'whole vault' },
+      ],
+      this.plugin.settings.backlinkScope,
+      async (value) => {
+        const v = value === 'vault' ? 'vault' : 'wiki'
+        this.plugin.settings.backlinkScope = v
+        await this.plugin.saveSettings()
+      },
+    )
+
     // OCR fallback (markitdown-ocr) — vision-capable provider+model when
     // text-layer extraction fails. DEFAULT inherits Default Model.
     const effectiveOcrProvider = (this.plugin.settings.ocrProvider || this.plugin.settings.basicModel) as LLMProvider

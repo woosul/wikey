@@ -103,6 +103,10 @@ interface WikeySettings {
   // 'sidecar' : sidecar 파일 (paired 면 .md, 단독 md 면 자체)
   // 'hidden'  : footer 미출력
   originalLinkMode: 'raw' | 'sidecar' | 'hidden'
+  // ── §5.18 v0.4 — backlink section scope (사용자 raise 2026-05-12) ──
+  // 'wiki'  : wiki/ 폴더 안 페이지만 backlink source 로 (default, wikey 3계층 원칙)
+  // 'vault' : vault 전체 (raw/ sidecar + plan/ + activity/ 등 모두 포함, opt-in)
+  backlinkScope: 'wiki' | 'vault'
   // ── §5.7.4 검색 backend engine ──
   // 'orama' (default): in-process Orama + Kiwi WASM tokenizer
   // 'qmd' (회귀): tools/qmd/ vendored CLI subprocess
@@ -174,6 +178,7 @@ const DEFAULT_SETTINGS: WikeySettings = {
   piiRedactionMode: 'mask',
   piiGuardEnabled: true,
   originalLinkMode: 'raw',
+  backlinkScope: 'wiki',
   searchEngine: 'orama',
   developerMode: false,
   allowUpdateCheck: false,

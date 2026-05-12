@@ -5,7 +5,7 @@ title: Query citation UX — 원본 1개당 1줄 + 전체 원본 링크 + wiki b
 status: draft
 created: 2026-05-11
 updated: 2026-05-12
-version: v0.3
+version: v0.4
 ---
 
 # Phase 5 §5.18 Query citation UX (Spec, WHAT)
@@ -104,6 +104,7 @@ version: v0.3
 - **Goal**: 답변에 등장한 wiki page 들이 어느 wiki page 에서 참조되는지 (Obsidian backlink) 별도 section 으로 표시.
 - **Invariants**:
   - I4: backlink 조회는 Obsidian `app.metadataCache.resolvedLinks` 역방향 lookup (Step "1" 안정성 LOCK). sidebar-chat 의 `wikey-wikilink` (line 2351) DOM rendering 과 별 layer — 답변 텍스트 post-process 단계에서 추가.
+  - **I4a (v0.4 신규 — wikey 3계층 scope filter)**: backlink source path 는 settings `backlinkScope` 옵션에 따라 filter. default `'wiki'` = `sourcePath.startsWith('wiki/')` 만 (wikey.schema.md 3계층 "wiki/ 가 유일한 LLM-made knowledge layer" 정합 + raw/ + plan/ + activity/ + .obsidian/ + .wikey/ 등 외부 폴더 제외). opt-in `'vault'` = 전체 vault graph (사용자가 이미 wikilink graph 가 광범위한 vault 통합 사용자용, niche). 사용자 결정 (2026-05-12) — ingest 의 본질은 raw → wiki LLM 의미 normalize + 4 카테고리 분해 + 검색 인덱싱이라 wiki/ 만이 "지식 자산", vault 다른 폴더는 단순 wikilink graph reference (지식 확장 X). default 'wiki' 가 wikey 철학 정합.
   - I5: 표시 위치 = `원본:` block 다음, 한 줄 공백 후. 신규 section header = `참조 페이지:` (backlink 의미 한국어 명시).
   - I5a: default **collapse** (Q2 LOCK 2026-05-12): HTML `<details><summary>` 구조 — `<details><summary>참조 페이지 (N)</summary>\n- [[...]]\n- [[...]]\n</details>`. Obsidian markdown renderer 가 details/summary 지원.
   - I6: backlink 0 개면 section 생략 (no-op) — 빈 collapse 도 출력 X.
@@ -161,3 +162,4 @@ version: v0.3
 - v0.1 (2026-05-11): draft 신규.
 - v0.2 (2026-05-12 analyst): Step "1" 실측 evidence 추가 (registry 14 record, 1 mismatch, 38 page fallback trigger, hot-page perception 100% 설명), Spec 1 I2 extension badge dynamic derive 명시 (anchor k 하드코딩 금지), Spec 2 I5a default collapse LOCK (Q2) + I7 truncation 안내 텍스트 (modal 회피, Karpathy Simplicity), Spec 3 I8 WARN log 형식 LOCK (Q4 sensitive X) + I9b 별 Modal 출력 LOCK (Q3), §3 LOC budget 재추정 (180~235 LOC), §4 Step A done 갱신.
 - v0.3 (2026-05-12 master): codex post-impl cycle #2 MED finding closure — §3 `commands.ts` LOC budget 정정 (`+80~+100` → `+120~+140`, interface + JSDoc + runner 포함). 총 변경 면 `180~235 LOC` → `220~275 LOC` (실측 반영, commands.ts +140 정합). 코드 변경 X (codex 권고대로 spec 주석만 sync).
+- v0.4 (2026-05-12 master): **wikey 3계층 원칙 위반 fix (사용자 raise)** — `collectBacklinks` + `mentioned` 가 vault 전체 (`resolvedLinks` + `getFirstLinkpathDest`) 사용 → wiki/ 외부 source (raw/, plan/, activity/, .obsidian/ 등) 가 backlink 로 포함됨. wikey.schema.md 3계층 "wiki/ 는 LLM-made knowledge layer" 위반. **신규 invariant I4a (scope filter)**: `collectBacklinks(resolvedLinks, mentioned, opts: { scope: 'wiki' | 'vault' })` — default `'wiki'` (wiki/ 시작 source 만, wikey 철학 정합), opt-in `'vault'` (vault 전체, 이미 wikilink graph 가 광범위한 vault 통합 사용자용). 사용자 결정 (2026-05-12) "옵션화 — 일부 vault 는 전체 폴더 link 대상 케이스 있음". WikeySettings 신규 필드 `backlinkScope: 'wiki' | 'vault'` + settings-tab dropdown. 변경 면: collectBacklinks +2 LOC (filter 라인) + main.ts +5 LOC (interface + default) + settings-tab.ts +20 LOC (dropdown) + sidebar-chat.ts +4 LOC (settings 읽기 + scope 전달) + 2 신규 test T14 wiki filter / T15 vault opt-in. wikey-obsidian 134 PASS (132 → 134), 회귀 0.

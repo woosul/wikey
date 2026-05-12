@@ -79,6 +79,40 @@ describe('§5.18 Spec 2 — collectBacklinks (resolvedLinks 역방향 lookup)', 
     expect(backlinks).not.toContain('wiki/entities/a.md')
     expect(backlinks).toContain('wiki/entities/c.md')
   })
+
+  // T14 ↔ Spec 2 I4a (v0.4) — default wiki/ scope filter
+  it('T14: I4a default wiki/ scope — raw/ + plan/ + .obsidian/ source 는 backlink 제외', () => {
+    const resolvedLinks: Record<string, Record<string, number>> = {
+      'wiki/entities/jeff.md': { 'wiki/entities/lotus-pms.md': 1 }, // wiki/ → ✓
+      'raw/3_resources/legacy.md': { 'wiki/entities/lotus-pms.md': 1 }, // raw/ → ✗
+      'plan/phase-5/phase-5-todo.md': { 'wiki/entities/lotus-pms.md': 1 }, // plan/ → ✗
+      '.obsidian/widgets/foo.md': { 'wiki/entities/lotus-pms.md': 1 }, // .obsidian/ → ✗
+      'activity/phase-5/note.md': { 'wiki/entities/lotus-pms.md': 1 }, // activity/ → ✗
+    }
+    const mentioned = new Set<string>(['wiki/entities/lotus-pms.md'])
+    const backlinks = collectBacklinks(resolvedLinks, mentioned)
+    // default scope='wiki' — wiki/ 하나만
+    expect(backlinks).toEqual(['wiki/entities/jeff.md'])
+  })
+
+  // T15 ↔ Spec 2 I4a (v0.4) — opt-in vault scope (사용자 결정 2026-05-12)
+  it('T15: I4a vault scope opt-in — 모든 source 포함 (raw/sidebar 사용 vault 케이스)', () => {
+    const resolvedLinks: Record<string, Record<string, number>> = {
+      'wiki/entities/jeff.md': { 'wiki/entities/lotus-pms.md': 1 },
+      'raw/3_resources/legacy.md': { 'wiki/entities/lotus-pms.md': 1 },
+      'plan/phase-5/phase-5-todo.md': { 'wiki/entities/lotus-pms.md': 1 },
+    }
+    const mentioned = new Set<string>(['wiki/entities/lotus-pms.md'])
+    const backlinks = collectBacklinks(resolvedLinks, mentioned, { scope: 'vault' })
+    expect(backlinks).toHaveLength(3)
+    expect(backlinks).toEqual(
+      expect.arrayContaining([
+        'wiki/entities/jeff.md',
+        'raw/3_resources/legacy.md',
+        'plan/phase-5/phase-5-todo.md',
+      ]),
+    )
+  })
 })
 
 describe('§5.18 Spec 2 — buildBacklinkSection (HTML <details> markup)', () => {
