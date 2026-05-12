@@ -850,9 +850,11 @@ Click [[page name]] in answers to navigate to the wiki page.
     // §5.19 v0.4 (R9) — Wiki Maintenance section. 3-button entry point
     // (Status / Check / Refactoring) opens `MaintenanceModal` in the requested
     // mode. Recovery was retired in v0.4 — Check's Fix link multi-mode absorbs
-    // its dangling-sha cleanup path (Spec 2 / I-FIX-2). hr divider before the
-    // maintenance section keeps the visual rhythm.
-    helpEl.createEl('hr', { cls: 'wikey-help-divider' })
+    // its dangling-sha cleanup path (Spec 2 / I-FIX-2).
+    //
+    // §5.19 v0.5 follow-up (사용자 raise 2026-05-13) — manual hr 제거. Settings
+    // paragraph 직전 `insertHelpDividers` 자동 hr 가 이미 시각 분리 cover, 추가
+    // hr 가 사용자 눈에 "2 줄" 중복으로 보임.
     this.renderMaintenanceSection(helpEl)
   }
 

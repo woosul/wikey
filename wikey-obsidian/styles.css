@@ -2675,6 +2675,14 @@ a.internal-link.wikey-broken-link,
   border-radius: 4px;
 }
 
+/* §5.19 v0.5 follow-up (사용자 raise 2026-05-13) — 빈 progress region
+   (no log lines) hidden. raw key:value dump 제거 후 progress 가 거의 항상
+   비어있어 빈 회색 block 만 잔존 = noise. `:empty` selector 가 child element
+   부재 시 자동 hide. */
+.wikey-maintenance-modal-progress:empty {
+  display: none;
+}
+
 .wikey-maintenance-modal-log-line {
   white-space: pre-wrap;
   padding: 1px 0;

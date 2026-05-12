@@ -196,10 +196,12 @@ export class MaintenanceModal extends Modal {
     // §5.19 v0.5 R6 — keep the refactoring result for the Step 2 dispatch
     // (the unhealthy Execute button reuses it instead of re-running the suite).
     if (this.mode === 'refactoring') this.refactoringResult = result
-    for (const [k, v] of Object.entries(result)) {
-      const display = Array.isArray(v) ? v.length : String(v)
-      this.appendProgressLine(`${k}: ${display}`)
-    }
+    // §5.19 v0.5 follow-up (사용자 raise 2026-05-13) — raw `key: value` dump
+    // 제거. unhealthy summary ("Issues found: 2 duplicates, 1 lowUtility") +
+    // Step 2 archive list 가 같은 정보 cover. raw dump 는 사용자 입장에서
+    // noise + 정보 중복. progress region 은 [error] / [refactor archive] 등
+    // 실제 진행 이벤트만 (appendProgressLine 호출 0 시 progressEl 빈 상태로
+    // 잔존 → R7 cleanup 별 처리).
     // §5.19 v0.4 (R6/R10/I-HEALTH-1) — Status / Refactoring modes show issue
     // summary instead of "All healthy" when any metric > 0. Previously every
     // key-value mode routed through `renderFindings([])` (empty findings →

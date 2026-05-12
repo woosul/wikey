@@ -122,8 +122,13 @@ export function renderUnhealthySummary(
     text: summary,
     cls: 'wikey-maintenance-modal-unhealthy',
   })
+  // §5.19 v0.5 follow-up (사용자 raise 2026-05-13) — Execute + Close 같은 row
+  // (`wikey-maintenance-modal-unhealthy-actions`, flex 가로 배치).
+  const actionsRow = actionEl.createDiv({
+    cls: 'wikey-maintenance-modal-unhealthy-actions',
+  })
   if (hooks.onExecute) {
-    const execBtn = actionEl.createEl('button', {
+    const execBtn = actionsRow.createEl('button', {
       text: 'Execute',
       cls: 'wikey-maintenance-modal-execute-btn',
     })
@@ -131,7 +136,7 @@ export function renderUnhealthySummary(
       hooks.onExecute!()
     })
   }
-  const closeBtn = actionEl.createEl('button', {
+  const closeBtn = actionsRow.createEl('button', {
     text: 'Close',
     cls: 'wikey-maintenance-modal-close-btn',
   })
