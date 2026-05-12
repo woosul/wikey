@@ -1841,11 +1841,11 @@ Stage 4 fail (LLM down)
 
 ### 10.6 Acceptance
 
-- [ ] script 실행 시 59 slug 중 가용한 모든 slug embedding 추출 (없는 slug 은 warn + skip, exit 0)
-- [ ] convergence-pass 가 실 embeddings 로 ≥ 1 ConvergedDecomposition 생성 (mock baseline 4 와 비교 — 변동 시 본문 기록)
-- [ ] cluster 정확도 spot-check ≥ 0.85 cosine 또는 의미 평가 PASS (한/영 / synonym 1 페어 이상)
-- [ ] 회귀 baseline 유지 (732 PASS) — 본 mini plan 은 회귀 코드 변경 없는 범위 (script + 산출 JSON 만)
-- [ ] activity/phase-5/phase-5-result.md §5.4.7 1순위 [x] mark + commit
+- [x] script 실행 시 59 slug 중 가용한 모든 slug embedding 추출 (없는 slug 은 warn + skip, exit 0)
+- [x] convergence-pass 가 실 embeddings 로 ≥ 1 ConvergedDecomposition 생성 (mock baseline 4 와 비교 — 변동 시 본문 기록)
+- [x] cluster 정확도 spot-check ≥ 0.85 cosine 또는 의미 평가 PASS (한/영 / synonym 1 페어 이상)
+- [x] 회귀 baseline 유지 (732 PASS) — 본 mini plan 은 회귀 코드 변경 없는 범위 (script + 산출 JSON 만)
+- [x] activity/phase-5/phase-5-result.md §5.4.7 1순위 [x] mark + commit
 
 ### 10.7 7-anchor self-check (mini plan 자체)
 
@@ -1969,14 +1969,14 @@ function rowToSuggestionShape(row: SuggestionsPanelRow): Suggestion {
 
 ### 11.6 Acceptance
 
-- [ ] 회귀 baseline 732 PASS 유지 (UI 변경, 회귀 코드 X — `appendStandardDecomposition` writer 재사용)
-- [ ] build wikey-core + wikey-obsidian 0 errors
-- [ ] Suggestions panel 그리드 표시: Stage 2 (`.wikey/suggestions.json`) + Stage 4 (`.wikey/converged-decompositions.json`) 통합
-- [ ] Accept multi: 2건 이상 선택 후 클릭 → 모두 schema.yaml append + state 갱신 (단위 또는 라이브 검증)
-- [ ] Reject multi: 2건 이상 선택 후 클릭 → 모두 store 제거
-- [ ] Add: 신규 row 입력 → 다음 Accept 시 schema.yaml 정상 append
-- [ ] Edit: edit mode → row 선택 → inline edit → 기존 row reject + user-added 신규 등록 (라이브 검증)
-- [ ] activity §5.4.9 신규 + plan §5.4.7 2/3/4순위 [x] mark + commit
+- [x] 회귀 baseline 732 PASS 유지 (UI 변경, 회귀 코드 X — `appendStandardDecomposition` writer 재사용)
+- [x] build wikey-core + wikey-obsidian 0 errors
+- [x] Suggestions panel 그리드 표시: Stage 2 (`.wikey/suggestions.json`) + Stage 4 (`.wikey/converged-decompositions.json`) 통합
+- [x] Accept multi: 2건 이상 선택 후 클릭 → 모두 schema.yaml append + state 갱신 (단위 또는 라이브 검증)
+- [x] Reject multi: 2건 이상 선택 후 클릭 → 모두 store 제거
+- [x] Add: 신규 row 입력 → 다음 Accept 시 schema.yaml 정상 append
+- [x] Edit: edit mode → row 선택 → inline edit → 기존 row reject + user-added 신규 등록 (라이브 검증)
+- [x] activity §5.4.9 신규 + plan §5.4.7 2/3/4순위 [x] mark + commit
 
 ### 11.7 4순위 follow-up 구체 계획 (2026-04-26 session 14 추가 — 사용자 지적 후속)
 

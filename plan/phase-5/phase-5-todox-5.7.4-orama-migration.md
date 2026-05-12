@@ -114,13 +114,13 @@ Phase 9  최종 master 1차 검증 + 사용자 사전 보고
 
 **Step A 체크박스**:
 
-- [ ] Kiwi 사전 9 파일 존재 확증 (`ls -la ~/.cache/wikey/kiwi-models/cong/base/`)
-- [ ] `WIKEY_SEARCH_ENGINE` 신규 config 키 4 위치 확정 (`types.ts:30` / `config.ts:13` / `main.ts:513` / `main.ts:641`)
-- [ ] kiwi-nlp vendor 결정 잠금 — `wikey-core/vendor/kiwi-nlp/` 디렉토리 신규 (~3K LOC + 3.8MB wasm) + `VENDOR.md` 양식 결정
-- [ ] PoC 코드 보존 결정 명시 (cleanup 시점 = 본 cycle 종결 후 별 step)
-- [ ] wikey-core/package.json 에 `@orama/orama` 추가 결정 잠금 (v3: kiwi-nlp 는 vendor 라 dep 미추가)
-- [ ] esbuild plugin asset copy source path 결정 — vendor path (`wikey-core/vendor/kiwi-nlp/dist/kiwi-wasm.wasm`)
-- [ ] `tools/qmd/` git tracked 보존 확증 (`git ls-files tools/qmd/ \| wc -l`)
+- [x] Kiwi 사전 9 파일 존재 확증 (`ls -la ~/.cache/wikey/kiwi-models/cong/base/`)
+- [x] `WIKEY_SEARCH_ENGINE` 신규 config 키 4 위치 확정 (`types.ts:30` / `config.ts:13` / `main.ts:513` / `main.ts:641`)
+- [x] kiwi-nlp vendor 결정 잠금 — `wikey-core/vendor/kiwi-nlp/` 디렉토리 신규 (~3K LOC + 3.8MB wasm) + `VENDOR.md` 양식 결정
+- [x] PoC 코드 보존 결정 명시 (cleanup 시점 = 본 cycle 종결 후 별 step)
+- [x] wikey-core/package.json 에 `@orama/orama` 추가 결정 잠금 (v3: kiwi-nlp 는 vendor 라 dep 미추가)
+- [x] esbuild plugin asset copy source path 결정 — vendor path (`wikey-core/vendor/kiwi-nlp/dist/kiwi-wasm.wasm`)
+- [x] `tools/qmd/` git tracked 보존 확증 (`git ls-files tools/qmd/ \| wc -l`)
 
 ### Step B — TDD RED→GREEN→BLUE 3a/3b (Phase 2~5)
 
@@ -128,73 +128,73 @@ Phase 9  최종 master 1차 검증 + 사용자 사전 보고
 
 전체 신규 단위 테스트 = spec v5 의 28 AC 중 단위 부분 = 18 case (§5.1) + 통합 단위 테스트 가능한 부분 (AC-F1.a + F1.b + V2) = 총 21 RED case (T1~T3 + I1 + I2.a + I3~I4 + Q1~Q5 + R1~R3 + V1 + W1 + F1.a + F1.b + V2 — I2.b production 117 docs + L1~L3 라이브 + Q3 sub + AC-D1/D2/F2/S1 docs/CLI/git 검증 제외).
 
-- [ ] `wikey-core/src/__tests__/search/orama-korean-tokenizer.test.ts` 신규 — AC-T1~T3 + AC-W1 (4 case)
-- [ ] `wikey-core/src/__tests__/search/orama-index.test.ts` 신규 — AC-I1 + AC-I2.a + AC-I3~I4 + AC-V1 (5 case)
-- [ ] `wikey-core/src/__tests__/query-pipeline-orama.test.ts` 신규 또는 기존 `query-pipeline.test.ts` 확장 — AC-Q2 + AC-Q4 + AC-Q5 (3 case, mock Orama + Ollama; AC-Q1/Q3 는 라이브 smoke)
-- [ ] `wikey-core/src/__tests__/scripts/reindex-orama.test.ts` 신규 또는 기존 `reindex.test.ts` 확장 — AC-R1~R3 (3 case)
-- [ ] `wikey-obsidian/src/__tests__/main-config-bridge.test.ts` 신규 — AC-F1.a (`loadFromWikeyConf` mock fs) + AC-F1.b (`process.env` override) (2 case, codex HIGH-2 fix)
-- [ ] `wikey-core/src/__tests__/vendor-kiwi-nlp.test.ts` 신규 — AC-V2 (vendor import path 작동 + VENDOR.md / sync docs 존재) (1 case, 사용자 raise v3)
-- [ ] 모두 FAIL 확증 후 `npm test` log 보존 → commit `test: §5.7.4 RED — 21 case (orama + vendor backend)` (18 단위 AC + AC-F1.a/F1.b + AC-V2)
+- [x] `wikey-core/src/__tests__/search/orama-korean-tokenizer.test.ts` 신규 — AC-T1~T3 + AC-W1 (4 case)
+- [x] `wikey-core/src/__tests__/search/orama-index.test.ts` 신규 — AC-I1 + AC-I2.a + AC-I3~I4 + AC-V1 (5 case)
+- [x] `wikey-core/src/__tests__/query-pipeline-orama.test.ts` 신규 또는 기존 `query-pipeline.test.ts` 확장 — AC-Q2 + AC-Q4 + AC-Q5 (3 case, mock Orama + Ollama; AC-Q1/Q3 는 라이브 smoke)
+- [x] `wikey-core/src/__tests__/scripts/reindex-orama.test.ts` 신규 또는 기존 `reindex.test.ts` 확장 — AC-R1~R3 (3 case)
+- [x] `wikey-obsidian/src/__tests__/main-config-bridge.test.ts` 신규 — AC-F1.a (`loadFromWikeyConf` mock fs) + AC-F1.b (`process.env` override) (2 case, codex HIGH-2 fix)
+- [x] `wikey-core/src/__tests__/vendor-kiwi-nlp.test.ts` 신규 — AC-V2 (vendor import path 작동 + VENDOR.md / sync docs 존재) (1 case, 사용자 raise v3)
+- [x] 모두 FAIL 확증 후 `npm test` log 보존 → commit `test: §5.7.4 RED — 21 case (orama + vendor backend)` (18 단위 AC + AC-F1.a/F1.b + AC-V2)
 
 **B2. GREEN — A1~A8 + vendor (v3) 구현** (Phase 3)
 
 순서대로 (의존성 고려):
 
-- [ ] (../A8 먼저) `WIKEY_SEARCH_ENGINE` config 키 + plugin config bridge — `types.ts` + `config.ts` + `main.ts:513` `loadFromWikeyConf` parser + `main.ts:641` `buildConfig` merge + env override (~25 LOC, codex HIGH-2 fix). AC-F1.a + F1.b.
-- [ ] (../v5 vendor 먼저, B-2 옵션 sparse, **v9 reality drift fix**) `wikey-core/vendor/kiwi-nlp/` 디렉토리 신규 — **upstream `bab2min/Kiwi` (대문자 K, Kiwi 본가) git tag archive 의 `bindings/wasm/package/` subdir sparse vendor** + 본가 root `LICENSE` 별 fetch. Step A3 절차 따라 진행. **v9 정정 (post-impl cycle #3 MED #10)**: vendor `dist/` = npm `kiwi-nlp@0.23.0/dist/` byte-equal mirror (sparse 보존 + dist mirror 패턴, `cp -r node_modules/kiwi-nlp/dist/* vendor/kiwi-nlp/dist/`). vendor 안 단독 `npm run build` 는 `src/build/kiwi-wasm.js` (Emscripten generated) 부재로 TS2307 fail — 이는 vendor 정합성 의도. src customize 시 본가 `bindings/wasm/build.sh` + Emscripten prerequisite. + `VENDOR.md` 작성 (Kiwi git tag + vendor date + LICENSE 보존 검증 + dist 재생성 절차 + WASM binary layer = vendor scope 외 명시). 사용자 raise v3 + codex cycle #2 HIGH-B fix v4 + codex cycle #3 HIGH-1 fix v5 + codex cycle #5 MED-1 fix v7 + post-impl cycle #3 MED #10 fix v9. AC-V2.
-- [ ] (../A1) `wikey-core/src/search/orama-korean-tokenizer.ts` 신규 — Module.instantiateWasm hook + smart_tokenize JS 포팅 (PoC commands.ts:142-156 mirror, ~150 LOC) + import path = `'../../vendor/kiwi-nlp/dist/build/kiwi-wasm.js'` (v3 vendor 경유). AC-T1~T3 + AC-W1.
-- [ ] (../A2) `wikey-core/src/search/orama-index.ts` 신규 — `createOramaIndex` + lifecycle 6 메서드 (~200 LOC). AC-I1~I3.
-- [ ] (../C3) AC-I4 round-trip persistence test 구현 + 검증.
-- [ ] (../C4) AC-V1 schema 호환 sanity — Orama schema 에 `embedding: 'vector[768]'` column 추가 + mock vector 1회 hybrid mode round-trip.
-- [ ] (../A4 codex HIGH-1 fix) `wikey-core/src/query-pipeline.ts::query()` 최상단 engine 판정 + qmd 탐색 조건부 + `execQmdSearchLegacy` rename + `execOramaSearch` 신규 (~80 LOC 추가). AC-Q1~Q5.
-- [ ] (../A5 codex HIGH-3 fix) `wikey-core/src/scripts/reindex.ts::cmdReindex` 분기 — `ReindexOptions.searchEngine` 추가 + `scripts-runner.ts:36` bridge + engine='orama' 시 `runOramaIngest` 단일 step (~120 LOC 추가). AC-R1~R3.
-- [ ] (../A3) `./scripts/download-kiwi-models.sh` 작성 + plugin onload 부재 detect 시 Notice (~30 LOC). AC-S1 (라이브 smoke 수준).
-- [ ] (../A5 esbuild) `wikey-obsidian/esbuild.config.mjs` 에 wasmCopyPlugin 추가 — vendor path → plugin root copy. AC-W1 의 build artifact 부분.
-- [ ] (../npm dep 제거 — wikey-core 만) `wikey-core/package.json` 의 `kiwi-nlp` dep 제거 — vendor 경유 import 만 남김. wikey-obsidian/package.json 은 PoC cleanup 시점까지 잠정 보존 (v4 codex cycle #2 HIGH-A fix). PoC cleanup 별 step (Step D 마지막 commit) = wikey-obsidian dep 도 제거.
-- [ ] (../A7) `tools/qmd/` 보존 (작업 0). AC-F2 — git ls-files 검증만.
-- [ ] 18 RED case 모두 PASS + 기존 wikey-core / wikey-obsidian 회귀 PASS 확증 → commit `feat: §5.7.4 GREEN — orama backend + kiwi-nlp vendor (A1~A8 + v3 vendor)`
+- [x] (../A8 먼저) `WIKEY_SEARCH_ENGINE` config 키 + plugin config bridge — `types.ts` + `config.ts` + `main.ts:513` `loadFromWikeyConf` parser + `main.ts:641` `buildConfig` merge + env override (~25 LOC, codex HIGH-2 fix). AC-F1.a + F1.b.
+- [x] (../v5 vendor 먼저, B-2 옵션 sparse, **v9 reality drift fix**) `wikey-core/vendor/kiwi-nlp/` 디렉토리 신규 — **upstream `bab2min/Kiwi` (대문자 K, Kiwi 본가) git tag archive 의 `bindings/wasm/package/` subdir sparse vendor** + 본가 root `LICENSE` 별 fetch. Step A3 절차 따라 진행. **v9 정정 (post-impl cycle #3 MED #10)**: vendor `dist/` = npm `kiwi-nlp@0.23.0/dist/` byte-equal mirror (sparse 보존 + dist mirror 패턴, `cp -r node_modules/kiwi-nlp/dist/* vendor/kiwi-nlp/dist/`). vendor 안 단독 `npm run build` 는 `src/build/kiwi-wasm.js` (Emscripten generated) 부재로 TS2307 fail — 이는 vendor 정합성 의도. src customize 시 본가 `bindings/wasm/build.sh` + Emscripten prerequisite. + `VENDOR.md` 작성 (Kiwi git tag + vendor date + LICENSE 보존 검증 + dist 재생성 절차 + WASM binary layer = vendor scope 외 명시). 사용자 raise v3 + codex cycle #2 HIGH-B fix v4 + codex cycle #3 HIGH-1 fix v5 + codex cycle #5 MED-1 fix v7 + post-impl cycle #3 MED #10 fix v9. AC-V2.
+- [x] (../A1) `wikey-core/src/search/orama-korean-tokenizer.ts` 신규 — Module.instantiateWasm hook + smart_tokenize JS 포팅 (PoC commands.ts:142-156 mirror, ~150 LOC) + import path = `'../../vendor/kiwi-nlp/dist/build/kiwi-wasm.js'` (v3 vendor 경유). AC-T1~T3 + AC-W1.
+- [x] (../A2) `wikey-core/src/search/orama-index.ts` 신규 — `createOramaIndex` + lifecycle 6 메서드 (~200 LOC). AC-I1~I3.
+- [x] (../C3) AC-I4 round-trip persistence test 구현 + 검증.
+- [x] (../C4) AC-V1 schema 호환 sanity — Orama schema 에 `embedding: 'vector[768]'` column 추가 + mock vector 1회 hybrid mode round-trip.
+- [x] (../A4 codex HIGH-1 fix) `wikey-core/src/query-pipeline.ts::query()` 최상단 engine 판정 + qmd 탐색 조건부 + `execQmdSearchLegacy` rename + `execOramaSearch` 신규 (~80 LOC 추가). AC-Q1~Q5.
+- [x] (../A5 codex HIGH-3 fix) `wikey-core/src/scripts/reindex.ts::cmdReindex` 분기 — `ReindexOptions.searchEngine` 추가 + `scripts-runner.ts:36` bridge + engine='orama' 시 `runOramaIngest` 단일 step (~120 LOC 추가). AC-R1~R3.
+- [x] (../A3) `./scripts/download-kiwi-models.sh` 작성 + plugin onload 부재 detect 시 Notice (~30 LOC). AC-S1 (라이브 smoke 수준).
+- [x] (../A5 esbuild) `wikey-obsidian/esbuild.config.mjs` 에 wasmCopyPlugin 추가 — vendor path → plugin root copy. AC-W1 의 build artifact 부분.
+- [x] (../npm dep 제거 — wikey-core 만) `wikey-core/package.json` 의 `kiwi-nlp` dep 제거 — vendor 경유 import 만 남김. wikey-obsidian/package.json 은 PoC cleanup 시점까지 잠정 보존 (v4 codex cycle #2 HIGH-A fix). PoC cleanup 별 step (Step D 마지막 commit) = wikey-obsidian dep 도 제거.
+- [x] (../A7) `tools/qmd/` 보존 (작업 0). AC-F2 — git ls-files 검증만.
+- [x] 18 RED case 모두 PASS + 기존 wikey-core / wikey-obsidian 회귀 PASS 확증 → commit `feat: §5.7.4 GREEN — orama backend + kiwi-nlp vendor (A1~A8 + v3 vendor)`
 
 **B3. BLUE Phase 3a — 회귀 검증** (Phase 4)
 
-- [ ] `npm test` (wikey-core fresh) — 모든 case PASS, 기존 회귀 무손상
-- [ ] `npm test` (wikey-obsidian fresh) — 회귀 PASS
-- [ ] `npm run build` (wikey-core + wikey-obsidian) — 0 errors
-- [ ] `./scripts/validate-wiki.sh` — wiki/ frontmatter 무결성 PASS
+- [x] `npm test` (wikey-core fresh) — 모든 case PASS, 기존 회귀 무손상
+- [x] `npm test` (wikey-obsidian fresh) — 회귀 PASS
+- [x] `npm run build` (wikey-core + wikey-obsidian) — 0 errors
+- [x] `./scripts/validate-wiki.sh` — wiki/ frontmatter 무결성 PASS
 
 **B4. BLUE Phase 3b — refactor** (Phase 5, CLAUDE.md SDD+TDD 정책 의무)
 
-- [ ] **함수 분해**: 50+ LOC 함수 후보 (예: `execOramaSearch` / `runOramaIngest`) extract 결정. ~30 LOC 단위로 split.
-- [ ] **Naming consistency**: `qmdQuery` → `multiQuery` / `legacyQmdSearch` → `execQmdSearchLegacy` 등 변수명 mapping 일관.
-- [ ] **DRY**: PoC commands.ts:142-156 의 smart_tokenize 와 wikey-core 신규 모듈의 같은 logic 중복 제거 (PoC 가 wikey-core import 또는 별 export). 또는 *의도적 유지* 근거 명시 (PoC = 벤치마크 isolated).
-- [ ] **주석 quality**: TODO/FIXME 0 / historical context 압축 (PoC 단계 reference 주석 → "see activity/phase-5-resultx-5.7.3" 1 line).
-- [ ] **가독성**: nested arrow / magic number (e.g. `0.5` similarity threshold) 상수화.
-- [ ] 각 refactor 후 회귀 검증 반복 (`npm test`) → commit `refactor: §5.7.4 BLUE — 함수 분해 / DRY / Naming`
+- [x] **함수 분해**: 50+ LOC 함수 후보 (예: `execOramaSearch` / `runOramaIngest`) extract 결정. ~30 LOC 단위로 split.
+- [x] **Naming consistency**: `qmdQuery` → `multiQuery` / `legacyQmdSearch` → `execQmdSearchLegacy` 등 변수명 mapping 일관.
+- [x] **DRY**: PoC commands.ts:142-156 의 smart_tokenize 와 wikey-core 신규 모듈의 같은 logic 중복 제거 (PoC 가 wikey-core import 또는 별 export). 또는 *의도적 유지* 근거 명시 (PoC = 벤치마크 isolated).
+- [x] **주석 quality**: TODO/FIXME 0 / historical context 압축 (PoC 단계 reference 주석 → "see activity/phase-5-resultx-5.7.3" 1 line).
+- [x] **가독성**: nested arrow / magic number (e.g. `0.5` similarity threshold) 상수화.
+- [x] 각 refactor 후 회귀 검증 반복 (`npm test`) → commit `refactor: §5.7.4 BLUE — 함수 분해 / DRY / Naming`
 
 ### Step C — 단위 + 라이브 smoke (Phase 6)
 
-- [ ] `npm test` final fresh re-run (wikey-core + wikey-obsidian) — 모든 PASS
-- [ ] `npm run build` final — 0 errors
-- [ ] `./scripts/validate-wiki.sh` final — PASS
-- [ ] **라이브 smoke 1**: obsidian-cdp full ingest cycle — `raw/0_inbox/<test-source>` → Brief → Proceed → Processing → Preview → Approve → wiki write. console log 보존. AC-L1.
-- [ ] **라이브 smoke 2**: sidebar-chat 한국어 query (`PMBOK 통제 도구 변경 관리`) + 영문 query (`BM25 algorithm`) 각 1회. 답변 + citation 정상 + p95 latency ≤ 200ms (cold 1회 제외). AC-L2.
-- [ ] **라이브 smoke 3**: `WIKEY_SEARCH_ENGINE=qmd` 환경변수 set + Obsidian 재시작 → 동일 query 결과 (회귀 path 작동 확증). AC-L3.
-- [ ] **PoC benchmark 재실행**: `wikey:wikey-poc-orama-benchmark` command 1회 — 10 query 결과 PoC 단계 3 동등 확증. AC-Q1, AC-Q3.
-- [ ] 모든 smoke PASS console log 보존 → `activity/phase-5-resultx-5.7.4-orama-migration-<date>.md` 작성
+- [x] `npm test` final fresh re-run (wikey-core + wikey-obsidian) — 모든 PASS
+- [x] `npm run build` final — 0 errors
+- [x] `./scripts/validate-wiki.sh` final — PASS
+- [x] **라이브 smoke 1**: obsidian-cdp full ingest cycle — `raw/0_inbox/<test-source>` → Brief → Proceed → Processing → Preview → Approve → wiki write. console log 보존. AC-L1.
+- [x] **라이브 smoke 2**: sidebar-chat 한국어 query (`PMBOK 통제 도구 변경 관리`) + 영문 query (`BM25 algorithm`) 각 1회. 답변 + citation 정상 + p95 latency ≤ 200ms (cold 1회 제외). AC-L2.
+- [x] **라이브 smoke 3**: `WIKEY_SEARCH_ENGINE=qmd` 환경변수 set + Obsidian 재시작 → 동일 query 결과 (회귀 path 작동 확증). AC-L3.
+- [x] **PoC benchmark 재실행**: `wikey:wikey-poc-orama-benchmark` command 1회 — 10 query 결과 PoC 단계 3 동등 확증. AC-Q1, AC-Q3.
+- [x] 모든 smoke PASS console log 보존 → `activity/phase-5-resultx-5.7.4-orama-migration-<date>.md` 작성
 
 ### Step D — 문서 동기화 (Phase 8)
 
-- [ ] **`wikey.schema.md`** §"검색 코어의 안정성" / §"검색 코어 = qmd ..." 섹션 갱신 — Orama default + qmd fallback 명시 (사용자 승인 필수, CLAUDE.md 쓰기 규칙)
-- [ ] **`activity/phase-5/phase-5-result.md`** §5.7.4 entry 신규 — 마이그레이션 결과 + AC 28 매핑 (= §5.1 18 + §5.2 7 + §5.3 3) + cycle 이력 (codex #1~#7 cycle 누적, v8 spec/todo APPROVE_WITH_CHANGES)
-- [ ] **`activity/phase-5-resultx-5.7.4-orama-migration-<date>.md`** 신규 — 라이브 smoke evidence + benchmark 재실행 결과
-- [ ] **`wiki/log.md`** entry 추가 형식: `## [<date>] (../검색 backend swap) | qmd CLI → Orama in-process` (단 §5.11 v2 의 log.md 의미 = 지식 log only — 본 변경은 *infrastructure* 라 log.md 미기록 가능, master 판단)
-- [ ] **`plan/phase-5/phase-5-todo.md §5.7.4`** 체크박스 mirror — 본 todo 의 Step A~D 결과 반영
-- [ ] **LICENSE 파일** 작성 (MIT 또는 Apache-2.0, 사용자 결정) — package.json `license` field 추가
+- [x] **`wikey.schema.md`** §"검색 코어의 안정성" / §"검색 코어 = qmd ..." 섹션 갱신 — Orama default + qmd fallback 명시 (사용자 승인 필수, CLAUDE.md 쓰기 규칙)
+- [x] **`activity/phase-5/phase-5-result.md`** §5.7.4 entry 신규 — 마이그레이션 결과 + AC 28 매핑 (= §5.1 18 + §5.2 7 + §5.3 3) + cycle 이력 (codex #1~#7 cycle 누적, v8 spec/todo APPROVE_WITH_CHANGES)
+- [x] **`activity/phase-5-resultx-5.7.4-orama-migration-<date>.md`** 신규 — 라이브 smoke evidence + benchmark 재실행 결과
+- [x] **`wiki/log.md`** entry 추가 형식: `## [<date>] (../검색 backend swap) | qmd CLI → Orama in-process` (단 §5.11 v2 의 log.md 의미 = 지식 log only — 본 변경은 *infrastructure* 라 log.md 미기록 가능, master 판단)
+- [x] **`plan/phase-5/phase-5-todo.md §5.7.4`** 체크박스 mirror — 본 todo 의 Step A~D 결과 반영
+- [x] **LICENSE 파일** 작성 (MIT 또는 Apache-2.0, 사용자 결정) — package.json `license` field 추가
 - [x] **NOTICE 파일** 작성 (post-impl Step D 진행, v9 mirror — spec v9 AC-D2 reality drift fix) — NOTICE 안에 다음 6 항목 모두 명시: (a) **JS wrapper layer** Kiwi NLP (LGPL-2.1) — vendored at `wikey-core/vendor/kiwi-nlp/` (sparse vendor of `bab2min/Kiwi/bindings/wasm/package/`) / (b) **WASM binary layer** Kiwi WASM — built from `bab2min/Kiwi` + Emscripten (vendor scope 외, `bab2min/Kiwi` git tag reference) / (c) **library source 위치** = `wikey-core/vendor/kiwi-nlp/{src,package.json,tsconfig.json}` (JS wrapper TS 원본) + `bab2min/Kiwi` repo root + `src/` + `include/` + `bindings/wasm/build.sh` (WASM C++) — LGPL §6 (b)(c) 의무 / (d) **JS wrapper relink mechanism (v9 정정)** = "사용자 `vendor/kiwi-nlp/src/` 수정 → 본가 `bindings/wasm/build.sh` + Emscripten 으로 `src/build/kiwi-wasm.{js,d.ts}` 재생성 (Emscripten prerequisite — vendor 안 단독 `npm run build` 는 `src/build/kiwi-wasm.js` 부재로 TS2307 fail) → vendor 안 `npm run build` (이제 PASS) → wikey-obsidian rebuild" / (e) **WASM binary relink mechanism (LGPL §6 (d))** = "사용자 `bab2min/Kiwi` clone → `bindings/wasm` + Emscripten + `./build.sh` → `kiwi-wasm.wasm` 생성 → `wikey-core/vendor/kiwi-nlp/dist/kiwi-wasm.wasm` 교체 → wikey-obsidian rebuild" 절차 명시 / (f) repository public 확증 (D4 sub-bullet) + Kiwi 사전 (`~/.cache/wikey/kiwi-models/`) = dictionary data cache 만 (LGPL relink 와 별개). AC-D2.
-- [ ] **README.md `## Third-party software` 섹션** 추가 — `@orama/orama` (Apache-2.0) + `kiwi-nlp` (LGPL-2.1, vendored at `wikey-core/vendor/kiwi-nlp/`) + qmd (벤더 정보) 명시. AC-D2.
-- [ ] **회귀 절차 문서**: README.md `## Search engine rollback` 섹션 추가 (별 docs 파일 대신 통합) — 3 layer 안전망 (git revert / qmd vendored / `WIKEY_SEARCH_ENGINE=qmd` toggle) 절차. AC-D1.
-- [ ] **kiwi-nlp vendor sync 절차 docs** (`docs/kiwi-nlp-vendor-sync.md`, ~50 줄) 신규 — 사용자 raise v3 + codex cycle #4 MED-2 fix v6 (primary 절차 정정). vendor 시점 Kiwi git tag + 사용자 / master 수동 점검 절차 (primary: `bab2min/Kiwi` releases 확인 + `bindings/wasm/package/` subdir diff + 본가 root LICENSE diff + cherry-pick + 단위 + 라이브 smoke. secondary: `npm view kiwi-nlp version` + dist tarball cross-check) + 자동화 §5.7.5 reference. AC-V2.
-- [ ] **GitHub repository public 확증** (사용자 confirm 1 line 보고) — AC-D2 sub.
-- [ ] commit 분리 (논리 단위): `feat: §5.7.4 ...` (코드) / `docs: §5.7.4 ...` (문서) / `chore: §5.7.4 LICENSE + NOTICE + vendor` (라이선스 + vendor).
+- [x] **README.md `## Third-party software` 섹션** 추가 — `@orama/orama` (Apache-2.0) + `kiwi-nlp` (LGPL-2.1, vendored at `wikey-core/vendor/kiwi-nlp/`) + qmd (벤더 정보) 명시. AC-D2.
+- [x] **회귀 절차 문서**: README.md `## Search engine rollback` 섹션 추가 (별 docs 파일 대신 통합) — 3 layer 안전망 (git revert / qmd vendored / `WIKEY_SEARCH_ENGINE=qmd` toggle) 절차. AC-D1.
+- [x] **kiwi-nlp vendor sync 절차 docs** (`docs/kiwi-nlp-vendor-sync.md`, ~50 줄) 신규 — 사용자 raise v3 + codex cycle #4 MED-2 fix v6 (primary 절차 정정). vendor 시점 Kiwi git tag + 사용자 / master 수동 점검 절차 (primary: `bab2min/Kiwi` releases 확인 + `bindings/wasm/package/` subdir diff + 본가 root LICENSE diff + cherry-pick + 단위 + 라이브 smoke. secondary: `npm view kiwi-nlp version` + dist tarball cross-check) + 자동화 §5.7.5 reference. AC-V2.
+- [x] **GitHub repository public 확증** (사용자 confirm 1 line 보고) — AC-D2 sub.
+- [x] commit 분리 (논리 단위): `feat: §5.7.4 ...` (코드) / `docs: §5.7.4 ...` (문서) / `chore: §5.7.4 LICENSE + NOTICE + vendor` (라이선스 + vendor).
 
 ---
 

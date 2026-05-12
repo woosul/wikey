@@ -7,8 +7,8 @@
 ## 진행 매트릭스 (Step A~G)
 
 - [x] **Step A — analyst v0.4** (2026-05-12): R1~R11 사용자 raise + G1~G4 핵심 목적 + Recovery 폐기 + Check Fix link multi-mode + Health rule + Help hr 반영.
-- [ ] **Step B — tester RED**: 4 신규 test file (wiki-status / wiki-check / wiki-refactoring / maintenance-modal). Recovery test 폐기 (Check Fix link mode b 로 흡수).
-- [ ] **Step C — developer GREEN**:
+- [x] **Step B — tester RED**: 4 신규 test file (wiki-status / wiki-check / wiki-refactoring / maintenance-modal). Recovery test 폐기 (Check Fix link mode b 로 흡수).
+- [x] **Step C — developer GREEN**:
   - `scripts/wiki-check.sh` 신규 (validate-wiki + paired-sidecar + reconcile dry-run + dangling detect + **`--fix` 옵션 multi-mode**, ≤ 150 LOC).
   - ~~`scripts/wiki-recovery.sh`~~ — **v0.4 폐기** (Check `--fix` 흡수).
   - `scripts/wiki-refactoring.sh` 신규 (suggestion only).
@@ -23,10 +23,10 @@
   - `wikey-obsidian/src/sidebar-chat.ts` — Help 패널 "Wiki Maintenance" 섹션 (**3 버튼**) + Dashboard health row (display only) + Help **hr divider** (R11).
   - `wikey-obsidian/src/commands.ts` — **3 부가 command** 등록 (palette legacy).
   - `wikey-obsidian/styles.css` — modal css patch (sticky header/footer + 중앙정렬 + accordion + Help hr + step 2 confirm view, ≤ 150 LOC v0.4).
-- [ ] **Step D — Phase 3a 회귀**: `npm test` + `npm run build` + `./scripts/validate-wiki.sh` 모두 PASS.
-- [ ] **Step E — Phase 3b BLUE** (의무, CLAUDE.md SDD+TDD §3a/3b): cache helper extract / modal mode 분기 가독성 / script common header / fuzzy-slug helper extract / accordion view 분리 / 회귀 PASS 반복.
-- [ ] **Step F — codex post-impl review** (cmux Mode D Panel). v0.4 30 AC 1:1 확증.
-- [ ] **Step G — master 라이브 smoke**: 사용자 vault 3 button (Status / Check / Refactoring) 실 실행. R1~R11 fix 확증 + G1~G4 매핑 확증 + §5.18 38-page dangling cleanup (Check Fix link mode b) 동일 use case 검증.
+- [x] **Step D — Phase 3a 회귀**: `npm test` + `npm run build` + `./scripts/validate-wiki.sh` 모두 PASS.
+- [x] **Step E — Phase 3b BLUE** (의무, CLAUDE.md SDD+TDD §3a/3b): cache helper extract / modal mode 분기 가독성 / script common header / fuzzy-slug helper extract / accordion view 분리 / 회귀 PASS 반복.
+- [x] **Step F — codex post-impl review** (cmux Mode D Panel). v0.4 30 AC 1:1 확증.
+- [x] **Step G — master 라이브 smoke**: 사용자 vault 3 button (Status / Check / Refactoring) 실 실행. R1~R11 fix 확증 + G1~G4 매핑 확증 + §5.18 38-page dangling cleanup (Check Fix link mode b) 동일 use case 검증.
 
 ## 의문점 LOCK (Step A v0.4 완료)
 

@@ -73,7 +73,7 @@ Phase 9  최종 master 1차 검증 + 사용자 사전 보고
 
 **A1. 사용자 결정 1건 잠금** (spec §1.3 + §7.1 mirror)
 
-- [ ] **결정 #1** stopword list 정확도 평가 — 후보 단어 set 결정. analyst v1 권고 default = **5 단어** = `프로젝트` / `관리` / `정보` / `시스템` / `업무`. master 가 사용자에게 명시 prompt + 응답 후 spec §3.1 + §3.2 의 `KOREAN_STOPWORDS` literal 잠금. 사용자가 추가/제외 시 spec v1.2 fix mirror.
+- [-] **결정 #1** stopword list 정확도 평가 — 후보 단어 set 결정. analyst v1 권고 default = **5 단어** = `프로젝트` / `관리` / `정보` / `시스템` / `업무`. master 가 사용자에게 명시 prompt + 응답 후 spec §3.1 + §3.2 의 `KOREAN_STOPWORDS` literal 잠금. 사용자가 추가/제외 시 spec v1.2 fix mirror.
 
 **A2. 진입 조건 확증** (spec §7.1 mirror)
 
@@ -83,41 +83,41 @@ Phase 9  최종 master 1차 검증 + 사용자 사전 보고
 
 **A3. 코드 변경 위치 fact-check** (spec §2 mirror, master fresh re-grep 의무)
 
-- [ ] `wikey-core/src/search/orama-korean-tokenizer.ts:128~145` `tokenize` arrow fn 위치 확증 (smart_tokenize 분기 추가 위치)
-- [ ] `scripts/korean-tokenize.py:66~97` `_smart_tokenize` 위치 확증 (Python mirror)
-- [ ] `wikey-core/eval/` 디렉토리 부재 확증 → 신규 생성 결정
-- [ ] `wikey-core/package.json::scripts` 기존 script 패턴 확증 (tsx / ts-node / node --loader 중 일관 양식 결정)
-- [ ] wiki/ 안 expected_top1 후보 slug 100% grep 확증 (예: `project-schedule-management.md` / `pmbok-7-guiding-principles.md` / `itil-4-guiding-principles.md` / `obsidian.md` 등 50+ query 의 expected slug 모두 wiki corpus 안 실제 존재 확증)
-- [ ] `yaml` npm dep license 확인 (MIT) — NOTICE 갱신 의무 결정 (devDep 시 NOTICE 미포함 정책 확증)
+- [-] `wikey-core/src/search/orama-korean-tokenizer.ts:128~145` `tokenize` arrow fn 위치 확증 (smart_tokenize 분기 추가 위치)
+- [-] `scripts/korean-tokenize.py:66~97` `_smart_tokenize` 위치 확증 (Python mirror)
+- [-] `wikey-core/eval/` 디렉토리 부재 확증 → 신규 생성 결정
+- [-] `wikey-core/package.json::scripts` 기존 script 패턴 확증 (tsx / ts-node / node --loader 중 일관 양식 결정)
+- [-] wiki/ 안 expected_top1 후보 slug 100% grep 확증 (예: `project-schedule-management.md` / `pmbok-7-guiding-principles.md` / `itil-4-guiding-principles.md` / `obsidian.md` 등 50+ query 의 expected slug 모두 wiki corpus 안 실제 존재 확증)
+- [-] `yaml` npm dep license 확인 (MIT) — NOTICE 갱신 의무 결정 (devDep 시 NOTICE 미포함 정책 확증)
 
 **A4. wikey-core eval 디렉토리 신규 결정**
 
-- [ ] `wikey-core/eval/` 신규 디렉토리 생성
-- [ ] `wikey-core/eval/benchmark-suite.json` (신규)
-- [ ] `wikey-core/eval/__tests__/benchmark-suite.test.ts` (신규, schema validation)
+- [-] `wikey-core/eval/` 신규 디렉토리 생성
+- [-] `wikey-core/eval/benchmark-suite.json` (신규)
+- [-] `wikey-core/eval/__tests__/benchmark-suite.test.ts` (신규, schema validation)
 
 **A5. scripts 신규 결정**
 
-- [ ] `scripts/benchmark-search.ts` (신규, ~100 LOC)
-- [ ] `scripts/__tests__/benchmark-search.test.ts` (신규 또는 wikey-core/eval/__tests__ 통합 — Step A3 결정)
+- [-] `scripts/benchmark-search.ts` (신규, ~100 LOC)
+- [-] `scripts/__tests__/benchmark-search.test.ts` (신규 또는 wikey-core/eval/__tests__ 통합 — Step A3 결정)
 
 **A6. 50+ query suite 작성 잠금**
 
-- [ ] **PMBOK / 프로젝트 관리** ≥ 10 query — Q5 (`pmbok-q1`, `프로젝트 일정 관리` → `project-schedule-management`) 포함, PMBOK 7 guiding principles + scope management + risk management + cost management 등
-- [ ] **ITIL / IT 서비스 관리** ≥ 10 query — Q4 mirror (`itil-q1`, `ITIL 4 가이드 원칙` → `itil-4-guiding-principles`) 포함, service value chain + change enablement + incident management 등
-- [ ] **Obsidian / 마크다운 위키** ≥ 10 query — Q10 mirror (`obsidian-q1`, `Obsidian 마크다운 위키` → `obsidian`) 포함, graph view + plugin + frontmatter + wikilink 등
-- [ ] **일반 한국어 검색** ≥ 10 query — 한국어 단순 명사구 + 의도 표현 + 동의어 variant
-- [ ] **영문 / 한+영 mix** ≥ 10 query — `BM25 algorithm` / `LLM agent` / `vector search` + Korean word mixing
-- [ ] 각 query 의 `expected_top1` + `expected_top3` 가 wiki corpus 안 실 slug grep 확증 (Step A3 mirror)
-- [ ] 도메인 균형 강제 — 각 ≥ 10 query × 5 도메인 = 50+ query
+- [-] **PMBOK / 프로젝트 관리** ≥ 10 query — Q5 (`pmbok-q1`, `프로젝트 일정 관리` → `project-schedule-management`) 포함, PMBOK 7 guiding principles + scope management + risk management + cost management 등
+- [-] **ITIL / IT 서비스 관리** ≥ 10 query — Q4 mirror (`itil-q1`, `ITIL 4 가이드 원칙` → `itil-4-guiding-principles`) 포함, service value chain + change enablement + incident management 등
+- [-] **Obsidian / 마크다운 위키** ≥ 10 query — Q10 mirror (`obsidian-q1`, `Obsidian 마크다운 위키` → `obsidian`) 포함, graph view + plugin + frontmatter + wikilink 등
+- [-] **일반 한국어 검색** ≥ 10 query — 한국어 단순 명사구 + 의도 표현 + 동의어 variant
+- [-] **영문 / 한+영 mix** ≥ 10 query — `BM25 algorithm` / `LLM agent` / `vector search` + Korean word mixing
+- [-] 각 query 의 `expected_top1` + `expected_top3` 가 wiki corpus 안 실 slug grep 확증 (Step A3 mirror)
+- [-] 도메인 균형 강제 — 각 ≥ 10 query × 5 도메인 = 50+ query
 
 **Step A 체크박스**:
 
-- [ ] 사용자 결정 1건 잠금 (#1 stopword list)
-- [ ] 진입 조건 3건 확증
-- [ ] 코드 변경 위치 6 항목 fact-check 완료
-- [ ] 신규 디렉토리 / 신규 file 위치 결정 잠금
-- [ ] 50+ query suite 도메인별 작성 잠금 (Step B GREEN 시 실 yaml 작성)
+- [-] 사용자 결정 1건 잠금 (#1 stopword list)
+- [-] 진입 조건 3건 확증
+- [-] 코드 변경 위치 6 항목 fact-check 완료
+- [-] 신규 디렉토리 / 신규 file 위치 결정 잠금
+- [-] 50+ query suite 도메인별 작성 잠금 (Step B GREEN 시 실 yaml 작성)
 
 ### Step B — TDD RED→GREEN→BLUE 3a/3b (Phase 2~5)
 
@@ -127,64 +127,64 @@ Phase 9  최종 master 1차 검증 + 사용자 사전 보고
 
 **v1.2 (codex HIGH #2 fix)**: vitest config (`wikey-core/vitest.config.ts`) include = `src/__tests__/**/*.test.ts` 만. 모든 TS test = `wikey-core/src/__tests__/...` 안. Python test 별 명령 + AC-B1 file existence assert (LOW #8).
 
-- [ ] `wikey-core/src/__tests__/search/orama-korean-tokenizer-stopword.test.ts` 신규 — AC-S1 (`KOREAN_STOPWORDS` set membership **5 단어** = `프로젝트` / `관리` / `정보` / `시스템` / `업무`, v1.2 codex HIGH #3 fix) + AC-S2 (`tokenize` fixture `"프로젝트 일정 관리"` 결과 stopword 5 단어 부재 **+ `일정` 잔존 (non-empty discriminating signal)** / `"BM25 알고리즘"` 결과 ALNUM 보존) (2 case)
-- [ ] `scripts/tests/test_korean_tokenize.py` 신규 — AC-S3 (Python `_smart_tokenize` 안 stopword early continue + `KOREAN_STOPWORDS` 5 단어 set + TS 동등 cross-language consistency check + `일정` 잔존 assert) (1 case). **별 명령 — `python -m pytest scripts/tests/test_korean_tokenize.py`**, `wikey-core/package.json::scripts` 또는 root level Makefile 안 통합 cmd 추가 의무 (vitest 가 cover 안 함).
-- [ ] `wikey-core/src/__tests__/eval/benchmark-suite.test.ts` 신규 — AC-B1 (JSON.parse + schema validation: 50+ query, 5 도메인 각 ≥ 10, `{id, query, expected_top1, expected_top3, domain}` field 모두 present + **모든 expected slug 가 `wiki/concepts|entities|sources/<slug>.md` 안 실 존재 file existence assert (codex LOW #8)**) (1 case)
-- [ ] `wikey-core/src/__tests__/eval/benchmark-search.test.ts` 신규 — AC-B2 (export `runBenchmark` + `computeQueryResult` 호출, mock searchFn inject — fixture `SearchResult[]` (path 형식 `wiki/concepts/<slug>.md`) → `{pass, results}` schema + `top1Hit / top3Hit / mrr` 정상 계산) (1 case, codex MED #4 fix: handle/search 분리)
-- [ ] 모두 FAIL 확증 후 `npm test` log 보존 → commit `test: §5.7.6 RED — 6 case (smart_tokenize stopword + benchmark suite + script)`
+- [-] `wikey-core/src/__tests__/search/orama-korean-tokenizer-stopword.test.ts` 신규 — AC-S1 (`KOREAN_STOPWORDS` set membership **5 단어** = `프로젝트` / `관리` / `정보` / `시스템` / `업무`, v1.2 codex HIGH #3 fix) + AC-S2 (`tokenize` fixture `"프로젝트 일정 관리"` 결과 stopword 5 단어 부재 **+ `일정` 잔존 (non-empty discriminating signal)** / `"BM25 알고리즘"` 결과 ALNUM 보존) (2 case)
+- [-] `scripts/tests/test_korean_tokenize.py` 신규 — AC-S3 (Python `_smart_tokenize` 안 stopword early continue + `KOREAN_STOPWORDS` 5 단어 set + TS 동등 cross-language consistency check + `일정` 잔존 assert) (1 case). **별 명령 — `python -m pytest scripts/tests/test_korean_tokenize.py`**, `wikey-core/package.json::scripts` 또는 root level Makefile 안 통합 cmd 추가 의무 (vitest 가 cover 안 함).
+- [-] `wikey-core/src/__tests__/eval/benchmark-suite.test.ts` 신규 — AC-B1 (JSON.parse + schema validation: 50+ query, 5 도메인 각 ≥ 10, `{id, query, expected_top1, expected_top3, domain}` field 모두 present + **모든 expected slug 가 `wiki/concepts|entities|sources/<slug>.md` 안 실 존재 file existence assert (codex LOW #8)**) (1 case)
+- [-] `wikey-core/src/__tests__/eval/benchmark-search.test.ts` 신규 — AC-B2 (export `runBenchmark` + `computeQueryResult` 호출, mock searchFn inject — fixture `SearchResult[]` (path 형식 `wiki/concepts/<slug>.md`) → `{pass, results}` schema + `top1Hit / top3Hit / mrr` 정상 계산) (1 case, codex MED #4 fix: handle/search 분리)
+- [-] 모두 FAIL 확증 후 `npm test` log 보존 → commit `test: §5.7.6 RED — 6 case (smart_tokenize stopword + benchmark suite + script)`
 
 **B2. GREEN — §3 변경 면 모두 구현** (Phase 3)
 
 순서대로 (의존성 고려):
 
-- [ ] **(B2-tokenizer-ts)** `wikey-core/src/search/orama-korean-tokenizer.ts` — `KOREAN_STOPWORDS` const set **5 단어** + `tokenize` arrow fn 안 `if (KOREAN_STOPWORDS.has(lowered)) continue` 1 줄 추가 (~15 LOC). exact members: `프로젝트` / `관리` / `정보` / `시스템` / `업무` (v1.2 — `일정` 제거, codex HIGH #3 fix). AC-S1, AC-S2.
-- [ ] **(B2-tokenizer-py)** `scripts/korean-tokenize.py` — `KOREAN_STOPWORDS` 모듈 상수 **5 단어** + `_smart_tokenize` 안 `if t.form in KOREAN_STOPWORDS: continue` 2 줄 추가 (~7 LOC). TS 와 동일 set (v1.2). AC-S3.
-- [ ] **(B2-suite)** `wikey-core/eval/benchmark-suite.json` (신규, ~200 LOC JSON) — 50+ query 의 도메인 균형 (5 도메인 각 ≥ 10 query). Step A6 잠금 결과 mirror. exact phrase: `pmbok-q1` / `"query": "프로젝트 일정 관리"` / `"expected_top1": "project-schedule-management"`. **v1.2 (codex LOW #8)**: 모든 expected slug = corpus 안 실 존재 (예: `project-schedule-management` / `project-management-body-of-knowledge` / `itil-4-guiding-principles` 등 — `wiki/concepts|entities|sources` grep 잠금). AC-B1.
-- [ ] **(B2-script)** `scripts/benchmark-search.ts` (신규, ~150 LOC v1.2) — **export** `runBenchmark({ suitePath, searchFn })` (codex MED #4 fix: handle/search injection) + `computeQueryResult` (pure score) + `reportResults` 분리. real Orama API: `createKoreanTokenizer({ wasmPath, modelDir })` + `createOramaIndex({ cachePath, tokenizer })` + `await handle.restore()` + `handle.search(question, { topN: 10 })` + `SearchResult.path` (slug derive via basename). v1.2 codex HIGH #1 fix. stdout (`# Total:` / `# Top-1:` / `# Top-3:` / `# Mean MRR:` / `# Per domain:`) + threshold (env `WIKEY_BENCHMARK_TOP1_MIN` 0.7 / `_TOP3_MIN` 0.85) + exit 0/1/2. AC-B2.
-- [ ] **(B2-npm)** `wikey-core/package.json` — `scripts` 안 `"benchmark:search": "tsx ../scripts/benchmark-search.ts"` + `devDependencies` 안 **`"tsx": "^4.7.0"` 신규**. 2 LOC. AC-B3. v1.2 (yaml dep 제거 ✓ — JSON 채택, codex MED #5 fix).
-- [ ] 6~7 RED case 모두 PASS + 기존 wikey-core / wikey-obsidian 회귀 PASS 확증 → commit `feat: §5.7.6 GREEN — Q5 stopword + 50+ query benchmark suite`
+- [-] **(B2-tokenizer-ts)** `wikey-core/src/search/orama-korean-tokenizer.ts` — `KOREAN_STOPWORDS` const set **5 단어** + `tokenize` arrow fn 안 `if (KOREAN_STOPWORDS.has(lowered)) continue` 1 줄 추가 (~15 LOC). exact members: `프로젝트` / `관리` / `정보` / `시스템` / `업무` (v1.2 — `일정` 제거, codex HIGH #3 fix). AC-S1, AC-S2.
+- [-] **(B2-tokenizer-py)** `scripts/korean-tokenize.py` — `KOREAN_STOPWORDS` 모듈 상수 **5 단어** + `_smart_tokenize` 안 `if t.form in KOREAN_STOPWORDS: continue` 2 줄 추가 (~7 LOC). TS 와 동일 set (v1.2). AC-S3.
+- [-] **(B2-suite)** `wikey-core/eval/benchmark-suite.json` (신규, ~200 LOC JSON) — 50+ query 의 도메인 균형 (5 도메인 각 ≥ 10 query). Step A6 잠금 결과 mirror. exact phrase: `pmbok-q1` / `"query": "프로젝트 일정 관리"` / `"expected_top1": "project-schedule-management"`. **v1.2 (codex LOW #8)**: 모든 expected slug = corpus 안 실 존재 (예: `project-schedule-management` / `project-management-body-of-knowledge` / `itil-4-guiding-principles` 등 — `wiki/concepts|entities|sources` grep 잠금). AC-B1.
+- [-] **(B2-script)** `scripts/benchmark-search.ts` (신규, ~150 LOC v1.2) — **export** `runBenchmark({ suitePath, searchFn })` (codex MED #4 fix: handle/search injection) + `computeQueryResult` (pure score) + `reportResults` 분리. real Orama API: `createKoreanTokenizer({ wasmPath, modelDir })` + `createOramaIndex({ cachePath, tokenizer })` + `await handle.restore()` + `handle.search(question, { topN: 10 })` + `SearchResult.path` (slug derive via basename). v1.2 codex HIGH #1 fix. stdout (`# Total:` / `# Top-1:` / `# Top-3:` / `# Mean MRR:` / `# Per domain:`) + threshold (env `WIKEY_BENCHMARK_TOP1_MIN` 0.7 / `_TOP3_MIN` 0.85) + exit 0/1/2. AC-B2.
+- [-] **(B2-npm)** `wikey-core/package.json` — `scripts` 안 `"benchmark:search": "tsx ../scripts/benchmark-search.ts"` + `devDependencies` 안 **`"tsx": "^4.7.0"` 신규**. 2 LOC. AC-B3. v1.2 (yaml dep 제거 ✓ — JSON 채택, codex MED #5 fix).
+- [-] 6~7 RED case 모두 PASS + 기존 wikey-core / wikey-obsidian 회귀 PASS 확증 → commit `feat: §5.7.6 GREEN — Q5 stopword + 50+ query benchmark suite`
 
 **B3. BLUE Phase 3a — 회귀 검증** (Phase 4)
 
-- [ ] `npm test` (wikey-core fresh) — 모든 case PASS, 기존 회귀 (738+ test, §5.7.5 baseline) 무손상
-- [ ] `npm test` (wikey-obsidian fresh) — 회귀 PASS (46+ test, §5.7.5 baseline)
-- [ ] `npm run build` (wikey-core + wikey-obsidian) — 0 errors
-- [ ] `./scripts/validate-wiki.sh` — wiki/ frontmatter 무결성 PASS
-- [ ] `./scripts/check-licenses.sh` — 본 cycle 직접 실행 (yaml dep 추가 후 NOTICE 정합성 확증 — devDep 면 NOTICE 미포함, 사용자 정책 확증)
-- [ ] `./scripts/check-kiwi-vendor-sync.sh` — 본 cycle 직접 실행 (변경 0 영역, sanity check)
+- [-] `npm test` (wikey-core fresh) — 모든 case PASS, 기존 회귀 (738+ test, §5.7.5 baseline) 무손상
+- [-] `npm test` (wikey-obsidian fresh) — 회귀 PASS (46+ test, §5.7.5 baseline)
+- [-] `npm run build` (wikey-core + wikey-obsidian) — 0 errors
+- [-] `./scripts/validate-wiki.sh` — wiki/ frontmatter 무결성 PASS
+- [-] `./scripts/check-licenses.sh` — 본 cycle 직접 실행 (yaml dep 추가 후 NOTICE 정합성 확증 — devDep 면 NOTICE 미포함, 사용자 정책 확증)
+- [-] `./scripts/check-kiwi-vendor-sync.sh` — 본 cycle 직접 실행 (변경 0 영역, sanity check)
 
 **B4. BLUE Phase 3b — refactor** (Phase 5, CLAUDE.md SDD+TDD 정책 의무)
 
-- [ ] **함수 분해**: 50+ LOC 함수 후보 점검 — `runBenchmark` 가 ~80 LOC 예상. extract 후보 = report 출력 부분 (`reportSuiteResults(results)` ~30 LOC) / aggregate 계산 부분 (`computeAggregate(results)` ~20 LOC) — analyst 권고 = 작성 시 분해 적용 (Karpathy Simplicity), 또는 의도적 단일 함수 유지 (50+ LOC 안 — 명확 흐름 시).
-- [ ] **Naming consistency**: `KOREAN_STOPWORDS` (TS+Py 동일) / `runBenchmark` / `BenchmarkSuite` / `QueryEntry` / `QueryResult` 일관 점검
-- [ ] **DRY**: `KOREAN_STOPWORDS` literal 5 단어가 TS + Python 양쪽 hardcoded — *의도적 유지* (1 변경 면 단순화, Karpathy Simplicity, 단어 list 6개 hardcoded). 변경 시 동시 수정 의무 commit message convention. 또는 (선택) test 안 양쪽 set 동등 assert 추가 (AC-S3 cross-language consistency check 강화).
-- [ ] **주석 quality**: TODO/FIXME 0 / `[사용자 결정]` 마커 cleanup (사용자 결정 잠금 후 marker 제거 + 결정 결과 명시) / `§5.7.6` reference marker 보존
-- [ ] **가독성**: nested arrow / magic number (e.g. regression threshold `0.7` / `0.85`) 상수화 — 본 cycle 은 env override 가능 (`WIKEY_BENCHMARK_TOP1_MIN` / `_TOP3_MIN`), default literal은 const 분리
-- [ ] 각 refactor 후 회귀 검증 반복 (`npm test`) → commit `refactor: §5.7.6 BLUE — 함수 분해 / Naming / 주석 cleanup`
+- [-] **함수 분해**: 50+ LOC 함수 후보 점검 — `runBenchmark` 가 ~80 LOC 예상. extract 후보 = report 출력 부분 (`reportSuiteResults(results)` ~30 LOC) / aggregate 계산 부분 (`computeAggregate(results)` ~20 LOC) — analyst 권고 = 작성 시 분해 적용 (Karpathy Simplicity), 또는 의도적 단일 함수 유지 (50+ LOC 안 — 명확 흐름 시).
+- [-] **Naming consistency**: `KOREAN_STOPWORDS` (TS+Py 동일) / `runBenchmark` / `BenchmarkSuite` / `QueryEntry` / `QueryResult` 일관 점검
+- [-] **DRY**: `KOREAN_STOPWORDS` literal 5 단어가 TS + Python 양쪽 hardcoded — *의도적 유지* (1 변경 면 단순화, Karpathy Simplicity, 단어 list 6개 hardcoded). 변경 시 동시 수정 의무 commit message convention. 또는 (선택) test 안 양쪽 set 동등 assert 추가 (AC-S3 cross-language consistency check 강화).
+- [-] **주석 quality**: TODO/FIXME 0 / `[사용자 결정]` 마커 cleanup (사용자 결정 잠금 후 marker 제거 + 결정 결과 명시) / `§5.7.6` reference marker 보존
+- [-] **가독성**: nested arrow / magic number (e.g. regression threshold `0.7` / `0.85`) 상수화 — 본 cycle 은 env override 가능 (`WIKEY_BENCHMARK_TOP1_MIN` / `_TOP3_MIN`), default literal은 const 분리
+- [-] 각 refactor 후 회귀 검증 반복 (`npm test`) → commit `refactor: §5.7.6 BLUE — 함수 분해 / Naming / 주석 cleanup`
 
 ### Step C — 단위 + 라이브 smoke (Phase 6)
 
-- [ ] `npm test` final fresh re-run (wikey-core + wikey-obsidian) — 모든 PASS
-- [ ] `npm run build` final — 0 errors
-- [ ] `./scripts/validate-wiki.sh` final — PASS
-- [ ] **선행 의무 — fresh reindex**: `./scripts/reindex.sh` (Orama backend, default) 실행 — stopword 추가가 indexing 결과 영향 → 기존 인덱스 stale → fresh reindex 후 측정. master 직접 + 결과 보고 (`# Indexed N docs`).
-- [ ] **라이브 smoke (AC-Q1)**: `npm run benchmark:search` 실행 (master 직접) → stdout 결과 캡처:
+- [-] `npm test` final fresh re-run (wikey-core + wikey-obsidian) — 모든 PASS
+- [-] `npm run build` final — 0 errors
+- [-] `./scripts/validate-wiki.sh` final — PASS
+- [-] **선행 의무 — fresh reindex**: `./scripts/reindex.sh` (Orama backend, default) 실행 — stopword 추가가 indexing 결과 영향 → 기존 인덱스 stale → fresh reindex 후 측정. master 직접 + 결과 보고 (`# Indexed N docs`).
+- [-] **라이브 smoke (AC-Q1)**: `npm run benchmark:search` 실행 (master 직접) → stdout 결과 캡처:
   - **Q5 회복 확증**: `pmbok-q1` (query=`프로젝트 일정 관리`) 의 `top1Hit = true` (Top-1 = `project-schedule-management`)
   - **도메인별 Top-1 / Top-3 / MRR**: `pmbok` / `itil` / `obsidian` / `korean-general` / `english-mixed` 5 도메인 각 측정 결과 — regression baseline 으로 활동 evidence 보존
   - **Aggregate**: Total 50+ / Top-1 ≥ 70% / Top-3 ≥ 85% (기준 v1 default, 사용자 final 조정 가능)
   - **exit 0** 확증 (regression 임계 통과)
-- [ ] smoke PASS console log 보존 → `activity/phase-5-resultx-5.7.6-search-quality-tuning-<date>.md` 작성 (master 직접)
+- [-] smoke PASS console log 보존 → `activity/phase-5-resultx-5.7.6-search-quality-tuning-<date>.md` 작성 (master 직접)
 
 ### Step D — 문서 동기화 (Phase 8)
 
-- [ ] **`activity/phase-5/phase-5-result.md`** §5.7.6 entry 신규 — 검색 quality tuning 결과 + **AC 8 매핑** (= §5.1 5 + §5.2 2 + §5.3 1) + cycle 이력 (codex cycle #1 plan + #2 post-impl)
-- [ ] **`activity/phase-5-resultx-5.7.6-search-quality-tuning-<date>.md`** 신규 — 라이브 smoke evidence + AC-Q1 console log + 도메인별 Top-1/Top-3/MRR baseline + Q5 회복 확증
-- [ ] **`wiki/log.md`** entry — *infrastructure* 변경 (검색 query path tokenizer + benchmark suite) 라 wikey.schema.md §"log.md 형식 (§5.11 v2 의미 재정의)" 의 *지식 log only* 정책 따라 **미기록 가능** (master 판단). 본 cycle 결과로 wiki 페이지 변경 0 확증. 단, fresh reindex 가 indexing 결과 변경 → 검색 결과 변경 — 사용자 인지 의무 (commit body 안 안내).
-- [ ] **`plan/phase-5/phase-5-todo.md §5.7.6`** 체크박스 mirror — 본 todo 의 Step A~D 결과 반영 + 상태 변경 (`Session 32 진입` → `Session 32 종결` + AC 8/8 PASS)
-- [ ] **`plan/plan-full.md §5.7`** 갱신 — §5.7.6 종결 status mirror (line 추가, §5.7.5 entry 패턴 mirror)
-- [ ] **`README.md`** — 본 cycle 변경이 사용자 가시 영역 0 (검색 quality 내부 fix). README 갱신 필요 시 master 판단 (선택). default = 갱신 안 함 (Karpathy Simplicity).
-- [ ] **`~/.claude/projects/-Users-denny-Project-wikey/memory/project_phase5_status.md`** 갱신 — §5.7.6 종결 status entry mirror
-- [ ] commit 분리 (논리 단위): `feat: §5.7.6 ...` (코드) / `docs: §5.7.6 ...` (문서) / 또는 단일 commit (논리 단위 1개 — Q5 stopword + benchmark suite)
+- [-] **`activity/phase-5/phase-5-result.md`** §5.7.6 entry 신규 — 검색 quality tuning 결과 + **AC 8 매핑** (= §5.1 5 + §5.2 2 + §5.3 1) + cycle 이력 (codex cycle #1 plan + #2 post-impl)
+- [-] **`activity/phase-5-resultx-5.7.6-search-quality-tuning-<date>.md`** 신규 — 라이브 smoke evidence + AC-Q1 console log + 도메인별 Top-1/Top-3/MRR baseline + Q5 회복 확증
+- [-] **`wiki/log.md`** entry — *infrastructure* 변경 (검색 query path tokenizer + benchmark suite) 라 wikey.schema.md §"log.md 형식 (§5.11 v2 의미 재정의)" 의 *지식 log only* 정책 따라 **미기록 가능** (master 판단). 본 cycle 결과로 wiki 페이지 변경 0 확증. 단, fresh reindex 가 indexing 결과 변경 → 검색 결과 변경 — 사용자 인지 의무 (commit body 안 안내).
+- [-] **`plan/phase-5/phase-5-todo.md §5.7.6`** 체크박스 mirror — 본 todo 의 Step A~D 결과 반영 + 상태 변경 (`Session 32 진입` → `Session 32 종결` + AC 8/8 PASS)
+- [-] **`plan/plan-full.md §5.7`** 갱신 — §5.7.6 종결 status mirror (line 추가, §5.7.5 entry 패턴 mirror)
+- [-] **`README.md`** — 본 cycle 변경이 사용자 가시 영역 0 (검색 quality 내부 fix). README 갱신 필요 시 master 판단 (선택). default = 갱신 안 함 (Karpathy Simplicity).
+- [-] **`~/.claude/projects/-Users-denny-Project-wikey/memory/project_phase5_status.md`** 갱신 — §5.7.6 종결 status entry mirror
+- [-] commit 분리 (논리 단위): `feat: §5.7.6 ...` (코드) / `docs: §5.7.6 ...` (문서) / 또는 단일 commit (논리 단위 1개 — Q5 stopword + benchmark suite)
 
 ---
 

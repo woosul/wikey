@@ -239,9 +239,9 @@
   - **Settings i18n** — settings-tab.ts 35 한글 라인 → 0 (전부 영문, Sentence case + 짧은 dropdown 라벨 + description 자세한 설명). OCR Model inputbox → renderModelDropdown
 - [x] **★ #10 R==null + paired sidecar 미보호 GAP fix** (2026-04-25 session 12 추가): `ConflictKind` 에 `'unmanaged-paired-sidecar'` 추가. `decideReingest` Phase A 에서 `R == null && diskSidecarExists` 시 push. Phase B `R == null` 분기 재구성 (conflicts=[] → force / onConflict → prompt / else → protect). Hook 1 + Hook 3 + pending_protections kind 분기 확장. 4 신규 test PASS (24 → 28)
 - [x] **★ #11 entity/concept `## 출처` wikilink broken link fix** (2026-04-25 session 12 추가): canonicalizer.ts `buildPageContent` 의 `## 출처` 를 alias `[[<sidecar path>|<basename without ext>]]` 형식으로 변경. sidecar 파일 규칙 derive (`.md`/`.txt` 자체, 그 외 `<base>.<ext>.md`). 4 신규 test PASS (53 → 57). `scripts/fix-source-wikilinks.py` one-off bulk fix script 로 기존 vault 36 페이지 일괄 fix. CDP unresolvedLinks 검증: lotus-pms.md `{}` (이전 `{PMS_..: 1}`) — resolved
-- [ ] **잔여 follow-up (out-of-scope, 다음 세션)**:
+- [-] **잔여 follow-up (out-of-scope, 본 §5.3 cycle 범위 밖 → 별도 평가)**:
   - `.md.new` 자동 cleanup / dashboard·audit panel UI 시각화 (5 신규 컬럼 배지) / user_marker_headers config 노출 / entity·concept page user marker 보호 / hash perf (mtime 1차 필터) / CLI `--force` `--diff-only` 플래그 / section-level diff / tombstone restore + sidecar_hash / Python ↔ TS NFC cross-language 자동 검증
-- [ ] **삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리** (★ 본 결합 plan 범위 밖 — Phase 4 §4.2.2 source-registry 의 tombstone 처리 + §5.5 그래프 영역. §5.3 종결 후 별도 평가)
+- [-] **삭제된 소스 → 의존 wiki 페이지 자동 "근거 삭제됨" 표시 / 정리** (★ 본 결합 plan 범위 밖 — Phase 4 §4.2.2 source-registry 의 tombstone 처리 + §5.5 그래프 영역. §5.3 종결 후 별도 평가)
 - [x] **wiki 재생성 없음 확증**: source-registry 스키마는 Phase 4 §4.2.2 에서 선결정. 본 항목은 로직만 추가, 기존 wiki 는 hash 변경된 소스만 재인제스트로 갱신. legacy record 는 skip-with-seed 자동 마이그레이션. 기존 NanoVNA / PMS 데이터 backwards compat read OK
 
 ### 5.3.2 sidecar + ingest 불일치 예외 처리 (★ 2026-04-25 §5.2.9 사용자 발견 — §5.3 으로 분리)
@@ -648,21 +648,20 @@
 - 본 §5.4.10.6/7 = 사용자 philosophy 의 정식 기록. §5.4 self-extending 의 fundamental gap 인정.
 - 진행 결정 = 다음 세션 사용자 명시. 옵션 A/B/C 중 선택 + 본 §5.4.10 진행 여부.
 
-#### 5.4.10.8 자동화 task (단기 — self-extending 의 chain break 부분 제거, 옵션 A 시)
+#### 5.4.10.8 자동화 task — **§5.10 D-wide paradigm shift 로 폐기** (2026-05-05 session 17)
 
-- [ ] **(★ 1순위 의문) panel 자체의 존재 가치 재검토**: 사용자 의문 — "표준 분해 패턴을 사용자가 왜 등록/관리해야 하는가? 너무 엔지니어링 사고, 내부 자동 처리만 있으면 됨." 결정 분기:
-  - **option A — panel 폐기**: 표준 분해는 internal infra 만. 사용자 노출 X. ingest pipeline 자동 등록 + audit log internal. panel UI / `.wikey/schema.yaml` 사용자 노출 X (또는 settings tab 안 advanced view 만). header button (clipboard_check) 도 제거.
-  - **option B — 조회 only panel 유지**: schema.yaml 등록 결과 사용자 조회 가치 인정 (debug / transparency). panel = read-only audit. Add/Edit/Accept/Reject 모두 제거. 자동 등록 결과 + 오류 케이스 표시만.
-  - **option C — 현재 유지 + audit 강화**: 본 §5.4.10 의 나머지 항목들 (ingest 자동 등록 + threshold split + audit log) 진행, panel 보조 도구로.
-- [ ] **ingest pipeline → schema.yaml 자동 등록 (high-confidence)**: 현재 Stage 2 detector → `.wikey/suggestions.json` (pending) → panel Accept 흐름. 사용자 의도 = ingest 단계에서 confidence ≥ threshold (예: 0.85) 후보를 schema.yaml 에 직접 append. 사용자 Accept 우회. `appendStandardDecomposition` 를 ingest pipeline 에서 직접 호출 path 추가.
-- [ ] **Confidence threshold split**: 두 단계 — high (자동 schema.yaml 등록) / low (panel 후보 표시 = 사용자 검토). user setting 으로 threshold 조정 가능 (`wikey.conf` 또는 plugin settings).
-- [ ] **자동 등록 audit log**: `.wikey/standard-audit.json` 신규. 자동 등록 이력 trace — 어떤 후보가 어떤 confidence 로 어떤 ingest event 에서 등록됐는지. 사용자가 추후 review 가능.
-- [ ] **panel rename**: `Suggestions` → `Audit` 또는 `표준 audit` (사용자 의도 정확 반영). icon (`clipboard_check`) 도 audit 컨셉 적합 검토. header button label / panel title / modal title 모두 일관.
-- [ ] **audit-only UI (Add/Edit 더 깊이 숨김)**: 본 cycle 의 secondary 약화 다음 단계 — Add/Edit 을 footer 작은 link 또는 plugin settings tab 으로 이동. 일반 사용자는 거의 안 씀. 진정한 예외 (오류 직접 수정 / 누락 표준 추가) 만.
-- [ ] **오류 케이스 audit 표시**: ingest 시 자동 등록 실패 (parser invalid slug / append 충돌 / 형식 위반 등) 항목을 panel 에 별도 row 로 표시 (warning badge). 사용자가 직접 fix → 등록.
-- [ ] **자동 / 수동 구분 시각화**: schema.yaml 의 `origin` 필드 (suggested / manual / converged / builtin) 를 panel 조회 시 색상 / icon 으로 구분.
-- [ ] **threshold tuning**: 자동 등록 후 false positive (사용자가 schema.yaml 에서 직접 제거) 발생 시 threshold 자동 상향 (자가 학습 — 별 P3 sub-cycle).
-- [ ] **이관 plan 작성**: 본 §5.4.10 mini plan 진입 시 `plan/phase-5-todox-5.4-audit-automation.md` 신규 작성 — 본 todo 의 acceptance 별 detail spec.
+> 본 §5.4.10.8 의 모든 task 는 §5.10.4 D-wide LLM-only ontology 채택 (Suggestions panel UI 폐기 + §5.4 self-extending Stage 1~4 폐기) 로 의도적 무효화. `[-]` = paradigm shift 의도적 보류.
+
+- [-] **(★ 1순위 의문) panel 자체의 존재 가치 재검토** — D-wide 결정: panel 폐기 채택 (option A)
+- [-] **ingest pipeline → schema.yaml 자동 등록 (high-confidence)** — Suggestions / detector 인프라 자체 폐기
+- [-] **Confidence threshold split** — 동일
+- [-] **자동 등록 audit log** — 동일
+- [-] **panel rename** — sidebar 6→5 panel 축소 (Suggestions 제거)
+- [-] **audit-only UI (Add/Edit 더 깊이 숨김)** — 동일
+- [-] **오류 케이스 audit 표시** — 동일
+- [-] **자동 / 수동 구분 시각화** — 동일
+- [-] **threshold tuning** — 동일
+- [-] **이관 plan 작성** — D-wide 채택으로 mini plan 불필요
 
 **연계**:
 - 본 §5.4.10 = §5.4 self-extending 의 **자동성 phase**. §5.4.1~9 가 본체 (Stage 1~4 + integration + UI) + §5.4.10 이 자동화 완성.
@@ -1173,8 +1172,8 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 
 ### 본 cycle 포함 — 2 항목 (BENCH-AUTO C2 통합)
 
-- [ ] (../C1) **Q5 회귀 보완 — smart_tokenize 정밀화 (v1.2 5 단어)**: 한국어 stopword list `프로젝트` / `관리` / `정보` / `시스템` / `업무` (generic content word BM25 saturation 회피, **`일정` 제거** — codex cycle #1 HIGH #3 fix: Q5 query "프로젝트 일정 관리" 3 단어 모두 stopword 시 tokenize empty → AC-Q1 unrecoverable). PoC §3 Q5 Top-1 1/10 (`프로젝트-관리-시스템`) → AC-Q1 = `project-schedule-management` Top-1 hit. 변경 면: `wikey-core/src/search/orama-korean-tokenizer.ts` smart_tokenize stopword 분기 + `scripts/korean-tokenize.py` 동등 mirror.
-- [ ] (../C2 + BENCH-AUTO 통합) **50+ query benchmark suite + `npm run benchmark:search` script 자동화**: 현 10 query (statistical power 부족) → 50+ query (도메인 균형 — PMBOK / ITIL / Obsidian / 한국어 / 영문 / 한+영 mix). **JSON suite** (yaml dep 0, Node native parse — v1.1 사용자 결정) + script. Top-1 / Top-3 / MRR 측정. quality regression 자동 감지 보조 (수동 실행, CI 통합은 미진행). 변경 면: `wikey-core/eval/benchmark-suite.json` (50+ query) + `scripts/benchmark-search.ts` (export `runBenchmark` + searchFn injection, codex MED #4) + `wikey-core/package.json` script + tsx devDep.
+- [-] (../C1) **Q5 회귀 보완 — smart_tokenize 정밀화 (v1.2 5 단어)**: 한국어 stopword list `프로젝트` / `관리` / `정보` / `시스템` / `업무` (generic content word BM25 saturation 회피, **`일정` 제거** — codex cycle #1 HIGH #3 fix: Q5 query "프로젝트 일정 관리" 3 단어 모두 stopword 시 tokenize empty → AC-Q1 unrecoverable). PoC §3 Q5 Top-1 1/10 (`프로젝트-관리-시스템`) → AC-Q1 = `project-schedule-management` Top-1 hit. 변경 면: `wikey-core/src/search/orama-korean-tokenizer.ts` smart_tokenize stopword 분기 + `scripts/korean-tokenize.py` 동등 mirror.
+- [-] (../C2 + BENCH-AUTO 통합) **50+ query benchmark suite + `npm run benchmark:search` script 자동화**: 현 10 query (statistical power 부족) → 50+ query (도메인 균형 — PMBOK / ITIL / Obsidian / 한국어 / 영문 / 한+영 mix). **JSON suite** (yaml dep 0, Node native parse — v1.1 사용자 결정) + script. Top-1 / Top-3 / MRR 측정. quality regression 자동 감지 보조 (수동 실행, CI 통합은 미진행). 변경 면: `wikey-core/eval/benchmark-suite.json` (50+ query) + `scripts/benchmark-search.ts` (export `runBenchmark` + searchFn injection, codex MED #4) + `wikey-core/package.json` script + tsx devDep.
 
 ### 별 cycle 분리 — §5.7.7 후보 (1 항목)
 
@@ -1710,7 +1709,7 @@ sub-목표:
 > **spec**: 보조 plan §10.5 AC-C1.6 (v5 산술 정정). 회귀 732 → ≥ 751 + 라이브 smoke 3 분기.
 
 - [x] **회귀 baseline 확증**: `npm test` **757 PASS** (732 baseline + 25 신규: AC-C1.1 +12 + AC-C1.2 +5 + AC-C1.5 +4 + AC-C1.7 +4) + build 0 errors. fresh re-run 명시.
-- [ ] **라이브 cycle smoke (master 직접 obsidian-cdp)**: 3 fixture (PDF + HWP + DOCX 각 1) ingest cycle 진행 — 사용자 환경 (Obsidian + CDP 9222 기동) 의존 → 별 단계.
+- [x] **라이브 cycle smoke (master 직접 obsidian-cdp)** (§5.10.3.10 라이브 smoke 3 fixture GREEN — line 1907, 2026-05-05 session 17)
 - [x] **결과 기록**: `activity/phase-5/phase-5-result.md §5.10.1` AC 7 항목 evidence (본 mirror commit).
 
 #### 5.10.1.9 AC-C1.7 — convert-cache schema 갱신 + 모든 cache callsite migration
@@ -1732,7 +1731,7 @@ sub-목표:
 #### 5.10.1.10 Phase 1 Exit 검증
 
 - [x] 회귀 baseline 최종: `npm test` **757 PASS** + build 0 errors. fresh re-run.
-- [ ] 라이브 smoke 3 fixture 결과 기록 (PDF + HWP + DOCX) — 사용자 환경 (Obsidian + CDP) 의존 → 별 단계.
+- [x] 라이브 smoke 3 fixture 결과 기록 (§5.10.3.10 — PDF + HWP + HWPX GREEN, 2026-05-05)
 - [x] `activity/phase-5/phase-5-result.md §5.10.1` mirror commit (본 cycle 의 마지막 commit).
 - [x] commit — auto mode 효율 위해 단일 통합 commit (RED+GREEN+회귀+result mirror).
 
@@ -1782,7 +1781,7 @@ sub-목표:
 
 - [x] 회귀 baseline 최종 **760 PASS** (≥ 755).
 - [x] `activity/phase-5/phase-5-result.md §5.10.2` mirror commit.
-- [ ] 라이브 smoke broken link click 처리 = §5.10.4.5 L 단계 통합 (사용자 환경 의존).
+- [x] 라이브 smoke broken link click 처리 = §5.10.4.5 L 단계 통합 (사용자 환경 의존).
 
 ### 5.10.3 Phase 3 (Session 16, 2026-05-04~05) — D-wide Part 1 ✅ GREEN (R0+R1+R2+R3+R8.1, 88 cases skip)
 
@@ -1879,7 +1878,7 @@ sub-목표:
 - [x] `npm test` baseline = **673 PASS + 88 skipped + 0 fail** + build 0 errors. fresh re-run.
 - [x] `activity/phase-5/phase-5-result.md §5.10.3` mirror commit (Phase 3 결과 timeline + R0~R3 + R6/R7 + R8.1 evidence).
 - [⚠️] **라이브 cycle smoke 부분 수행** (md 1 fixture, 2026-05-05): brief + Cancel + full ingest + D-wide 자유 type 8 종 + broken link click 통과 — 단 **AC-C1.6 spec ("PDF + HWP + DOCX 각 1") 위반** (사용자 지적). 다음 세션 다중 fixture 라이브 smoke 의무.
-- [ ] **다중 파일 유형 라이브 smoke** (다음 세션, master 직접 obsidian-cdp 스킬 §3 재시동): PDF (PMS_제품소개_R10_20220815.pdf, vector PDF AC-C1.7) + HWP (스마트공장 보급확산, AC-C1.2) + HWPX (Examples.hwpx, Docling 일반 분기 — DOCX 부재 대체). 결과 evidence → `activity/phase-5/phase-5-result.md §5.10.3.9` 보강.
+- [x] **다중 파일 유형 라이브 smoke** (다음 세션, master 직접 obsidian-cdp 스킬 §3 재시동): PDF (PMS_제품소개_R10_20220815.pdf, vector PDF AC-C1.7) + HWP (스마트공장 보급확산, AC-C1.2) + HWPX (Examples.hwpx, Docling 일반 분기 — DOCX 부재 대체). 결과 evidence → `activity/phase-5/phase-5-result.md §5.10.3.9` 보강.
 
 ### 5.10.3.10 (Session 16 보강) — Modal UX 옵션 C + 영어 일관 + 다중 fixture 라이브 smoke ✅
 
@@ -1906,13 +1905,13 @@ sub-목표:
 - [x] DESIGN.md 모달 컴포넌트 표준 섹션 추가 (10 항목 — 언어/사이즈/Layout/stepper/progress/file label/drag-resize/close 보호/scroll/색상)
 - [x] sidecar 잔재 즉시 fix (raw/0_inbox/PMS_제품소개_R10_20220815.pdf.md 삭제)
 - [x] 라이브 smoke 3 fixture (PDF + HWP + HWPX) GREEN — AC-C1.6 spec 충족
-- [ ] **잔여 §5.10.4 등록 issues**:
+- [-] **잔여 §5.10.4 등록 issues** (별 cycle 이관 — Phase 5 backlog):
   - `autoMove` 누락 (protocol handler `obsidian://wikey?ingest=` 가 autoMoveFromInbox=true 안 넘김 → HWP/HWPX 가 raw/0_inbox/ 잔존)
   - mention extraction 병렬화 (PDF 6분 → 1~2분 단축 가능, gemini-2.5-flash 1M context 활용)
   - picker fuzzy 한국어 path 매치 약함 (vault.getFiles() 결과 정상이지만 한국어 search 결과 0)
   - AC-C1.4 보강 의심 — 이번 cycle 의 sidecar 잔재가 1차 Cancel 후 잔존 (raw/0_inbox/<file>.<ext>.md). sidecar write 시점 검토 필요 (Approve 전 write 발생 시 spec 위반)
   - Preview 큰 plan list (PDF 37+) modal 자체 변동 — maxHeight init 보강 후 PDF 재 cycle 검증 필요
-- [ ] reset-modals.ts 영어화 (본 cycle 무관 — §5.10.4 처리)
+- [x] reset-modals.ts 영어화 (§5.22 cycle 에서 완료, 2026-05-12 session 39)
 
 ### 5.10.4 Phase 4 (Session 4) — D-wide Part 2 + Final (UI/docs/migration/라이브/종결) ✅ **종결 (2026-05-05 session 17, codex cycle #8 APPROVE)**
 
@@ -2091,24 +2090,24 @@ sub-목표:
 
 #### 5.10.5.4 옵션 A 작업 단위 (미채택, 참조용 — "점진" 경로)
 
-- [ ] **자동/수동 매트릭스 chain break 3 fix**:
+- [-] **자동/수동 매트릭스 chain break 3 fix**: (옵션 A 미채택 — §5.10 D-wide paradigm shift 폐기)
   - schema.yaml 등록 자동화 (ingest 시 high-confidence 후보 직접 append, panel Accept 우회)
   - alias 자동 merging (canonicalizer 강화 — 같은 표준의 다른 표기 한 wiki 페이지 통합)
   - umbrella 자체 wiki 페이지 자동 생성 (group level concept page)
-- [ ] **자동 등록 audit log** (`.wikey/standard-audit.json`): 자동 등록 이력 trace.
-- [ ] **panel rename**: `Suggestions` → `Knowledge audit` 또는 `지식 audit` (audit 컨셉 일치).
-- [ ] **threshold split**: high-confidence 자동 / low-confidence panel review.
-- [ ] **자동 / 수동 구분 시각화**: schema.yaml `origin` 필드 (suggested / manual / converged / builtin / auto-ingested) 색상 / icon 구분.
+- [-] **자동 등록 audit log** (`.wikey/standard-audit.json`): 자동 등록 이력 trace. (옵션 A 미채택, D-wide 폐기)
+- [-] **panel rename**: `Suggestions` → `Knowledge audit` 또는 `지식 audit` (audit 컨셉 일치). (옵션 A 미채택, D-wide 폐기)
+- [-] **threshold split**: high-confidence 자동 / low-confidence panel review. (옵션 A 미채택, D-wide 폐기)
+- [-] **자동 / 수동 구분 시각화**: schema.yaml `origin` 필드 (suggested / manual / converged / builtin / auto-ingested) 색상 / icon 구분. (옵션 A 미채택, D-wide 폐기)
 
 #### 5.10.5.5 옵션 B 작업 단위 (미채택, 참조용 — "graph emergent" 경로)
 
-- [ ] **§5.4 본체 deprecation 결정**: `standard_decompositions` schema 모델 폐기. 외부 표준 명시는 별 schema (`aliases.yaml` 또는 `manual-overrides.yaml`) 로 분리.
-- [ ] **§5.5 graph 시각화 → ontology source 격상**: NetworkX + Leiden community detection 이 자연 cluster 발견. mention graph 가 primary ontology.
-- [ ] **canonicalizer alias dedup 강화**: canonical slug normalization 로직 강화 (다국어 / synonym / 동명이인 / 모델 변형 모두 graph node identity 통합).
-- [ ] **검색 PageRank 통합** (§5.2 확장): 1-hop wikilink 외에 PageRank-like ranking 으로 자연 중심 search 결과 정렬.
-- [ ] **panel UI 폐기 또는 graph view 교체**: header button 제거 또는 graph 시각화 panel 으로 대체.
-- [ ] **migration script**: 기존 schema.yaml `standard_decompositions` → `manual-overrides.yaml` (외부 표준 명시 hardcode 만 보존).
-- [ ] **wiki/concepts/<umbrella>.md 자동 생성**: graph cluster center 가 자체 wiki 페이지 — 그룹 명시 schema 없이 graph 관계만으로.
+- [-] **§5.4 본체 deprecation 결정**: `standard_decompositions` schema 모델 폐기. 외부 표준 명시는 별 schema (`aliases.yaml` 또는 `manual-overrides.yaml`) 로 분리. (옵션 B 미채택, D-wide 폐기)
+- [-] **§5.5 graph 시각화 → ontology source 격상**: NetworkX + Leiden community detection 이 자연 cluster 발견. mention graph 가 primary ontology. (옵션 B 미채택, D-wide 폐기)
+- [-] **canonicalizer alias dedup 강화**: canonical slug normalization 로직 강화 (다국어 / synonym / 동명이인 / 모델 변형 모두 graph node identity 통합). (옵션 B 미채택, D-wide 폐기)
+- [-] **검색 PageRank 통합** (§5.2 확장): 1-hop wikilink 외에 PageRank-like ranking 으로 자연 중심 search 결과 정렬. (옵션 B 미채택, D-wide 폐기)
+- [-] **panel UI 폐기 또는 graph view 교체**: header button 제거 또는 graph 시각화 panel 으로 대체. (옵션 B 미채택, D-wide 폐기)
+- [-] **migration script**: 기존 schema.yaml `standard_decompositions` → `manual-overrides.yaml` (외부 표준 명시 hardcode 만 보존). (옵션 B 미채택, D-wide 폐기)
+- [-] **wiki/concepts/<umbrella>.md 자동 생성**: graph cluster center 가 자체 wiki 페이지 — 그룹 명시 schema 없이 graph 관계만으로. (옵션 B 미채택, D-wide 폐기)
 
 #### 5.10.5.6 epistemology 비판 (영구 기록)
 
@@ -2182,8 +2181,8 @@ sub-목표:
 - [x] **Layer 2 (deterministic, code gate)**: `canonicalizer.ts::assembleCanonicalResult` 의 `countOccurrences()` + `PROMOTION_THRESHOLD = 2` substring count gate. `CanonicalizeArgs.sourceBody?: string` 추가 (optional, backward compatible). `dropped[].reason` 에 `single-mention (N occurrence) — not promoted to page` 명시.
 - [x] **ingest-pipeline 통합**: FULL route + SEGMENTED route 양쪽 `canonicalize({ ..., sourceBody })` 전달.
 - [x] **test ≥ 4 신규**: AC1 (sourceBody 미전달 backward) / AC2 (single-mention dropped) / AC3 (multi-occurrence promoted) / AC4 (alias 합산 promoted). 결과: **608 PASS** (이전 604 + 4 신규).
-- [ ] 라이브 cycle smoke (사용자 vault, 다음 ingest cycle): 신규 ingest 시 `console` 에 `[Wikey ingest] dropped sample: X (single-mention 1 occurrence)` 로그 확인 + 단순 출처 page 신규 생성 0.
-- [ ] 기존 vault 의 single-mention page (jeonnam-technopark 등) cleanup = 별 cycle (re-ingest 시 자동 정리되거나 사용자 명시 삭제).
+- [-] 라이브 cycle smoke (§5.11 v2 cycle 로 이관 → Session 19 ✅ Live Smoke Done)
+- [-] 기존 vault single-mention page cleanup (§5.11 v2 + §5.19 wiki-check Fix link 로 이관)
 
 
 ---
@@ -2235,13 +2234,13 @@ sub-목표:
 
 ### 5.11 v3 sub-section
 
-- [ ] **§5.11 v3.A** Layer 2 deterministic gate 강화 — `countOccurrences` 가 *unique sentence position* 카운트
+- [x] **§5.11 v3.A** Layer 2 deterministic gate 강화 — `countOccurrences` 가 *unique sentence position* 카운트
   - 본문을 sentence boundary (`. ! ? \n\n`) 로 split → 각 sentence 안에서 alias 매칭은 1 카운트
   - alias `[eda, exploratory-data-analysis, 탐색적 데이터 분석]` 이 한 sentence 안 매칭 → **1**, 두 sentence 면 **2**
   - threshold = 2 유지. 의도 (서로 다른 location 에서 ≥ 2 mention) 정확 적용
   - 추정 LOC: ~50 (canonicalizer.ts countOccurrences + sentence-tokenize helper) + test 5 case
 
-- [ ] **§5.11 v3.B** Layer 1 prompt 강화 — parenthetical / list element / acronym-only context 명시 거부
+- [x] **§5.11 v3.B** Layer 1 prompt 강화 — parenthetical / list element / acronym-only context 명시 거부
   - prompt rule 8 추가:
     - "parenthetical 1회 acronym (`(XXX)` 패턴 한 문장 등장 only) 은 거부"
     - "단순 list element (`A, B, C 등` / `Data Lake(RDB, TSDB)` 같은 enumeration only) 은 거부"
@@ -2249,7 +2248,7 @@ sub-목표:
   - 예시 (긍정): `RLHF 메커니즘 제공 — 사용자가 수정한 SQL을 학습 데이터로 활용` (action 서술 있음 → promote)
   - 예시 (부정): `Data Lake(RDB, TSDB)` (parenthetical-only enumeration → 거부)
 
-- [ ] **§5.11 v3.C** dropped reason 정확도 ↑ — 명명 분리
+- [x] **§5.11 v3.C** dropped reason 정확도 ↑ — 명명 분리
   - 현재: `single-mention (N occurrence)` (단일 라벨)
   - v3: `parenthetical-only`, `list-element`, `acronym-no-context`, `single-sentence-multi-alias`, `weak-relation` 등 분류
   - canonicalizer.ts dropped 구조에 reason taxonomy 추가
@@ -2306,8 +2305,8 @@ Phase 6: master verdict + commit + push + result 문서
 - [x] **C4**: `normalizeSourcePageFilename` helper export + callLLMForSummary 적용 + buildIngestPrompt 강제 문구 + ingest-pipeline.test.ts §5.13 block 6 test (`dfc5e6a`)
 - [x] Phase 3a 회귀: 628 PASS / 3 skip / 0 fail / build PASS / validate-wiki PASS
 - [x] Phase 3b BLUE: defense in depth (prompt + normalize) 의도적 유지 / args chain narrow inline / paradigm 주석 명시
-- [ ] **AC-A1-6 라이브 cycle smoke** (다음 세션 사용자 라이브 검증, master 의무, obsidian-cdp SKILL)
-- [ ] codex post-impl cycle 재검증 — cmux dispatch 환경 이슈 fix 후
+- [-] **AC-A1-6 라이브 cycle smoke** (이관 — §5.18/§5.19 cycle 안 master 직접 cdp smoke 가 cover)
+- [-] codex post-impl cycle 재검증 (이관 — 후속 cycle 안 codex 재검증 완료)
 
 ---
 

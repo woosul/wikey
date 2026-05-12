@@ -87,36 +87,36 @@ Phase 9  최종 master 1차 검증 + 사용자 사전 보고
 
 **A3. 코드 변경 위치 fact-check** (spec §2 mirror, master fresh re-grep 의무)
 
-- [ ] `wikey-obsidian/src/settings-tab.ts` 의 *맨 마지막* line + section 양식 (`wikey-settings-*` prefix, line 83/94/117/136/396 등) 패턴 확증 (v1.1 fact-check)
-- [ ] `wikey-obsidian/src/commands.ts:96~522` 3 PoC command 위치 확증 (POC-1 결정에 따라 cleanup)
-- [ ] `wikey-obsidian/src/commands.ts:142~156` lowercase 부재 위치 확증 (LOW #5)
-- [ ] `wikey-core/src/search/orama-index.ts::persist()` 위치 확증 (LOW #14 atomic write)
-- [ ] `./scripts/reindex.sh --check --json` 의 stderr `MODULE_TYPELESS_PACKAGE_JSON` warn 재현 확증 (LOW #15)
-- [ ] `wikey-core/vendor/kiwi-nlp/VENDOR.md` 의 Kiwi git tag + vendor date 확증 (B7 detect script 의 input)
+- [x] `wikey-obsidian/src/settings-tab.ts` 의 *맨 마지막* line + section 양식 (`wikey-settings-*` prefix, line 83/94/117/136/396 등) 패턴 확증 (v1.1 fact-check)
+- [x] `wikey-obsidian/src/commands.ts:96~522` 3 PoC command 위치 확증 (POC-1 결정에 따라 cleanup)
+- [x] `wikey-obsidian/src/commands.ts:142~156` lowercase 부재 위치 확증 (LOW #5)
+- [x] `wikey-core/src/search/orama-index.ts::persist()` 위치 확증 (LOW #14 atomic write)
+- [x] `./scripts/reindex.sh --check --json` 의 stderr `MODULE_TYPELESS_PACKAGE_JSON` warn 재현 확증 (LOW #15)
+- [x] `wikey-core/vendor/kiwi-nlp/VENDOR.md` 의 Kiwi git tag + vendor date 확증 (B7 detect script 의 input)
 
 **A4. wikey-core 신규 모듈 위치 결정**
 
-- [ ] `wikey-core/src/update/upstream-checker.ts` (신규)
-- [ ] `wikey-core/src/update/update-analyzer.ts` (신규)
-- [ ] `wikey-core/src/__tests__/update/upstream-checker.test.ts` + `update-analyzer.test.ts` (신규)
+- [x] `wikey-core/src/update/upstream-checker.ts` (신규)
+- [x] `wikey-core/src/update/update-analyzer.ts` (신규)
+- [x] `wikey-core/src/__tests__/update/upstream-checker.test.ts` + `update-analyzer.test.ts` (신규)
 
 **A5. wikey-obsidian settings-tab 변경 위치 결정**
 
-- [ ] `wikey-obsidian/src/settings-tab.ts` — 맨 마지막에 `wikey-settings-developer-section` 추가 (v1.1 prefix 정정)
-- [ ] `wikey-obsidian/src/main.ts` — onload 시 `detectUpstreamUpdates` 1회 호출 (사용자 동의 시)
-- [ ] `wikey-obsidian/src/__tests__/settings-tab-developer.test.ts` (신규)
+- [x] `wikey-obsidian/src/settings-tab.ts` — 맨 마지막에 `wikey-settings-developer-section` 추가 (v1.1 prefix 정정)
+- [x] `wikey-obsidian/src/main.ts` — onload 시 `detectUpstreamUpdates` 1회 호출 (사용자 동의 시)
+- [x] `wikey-obsidian/src/__tests__/settings-tab-developer.test.ts` (신규)
 
 **A6. scripts 신규 결정**
 
-- [ ] `scripts/check-kiwi-vendor-sync.sh` (~50 LOC, B7 detect)
-- [ ] `scripts/check-licenses.sh` (~30 LOC, LOW #7)
+- [x] `scripts/check-kiwi-vendor-sync.sh` (~50 LOC, B7 detect)
+- [x] `scripts/check-licenses.sh` (~30 LOC, LOW #7)
 
 **Step A 체크박스**:
 
-- [ ] 사용자 결정 5건 + 부가 결정 4건 모두 잠금
-- [ ] 선행 의무 #1 (`wikey.schema.md` 갱신) 완료 또는 본 cycle 안 별 step 결정 잠금
-- [ ] 코드 변경 위치 6 항목 fact-check 완료
-- [ ] 신규 모듈 / 신규 script 위치 결정 잠금
+- [x] 사용자 결정 5건 + 부가 결정 4건 모두 잠금
+- [x] 선행 의무 #1 (`wikey.schema.md` 갱신) 완료 또는 본 cycle 안 별 step 결정 잠금
+- [x] 코드 변경 위치 6 항목 fact-check 완료
+- [x] 신규 모듈 / 신규 script 위치 결정 잠금
 
 ### Step B — TDD RED→GREEN→BLUE 3a/3b (Phase 2~5)
 
@@ -124,77 +124,77 @@ Phase 9  최종 master 1차 검증 + 사용자 사전 보고
 
 전체 신규 단위 테스트 = spec v1.2 의 20 AC 중 단위 부분 = 13 case (§5.1 11 + §5.1.1 2 = AC-C5 + AC-C6) + 통합 단위 가능한 부분 (AC-S1 / AC-L7 / AC-D1 grep) = **총 16 RED case** (단위 13 + 통합 가능 3 — V1~V3 라이브 + AC-P1 size 측정 제외, v1.2 fix: 14 → 16).
 
-- [ ] `wikey-core/src/__tests__/update/upstream-checker.test.ts` 신규 — AC-U1 + AC-U2 (2 case, mock fetch + kind 4 fixture)
-- [ ] `wikey-core/src/__tests__/update/update-analyzer.test.ts` 신규 — AC-U6 (1 case, mock LLM + mock fetch)
-- [ ] `wikey-obsidian/src/__tests__/settings-tab-developer.test.ts` 신규 — AC-U3 + AC-U5 + AC-U7 + AC-U8 (4 case, mock plugin settings + DOM)
-- [ ] `wikey-obsidian/src/__tests__/main-update-onload.test.ts` 신규 — AC-U4 (1 case, mock onload + spy)
-- [ ] `wikey-core/src/__tests__/search/orama-index-persist.test.ts` 확장 — AC-L14 (1 case, atomic write + abort)
-- [ ] `wikey-core/src/__tests__/scripts/reindex-lazy-import.test.ts` 신규 — AC-L15 (1 case, engine='qmd' branch + stderr capture)
-- [ ] `wikey-core/src/__tests__/search/lowercase-consistency.test.ts` 신규 — AC-L5 (1 case, 사용자 결정 #4 결과 mirror)
-- [ ] `scripts/__tests__/check-kiwi-vendor-sync.test.sh` 신규 (또는 wikey-core integration) — AC-S1 (1 case, mock curl + stdout grep)
-- [ ] `scripts/__tests__/check-licenses.test.sh` 신규 — AC-L7 (1 case, mock package.json + NOTICE diff)
-- [ ] README docs grep test (작은 verification) — AC-D1 (1 case, grep `Developer (advanced)` + `[upgrade]` + `[분석]` + `[개발필요]`)
-- [ ] **(v1.2 신규)** `wikey-core/src/__tests__/config-search-top-n-alias.test.ts` 신규 — AC-C5 (1 case, `WIKEY_SEARCH_TOP_N` alias + `WIKEY_QMD_TOP_N` deprecation warn)
-- [ ] **(v1.3 정정 — finding 2 fix)** `wikey-obsidian/src/__tests__/env-detect-engine-flag.test.ts` 신규 — AC-C6 (2 case: searchEngine='orama' 시 qmd path block call 0 + ABI scan skip / searchEngine='qmd' 시 정상 inline detect)
-- [ ] 모두 FAIL 확증 후 `npm test` log 보존 → commit `test: §5.7.5 RED — 16 case (developer update UI + LOW fix + scripts + C5/C6 v1.2)`
+- [x] `wikey-core/src/__tests__/update/upstream-checker.test.ts` 신규 — AC-U1 + AC-U2 (2 case, mock fetch + kind 4 fixture)
+- [x] `wikey-core/src/__tests__/update/update-analyzer.test.ts` 신규 — AC-U6 (1 case, mock LLM + mock fetch)
+- [x] `wikey-obsidian/src/__tests__/settings-tab-developer.test.ts` 신규 — AC-U3 + AC-U5 + AC-U7 + AC-U8 (4 case, mock plugin settings + DOM)
+- [x] `wikey-obsidian/src/__tests__/main-update-onload.test.ts` 신규 — AC-U4 (1 case, mock onload + spy)
+- [x] `wikey-core/src/__tests__/search/orama-index-persist.test.ts` 확장 — AC-L14 (1 case, atomic write + abort)
+- [x] `wikey-core/src/__tests__/scripts/reindex-lazy-import.test.ts` 신규 — AC-L15 (1 case, engine='qmd' branch + stderr capture)
+- [x] `wikey-core/src/__tests__/search/lowercase-consistency.test.ts` 신규 — AC-L5 (1 case, 사용자 결정 #4 결과 mirror)
+- [x] `scripts/__tests__/check-kiwi-vendor-sync.test.sh` 신규 (또는 wikey-core integration) — AC-S1 (1 case, mock curl + stdout grep)
+- [x] `scripts/__tests__/check-licenses.test.sh` 신규 — AC-L7 (1 case, mock package.json + NOTICE diff)
+- [x] README docs grep test (작은 verification) — AC-D1 (1 case, grep `Developer (advanced)` + `[upgrade]` + `[분석]` + `[개발필요]`)
+- [x] **(v1.2 신규)** `wikey-core/src/__tests__/config-search-top-n-alias.test.ts` 신규 — AC-C5 (1 case, `WIKEY_SEARCH_TOP_N` alias + `WIKEY_QMD_TOP_N` deprecation warn)
+- [x] **(v1.3 정정 — finding 2 fix)** `wikey-obsidian/src/__tests__/env-detect-engine-flag.test.ts` 신규 — AC-C6 (2 case: searchEngine='orama' 시 qmd path block call 0 + ABI scan skip / searchEngine='qmd' 시 정상 inline detect)
+- [x] 모두 FAIL 확증 후 `npm test` log 보존 → commit `test: §5.7.5 RED — 16 case (developer update UI + LOW fix + scripts + C5/C6 v1.2)`
 
 **B2. GREEN — §3 변경 면 모두 구현** (Phase 3)
 
 순서대로 (의존성 고려):
 
-- [ ] **(A4 먼저)** `wikey-core/src/update/upstream-checker.ts` (신규, ~150 LOC) — `detectUpstreamUpdates` + `UpdateItemDescriptor` 4 kind detect (kiwi-nlp / orama / qwen3-embedding / qmd-vendored). AC-U1, AC-U2.
-- [ ] **(A4 후)** `wikey-core/src/update/update-analyzer.ts` (신규, ~80 LOC) — `analyzeUpdate` LLM 요약 + devRequired heuristic. AC-U6.
-- [ ] **(A6 script)** `scripts/check-kiwi-vendor-sync.sh` (~50 LOC) — `bab2min/Kiwi` releases API + VENDOR.md 비교. AC-S1.
-- [ ] **(A6 script)** `scripts/check-licenses.sh` (~30 LOC) — package.json deps + NOTICE grep diff. AC-L7.
-- [ ] **(A5 settings-tab)** `wikey-obsidian/src/settings-tab.ts` — 맨 마지막에 `[developer]` 섹션 + `renderUpdateRow` helper (~80 LOC). exact phrase: `Developer (advanced)` / `[upgrade]` / `[분석]` / `[개발필요]`. AC-U3, AC-U5, AC-U7, AC-U8.
-- [ ] **(A5 main.ts onload + v1.3 finding 4 fix)** `wikey-obsidian/src/main.ts` — onload 시 `if (settings.developerMode && settings.allowUpdateCheck) { detectUpstreamUpdates(...) }` 1회 호출 + `runUpdateAnalysis` method (~30 LOC). **`WikeySettings` (main.ts:34)** + **`DEFAULT_SETTINGS` (main.ts:87)** + **`buildPluginOnlyData` (main.ts:651)** 에 `developerMode: false` + `allowUpdateCheck: false` field 추가 의무. AC-U4 matrix 3건 검증.
-- [ ] **(LOW #14)** `wikey-core/src/search/orama-index.ts::persist()` — atomic write (`<cachePath>.tmp` + `fs.renameSync`) + abort signal check (~15 LOC). AC-L14.
-- [ ] **(LOW #15)** `wikey-core/src/scripts/reindex.ts::runOramaIngest` — `createKoreanTokenizer` lazy import (engine='orama' branch 안에서만 load) (~10 LOC). AC-L15.
-- [ ] **(LOW #5)** 사용자 결정 #4 결과 mirror — code lowercase 유지 권고 시: PoC `wikey-obsidian/src/commands.ts:142~156` 와 `scripts/korean-tokenize.py::_smart_tokenize` 의 docs 정정 + 단위 테스트. AC-L5.
-- [ ] **(POC-1)** 사용자 결정 cleanup 권고 시: `wikey-obsidian/src/commands.ts:96~522` 3 PoC command 제거 + `wikey-obsidian/package.json` deps (`kiwi-nlp`, `@orama/orama`) 제거 (~80 LOC 제거). 보존 시: 변경 0. AC-P1.
-- [ ] **(POC-3)** main.js size 측정 — `ls -la wikey-obsidian/main.js | awk '{print $5}'` 결과 보고 (cleanup 후 ≤ 400K 예상). AC-P1 sub.
-- [ ] **(C5 v1.2)** `wikey-core/src/config.ts:13` defaults + `wikey-obsidian/src/main.ts:513` `loadFromWikeyConf` parser — `WIKEY_SEARCH_TOP_N` alias 신규 + `WIKEY_QMD_TOP_N` deprecation marker (~30 LOC + console warn 1회). AC-C5.
-- [ ] **(C6 v1.3 정정 — finding 2 fix)** `wikey-obsidian/src/env-detect.ts:253 detectEnvironment` 시그니처 확장 → `detectEnvironment(basePath, ollamaUrl, searchEngine)`. `searchEngine !== 'qmd'` 분기에서 line 273~283 qmd inline block + `findCompatibleNode` ABI scan **skip** (`status.qmdPath = ''` + `status.nodePath = process.execPath`). 호출 site 갱신 = `wikey-obsidian/src/main.ts` 안 `detectEnvironment` 호출 (~3 위치, fact-check 의무 Step A3). ~30 LOC + 단위 2 case (engine='orama' = qmd block call 0 / engine='qmd' = inline detect 정상). AC-C6.
-- [ ] 16 RED case 모두 PASS + 기존 wikey-core / wikey-obsidian 회귀 PASS 확증 → commit `feat: §5.7.5 GREEN — developer update UI + LOW fix + PoC cleanup + C5/C6`
+- [x] **(A4 먼저)** `wikey-core/src/update/upstream-checker.ts` (신규, ~150 LOC) — `detectUpstreamUpdates` + `UpdateItemDescriptor` 4 kind detect (kiwi-nlp / orama / qwen3-embedding / qmd-vendored). AC-U1, AC-U2.
+- [x] **(A4 후)** `wikey-core/src/update/update-analyzer.ts` (신규, ~80 LOC) — `analyzeUpdate` LLM 요약 + devRequired heuristic. AC-U6.
+- [x] **(A6 script)** `scripts/check-kiwi-vendor-sync.sh` (~50 LOC) — `bab2min/Kiwi` releases API + VENDOR.md 비교. AC-S1.
+- [x] **(A6 script)** `scripts/check-licenses.sh` (~30 LOC) — package.json deps + NOTICE grep diff. AC-L7.
+- [x] **(A5 settings-tab)** `wikey-obsidian/src/settings-tab.ts` — 맨 마지막에 `[developer]` 섹션 + `renderUpdateRow` helper (~80 LOC). exact phrase: `Developer (advanced)` / `[upgrade]` / `[분석]` / `[개발필요]`. AC-U3, AC-U5, AC-U7, AC-U8.
+- [x] **(A5 main.ts onload + v1.3 finding 4 fix)** `wikey-obsidian/src/main.ts` — onload 시 `if (settings.developerMode && settings.allowUpdateCheck) { detectUpstreamUpdates(...) }` 1회 호출 + `runUpdateAnalysis` method (~30 LOC). **`WikeySettings` (main.ts:34)** + **`DEFAULT_SETTINGS` (main.ts:87)** + **`buildPluginOnlyData` (main.ts:651)** 에 `developerMode: false` + `allowUpdateCheck: false` field 추가 의무. AC-U4 matrix 3건 검증.
+- [x] **(LOW #14)** `wikey-core/src/search/orama-index.ts::persist()` — atomic write (`<cachePath>.tmp` + `fs.renameSync`) + abort signal check (~15 LOC). AC-L14.
+- [x] **(LOW #15)** `wikey-core/src/scripts/reindex.ts::runOramaIngest` — `createKoreanTokenizer` lazy import (engine='orama' branch 안에서만 load) (~10 LOC). AC-L15.
+- [x] **(LOW #5)** 사용자 결정 #4 결과 mirror — code lowercase 유지 권고 시: PoC `wikey-obsidian/src/commands.ts:142~156` 와 `scripts/korean-tokenize.py::_smart_tokenize` 의 docs 정정 + 단위 테스트. AC-L5.
+- [x] **(POC-1)** 사용자 결정 cleanup 권고 시: `wikey-obsidian/src/commands.ts:96~522` 3 PoC command 제거 + `wikey-obsidian/package.json` deps (`kiwi-nlp`, `@orama/orama`) 제거 (~80 LOC 제거). 보존 시: 변경 0. AC-P1.
+- [x] **(POC-3)** main.js size 측정 — `ls -la wikey-obsidian/main.js | awk '{print $5}'` 결과 보고 (cleanup 후 ≤ 400K 예상). AC-P1 sub.
+- [x] **(C5 v1.2)** `wikey-core/src/config.ts:13` defaults + `wikey-obsidian/src/main.ts:513` `loadFromWikeyConf` parser — `WIKEY_SEARCH_TOP_N` alias 신규 + `WIKEY_QMD_TOP_N` deprecation marker (~30 LOC + console warn 1회). AC-C5.
+- [x] **(C6 v1.3 정정 — finding 2 fix)** `wikey-obsidian/src/env-detect.ts:253 detectEnvironment` 시그니처 확장 → `detectEnvironment(basePath, ollamaUrl, searchEngine)`. `searchEngine !== 'qmd'` 분기에서 line 273~283 qmd inline block + `findCompatibleNode` ABI scan **skip** (`status.qmdPath = ''` + `status.nodePath = process.execPath`). 호출 site 갱신 = `wikey-obsidian/src/main.ts` 안 `detectEnvironment` 호출 (~3 위치, fact-check 의무 Step A3). ~30 LOC + 단위 2 case (engine='orama' = qmd block call 0 / engine='qmd' = inline detect 정상). AC-C6.
+- [x] 16 RED case 모두 PASS + 기존 wikey-core / wikey-obsidian 회귀 PASS 확증 → commit `feat: §5.7.5 GREEN — developer update UI + LOW fix + PoC cleanup + C5/C6`
 
 **B3. BLUE Phase 3a — 회귀 검증** (Phase 4)
 
-- [ ] `npm test` (wikey-core fresh) — 모든 case PASS, 기존 회귀 무손상
-- [ ] `npm test` (wikey-obsidian fresh) — 회귀 PASS
-- [ ] `npm run build` (wikey-core + wikey-obsidian) — 0 errors
-- [ ] `./scripts/validate-wiki.sh` — wiki/ frontmatter 무결성 PASS
-- [ ] `./scripts/check-licenses.sh` — 본 cycle 직접 실행 (NOTICE / package.json deps 정합성 확증)
-- [ ] `./scripts/check-kiwi-vendor-sync.sh` — 본 cycle 직접 실행 (현재 vendor 와 upstream 비교 확증)
+- [x] `npm test` (wikey-core fresh) — 모든 case PASS, 기존 회귀 무손상
+- [x] `npm test` (wikey-obsidian fresh) — 회귀 PASS
+- [x] `npm run build` (wikey-core + wikey-obsidian) — 0 errors
+- [x] `./scripts/validate-wiki.sh` — wiki/ frontmatter 무결성 PASS
+- [x] `./scripts/check-licenses.sh` — 본 cycle 직접 실행 (NOTICE / package.json deps 정합성 확증)
+- [x] `./scripts/check-kiwi-vendor-sync.sh` — 본 cycle 직접 실행 (현재 vendor 와 upstream 비교 확증)
 
 **B4. BLUE Phase 3b — refactor** (Phase 5, CLAUDE.md SDD+TDD 정책 의무)
 
-- [ ] **함수 분해**: 50+ LOC 함수 후보 (예: `detectUpstreamUpdates` 의 4 kind 별 fetch — extract 후보) ~30 LOC 단위로 split
-- [ ] **Naming consistency**: `UpdateItem*` 시리즈 / `developerMode` / `allowUpdateCheck` 등 일관 점검
-- [ ] **DRY**: 4 kind 별 fetch 의 공통 패턴 (URL fetch + parse + version 비교) extract — 또는 *의도적 유지* 근거 명시 (kind 별 source 다양 — generic abstraction = over-spec)
-- [ ] **주석 quality**: TODO/FIXME 0 / historical context 압축 / `[사용자 결정]` 마커 cleanup (사용자 결정 잠금 후 marker 제거 + 결정 결과 명시)
-- [ ] **가독성**: nested arrow / magic number (e.g. update check timeout `30000ms`) 상수화
-- [ ] 각 refactor 후 회귀 검증 반복 (`npm test`) → commit `refactor: §5.7.5 BLUE — 함수 분해 / DRY / Naming`
+- [x] **함수 분해**: 50+ LOC 함수 후보 (예: `detectUpstreamUpdates` 의 4 kind 별 fetch — extract 후보) ~30 LOC 단위로 split
+- [x] **Naming consistency**: `UpdateItem*` 시리즈 / `developerMode` / `allowUpdateCheck` 등 일관 점검
+- [x] **DRY**: 4 kind 별 fetch 의 공통 패턴 (URL fetch + parse + version 비교) extract — 또는 *의도적 유지* 근거 명시 (kind 별 source 다양 — generic abstraction = over-spec)
+- [x] **주석 quality**: TODO/FIXME 0 / historical context 압축 / `[사용자 결정]` 마커 cleanup (사용자 결정 잠금 후 marker 제거 + 결정 결과 명시)
+- [x] **가독성**: nested arrow / magic number (e.g. update check timeout `30000ms`) 상수화
+- [x] 각 refactor 후 회귀 검증 반복 (`npm test`) → commit `refactor: §5.7.5 BLUE — 함수 분해 / DRY / Naming`
 
 ### Step C — 단위 + 라이브 smoke (Phase 6)
 
-- [ ] `npm test` final fresh re-run (wikey-core + wikey-obsidian) — 모든 PASS
-- [ ] `npm run build` final — 0 errors
-- [ ] `./scripts/validate-wiki.sh` final — PASS
-- [ ] **라이브 smoke 1 (AC-V1)**: obsidian-cdp Obsidian 재시작 → settings tab 열기 → `Show developer section` 토글 on → `[developer]` 섹션 표시 → 4 row 모두 표시 (kiwi-nlp / orama / qwen3-embedding / qmd-vendored) + 각 row 의 currentVersion 정상 + update 있으면 `[upgrade]` 뱃지 표시. console log + DOM 캡처.
-- [ ] **라이브 smoke 2 (AC-V2)**: 4 row 중 1 row 의 `[분석]` 버튼 클릭 → LLM 호출 1회 + summary 표시 ≤ 30s. devRequired=true 결과 시 `[개발필요]` 마크 표시 확증.
-- [ ] **라이브 smoke 3 (AC-V3)**: settings developer toggle off → 섹션 숨김 + plugin onload 시 `detectUpstreamUpdates` 호출 0 (사용자 동의 옵트아웃 path 작동). console log spy.
-- [ ] 모든 smoke PASS console log 보존 → `activity/phase-5-resultx-5.7.5-orama-update-sync-<date>.md` 작성
+- [x] `npm test` final fresh re-run (wikey-core + wikey-obsidian) — 모든 PASS
+- [x] `npm run build` final — 0 errors
+- [x] `./scripts/validate-wiki.sh` final — PASS
+- [x] **라이브 smoke 1 (AC-V1)**: obsidian-cdp Obsidian 재시작 → settings tab 열기 → `Show developer section` 토글 on → `[developer]` 섹션 표시 → 4 row 모두 표시 (kiwi-nlp / orama / qwen3-embedding / qmd-vendored) + 각 row 의 currentVersion 정상 + update 있으면 `[upgrade]` 뱃지 표시. console log + DOM 캡처.
+- [x] **라이브 smoke 2 (AC-V2)**: 4 row 중 1 row 의 `[분석]` 버튼 클릭 → LLM 호출 1회 + summary 표시 ≤ 30s. devRequired=true 결과 시 `[개발필요]` 마크 표시 확증.
+- [x] **라이브 smoke 3 (AC-V3)**: settings developer toggle off → 섹션 숨김 + plugin onload 시 `detectUpstreamUpdates` 호출 0 (사용자 동의 옵트아웃 path 작동). console log spy.
+- [x] 모든 smoke PASS console log 보존 → `activity/phase-5-resultx-5.7.5-orama-update-sync-<date>.md` 작성
 
 ### Step D — 문서 동기화 (Phase 8)
 
-- [ ] **`activity/phase-5/phase-5-result.md`** §5.7.5 entry 신규 — 마이그레이션 후 운영 결과 + **AC 20 매핑** (= §5.1 11 + §5.1.1 2 + §5.2 4 + §5.3 3, v1.2/v1.3) + cycle 이력 (codex cycle #1 NEEDS_REVISION fix + cycle #2 plan APPROVE + #3 post-impl)
-- [ ] **`activity/phase-5-resultx-5.7.5-orama-update-sync-<date>.md`** 신규 — 라이브 smoke evidence + AC-V1/V2/V3 console log + AC-P1 main.js size 측정 결과
-- [ ] **`wiki/log.md`** entry — *infrastructure* 변경 (settings UI + scripts) 라 wikey.schema.md §"log.md 형식 (§5.11 v2 의미 재정의)" 의 *지식 log only* 정책 따라 미기록 가능 (master 판단). 본 cycle 결과로 wiki 페이지 변경 0 확증.
-- [ ] **`plan/phase-5/phase-5-todo.md §5.7.5`** 체크박스 mirror — 본 todo 의 Step A~D 결과 반영 + 4 그룹 (B 7 + LOW 4 + PoC 3 + C 4 + 비목표 2) 의 *최종 분류* (**포함 11 / 단순화 9 / deferral 7**, v1.2/v1.3) 갱신
-- [ ] **`README.md ## Developer mode` 섹션** 추가 (~30 줄, v1.3 finding 5 fix — 결정 #1 (A) 잠금 mirror) — toggle 활성화 방법 = **`Show developer section` settings 토글만** (옵션 B: env / 옵션 C: 양쪽 미도입, 코드 변경 0) + 4 row 의미 + `[upgrade]` 뱃지 + `[분석]` 버튼 + `[개발필요]` 마크 흐름 docs. exact phrase: `Developer (advanced)` + `[upgrade]` + `[분석]` + `[개발필요]` + `Show developer section`. AC-D1.
-- [ ] **`docs/kiwi-nlp-vendor-sync.md`** 갱신 (선택) — 본 §5.7.5 의 `scripts/check-kiwi-vendor-sync.sh` reference 추가 (수동 절차 대신 script 1줄 실행 안내)
-- [ ] **NOTICE 갱신** (POC-1 cleanup 시) — `kiwi-nlp` / `@orama/orama` 의 wikey-obsidian dep 제거 반영 — `scripts/check-licenses.sh` 실행 후 정합성 확증
-- [ ] commit 분리 (논리 단위): `feat: §5.7.5 ...` (코드) / `docs: §5.7.5 ...` (문서) / `chore: §5.7.5 LOW fix + PoC cleanup` (정리)
+- [x] **`activity/phase-5/phase-5-result.md`** §5.7.5 entry 신규 — 마이그레이션 후 운영 결과 + **AC 20 매핑** (= §5.1 11 + §5.1.1 2 + §5.2 4 + §5.3 3, v1.2/v1.3) + cycle 이력 (codex cycle #1 NEEDS_REVISION fix + cycle #2 plan APPROVE + #3 post-impl)
+- [x] **`activity/phase-5-resultx-5.7.5-orama-update-sync-<date>.md`** 신규 — 라이브 smoke evidence + AC-V1/V2/V3 console log + AC-P1 main.js size 측정 결과
+- [x] **`wiki/log.md`** entry — *infrastructure* 변경 (settings UI + scripts) 라 wikey.schema.md §"log.md 형식 (§5.11 v2 의미 재정의)" 의 *지식 log only* 정책 따라 미기록 가능 (master 판단). 본 cycle 결과로 wiki 페이지 변경 0 확증.
+- [x] **`plan/phase-5/phase-5-todo.md §5.7.5`** 체크박스 mirror — 본 todo 의 Step A~D 결과 반영 + 4 그룹 (B 7 + LOW 4 + PoC 3 + C 4 + 비목표 2) 의 *최종 분류* (**포함 11 / 단순화 9 / deferral 7**, v1.2/v1.3) 갱신
+- [x] **`README.md ## Developer mode` 섹션** 추가 (~30 줄, v1.3 finding 5 fix — 결정 #1 (A) 잠금 mirror) — toggle 활성화 방법 = **`Show developer section` settings 토글만** (옵션 B: env / 옵션 C: 양쪽 미도입, 코드 변경 0) + 4 row 의미 + `[upgrade]` 뱃지 + `[분석]` 버튼 + `[개발필요]` 마크 흐름 docs. exact phrase: `Developer (advanced)` + `[upgrade]` + `[분석]` + `[개발필요]` + `Show developer section`. AC-D1.
+- [x] **`docs/kiwi-nlp-vendor-sync.md`** 갱신 (선택) — 본 §5.7.5 의 `scripts/check-kiwi-vendor-sync.sh` reference 추가 (수동 절차 대신 script 1줄 실행 안내)
+- [x] **NOTICE 갱신** (POC-1 cleanup 시) — `kiwi-nlp` / `@orama/orama` 의 wikey-obsidian dep 제거 반영 — `scripts/check-licenses.sh` 실행 후 정합성 확증
+- [x] commit 분리 (논리 단위): `feat: §5.7.5 ...` (코드) / `docs: §5.7.5 ...` (문서) / `chore: §5.7.5 LOW fix + PoC cleanup` (정리)
 
 ---
 

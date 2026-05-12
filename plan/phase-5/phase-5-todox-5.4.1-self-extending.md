@@ -448,8 +448,8 @@ ${decompositionBlock ? '\n' + decompositionBlock + '\n' : ''}
 
 ### 3.5 acceptance criteria (Stage 1, v3 — 9 AC, ≥ 16 신규 cases)
 
-- [ ] **AC1**: `SchemaOverride.standardDecompositions` 필드 추가 + `StandardDecomposition` / `StandardDecompositionComponent` (with optional `aliases`) 타입 export + `StandardDecompositionsState` discriminated union (3-state: empty-explicit / empty-all-skipped / present, F2 + codex cycle #2 단일화 — absent 는 `undefined` 자체) + `BUILTIN_STANDARD_DECOMPOSITIONS` 상수 (export, F3 component aliases 포함) 정의 (`schema.ts`). **추가 — STANDARD_EXCEPTIONS 갱신 (P3 codex cycle #2)**: `schema.ts:143` 의 STANDARD_EXCEPTIONS Set 에 PMBOK canonical slug 2개 추가 — `project-schedule-management`, `project-resource-management` (현재 alias `project-time-management`, `project-human-resource-management` 만 있음). canonical slug 가 functional suffix `-management` 로 끝나서 anti-pattern 으로 잡히지 않도록. `tsc` 빌드 0 errors.
-- [ ] **AC2**: `parseSchemaOverrideYaml` 가 `standard_decompositions:` section 인식. 신규 단위 테스트 **≥ 9 cases**:
+- [-] **AC1**: `SchemaOverride.standardDecompositions` 필드 추가 + `StandardDecomposition` / `StandardDecompositionComponent` (with optional `aliases`) 타입 export + `StandardDecompositionsState` discriminated union (3-state: empty-explicit / empty-all-skipped / present, F2 + codex cycle #2 단일화 — absent 는 `undefined` 자체) + `BUILTIN_STANDARD_DECOMPOSITIONS` 상수 (export, F3 component aliases 포함) 정의 (`schema.ts`). **추가 — STANDARD_EXCEPTIONS 갱신 (P3 codex cycle #2)**: `schema.ts:143` 의 STANDARD_EXCEPTIONS Set 에 PMBOK canonical slug 2개 추가 — `project-schedule-management`, `project-resource-management` (현재 alias `project-time-management`, `project-human-resource-management` 만 있음). canonical slug 가 functional suffix `-management` 로 끝나서 anti-pattern 으로 잡히지 않도록. `tsc` 빌드 0 errors.
+- [-] **AC2**: `parseSchemaOverrideYaml` 가 `standard_decompositions:` section 인식. 신규 단위 테스트 **≥ 9 cases**:
   - (1) standard_decompositions only YAML → 파서 non-null + entityTypes [] (../F2 null 조건 변경)
   - (2) explicit `standard_decompositions: []` → state `{ kind: 'empty-explicit' }`
   - (3) `standard_decompositions:` 키 부재 → `standardDecompositions` 필드 `undefined` (v4: absent 단일화 — 별도 `kind: 'absent'` 없음)
@@ -460,28 +460,28 @@ ${decompositionBlock ? '\n' + decompositionBlock + '\n' : ''}
   - (8) 잘못된 rule (`decompose|bundle` 외) → 항목 skip
   - (9) components[].aliases (F3) 정상 파싱 + 동일 항목 안 중복 skip
   - **추가 spy 검증** (UNDECIDED #2 v3): 각 warn 케이스에서 `vi.spyOn(console, 'warn')` 으로 메시지 capture 확인 — `loadSchemaOverride` 시그니처 변경 없이도 warning 관측 가능.
-- [ ] **AC3**: `buildStandardDecompositionBlock(override)` 의 **F2 discriminated union 분기 + F1 append 검증**. 신규 단위 테스트 **≥ 5 cases**:
+- [-] **AC3**: `buildStandardDecompositionBlock(override)` 의 **F2 discriminated union 분기 + F1 append 검증**. 신규 단위 테스트 **≥ 5 cases**:
   - (a) `override === undefined` → built-in PMBOK 블록 (10 components + 2 alternate slugs anchor 포함).
   - (b) `state === undefined` (parser 가 standardDecompositions 필드 자체 미포함) → (a) 와 동일 anchor.
   - (c) state `{ kind: 'empty-explicit' }` → 빈 string `''` (명시 disable).
   - (d) state `{ kind: 'empty-all-skipped', skippedCount: 2 }` → built-in PMBOK 블록 (silent disable 방지, F2 v3).
   - (e) state `{ kind: 'present', items: [{ ISO-27001 ... }] }` → **built-in PMBOK + ISO-27001 둘 다** prompt 안에 텍스트 출력 (F1 append v3 정정). bundle rule 도 별도 case 추가.
-- [ ] **AC4**: `canonicalizer.ts` 작업 규칙 #7 PMBOK 인라인 제거. `buildCanonicalizerPrompt` 에 `decompositionBlock` 치환 적용. 신규 단위 테스트 **≥ 2 cases**:
+- [-] **AC4**: `canonicalizer.ts` 작업 규칙 #7 PMBOK 인라인 제거. `buildCanonicalizerPrompt` 에 `decompositionBlock` 치환 적용. 신규 단위 테스트 **≥ 2 cases**:
   - (i) `schemaOverride === undefined` (default 경로) → 출력 prompt 에 built-in PMBOK 블록 + "PMBOK 10 knowledge areas 개별 추출" marker 포함 (M3 default fallback + F3 anchor).
   - (ii) `overridePrompt` (custom prompt) 가 `{{STANDARD_DECOMPOSITION_BLOCK}}` placeholder 포함 → 출력에 PMBOK 블록 텍스트 치환 (F4 v3 신규).
-- [ ] **AC5.a (5-control unit, F6 v3)**: ISO-27001 5 controls 샘플 yaml → `buildCanonicalizerPrompt` 출력에 5 slugs + ISO-27001 name + **built-in PMBOK 도 동시에** 포함 (F1 append). 단위 테스트 1 case.
-- [ ] **AC5.b (93-control fixture smoke, F6 v3 + P2-3 codex cycle #2 fix)**: ISO-27001 전체 93 controls fixture → `buildStandardDecompositionBlock` 정상 처리. 검증: (i) 출력 string 에 93 slugs 모두 substring match, (ii) 함수 실행 시간 < 100ms (performance 회귀 방지). **line-count 조건 제거** — builder pseudocode (§3.3) 가 components 를 comma-joined 단일 line 으로 출력해서 §4.5.1.7.2 hardcoded prompt 와 string-equivalence (AC6.a) 를 보존하는 설계와 충돌하므로. 1 case (smoke).
-- [ ] **AC6.a (코드 검증, M2 + F3 anchor 보강)**: default schema fixture 또는 `override === undefined` 입력 → `buildCanonicalizerPrompt` 출력 string 의 작업 규칙 #7 블록이 §4.5.1.7.2 시기 hardcoded prompt 와 **anchor 3 가지 모두 일치**:
+- [-] **AC5.a (5-control unit, F6 v3)**: ISO-27001 5 controls 샘플 yaml → `buildCanonicalizerPrompt` 출력에 5 slugs + ISO-27001 name + **built-in PMBOK 도 동시에** 포함 (F1 append). 단위 테스트 1 case.
+- [-] **AC5.b (93-control fixture smoke, F6 v3 + P2-3 codex cycle #2 fix)**: ISO-27001 전체 93 controls fixture → `buildStandardDecompositionBlock` 정상 처리. 검증: (i) 출력 string 에 93 slugs 모두 substring match, (ii) 함수 실행 시간 < 100ms (performance 회귀 방지). **line-count 조건 제거** — builder pseudocode (§3.3) 가 components 를 comma-joined 단일 line 으로 출력해서 §4.5.1.7.2 hardcoded prompt 와 string-equivalence (AC6.a) 를 보존하는 설계와 충돌하므로. 1 case (smoke).
+- [-] **AC6.a (코드 검증, M2 + F3 anchor 보강)**: default schema fixture 또는 `override === undefined` 입력 → `buildCanonicalizerPrompt` 출력 string 의 작업 규칙 #7 블록이 §4.5.1.7.2 시기 hardcoded prompt 와 **anchor 3 가지 모두 일치**:
   - (i) marker 텍스트 "PMBOK 10 knowledge areas 개별 추출" (또는 동등 표현) 포함
   - (ii) 10 main PMBOK slugs (`project-integration-management` … `project-stakeholder-management`)
   - (iii) **2 alternate slugs**: `project-time-management`, `project-human-resource-management` (F3 v3 신규 — legacy anchor 보존)
   - 단위 테스트 1 case (canonicalizer.test.ts). codex 권고: AC6.a string-eq + AC6.b live CV **둘 다** 통과해야 §5.4.1 close.
-- [ ] **AC6.b (라이브 측정, tester 책임, F7 v3 명료화)**: PMS 코퍼스 cycle smoke 5/5 run, **Concepts CV ≤ post-change baseline**.
+- [-] **AC6.b (라이브 측정, tester 책임, F7 v3 명료화)**: PMS 코퍼스 cycle smoke 5/5 run, **Concepts CV ≤ post-change baseline**.
   - **post-change baseline 정의**: 본 §5.4.1 코드 변경 시점에 entry gate (Phase 4 §4.5.1.7.2 PMS 5-run 실측) 가 도달한 Concepts CV 값. 현재 `activity/phase-4/phase-4-result.md:659` 기준 = **24.6%**.
   - 만약 entry gate 가 향후 < 15% 로 강화되어 그 baseline 이 새로 측정되면 그 값으로 자동 갱신.
   - 즉 **AC6.b 는 "entry gate 도달 시점의 baseline 이하 유지" no-regression 검증** (F7).
   - tester 세션에서 실측. 결과는 `activity/phase-5/phase-5-result.md §5.4.1` 에 5-run 표 + run-by-run Concepts count 형태로 기록. 본 §5.4.1 close 의 **필수 조건** — AC6.a 만으로는 완료 불가.
-- [ ] **AC7 (M1, baseline 못박음)**: **빌드 0 errors 유지 + 회귀 전체 테스트 ≥ 648 PASS 유지** (`plan/session-wrap-followups.md:3` 의 §5.3 종결 시점 baseline = "회귀 584 → 648 PASS, build 0 errors"). Stage 1 완료 시점에 fresh `npm test` + `npm run build` 출력 첨부. 신규 ≥ 16 cases (AC2 ≥ 9 + AC3 ≥ 5 + AC4 ≥ 2 + AC5.a 1 + AC5.b 1 + AC6.a 1 = ≥ 19 신규 — 일부 fixture 공유 가능) 추가만큼 PASS 카운트 상승 허용 (≥ 648 + 신규 case 수).
+- [-] **AC7 (M1, baseline 못박음)**: **빌드 0 errors 유지 + 회귀 전체 테스트 ≥ 648 PASS 유지** (`plan/session-wrap-followups.md:3` 의 §5.3 종결 시점 baseline = "회귀 584 → 648 PASS, build 0 errors"). Stage 1 완료 시점에 fresh `npm test` + `npm run build` 출력 첨부. 신규 ≥ 16 cases (AC2 ≥ 9 + AC3 ≥ 5 + AC4 ≥ 2 + AC5.a 1 + AC5.b 1 + AC6.a 1 = ≥ 19 신규 — 일부 fixture 공유 가능) 추가만큼 PASS 카운트 상승 허용 (≥ 648 + 신규 case 수).
 
 ### 3.6 위험 + 완화 (v3 갱신)
 
@@ -505,23 +505,23 @@ ${decompositionBlock ? '\n' + decompositionBlock + '\n' : ''}
 
 ### 4.1 Stage 2 진입 조건 (extraction graph 기반 suggestion)
 
-- [ ] Stage 1 안정 동작 — 정량 정의: **두 표준 (PMBOK + 1 추가) 이 schema.yaml 으로 ingest 되어 Concepts CV ≤ 15% 유지** 가 5-run 측정으로 확증.
-- [ ] 누적 표준 수 ≥ 5 개 — 사용자가 yaml 수동 등록을 부담스러워하는 수준.
-- [ ] **mention graph 데이터 인프라** (Scrutiny d 보강) — 측정 corpus = PMS + 두 번째 표준 ingest 후 wiki, query set = N=20 random mention pairs (`select-sampler` script TBD). qmd index co-occurrence query 평균 latency **≤ 200ms** (현재 PMS 1 corpus 환경에서 미측정 — Stage 2 진입 직전 측정).
-- [ ] Phase 4 §4.3.2 provenance tracking 구현 완료 (suggestion 카드의 evidence 표시에 필요).
+- [-] Stage 1 안정 동작 — 정량 정의: **두 표준 (PMBOK + 1 추가) 이 schema.yaml 으로 ingest 되어 Concepts CV ≤ 15% 유지** 가 5-run 측정으로 확증.
+- [-] 누적 표준 수 ≥ 5 개 — 사용자가 yaml 수동 등록을 부담스러워하는 수준.
+- [-] **mention graph 데이터 인프라** (Scrutiny d 보강) — 측정 corpus = PMS + 두 번째 표준 ingest 후 wiki, query set = N=20 random mention pairs (`select-sampler` script TBD). qmd index co-occurrence query 평균 latency **≤ 200ms** (현재 PMS 1 corpus 환경에서 미측정 — Stage 2 진입 직전 측정).
+- [-] Phase 4 §4.3.2 provenance tracking 구현 완료 (suggestion 카드의 evidence 표시에 필요).
 
 ### 4.2 Stage 3 진입 조건 (in-source self-declaration)
 
-- [ ] Stage 2 suggestion accept rate ≥ 80% (≥ 10 suggestion 표본).
-- [ ] Stage 2 false positive 사례에 대한 회귀 테스트 fixture 누적 (false-positive corpus ≥ 5 examples).
-- [ ] **`section-index.ts` heading classifier** (Scrutiny d 보강) — fixture: ≥ 5 표준 corpus (PMBOK / ISO 27001 / ITIL 4 / GDPR / OWASP) 의 H2/H3 headings, 100 samples manual labeled (label = "표준 개요" / "기타"). 평가 기준: **precision ≥ 0.9 / recall ≥ 0.7**. fixture 위치 TBD (`wikey-core/src/__fixtures__/heading-classifier/`).
+- [-] Stage 2 suggestion accept rate ≥ 80% (≥ 10 suggestion 표본).
+- [-] Stage 2 false positive 사례에 대한 회귀 테스트 fixture 누적 (false-positive corpus ≥ 5 examples).
+- [-] **`section-index.ts` heading classifier** (Scrutiny d 보강) — fixture: ≥ 5 표준 corpus (PMBOK / ISO 27001 / ITIL 4 / GDPR / OWASP) 의 H2/H3 headings, 100 samples manual labeled (label = "표준 개요" / "기타"). 평가 기준: **precision ≥ 0.9 / recall ≥ 0.7**. fixture 위치 TBD (`wikey-core/src/__fixtures__/heading-classifier/`).
 
 ### 4.3 Stage 4 진입 조건 (cross-source convergence)
 
-- [ ] Stage 3 까지의 decomposition 인스턴스 누적 ≥ 3 표준 × 2 소스 = 6 instance.
-- [ ] qmd vector clustering API 가 mention-level granularity 지원 (현재 page-level).
-- [ ] **LLM arbitration 비용 모델** (Scrutiny d 보강) — qmd 벡터 clustering pass 의 expected token = `(mention_count × 평균 prompt 토큰 + LLM arbitration 토큰)`. 측정 방식 = log file `~/.cache/qmd/convergence-pass-tokens.log` 에서 line `tokens=<N>` 합산 (1 pass 1 line). **1 회당 < 50K** 유지. log 형식 + sampler 는 Stage 4 진입 직전 정의.
-- [ ] Phase 4 §4.2.2 URI 기반 안정 참조 완료 (cross-source canonical 참조 필수).
+- [-] Stage 3 까지의 decomposition 인스턴스 누적 ≥ 3 표준 × 2 소스 = 6 instance.
+- [-] qmd vector clustering API 가 mention-level granularity 지원 (현재 page-level).
+- [-] **LLM arbitration 비용 모델** (Scrutiny d 보강) — qmd 벡터 clustering pass 의 expected token = `(mention_count × 평균 prompt 토큰 + LLM arbitration 토큰)`. 측정 방식 = log file `~/.cache/qmd/convergence-pass-tokens.log` 에서 line `tokens=<N>` 합산 (1 pass 1 line). **1 회당 < 50K** 유지. log 형식 + sampler 는 Stage 4 진입 직전 정의.
+- [-] Phase 4 §4.2.2 URI 기반 안정 참조 완료 (cross-source canonical 참조 필수).
 
 **Phase 6 이관 없음**: 본체 §5.4 line 331. Stage 4 는 Phase 5 안에서 종료. Stage 4 선결 미충족 시 Phase 5 종료 시 §5.4.1~3 까지만 closed 로 마감.
 

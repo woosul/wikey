@@ -10,18 +10,18 @@
 ## 진행 매트릭스 (Step A~G)
 
 - [x] **Step A — analyst v0.2 보강**: ✅ master 직접 작성 (Step "1" raw evidence 기반, spec v0.2).
-- [ ] **Step B — tester RED**: 11 AC (AC-1~AC-12) 1:1 test 작성, 모두 RED 확증.
+- [x] **Step B — tester RED**: 11 AC (AC-1~AC-12) 1:1 test 작성, 모두 RED 확증.
   - paired-sidecar.test.ts — AC-1~AC-4 (`hasSidecar` set 정합)
   - source-registry-reconcile.test.ts — AC-5~AC-8 (stale tombstone 복구)
   - sidebar-chat-refresh.test.ts — AC-9~AC-12 (refresh trigger)
-- [ ] **Step C — developer GREEN**: B1/B2/B3 minimal fix.
+- [x] **Step C — developer GREEN**: B1/B2/B3 minimal fix.
   - B1: sidebar-chat.ts (HEAD `:943` `auditAllSet`, pre-fix `:884` v0.2 evidence) → rawAudit 기반 (~5 LOC).
   - B2: ingest-pipeline.ts reconcile hook (~10 LOC).
   - B3: commands.ts:runIngest 완료 콜백 → refresh API (~10 LOC).
-- [ ] **Step D — Phase 3a 회귀**: `npm test` / `npm run build` / `./scripts/validate-wiki.sh` PASS.
-- [ ] **Step E — Phase 3b BLUE**: refresh trigger helper extract + reconcile 호출 시점 주석.
-- [ ] **Step F — codex post-impl review** (cmux Mode D).
-- [ ] **Step G — master 라이브 cycle smoke (obsidian-cdp)**: PMS + case A/B + conflict overwrite.
+- [x] **Step D — Phase 3a 회귀**: `npm test` / `npm run build` / `./scripts/validate-wiki.sh` PASS.
+- [x] **Step E — Phase 3b BLUE**: refresh trigger helper extract + reconcile 호출 시점 주석.
+- [x] **Step F — codex post-impl review** (cmux Mode D).
+- [x] **Step G — master 라이브 cycle smoke (obsidian-cdp)**: PMS + case A/B + conflict overwrite.
 
 ## 3 결함 정확한 코드 위치 (Step C GREEN 시 참조)
 
