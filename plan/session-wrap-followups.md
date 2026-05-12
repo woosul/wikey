@@ -1,12 +1,22 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-12 session 39 진행 중 — §5.22 ✅ 종결 (UI English sweep), §5.21 진입 예정**. 사용자 "계획 필요 없음" 명시 → §5.22 SDD+TDD LOCK 스킵 + 직접 sweep (8 file + 2 test fixture). 1065 PASS / build 0 errors. `wikey.schema.md §핵심 원칙 #6` + `CLAUDE.md §시스템 언어 = 영문` LOCK 신규.
+> 최신 갱신: **2026-05-13 session 39 진행 중 — §5.22 + §5.19 v0.5 + v0.5 follow-up 모두 종결, §5.21 진입 예정**. 본 세션 누적: 4 commit (§5.22 / phase-5 sweep / §5.19 v0.5 / v0.5 follow-up). 1088 PASS / build 0. `wikey.schema.md §핵심 원칙 #6` + `CLAUDE.md §시스템 언어 = 영문` LOCK 신규. `/sync` 스킬 §0-4.5.5 (완료 체크박스 갱신 의무 v8.4) + CLAUDE.md §문서 동기화 플로우 Step 2 신규.
 >
-> ## 다음 세션 첫 액션 (Session 39 후반) — §5.21 SDD+TDD 진입
+> ## 다음 세션 첫 액션 (Session 40) — §5.21 SDD+TDD 진입
 >
 > **§5.21 Ingest mention guard (P2)** — broken wikilink 근본 원인 1+3 fix (raw filename guard + canonicalizer 호출 강제). §5.19 분석 결과 (390+195+116 broken = 49% 비율) cover. 다음 = analyst Step A v0.2 (Q1 LLM prompt vs post-process / Q2 reject vs plain text / Q3 canonicalizer scope LOCK).
 >
-> **§5.22 시스템 UI 영문화 sweep (P3)** ✅ — Session 39 종결. 8 file UI string + 2 test fixture sweep + 기준 문서 (`wikey.schema.md §핵심 원칙 #6` + `CLAUDE.md §시스템 언어 = 영문`) LOCK. activity: `phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md`.
+> ## Session 39 종결 종합 (2026-05-12~13)
+>
+> **§5.22 시스템 UI 영문화 sweep (P3)** ✅ — 8 file UI string + 2 test fixture sweep + 기준 문서 LOCK. commit `9a0cdf3`. activity: `phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md`.
+>
+> **phase-5 todo/todox 체크박스 일괄 sweep** ✅ — 9 file 333+ line mark 갱신. 종결 §section unchecked 0 달성 (미종결 §5.1/§5.2/§5.5/§5.6/§5.8/§5.9/§5.15 본체/§5.20/§5.21 = 57 unchecked 유지). commit `a7cab76`.
+>
+> **§5.19 v0.5 사용자 raise R1~R7** ✅ — UX 통합 (step1 guidance) + 5 카테고리 fix path (stale-tombstone apply 신규) + Refactoring next step (Execute + archive) + margin. wikey-core 2 신규 file + wikey-obsidian 5 file + test 23 신규. commit `a2b6e5d`. activity: `phase-5-resultx-5.19-v0.5-raise-fix-2026-05-13.md`.
+>
+> **§5.19 v0.5 follow-up — init view cleanup** ✅ — progress block hidden / Execute row / 라인 중복 / help hr 중복. commit `e2fffb5`.
+>
+> 모든 cycle 의 master 1차 검증 + master 직접 obsidian-cdp 라이브 smoke 의무 수행 (R1~R7 + follow-up 4건 모두 live evidence 확보).
 >
 > 두 cycle 모두 spec v0.1 + todox v0.1 신규 등재 완료. 다음 세션 진입 시 바로 analyst 호출 가능.
 >

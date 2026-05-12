@@ -157,8 +157,29 @@ obsidian-cdp 직접 시험 7 raise (실측 evidence 포함):
 - styles.css: 110 → 150 LOC (sticky/accordion/hr/중앙정렬).
 - 7 raise (R1~R11) + 4 goal (G1~G4) 완전 매핑.
 
+## v0.5 raise (Session 39, 2026-05-12) — UX 통합 + 5 카테고리 fix
+
+- [x] **R1+R2+R3 (Check UX)** — step 1 guidance + Apply fix flow 명확화
+- [x] **R4 (5 카테고리)** — `applyStaleTombstoneCleanup` (I-PURGE-1~4) 신규. paired-sidecar / validate-wiki-other = out-of-scope
+- [x] **R5 (Help 정의)** — Maintenance Modes section (Status / Check / Refactoring)
+- [x] **R6 (Refactoring next step)** — Execute button + Step 2 archive + `applyRefactoringArchive` (I-ARCH-1~5)
+- [x] **R7 (margin)** — `.wikey-maintenance-modal-unhealthy` margin-bottom 16px
+
+검증: 23 신규 test PASS (core 15 + obsidian 8), build 0 errors, master cdp R1~R7 smoke PASS. commit `a2b6e5d`.
+
+## v0.5 follow-up (Session 39, 2026-05-13) — init view cleanup
+
+- [x] **wikicheck-init progress block** — `:empty { display:none }` + raw key:value dump 제거 (정보 중복 해소)
+- [x] **refactoring-init Execute/Close row** — `.wikey-maintenance-modal-unhealthy-actions` flex (gap 8px, margin-top 16px)
+- [x] **라인 중복** — raw progress + unhealthy summary 중복 제거
+- [x] **Help maintenance hr 2줄** — manual `helpEl.createEl('hr')` (line 855) 제거. Settings paragraph 직전 자동 hr 만
+
+검증: 1088 PASS / build 0, master cdp smoke (progress display:none / sameRow:true / hr 1줄) PASS. commit `e2fffb5`.
+
 ## 변경 이력
 
+- v0.5 follow-up (2026-05-13): init view UX 4 raise — progress block hidden / Execute row / 라인 중복 / help hr 중복. commit `e2fffb5`.
+- v0.5 (2026-05-12): 사용자 raise R1~R7 — UX 통합 + 5 카테고리 fix path + Refactoring next step + margin. AC 30 + I-PURGE/I-ARCH invariants. commit `a2b6e5d`.
 - v0.4 (2026-05-12): 사용자 obsidian-cdp 7 raise (R1~R11) + 핵심 목적 4 (G1~G4) 반영. Recovery 폐기 (Check Fix link 흡수), Check finding accordion, Fix link multi-mode (a/b/c), Health rule, Help hr. 4→3 command, AC 17→30.
 - v0.3 (2026-05-12): master LOC budget realistic adjustment.
 - v0.2 (2026-05-12): analyst LOCK — Q1~Q4, §5.16 reference 정정, §5.18 dangling cross-link, 신규 UI 흐름, 17 AC.

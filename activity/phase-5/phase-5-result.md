@@ -4277,3 +4277,60 @@ Session 39 사용자 추가 명시: "시스템 언어는 '영문'을 기준 문�
 - [x] Step G — master grep 확증
 
 → **§5.22 v0.2 종결**. 다음 = §5.21 Ingest mention guard SDD+TDD 진입.
+
+
+## 5.19 v0.5 — 사용자 raise R1~R7 + follow-up init view cleanup ✅ 종결 (Session 39, 2026-05-12~13)
+
+> tag: #maintenance, #ux, #done
+>
+> **상위 plan**: [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md)
+> **상세 cycle log**: [`activity/phase-5/phase-5-resultx-5.19-v0.5-raise-fix-2026-05-13.md`](./phase-5-resultx-5.19-v0.5-raise-fix-2026-05-13.md)
+
+### 5.19.9 v0.5 결정 배경
+
+§5.19 v0.4 종결 후 사용자 직접 obsidian-cdp 시험 → 7 raise (R1~R7). 사용자 "계획 필요 없음" 결정 → SDD+TDD LOCK 스킵 + 직접 sweep. R7 master 직접 + R1~R6 developer agent 위임 + master 1차 검증 + master cdp 라이브 smoke 의무 수행.
+
+### 5.19.10 v0.5 변경 면 (commit `a2b6e5d`)
+
+- **wikey-core 신규 2 file**: `tombstone-cleanup.ts` (`applyStaleTombstoneCleanup`, I-PURGE-1~4 — confirm/dry-run/protect-active/idempotent), `refactoring-archive.ts` (`applyRefactoringArchive`, I-ARCH-1~5 — wiki/archive/ path mirror)
+- **wikey-obsidian 5 file**: maintenance-modal-views (step1 guidance + step2 stale-tombstone section + Refactoring step2 3 sub-renderer), maintenance-modal (runner + onExecute orchestration), maintenance-runner (apply wire + listWikiPages), sidebar-chat (R5 Help guide), styles.css (R7 16px margin)
+- **Test 23 신규**: core 15 (tombstone 7 + refactoring 8) + obsidian 8 (v0_5 modal)
+
+### 5.19.11 v0.5 follow-up (commit `e2fffb5`)
+
+사용자 cdp 추가 raise 4건:
+1. **wikicheck-init progress block** — `:empty { display:none }` + raw key:value dump 제거 (`for(k,v) appendProgressLine` 루프 삭제)
+2. **refactoring-init Execute/Close row** — `.wikey-maintenance-modal-unhealthy-actions` flex div 안 wrap (Execute + Close 같은 row, gap 8px, margin-top 16px)
+3. **라인 중복** — raw progress + unhealthy summary 정보 중복 제거 (key:value dump 사라짐, summary 만 표시)
+4. **Help maintenance hr 2줄** — sidebar-chat.ts:855 manual `helpEl.createEl('hr')` 제거. Settings paragraph 직전 자동 hr 1개만
+
+### 5.19.12 v0.5 + follow-up 검증
+
+| Step | 결과 |
+|------|------|
+| wikey-core test | **900 PASS** / 3 skipped (+15 신규) |
+| wikey-obsidian test | **188 PASS** (+8 신규) |
+| build | 0 errors |
+| validate-wiki | 458 baseline (§5.21 대상, 본 cycle 무관) |
+| master cdp 라이브 smoke (의무) | R1~R7 + follow-up 4건 모두 PASS |
+
+**Live cdp evidence** (master 직접):
+- Help Maintenance Modes: Status/Check/Refactoring 명시
+- Check step 1: guidance text + Broken Wikilink (1324) + Apply fix button
+- Check step 2: 3 sub-section (Auto-fix 29 + Manual fuzzy 116 + Manual no-match 449) + 594 checkbox
+- Refactoring init: "Issues found: 2 duplicates, 1 lowUtility" + marginBottom:"16px" + actionsRow display:"flex" + sameRow:true
+- Refactoring step 2: Duplicate pages (2) + Low-utility pages (1) + 3 checkbox
+- Progress block: display:"none" (CSS :empty 작동)
+- Help maintenance: Settings 직전 hr 1개만 (manual hr 제거)
+
+### 5.19.13 v0.5 SDD+TDD 단계
+
+- [-] Step A — analyst Spec LOCK (사용자 "계획 필요 없음" → in-task spec invariants 사용)
+- [x] Step B — tester RED (23 신규 test)
+- [x] Step C — developer GREEN (multi-file)
+- [x] Step D — Phase 3a 회귀 (1088 PASS / build 0)
+- [x] Step E — Phase 3b BLUE (6 활동 명시 — 함수 분해 / Naming / DRY / 주석 / 가독성 / 회귀 재검증)
+- [-] Step F — codex post-impl (사용자 결정 스킵 → master 1차 검증)
+- [x] Step G — master 직접 obsidian-cdp 라이브 smoke (R1~R7 + follow-up)
+
+→ **§5.19 v0.5 + follow-up 종결**. 다음 = §5.21 Ingest mention guard SDD+TDD 진입.

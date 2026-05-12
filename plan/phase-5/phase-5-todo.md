@@ -2493,12 +2493,13 @@ Phase 6: master verdict + commit + push + result 문서
 
 ---
 
-## 5.19 Wiki maintenance suite — wiki-status / wiki-check / wiki-recovery / wiki-refactoring ✅ 종결 (Session 38, 2026-05-12)
-> tag: #maintenance, #lint, #status, #recovery
-> **종결 v0.3 (2026-05-12)** — 17 AC ↔ 28 test ↔ 라이브 6 scenario 모두 PASS production binding. 38 → 0 dangling cleanup 결정적 확증.
+## 5.19 Wiki maintenance suite — wiki-status / wiki-check / wiki-recovery / wiki-refactoring ✅ 종결 (Session 38~39, 2026-05-12~13) #done
+> tag: #maintenance, #lint, #status, #recovery, #done
+> **종결 v0.5 + follow-up (2026-05-13)** — v0.3 (17 AC, 38→0 dangling cleanup) → v0.4 (Batch 1~8, broken 11772→458) → v0.5 (R1~R7 UX 통합 + 5 카테고리 fix path + Refactoring next step + margin) → v0.5 follow-up (init view cleanup: progress block + Execute row + raw key:value + help hr 중복).
 >
-> **상위 plan**: [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](./phase-5-spec-5.19-wiki-maintenance-suite.md) v0.3 · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](./phase-5-todox-5.19-wiki-maintenance-suite.md) v0.2 · [`activity/phase-5/phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md`](../../activity/phase-5/phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md)
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](./phase-5-spec-5.19-wiki-maintenance-suite.md) v0.3 · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](./phase-5-todox-5.19-wiki-maintenance-suite.md) v0.2 · [`activity/phase-5/phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md`](../../activity/phase-5/phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md) · [`activity/phase-5/phase-5-resultx-5.19-v0.5-raise-fix-2026-05-13.md`](../../activity/phase-5/phase-5-resultx-5.19-v0.5-raise-fix-2026-05-13.md)
 
+v0.3 SDD+TDD (Session 38):
 - [x] **Step A — analyst v0.2 LOCK** (Q1~Q4 + 17 정량 AC + UI flow §1.5 + §5.16 reference 정정 + §5.18 dangling cross-link)
 - [x] **Step B — tester RED** (5 신규 test file 25 case, AC 17 ↔ test 25 1:1)
 - [x] **Step C — developer GREEN** (6 file split + maintenance-modal + runner + 3 script + adapter + `findRestoredIds` extract)
@@ -2506,6 +2507,21 @@ Phase 6: master verdict + commit + push + result 문서
 - [x] **Step E — Phase 3b BLUE** (maintenance.ts 632→6 file ≤200 LOC + wiki-fs-adapter 추출 + magic constant 명명)
 - [x] **Step F — codex post-impl 5 cycle** (#1 6 finding → #5 ✅ APPROVE No findings, 누적 18 finding 모두 fix)
 - [x] **Step G — Obsidian CDP 라이브 cycle smoke 2 cycle** (1차 FAIL → WikiFS.walk fix → 2차 PASS, **38 → 0 dangling cleanup 결정적**)
+
+v0.4 raise-based cycle (Session 38, Batch 1~8): broken count 11,772 → 458 (recursive feedback fix + wiki-check report self-detect 차단). commit `1052b2a`.
+
+v0.5 사용자 raise R1~R7 (Session 39, 2026-05-12):
+- [x] **R1+R2+R3 (Check UX)** — step1 guidance + Apply fix → step 2 3 sub-section (Auto-fix / Manual fuzzy / Manual no-match) 흐름
+- [x] **R4 (5 카테고리)** — `applyStaleTombstoneCleanup` 신규 (I-PURGE-1~4). paired-sidecar / validate-wiki-other = out-of-scope
+- [x] **R5 (정의 명시)** — Help guide Maintenance Modes section
+- [x] **R6 (Refactoring next step)** — Execute button + Step 2 (Duplicate + Low-utility) + `applyRefactoringArchive` 신규 (I-ARCH-1~5)
+- [x] **R7 (margin)** — `.wikey-maintenance-modal-unhealthy { margin-bottom: 16px }`. commit `a2b6e5d`.
+
+v0.5 follow-up (Session 39, 2026-05-13):
+- [x] **wikicheck-init progress block** — `display:none` for empty + raw key:value dump 제거
+- [x] **refactoring-init Execute/Close 같은 row** — `.wikey-maintenance-modal-unhealthy-actions` flex (gap 8px, margin-top 16px)
+- [x] **라인 중복** — raw progress + unhealthy summary 정보 중복 제거
+- [x] **Help maintenance hr 2줄** — manual `helpEl.createEl('hr')` 제거. commit `e2fffb5`.
 
 ---
 
