@@ -1,18 +1,31 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-13 session 40 — §5.21 Ingest mention guard SDD+TDD 7 step 모두 종결**. 1095 PASS (1088 + 7 신규) / build 0 / validate-wiki 458 → 447 (-11). 라이브 CDP smoke 2 cycle PASS (cobit + Obsidian Web Clipper). codex 2 cycle review (Step A + Step F) 11 finding 모두 master 직접 fix.
+> 최신 갱신: **2026-05-13 session 40 — §5.21 v0.5 종결 (Ingest mention guard paradigm 완성)**. 6 commit (e97a828 / deda7ce / cd745d4 / 834d50e / 26aa912 / 6e559ed). 회귀 1102 PASS / build 0 / validate-wiki **모든 검증 통과 0 errors**. 라이브 CDP smoke 3 cycle (cobit + Obsidian Web Clipper + iso) — iso v0.5 에서 Stage 2 pre-filter **~75% emit 감소 라이브 발동 확증** (8 → 2 concepts / 20 → 2 entries).
 >
 > ## 다음 세션 첫 액션 (Session 41) — §5.20 Knowledge Gap SDD+TDD 진입
 >
-> **§5.20 Knowledge Gap management (P2)** — §5.21 종결 후 Phase 5 잔여 5 subject 중 우선. Spec scope = query log capture + privacy + gap score formula + auto-report. §5.21 의 근본 원인 2 (mention only entity, 390건 67%) 도 §5.20 후속 확장 영역. 다음 = analyst Step A v0.2 (Q1 query log 저장 위치 / Q2 topic clustering LLM / Q3 자동 schedule scope / Q4 gap score formula 단위 LOCK).
+> **§5.20 Knowledge Gap management (P2)** — §5.21 종결 후 Phase 5 잔여 5 subject 중 우선. Spec scope = query log capture + privacy + gap score formula + auto-report. §5.21 의 근본 원인 2 (mention only entity, 390건 67%) cover 영역 — §5.21 v0.4 에서 제거(clean) 영역은 cover, §5.20 는 진단/surface (gap candidate report). 동시 운영. 다음 = analyst Step A v0.2 (Q1 query log 저장 위치 / Q2 topic clustering LLM / Q3 자동 schedule scope / Q4 gap score formula 단위 LOCK).
 
 ## Session 40 종결 종합 (2026-05-13)
 
-**§5.21 Ingest pipeline mention guard (P2)** ✅ — broken wikilink 근본 원인 1+3 (raw filename + case-insensitive) cover. SDD+TDD 7 step 모두 통과. mention-guard.ts 228 LOC (pure function, 6 helper) + ingest-pipeline.ts hook + canonicalizer prompt hint. Karpathy 4 원칙 모두 충족. activity: `phase-5-resultx-5.21-ingest-mention-guard-2026-05-13.md`.
+**§5.21 Ingest pipeline mention guard (P2)** ✅ **v0.5 종결** — broken wikilink 근본 원인 1+2+3 모두 cover + Stage 2 efficiency + basename collision 사전 차단. cover ~49% → **~100% deterministic**. 6 commit 누적.
 
-**codex 2 cycle review** — Step A (NEEDS_REVISION 7 finding: HIGH 2 recursive feedback + scope exempt / MEDIUM 3 evidence + handoff + numeric / LOW 2 mirror + parser) + Step F post-impl (NEEDS_REVISION 4 finding: HIGH disk write + MEDIUM existingBases + MEDIUM guarded propagation + LOW canonicalizer prompt). 11 finding 모두 master 직접 fix.
+| 단계 | 핵심 |
+|------|------|
+| v0.3 (`e97a828`) | SDD+TDD 7 step + codex Step A/F 11 finding (HIGH 2+1 + MEDIUM 3+2 + LOW 2+1) master 직접 fix |
+| v0.4 (`deda7ce`) | mention-only cover (Spec 3 / I9·I10 / AC-S3-1~3). vault page 미존재 wikilink → plain text |
+| UI (`cd745d4`) | maintenance modal Select all/Deselect all 토글 + Step 2/3 결과 ↔ 버튼 16px gap |
+| v0.5 (`834d50e`) | **paradigm 사전 차단** — preFilterMentionsByOccurrence (Stage 2 LLM call 전 token 절약) + filterBasenameCollisions (raw inbox basename 충돌 사전 drop) |
+| docs (`26aa912`/`6e559ed`) | result v0.5 + phase-5-todo §5.21 종결 mark |
 
-**master 라이브 CDP smoke 2 cycle** — test-stage3-cobit.md (54s preview + 65s write, source+concept new) + Obsidian Web Clipper.md (39s preview + 74s write, source new + obsidian entity update). broken 458 → 447 (-11). extension no-alias 195 baseline 유지 (회귀 0). source link 원문 I7 exempt 195 → 196 (보존 확증 — `[[Obsidian Web Clipper.md|원문]]` 정상 보존).
+**라이브 CDP smoke 3 cycle**:
+- test-stage3-cobit.md (54s + 65s) — source + concept new, mention-guard 변환 0
+- Obsidian Web Clipper.md (39s + 74s) — source + obsidian entity update, I7 exempt 보존
+- **iso-27001-annex-a-detail.md (v0.5, 106s + 74s) — 8 → 2 concepts (-75%) 라이브 발동 확증**
+
+**Wiki cleanup 부산물** (vault local, untracked) — broken 404 → **0**: 99 fuzzy match (plugin UI) + 271 plain text (master script) + 41 broken source link 제거 + `wiki/concepts/llm-wiki.md → llm-wiki-pattern.md` rename + 참조 갱신.
+
+**Karpathy 4 원칙 모두 충족** (Explicit log + Yours alias 보존 + File over app deterministic + BYOAI 다층 방어).
 
 **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9 / §5.20** (5 subject).
 >

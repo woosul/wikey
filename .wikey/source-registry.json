@@ -336,5 +336,26 @@
     ],
     "tombstone": false,
     "last_action": "force"
+  },
+  "sha256:2ad5797051b4a95a": {
+    "vault_path": "raw/3_resources/60_note/500_technology/iso-27001-annex-a-detail.md",
+    "hash": "2ad5797051b4a95a885edb83d407bbe2d8b0ccb83af8d5eae27f295734a04d7c",
+    "size": 2833,
+    "first_seen": "2026-05-12T23:46:40.285Z",
+    "ingested_pages": [
+      "wiki/sources/source-iso-27001-annex-a-detail.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/iso-27001-annex-a-detail.md",
+        "at": "2026-05-12T23:46:40.285Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/iso-27001-annex-a-detail.md",
+        "at": "2026-05-12T23:47:54.844Z"
+      }
+    ],
+    "tombstone": true,
+    "last_action": "force"
   }
 }
