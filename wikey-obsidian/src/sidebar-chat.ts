@@ -269,14 +269,18 @@ export function triggerPanelRefresh(
  *
  * - `resolvedLinks` shape = `Record<sourcePath, Record<targetPath, count>>`
  *   (Obsidian `app.metadataCache.resolvedLinks` 직접 사용)
- * - **I4a scope filter (v0.4)**: `scope='wiki'` 면 wiki/ 시작 source 만 (default,
- *   wikey 3계층 knowledge layer 원칙 — 사용자 raise 2026-05-12). `scope='vault'`
- *   면 vault 전체 (raw/ sidecar 의 wikilink mention 등 포함, 사용자 opt-in).
+ * - **I4a scope filter (v0.5, 사용자 raise 2026-05-12)**:
+ *   - `scope='wiki'` (default) — `sourcePath.startsWith('wiki/')` 만. wikey 3계층
+ *     knowledge layer (wiki/ = LLM-made 지식 자산).
+ *   - `scope='extended'` (opt-in) — wiki/ + 다른 폴더 (plan/ / activity/ /
+ *     사용자 메모 등). **raw/ 는 항상 제외** (wiki/ 와 중복 — ingest 된 raw
+ *     sidecar 의 wikilink 가 wiki page 를 가리키면 self-reference dup).
+ *     "단순 참조로서의 지식" 가시화 용도, 검색 인덱스 (qmd/Orama) 와 무관.
  * - I7a self-reference 회피: source 가 `mentioned` 셋 에 포함되면 제외
  *   (답변 본문 안 mention 된 page 자체는 backlink list 에서 노출 X).
  * - 결과 unique + sort 안정 (alphabetic).
  */
-export type BacklinkScope = 'wiki' | 'vault'
+export type BacklinkScope = 'wiki' | 'extended'
 
 export function collectBacklinks(
   resolvedLinks: Record<string, Record<string, number>>,
@@ -286,7 +290,10 @@ export function collectBacklinks(
   const scope: BacklinkScope = opts.scope ?? 'wiki'
   const backlinks = new Set<string>()
   for (const [sourcePath, links] of Object.entries(resolvedLinks)) {
-    // I4a — scope filter (default wiki/ 만, opt-in vault 전체)
+    // I4a — raw/ 는 모든 scope 에서 제외 (wiki/ 와 중복: ingest 후 raw sidecar
+    // 안 wikilink 는 wiki/ 페이지와 동일 reference, 사용자 결정 2026-05-12).
+    if (sourcePath.startsWith('raw/')) continue
+    // I4a — scope filter: 'wiki' = wiki/ only, 'extended' = raw/ 제외 vault 전체
     if (scope === 'wiki' && !sourcePath.startsWith('wiki/')) continue
     // I7a — self-reference 회피
     if (mentioned.has(sourcePath)) continue
@@ -306,7 +313,9 @@ const BACKLINK_DISPLAY_LIMIT = 5
  * backlink list → HTML `<details>` markup (default collapse).
  *
  * - I5a: default closed (`<details>` 에 `open` attribute 없음).
- * - I5: `<summary>참조 페이지 (N)</summary>` 헤더.
+ * - I5: `<summary>참고 (N)</summary>` 헤더 (사용자 표현 2026-05-12).
+ * - **I5b (v0.5)**: entry badge — wiki/ 정식 지식은 plain `[[path]]`, 외부 폴더
+ *   (extended scope opt-in 시) 는 `[[path]] (+)` 로 단순 참조 표시 (사용자 결정).
  * - I7: 5 항목 list + 초과 시 truncation 안내 텍스트 (modal/state 회피).
  * - I6: 빈 array → 빈 string (section 미출력 trigger).
  */
@@ -314,11 +323,14 @@ export function buildBacklinkSection(backlinks: readonly string[]): string {
   if (backlinks.length === 0) return ''
   const total = backlinks.length
   const head = backlinks.slice(0, BACKLINK_DISPLAY_LIMIT)
-  const items = head.map((p) => `- [[${p}]]`)
+  const items = head.map((p) => {
+    const badge = p.startsWith('wiki/') ? '' : ' (+)'
+    return `- [[${p}]]${badge}`
+  })
   if (total > BACKLINK_DISPLAY_LIMIT) {
     items.push(`- ... (총 ${total} 개, 모두 보려면 Obsidian backlink panel 참조)`)
   }
-  return `<details><summary>참조 페이지 (${total})</summary>\n\n${items.join('\n')}\n</details>`
+  return `<details><summary>참고 (${total})</summary>\n\n${items.join('\n')}\n</details>`
 }
 
 export class WikeyChatView extends ItemView {
@@ -633,7 +645,9 @@ export class WikeyChatView extends ItemView {
         const linkpath = m[1]?.trim()
         if (!linkpath) continue
         const dest = this.app.metadataCache.getFirstLinkpathDest(linkpath, '')
-        if (dest) mentioned.add(dest.path)
+        // I4a (v0.5): mentioned target 은 wiki/ 페이지만 — 답변의 wikilink 가
+        // raw/ 또는 외부 폴더로 resolve 되면 wikey 지식 자산 아님 (대부분 0건).
+        if (dest && dest.path.startsWith('wiki/')) mentioned.add(dest.path)
       }
       const backlinkScope =
         (this.plugin?.settings as { backlinkScope?: BacklinkScope } | undefined)?.backlinkScope ??

@@ -1126,21 +1126,21 @@ export class WikeySettingTab extends PluginSettingTab {
       },
     )
 
-    // §5.18 v0.4 — backlink section scope (wiki/ vs vault 전체)
+    // §5.18 v0.5 — backlink section scope (wiki/ vs extended; raw/ always excluded)
     this.renderStandardDropdown(
       containerEl,
       'Backlink section scope',
-      'Which folders count as backlink sources in the answer "참조 페이지" section. ' +
-        'wiki — only pages under wiki/ (default, wikey 3-layer knowledge principle). ' +
-        'vault — every markdown file in the vault (raw/ sidecars, plan/, activity/, .obsidian/ … ' +
-        'opt-in for vaults that already use wikilinks broadly outside wiki/).',
+      'Which folders count as backlink sources in the answer "참고" section. ' +
+        'wiki — only pages under wiki/ (default, wikey 3-layer knowledge: wiki/ is the LLM-curated asset). ' +
+        'extended — wiki/ + other folders (plan/, activity/, your notes…). External pages get a "(+)" badge ' +
+        'to mark them as informal references. raw/ is always excluded (would duplicate wiki/ ingest result).',
       [
         { value: 'wiki', label: 'wiki/ only (default)' },
-        { value: 'vault', label: 'whole vault' },
+        { value: 'extended', label: 'extended (wiki/ + 외부 폴더, raw/ 제외)' },
       ],
       this.plugin.settings.backlinkScope,
       async (value) => {
-        const v = value === 'vault' ? 'vault' : 'wiki'
+        const v = value === 'extended' ? 'extended' : 'wiki'
         this.plugin.settings.backlinkScope = v
         await this.plugin.saveSettings()
       },
