@@ -159,6 +159,12 @@ export {
   applyWikiRecovery,
   getRefactoringSuggestions,
   slugSimilarity,
+  // §5.19 v0.4 (R6/R10) — health predicates.
+  isWikiHealthy,
+  isRefactoringHealthy,
+  // §5.19 v0.4 Batch 5 (R8 / G1) — broken wikilink fix (mode a).
+  detectBrokenWikilinks,
+  applyBrokenWikilinkFix,
 } from './wiki/maintenance.js'
 export type {
   WikiStatus,
@@ -172,6 +178,11 @@ export type {
   RunWikiCheckOptions,
   ApplyWikiRecoveryOptions,
   GetRefactoringSuggestionsOptions,
+  BrokenWikilinkFixCandidate,
+  BrokenWikilinkFixKind,
+  BrokenWikilinkCandidate,
+  BrokenWikilinkFixRequest,
+  BrokenWikilinkFixReport,
 } from './wiki/maintenance.js'
 // §5.10.4 D-wide: §5.4 self-extending (suggestion / self-declaration / convergence) 메커니즘 폐기.
 export {

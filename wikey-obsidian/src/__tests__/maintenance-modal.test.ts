@@ -20,9 +20,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { App, Vault } from 'obsidian'
-// TODO(developer GREEN): create wikey-obsidian/src/maintenance-modal.ts exporting:
-//   - MaintenanceModal extends Modal { constructor(app, plugin, opts: { mode, ... }); onOpen(); ... }
-//   - MaintenanceMode = 'status' | 'check' | 'recovery' | 'refactoring'
+// MaintenanceMode = 'status' | 'check' | 'refactoring' (§5.19 v0.4 R9 — recovery
+// retired; Check's Fix link multi-mode absorbed the dangling-sha cleanup path).
 import { MaintenanceModal, type MaintenanceMode } from '../maintenance-modal'
 // sidebar-chat 안 openHelp() 의 신규 "Wiki Maintenance" 섹션 (4 버튼) — GREEN 시 sidebar-chat.ts 에 추가.
 // 본 test 는 ChatSidebarView 인스턴스 mount 후 help 패널 DOM 을 assert.
@@ -63,8 +62,8 @@ function makeFakeLeaf() {
 
 // ── AC-UI-1: Help 패널 섹션 ──
 
-describe('§5.19 UI Spec — AC-UI-1: Help 패널 "Wiki Maintenance" 섹션 + 4 버튼', () => {
-  it('AC-UI-1: openHelp() 호출 후 .wikey-maintenance-buttons 영역 + Status/Check/Recovery/Refactoring 4 버튼', async () => {
+describe('§5.19 UI Spec — AC-UI-1: Help 패널 "Wiki Maintenance" 섹션 + 3 버튼 (v0.4 R9)', () => {
+  it('AC-UI-1: openHelp() 호출 후 .wikey-maintenance-buttons 영역 + Status/Check/Refactoring 3 버튼', async () => {
     const plugin = makeFakePlugin()
     const leaf = makeFakeLeaf()
     // ChatSidebarView 의 정확한 constructor signature 는 sidebar-chat.ts 정의에 의존.
@@ -82,19 +81,20 @@ describe('§5.19 UI Spec — AC-UI-1: Help 패널 "Wiki Maintenance" 섹션 + 4 
     expect(maintenanceSection, '`.wikey-maintenance-buttons` 섹션 미존재').not.toBeNull()
 
     const buttons = maintenanceSection?.querySelectorAll('button') ?? []
-    expect(buttons.length).toBe(4)
+    expect(buttons.length).toBe(3)
     const labels = Array.from(buttons).map((b) => b.textContent ?? '')
     expect(labels.some((l) => /status/i.test(l))).toBe(true)
     expect(labels.some((l) => /check/i.test(l))).toBe(true)
-    expect(labels.some((l) => /recovery/i.test(l))).toBe(true)
     expect(labels.some((l) => /refactor/i.test(l))).toBe(true)
+    // v0.4 (R9): Recovery 버튼 폐기 — Check Fix link 가 흡수.
+    expect(labels.some((l) => /recovery/i.test(l))).toBe(false)
   })
 })
 
 // ── AC-UI-2: MaintenanceModal mode prop 분기 ──
 
-describe('§5.19 UI Spec — AC-UI-2: MaintenanceModal({ mode }) 4 분기', () => {
-  it.each<MaintenanceMode>(['status', 'check', 'recovery', 'refactoring'])(
+describe('§5.19 UI Spec — AC-UI-2: MaintenanceModal({ mode }) 3 분기 (v0.4 R9)', () => {
+  it.each<MaintenanceMode>(['status', 'check', 'refactoring'])(
     'AC-UI-2: new MaintenanceModal(app, plugin, { mode: "%s" }).open() — modal 1회 생성 + open() 호출',
     async (mode) => {
       const plugin = makeFakePlugin()
@@ -107,9 +107,9 @@ describe('§5.19 UI Spec — AC-UI-2: MaintenanceModal({ mode }) 4 분기', () =
     },
   )
 
-  it('AC-UI-2: 4 mode 모두 동일 컴포넌트 (별 클래스 X) — instanceof MaintenanceModal', () => {
+  it('AC-UI-2: 3 mode 모두 동일 컴포넌트 (별 클래스 X) — instanceof MaintenanceModal', () => {
     const plugin = makeFakePlugin()
-    const modes: MaintenanceMode[] = ['status', 'check', 'recovery', 'refactoring']
+    const modes: MaintenanceMode[] = ['status', 'check', 'refactoring']
     for (const mode of modes) {
       const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode })
       expect(modal).toBeInstanceOf(MaintenanceModal)
@@ -295,10 +295,10 @@ describe('§5.19 UI Spec — Runner injection (Finding 1, 6)', () => {
     expect(checkboxes.length).toBe(1)
     const rowText = modal.contentEl.querySelector('.wikey-maintenance-modal-confirm-list')?.textContent ?? ''
     expect(rowText).toContain('sha256:679cf2dd6db75e3a')
-    expect(rowText).toMatch(/2\s*페이지/)
+    expect(rowText).toMatch(/2\s*pages/)
 
     const execBtn = Array.from(modal.contentEl.querySelectorAll('button')).find((b) =>
-      /실행/.test(b.textContent ?? ''),
+      /Execute/.test(b.textContent ?? ''),
     )
     expect(execBtn, '[실행] 버튼 미존재').toBeTruthy()
 
@@ -339,7 +339,7 @@ describe('§5.19 UI Spec — Runner injection (Finding 1, 6)', () => {
     checkboxes[0]!.checked = false
 
     const execBtn = Array.from(modal.contentEl.querySelectorAll('button')).find((b) =>
-      /실행/.test(b.textContent ?? ''),
+      /Execute/.test(b.textContent ?? ''),
     )
     ;(execBtn as HTMLButtonElement).click()
     await new Promise((r) => setTimeout(r, 0))
@@ -416,5 +416,552 @@ describe('§5.19 UI Spec — Runner injection (Finding 1, 6)', () => {
     modal.close()
     expect(observed).not.toBeNull()
     expect(observed!.aborted).toBe(true)
+  })
+})
+
+// ── §5.19 v0.4 R4 — footer Close 버튼 동작 (BUG fix) ──
+//
+// 사용자 obsidian-cdp 직접 시험에서 healthy-state footer `.wikey-maintenance-modal-close-btn`
+// click → modal close 0. 본 cycle 에서 onClick 을 modal.close() 로 wiring.
+
+describe('§5.19 v0.4 R4 — footer Close 버튼 click → modal.close()', () => {
+  it('R4: healthy state footer Close click → modal.close() 호출', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([])
+
+    const closeSpy = vi.spyOn(modal, 'close')
+    const closeBtn = modal.contentEl.querySelector(
+      '.wikey-maintenance-modal-close-btn',
+    ) as HTMLButtonElement | null
+    expect(closeBtn, 'footer Close 버튼 미존재').not.toBeNull()
+    closeBtn!.click()
+    expect(closeSpy).toHaveBeenCalledTimes(1)
+  })
+})
+
+// ── §5.19 v0.4 R6/R10/I-HEALTH-1 — "All healthy" 모순 fix ──
+
+describe('§5.19 v0.4 R6 (Status) — broken > 0 시 "All healthy" 표시 0', () => {
+  it('R6: Status mode runner result with brokenLinkCount=6936 → unhealthy summary, NOT "All healthy"', async () => {
+    const plugin = makeFakePlugin()
+    const runStatus = vi.fn(async () => ({
+      pageCount: 215,
+      orphanCount: 0,
+      brokenLinkCount: 6936,
+      staleTombstoneCount: 0,
+      danglingCrossLinkCount: 38,
+      lastValidateTs: null,
+    }))
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, {
+      mode: 'status',
+      runner: { runStatus },
+    })
+    modal.onOpen()
+    await new Promise((r) => setTimeout(r, 0))
+    await Promise.resolve()
+
+    const body = modal.contentEl.textContent ?? ''
+    expect(body).not.toMatch(/all healthy/i)
+    expect(body).toMatch(/issues found/i)
+    expect(body).toMatch(/6936\s*broken/)
+    expect(body).toMatch(/38\s*dangling/)
+  })
+
+  it('R6: Status mode runner result with all zeros → "All healthy"', async () => {
+    const plugin = makeFakePlugin()
+    const runStatus = vi.fn(async () => ({
+      pageCount: 1,
+      orphanCount: 0,
+      brokenLinkCount: 0,
+      staleTombstoneCount: 0,
+      danglingCrossLinkCount: 0,
+      lastValidateTs: null,
+    }))
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, {
+      mode: 'status',
+      runner: { runStatus },
+    })
+    modal.onOpen()
+    await new Promise((r) => setTimeout(r, 0))
+    await Promise.resolve()
+
+    const body = modal.contentEl.textContent ?? ''
+    expect(body).toMatch(/all healthy/i)
+  })
+})
+
+// ── §5.19 v0.4 Batch 2 (R1/R2/R3/R5) — 3-layer modal structure ──
+//
+// 사용자 obsidian-cdp 실측: modal 전체 scroll 로 title/buttons 가 화면 밖으로 밀림.
+// onOpen() 이 root → header (sticky) / body (scrollable) / footer (sticky, centered)
+// 3-layer 를 만들도록 검증.
+
+describe('§5.19 v0.4 Batch 2 — 3-layer modal structure (R1/R2/R3/R5)', () => {
+  it('R1/R2/R3: onOpen() 후 header / body / footer 3 element 모두 존재', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'status' })
+    modal.onOpen()
+
+    const headerEl = modal.contentEl.querySelector('.wikey-maintenance-modal-header')
+    const bodyEl = modal.contentEl.querySelector('.wikey-maintenance-modal-body')
+    const footerEl = modal.contentEl.querySelector('.wikey-maintenance-modal-footer')
+
+    expect(headerEl, 'header layer 미존재').not.toBeNull()
+    expect(bodyEl, 'body layer 미존재').not.toBeNull()
+    expect(footerEl, 'footer layer 미존재').not.toBeNull()
+  })
+
+  it('R1: header 안 title element + MODE_TITLES mapping (mode 별 정확한 제목)', () => {
+    const plugin = makeFakePlugin()
+    const cases: Array<[MaintenanceMode, RegExp]> = [
+      ['status', /wiki status/i],
+      ['check', /wiki check/i],
+      ['refactoring', /refactoring suggestions/i],
+    ]
+    for (const [mode, re] of cases) {
+      const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode })
+      modal.onOpen()
+      const titleEl = modal.contentEl.querySelector(
+        '.wikey-maintenance-modal-header .wikey-maintenance-modal-title',
+      )
+      expect(titleEl, `title element 미존재 (${mode})`).not.toBeNull()
+      expect(titleEl?.textContent ?? '').toMatch(re)
+    }
+  })
+
+  it('R3: progress 영역이 body 안에 nested (root 직속 X)', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    const bodyEl = modal.contentEl.querySelector('.wikey-maintenance-modal-body')
+    const progressEl = bodyEl?.querySelector('.wikey-maintenance-modal-progress')
+    expect(progressEl, 'progress 가 body 안에 미존재').not.toBeNull()
+  })
+
+  it('R2/R5: footer 안에 action element + 모든 action button 이 footer 하위', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      { kind: 'dangling-cross-link', path: 'wiki/entities/page-1.md', sha: 'sha256:abc' },
+    ])
+
+    const footerEl = modal.contentEl.querySelector('.wikey-maintenance-modal-footer')
+    expect(footerEl, 'footer layer 미존재').not.toBeNull()
+    const actionEl = footerEl?.querySelector('.wikey-maintenance-modal-action')
+    expect(actionEl, 'action element 가 footer 안에 미존재').not.toBeNull()
+
+    // 모든 action button 이 footer 안에 있어야 함 (Apply fix + Cancel)
+    const footerButtons = footerEl?.querySelectorAll('button') ?? []
+    expect(footerButtons.length).toBeGreaterThanOrEqual(2)
+    const labels = Array.from(footerButtons).map((b) => b.textContent ?? '')
+    expect(labels.some((l) => /apply fix/i.test(l))).toBe(true)
+    expect(labels.some((l) => /cancel/i.test(l))).toBe(true)
+  })
+})
+
+// ── §5.19 v0.4 Batch 3 (R7 / AC-CHECK-1~3) — finding 분류 accordion ──
+//
+// 사용자 obsidian-cdp 실측: Check modal finding 7,439건 flat list → 분류 그룹 +
+// expand/collapse 필요. 본 cycle 에서 renderFindings 가 kind 별 그룹 accordion 을
+// 만들도록 검증.
+
+describe('§5.19 v0.4 Batch 3 R7 — finding accordion (AC-CHECK-1~3)', () => {
+  it('AC-CHECK-1: 다중 kind → 각 kind 별 group element 생성 (빈 group 미표시)', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      { kind: 'broken-link', path: 'wiki/a.md', detail: '[[missing]]' },
+      { kind: 'broken-link', path: 'wiki/b.md', detail: '[[other]]' },
+      { kind: 'dangling-cross-link', path: 'wiki/c.md', detail: 'sha256:abc' },
+      { kind: 'stale-tombstone', detail: 'id-1' },
+    ])
+
+    const groups = modal.contentEl.querySelectorAll(
+      '.wikey-maintenance-modal-finding-group',
+    )
+    expect(groups.length).toBe(3) // 3 distinct kinds, no `paired-sidecar` group
+  })
+
+  it('AC-CHECK-2: 그룹 헤더 click → expand (chevron-down + list 표시), 재click → collapse (chevron-right + list 숨김)', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      { kind: 'broken-link', path: 'wiki/a.md', detail: '[[x]]' },
+    ])
+
+    const groupEl = modal.contentEl.querySelector(
+      '.wikey-maintenance-modal-finding-group',
+    ) as HTMLElement
+    expect(groupEl, 'finding group 미존재').toBeTruthy()
+    const headerBtn = groupEl.querySelector(
+      '.wikey-maintenance-modal-finding-group-header',
+    ) as HTMLButtonElement
+    const chevron = groupEl.querySelector('.wikey-maintenance-modal-chevron') as HTMLElement
+    const listEl = groupEl.querySelector(
+      '.wikey-maintenance-modal-finding-group-list',
+    ) as HTMLElement
+
+    // §5.19 Batch 7 (2026-05-12, 사용자 명시 UI) — chevron is a Bootstrap SVG
+    // (`viewBox="0 0 16 16"` + `<path d="M4.646..."/>` for right vs
+    // `M1.646...` for down). Assert SVG presence + path identity rather than
+    // unicode glyph textContent (which is empty for SVG innerHTML).
+    const isRight = (el: HTMLElement) =>
+      !!el.querySelector('svg path[d^="M4.646"]')
+    const isDown = (el: HTMLElement) =>
+      !!el.querySelector('svg path[d^="M1.646"]')
+
+    // Initial — collapsed
+    expect(headerBtn.getAttribute('aria-expanded')).toBe('false')
+    expect(isRight(chevron)).toBe(true)
+    expect(listEl.style.display).toBe('none')
+
+    // Click 1 — expand
+    headerBtn.click()
+    expect(headerBtn.getAttribute('aria-expanded')).toBe('true')
+    expect(isDown(chevron)).toBe(true)
+    expect(listEl.style.display).not.toBe('none')
+
+    // Click 2 — collapse
+    headerBtn.click()
+    expect(headerBtn.getAttribute('aria-expanded')).toBe('false')
+    expect(isRight(chevron)).toBe(true)
+    expect(listEl.style.display).toBe('none')
+  })
+
+  it('AC-CHECK-3: 그룹 헤더 label 에 finding 수량 표시 (예: "Broken Wikilink (2)")', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      { kind: 'broken-link', path: 'wiki/a.md', detail: '[[x]]' },
+      { kind: 'broken-link', path: 'wiki/b.md', detail: '[[y]]' },
+      { kind: 'dangling-cross-link', path: 'wiki/c.md', detail: 'sha256:abc' },
+    ])
+
+    const headers = Array.from(
+      modal.contentEl.querySelectorAll('.wikey-maintenance-modal-finding-group-header'),
+    )
+    const labelText = headers.map((h) => h.textContent ?? '').join(' | ')
+    expect(labelText).toMatch(/Broken Wikilink\s*\(2\)/)
+    expect(labelText).toMatch(/Dangling Cross-link\s*\(1\)/)
+  })
+
+  it('R7: unknown kind → validate-wiki-other 그룹으로 fallback', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      { kind: 'validate-wiki', detail: 'FAIL: some validate-wiki line' },
+      { kind: 'totally-unknown-kind', detail: 'fallback me' },
+    ])
+
+    const headers = Array.from(
+      modal.contentEl.querySelectorAll('.wikey-maintenance-modal-finding-group-header'),
+    )
+    // Both should collapse into the same `Validate-wiki Other` bucket.
+    expect(headers.length).toBe(1)
+    expect(headers[0]!.textContent ?? '').toMatch(/Validate-wiki Other\s*\(2\)/)
+  })
+})
+
+describe('§5.19 v0.4 R10 (Refactoring) — duplicates > 0 시 "All healthy" 표시 0', () => {
+  it('R10: Refactoring mode result with duplicates=[{...},{...}] → unhealthy summary', async () => {
+    const plugin = makeFakePlugin()
+    const runRefactoring = vi.fn(async () => ({
+      duplicates: [
+        { a: 'foo', b: 'bar', similarity: 0.9 },
+        { a: 'baz', b: 'qux', similarity: 0.88 },
+      ],
+      lowUtility: [{ path: 'wiki/analyses/old.md', lastUpdated: '2026-01-01', backlinkCount: 0 }],
+      thresholdUsed: 0.85,
+      configFallback: 'default',
+    }))
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, {
+      mode: 'refactoring',
+      runner: { runRefactoring },
+    })
+    modal.onOpen()
+    await new Promise((r) => setTimeout(r, 0))
+    await Promise.resolve()
+
+    const body = modal.contentEl.textContent ?? ''
+    expect(body).not.toMatch(/all healthy/i)
+    expect(body).toMatch(/issues found/i)
+    expect(body).toMatch(/2\s*duplicates/)
+    expect(body).toMatch(/1\s*lowUtility/)
+  })
+
+  it('R10: Refactoring mode result with empty arrays → "All healthy"', async () => {
+    const plugin = makeFakePlugin()
+    const runRefactoring = vi.fn(async () => ({
+      duplicates: [],
+      lowUtility: [],
+      thresholdUsed: 0.85,
+      configFallback: 'default',
+    }))
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, {
+      mode: 'refactoring',
+      runner: { runRefactoring },
+    })
+    modal.onOpen()
+    await new Promise((r) => setTimeout(r, 0))
+    await Promise.resolve()
+
+    const body = modal.contentEl.textContent ?? ''
+    expect(body).toMatch(/all healthy/i)
+  })
+})
+
+// ── §5.19 v0.4 Batch 5 fix (2026-05-12) — validate-wiki broken wikilink wiring ──
+//
+// 라이브 vault 의 broken wikilink 거의 전부 (10,000+ 중 99%+) 가 collectFindings 의
+// standalone `broken-link` path 가 아닌 validate-wiki.sh stdout (`validate-wiki`
+// kind) 로 surface 된다. annotateAutoFix 가 이 path 를 무시하면 Step 2 broken
+// section 이 0 row 가 되어 사용자가 38+ pages auto-fix 결과를 볼 수 없음
+// (master cdp 직접 검증, 2026-05-12).
+
+describe('§5.19 v0.4 Batch 5 fix — parseValidateWikiBrokenLine', () => {
+  it('정상 broken wikilink FAIL line → { source, target } 추출', async () => {
+    const { parseValidateWikiBrokenLine } = await import('../maintenance-runner')
+    const out = parseValidateWikiBrokenLine(
+      'wiki/log.md: 깨진 위키링크 [[exchangeable-image-file-format]]',
+    )
+    expect(out).toEqual({
+      source: 'wiki/log.md',
+      target: 'exchangeable-image-file-format',
+    })
+  })
+
+  it('source path + alias 가 있는 broken wikilink → target 만 alias 제외 추출', async () => {
+    const { parseValidateWikiBrokenLine } = await import('../maintenance-runner')
+    const out = parseValidateWikiBrokenLine(
+      'wiki/sources/source-X.md: 깨진 위키링크 [[GPT-4o|GPT 4o]]',
+    )
+    expect(out).toEqual({ source: 'wiki/sources/source-X.md', target: 'GPT-4o' })
+  })
+
+  it('broken wikilink 패턴 미일치 line → null (다른 FAIL 종류는 흡수 X)', async () => {
+    const { parseValidateWikiBrokenLine } = await import('../maintenance-runner')
+    expect(parseValidateWikiBrokenLine('wiki/log.md: 고아 페이지')).toBeNull()
+    expect(parseValidateWikiBrokenLine('plain validate-wiki line')).toBeNull()
+  })
+})
+
+describe('§5.19 v0.4 Batch 5 fix — annotateAutoFix validate-wiki branch', () => {
+  it('validate-wiki broken wikilink + autoFixIndex 히트 → path + autoFixSlug 모두 채움', async () => {
+    const { annotateAutoFix } = await import('../maintenance-runner')
+    const idx = new Map<string, string>([
+      ['wiki/log.md|exchangeable-image-file-format', 'exchangeable-image-file-format'],
+    ])
+    const f = {
+      kind: 'validate-wiki',
+      detail: 'wiki/log.md: 깨진 위키링크 [[exchangeable-image-file-format]]',
+    }
+    const out = annotateAutoFix(f, idx)
+    expect(out.kind).toBe('validate-wiki')
+    expect(out.path).toBe('wiki/log.md')
+    expect(out.autoFixSlug).toBe('exchangeable-image-file-format')
+  })
+
+  it('validate-wiki broken wikilink + autoFixIndex 미스 → 원본 그대로 (autoFixSlug 미채움)', async () => {
+    const { annotateAutoFix } = await import('../maintenance-runner')
+    const idx = new Map<string, string>()
+    const f = {
+      kind: 'validate-wiki',
+      detail: 'wiki/log.md: 깨진 위키링크 [[unknown-page]]',
+    }
+    const out = annotateAutoFix(f, idx)
+    expect(out.autoFixSlug).toBeUndefined()
+    // path 도 채우지 않음 (autoFix 가능한 경우에만 path fill — downstream filter 보호)
+    expect(out.path).toBeUndefined()
+  })
+
+  it('기존 broken-link 분기는 그대로 동작 (회귀 검증)', async () => {
+    const { annotateAutoFix } = await import('../maintenance-runner')
+    const idx = new Map<string, string>([['wiki/a.md|missing', 'missing-canonical']])
+    const f = { kind: 'broken-link', path: 'wiki/a.md', detail: '[[missing]]' }
+    const out = annotateAutoFix(f, idx)
+    expect(out.autoFixSlug).toBe('missing-canonical')
+    expect(out.path).toBe('wiki/a.md')
+  })
+})
+
+describe('§5.19 v0.4 Batch 5 fix — groupFindingsByKind: validate-wiki + 깨진 위키링크 detail → broken-wikilink bucket', () => {
+  it('validate-wiki finding 의 detail 이 "깨진 위키링크 [[X]]" 패턴이면 broken-wikilink group 으로 분류', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      {
+        kind: 'validate-wiki',
+        detail: 'wiki/log.md: 깨진 위키링크 [[exchangeable-image-file-format]]',
+      },
+      {
+        kind: 'validate-wiki',
+        detail: 'wiki/foo.md: 깨진 위키링크 [[GPT-4o]]',
+      },
+      // 일반 validate-wiki line (broken wikilink X) → validate-wiki-other 잔존
+      { kind: 'validate-wiki', detail: 'wiki/x.md: 고아 페이지' },
+    ])
+
+    const headers = Array.from(
+      modal.contentEl.querySelectorAll('.wikey-maintenance-modal-finding-group-header'),
+    )
+    const labelText = headers.map((h) => h.textContent ?? '').join(' | ')
+    expect(labelText).toMatch(/Broken Wikilink\s*\(2\)/)
+    expect(labelText).toMatch(/Validate-wiki Other\s*\(1\)/)
+  })
+
+  it('broken-link (기존 producer) + validate-wiki broken (라이브 dominant) 혼합 → 동일 broken-wikilink bucket 통합', () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      { kind: 'broken-link', path: 'wiki/a.md', detail: '[[X]]' },
+      {
+        kind: 'validate-wiki',
+        detail: 'wiki/b.md: 깨진 위키링크 [[Y]]',
+      },
+    ])
+
+    const headers = Array.from(
+      modal.contentEl.querySelectorAll('.wikey-maintenance-modal-finding-group-header'),
+    )
+    expect(headers.length).toBe(1)
+    expect(headers[0]!.textContent ?? '').toMatch(/Broken Wikilink\s*\(2\)/)
+  })
+})
+
+// ── §5.19 v0.4 Batch 6 (R12 / R13) — Step 2 multi-section render ──
+//
+// Goals:
+//   - fuzzy finding 도 checkbox + <select> 드롭다운으로 surface
+//   - no-match finding 도 checkbox 으로 surface (manual review tracking)
+//   - section 사이 <hr> divider
+
+describe('§5.19 v0.4 Batch 6 (R12) — Step 2 fuzzy + manual 섹션 render', () => {
+  it('fuzzy finding → wikey-maintenance-modal-fuzzy-list 안 row + dropdown', async () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      {
+        kind: 'broken-link',
+        path: 'wiki/entities/page-a.md',
+        detail: '[[claude-cod]]',
+        fixKind: 'fuzzy',
+        candidates: [
+          { slug: 'claude-code', similarity: 0.9 },
+          { slug: 'claude-3-opus', similarity: 0.72 },
+        ],
+      },
+    ])
+    await modal.applyFix()
+
+    const fuzzyList = modal.contentEl.querySelector('.wikey-maintenance-modal-fuzzy-list')
+    expect(fuzzyList, 'fuzzy section 미존재').toBeTruthy()
+    const select = fuzzyList!.querySelector('select.wikey-maintenance-modal-fuzzy-select')
+    expect(select, 'fuzzy dropdown 미존재').toBeTruthy()
+    const options = Array.from(select!.querySelectorAll('option'))
+    expect(options.length).toBe(2)
+    expect(options[0]!.textContent ?? '').toMatch(/claude-code/)
+  })
+
+  it('no-match finding → wikey-maintenance-modal-no-match-list 안 row + checkbox', async () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      {
+        kind: 'broken-link',
+        path: 'wiki/entities/page-a.md',
+        detail: '[[microsoft]]',
+        fixKind: 'no-match',
+        candidates: [],
+      },
+    ])
+    await modal.applyFix()
+
+    const noMatchList = modal.contentEl.querySelector('.wikey-maintenance-modal-no-match-list')
+    expect(noMatchList, 'no-match section 미존재').toBeTruthy()
+    const checkbox = noMatchList!.querySelector('input[type=checkbox]')
+    expect(checkbox, 'no-match checkbox 미존재').toBeTruthy()
+  })
+
+  it('R13: 다중 section 시 사이에 <hr> divider 삽입', async () => {
+    const plugin = makeFakePlugin()
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, { mode: 'check' })
+    modal.onOpen()
+    ;(modal as any).renderFindings?.([
+      {
+        kind: 'broken-link',
+        path: 'wiki/a.md',
+        detail: '[[GPT-4o]]',
+        fixKind: 'case-insensitive',
+        autoFixSlug: 'gpt-4o',
+      },
+      {
+        kind: 'broken-link',
+        path: 'wiki/b.md',
+        detail: '[[microsoft]]',
+        fixKind: 'no-match',
+        candidates: [],
+      },
+    ])
+    await modal.applyFix()
+
+    const dividers = modal.contentEl.querySelectorAll(
+      'hr.wikey-maintenance-modal-section-divider',
+    )
+    // 2 sections (auto-fix + no-match) → 1 divider 사이
+    expect(dividers.length).toBe(1)
+  })
+
+  it('R12: fuzzy 체크박스 체크 + dropdown 선택 → [실행] payload 에 replacement 포함', async () => {
+    const plugin = makeFakePlugin()
+    const fixSpy = vi.fn(async () => ({ changedFiles: 1, changedLinks: 1 }))
+    const modal = new MaintenanceModal(plugin.app as any, plugin as any, {
+      mode: 'check',
+      runner: {
+        runCheck: async () => [
+          {
+            kind: 'broken-link' as const,
+            path: 'wiki/entities/page-a.md',
+            detail: '[[claude-cod]]',
+            fixKind: 'fuzzy' as const,
+            candidates: [
+              { slug: 'claude-code', similarity: 0.9 },
+              { slug: 'claude-3-opus', similarity: 0.72 },
+            ],
+          },
+        ],
+        runBrokenLinkFix: fixSpy,
+      },
+    })
+    modal.onOpen()
+    await new Promise((r) => setTimeout(r, 0))
+    await modal.applyFix()
+
+    const checkbox = modal.contentEl.querySelector(
+      '.wikey-maintenance-modal-fuzzy-list input[type=checkbox]',
+    ) as HTMLInputElement
+    expect(checkbox).toBeTruthy()
+    checkbox.checked = true
+
+    const execBtn = Array.from(modal.contentEl.querySelectorAll('button')).find((b) =>
+      /Execute/.test(b.textContent ?? ''),
+    ) as HTMLButtonElement
+    execBtn.click()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(fixSpy).toHaveBeenCalledTimes(1)
+    const payload = fixSpy.mock.calls[0]![1] as { fixes: readonly { source: string; brokenTarget: string; replacement: string }[] }
+    expect(payload.fixes.length).toBe(1)
+    expect(payload.fixes[0]!.replacement).toBe('claude-code')
+    expect(payload.fixes[0]!.brokenTarget).toBe('claude-cod')
   })
 })

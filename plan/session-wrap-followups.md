@@ -1,6 +1,6 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-12 session 38 — §5.19 SDD+TDD ✅ 종결 + §5.20 1 draft 잔존**. §5.19 (Wiki maintenance suite) 동일 세션 내 완료. **38 → 0 dangling cleanup 결정적 확증** (§5.18 잔존 sha256:679cf2dd6db75e3a). WikiFS.walk 신규 method 추가 (R5 cross-process pattern 회귀 fix). 사용자 진행 정책 (2026-05-12 LOCK): "승인할게 없으면 완료까지 승인없이 진행, 사용자 승인대기 5분 넘어가면 권고안 default 처리".
+> 최신 갱신: **2026-05-12 session 38 후반 — §5.19 v0.4 종결 + §5.20 잔존**. v0.3 종결 후 사용자 obsidian-cdp 직접 시험 → 12 raise (UI 7 + 핵심 목적 4 + 추가 1) → master 직접 cdp 검증 cycle (Batch 1~8) + broken link 철저 분석. **broken count 11,772 → 458** (recursive feedback fix, wiki-check report page 자기 자신 detect 차단). 정책 LOCK 변경: **Obsidian CDP UI smoke = master 1차 책임** (tester 위임 폐기).
 >
 > §5.19 codex 5 cycle (#1 6 finding → #5 ✅ APPROVE No findings, 누적 18 finding 모두 fix). 특히 #3 `.gitignore wiki/` silent kill (master 직접 fix, root anchor `/wiki/`). Step G obsidian-cdp 2 cycle (1차 FAIL — WikiFS R5 회귀 / 2차 PASS — 6 scenario 모두). 라이브 evidence: Scenario A `pageCount=218 / dangling=38` Status modal / Scenario B Check sha 별 1 row group + Apply fix / Scenario C Step 2 confirm → Step 3 "완료 (38 pages updated)" / Scenario D Refactoring duplicates 2+lowUtility 1 / Scenario E Dashboard health row click → Help nav / Scenario F Escape close. 1018 PASS / build 0 errors.
 >

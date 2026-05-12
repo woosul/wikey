@@ -836,19 +836,48 @@ Click [[page name]] in answers to navigate to the wiki page.
 
     MarkdownRenderer.render(this.app, helpMd, helpEl, '', this.plugin)
 
-    // §5.19 — Wiki Maintenance section. 4-button entry point (Status / Check /
-    // Recovery / Refactoring) opens `MaintenanceModal` in the requested mode.
+    // §5.19 v0.4 (R11/AC-UI-13) — insert <hr> dividers between Help guide
+    // sections (`**Heading**` bold lines used as visual section breaks in the
+    // markdown above) so the panel reads as discrete sections rather than one
+    // wall of text. Inserted *before* each section heading except the first.
+    this.insertHelpDividers(helpEl)
+
+    // §5.19 v0.4 (R9) — Wiki Maintenance section. 3-button entry point
+    // (Status / Check / Refactoring) opens `MaintenanceModal` in the requested
+    // mode. Recovery was retired in v0.4 — Check's Fix link multi-mode absorbs
+    // its dangling-sha cleanup path (Spec 2 / I-FIX-2). hr divider before the
+    // maintenance section keeps the visual rhythm.
+    helpEl.createEl('hr', { cls: 'wikey-help-divider' })
     this.renderMaintenanceSection(helpEl)
+  }
+
+  /**
+   * §5.19 v0.4 (R11) — Help panel post-processing: insert `<hr>` before every
+   * bold-paragraph section heading after the first. The guide markdown uses
+   * `<p><strong>Heading</strong></p>` lines (rendered from `**Heading**`) as
+   * section markers; without dividers consecutive sections blur into each
+   * other. We post-process the rendered tree instead of mutating the source
+   * markdown so future heading edits keep working.
+   */
+  private insertHelpDividers(helpEl: HTMLElement): void {
+    const headings = helpEl.querySelectorAll(':scope > p > strong')
+    // Skip the first heading (top of panel — no divider needed above it).
+    for (let i = 1; i < headings.length; i++) {
+      const paragraph = headings[i]?.parentElement
+      if (!paragraph) continue
+      const hr = document.createElement('hr')
+      hr.className = 'wikey-help-divider'
+      paragraph.parentElement?.insertBefore(hr, paragraph)
+    }
   }
 
   private renderMaintenanceSection(helpEl: HTMLElement): void {
     const section = helpEl.createDiv({ cls: 'wikey-maintenance-section' })
     section.createEl('h3', { text: 'Wiki Maintenance' })
     const btnRow = section.createDiv({ cls: 'wikey-maintenance-buttons' })
-    const modes: ReadonlyArray<{ mode: 'status' | 'check' | 'recovery' | 'refactoring'; label: string }> = [
+    const modes: ReadonlyArray<{ mode: 'status' | 'check' | 'refactoring'; label: string }> = [
       { mode: 'status', label: 'Status' },
       { mode: 'check', label: 'Check' },
-      { mode: 'recovery', label: 'Recovery' },
       { mode: 'refactoring', label: 'Refactoring suggestions' },
     ]
     for (const { mode, label } of modes) {
@@ -865,7 +894,7 @@ Click [[page name]] in answers to navigate to the wiki page.
    * (commands.ts) so Help / palette / CLI all share one validateWiki injection
    * + signal propagation path (Finding 1+2 cycle #3 — code duplication 0).
    */
-  private openMaintenanceModal(mode: 'status' | 'check' | 'recovery' | 'refactoring'): void {
+  private openMaintenanceModal(mode: 'status' | 'check' | 'refactoring'): void {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { MaintenanceModal } = require('./maintenance-modal') as typeof import('./maintenance-modal')
     // eslint-disable-next-line @typescript-eslint/no-require-imports

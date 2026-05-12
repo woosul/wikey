@@ -35,6 +35,27 @@ interface CoreApi {
     env: Record<string, string>,
     signal?: AbortSignal,
   ) => Promise<{ exitCode: number; stdout: string }>
+  // §5.19 v0.4 Batch 5 (R8 / G1) — broken wikilink fix (mode a).
+  detectBrokenWikilinks?: (
+    wikiFS: unknown,
+    opts?: { signal?: AbortSignal },
+  ) => Promise<
+    readonly {
+      source: string
+      brokenTarget: string
+      fixKind: 'case-insensitive' | 'fuzzy' | 'no-match'
+      candidates: readonly { slug: string; similarity: number }[]
+      autoFixSlug?: string
+    }[]
+  >
+  applyBrokenWikilinkFix?: (
+    wikiFS: unknown,
+    opts: {
+      confirm: boolean
+      fixes: readonly { source: string; brokenTarget: string; replacement: string }[]
+      signal?: AbortSignal
+    },
+  ) => Promise<{ changedFiles: number; changedLinks: number }>
 }
 
 function loadCore(): CoreApi | null {
@@ -76,7 +97,13 @@ export function createMaintenanceRunner(plugin: WikeyPlugin): MaintenanceRunner 
       if (!core?.runWikiCheck) return []
       const validateWiki = buildValidateWikiInjection(plugin, core)
       const report = await core.runWikiCheck(wikiFS, { validateWiki, signal })
-      return report.findings
+      // §5.19 v0.4 Batch 5 (R8 / G1 / I-FIX-1) — overlay `autoFixSlug` onto
+      // broken-link findings via the standalone `detectBrokenWikilinks` helper.
+      // The runWikiCheck producer emits broken-link rows without classification
+      // (case-insensitive vs fuzzy vs no-match); the merge below attaches
+      // `autoFixSlug` so Step 2 confirm can render auto-fix checkboxes.
+      const autoFixIndex = await buildAutoFixIndex(core, wikiFS, signal)
+      return report.findings.map((f) => annotateAutoFix(f, autoFixIndex))
     },
     async runRecovery(signal, payload) {
       const core = loadCore()
@@ -88,12 +115,168 @@ export function createMaintenanceRunner(plugin: WikeyPlugin): MaintenanceRunner 
       })
       return { changedPages: report.changedPages }
     },
+    async runBrokenLinkFix(signal, payload) {
+      const core = loadCore()
+      if (!core?.applyBrokenWikilinkFix) return { changedFiles: 0, changedLinks: 0 }
+      const report = await core.applyBrokenWikilinkFix(wikiFS, {
+        confirm: true,
+        fixes: payload.fixes,
+        signal,
+      })
+      return { changedFiles: report.changedFiles, changedLinks: report.changedLinks }
+    },
     async runRefactoring(signal) {
       const core = loadCore()
       if (!core?.getRefactoringSuggestions) return {}
       return await core.getRefactoringSuggestions(wikiFS, { signal })
     },
   }
+}
+
+/**
+ * §5.19 v0.4 Batch 6 (R12) — broken-wikilink classification entry. The runner
+ * now surfaces all three fix kinds (case-insensitive auto / fuzzy candidates /
+ * no-match) so Step 2 confirm can render a checkbox + dropdown per row instead
+ * of dropping fuzzy + no-match findings on the floor.
+ *
+ * `autoFixSlug` is filled only for `case-insensitive` (back-compat with the
+ * existing modal checkbox path); `candidates` carries the top-3 fuzzy slugs so
+ * the modal can drive a `<select>` per row.
+ */
+export interface BrokenLinkClassification {
+  readonly fixKind: 'case-insensitive' | 'fuzzy' | 'no-match'
+  readonly autoFixSlug?: string
+  readonly candidates: readonly { slug: string; similarity: number }[]
+}
+
+/**
+ * Build a `(source|brokenTarget) → classification` lookup from
+ * `detectBrokenWikilinks`. Empty Map when the helper is missing (legacy core
+ * bundle) — `annotateAutoFix` then no-ops and finding rows stay as-is.
+ *
+ * §5.19 v0.4 Batch 6 (R12) — index now keeps fuzzy + no-match entries too so
+ * Step 2 can surface them with checkbox + dropdown. Previously only
+ * `case-insensitive` rows were retained (Batch 5 scope).
+ */
+async function buildAutoFixIndex(
+  core: CoreApi,
+  wikiFS: unknown,
+  signal: AbortSignal,
+): Promise<ReadonlyMap<string, BrokenLinkClassification>> {
+  if (!core.detectBrokenWikilinks) return new Map()
+  const cands = await core.detectBrokenWikilinks(wikiFS, { signal })
+  const out = new Map<string, BrokenLinkClassification>()
+  for (const c of cands) {
+    out.set(`${c.source}|${c.brokenTarget}`, {
+      fixKind: c.fixKind,
+      autoFixSlug: c.autoFixSlug,
+      candidates: c.candidates,
+    })
+  }
+  return out
+}
+
+/**
+ * §5.19 v0.4 Batch 5 fix (2026-05-12) — annotate `autoFixSlug` onto both the
+ * native `broken-link` / `broken-wikilink` producer rows *and* the
+ * `validate-wiki` injection rows. The live vault funnels ~99% of broken
+ * wikilinks through `validate-wiki.sh` stdout (collectFindings's standalone
+ * broken-link path is near-empty at scale), so without the second branch Step
+ * 2's broken section rendered 0 rows even with thousands of fixable findings
+ * present (master cdp regression, 2026-05-12).
+ *
+ * For `validate-wiki` rows the helper *also* fills `path` so the downstream
+ * Step 2 confirm view can render `source: [[X]] → [[Y]]` without re-parsing
+ * the raw FAIL line.
+ *
+ * §5.19 v0.4 Batch 6 (R12) — accepts either the legacy `string` map (Batch 5
+ * test signature) or the richer `BrokenLinkClassification` map (production
+ * runner) and forwards `fixKind` + `candidates` so Step 2 can render fuzzy
+ * dropdowns + no-match manual rows.
+ */
+export function annotateAutoFix(
+  f: { kind: string; path?: string; detail?: string },
+  autoFixIndex: ReadonlyMap<string, string | BrokenLinkClassification>,
+): {
+  kind: string
+  path?: string
+  detail?: string
+  autoFixSlug?: string
+  fixKind?: 'case-insensitive' | 'fuzzy' | 'no-match'
+  candidates?: readonly { slug: string; similarity: number }[]
+} {
+  const lookup = (key: string) => normalizeClassification(autoFixIndex.get(key))
+  if (f.kind === 'broken-link' || f.kind === 'broken-wikilink') {
+    if (!f.path || !f.detail) return f
+    const target = parseBrokenTarget(f.detail)
+    if (!target) return f
+    const cls = lookup(`${f.path}|${target}`)
+    return cls ? { ...f, ...projectClassification(cls) } : f
+  }
+  if (f.kind === 'validate-wiki' && f.detail) {
+    const parsed = parseValidateWikiBrokenLine(f.detail)
+    if (!parsed) return f
+    const key = `${parsed.source}|${parsed.target}`
+    const cls = lookup(key)
+    if (!cls) return f
+    // Fill `path` so collectBrokenLinkRows (modal-views) can group the row by
+    // source page without re-parsing the FAIL detail string.
+    return { ...f, path: parsed.source, ...projectClassification(cls) }
+  }
+  return f
+}
+
+/**
+ * Normalize the legacy `string` (autoFixSlug) entry form into the richer
+ * `BrokenLinkClassification` shape so a single downstream projector handles
+ * both call sites (Batch 5 tests + Batch 6 production index).
+ */
+function normalizeClassification(
+  entry: string | BrokenLinkClassification | undefined,
+): BrokenLinkClassification | undefined {
+  if (entry === undefined) return undefined
+  if (typeof entry === 'string') {
+    return { fixKind: 'case-insensitive', autoFixSlug: entry, candidates: [] }
+  }
+  return entry
+}
+
+/**
+ * Shape the classification into the finding overlay fields. Empty `candidates`
+ * arrays are dropped from the projection so existing tests asserting
+ * `autoFixSlug` only see the autoFix field (no spurious `candidates: []`).
+ */
+function projectClassification(
+  cls: BrokenLinkClassification,
+): { autoFixSlug?: string; fixKind: 'case-insensitive' | 'fuzzy' | 'no-match'; candidates?: readonly { slug: string; similarity: number }[] } {
+  const out: {
+    autoFixSlug?: string
+    fixKind: 'case-insensitive' | 'fuzzy' | 'no-match'
+    candidates?: readonly { slug: string; similarity: number }[]
+  } = { fixKind: cls.fixKind }
+  if (cls.autoFixSlug) out.autoFixSlug = cls.autoFixSlug
+  if (cls.candidates.length > 0) out.candidates = cls.candidates
+  return out
+}
+
+export function parseBrokenTarget(detail: string): string | null {
+  const m = detail.match(/^\[\[([^\]|#]+)/)
+  return m ? m[1]!.trim() : null
+}
+
+/**
+ * Parse a `validate-wiki` FAIL detail line of the form
+ *   `<source path>: 깨진 위키링크 [[<target>]]`
+ * into its `{ source, target }` components. Returns `null` when the line
+ * does not match the broken-wikilink subset (e.g. orphan / missing-frontmatter
+ * lines also flow through the same `validate-wiki` finding kind).
+ */
+export function parseValidateWikiBrokenLine(
+  detail: string,
+): { source: string; target: string } | null {
+  const m = detail.match(/^([^:]+): 깨진 위키링크 \[\[([^\]|#]+)/)
+  if (!m) return null
+  return { source: m[1]!.trim(), target: m[2]!.trim() }
 }
 
 /**

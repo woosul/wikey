@@ -21,6 +21,24 @@ export type { Finding, WikiCheckReport, RunWikiCheckOptions } from './maintenanc
 export { applyWikiRecovery } from './maintenance/recovery.js'
 export type { WikiRecoveryReport, ApplyWikiRecoveryOptions } from './maintenance/recovery.js'
 
+// §5.19 v0.4 Batch 5 (R8 / G1) — Check Fix link mode a (broken wikilink fix).
+// Mode b stays in `applyWikiRecovery` (recovery.ts); the modal aggregates both
+// via `executeFix` in `maintenance-modal.ts`.
+export {
+  detectBrokenWikilinks,
+  applyBrokenWikilinkFix,
+  levenshteinDistance,
+} from './maintenance/fix-link.js'
+export type {
+  BrokenWikilinkFixCandidate,
+  BrokenWikilinkFixKind,
+  BrokenWikilinkCandidate,
+  BrokenWikilinkFixRequest,
+  BrokenWikilinkFixReport,
+  DetectBrokenWikilinksOptions,
+  ApplyBrokenWikilinkFixOptions,
+} from './maintenance/fix-link.js'
+
 export { getRefactoringSuggestions, slugSimilarity } from './maintenance/refactoring.js'
 export type {
   DuplicatePair,
@@ -29,3 +47,14 @@ export type {
   RefactoringSuggestions,
   GetRefactoringSuggestionsOptions,
 } from './maintenance/refactoring.js'
+
+// §5.19 v0.4 (R6/R10/I-HEALTH-1) — Health predicates shared by Status +
+// Refactoring modals (and any future Dashboard pill). Re-exported here so
+// `wikey-obsidian` can import via the maintenance barrel.
+export { isWikiHealthy, isRefactoringHealthy } from './maintenance/helpers.js'
+export type { WikiHealthMetrics, RefactoringHealthMetrics } from './maintenance/helpers.js'
+
+// §5.19 v0.4 Batch 6 — wiki-check report exclusion + finding detail escape.
+// Surfaces so wikey-obsidian (or future consumers) can keep the recursive
+// feedback invariant without re-implementing the predicate.
+export { escapeWikilinks, isWikiCheckReportPath } from './maintenance/helpers.js'

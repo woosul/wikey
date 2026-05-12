@@ -4146,3 +4146,73 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 ### 5.19.5 다음 액션 (잔여 Phase 5)
 
 → **§5.20 P2 진입** — Knowledge Gap management (query log capture + score formula + report 생성 command). §5.19 wiki-check 의 dangling detect → §5.20 의 knowledge gap report 와 보완 관계. 다음 = analyst Step A v0.2 (score formula calibration + privacy 정책 LOCK).
+
+### 5.19.6 v0.4 사용자 실측 cycle (Session 38 후반, 2026-05-12)
+
+§5.19 v0.3 종결 commit (`49d59c9`) 후 사용자가 obsidian-cdp 직접 시험 → 6 critical raise 보고. 정책 LOCK 변경 (**Obsidian CDP UI smoke = master 1차 책임**, tester 위임 폐기) + analyst v0.4 spec 재구성 (4→3 command, Recovery 폐기, Help 4→3 버튼, 17→30 AC) + raise-별 master 직접 cdp 검증 cycle 진행.
+
+**raise 매트릭스 (사용자 명시 7 + 추가 3 = 10건)**:
+
+| Raise | 내용 | Batch | Status |
+|-------|------|-------|--------|
+| R1~R3 | sticky title/footer + 중앙 scroll | Batch 2 | ✅ master cdp 확증 (header sticky top:0 / body overflow auto / footer sticky bottom:0) |
+| R4 | 하단 Close 버튼 동작 0 (BUG) | Batch 1 | ✅ close 1→0 PASS |
+| R5 | footer button horizontal 중앙정렬 | Batch 2 | ✅ justifyContent: center |
+| R6 | Status "All healthy" 모순 (brokenLinkCount > 0 인데) | Batch 1 | ✅ "Issues found: 8670 broken" |
+| R7 | Check finding 7,439 flat list (accordion/그룹화 없음) | Batch 3 | ✅ 2 group + chevron + 수량 표시 |
+| R8 + G1 | Fix link multi-mode (broken wikilink fix) + 핵심 목적 4 (G1~G4) | Batch 5 | ✅ data flow OK (case-insensitive 116 / fuzzy 121 / no-match 470) |
+| R9 | Recovery modal = Check 중복 → 폐기 | Batch 4 | ✅ Help 4→3 버튼 + palette 4→3 command |
+| R10 | Refactoring "All healthy" 모순 | Batch 1 | ✅ "Issues found: 2 duplicates, 1 lowUtility" |
+| R11 | Help 패널 섹션 가로줄 | Batch 1 | ✅ 4 divider |
+| R12 | Step 2 수동검토 fuzzy/no-match checkbox + dropdown | Batch 5+6 | ✅ 594 checkbox + 116 dropdown |
+| R13 | Step 2 섹션 사이 구분선 | Batch 5+6 | ✅ 2 HR section-divider |
+| R14 | UI polish (theme tokens + bootstrap chevron + 좌측정렬 `> label (N)` + `<hr>` 분리) | Batch 7 | ✅ Bootstrap chevron SVG inline + text-align: left |
+
+**recursive feedback 근본 원인 발견** (사용자 raise "broken link 많은 이유"):
+
+- master cdp 측정: `wiki/analyses/wiki-check-2026-05-12.md` 1 페이지에 wikilink **11,271건** (96%) — 나머지 vault 의 모든 wiki page wikilink 합 = 501건 (4%)
+- wiki-check report 가 broken finding 의 `[[X]]` 를 그대로 enum → 다음 wiki-check 시 본 report page 를 scan → 인용된 `[[X]]` 를 또 broken 으로 detect → cycle 마다 누적 폭증
+- **fix (Batch 6)**: (a) `escapeWikilinks(text)` helper — `[[X]]` → `` `[[X]]` `` codeblock escape, (b) `isWikiCheckReportPath` 5 site exclude (listWikiPages / detectDanglingCrossLinks / detectBrokenWikilinks / collectFindings / validate-wiki.checkWikilinks), (c) stale `wiki/analyses/wiki-check-2026-05-12.md` 삭제
+- **결과**: validate-wiki broken count **11,772 → 458** (96.1% 감소) + cdp 라이브 Step 1 `깨진 wikilink (1,324)` (analyses page 재생성된 후 약간 누적)
+
+### 5.19.7 세션 마지막 broken wikilink 철저 분석 (585 de-duped, 사용자 명시 의무)
+
+**카테고리별 분포**:
+
+| Category | Count | % | 의미 |
+|----------|-------|---|------|
+| normal ASCII slug | 390 | **67%** | mention 만, 자체 page 생성 누락 |
+| 파일 확장자 포함 (`.md`/`.pdf`) | 195 | **33%** | raw source filename 그대로 wikilink |
+| 다중 hyphen | 190 | 32% | 위 두 카테고리 overlap |
+| 숫자 포함 | 171 | 29% | 버전 (`5.17`, `R10_20220815`) |
+| 대문자 차이 | 116 | **20%** | LLM 출력 case inconsistency |
+| 한글 포함 | 116 | 20% | 한글 raw source filename |
+
+**Source 분포**: top 10 모두 entity page 각 11건 균등 (anthropic / autogen / claude / docker / gemini 등) — entity 간 cross-reference broken.
+
+**3 근본 원인**:
+
+1. **Raw source filename 그대로 wikilink (33%, ~195건)** — 예 `[[AI 기반 통합 대화형 인터페이스 - finetree-BOT.md]]`, `[[PMS_제품소개_R10_20220815.pdf]]`. LLM 이 ingest mention stage 에서 raw filename 을 그대로 wikilink target 으로 사용 (wikey 워크플로우 위반: raw → LLM 분해 → wiki slug → wikilink). **fix**: ingest pipeline 의 mention stage 에서 file extension 포함 wikilink reject + raw filename → slug 변환 강제.
+
+2. **Mention only, entity page 생성 누락 (67%, ~390건)** ★ 본질 — 예 `[[claude-desktop]]`, `[[microsoft-excel]]`. LLM 이 entity mention 하지만 §5.11 v2 promotion threshold 미통과 → entity page 미생성 → "내용 없는 wikilink". **fix 옵션**: (a) promotion 미통과 entity wikilink → plain text 변환 (b) §5.20 Knowledge Gap 와 연계 (broken wikilink = 잠재 knowledge gap).
+
+3. **Case-insensitive inconsistency (20%, 116건)** — 예 `[[GPT-4o]]` ↔ `gpt-4o.md`. LLM 출력 case inconsistency, canonicalizer SLUG_ALIASES 가 wikilink 본문에 미적용. §5.19 Batch 5 의 case-insensitive auto-fix 가 본 카테고리 cover (자동 fix 가능).
+
+**권장 후속**:
+- 즉시: §5.19 Fix link 가 카테고리 3 (case-insensitive) 116건 자동 fix 가능
+- 중기: ingest pipeline 의 mention stage 에 raw filename guard + canonicalizer 호출 강제 (§5.21 신규 cycle)
+- 장기: §5.20 Knowledge Gap 와 연계 — broken wikilink → knowledge gap 후보 surface
+
+### 5.19.8 v0.4 cycle 종합
+
+- **테스트**: wikey-core 885 + 3 skipped / wikey-obsidian 180 = **1065 PASS / 회귀 0**
+- **build**: 0 new errors (5 pre-existing kiwi-wasm warnings)
+- **라이브 검증**: master 직접 obsidian-cdp 8 cycle (Batch 1~8 각 batch 후 직접 검증) — 모든 raise PASS
+- **vault 영향**: stale `wiki/analyses/wiki-check-2026-05-12.md` 삭제 (gitignore, git impact 0)
+- **변경 면 (commit 후 mirror)**:
+  - 신규 helper: `escapeWikilinks` / `isWikiCheckReportPath` / `parseValidateWikiBrokenLine` / `BrokenLinkClassification` / `isWikiHealthy` / `isRefactoringHealthy`
+  - 신규 file: `wiki-fix-link.test.ts` / `wiki-maintenance-batch6.test.ts`
+  - 폐기: `scripts/wiki-recovery.sh` (git rm)
+- **정책 LOCK 변경 (CLAUDE.md)**: Obsidian CDP UI smoke = **master 1차 책임** (tester 위임 폐기, 2026-05-12 사용자 명시).
+
+→ **§5.19 v0.4 종결**. 다음 = §5.20 Knowledge Gap management 또는 §5.21 ingest pipeline mention guard (사용자 결정).

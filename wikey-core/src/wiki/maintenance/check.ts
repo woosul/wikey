@@ -16,7 +16,9 @@ import {
   buildRawWalker,
   detectDanglingCrossLinks,
   detectStaleTombstones,
+  escapeWikilinks,
   extractWikilinks,
+  isWikiCheckReportPath,
   listWikiPages,
   loadRegistrySafe,
   pageSlugFromPath,
@@ -123,8 +125,14 @@ async function collectFindings(fs: WikiFS, signal?: AbortSignal): Promise<Collec
   const registryShas = new Set(Object.keys(registry))
 
   // broken wikilink findings
+  //
+  // §5.19 v0.4 Batch 6 fix — `listWikiPages` already excludes wiki-check report
+  // pages, but the explicit guard documents the recursive-feedback invariant at
+  // every iteration site (master cdp evidence: 96% of broken-wikilink findings
+  // historically traced to a single report page).
   for (const path of pages) {
     throwIfAborted(signal)
+    if (isWikiCheckReportPath(path)) continue
     const body = await fs.read(path)
     for (const link of extractWikilinks(body)) {
       if (!pageSet.has(link)) {
@@ -195,5 +203,7 @@ function renderCheckAnalysisPage(today: string, findings: readonly Finding[]): s
 
 function formatFinding(f: Finding): string {
   const parts = [f.path, f.detail].filter((s) => !!s)
-  return `- ${parts.join(' — ')}`
+  // §5.19 v0.4 Batch 6 fix — escape `[[X]]` inside detail so the persisted
+  // analyses page never re-triggers broken-link detection on subsequent runs.
+  return `- ${escapeWikilinks(parts.join(' — '))}`
 }

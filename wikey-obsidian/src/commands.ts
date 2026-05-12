@@ -118,17 +118,17 @@ export function registerCommands(plugin: WikeyPlugin): void {
     },
   })
 
-  // §5.19 — 4 maintenance commands (palette legacy/power-user entry; primary UX
-  // is the Help panel "Wiki Maintenance" section). Each invokes MaintenanceModal
-  // in the requested mode.
+  // §5.19 v0.4 (R9) — 3 maintenance commands (palette legacy/power-user entry;
+  // primary UX is the Help panel "Wiki Maintenance" section). Each invokes
+  // MaintenanceModal in the requested mode. Recovery was retired in v0.4 —
+  // Check's Fix link multi-mode absorbs the dangling-sha cleanup path.
   registerMaintenanceCommands(plugin)
 }
 
 function registerMaintenanceCommands(plugin: WikeyPlugin): void {
-  const modes: ReadonlyArray<{ id: string; name: string; mode: 'status' | 'check' | 'recovery' | 'refactoring' }> = [
+  const modes: ReadonlyArray<{ id: string; name: string; mode: 'status' | 'check' | 'refactoring' }> = [
     { id: 'wikey-wiki-status', name: 'Wikey: Wiki status', mode: 'status' },
     { id: 'wikey-wiki-check', name: 'Wikey: Wiki check', mode: 'check' },
-    { id: 'wikey-wiki-recovery', name: 'Wikey: Wiki recovery', mode: 'recovery' },
     { id: 'wikey-wiki-refactoring', name: 'Wikey: Wiki refactoring suggestions', mode: 'refactoring' },
   ]
   for (const { id, name, mode } of modes) {

@@ -22,6 +22,34 @@ export const SHA256_PREFIX_LENGTH = 8
 const HOUSEKEEPING_PAGES = new Set(['wiki/index.md', 'wiki/log.md'])
 
 /**
+ * §5.19 v0.4 Batch 6 fix (2026-05-12) — `wiki/analyses/wiki-check-<YYYY-MM-DD>.md`
+ * report exclusion. The report page enumerates every broken `[[X]]` finding in
+ * its body, so without exclusion a subsequent `validate-wiki` / detector run
+ * re-scans those `[[X]]` occurrences as new broken-link findings → recursive
+ * feedback loop (master cdp measurement: 11,271 of 11,772 broken wikilinks
+ * traced to a single wiki-check report page, 96%).
+ *
+ * Path exclusion (this predicate) is the structural fix; the in-page
+ * `escapeWikilinks` helper (check.ts:renderCheckAnalysisPage) is a
+ * defense-in-depth (other tools / downstream readers won't replay the loop).
+ */
+export function isWikiCheckReportPath(path: string): boolean {
+  return /^wiki\/analyses\/wiki-check-\d{4}-\d{2}-\d{2}\.md$/.test(path)
+}
+
+/**
+ * §5.19 v0.4 Batch 6 fix — escape `[[X]]` wikilink syntax inside finding detail
+ * lines so the persisted analyses page never re-triggers broken-link detection.
+ * Wraps every `[[X]]` (or `[[X|alias]]` / `[[X#anchor]]`) in inline backticks,
+ * which most wikilink extractors and validate-wiki both skip (markdown inline
+ * code segments are not link targets). Defensive — the canonical exclusion is
+ * `isWikiCheckReportPath`.
+ */
+export function escapeWikilinks(text: string): string {
+  return text.replace(/\[\[([^\]]+)\]\]/g, '`[[$1]]`')
+}
+
+/**
  * List every markdown page under `wiki/`. Spec §5.19 AC-S1-1: `pageCount` =
  * total markdown files under wiki/ (housekeeping included — `index.md` /
  * `log.md` are real `.md` files in the vault and the schema considers them
@@ -49,11 +77,15 @@ export async function listAllWikiPages(fs: WikiFS): Promise<readonly string[]> {
 export async function listWikiPages(fs: WikiFS): Promise<readonly string[]> {
   // §5.19 Step G fix — see `listAllWikiPages` note. `walk` recurses into
   // entities/concepts/sources/analyses sub-folders.
+  //
+  // §5.19 v0.4 Batch 6 fix — wiki-check report pages excluded (recursive
+  // feedback loop prevention, see `isWikiCheckReportPath` JSDoc).
   const all = await fs.walk('wiki')
   const out: string[] = []
   for (const p of all) {
     if (!p.endsWith('.md')) continue
     if (HOUSEKEEPING_PAGES.has(p)) continue
+    if (isWikiCheckReportPath(p)) continue
     out.push(p)
   }
   return out.sort()
@@ -177,6 +209,9 @@ export async function detectDanglingCrossLinks(
   const out: DanglingCrossLink[] = []
   for (const path of pages) {
     throwIfAborted(signal)
+    // §5.19 v0.4 Batch 6 fix — wiki-check report pages excluded so the
+    // historical `sources:` list inside an archived report never re-fires.
+    if (isWikiCheckReportPath(path)) continue
     const body = await fs.read(path)
     for (const sha of extractFrontmatterSources(body)) {
       if (!registryShas.has(sha)) out.push({ path, sha })
@@ -257,4 +292,48 @@ export async function detectStaleTombstones(
     if (await fs.exists(record.vault_path)) out.push(id)
   }
   return out
+}
+
+/**
+ * §5.19 v0.4 (R6/I-HEALTH-1) — Wiki status health predicate.
+ *
+ * Returns `true` iff none of the four issue metrics fire. Previously the
+ * Status modal showed "All healthy" unconditionally (it routed through
+ * `renderFindings([])` after the key-value dump), so a vault with 6,936 broken
+ * links still claimed health. Centralising the rule here keeps the UI + future
+ * callers (Dashboard pill / CLI summary) consistent — change one place to
+ * change every surface.
+ *
+ * Spec mapping: AC-S1-3 (UI cannot show "All healthy" while any metric > 0).
+ */
+export interface WikiHealthMetrics {
+  readonly brokenLinkCount: number
+  readonly danglingCrossLinkCount: number
+  readonly staleTombstoneCount: number
+  readonly orphanCount: number
+}
+
+export function isWikiHealthy(status: WikiHealthMetrics): boolean {
+  return (
+    status.brokenLinkCount === 0 &&
+    status.danglingCrossLinkCount === 0 &&
+    status.staleTombstoneCount === 0 &&
+    status.orphanCount === 0
+  )
+}
+
+/**
+ * §5.19 v0.4 (R10/AC-R4-4) — Refactoring suggestions health predicate.
+ *
+ * Returns `true` iff zero duplicate slug pairs AND zero low-utility analyses.
+ * Mirrors `isWikiHealthy` for the Refactoring modal so an unhealthy vault never
+ * displays the "All healthy" footer while suggestions are pending.
+ */
+export interface RefactoringHealthMetrics {
+  readonly duplicates: { readonly length: number }
+  readonly lowUtility: { readonly length: number }
+}
+
+export function isRefactoringHealthy(suggestions: RefactoringHealthMetrics): boolean {
+  return suggestions.duplicates.length === 0 && suggestions.lowUtility.length === 0
 }

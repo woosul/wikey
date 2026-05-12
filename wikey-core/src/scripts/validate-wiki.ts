@@ -183,10 +183,27 @@ function checkFrontmatter(ctx: ValidateContext): void {
   }
 }
 
+/**
+ * §5.19 v0.4 Batch 6 fix — wiki-check report pages (`wiki/analyses/wiki-check-
+ * YYYY-MM-DD.md`) are explicitly skipped from the wikilink scan. Without this
+ * guard the persisted report (which historically enumerated every broken
+ * `[[X]]` finding inline) created a recursive feedback loop: validate-wiki
+ * re-detected those `[[X]]` references as new broken links on each subsequent
+ * run (master cdp evidence 2026-05-12: 96% of broken-link findings traced to
+ * one report page). The in-page `escapeWikilinks` helper handles new reports;
+ * this path skip cleans up the historical case + future reproducibility.
+ */
+const WIKI_CHECK_REPORT_NAME_RE = /(?:^|\/|\\)wiki-check-\d{4}-\d{2}-\d{2}\.md$/
+
+function isWikiCheckReportFile(file: string): boolean {
+  return WIKI_CHECK_REPORT_NAME_RE.test(file)
+}
+
 function checkWikilinks(ctx: ValidateContext): void {
   ctx.write('=== 검증 2: 위키링크 확인 ===')
   for (const file of walkMarkdown(ctx.wikiAbs)) {
     throwIfAborted(ctx.signal)
+    if (isWikiCheckReportFile(file)) continue
     const content = readSafe(file)
     if (content === null) continue
     const display = relDisplay(ctx, file)

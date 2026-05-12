@@ -1,8 +1,9 @@
 // §5.19 Wiki maintenance — shared Node WikiFS adapter.
 //
-// Used by scripts/wiki-check.sh / wiki-recovery.sh / wiki-refactoring.sh thin
-// wrappers. Mirrors the `WikiFS` interface consumed by
-// `wikey-core/src/wiki/maintenance/*` modules.
+// Used by scripts/wiki-check.sh / wiki-refactoring.sh thin wrappers. Mirrors
+// the `WikiFS` interface consumed by `wikey-core/src/wiki/maintenance/*`
+// modules. (§5.19 v0.4 R9 — wiki-recovery.sh was retired; Check's Fix link
+// absorbed the dangling-sha cleanup path.)
 //
 // CommonJS source (.mjs naming follows scripts/ convention) — loaded via
 // `require()` from the inline node -e scripts.

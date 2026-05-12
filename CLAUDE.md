@@ -190,7 +190,7 @@ wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`
 - **Output 500+ lines**: log tail, test 전체 출력, 대량 grep 결과, file list 100+ entries
 - **Long-running 5분+**: `npm run build`, `npm test` (전체), docling 변환, qmd reindex full, llm-ingest 1 파일 이상
 - **Domain isolated**: DB review (database-reviewer), security audit (reviewer/codex), UI/UX review (gemini-panel/ui-designer), refactor cleanup (refactor-cleaner)
-- **Obsidian CDP UI smoke**: tester 1차 책임 — `~/.claude/skills/obsidian-cdp/SKILL.md §1`. master 는 환경 외 사유 fallback.
+- **Obsidian CDP UI smoke**: **master 1차 책임** (2026-05-12 LOCK, 사용자 명시) — `~/.claude/skills/obsidian-cdp/SKILL.md §1`. tester 는 단위/통합 시뮬레이션 (mock fs + mock LLM) 만. 라이브 cycle smoke 는 master 가 cdp 직접 호출. 이전 정책 ("tester 1차") 폐기.
 - **Plan 검증**: codex Mode D Panel — `~/.claude/skills/codex/SKILL.md` 기본 정책. 길이 무관 Mode D 우선.
 - **3 query 이상 codebase 탐색**: Explore agent (Glob+Grep+Read).
 
