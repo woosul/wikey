@@ -4079,3 +4079,70 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 ### 5.18.4 다음 액션 (잔여 Phase 5)
 
 → **§5.19 P2 진입** — Wiki maintenance suite (wiki-status / wiki-check / wiki-recovery / wiki-refactoring). §5.18 의 mismatch detect → §5.19 의 자동 fix 연결. 다음 = analyst Step A v0.2 보강 (§5.16 Spec 3 stale tombstone 흡수 결정 + 4 command 분기 LOCK).
+
+---
+
+## 5.19 Wiki maintenance suite — wiki-status / wiki-check / wiki-recovery / wiki-refactoring ✅ 종결 (Session 38, 2026-05-12)
+> tag: #maintenance, #lint, #status, #recovery
+
+> 라이브 evidence: Scenario A `pageCount=218, danglingCrossLinkCount=38` Status modal. Scenario B Check modal sha256 별 1 row group (`679cf2dd6db75e3a`) + 38 page enum + Apply fix 버튼. Scenario C Apply fix → Step 2 confirm 체크박스 → 실행 → Step 3 "완료 (38 pages updated)" — **pre-grep 38 / post-grep 0** 결정적 cleanup. Scenario D Refactoring `duplicates: 2, lowUtility: 1, threshold 0.85`. Scenario E Dashboard health row click → Help maintenance section nav. Scenario F Escape close abort. log.md `## [2026-05-12] lint-fix | wiki-recovery` entry (38 wikilink enum).
+>
+> codex 5 cycle (#1 NEEDS_REVISION 6 finding → #5 ✅ APPROVE No findings). 누적 18 finding 모두 fix (5 HIGH + 10 MED + 3 LOW). 특히 #3 `.gitignore wiki/` silent kill (master 직접 fix, `wikey-core/src/wiki/` false-match 방지 root anchor). Step G 1차 FAIL → master fix (WikiFS.walk 신규 method, R5 cross-process pattern 회귀) → 2차 PASS.
+>
+> 상위 plan: [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](../../plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md) v0.3 · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md) v0.2 · [`activity/phase-5/phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md`](./phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md)
+
+### 5.19.1 진행 매트릭스 (Step A~G)
+
+- **Step A — analyst v0.2 LOCK**: Q1~Q4 모두 LOCK + §5.16 reference 정정 (Spec 3 → Spec 2 B2) + §5.18 dangling cross-link cross-link + 17 정량 AC (Spec 11 + UI 6) + 신규 사용자 UI LOCK (Help 패널 4 버튼 = 1차 진입점 / MaintenanceModal 단일 컴포넌트 mode prop / in-modal step 2/3 진행 / Dashboard health row display only / Command palette = 부가 진입점).
+- **Step B — tester RED**: 5 신규 test file 25 `it()` case. AC 17 ↔ test 25 1:1 매핑. helper signature gap raise (`reconcileAfterIngest` dry-run mode 미지원).
+- **Step C — developer GREEN**: 6 file split (`wikey-core/src/wiki/maintenance/{helpers,status,check,recovery,refactoring}.ts` + `maintenance.ts` barrel) + `wikey-obsidian/src/maintenance-modal.ts` + 3 신규 script + `scripts/lib/wiki-fs-adapter.cjs` + `wikey-core/src/source-registry.ts` `findRestoredIds` pure function extract (Option C — signature 변경 0).
+- **Step D — Phase 3a 회귀**: 997 PASS, build 0 new errors.
+- **Step E — Phase 3b BLUE**: maintenance.ts 632 LOC → 6 file split (모두 ≤ 200 LOC); WikiFS adapter 공통 추출; `collectFindings` / `renderAnalysisPage` extract; `SHA256_HASH_PREFIX` / `SHA256_PREFIX_LENGTH` 명명.
+- **Step F — codex post-impl 5 cycle**: #1 (3 HIGH + 2 MED + 1 LOW) → #2 (1 HIGH + 4 MED + 1 LOW) → #3 (1 HIGH + 2 MED) → #4 (2 MED + 1 LOW) → #5 ✅ APPROVE. 누적 18 finding 모두 fix. spec v0.3 (LOC budget cosmetic).
+- **Step G — Obsidian CDP 라이브 cycle smoke 2 cycle**: 1차 FAIL (WikiFS R5 cross-process pattern 회귀 — test mock recursive vs production WikiFSObsidian.list children-only + trailing slash mismatch, vault impact 0) → master fix (`WikiFS.walk(dir)` 신규 method, list signature 0 변경) → 2차 PASS (6 scenario 모두, **38 → 0 dangling cleanup 결정적 확증**).
+
+### 5.19.2 spec invariant ↔ 라이브 evidence 매트릭스 (17 AC)
+
+| Invariant | Spec scenario | 라이브 evidence |
+|-----------|---------------|----------------|
+| AC-S1-1 | wiki-status 6 metric | pageCount=218 / dangling=38 (cycle #1 0/0 회귀 fix) |
+| AC-S1-2 | cache TTL 5분 / hit ≤ 50ms | 단위 test 3 cases PASS |
+| AC-C2-1 | validate-wiki exit + finding list | wiki-check modal finding + validateWiki injection wired |
+| AC-C2-2 | analyses page 자동 생성 | `wiki-check-2026-05-12.md` 디스크 생성 |
+| AC-C2-3 | findRestoredIds 1:1 | 단위 test PASS |
+| AC-W3-1 | 38 page dangling cleanup | **38 → 0 결정적** (pre-grep 38 / post-grep 0) |
+| AC-W3-2 | silent fix 0 | Step 2 confirm + 실행 명시 click 후만 변경 |
+| AC-W3-3 | log entry 정합 | log.md `lint-fix | wiki-recovery` + 38 wikilink enum |
+| AC-R4-1 | suggestion list | duplicates 2 + lowUtility 1 |
+| AC-R4-2 | 자동 변경 0 | wiki/ timestamps 미변동 |
+| AC-R4-3 | 0.85 threshold + override | thresholdUsed: 0.85 / configFallback: default |
+| AC-UI-1 | Help 4 버튼 | Status / Check / Recovery / Refactoring |
+| AC-UI-2 | Modal mode prop | 4 mode 모두 new MaintenanceModal({mode}) |
+| AC-UI-3 | progress + log tail | `.wikey-maintenance-modal-progress` stream |
+| AC-UI-4 | finding 발견 시 action 분기 | finding>0 → Apply fix / 0 → All healthy + Close |
+| AC-UI-5 | in-modal step 진행 | step 1→2→3 same contentEl |
+| AC-UI-6 | abort + SIGTERM | Escape → close + signal propagation full chain |
+
+### 5.19.3 사용자 vault 실측 사이드 effect
+
+- 38 entity/concept page modify (frontmatter `sources:` sha 제거 + provenance block ref entry 제거 + 본문 wikilink 제거 또는 "근거 삭제됨" 변환)
+- `wiki/log.md` 1 entry (`## [2026-05-12] lint-fix | wiki-recovery`)
+- `wiki/analyses/wiki-check-2026-05-12.md` 재생성 (idempotent overwrite)
+- **git impact 0** (wiki/ gitignore 등록, PII 보호)
+- §5.18 잔존 dangling (sha256:679cf2dd6db75e3a) cleanup 완료
+
+### 5.19.4 WikiFS.walk fix master-validation R5 회귀 학습
+
+| 항목 | 내용 |
+|------|------|
+| 회귀 위치 | helpers.ts 3 site (line 31/46/202) |
+| 회귀 패턴 | **R5 cross-process** (test mock vs production binding divergence) |
+| 발견 시점 | Step G 라이브 smoke (codex 5 cycle review 도 미검출) |
+| Root cause | (a) trailing slash `wiki/` Obsidian path 미 match (b) WikiFSObsidian.list non-recursive (children-only) |
+| Fix 패턴 | Option C — `WikiFS.walk(dir)` 신규 method (Karpathy #2 Simplicity, list signature 0 변경) |
+| 검증 | 신규 contract test 6 cases (`wiki-fs-walk-contract.test.ts`) — list vs walk 결정적 명시 |
+| 향후 학습 | 신규 helper 가 WikiFS 호출 시 production binding (Obsidian) live smoke 의무. test mock 만 PASS = 거짓 안전 |
+
+### 5.19.5 다음 액션 (잔여 Phase 5)
+
+→ **§5.20 P2 진입** — Knowledge Gap management (query log capture + score formula + report 생성 command). §5.19 wiki-check 의 dangling detect → §5.20 의 knowledge gap report 와 보완 관계. 다음 = analyst Step A v0.2 (score formula calibration + privacy 정책 LOCK).

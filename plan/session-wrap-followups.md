@@ -1,19 +1,39 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-12 session 37 — §5.17 + §5.18 SDD+TDD ✅ 종결 + §5.19~§5.20 2 draft 잔존**. §5.17 (Ingest 분해 calibration) + §5.18 (Query citation UX) 동일 세션 내 완료. 사용자 진행 정책 (2026-05-12 LOCK): "승인할게 없으면 완료까지 승인없이 진행, 사용자 승인대기 5분 넘어가면 권고안 default 처리".
+> 최신 갱신: **2026-05-12 session 38 — §5.19 SDD+TDD ✅ 종결 + §5.20 1 draft 잔존**. §5.19 (Wiki maintenance suite) 동일 세션 내 완료. **38 → 0 dangling cleanup 결정적 확증** (§5.18 잔존 sha256:679cf2dd6db75e3a). WikiFS.walk 신규 method 추가 (R5 cross-process pattern 회귀 fix). 사용자 진행 정책 (2026-05-12 LOCK): "승인할게 없으면 완료까지 승인없이 진행, 사용자 승인대기 5분 넘어가면 권고안 default 처리".
 >
-> §5.18 codex 2 cycle (#1 FAIL 4 finding — P1 CRITICAL `collectBacklinks` production wiring 누락 + P2 modal title/sourceId/styles + P3 T1 → developer fix → #2 APPROVE). 라이브 evidence: Scenario A citation list `\n- (md)` + Scenario B `<details>참조 페이지 (19/98)` collapse + Scenario C `Citation Registry Diagnostic` Modal 38-page mismatch 정확 노출. **추가 사용자 raise 3 cycle (v0.4/v0.5/v0.6)** — wiki/ 3계층 scope filter (commit `e6fd0ab`) → raw/ 제외 + (+) badge + "참고" reword (commit `0527b04`) → 답변 footer 3 layer 분리 `원본:` / `참고:` / `확장:` (commit `3acc5be`). 137 PASS / build 0 errors.
+> §5.19 codex 5 cycle (#1 6 finding → #5 ✅ APPROVE No findings, 누적 18 finding 모두 fix). 특히 #3 `.gitignore wiki/` silent kill (master 직접 fix, root anchor `/wiki/`). Step G obsidian-cdp 2 cycle (1차 FAIL — WikiFS R5 회귀 / 2차 PASS — 6 scenario 모두). 라이브 evidence: Scenario A `pageCount=218 / dangling=38` Status modal / Scenario B Check sha 별 1 row group + Apply fix / Scenario C Step 2 confirm → Step 3 "완료 (38 pages updated)" / Scenario D Refactoring duplicates 2+lowUtility 1 / Scenario E Dashboard health row click → Help nav / Scenario F Escape close. 1018 PASS / build 0 errors.
 >
-> 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재. §5.16/§5.17/§5.18 종결. 잔여 §5.19/§5.20.
+> 본체 완성 시점 사용자 테스트 9 이슈 → §5.16~§5.20 5 신규 subject 등재. §5.16/§5.17/§5.18/§5.19 종결. **잔여 §5.20 만**.
 >
+> 이전 session 37 — §5.17 + §5.18 SDD+TDD ✅ 종결 (Ingest calibration + Query citation UX).
 > 이전 session 36 — §5.16 SDD+TDD ✅ 종결 (Audit/Ingest panel refresh + sidecar pair label).
-> 이전 session 35 — §5.7.7 SDD+TDD ✅ 종결 (vector-hybrid reroute, Top-3 +11.7%p).
 >
-> ## 다음 세션 첫 액션 (Session 38) — §5.19 SDD+TDD 진입
+> ## 다음 세션 첫 액션 (Session 39) — §5.20 SDD+TDD 진입
 >
-> **§5.19 Wiki maintenance suite (P2)** — wiki-status / wiki-check / wiki-recovery / wiki-refactoring 4 command + Dashboard health row. §5.18 의 mismatch detect → §5.19 의 자동 fix 연결.
+> **§5.20 Knowledge Gap management (P2)** — query log capture + score formula + report 생성 command + settings toggle. §5.19 wiki-check 의 dangling detect → §5.20 의 knowledge gap report 와 보완 관계.
 >
-> - 다음 단계: Step A analyst v0.2 (§5.16 Spec 3 stale tombstone 흡수 결정 + 4 command 분기 LOCK) → Step B tester RED → Step C developer GREEN.
+> - 다음 단계: Step A analyst v0.2 (score formula calibration + privacy 정책 LOCK) → Step B tester RED → Step C developer GREEN.
+>
+> ## §5.19 cycle 종결 종합 (session 38, 2026-05-12)
+>
+> - **Step A analyst v0.2 LOCK**: Q1~Q4 모두 LOCK + §5.16 reference 정정 (Spec 3 → Spec 2 B2) + §5.18 dangling cross-link cross-link + 17 정량 AC (Spec 11 + UI 6) + 신규 사용자 UI LOCK (Help 패널 4 버튼 = 1차 진입점 / MaintenanceModal 단일 컴포넌트 mode prop / in-modal step 2/3 진행 / Dashboard health row display only / Command palette = 부가 진입점).
+> - **Step B tester RED**: 5 신규 test file 25 case. AC 17 ↔ test 25 1:1 매핑. helper signature gap raise (`reconcileAfterIngest` dry-run mode 미지원).
+> - **Step C developer GREEN**: 6 file split + maintenance-modal + runner + 3 script + adapter + `findRestoredIds` extract (Option C, signature 변경 0).
+> - **Step D/E**: 회귀 PASS + BLUE refactor (maintenance.ts 632 → 6 file ≤200 LOC + wiki-fs-adapter 추출 + magic constant 명명).
+> - **Step F codex post-impl 5 cycle**:
+>   - #1 (6 finding: 3 HIGH + 2 MED + 1 LOW): modal wiring / dangling source-of-truth (provenance vs sources, 라이브 measure 203 false positive) / validate-wiki parity / Dashboard health / numeric semantics / test coverage → developer fix.
+>   - #2 (6 finding: 1 HIGH + 4 MED + 1 LOW): Help runCheck validateWiki injection / palette inert modal / Apply fix step-2 confirm checkbox / abort signal / LOC budget over (modal 305) / AUDIT_EXIT propagation → developer + master spec v0.3.
+>   - #3 (3 finding: 1 HIGH + 2 MED): **`.gitignore wiki/` silent kill** (master 직접 fix, `/wiki/` root anchor + 주석) / signal propagation 부분 누락 / step-2 checkbox granularity.
+>   - #4 (3 finding: 2 MED + 1 LOW): validateWiki signal honored / recovery abort partial state + `[ABORTED]` marker / LOC budget trim.
+>   - #5 ✅ **APPROVE** (No findings).
+> - **Step G obsidian-cdp 라이브 cycle smoke 2 cycle**:
+>   - **1차 FAIL** (WikiFS R5 cross-process pattern 회귀): test mock recursive vs production `WikiFSObsidian.list` children-only + trailing slash mismatch. helpers.ts 3 site `fs.list('wiki/')` 가 production 에서 `[]` 반환. AC-S1-1/AC-C2-1/AC-W3-1/AC-R4-1 모두 FAIL. **vault impact 0** (confirm-list empty → applyWikiRecovery({danglingShas: []}) → changedPages 0).
+>   - **Master fix** (Option C, Karpathy #2 Simplicity): `WikiFS.walk(dir)` 신규 method (list signature 0 변경). `wikey-core/src/types.ts:31` + `wikey-obsidian/src/main.ts:1687-1707` + `scripts/lib/wiki-fs-adapter.cjs:54-78` + helpers.ts 3 site + 14 test mock + 신규 contract test (`wiki-fs-walk-contract.test.ts`, 6 cases). 라이브 fresh evidence: pageCount=218 / danglingCrossLinkCount=38.
+>   - **2차 PASS**: 6 scenario 모두 — A (Status 6 metric production binding 정상) / B (Check sha 별 1 row group) / C (**Apply fix → Step 2 confirm → Step 3 "완료 (38 pages updated)" / pre-grep 38 / post-grep 0 결정적 cleanup**) / D (Refactoring 2+1) / E (Dashboard health row click → Help nav) / F (Escape close abort).
+> - **사용자 vault 사이드 effect**: 38 entity/concept page modify (frontmatter sources + provenance ref + 본문 wikilink) + log.md 1 entry (`## [2026-05-12] lint-fix | wiki-recovery`) + wiki/analyses/wiki-check-2026-05-12.md (재생성 idempotent). **git impact 0** (wiki/ gitignore).
+> - **테스트**: wikey-core 862 + 3 skipped / wikey-obsidian 156 = 1018 PASS / 회귀 0 / build 0 new errors.
+> - **WikiFS R5 회귀 학습**: 신규 helper 가 WikiFS 호출 시 production binding (Obsidian) live smoke 의무. test mock 만 PASS = 거짓 안전. codex 5 cycle review 도 R5 회귀 미검출 (master-validation Layer 4 R5 anchor 강화 필요).
 >
 > ## §5.18 cycle 종결 종합 (session 37, 2026-05-12)
 >
