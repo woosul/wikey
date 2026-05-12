@@ -5,12 +5,12 @@
 ## 진행 매트릭스 (Step A~G)
 
 - [x] **Step A — analyst v0.2 보강**: ✅ done (2026-05-11). 9 corpus sample 실측 evidence + Q1~Q4 LOCK + spec v0.2 갱신.
-- [ ] **Step B — tester RED**: promotion-config + canonicalizer + ingest-pipeline write batch test.
-- [ ] **Step C — developer GREEN**: ceiling cap 분기 + WARN path + write batch yield + HWP WARN helper.
-- [ ] **Step D — Phase 3a 회귀**.
-- [ ] **Step E — Phase 3b BLUE**: telemetry decision struct cleanup.
-- [ ] **Step F — codex post-impl review**.
-- [ ] **Step G — master 라이브 cycle smoke**: case A + case B 재 ingest + latency p95 측정.
+- [x] **Step B — tester RED** (2026-05-12): 17 신규 test (T1~T17), 808 PASS 회귀 0.
+- [x] **Step C — developer GREEN** (2026-05-12): 4 신규 export (loadPromotionConfig / applyCeilingCap / writePagesWithBatchYield / assessConversionQuality), 825 PASS.
+- [x] **Step D — Phase 3a 회귀** (2026-05-12): wikey-core 825 + wikey-obsidian 121 = 946 PASS / build 0 errors.
+- [x] **Step E — Phase 3b BLUE** (2026-05-12): 6 활동 self-applied + cycle #2 P2 sweep.
+- [x] **Step F — codex post-impl review** (2026-05-12): 3 cycle — #1 NEEDS_REVISION 6 finding → developer fix → #2 NEEDS_REVISION 3 finding → master fix → #3 APPROVE.
+- [x] **Step G — obsidian-cdp 라이브 cycle smoke** (2026-05-12): case A 복제본 ingest 59 → 51 cap formula 발화 + latency 180s → 63s (-65%) 확증.
 
 ## 의문점 (Step A LOCK — v0.2 2026-05-11)
 

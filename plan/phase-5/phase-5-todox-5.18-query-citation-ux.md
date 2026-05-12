@@ -5,15 +5,12 @@
 ## 진행 매트릭스 (Step A~G)
 
 - [x] **Step A — analyst v0.2 보강** (2026-05-12): Step "1" 결과로 mismatch 실측 비율 + sourceId 분포 측정 후 I7 log format 결정. spec v0.1 → v0.2.
-- [ ] **Step B — tester RED**: query-pipeline.test.ts (format 5 시나리오) + sidebar-chat backlink test + diagnostic command test.
-- [ ] **Step C — developer GREEN**:
-  - `appendOriginalLinks` format `, ` → `\n- ` + extension badge (dynamic derive).
-  - sidebar-chat backlink section (resolvedLinks 역방향, default collapse).
-  - WARN log + diagnostic command + MismatchDiagnosticModal.
-- [ ] **Step D — Phase 3a 회귀**.
-- [ ] **Step E — Phase 3b BLUE**: `collectBacklinks` helper extract + WARN dedup 검토.
-- [ ] **Step F — codex post-impl review**.
-- [ ] **Step G — master 라이브 cycle smoke**: PMS / claude-code (fallback) / multi-source / diagnostic.
+- [x] **Step B — tester RED** (2026-05-12): 18 신규 test (T1~T13a, 16 RED + 2 regression-PASS), 946 PASS 유지.
+- [x] **Step C — developer GREEN** (2026-05-12): 4 신규 export (`appendOriginalLinks` format + `collectBacklinks` + `buildBacklinkSection` + `scanCitationMismatches` + `MismatchDiagnosticModal`), 964 PASS.
+- [x] **Step D — Phase 3a 회귀** (2026-05-12): wikey-core 832 + wikey-obsidian 132 = 964 PASS / build 0 errors.
+- [x] **Step E — Phase 3b BLUE** (2026-05-12): 6 활동 self-applied + master direct `deriveExtBadge` extract → `appendOriginalLinks` 61 → 50 LOC rule compliant.
+- [x] **Step F — codex post-impl review** (2026-05-12): 2 cycle — #1 FAIL 4 finding (P1 CRITICAL backlink wiring + P2 title/sourceId/styles + P3 T1) → developer fix → #2 ✅ APPROVE.
+- [x] **Step G — obsidian-cdp 라이브 cycle smoke** (2026-05-12): Scenario A citation format + Scenario B `<details>` backlink section + Scenario C `Citation Registry Diagnostic` Modal 38-page mismatch evidence 모두 PASS.
 
 ## 의문점 (Step A LOCK 2026-05-12)
 
