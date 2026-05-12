@@ -19,6 +19,15 @@ export interface ValidateWikiOptions {
   readonly wikiDir?: string
   readonly rawDir?: string
   readonly write?: (line: string) => void
+  /**
+   * Cooperative AbortSignal — polled at the head of every per-page validator
+   * loop (frontmatter / wikilinks / index registration / duplicate basename /
+   * raw↔wiki conflict). Pre-aborted signals throw before any output. §5.19
+   * cycle #5 Finding 1 — `scripts-runner.captureRun` already wires its
+   * `parentSignal` into the internal controller, so passing it through here
+   * makes modal close → SIGTERM the same abort path as the timeout.
+   */
+  readonly signal?: AbortSignal
 }
 
 export interface ValidateWikiResult {
@@ -141,7 +150,15 @@ interface ValidateContext {
   readonly basePath: string
   readonly wikiAbs: string
   readonly rawAbs: string
+  readonly signal?: AbortSignal
   errorCount: number
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (!signal?.aborted) return
+  const err: Error & { name: string } = new Error('AbortError')
+  err.name = 'AbortError'
+  throw err
 }
 
 function fail(ctx: ValidateContext, msg: string): void {
@@ -156,6 +173,7 @@ function relDisplay(ctx: ValidateContext, file: string): string {
 function checkFrontmatter(ctx: ValidateContext): void {
   ctx.write('=== 검증 1: 프론트매터 확인 ===')
   for (const file of walkMarkdown(ctx.wikiAbs)) {
+    throwIfAborted(ctx.signal)
     const content = readSafe(file)
     if (content === null) continue
     const firstLine = content.split('\n', 1)[0] ?? ''
@@ -168,6 +186,7 @@ function checkFrontmatter(ctx: ValidateContext): void {
 function checkWikilinks(ctx: ValidateContext): void {
   ctx.write('=== 검증 2: 위키링크 확인 ===')
   for (const file of walkMarkdown(ctx.wikiAbs)) {
+    throwIfAborted(ctx.signal)
     const content = readSafe(file)
     if (content === null) continue
     const display = relDisplay(ctx, file)
@@ -193,6 +212,7 @@ function checkIndexRegistration(ctx: ValidateContext): void {
     const subdirAbs = path.join(ctx.wikiAbs, subdir)
     if (!fs.existsSync(subdirAbs)) continue
     for (const file of walkMarkdown(subdirAbs)) {
+      throwIfAborted(ctx.signal)
       const basename = path.basename(file, '.md')
       // 동등성: .sh 의 grep `[[<basename>]]` (alias 형식 미허용)
       if (!indexContent.includes(`[[${basename}]]`)) {
@@ -227,6 +247,7 @@ function checkDuplicateBasename(ctx: ValidateContext): void {
   ctx.write('=== 검증 5: 중복 파일명 확인 ===')
   const basenameMap = new Map<string, number>()
   for (const file of walkMarkdown(ctx.wikiAbs)) {
+    throwIfAborted(ctx.signal)
     const base = path.basename(file)
     basenameMap.set(base, (basenameMap.get(base) ?? 0) + 1)
   }
@@ -239,6 +260,7 @@ function checkBasenameConflict(ctx: ValidateContext): void {
   ctx.write('=== 검증 6: raw vs wiki basename 충돌 확인 ===')
   if (!fs.existsSync(ctx.rawAbs)) return
   for (const rawFile of walkMarkdown(ctx.rawAbs)) {
+    throwIfAborted(ctx.signal)
     const base = path.basename(rawFile)
     const wikiMatch = findFirstFile(ctx.wikiAbs, (name) => name === base)
     if (wikiMatch) {
@@ -259,9 +281,12 @@ export async function runValidateWiki(opts: ValidateWikiOptions): Promise<Valida
     basePath: opts.basePath,
     wikiAbs: path.isAbsolute(wikiRel) ? wikiRel : path.join(opts.basePath, wikiRel),
     rawAbs: path.isAbsolute(rawRel) ? rawRel : path.join(opts.basePath, rawRel),
+    signal: opts.signal,
     errorCount: 0,
   }
 
+  // Pre-aborted signal → throw before any output (consistent with maintenance core).
+  throwIfAborted(ctx.signal)
   checkFrontmatter(ctx)
   checkWikilinks(ctx)
   checkIndexRegistration(ctx)

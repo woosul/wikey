@@ -20,7 +20,22 @@ export interface WikiFS {
   read(path: string): Promise<string>
   write(path: string, content: string): Promise<void>
   exists(path: string): Promise<boolean>
+  /**
+   * Direct children of `dir` only (one level deep). `dir` may end with `/`
+   * or not — both forms must resolve to the same folder. Production binding
+   * (`ObsidianWikiFS.list`) reads `folder.children` and does NOT recurse.
+   */
   list(dir: string): Promise<string[]>
+  /**
+   * §5.19 Step G fix — recursive markdown enumeration under `dir`.
+   * Returns vault-relative paths of all `.md` files in the subtree (files only,
+   * directories excluded). Used by wiki maintenance (status / check /
+   * recovery / refactoring) which need every page under `wiki/` or every
+   * source under `raw/` — the children-only `list` was returning sub-folders
+   * (`wiki/entities`, `wiki/concepts`, …) as siblings of `wiki/index.md`,
+   * causing zero hits against real vaults.
+   */
+  walk(dir: string): Promise<string[]>
 }
 
 // ── Config ──

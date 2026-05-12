@@ -1,8 +1,9 @@
 # Raw sources (PII protection)
-raw/
+/raw/
 
 # Wiki content (사용자 ingest 산출물 — 개인 자료, 공개 리포에 노출 금지)
-wiki/
+# root anchor (/wiki/) — `wikey-core/src/wiki/` 같은 nested code 폴더 false-match 방지 (codex cycle #3 Finding 1)
+/wiki/
 
 # .wikey/ vault state — 사용자 vault 별 dynamic, git 충돌 방지
 # source-registry.json 은 historic tracked → 유지. 나머지 ignore.

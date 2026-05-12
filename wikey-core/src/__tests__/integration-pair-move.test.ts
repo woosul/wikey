@@ -43,6 +43,9 @@ class DiskFS implements WikiFS {
   async list(_dir: string): Promise<string[]> {
     return []
   }
+  async walk(_dir: string): Promise<string[]> {
+    return []
+  }
 }
 
 let basePath: string

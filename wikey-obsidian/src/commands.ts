@@ -117,6 +117,38 @@ export function registerCommands(plugin: WikeyPlugin): void {
       void runDiagnoseCitationMismatches(plugin)
     },
   })
+
+  // §5.19 — 4 maintenance commands (palette legacy/power-user entry; primary UX
+  // is the Help panel "Wiki Maintenance" section). Each invokes MaintenanceModal
+  // in the requested mode.
+  registerMaintenanceCommands(plugin)
+}
+
+function registerMaintenanceCommands(plugin: WikeyPlugin): void {
+  const modes: ReadonlyArray<{ id: string; name: string; mode: 'status' | 'check' | 'recovery' | 'refactoring' }> = [
+    { id: 'wikey-wiki-status', name: 'Wikey: Wiki status', mode: 'status' },
+    { id: 'wikey-wiki-check', name: 'Wikey: Wiki check', mode: 'check' },
+    { id: 'wikey-wiki-recovery', name: 'Wikey: Wiki recovery', mode: 'recovery' },
+    { id: 'wikey-wiki-refactoring', name: 'Wikey: Wiki refactoring suggestions', mode: 'refactoring' },
+  ]
+  for (const { id, name, mode } of modes) {
+    plugin.addCommand({
+      id,
+      name,
+      callback: () => {
+        // Lazy require — keeps the top-level import graph free of the modal module
+        // until the user actually opens it. Runner factory is shared with the
+        // Help panel entry (Finding 2 cycle #3 — palette command was previously
+        // an inert modal without a runner, dropping validateWiki + abort signal).
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { MaintenanceModal } = require('./maintenance-modal') as typeof import('./maintenance-modal')
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { createMaintenanceRunner } = require('./maintenance-runner') as typeof import('./maintenance-runner')
+        const runner = createMaintenanceRunner(plugin)
+        new MaintenanceModal(plugin.app, plugin, { mode, runner }).open()
+      },
+    })
+  }
 }
 
 

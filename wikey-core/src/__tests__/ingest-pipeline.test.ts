@@ -269,6 +269,7 @@ describe('loadEffectiveIngestPrompt', () => {
       write: async () => {},
       exists: async () => true,
       list: async () => [],
+      walk: async () => [],
     }
     const result = await loadEffectiveIngestPrompt(fs)
     expect(result).toBe(BUNDLED_INGEST_PROMPT)

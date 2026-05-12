@@ -112,6 +112,29 @@ if (typeof proto.setText !== 'function') {
   }
 }
 
+// Obsidian global `createDiv` — production exposes this as a global; happy-dom
+// callers (sidebar-chat.openHelp etc.) expect window.createDiv to exist. Mirror
+// the HTMLElement.prototype.createDiv shape but as a free function returning
+// a detached element. (§5.19 UI test fix.)
+declare global {
+  // eslint-disable-next-line no-var
+  var createDiv: (
+    opts?: string | { cls?: string | string[]; text?: string; attr?: Record<string, string> },
+  ) => HTMLDivElement
+}
+if (typeof (globalThis as { createDiv?: unknown }).createDiv !== 'function') {
+  ;(globalThis as { createDiv: (opts?: unknown) => HTMLDivElement }).createDiv = (
+    opts?: unknown,
+  ): HTMLDivElement => {
+    const div = document.createElement('div')
+    applyOpts(
+      div,
+      opts as string | { cls?: string | string[]; text?: string; attr?: Record<string, string> } | undefined,
+    )
+    return div
+  }
+}
+
 // ── TFile ──
 
 export class TFile {
@@ -379,6 +402,20 @@ export class MarkdownRenderer {
     _component?: unknown,
   ): Promise<void> {
     // Minimal: <p> 으로 wrap (실제 markdown rendering 은 plugin runtime 만)
+    const p = document.createElement('p')
+    p.textContent = markdown
+    el.appendChild(p)
+  }
+
+  // Obsidian 1.5+ surface — `MarkdownRenderer.render(app, md, el, path, component)`.
+  // Test path mirrors `renderMarkdown` shape.
+  static async render(
+    _app: unknown,
+    markdown: string,
+    el: HTMLElement,
+    _sourcePath: string,
+    _component?: unknown,
+  ): Promise<void> {
     const p = document.createElement('p')
     p.textContent = markdown
     el.appendChild(p)

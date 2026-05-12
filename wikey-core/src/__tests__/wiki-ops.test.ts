@@ -32,6 +32,13 @@ function createMockFS(files: Record<string, string> = {}): WikiFS {
     async list(dir: string): Promise<string[]> {
       return [...store.keys()].filter((k) => k.startsWith(dir))
     },
+    async walk(dir: string): Promise<string[]> {
+      const root = dir.endsWith('/') ? dir.slice(0, -1) : dir
+      const prefix = root + '/'
+      return [...store.keys()].filter(
+        (k) => (k === root || k.startsWith(prefix)) && k.endsWith('.md'),
+      )
+    },
   }
 }
 

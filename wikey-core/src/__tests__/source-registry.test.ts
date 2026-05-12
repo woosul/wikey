@@ -44,6 +44,9 @@ class MemoryFS implements WikiFS {
   async list(_dir: string): Promise<string[]> {
     return [...this.files.keys()]
   }
+  async walk(_dir: string): Promise<string[]> {
+    return [...this.files.keys()].filter((k) => k.endsWith('.md'))
+  }
 }
 
 function makeRecord(path: string, hash: string, size = 100): SourceRecord {

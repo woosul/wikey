@@ -37,6 +37,12 @@ class MemoryFS implements WikiFS {
     const prefix = dir.endsWith('/') ? dir : `${dir}/`
     return [...this.files.keys()].filter((p) => p.startsWith(prefix) || p === dir)
   }
+  async walk(dir: string): Promise<string[]> {
+    const prefix = dir.endsWith('/') ? dir : `${dir}/`
+    return [...this.files.keys()].filter(
+      (p) => (p === dir || p.startsWith(prefix)) && p.endsWith('.md'),
+    )
+  }
 }
 
 function makeRecord(opts: {

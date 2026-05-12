@@ -394,20 +394,60 @@ export async function reconcile(
  *   - I6: ingest pipeline 완료 직후 1회 호출 — 본 helper 는 호출 가능한 단일 entry point.
  *   - I7: idempotent — 2회 연속 호출 시 두 번째의 restoredIds = [] (이미 1회차 복구).
  *   - I8: walker hash match + path mismatch → reconcile 내부 recordMove 자동 발화 (case 2).
+ *
+ * §5.19 note: pure detection (no registry mutation) is exposed separately as
+ * `findRestoredIds(reg, walker)` for wiki-check dry-run reuse. reconcileAfterIngest
+ * remains a write path (reconcile result returned). Both share the same comparison
+ * logic but with disjoint side-effect contracts.
  */
 export async function reconcileAfterIngest(
   reg: SourceRegistry,
   walker: () => Promise<readonly WalkerEntry[]>,
 ): Promise<{ registry: SourceRegistry; restoredIds: string[] }> {
-  const before = new Set<string>()
-  for (const [id, record] of Object.entries(reg)) {
-    if (record.tombstone) before.add(id)
-  }
+  const before = collectTombstonedIds(reg)
   const registry = await reconcile(reg, walker)
-  const restoredIds: string[] = []
-  for (const id of before) {
-    const next = registry[id]
-    if (next && !next.tombstone) restoredIds.push(id)
-  }
+  const restoredIds = diffRestoredIds(before, registry)
   return { registry, restoredIds }
+}
+
+/**
+ * §5.19 Spec 2 (I5, Q1 LOCK) — pure detector for stale tombstone candidates.
+ *
+ * Runs reconcile against a SNAPSHOT of the registry (input copy) so the caller's
+ * registry object is never mutated, then diffs tombstone state before/after to
+ * return the same `restoredIds` array reconcileAfterIngest would surface.
+ *
+ * Used by `wikey-core/src/wiki/maintenance.ts:runWikiCheck` to detect stale
+ * tombstones for the wiki-check report — no signature change to reconcileAfterIngest,
+ * no production reconcile path branching (Option C extract per master decision
+ * 2026-05-12).
+ */
+export async function findRestoredIds(
+  reg: SourceRegistry,
+  walker: () => Promise<readonly WalkerEntry[]>,
+): Promise<string[]> {
+  const before = collectTombstonedIds(reg)
+  // Defensive copy — reconcile returns a new registry, but it iterates over input.
+  // Spread guarantees the input map identity is preserved (caller may compare by
+  // identity / re-use the same object after this call).
+  const snapshot: SourceRegistry = { ...reg }
+  const after = await reconcile(snapshot, walker)
+  return diffRestoredIds(before, after)
+}
+
+function collectTombstonedIds(reg: SourceRegistry): Set<string> {
+  const out = new Set<string>()
+  for (const [id, record] of Object.entries(reg)) {
+    if (record.tombstone) out.add(id)
+  }
+  return out
+}
+
+function diffRestoredIds(before: ReadonlySet<string>, after: SourceRegistry): string[] {
+  const out: string[] = []
+  for (const id of before) {
+    const next = after[id]
+    if (next && !next.tombstone) out.push(id)
+  }
+  return out
 }

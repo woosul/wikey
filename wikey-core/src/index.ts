@@ -139,6 +139,7 @@ export {
   restoreTombstone as registryRestoreTombstone,
   reconcile as registryReconcile,
   reconcileAfterIngest,
+  findRestoredIds,
   REGISTRY_PATH,
 } from './source-registry.js'
 export type { SourceRecord, SourceRegistry, PathHistoryEntry, WalkerEntry } from './source-registry.js'
@@ -150,6 +151,28 @@ export {
 } from './wiki-ops.js'
 export type { SourceFrontmatter } from './wiki-ops.js'
 export type { Citation, ProvenanceType, ProvenanceEntry } from './types.js'
+
+// §5.19 — Wiki maintenance suite (status / check / recovery / refactoring).
+export {
+  getWikiStatus,
+  runWikiCheck,
+  applyWikiRecovery,
+  getRefactoringSuggestions,
+  slugSimilarity,
+} from './wiki/maintenance.js'
+export type {
+  WikiStatus,
+  WikiCheckReport,
+  WikiRecoveryReport,
+  RefactoringSuggestions,
+  DuplicatePair,
+  LowUtilityEntry,
+  Finding,
+  GetWikiStatusOptions,
+  RunWikiCheckOptions,
+  ApplyWikiRecoveryOptions,
+  GetRefactoringSuggestionsOptions,
+} from './wiki/maintenance.js'
 // §5.10.4 D-wide: §5.4 self-extending (suggestion / self-declaration / convergence) 메커니즘 폐기.
 export {
   RenameGuard,

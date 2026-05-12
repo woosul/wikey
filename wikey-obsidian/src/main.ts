@@ -1682,6 +1682,33 @@ class ObsidianWikiFS implements WikiFS {
     if (!Array.isArray(children)) return []
     return children.map((c: any) => c.path as string)
   }
+
+  /**
+   * §5.19 Step G fix — BFS recursive walk returning every `.md` file under `dir`.
+   * Trailing `/` stripped (Obsidian vault paths never carry trailing slash). Files
+   * with non-`.md` extension are skipped. Folders are traversed but not emitted.
+   */
+  async walk(dir: string): Promise<string[]> {
+    const root = this.plugin.app.vault.getAbstractFileByPath(stripTrailingSlash(dir))
+    if (!root) return []
+    const results: string[] = []
+    const queue: any[] = [root]
+    while (queue.length > 0) {
+      const current = queue.shift()
+      if (!current) continue
+      if (current instanceof TFile) {
+        if (current.extension === 'md') results.push(current.path)
+        continue
+      }
+      const children = (current as any).children
+      if (Array.isArray(children)) queue.push(...children)
+    }
+    return results
+  }
+}
+
+function stripTrailingSlash(p: string): string {
+  return p.endsWith('/') ? p.slice(0, -1) : p
 }
 
 class ObsidianHttpClient implements HttpClient {

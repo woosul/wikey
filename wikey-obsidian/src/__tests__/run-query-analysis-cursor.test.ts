@@ -63,6 +63,7 @@ function makePlugin(): WikeyPlugin {
     async read() { throw new Error('not used') },
     async write() { /* no-op */ },
     async list() { return [] },
+    async walk() { return [] },
   }
   // @ts-expect-error: we deliberately bypass the full onload() lifecycle.
   plugin.wikiFS = wikiFS

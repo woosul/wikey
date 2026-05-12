@@ -48,6 +48,9 @@ function memFS(files: Record<string, string>, listMap: Record<string, string[]> 
     async list(dir: string): Promise<string[]> {
       return listMap[dir] ?? []
     },
+    async walk(dir: string): Promise<string[]> {
+      return (listMap[dir] ?? []).filter((k) => k.endsWith('.md'))
+    },
   }
 }
 

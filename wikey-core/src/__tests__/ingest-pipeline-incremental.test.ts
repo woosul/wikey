@@ -41,6 +41,9 @@ class MemoryFS implements WikiFS {
   async list(_dir: string): Promise<string[]> {
     return [...this.files.keys()]
   }
+  async walk(_dir: string): Promise<string[]> {
+    return [...this.files.keys()].filter((k) => k.endsWith('.md'))
+  }
 }
 
 class ThrowingHttpClient implements HttpClient {

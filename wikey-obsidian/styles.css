@@ -2589,3 +2589,113 @@ a.internal-link.wikey-broken-link,
   font-family: var(--font-monospace);
   margin: 0 0 4px;
 }
+
+/* §5.19 Wiki maintenance suite — Help panel section + Modal layout. */
+.wikey-maintenance-section {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.wikey-maintenance-section h3 {
+  font-size: 0.95em;
+  margin: 0 0 0.5rem;
+}
+
+.wikey-maintenance-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.wikey-maintenance-btn {
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.wikey-maintenance-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 480px;
+}
+
+.wikey-maintenance-modal-header h3 {
+  margin: 0;
+}
+
+.wikey-maintenance-modal-progress {
+  max-height: 320px;
+  overflow-y: auto;
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+  padding: 0.5rem;
+  background: var(--background-secondary);
+  border-radius: 4px;
+}
+
+.wikey-maintenance-modal-log-line {
+  white-space: pre-wrap;
+  padding: 1px 0;
+}
+
+.wikey-maintenance-modal-action {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wikey-maintenance-modal-finding-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.9em;
+}
+
+.wikey-maintenance-modal-action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.wikey-maintenance-modal-apply-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.wikey-maintenance-modal-healthy {
+  color: var(--text-success, var(--text-muted));
+  font-weight: 500;
+}
+
+.wikey-maintenance-modal-step-2,
+.wikey-maintenance-modal-step-3-running {
+  font-style: italic;
+  color: var(--text-muted);
+}
+
+.wikey-maintenance-modal-step-3 {
+  font-weight: 500;
+  color: var(--text-success, var(--text-normal));
+}
+
+/* §5.19 cycle #3 Finding 3 — step-2 confirm checkbox UI (in-modal). */
+.wikey-maintenance-modal-confirm-list {
+  margin: 0.4rem 0;
+  padding-left: 1.25rem;
+  font-size: 0.9em;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.wikey-maintenance-modal-confirm-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.wikey-maintenance-modal-execute-btn {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}

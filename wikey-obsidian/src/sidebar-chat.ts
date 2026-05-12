@@ -835,6 +835,69 @@ Click [[page name]] in answers to navigate to the wiki page.
 \`Cmd+,\` → Wikey tab to manage models, API keys, Ollama connection.`
 
     MarkdownRenderer.render(this.app, helpMd, helpEl, '', this.plugin)
+
+    // §5.19 — Wiki Maintenance section. 4-button entry point (Status / Check /
+    // Recovery / Refactoring) opens `MaintenanceModal` in the requested mode.
+    this.renderMaintenanceSection(helpEl)
+  }
+
+  private renderMaintenanceSection(helpEl: HTMLElement): void {
+    const section = helpEl.createDiv({ cls: 'wikey-maintenance-section' })
+    section.createEl('h3', { text: 'Wiki Maintenance' })
+    const btnRow = section.createDiv({ cls: 'wikey-maintenance-buttons' })
+    const modes: ReadonlyArray<{ mode: 'status' | 'check' | 'recovery' | 'refactoring'; label: string }> = [
+      { mode: 'status', label: 'Status' },
+      { mode: 'check', label: 'Check' },
+      { mode: 'recovery', label: 'Recovery' },
+      { mode: 'refactoring', label: 'Refactoring suggestions' },
+    ]
+    for (const { mode, label } of modes) {
+      const btn = btnRow.createEl('button', { text: label, cls: `wikey-maintenance-btn wikey-maintenance-btn-${mode}` })
+      btn.addEventListener('click', () => {
+        this.openMaintenanceModal(mode)
+      })
+    }
+  }
+
+  /**
+   * Open the §5.19 MaintenanceModal with a production-wired runner. Runner
+   * factory (`createMaintenanceRunner`) is shared with the palette commands
+   * (commands.ts) so Help / palette / CLI all share one validateWiki injection
+   * + signal propagation path (Finding 1+2 cycle #3 — code duplication 0).
+   */
+  private openMaintenanceModal(mode: 'status' | 'check' | 'recovery' | 'refactoring'): void {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { MaintenanceModal } = require('./maintenance-modal') as typeof import('./maintenance-modal')
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { createMaintenanceRunner } = require('./maintenance-runner') as typeof import('./maintenance-runner')
+    const runner = createMaintenanceRunner(this.plugin)
+    new MaintenanceModal(this.app, this.plugin, { mode, runner }).open()
+  }
+
+  private async renderDashboardHealthRow(el: HTMLElement): Promise<void> {
+    const row = el.createDiv({ cls: 'wikey-dashboard-health-row' })
+    // Default placeholder rendered immediately; replaced once getWikiStatus resolves.
+    const placeholder = 'Pages: — | Broken: — | Tombstone: — | Dangling: — | Last: —'
+    const text = row.createEl('span', { cls: 'wikey-dashboard-health-text', text: placeholder })
+    row.addEventListener('click', () => {
+      // Display-only — navigate to Help panel maintenance section.
+      this.selectPanel('help')
+      const section = (this.containerEl as HTMLElement).querySelector('.wikey-maintenance-section')
+      ;(section as HTMLElement | null)?.scrollIntoView?.({ behavior: 'smooth' })
+    })
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const core = require('wikey-core')
+      if (!core?.getWikiStatus) return
+      const status = await core.getWikiStatus(this.plugin.wikiFS)
+      text.setText(
+        `Pages: ${status.pageCount} | Broken: ${status.brokenLinkCount} | ` +
+        `Tombstone: ${status.staleTombstoneCount} | Dangling: ${status.danglingCrossLinkCount} | ` +
+        `Last: ${status.lastValidateTs ?? 'N/A'}`,
+      )
+    } catch {
+      // Bundle absent (test context) — keep placeholder, Health row stays clickable.
+    }
   }
 
 
@@ -850,6 +913,15 @@ Click [[page name]] in answers to navigate to the wiki page.
 
   private renderDashboardContent(el: HTMLElement) {
     const vault = this.app.vault
+
+    // ── §5.19 Health row (display only) ──
+    //
+    // Pulls the cached `WikiStatus` via maintenance.getWikiStatus and renders
+    // it as a single text pill. Click navigates to the Help panel maintenance
+    // section (AC display-only — never executes maintenance scripts directly).
+    this.renderDashboardHealthRow(el).catch(() => {
+      // Cache miss / build artifact missing — render placeholder.
+    })
 
     // ── Wiki Stats ──
     const wikiSection = el.createDiv({ cls: 'wikey-dashboard-section' })
@@ -2525,4 +2597,11 @@ Click [[page name]] in answers to navigate to the wiki page.
     }
   }
 }
+
+
+// §5.19 — `ChatSidebarView` is the production export name expected by §5.19 UI test
+// (`maintenance-modal.test.ts`). Aliased here without renaming the class so the
+// existing 2,500+ LOC `WikeyChatView` reference graph (commands.ts, main.ts,
+// ingest-modals.ts, etc.) stays intact.
+export { WikeyChatView as ChatSidebarView }
 

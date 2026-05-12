@@ -37,6 +37,9 @@ class MemoryFS implements WikiFS {
   async list(_dir: string): Promise<string[]> {
     return []
   }
+  async walk(_dir: string): Promise<string[]> {
+    return []
+  }
 }
 
 async function seed(fs: MemoryFS, oldPath: string, bytes: Uint8Array, slug: string): Promise<string> {

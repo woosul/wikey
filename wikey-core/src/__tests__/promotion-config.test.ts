@@ -21,6 +21,7 @@ function makeFS(files: Record<string, string>): WikiFS {
     async write() { /* no-op */ },
     async exists(path) { return path in files },
     async list() { return [] },
+    async walk() { return [] },
   }
 }
 
@@ -88,6 +89,7 @@ describe('loadPromotionThreshold', () => {
       async write() {},
       async exists() { return true },
       async list() { return [] },
+      async walk() { return [] },
     }
     expect(await loadPromotionThreshold(fs)).toBe(DEFAULT_PROMOTION_THRESHOLD)
   })

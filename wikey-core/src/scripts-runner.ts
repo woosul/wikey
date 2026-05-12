@@ -70,6 +70,11 @@ export interface RunScriptOptions {
  *     갱신 가능 (기존 execFile timeout 은 child kill 했음)
  *   - fix: AbortController.signal 을 fn 에 전달 → reindex 의 spawn 으로 propagate.
  *     finally 에 clearTimeout 으로 timer 정리.
+ *
+ * §5.19 cycle #4 (2026-05-12):
+ *   - external `parentSignal` (e.g. MaintenanceModal AbortController) wires into
+ *     the internal controller so an upstream abort (modal close) trips the same
+ *     SIGTERM/cancellation path as the timeout.
  */
 async function captureRun(
   fn: (
@@ -77,7 +82,7 @@ async function captureRun(
     writeErr: (s: string) => void,
     signal: AbortSignal,
   ) => Promise<number>,
-  opts?: RunScriptOptions,
+  opts?: RunScriptOptions & { parentSignal?: AbortSignal },
 ): Promise<ScriptResult> {
   const stdoutLines: string[] = []
   const stderrLines: string[] = []
@@ -85,6 +90,13 @@ async function captureRun(
   const writeErr = (s: string) => stderrLines.push(s)
   const timeout = opts?.timeoutMs ?? 120_000
   const controller = new AbortController()
+  // Forward an upstream abort to the internal controller so the logic fn's
+  // `signal` flips identically to the timeout path.
+  const parentAbortHandler = (): void => controller.abort()
+  if (opts?.parentSignal) {
+    if (opts.parentSignal.aborted) controller.abort()
+    else opts.parentSignal.addEventListener('abort', parentAbortHandler, { once: true })
+  }
   let timeoutId: ReturnType<typeof setTimeout> | null = null
   let exitCode: number
   try {
@@ -108,6 +120,9 @@ async function captureRun(
     }
   } finally {
     if (timeoutId) clearTimeout(timeoutId)
+    if (opts?.parentSignal) {
+      opts.parentSignal.removeEventListener('abort', parentAbortHandler)
+    }
   }
   return {
     success: exitCode === 0,
@@ -120,11 +135,18 @@ async function captureRun(
 export async function validateWiki(
   basePath: string,
   _env: Record<string, string>,
+  signal?: AbortSignal,
 ): Promise<ScriptResult> {
-  return captureRun(async (write) => {
-    const r = await runValidateWiki({ basePath, write })
-    return r.exitCode
-  })
+  return captureRun(
+    async (write, _writeErr, innerSignal) => {
+      // §5.19 cycle #5 Finding 1 — thread captureRun's internal signal into
+      // runValidateWiki so an upstream abort (modal close / timeout) trips the
+      // per-page throwIfAborted polls instead of running to completion.
+      const r = await runValidateWiki({ basePath, write, signal: innerSignal })
+      return r.exitCode
+    },
+    { parentSignal: signal },
+  )
 }
 
 export async function checkPii(
