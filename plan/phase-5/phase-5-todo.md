@@ -29,8 +29,10 @@
   - [`plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](./phase-5-spec-5.16-audit-refresh-reliability.md) · [`plan/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](./phase-5-todox-5.16-audit-refresh-reliability.md) — §5.16 P0 (사용자 테스트 1-1·1-2·1-4, draft v0.1)
   - [`plan/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](./phase-5-spec-5.17-ingest-balance-calibration.md) · [`plan/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](./phase-5-todox-5.17-ingest-balance-calibration.md) — §5.17 P0 (case A 83 → 51 cap + latency -65%, **종결 Session 37 2026-05-12**)
   - [`plan/phase-5/phase-5-spec-5.18-query-citation-ux.md`](./phase-5-spec-5.18-query-citation-ux.md) · [`plan/phase-5/phase-5-todox-5.18-query-citation-ux.md`](./phase-5-todox-5.18-query-citation-ux.md) — §5.18 P1 (citation list + backlink + diagnostic, **종결 Session 37 2026-05-12**)
-  - [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](./phase-5-spec-5.19-wiki-maintenance-suite.md) · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](./phase-5-todox-5.19-wiki-maintenance-suite.md) — §5.19 P2 (사용자 테스트 2-1, draft v0.1)
+  - [`plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](./phase-5-spec-5.19-wiki-maintenance-suite.md) · [`plan/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](./phase-5-todox-5.19-wiki-maintenance-suite.md) — §5.19 P2 (Wiki maintenance suite, **v0.4 종결 Session 38 2026-05-12** — 12 raise + recursive feedback fix + broken 11772→458)
   - [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](./phase-5-spec-5.20-knowledge-gap-management.md) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](./phase-5-todox-5.20-knowledge-gap-management.md) — §5.20 P2 (사용자 테스트 2-2, Phase 6 → Phase 5 편입, draft v0.1)
+  - [`plan/phase-5/phase-5-spec-5.21-ingest-mention-guard.md`](./phase-5-spec-5.21-ingest-mention-guard.md) · [`plan/phase-5/phase-5-todox-5.21-ingest-mention-guard.md`](./phase-5-todox-5.21-ingest-mention-guard.md) — §5.21 P2 (ingest mention guard, broken wikilink 근본 원인 1+3 fix, draft v0.1 2026-05-12)
+  - [`plan/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](./phase-5-spec-5.22-ui-english-sweep.md) · [`plan/phase-5/phase-5-todox-5.22-ui-english-sweep.md`](./phase-5-todox-5.22-ui-english-sweep.md) — §5.22 P3 (시스템 UI 영문화 sweep, draft v0.1 2026-05-12)
 - **프로젝트 공통**: [`plan/ref/decisions.md`](../decisions.md) · [`plan/ref/plan_wikey-enterprise-kb.md`](../plan_wikey-enterprise-kb.md).
 
 ## 우선순위 가이드 (2026-04-24 재조정)
@@ -2521,3 +2523,35 @@ Phase 6: master verdict + commit + push + result 문서
 - [ ] **Step E — Phase 3b BLUE**
 - [ ] **Step F — codex post-impl review**
 - [ ] **Step G — master 라이브 cycle smoke** (10 query 후 report 생성)
+
+---
+
+## 5.21 Ingest pipeline mention guard — broken wikilink 근본 원인 1+3 fix (P2)
+> tag: #ingest, #mention-guard, #canonicalizer
+> **draft v0.1 (2026-05-12)** — §5.19 v0.4 broken wikilink 585건 철저 분석 결과 신규 등재. 근본 원인 1 (raw filename 33%) + 근본 원인 3 (case-insensitive 20%) cover.
+>
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.21-ingest-mention-guard.md`](./phase-5-spec-5.21-ingest-mention-guard.md) · [`plan/phase-5/phase-5-todox-5.21-ingest-mention-guard.md`](./phase-5-todox-5.21-ingest-mention-guard.md)
+
+- [ ] **Step A — analyst v0.2 LOCK** (Q1 위치 / Q2 강도 / Q3 canonicalizer scope LOCK + 근본 원인 1+3 scope 명확화)
+- [ ] **Step B — tester RED** (ingest fixture 2 case + AC-S1/S2 4 test)
+- [ ] **Step C — developer GREEN** (`wikey-core/src/wiki/mention-guard.ts` 신규 + Stage 2 hook)
+- [ ] **Step D — Phase 3a 회귀**
+- [ ] **Step E — Phase 3b BLUE**
+- [ ] **Step F — codex post-impl review**
+- [ ] **Step G — master 라이브 smoke** (실 source 재 ingest → broken count -49% 예상)
+
+---
+
+## 5.22 시스템 UI 영문화 sweep — 모든 사용자 인터페이스 텍스트 한글 → 영문 (P3)
+> tag: #ui, #i18n, #english
+> **draft v0.1 (2026-05-12)** — 사용자 명시 정책 (Session 38) 통합. §5.19 v0.4 cycle 안 maintenance UI 영문화 완료, 잔여 panel (Audit / Ingest / Citation Modal / Help guide / settings 등) 일괄 sweep.
+>
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](./phase-5-spec-5.22-ui-english-sweep.md) · [`plan/phase-5/phase-5-todox-5.22-ui-english-sweep.md`](./phase-5-todox-5.22-ui-english-sweep.md)
+
+- [ ] **Step A — 사용자 라벨 결정 LOCK** (Spec 2 영문 매핑 1차 review 필수)
+- [ ] **Step B — tester** (각 panel 영문 expected fixture 갱신)
+- [ ] **Step C — developer** (sed sweep + 영문 라벨 적용)
+- [ ] **Step D — Phase 3a 회귀**
+- [ ] **Step E — Phase 3b BLUE**
+- [ ] **Step F — codex post-impl review**
+- [ ] **Step G — master 라이브 cdp** (각 panel grep `[가-힣]` = 0)

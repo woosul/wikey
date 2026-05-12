@@ -1,6 +1,14 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-12 session 38 후반 — §5.19 v0.4 종결 + §5.20 잔존**. v0.3 종결 후 사용자 obsidian-cdp 직접 시험 → 12 raise (UI 7 + 핵심 목적 4 + 추가 1) → master 직접 cdp 검증 cycle (Batch 1~8) + broken link 철저 분석. **broken count 11,772 → 458** (recursive feedback fix, wiki-check report page 자기 자신 detect 차단). 정책 LOCK 변경: **Obsidian CDP UI smoke = master 1차 책임** (tester 위임 폐기).
+> 최신 갱신: **2026-05-12 session 38 종결 — §5.19 v0.4 종결 + §5.20/§5.21/§5.22 draft 3 잔존**. v0.3 종결 후 사용자 obsidian-cdp 직접 시험 → 12 raise (UI 7 + 핵심 목적 4 + 추가 1) → master 직접 cdp 검증 cycle (Batch 1~8) + broken link 철저 분석. **broken count 11,772 → 458** (recursive feedback fix, wiki-check report page 자기 자신 detect 차단). 정책 LOCK 변경: **Obsidian CDP UI smoke = master 1차 책임** (tester 위임 폐기).
+>
+> ## 다음 세션 첫 액션 (Session 39) — §5.21 SDD+TDD 진입 + §5.22 영문화 sweep
+>
+> **§5.21 Ingest mention guard (P2)** — broken wikilink 근본 원인 1+3 fix (raw filename guard + canonicalizer 호출 강제). §5.19 분석 결과 (390+195+116 broken = 49% 비율) cover. 다음 = analyst Step A v0.2 (Q1 LLM prompt vs post-process / Q2 reject vs plain text / Q3 canonicalizer scope LOCK).
+>
+> **§5.22 시스템 UI 영문화 sweep (P3)** — Audit row / Citation Modal / Help guide / settings 등 잔여 한글 일괄 영문화. 사용자 정책: "시스템 인터페이스의 모든 문자는 영문". §5.21 과 병행 또는 독립 가능. 다음 = Step A 사용자 영문 라벨 결정 LOCK.
+>
+> 두 cycle 모두 spec v0.1 + todox v0.1 신규 등재 완료. 다음 세션 진입 시 바로 analyst 호출 가능.
 >
 > §5.19 codex 5 cycle (#1 6 finding → #5 ✅ APPROVE No findings, 누적 18 finding 모두 fix). 특히 #3 `.gitignore wiki/` silent kill (master 직접 fix, root anchor `/wiki/`). Step G obsidian-cdp 2 cycle (1차 FAIL — WikiFS R5 회귀 / 2차 PASS — 6 scenario 모두). 라이브 evidence: Scenario A `pageCount=218 / dangling=38` Status modal / Scenario B Check sha 별 1 row group + Apply fix / Scenario C Step 2 confirm → Step 3 "완료 (38 pages updated)" / Scenario D Refactoring duplicates 2+lowUtility 1 / Scenario E Dashboard health row click → Help nav / Scenario F Escape close. 1018 PASS / build 0 errors.
 >
