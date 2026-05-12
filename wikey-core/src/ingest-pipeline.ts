@@ -48,7 +48,12 @@ import {
 } from './incremental-reingest.js'
 import { canonicalize, applyCeilingCap, type ProposalForCeiling } from './canonicalizer.js'
 import { loadUserAliases } from './schema.js'
-import { applyMentionGuard, type MentionGuardLogEntry } from './wiki/mention-guard.js'
+import {
+  applyMentionGuard,
+  filterBasenameCollisions,
+  preFilterMentionsByOccurrence,
+  type MentionGuardLogEntry,
+} from './wiki/mention-guard.js'
 import { loadPromotionThreshold, loadPromotionConfig } from './promotion-config.js'
 import {
   EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
@@ -587,8 +592,18 @@ export async function ingest(
 
     onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model}) [FULL]` })
     const tMentions0 = Date.now()
-    const mentions = await extractMentions(llm, content, llmSourceFilename, provider, model, undefined, deterministic, stage2Template)
-    log(`stage 2.2 mention extraction done in ${Date.now() - tMentions0}ms (FULL, ${mentions.length} mentions)`)
+    const rawMentions = await extractMentions(llm, content, llmSourceFilename, provider, model, undefined, deterministic, stage2Template)
+    log(`stage 2.2 mention extraction done in ${Date.now() - tMentions0}ms (FULL, ${rawMentions.length} mentions)`)
+
+    // §5.21 v0.5 — Stage 2 pre-filter (사용자 raise: Stage 1 over-emit 자원 낭비).
+    // sourceBody substring count < promotionThreshold mention 을 canonicalizer
+    // LLM call *전* drop → token 절약. canonicalizer.ts applyPromotionGate 는
+    // LLM 호출 *후* 적용 — token cost 회피 불가.
+    const preFilter = preFilterMentionsByOccurrence(rawMentions, content, promotionThreshold)
+    const mentions = preFilter.kept
+    if (preFilter.dropped.length > 0) {
+      log(`stage 2.2 pre-filter dropped ${preFilter.dropped.length}/${rawMentions.length} mentions (occurrence < ${promotionThreshold})`)
+    }
 
     onProgress?.({ step: 2, total: 4, subStep: 2, subTotal: 3, message: `Canonicalizing (${model})` })
     parsed = await canonicalizeAndAssembleParsed({
@@ -644,13 +659,20 @@ export async function ingest(
     }
     log(`stage 2.2 mention extraction done in ${Date.now() - tSegMentions0}ms (SEGMENTED, ${targetSections.length} sections, ok=${sectionOk}/fail=${sectionFail}, ${allMentions.length} mentions)`)
 
+    // §5.21 v0.5 — Stage 2 pre-filter (FULL route 와 동일 로직, SEGMENTED 분기).
+    const segPreFilter = preFilterMentionsByOccurrence(allMentions, sourceContent, promotionThreshold)
+    const segMentions = segPreFilter.kept
+    if (segPreFilter.dropped.length > 0) {
+      log(`stage 2.2 pre-filter dropped ${segPreFilter.dropped.length}/${allMentions.length} mentions (occurrence < ${promotionThreshold})`)
+    }
+
     onProgress?.({
       step: 2, total: 4,
       subStep: targetSections.length + 1, subTotal: totalSteps,
       message: `Canonicalizing (${model}) [SEGMENTED ${targetSections.length + 1}/${totalSteps}]`,
     })
     parsed = await canonicalizeAndAssembleParsed({
-      llm, mentions: allMentions, existingEntityBases, existingConceptBases,
+      llm, mentions: segMentions, existingEntityBases, existingConceptBases,
       // §5.13.A1: rawSourceFilename = mask 안 된 원본 raw basename (sourceFilename 그대로).
       llmSourceFilename, rawSourceFilename: sourceFilename, summaryParsed, today,
       guideHint: opts?.guideHint, provider, model, userAliases,
@@ -860,6 +882,31 @@ export async function ingest(
   const mentionGuardLog: MentionGuardLogEntry[] = []
   const guardedEntities = new Map<string, string>() // filename → guarded content
   const guardedConcepts = new Map<string, string>()
+  // §5.21 v0.5 — basename collision guard (사용자 raise 2026-05-13). raw inbox /
+  // delayed basename 과 같은 wiki entity/concept filename emit 시 §5.13.A1
+  // ambiguity 발생 (Obsidian basename matcher 충돌). canonicalize 결과를 raw
+  // basename set 과 비교하여 pre-write drop. raw/0_inbox + raw/_delayed 만 scan
+  // (top-level, deep nested PARA 는 후속 — 가장 자주 conflict 발생 영역 cover).
+  const rawInboxBases = (await wikiFS.list('raw/0_inbox').catch(() => []))
+  const rawDelayedBases = (await wikiFS.list('raw/_delayed').catch(() => []))
+  const rawBasenameSet = new Set<string>([...rawInboxBases, ...rawDelayedBases])
+  const beforeEntities = parsed.entities?.length ?? 0
+  const beforeConcepts = parsed.concepts?.length ?? 0
+  if (parsed.entities) {
+    const ef = filterBasenameCollisions(parsed.entities, rawBasenameSet)
+    if (ef.dropped.length > 0) {
+      log(`stage 2 collision drop: ${ef.dropped.length}/${beforeEntities} entities — raw basename conflict`)
+    }
+    parsed = { ...parsed, entities: [...ef.kept] }
+  }
+  if (parsed.concepts) {
+    const cf = filterBasenameCollisions(parsed.concepts, rawBasenameSet)
+    if (cf.dropped.length > 0) {
+      log(`stage 2 collision drop: ${cf.dropped.length}/${beforeConcepts} concepts — raw basename conflict`)
+    }
+    parsed = { ...parsed, concepts: [...cf.kept] }
+  }
+
   // §5.21 v0.4 — mention-guard existingBases set: this-ingest pages ∪ vault
   // existing pages (entities + concepts + sources). I2 raw-filename fallback
   // AND I9 mention-only fallback both consult this set. existingEntityBases /

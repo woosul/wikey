@@ -190,6 +190,102 @@ function classifyLink(
 }
 
 /**
+ * §5.21 v0.5 — Stage 2 pre-filter (사용자 raise 2026-05-13).
+ *
+ * mention list + sourceBody 받아 deterministic substring count < threshold 인
+ * mention 을 drop. Stage 2 canonicalizer LLM call *전* 적용 → token 절약. 같은
+ * logic 이 canonicalizer.ts:applyPromotionGate 안에 있지만 그건 LLM 호출 *후*
+ * 적용 — Stage 2 token cost 회피 불가. 본 helper 가 LLM 호출 전 차단.
+ *
+ * Returns `{ kept, dropped }` — kept 만 canonicalize 로 전달.
+ *
+ * Pure function (I/O 없음). Mention 의 name + alias 의 sourceBody 등장 횟수가
+ * threshold 미만이면 drop.
+ */
+export interface PreFilteredMention {
+  readonly name: string
+  readonly type_hint?: string
+  readonly evidence: string
+}
+
+export interface PreFilterResult<T extends PreFilteredMention> {
+  readonly kept: readonly T[]
+  readonly dropped: readonly { mention: T; occurrences: number }[]
+}
+
+export function preFilterMentionsByOccurrence<T extends PreFilteredMention>(
+  mentions: readonly T[],
+  sourceBody: string,
+  threshold: number = 2,
+): PreFilterResult<T> {
+  const kept: T[] = []
+  const dropped: { mention: T; occurrences: number }[] = []
+  const lowerBody = sourceBody.toLowerCase()
+  for (const m of mentions) {
+    const name = (m.name ?? '').trim()
+    if (!name) {
+      dropped.push({ mention: m, occurrences: 0 })
+      continue
+    }
+    const occ = countOccurrences(lowerBody, name.toLowerCase())
+    if (occ < threshold) {
+      dropped.push({ mention: m, occurrences: occ })
+    } else {
+      kept.push(m)
+    }
+  }
+  return { kept, dropped }
+}
+
+function countOccurrences(haystack: string, needle: string): number {
+  if (!needle) return 0
+  let count = 0
+  let i = 0
+  while ((i = haystack.indexOf(needle, i)) !== -1) {
+    count++
+    i += needle.length
+  }
+  return count
+}
+
+/**
+ * §5.21 v0.5 — basename collision guard (사용자 raise 2026-05-13: "basename 도
+ * 기존에 있다면 중복으로 생성을 하지 말아야지").
+ *
+ * canonicalize 결과의 entity/concept filename 이 raw inbox basename set 과
+ * 충돌하면 drop. Obsidian basename matcher 가 raw vs wiki 동일 basename 시
+ * ambiguity (§5.13.A1) — 충돌 자체를 사전 차단.
+ *
+ * Returns `{ kept, dropped }` — kept 만 Stage 3 page write 로 전달.
+ */
+export interface CollisionCandidate {
+  readonly filename: string
+}
+
+export interface CollisionFilterResult<T extends CollisionCandidate> {
+  readonly kept: readonly T[]
+  readonly dropped: readonly T[]
+}
+
+export function filterBasenameCollisions<T extends CollisionCandidate>(
+  candidates: readonly T[],
+  rawBasenames: ReadonlySet<string>,
+): CollisionFilterResult<T> {
+  if (rawBasenames.size === 0) return { kept: candidates, dropped: [] }
+  const kept: T[] = []
+  const dropped: T[] = []
+  for (const c of candidates) {
+    const base = normalizeBase(c.filename)
+    if (rawBasenames.has(base) || rawBasenames.has(`${base}.md`)) {
+      dropped.push(c)
+    } else {
+      kept.push(c)
+    }
+  }
+  return { kept, dropped }
+}
+
+/**
  * §5.21 main API. Applies deterministic mention guard to `content` and returns
  * `{ content, log }`. Pure: no I/O, no side effects.
  *

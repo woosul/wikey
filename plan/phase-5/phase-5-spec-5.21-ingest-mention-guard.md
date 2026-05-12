@@ -1,11 +1,11 @@
 ---
 phase: 5
 section: 5.21
-title: Ingest pipeline mention guard — broken wikilink 근본 원인 1+2+3 fix (Spec)
+title: Ingest pipeline mention guard — broken wikilink 근본 원인 1+2+3 fix + Stage 2 efficiency + basename collision (Spec)
 status: draft
 created: 2026-05-12
 updated: 2026-05-13
-version: v0.4
+version: v0.5
 ---
 
 # Phase 5 §5.21 Ingest pipeline mention guard (Spec, WHAT)
@@ -180,3 +180,4 @@ codex review (NEEDS_REVISION, 7 finding) 의 7 issue master 직접 fix 반영:
 - v0.2 (2026-05-13): Step A LOCK. Q1 (하이브리드) / Q2 (plain text + log) / Q3 (target 만) 결정 + 근거 + Karpathy 4 원칙 cross-check (§1.6). Spec 1 invariants 갱신 (I1 plain text 명시 / I3 prompt hint 신규) + AC-S1-3 신규 (mention-guard log entry 형식). Spec 2 invariants 갱신 (I4 → I4/I5/I6 분리, alias preserve 명시) + AC-S2-3 신규 (idempotent). Out of Scope 4번째 추가 (mention-guard log UI). Dependencies 갱신 (log.md append + analyses page 누적). Step A 종결 표기.
 - v0.3 (2026-05-13): codex Mode D Panel review NEEDS_REVISION 7 finding (HIGH 2 + MEDIUM 3 + LOW 2) master 직접 fix. (1) HIGH-1 recursive feedback 회피 — log 위치 `wiki/analyses/mention-guard-<date>.md` → `.wikey/mention-guard-<date>.jsonl` (wiki/ 외부); `wiki/log.md` summary 는 raw `[[X]]` 미포함 텍스트만 (§1.5 Q2 + AC-S1-3 갱신). (2) HIGH-2 §5.13 source link 충돌 회피 — Spec 1 Goal scope 명시 + I7 신규 (scope exempt) + AC-S1-4 신규 (`## 출처` exempt fixture). (3) MEDIUM-3 evidence path 정정 — `phase-5-result.md §5.19.7` (~4188+) 로 변경. (4) MEDIUM-4 §5.20 handoff wording "future §5.20 extension" 으로 약화. (5) MEDIUM-5 baseline 585 통일 + overlap math 명시 (53% before overlap, ~24 overlap, ~49% union). (6) LOW-6 Step A byte-mirror — spec § 4 AC-S2-3 명시 + todox v0.3 mirror. (7) LOW-7 신규 parser API I8 (`parseWikilinksWithRanges` returning `{ original, target, alias, range }`). Dependencies 갱신 (wiki-ops.ts:488 재사용 불가 명시). mention-guard.ts LOC 한계 200 → 250 (scope exempt + parser 추가).
 - v0.4 (2026-05-13): **사용자 raise — mention-only (67%, 390건) 도 §5.21 cover 영역 확장**. spec title "근본 원인 1+3" → "1+2+3". Spec 3 신규 (vault page 미존재 wikilink → plain text, I9/I10 + AC-S3-1~3). Out of Scope §5.20 wording 갱신 (§5.20 는 진단/surface, §5.21 은 제거/clean — 동시 운영). cover scope ~49% → **~100%** (deterministic). reason enum 에 `'mention-only'` 추가. existingBases scope 확장 — 이번 ingest set ∪ vault 기존 wiki/entities + wiki/concepts + wiki/sources base set (ingest-pipeline.ts:536-541 의 existingEntityBases/existingConceptBases 재사용 + wiki/sources list 추가).
+- v0.5 (2026-05-13): **사용자 raise — paradigm 본질 (Stage 2 자원 효율 + basename 충돌 사전 차단)**. 사전 차단 = 사후 cleanup 우위. Spec 4/5 신규: (a) `preFilterMentionsByOccurrence(mentions, sourceBody, threshold)` — Stage 1 mention 결과 + sourceBody substring count → threshold (default 2) 미달 mention 을 Stage 2 canonicalizer LLM call *전* drop. canonicalizer.ts applyPromotionGate 와 동일 logic 이지만 LLM 호출 *전* 적용 → token 절약. ingest-pipeline.ts FULL/SEGMENTED 두 route 모두 hook. (b) `filterBasenameCollisions(candidates, rawBasenameSet)` — canonicalize 결과의 entity/concept filename 이 raw/0_inbox + raw/_delayed top-level basename 과 충돌하면 drop (§5.13.A1 ambiguity 사전 차단). deep nested PARA 는 후속. test 4 신규 (preFilter 2 + collision 2). 회귀 914 PASS / 188 PASS / build 0.

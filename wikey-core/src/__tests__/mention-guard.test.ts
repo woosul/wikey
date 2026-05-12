@@ -24,6 +24,8 @@ import { fileURLToPath } from 'node:url'
 
 import {
   applyMentionGuard,
+  filterBasenameCollisions,
+  preFilterMentionsByOccurrence,
   type MentionGuardLogEntry,
 } from '../wiki/mention-guard.js'
 
@@ -228,6 +230,46 @@ describe('§5.21 mention-guard — Spec 3 (vault membership, mention-only fallba
     expect(res.log.some((e) => e.original === '[[unknown-entity]]')).toBe(false)
     // ghost-concept and mythical-tool remain missing → still degraded.
     expect(res.log.some((e) => e.reason === 'mention-only')).toBe(true)
+  })
+})
+
+describe('§5.21 v0.5 — preFilterMentionsByOccurrence (Stage 2 pre-filter)', () => {
+  it('drops mentions with sourceBody substring count below threshold', () => {
+    const sourceBody = 'GPT-4o is a model. Claude is another model. GPT-4o appears twice. Once-only.'
+    const mentions = [
+      { name: 'GPT-4o', evidence: 'GPT-4o is a model' },
+      { name: 'Claude', evidence: 'Claude is another model' },
+      { name: 'Once-only', evidence: 'mentioned once' },
+    ]
+    const result = preFilterMentionsByOccurrence(mentions, sourceBody, 2)
+    expect(result.kept.map((m) => m.name)).toEqual(['GPT-4o'])
+    expect(result.dropped.map((d) => d.mention.name).sort()).toEqual(['Claude', 'Once-only'])
+  })
+
+  it('empty mention name is dropped with occurrences=0', () => {
+    const result = preFilterMentionsByOccurrence([{ name: '', evidence: 'x' }], 'body', 1)
+    expect(result.kept).toEqual([])
+    expect(result.dropped[0].occurrences).toBe(0)
+  })
+})
+
+describe('§5.21 v0.5 — filterBasenameCollisions (basename guard)', () => {
+  it('drops candidates whose filename collides with raw inbox basenames', () => {
+    const raw = new Set<string>(['llm-wiki.md', 'overview.pdf', 'note.md'])
+    const candidates = [
+      { filename: 'llm-wiki' }, // collides (raw `llm-wiki.md`)
+      { filename: 'overview' }, // collides (raw `overview.pdf` not — only .md mapped; but normalizeBase strips .md)
+      { filename: 'unique-entity' },
+    ]
+    const result = filterBasenameCollisions(candidates, raw)
+    expect(result.kept.map((c) => c.filename)).toContain('unique-entity')
+    expect(result.dropped.map((c) => c.filename)).toContain('llm-wiki')
+  })
+
+  it('empty rawBasenames set returns all candidates as kept', () => {
+    const result = filterBasenameCollisions([{ filename: 'x' }], new Set())
+    expect(result.kept.length).toBe(1)
+    expect(result.dropped.length).toBe(0)
   })
 })
 
