@@ -37,6 +37,10 @@ describe('§5.6.4.2 Step B — buildDefaultAuthFallback', () => {
     expect(msg).toContain('gemini')
     // English-only assertion — no Hangul codepoints (system language LOCK).
     expect(msg).not.toMatch(/[가-힯]/)
+    // codex cycle #3 F1 — AuthMode 'auto' 폐기 후 자동 fallback 안 함.
+    // "Switched to API key" / "Using API key" 같은 fallback 가정 문구 금지.
+    expect(msg).not.toMatch(/Switched to API key/i)
+    expect(msg).not.toMatch(/Using API key/i)
     // Reason-specific keyword present.
     const keywords: Record<typeof reason, RegExp> = {
       'quota-exceeded': /quota/i,

@@ -367,13 +367,17 @@ export function serializeCredentialsPayload(
 export function buildDefaultAuthFallback(
   noticeFn: (msg: string) => void,
 ): (info: AuthFallbackInfo) => void {
+  // §5.6.4 v0.7 codex cycle #3 F1 fix (2026-05-14): AuthMode 'auto' 폐기 후
+  // subscription 실패 = throw (no auto-retry). Notice 문구도 "Switched to API key"
+  // (fallback 가정) → "Subscription failed … switch to API Key if desired"
+  // (사용자가 mode 수동 전환) 으로 정정.
   return (info: AuthFallbackInfo): void => {
     const messages: Record<AuthFallbackInfo['reason'], string> = {
-      'quota-exceeded': `Switched to API key (${info.provider} subscription quota reached)`,
-      'auth-missing': `Switched to API key (${info.provider} not signed in)`,
-      'spawn-failed': `Switched to API key (${info.provider} CLI failed to launch)`,
-      'jsonMode-unsupported': `Using API key for JSON output (${info.provider} subscription not supported)`,
-      'timeout': `Switched to API key (${info.provider} subscription timeout)`,
+      'quota-exceeded': `${info.provider} subscription quota reached — switch Auth Mode to API Key if desired`,
+      'auth-missing': `${info.provider} subscription not signed in — switch Auth Mode to API Key or sign in`,
+      'spawn-failed': `${info.provider} CLI failed to launch — switch Auth Mode to API Key if desired`,
+      'jsonMode-unsupported': `${info.provider} subscription does not support JSON output — switch Auth Mode to API Key`,
+      'timeout': `${info.provider} subscription timeout — switch Auth Mode to API Key if persistent`,
     }
     noticeFn(messages[info.reason])
   }
