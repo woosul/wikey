@@ -25,7 +25,7 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 - **File over app** — plain-text credentials.json + auth_mode JSON, 양방향 migration
 - **BYOAI** — provider 선택 자유 확장 (기존 API key + 신규 subscription path)
 
-## 2. 10 commit (push X — codex cycle #4 + 사용자 사전 보고 후 진행)
+## 2. 11 commit (push X — codex cycle #4 APPROVE + 사용자 사전 보고 후 진행)
 
 | commit | hash | scope | 주요 변경 |
 |--------|------|-------|----------|
@@ -39,7 +39,7 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 | 8 | `94340ea` | section heading right-align note | `'API keys are stored in ~/.config/wikey/credentials.json'` 문구를 LLM Model Authentication (h3) 행의 오른쪽 정렬 + deep grey + 13pt. flex space-between wrapper. |
 | 9 | `8836ff9` | provider heading outside + right-align controls + plain badge | Provider 명 (h3) block 밖. section title 동일 크기 + font-weight:300 + accent color (`var(--interactive-accent)`). selectbox + button 우측 정렬 (justify-content: flex-end). badge 배경 없이 텍스트만. section title ↔ 첫 block 16px 여백. h3 selector specificity 강화 (Obsidian native 600 override). |
 | 10 | `f19f313` | codex cycle #3 F1 — Notice 문구 | AuthMode 'auto' 폐기 후 Notice 문구 정정 — `'Switched to API key'` → `'<provider> subscription failed — switch Auth Mode to API Key if desired'` 계열 5 reason. `default-auth-fallback.test.ts` `not.toMatch(/Switched\|Using API key/)` assertion 보강. |
-| 11 | (본 turn) | codex cycle #3 F2 — resultx 8 commit 갱신 | 본 §2 표 11 commit 으로 갱신. §3 (Step E) → §3a (commit 6~11 추가). §7 master CDP smoke 결과 commit 9 후 재실행 → 3 provider `signed-in (green)` 확증 (binary resolver 실효성). 최신 wikey-core 1093 / wikey-obsidian 215 PASS. |
+| 11 | `0bde7b7` | codex cycle #3 F2 — resultx 11 commit 갱신 | 본 §2 표 11 commit 갱신 + §2a commit 9 후 CDP smoke 결과 10 항목 PASS 표 추가. binary resolver 실효성 확증 (3 provider `signed-in` green). 최신 wikey-core 1093 / wikey-obsidian 215 PASS. |
 
 ### 2a. Commit 9 후 master CDP smoke 재실행 결과 (2026-05-14)
 
@@ -158,22 +158,24 @@ private async callWithFallback(
 
 ### 4.1 Routing scenarios (AC-S1~S8)
 
+> **v0.7 'auto' 폐기 mirror (commit 5 / codex cycle #3 F1 commit 10)**: AuthMode = `'none' | 'subscription' | 'api'` (explicit). 자동 API retry 폐기. AC-S4 / S9 의 "fallback" = subscription 실패 → **Notice surface + 사용자 수동 Auth Mode 전환** (자동 retry 아님). 단 backward-compat: legacy `'auto'` 값 (v0.6 사용자) 은 4 entry point 에서 자동 `'subscription'` 으로 마이그레이션.
+
 | AC | provider | 사용자 상태 | authMode | 기대 | evidence |
 |----|----------|------------|----------|------|----------|
-| S1 | Google | subscription only | `auto` | gemini CLI spawn 호출 성공 / API 0 | `llm-subscription-gemini.test.ts` "AC-S1 subscription only + auto" PASS + routing matrix case 1 PASS |
-| S2 | Google | API key only | `auto` | API path / spawn 0 | `llm-subscription-gemini.test.ts` "AC-S2 API only" PASS |
-| S3 | Google | 둘 다 | `auto` | subscription / API 0 | `llm-subscription-gemini.test.ts` "AC-S3 both + auto" PASS + routing matrix case 1 PASS |
-| S4 | Google | 둘 다 + quota | `auto` | subscription 401 detect → API fallback + onAuthFallback callback / Notice 영문 | `llm-subscription-gemini.test.ts` "AC-S4 quota fallback" PASS |
+| S1 | Google | subscription only | `subscription` | gemini CLI spawn 호출 성공 / API 0 | `llm-subscription-gemini.test.ts` "AC-S1 subscription only" PASS + routing matrix case 1 PASS |
+| S2 | Google | API key only | `api` | API path / spawn 0 | `llm-subscription-gemini.test.ts` "AC-S2 API only" PASS |
+| S3 | Google | 둘 다 | `subscription` | subscription 호출 / API 0 (사용자 explicit 선택) | `llm-subscription-gemini.test.ts` "AC-S3 subscription mode" PASS + routing matrix case 1 PASS |
+| S4 | Google | subscription + quota | `subscription` | subscription 401 detect → onAuthFallback Notice ("switch Auth Mode to API Key if desired") + **throw** (자동 retry 안 함) | `llm-subscription-gemini.test.ts` "AC-S4 quota Notice + throw" PASS + `default-auth-fallback.test.ts` `not.toMatch(/Switched\|Using API key/)` PASS |
 | S5 | Anthropic | 4 case | — | claude CLI OAuth | `llm-subscription-anthropic.test.ts` 16 case PASS |
 | S6 | OpenAI | 4 case | — | codex CLI exec OAuth | `llm-subscription-openai.test.ts` 16 case PASS |
-| S7 | 3 provider 모두 등록 | `auto` | provider 별 독립 routing | routing matrix case 7 PASS (3 spawn / 0 HTTP) |
-| S8 | force-api | `api` | subscription credential 있어도 시도 0 | routing matrix case 8 PASS (gemini API, others subscription) + 3 provider test "force-api" 각각 PASS |
+| S7 | 3 provider 모두 등록 | 각 `subscription` | provider 별 독립 routing | routing matrix case 7 PASS (3 spawn / 0 HTTP) |
+| S8 | gemini `api` / others `subscription` | mixed | provider 별 mode 격리 | routing matrix case 8 PASS (gemini API, others subscription) + 3 provider test "force-api" 각각 PASS |
 
 ### 4.2 Option preservation (AC-S9~S12)
 
 | AC | condition | 기대 | evidence |
 |----|-----------|------|----------|
-| S9 | `jsonMode: true` + subscription path | API path 자동 + `onAuthFallback({reason:'jsonMode-unsupported'})` | 3 provider test "AC-S9 jsonMode unsupported" 각각 PASS (force-sub 시 throw 분기 포함) |
+| S9 | `jsonMode: true` + `subscription` mode | onAuthFallback Notice (reason `'jsonMode-unsupported'`) + **throw** (자동 API retry 안 함, 사용자가 mode 수동 전환) | 3 provider test "AC-S9 jsonMode unsupported" 각각 PASS |
 | S10 | `model: <custom>` | spawn args 안 provider-specific model flag 포함 (`-m` / `--model` / `-m`) | 3 provider test "AC-S10 model option forwarded" 각각 PASS |
 | S11 | `temperature` / `maxTokens` / `seed` / `thinkingBudget` | subscription path silent ignore | 3 provider test "AC-S11 silent ignore" 각각 PASS |
 | S12 | `timeout` | spawn timeout 보존 (AbortController) | 3 provider test "AC-S12 spawn timeout" 각각 PASS |
@@ -182,14 +184,14 @@ private async callWithFallback(
 
 | I | invariant | code site (확증) |
 |---|-----------|-----------------|
-| I1 | 구독형 우선 routing | `llm-client.ts callWithFallback` line 1 — `resolveAuthMode` 결과 'subscription' 시 즉시 `subscriptionFn` 호출 (api 경로 진입 0) |
-| I2 | API fallback 자동 | `llm-client.ts callWithFallback` catch block — `mode==='auto'` + `hasApiKey` + actionable trigger 3 조건 모두 만족 시만 retry + `onAuthFallback` 호출 |
-| I3 | 사용자 제어 | `auth-resolver.ts resolveAuthMode` 의 force-subscription/force-api branch — fallback 안 함 (실패 시 throw) |
-| I4 | wiki 재생성 없음 | `git diff master..HEAD -- wiki/` = 0 (provider call path 만 변경) |
+| I1 | 구독형 우선 routing — `mode='subscription'` 시 subscription 시도 (commit 5 폐기 후 `'auto'` 진입 없음) | `llm-client.ts callWithFallback` — `resolveAuthMode` 결과 'subscription' 시 즉시 `subscriptionFn` 호출 (api 경로 진입 0) |
+| I2 | **Notice surface + manual Auth Mode switch** (commit 5 `'auto'` 자동 retry 폐기, commit 10 Notice 문구 정정) | `llm-client.ts callWithFallback` catch block — subscription 실패 시 `opts.onAuthFallback({reason})` 호출 후 **throw** (자동 retry 안 함). 사용자가 Settings UI dropdown 에서 mode 수동 전환. |
+| I3 | 사용자 explicit 제어 — `'none' \| 'subscription' \| 'api'` 명시 선택 | `auth-resolver.ts resolveAuthMode` 6-row truth table — fallback 안 함 (각 mode 실패 시 throw) |
+| I4 | wiki 재생성 없음 | `git diff 6ead5fb..HEAD -- wiki/` = 0 (provider call path 만 변경) |
 | I5 | 영문 UI | settings-tab.ts grep `[가-힣]` = comment / variable name 만 (CLAUDE.md 예외 a 허용) |
 | I6 | credentials.json read 금지 | 본 cycle 내 `Read` tool credentials.json 호출 0건 (master) |
 | I7 | subscription credential 단일 source | wikey-core/src 안 OAuth token storage 0 — `child_process.spawn` 위임만 |
-| I8 | 하드코딩 금지 | `cli-spawn.ts CLI_DEFAULT_BINARY` const + `provider-cli-options.ts CLI_OPTION_SUPPORT` const block + 각 const 에 출처 주석 |
+| I8 | 하드코딩 금지 — binary path 동적 resolution (commit 6 fix) | `cli-binary-resolver.ts resolveCliBinary` — env override > `command -v` > 정적 fallback (`/opt/homebrew/bin`, `/usr/local/bin`, `/Applications/cmux.app/Contents/Resources/bin`) > nvm glob. memoize. commit 9 후 CDP smoke 실효성 확증. |
 | I9 | LLMCallOptions 8 field 계약 보존 | `provider-cli-options.test.ts` 48-cell golden + AC-S10/S11/S12 evidence |
 | I10 | core ↔ UI 결합 0 | `grep -rn "from 'obsidian'" wikey-core/src/` 본문 = 0 (test fixture anchor 만) |
 | I11 | credentials migration round-trip | `wikey-obsidian/src/__tests__/save-credentials.test.ts` (commit 6 추가) — case 1 (v0.2 → v0.3 load + save 자동 auth 추가) / case 2 (v0.3 round-trip byte-identical) / case 3 (legacy 'auto' → 'subscription' migration) / case 4 (unknown user-added field `xaiApiKey` 보존) 4 PASS. `parseCredentialsPayload` / `serializeCredentialsPayload` pure helper 로 extract (테스트 격리). |
@@ -214,22 +216,31 @@ private async callWithFallback(
 - **commit prefix lock** — plan version 과 commit prefix 가 다르면 cycle 마다 codex 가 raise. 매 cycle 종결 시 grep gate.
 - **9 cycle 수렴**: 사용자 시간 비용 ≠ 0 이지만 codex finding 의 false-positive 가 거의 없어 master fix loop 비용 < codex 누락 발견 비용.
 
-## 7. master CDP smoke (별도 turn) — A0 gate
+## 7. master CDP smoke — A0 gate **PASS** (commit 9 후, 2026-05-14)
 
-**A0 status (commit 6 정정, codex cycle #2 F5 fix)**: **Partial** — vitest layer PASS, renderer-layer master CDP smoke 별도 turn 의무.
+**A0 status (final, codex cycle #4 verdict 영역)**: **PASS** — vitest layer + CDP renderer-layer 양쪽 모두 통과.
 
-- vitest layer (spawn-smoke / cli-spawn / llm-subscription-*): PASS
-- master 1차 CDP smoke (2026-05-14, 사용자 명시 진행): 회귀 발견 — binary path 하드코딩 (`/usr/local/bin/{gemini,claude,codex}`) 으로 nvm / cmux / Homebrew 환경에서 "Subscription: not detected" → I8 invariant 위반 (commit 5 까지 잠재). **commit 6 F1 fix** (`resolveCliBinary` + env override + PATH 검색 + 정적 fallback + nvm glob) 로 회귀 차단.
-- 차기 master CDP smoke (commit 6 push 후) 가 최종 A0 gate.
+| Layer | Status | Evidence |
+|-------|--------|----------|
+| **vitest layer** (spawn-smoke / cli-spawn / llm-subscription-* / cli-parser / provider-cli-options / save-credentials / build-config-auth-mode) | PASS | wikey-core 1093 PASS / wikey-obsidian 215 PASS (commit 11 시점 fresh re-run) |
+| **renderer-layer (CDP)** | PASS | §2a 10 항목 모두 PASS (commit 9 후 master 직접 실측, 2026-05-14) — binary resolver 실효성 + UI layout (provider heading 밖 / controls 우측 / badge transparent / section margin) 모두 확증 |
 
-**예상 smoke scenario** (사용자 진행 시):
-- Vault open → Settings → Wikey → 3 provider 카드 영문 (`LLM Model Authentication` 섹션) 확증 — Auth mode dropdown / Sign in / Sign out / status badge
-- Google: Sign in 클릭 → terminal `gemini` 가이드 Modal → 사용자 OAuth 완료 후 status "Subscription: detected" (commit 6 resolver 적용 후 nvm 환경에서도 detected)
-- Chat panel query "test 1" → spawn 호출 1건 (각 provider) + 응답 + Notice 영문 (F2 fix 후 primary Chat 경로도 onAuthFallback Notice surface)
-- force-api toggle → 동일 query API path 호출 + Notice "Switched to API key"
-- Cross-provider: 동시 등록 시 isolation (1 provider force-api / others subscription)
+**Smoke history**:
+1. **commit 5 시점 1차 master CDP smoke** (2026-05-14): UI 렌더 PASS / `Subscription: not detected × 3` 회귀 발견 — binary path 하드코딩 (`/usr/local/bin/{gemini,claude,codex}`) → nvm 환경에서 detection fail (I8 invariant 위반).
+2. **commit 6 F1 fix**: `resolveCliBinary` 단일 helper (env override + `command -v` + 정적 fallback + nvm glob + memoize) 도입.
+3. **commit 9 후 2차 master CDP smoke**: 3 provider 모두 `signed-in` (green badge) 확증 + UI layout 10 항목 PASS (§2a 표). **A0 gate 최종 PASS**.
 
-**deferred reason** (commit 5 까지): CDP smoke 는 real OAuth login state + real CLI binary 의존. 코드 결정성 영역 focus 로 보류. commit 6 master CDP smoke 결과는 다음 turn 에서 본 §7 갱신 + cycle #3 codex 송부 직전 확증.
+**확인된 UI 동작** (commit 9 후 실측):
+- `LLM Model Authentication` 섹션 heading + storage note (13pt deep grey, 오른쪽 정렬)
+- 3 provider heading (h3 외, 15px / weight 300 / accent color `rgb(138, 92, 245)`)
+- 각 통합 block: Auth Mode dropdown (None/Subscription/API Key, default subscription) + Subscription row (badge `signed-in` transparent background + `Sign out` 버튼) + API Key row (password input + Test 버튼) — controls 우측 정렬
+- Section title ↔ 첫 block 16px 여백 / provider 간 8px margin
+
+**Manual user flow** (real OAuth — 사용자 운용 영역):
+- Sign in 클릭 → Modal "Run 'X login' in terminal" 가이드 → 사용자 terminal OAuth 완료 → reload Obsidian → badge `signed-in` (green) + button `Sign out`
+- Chat panel query → spawn 호출 → 응답 + (실패 시) onAuthFallback Notice "subscription failed — switch Auth Mode to API Key if desired" (commit 10 F1 fix 양식)
+- force-api (사용자가 dropdown 'API Key' 선택) → API path 호출
+- Cross-provider isolation: 3 provider 독립 mode 선택 가능 (auto 폐기 — 모두 explicit)
 
 ## 7a. Commit traceability (codex cycle #2 F6 fix, LOW)
 
