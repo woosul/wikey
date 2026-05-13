@@ -1,15 +1,83 @@
-import type { HttpClient, LLMCallOptions, LLMProvider, WikeyConfig } from './types.js'
+import type {
+  AuthFallbackInfo,
+  HttpClient,
+  LLMCallOptions,
+  LLMProvider,
+  SubscriptionProvider,
+  WikeyConfig,
+} from './types.js'
 import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
+import {
+  detectFallbackTrigger,
+  resolveAuthMode,
+  type CredentialPresence,
+} from './auth-resolver.js'
+import {
+  spawnCliPrompt as defaultSpawnCliPrompt,
+  CLI_DEFAULT_BINARY,
+  type SpawnCliOptions,
+  type SpawnCliResult,
+} from './cli-spawn.js'
+import { mapOptionsToCliArgs } from './provider-cli-options.js'
+import { parseSubscriptionOutput } from './cli-parser.js'
 
 const DEFAULT_TIMEOUT = 300_000
 const DEFAULT_MAX_TOKENS = 65_536
 const DEFAULT_TEMPERATURE = 0.1
 
+/**
+ * §5.6.4.2 Step B — pluggable side-effect surface for subscription routing.
+ * Production wires `spawnCliPrompt` (real child_process) + `existsSync` (real fs).
+ * Tests inject deterministic mocks (no spawn / no fs hits).
+ *
+ * Why injection over `vi.mock`: keeps `wikey-core` free of test-only hooks at
+ * import time, lets multiple tests share a single LLMClient instance with
+ * different presence triplets, and surfaces the contract explicitly.
+ */
+export interface SubscriptionDeps {
+  readonly spawnCliPrompt?: (
+    provider: SubscriptionProvider,
+    prompt: string,
+    opts?: SpawnCliOptions,
+  ) => Promise<SpawnCliResult>
+  /** Check whether `path` exists. Default = `node:fs.existsSync`. */
+  readonly fileExists?: (path: string) => boolean
+  /** Override `~` resolution (default = `node:os.homedir()`). Tests inject a fixture path. */
+  readonly homeDir?: () => string
+}
+
+/**
+ * §5.6.4 §3.9 — auth-missing reason for force-subscription failures. Reused by
+ * UI Notice mapping in main.ts (`messages` table).
+ */
+type FallbackReason = AuthFallbackInfo['reason']
+
 export class LLMClient {
+  private readonly subscriptionDeps: Required<SubscriptionDeps>
+
   constructor(
     private readonly httpClient: HttpClient,
     private readonly config: WikeyConfig,
-  ) {}
+    subscriptionDeps: SubscriptionDeps = {},
+  ) {
+    this.subscriptionDeps = {
+      spawnCliPrompt: subscriptionDeps.spawnCliPrompt ?? defaultSpawnCliPrompt,
+      fileExists:
+        subscriptionDeps.fileExists ??
+        ((p: string): boolean => {
+          // Lazy-require so wikey-core bundles that never use subscription paths
+          // (e.g. pure browser builds — none today, but defensive) don't pull `fs`.
+          const fs = require('node:fs') as typeof import('node:fs')
+          return fs.existsSync(p)
+        }),
+      homeDir:
+        subscriptionDeps.homeDir ??
+        ((): string => {
+          const os = require('node:os') as typeof import('node:os')
+          return os.homedir()
+        }),
+    }
+  }
 
   async call(prompt: string, opts?: LLMCallOptions): Promise<string> {
     const provider = opts?.provider ?? 'gemini'
@@ -28,7 +96,104 @@ export class LLMClient {
     }
   }
 
+  /**
+   * §5.6.4 §3.8 — credential presence detector for `gemini`.
+   *
+   * Subscription detected = `~/.gemini/oauth_creds.json` exists AND CLI binary
+   * (`CLI_DEFAULT_BINARY.gemini`) exists. API detected = `GEMINI_API_KEY`
+   * config field is non-empty. Both checks are sync (no spawn) so this is
+   * safe to call on every request.
+   */
+  checkGeminiPresence(): CredentialPresence {
+    const path = require('node:path') as typeof import('node:path')
+    const credsPath = path.join(this.subscriptionDeps.homeDir(), '.gemini', 'oauth_creds.json')
+    const hasOauth = this.subscriptionDeps.fileExists(credsPath)
+    const hasBinary = this.subscriptionDeps.fileExists(CLI_DEFAULT_BINARY.gemini)
+    return {
+      hasSubscription: hasOauth && hasBinary,
+      hasApiKey: !!this.config.GEMINI_API_KEY,
+    }
+  }
+
   private async callGemini(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const presence = this.checkGeminiPresence()
+    // resolveAuthMode throws when neither credential is registered AND no force-mode
+    // satisfies the demand. callGeminiApi's own guard ('GEMINI_API_KEY not set') is
+    // preserved for force-api with no key (resolveAuthMode throws first with the
+    // same intent — provider parity).
+    const path = resolveAuthMode('gemini', this.config, presence)
+    if (path !== 'subscription') {
+      return this.callGeminiApi(prompt, opts)
+    }
+    return this.callGeminiWithFallback(prompt, opts, presence)
+  }
+
+  private async callGeminiWithFallback(
+    prompt: string,
+    opts: LLMCallOptions | undefined,
+    presence: CredentialPresence,
+  ): Promise<string> {
+    try {
+      return await this.callGeminiSubscription(prompt, opts)
+    } catch (err) {
+      const reason = classifyFallbackReason(err)
+      const mode = this.config.GEMINI_AUTH_MODE ?? 'auto'
+      // auto + has API key + actionable reason = retry on API path.
+      if (mode === 'auto' && presence.hasApiKey && reason !== null) {
+        opts?.onAuthFallback?.({ provider: 'gemini', reason, originalError: err as Error })
+        return this.callGeminiApi(prompt, opts)
+      }
+      throw err
+    }
+  }
+
+  /**
+   * §5.6.4.2 Step B — gemini subscription path (CLI spawn → parseSubscriptionOutput).
+   *
+   * Failure modes (caller catches + classifies):
+   *   - jsonMode requested → throw SubscriptionUnsupportedError('jsonMode-unsupported')
+   *   - CLI spawn ENOENT  → throw with cause; classifyFallbackReason returns 'spawn-failed'
+   *   - aborted (timeout) → throw with reason 'timeout'
+   *   - auth missing       → throw with reason from detectFallbackTrigger
+   *   - quota              → ditto
+   *   - nonzero exit       → throw raw stderr (api fallback can recover in auto mode)
+   */
+  private async callGeminiSubscription(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const mapped = mapOptionsToCliArgs('gemini', 'subscription', opts ?? {})
+    if (mapped.unsupported === 'jsonMode') {
+      throw new SubscriptionFallbackError('jsonMode-unsupported', 'gemini subscription does not support jsonMode')
+    }
+
+    const spawnOpts: SpawnCliOptions = {
+      extraArgs: mapped.args,
+      timeoutMs: opts?.timeout,
+    }
+    let result: SpawnCliResult
+    try {
+      result = await this.subscriptionDeps.spawnCliPrompt('gemini', prompt, spawnOpts)
+    } catch (err) {
+      // spawn-time error (ENOENT etc.) — classified as spawn-failed.
+      throw new SubscriptionFallbackError('spawn-failed', `gemini CLI spawn failed: ${(err as Error).message}`, err as Error)
+    }
+
+    if (result.aborted) {
+      throw new SubscriptionFallbackError('timeout', 'gemini CLI aborted (timeout or external signal)')
+    }
+
+    if (result.exitCode !== 0) {
+      const triggerReason = detectFallbackTrigger({
+        status: 0,
+        stderr: result.stderr,
+        body: result.stdout,
+      })
+      const reason: FallbackReason = triggerReason ?? 'spawn-failed'
+      throw new SubscriptionFallbackError(reason, `gemini CLI exit ${result.exitCode}: ${result.stderr.trim() || '<no stderr>'}`)
+    }
+
+    return parseSubscriptionOutput('gemini', result.stdout)
+  }
+
+  private async callGeminiApi(prompt: string, opts?: LLMCallOptions): Promise<string> {
     const apiKey = this.config.GEMINI_API_KEY
     if (!apiKey) throw new Error('GEMINI_API_KEY not set — configure API key in settings')
 
@@ -295,4 +460,32 @@ function stripThinkingBlock(text: string): string {
   const idx = text.toLowerCase().indexOf(marker)
   if (idx === -1) return text
   return text.slice(idx + marker.length).replace(/^[.\n ]+/, '')
+}
+
+/**
+ * §5.6.4.2 Step B — typed subscription failure carrying the AuthFallbackInfo.reason.
+ * Thrown by `callGeminiSubscription` (and future claude/codex subscription paths)
+ * so the wrapper `callGeminiWithFallback` can decide retry vs throw with one branch.
+ *
+ * Plain `Error` subclass — no instanceof check across realms is required (single
+ * bundle / single VM in Obsidian renderer + Node test runner).
+ */
+export class SubscriptionFallbackError extends Error {
+  constructor(
+    public readonly reason: FallbackReason,
+    message: string,
+    public readonly cause?: Error,
+  ) {
+    super(message)
+    this.name = 'SubscriptionFallbackError'
+  }
+}
+
+/**
+ * Extract the FallbackReason from an error. Returns null when the error is not
+ * a recognized subscription failure (caller surfaces original).
+ */
+function classifyFallbackReason(err: unknown): FallbackReason | null {
+  if (err instanceof SubscriptionFallbackError) return err.reason
+  return null
 }

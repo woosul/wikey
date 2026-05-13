@@ -1,5 +1,12 @@
 import { Notice, Plugin, TFile, WorkspaceLeaf, requestUrl } from 'obsidian'
-import type { HttpClient, HttpRequestOptions, HttpResponse, WikiFS, WikeyConfig } from 'wikey-core'
+import type {
+  AuthFallbackInfo,
+  HttpClient,
+  HttpRequestOptions,
+  HttpResponse,
+  WikiFS,
+  WikeyConfig,
+} from 'wikey-core'
 import {
   LLMClient,
   parseWikeyConf,
@@ -55,6 +62,7 @@ import { registerCommands } from './commands'
 import { detectEnvironment, buildExecEnv } from './env-detect'
 import type { EnvStatus } from './env-detect'
 import { ensureParaFolders } from './setup-para'
+import { buildAuthModesForConfig } from './auth-mode-bridge'
 
 interface WikeySettings {
   basicModel: string
@@ -62,6 +70,10 @@ interface WikeySettings {
   geminiApiKey: string
   anthropicApiKey: string
   openaiApiKey: string
+  // §5.6.4 — per-provider auth mode (default 'auto').
+  geminiAuthMode: 'subscription' | 'api' | 'auto'
+  anthropicAuthMode: 'subscription' | 'api' | 'auto'
+  openaiAuthMode: 'subscription' | 'api' | 'auto'
   ollamaUrl: string
   qmdPath: string
   costLimit: number
@@ -159,6 +171,10 @@ const DEFAULT_SETTINGS: WikeySettings = {
   geminiApiKey: '',
   anthropicApiKey: '',
   openaiApiKey: '',
+  // §5.6.4 — default 'auto' (subscription first with API fallback).
+  geminiAuthMode: 'auto',
+  anthropicAuthMode: 'auto',
+  openaiAuthMode: 'auto',
   ollamaUrl: 'http://localhost:11434',
   qmdPath: '',
   costLimit: 50,
@@ -267,6 +283,36 @@ export interface FilterCallOptionsResult {
   timeout: number
   /** §5.7.9 I2 — gemini-2.5 thinking opt-out for advanced query tuning. */
   thinkingBudget?: number
+  /**
+   * §5.6.4.2 Step B — auth-mode fallback callback. main.ts injects a Notice-surfacing
+   * default; downstream layers (filter / rewriter / expander / analyzer + ingest)
+   * forward it verbatim to LLMClient.call → onAuthFallback.
+   */
+  onAuthFallback?: (info: AuthFallbackInfo) => void
+}
+
+/**
+ * §5.6.4.2 Step B — default Notice surfacing for subscription→API fallback events.
+ *
+ * Stable English strings (system language LOCK 2026-05-12). Each `reason` maps to a
+ * single concise message; unknown reasons fall through to a generic message.
+ *
+ * Pure function — `noticeFn` injected for unit-testability (vitest does not run
+ * inside Obsidian, so `new Notice` would throw). Default = real `Notice` in renderer.
+ */
+export function buildDefaultAuthFallback(
+  noticeFn: (msg: string) => void,
+): (info: AuthFallbackInfo) => void {
+  return (info: AuthFallbackInfo): void => {
+    const messages: Record<AuthFallbackInfo['reason'], string> = {
+      'quota-exceeded': `Switched to API key (${info.provider} subscription quota reached)`,
+      'auth-missing': `Switched to API key (${info.provider} not signed in)`,
+      'spawn-failed': `Switched to API key (${info.provider} CLI failed to launch)`,
+      'jsonMode-unsupported': `Using API key for JSON output (${info.provider} subscription not supported)`,
+      'timeout': `Switched to API key (${info.provider} subscription timeout)`,
+    }
+    noticeFn(messages[info.reason])
+  }
 }
 
 /**
@@ -327,6 +373,12 @@ export interface GenerationToken {
 export function buildFilterCallOptionsFromSettings(
   settings: FilterCallOptionsInputs,
   baseConfig: WikeyConfig,
+  /**
+   * §5.6.4.2 Step B — optional default auth fallback callback. Injected by main.ts
+   * `buildFilterCallOptions()` to surface a Notice on subscription→API fallback.
+   * Tests omit this param so the helper stays pure (no Obsidian import).
+   */
+  onAuthFallback?: (info: AuthFallbackInfo) => void,
 ): FilterCallOptionsResult {
   const overrideProvider = settings.advancedQueryTuningProvider
   const overrideModel = settings.advancedQueryTuningModel
@@ -356,6 +408,7 @@ export function buildFilterCallOptionsFromSettings(
     // §5.7.9 I2 — advanced query tuning 4 layer (filter / rewriter / expander /
     // analyzer) 모두 결정적 짧은 JSON. thinking off 로 gemini-2.5-* 호환 + cost 절약.
     thinkingBudget: 0,
+    onAuthFallback,
   }
 }
 
@@ -824,7 +877,10 @@ export default class WikeyPlugin extends Plugin {
         // §5.7.5 라이브 smoke fix — LLMClient public API = `call(prompt, opts?)`,
         // not `callLLM` (verified in wikey-core/src/llm-client.ts:14). 사용자 결정 #3
         // (buildConfig default provider) mirror — opts omit → default `gemini`.
-        return await this.llmClient.call(prompt)
+        // §5.6.4.2 Step B — inject Notice surfacing for subscription→API fallback.
+        return await this.llmClient.call(prompt, {
+          onAuthFallback: buildDefaultAuthFallback((msg) => new Notice(msg)),
+        })
       },
     }
     const analysis = await analyzeUpdate({ item, llm, fetch: fetcher })
@@ -981,6 +1037,13 @@ export default class WikeyPlugin extends Plugin {
         ? 'off'
         : this.settings.advancedQueryTuningMode
 
+      // §5.6.4 — auth mode override from wikey.conf. Invalid values fall through
+      // to current settings (no silent acceptance). Recognised: 'subscription' | 'api' | 'auto'.
+      const parseAuthMode = (raw: unknown, current: WikeySettings['geminiAuthMode']): WikeySettings['geminiAuthMode'] => {
+        if (raw === 'subscription' || raw === 'api' || raw === 'auto') return raw
+        return current
+      }
+
       this.settings = {
         ...this.settings,
         basicModel: (conf.WIKEY_BASIC_MODEL as string) || this.settings.basicModel,
@@ -996,6 +1059,10 @@ export default class WikeyPlugin extends Plugin {
         searchRrfK: rrfKFromConf,
         advancedQueryTuningEnabled: advancedFromConf,
         advancedQueryTuningMode: modeFromConf,
+        // §5.6.4 — auth mode from wikey.conf (priority below process.env, above credentials.json).
+        geminiAuthMode: parseAuthMode(conf.WIKEY_GEMINI_AUTH_MODE, this.settings.geminiAuthMode),
+        anthropicAuthMode: parseAuthMode(conf.WIKEY_ANTHROPIC_AUTH_MODE, this.settings.anthropicAuthMode),
+        openaiAuthMode: parseAuthMode(conf.WIKEY_OPENAI_AUTH_MODE, this.settings.openaiAuthMode),
       }
     } catch {
       // wikey.conf 없음 — data.json 값 유지
@@ -1079,17 +1146,29 @@ export default class WikeyPlugin extends Plugin {
     }
   }
 
+  // §5.6.4 A5 — credentials.json round-trip storage for unknown fields (F2).
+  // Preserves user-added keys (e.g. future xaiApiKey) so saveCredentials does
+  // not drop them. Set on loadCredentials, re-spread on saveCredentials.
+  private credentialsRaw: Record<string, unknown> = {}
+
   loadCredentials(): void {
     try {
       const fs = require('node:fs') as typeof import('node:fs')
       const raw = fs.readFileSync(this.credentialsPath, 'utf-8')
-      const data = JSON.parse(raw)
+      const data = JSON.parse(raw) as Record<string, unknown>
+      const auth = (data.auth as Record<string, { mode?: 'subscription' | 'api' | 'auto' }> | undefined) ?? {}
       this.settings = {
         ...this.settings,
-        geminiApiKey: data.geminiApiKey ?? '',
-        anthropicApiKey: data.anthropicApiKey ?? '',
-        openaiApiKey: data.openaiApiKey ?? '',
+        geminiApiKey: (data.geminiApiKey as string | undefined) ?? '',
+        anthropicApiKey: (data.anthropicApiKey as string | undefined) ?? '',
+        openaiApiKey: (data.openaiApiKey as string | undefined) ?? '',
+        // §5.6.4 — auth sub-object (default 'auto'). Missing fields → 'auto'.
+        geminiAuthMode: auth.gemini?.mode ?? 'auto',
+        anthropicAuthMode: auth.anthropic?.mode ?? 'auto',
+        openaiAuthMode: auth.openai?.mode ?? 'auto',
       }
+      // F2: snapshot raw payload so unknown fields survive a save round-trip.
+      this.credentialsRaw = data
     } catch {
       // 파일 없음 — 초기 상태
     }
@@ -1100,18 +1179,20 @@ export default class WikeyPlugin extends Plugin {
     const path = require('node:path') as typeof import('node:path')
     const dir = path.dirname(this.credentialsPath)
     fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(
-      this.credentialsPath,
-      JSON.stringify(
-        {
-          geminiApiKey: this.settings.geminiApiKey,
-          anthropicApiKey: this.settings.anthropicApiKey,
-          openaiApiKey: this.settings.openaiApiKey,
-        },
-        null,
-        2,
-      ),
-    )
+    // §5.6.4 A5 — v0.3 schema (lower-camel keys + auth sub-object). Unknown fields
+    // from credentialsRaw are spread first; known fields override deterministically.
+    const out: Record<string, unknown> = {
+      ...this.credentialsRaw,
+      geminiApiKey: this.settings.geminiApiKey,
+      anthropicApiKey: this.settings.anthropicApiKey,
+      openaiApiKey: this.settings.openaiApiKey,
+      auth: {
+        gemini: { mode: this.settings.geminiAuthMode ?? 'auto' },
+        anthropic: { mode: this.settings.anthropicAuthMode ?? 'auto' },
+        openai: { mode: this.settings.openaiAuthMode ?? 'auto' },
+      },
+    }
+    fs.writeFileSync(this.credentialsPath, JSON.stringify(out, null, 2))
   }
 
   scheduleChatSave() {
@@ -1492,7 +1573,13 @@ export default class WikeyPlugin extends Plugin {
    * Logic + tests live with the helper; this method only forwards plugin state.
    */
   private buildFilterCallOptions(): FilterCallOptionsResult {
-    return buildFilterCallOptionsFromSettings(this.settings, this.buildConfig())
+    return buildFilterCallOptionsFromSettings(
+      this.settings,
+      this.buildConfig(),
+      // §5.6.4.2 Step B — surface Notice on subscription→API fallback. Helper stays pure
+      // (no Obsidian import); injection happens here at the plugin boundary.
+      buildDefaultAuthFallback((msg) => new Notice(msg)),
+    )
   }
 
   /**
@@ -1587,6 +1674,9 @@ export default class WikeyPlugin extends Plugin {
     const envRrfK = process.env.WIKEY_RRF_K
     const rrfKParsed = envRrfK ? Number.parseInt(envRrfK, 10) : (this.settings.searchRrfK ?? 60)
     const rrfK = Number.isFinite(rrfKParsed) && rrfKParsed > 0 ? rrfKParsed : 60
+    // §5.6.4 — auth mode merge (process.env > settings > 'auto'). Single source of truth lives in
+    // auth-mode-bridge.ts so build-config-auth-mode.test.ts and buildConfig() stay in sync.
+    const authModes = buildAuthModesForConfig(this.settings)
     return {
       WIKEY_BASIC_MODEL: this.settings.basicModel,
       WIKEY_SEARCH_BACKEND: 'basic',
@@ -1608,6 +1698,10 @@ export default class WikeyPlugin extends Plugin {
       OCR_PROVIDER: this.settings.ocrProvider || undefined,
       OCR_MODEL: this.settings.ocrModel || undefined,
       WIKEY_EXTRACTION_DETERMINISM: this.settings.extractionDeterminism || undefined,
+      // §5.6.4 A5 — per-provider subscription auth mode.
+      GEMINI_AUTH_MODE: authModes.GEMINI_AUTH_MODE,
+      ANTHROPIC_AUTH_MODE: authModes.ANTHROPIC_AUTH_MODE,
+      OPENAI_AUTH_MODE: authModes.OPENAI_AUTH_MODE,
     }
   }
 

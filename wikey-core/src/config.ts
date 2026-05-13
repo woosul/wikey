@@ -31,6 +31,12 @@ const DEFAULTS: WikeyConfig = {
   SUMMARIZE_PROVIDER: '',
   CONTEXTUAL_MODEL: CONTEXTUAL_DEFAULT_MODEL,
   COST_LIMIT: 50,
+  // §5.6.4 — per-provider auth mode defaults. 'auto' = subscription first,
+  // API fallback on quota/401/429. Users override via wikey.conf or
+  // credentials.json `auth.<provider>.mode`.
+  GEMINI_AUTH_MODE: 'auto',
+  ANTHROPIC_AUTH_MODE: 'auto',
+  OPENAI_AUTH_MODE: 'auto',
 }
 
 /**

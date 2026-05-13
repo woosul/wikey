@@ -107,6 +107,11 @@ export interface WikeyConfig {
   readonly DOCLING_OCR_LANG?: string            // 기본 'ko-KR,en-US'
   readonly DOCLING_TIMEOUT_MS?: number          // 기본 300000
   readonly DOCLING_DISABLE?: boolean            // true = tier 1 스킵 (디버깅/벤치마크용)
+
+  // §5.6.4 — per-provider subscription auth mode (default 'auto').
+  readonly GEMINI_AUTH_MODE?: AuthMode
+  readonly ANTHROPIC_AUTH_MODE?: AuthMode
+  readonly OPENAI_AUTH_MODE?: AuthMode
 }
 
 // ── Provenance (§4.3.2 Part A, Phase 4.3) ──
@@ -135,6 +140,48 @@ export interface ProvenanceEntry {
 
 export type LLMProvider = 'gemini' | 'anthropic' | 'openai' | 'ollama'
 
+/**
+ * §5.6.4 — subscription/api/auto routing mode (per-provider).
+ *   - 'subscription' : force CLI OAuth path (no API fallback on failure)
+ *   - 'api'          : force HTTP API key path (no subscription attempt)
+ *   - 'auto'         : subscription first, API fallback on quota/401/429
+ */
+export type AuthMode = 'subscription' | 'api' | 'auto'
+
+/** §5.6.4 — routing-resolved path (`AuthMode` minus 'auto', what the call site actually executes). */
+export type AuthPath = 'subscription' | 'api'
+
+/**
+ * §5.6.4 — providers that support a subscription OAuth path. ollama is
+ * local-only (no subscription concept) so it is excluded.
+ */
+export type SubscriptionProvider = Exclude<LLMProvider, 'ollama'>
+
+/**
+ * §5.6.4 — single source of truth for the path-support matrix row union.
+ * Excludes:
+ *   - `provider` : selects the *column-set* itself (meta)
+ *   - `onAuthFallback` : UI callback, not a CLI flag / API param
+ * Resulting cardinality = 8 (model / temperature / maxTokens / seed /
+ *   responseMimeType / jsonMode / thinkingBudget / timeout).
+ */
+export type LLMCliOptionField = Exclude<keyof LLMCallOptions, 'provider' | 'onAuthFallback'>
+
+/**
+ * §5.6.4 §3.9 — fallback diagnostic surfaced to UI Notice via callback.
+ * core/ui decoupled — wikey-core never imports `obsidian` (I10).
+ */
+export interface AuthFallbackInfo {
+  readonly provider: SubscriptionProvider
+  readonly reason:
+    | 'quota-exceeded'       // 401/429 from subscription path
+    | 'auth-missing'         // CLI not signed in
+    | 'spawn-failed'         // child_process error
+    | 'jsonMode-unsupported' // F1: subscription CLI cannot enforce JSON
+    | 'timeout'              // spawn timeout / AbortController abort
+  readonly originalError?: Error
+}
+
 export interface LLMCallOptions {
   readonly provider?: LLMProvider
   readonly model?: string
@@ -153,6 +200,13 @@ export interface LLMCallOptions {
    * providers ignore this field.
    */
   readonly thinkingBudget?: number
+  /**
+   * §5.6.4 §3.9 — invoked once when the subscription path falls back to API
+   * (auto mode) or when subscription fails (force-subscription throws *before*
+   * this callback). Used by main.ts to surface an Obsidian Notice while keeping
+   * `wikey-core` Obsidian-free (I10).
+   */
+  readonly onAuthFallback?: (info: AuthFallbackInfo) => void
 }
 
 // ── Wiki ──

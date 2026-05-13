@@ -1,0 +1,1 @@
+Here's how to use model:gemini-pro for queries. Also workdir: paths matter. tokens used: in metadata.

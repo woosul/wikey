@@ -1,0 +1,1 @@
+Error: not logged in. Run `codex login` to authenticate with ChatGPT.

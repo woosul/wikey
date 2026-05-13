@@ -1205,8 +1205,93 @@ export class WikeySettingTab extends PluginSettingTab {
     })
 
     this.renderApiKeyField(containerEl, 'Google Gemini', 'geminiApiKey', 'AIza...', 'gemini')
+    // §5.6.4.2 Step B — Google subscription (Gemini Advanced via `gemini` CLI OAuth).
+    this.renderGoogleAuthModeCard(containerEl)
     this.renderApiKeyField(containerEl, 'Anthropic Claude', 'anthropicApiKey', 'sk-ant-...', 'anthropic')
     this.renderApiKeyField(containerEl, 'OpenAI Codex', 'openaiApiKey', 'sk-...', 'openai')
+  }
+
+  /**
+   * §5.6.4.2 Step B — Google provider Auth mode card.
+   *
+   * Three controls (all English per system language LOCK 2026-05-12):
+   *   1. dropdown — Auth mode: Subscription / API key / Auto (default)
+   *   2. status   — Subscription detected? + API key configured?
+   *   3. buttons  — Sign in with Google / Sign out (open instruction Modal)
+   *
+   * The subscription path runs `gemini` CLI via wikey-core's spawnCliPrompt. We do
+   * not invoke `gemini login` from the plugin (Obsidian renderer has no TTY); the
+   * user runs it in their terminal, then returns + reloads.
+   */
+  private renderGoogleAuthModeCard(containerEl: HTMLElement): void {
+    const cardEl = containerEl.createDiv({ cls: 'wikey-settings-auth-mode-card' })
+
+    new Setting(cardEl)
+      .setName('Auth mode')
+      .setDesc('How wikey calls Gemini. Auto = subscription first, API fallback.')
+      .addDropdown((dd) => {
+        dd.addOption('subscription', 'Subscription (Gemini Advanced)')
+        dd.addOption('api', 'API key')
+        dd.addOption('auto', 'Auto (subscription first, API fallback)')
+        dd.setValue(this.plugin.settings.geminiAuthMode ?? 'auto')
+        dd.onChange(async (value) => {
+          if (value === 'subscription' || value === 'api' || value === 'auto') {
+            this.plugin.settings.geminiAuthMode = value
+            await this.plugin.saveSettings()
+          }
+        })
+      })
+
+    const statusEl = cardEl.createDiv({ cls: 'wikey-settings-status-row' })
+    const subscriptionDetected = this.detectGeminiSubscription()
+    const apiConfigured = !!this.plugin.settings.geminiApiKey
+    statusEl.createEl('span', {
+      text: `Subscription: ${subscriptionDetected ? 'detected' : 'not detected'}`,
+      cls: 'wikey-settings-status-label',
+    })
+    statusEl.createEl('span', {
+      text: ` · API key: ${apiConfigured ? 'configured' : 'empty'}`,
+      cls: 'wikey-settings-status-label',
+    })
+
+    new Setting(cardEl)
+      .addButton((btn) => {
+        btn.setButtonText('Sign in with Google').onClick(() => {
+          new GeminiAuthInstructionModal(
+            this.app,
+            'Sign in with Google',
+            'Run "gemini login" in your terminal, then return here and reload Obsidian.',
+          ).open()
+        })
+      })
+      .addButton((btn) => {
+        btn.setButtonText('Sign out').onClick(() => {
+          new GeminiAuthInstructionModal(
+            this.app,
+            'Sign out',
+            'Run "gemini logout" in your terminal.',
+          ).open()
+        })
+      })
+  }
+
+  /**
+   * §5.6.4.2 Step B — sync detection: gemini CLI binary AND OAuth credentials both
+   * present. Mirrors `LLMClient.checkGeminiPresence` so the Settings UI shows the
+   * same state the runtime will see. Sync (no spawn) — safe in renderer.
+   */
+  private detectGeminiSubscription(): boolean {
+    try {
+      const fs = require('node:fs') as typeof import('node:fs')
+      const os = require('node:os') as typeof import('node:os')
+      const path = require('node:path') as typeof import('node:path')
+      const credsPath = path.join(os.homedir(), '.gemini', 'oauth_creds.json')
+      // CLI binary location — same default as wikey-core/cli-spawn.ts `CLI_DEFAULT_BINARY.gemini`.
+      const binaryPath = '/usr/local/bin/gemini'
+      return fs.existsSync(credsPath) && fs.existsSync(binaryPath)
+    } catch {
+      return false
+    }
   }
 
   private renderApiKeyField(
@@ -1569,6 +1654,36 @@ aliases:
   #   - ISO/IEC 27001
   #   - ISMS
 `
+
+/**
+ * §5.6.4.2 Step B — instruction modal for `gemini login` / `gemini logout`.
+ *
+ * Obsidian renderer has no TTY so we cannot run the login flow inline. The modal
+ * tells the user what to type in their terminal and to reload Obsidian afterwards
+ * so `checkGeminiPresence` re-reads `~/.gemini/oauth_creds.json`.
+ */
+class GeminiAuthInstructionModal extends Modal {
+  constructor(
+    app: App,
+    private readonly titleText: string,
+    private readonly bodyText: string,
+  ) {
+    super(app)
+  }
+
+  onOpen(): void {
+    const { contentEl } = this
+    contentEl.createEl('h2', { text: this.titleText })
+    contentEl.createEl('p', { text: this.bodyText })
+    const footer = contentEl.createDiv({ cls: 'wikey-ingest-prompt-footer' })
+    const closeBtn = footer.createEl('button', { text: 'Close', cls: 'mod-cta' })
+    closeBtn.addEventListener('click', () => this.close())
+  }
+
+  onClose(): void {
+    this.contentEl.empty()
+  }
+}
 
 /**
  * Modal popup for editing `.wikey/schema.yaml` (v7-5).

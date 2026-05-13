@@ -36,7 +36,15 @@ export {
   stats as convertCacheStats,
 } from './convert-cache.js'
 export type { CacheKeyInput, CacheIndexEntry } from './convert-cache.js'
-export { LLMClient, fetchModelList } from './llm-client.js'
+export { LLMClient, fetchModelList, SubscriptionFallbackError } from './llm-client.js'
+export type { SubscriptionDeps } from './llm-client.js'
+// §5.6.4 — auth-mode types surfaced for plugin Settings UI + Notice wiring.
+export type {
+  AuthMode,
+  AuthPath,
+  AuthFallbackInfo,
+  SubscriptionProvider,
+} from './types.js'
 export { createPage, updateIndex, appendLog, extractWikilinks } from './wiki-ops.js'
 export {
   computeGapScore,
