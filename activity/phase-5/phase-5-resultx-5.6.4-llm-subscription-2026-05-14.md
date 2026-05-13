@@ -25,7 +25,7 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 - **File over app** — plain-text credentials.json + auth_mode JSON, 양방향 migration
 - **BYOAI** — provider 선택 자유 확장 (기존 API key + 신규 subscription path)
 
-## 2. 12 commit (push X — codex cycle #5 APPROVE + 사용자 사전 보고 후 진행)
+## 2. 13 commit (push 직전 — codex Mode D Panel 6 cycle (#1~#6) 수렴, 사용자 사전 보고 후 진행)
 
 | commit | hash | scope | 주요 변경 |
 |--------|------|-------|----------|
