@@ -1,0 +1,5 @@
+{
+  "_note": "§5.6.4.1 A3-2 — explicit drift waiver. Empty by default. Add 'provider: <semver-or-M.m.x>' after manual matrix review.",
+  "_format": "{ \"gemini\": \"0.41.x\", \"anthropic\": \"2.1.142\" }",
+  "_review_trail": "git tracked — every entry implies plan/phase-5 review note + provider-cli-options.ts re-validation."
+}

@@ -1,5 +1,6 @@
 import type {
   AuthFallbackInfo,
+  AuthMode,
   HttpClient,
   LLMCallOptions,
   LLMProvider,
@@ -116,32 +117,62 @@ export class LLMClient {
   }
 
   private async callGemini(prompt: string, opts?: LLMCallOptions): Promise<string> {
-    const presence = this.checkGeminiPresence()
-    // resolveAuthMode throws when neither credential is registered AND no force-mode
-    // satisfies the demand. callGeminiApi's own guard ('GEMINI_API_KEY not set') is
-    // preserved for force-api with no key (resolveAuthMode throws first with the
-    // same intent — provider parity).
-    const path = resolveAuthMode('gemini', this.config, presence)
-    if (path !== 'subscription') {
-      return this.callGeminiApi(prompt, opts)
-    }
-    return this.callGeminiWithFallback(prompt, opts, presence)
+    // callGeminiApi's own guard ('GEMINI_API_KEY not set') is preserved for the
+    // edge where resolveAuthMode somehow lets force-api through without a key —
+    // provider parity (Anthropic/OpenAI use the same belt-and-suspenders shape).
+    return this.callWithFallback(
+      'gemini',
+      this.checkGeminiPresence(),
+      this.config.GEMINI_AUTH_MODE,
+      (p, o) => this.callGeminiSubscription(p, o),
+      (p, o) => this.callGeminiApi(p, o),
+      prompt,
+      opts,
+    )
   }
 
-  private async callGeminiWithFallback(
-    prompt: string,
-    opts: LLMCallOptions | undefined,
+  /**
+   * §5.6.4.5 Step E BLUE 3b — shared subscription→api fallback shell.
+   *
+   * Why one helper, three call sites: callGemini / callAnthropic / callOpenAI
+   * shared *identical* try/catch/retry shape (only the function bindings, the
+   * provider tag, and the AUTH_MODE config key differed). One helper removes
+   * three near-duplicate `callXxxWithFallback` methods (~14 LOC each → 0) and
+   * makes the routing invariant (I1+I2+I3) provable at one site.
+   *
+   * Invariant guarantees (one place to read):
+   *   - I1 (subscription-first when resolveAuthMode → subscription)
+   *   - I2 (auto + actionable trigger + API key present = transparent retry +
+   *     onAuthFallback once)
+   *   - I3 (force-subscription = no fallback even when API key present;
+   *     force-api = no subscription attempt — handled by resolveAuthMode itself)
+   *
+   * `authMode` is the per-provider raw config value (`undefined` defaults to
+   * 'auto' — matches each callX's prior behaviour). Passing it in keeps the
+   * helper provider-agnostic without touching `this.config` via a key lookup.
+   */
+  private async callWithFallback(
+    provider: SubscriptionProvider,
     presence: CredentialPresence,
+    authMode: AuthMode | undefined,
+    subscriptionFn: (prompt: string, opts?: LLMCallOptions) => Promise<string>,
+    apiFn: (prompt: string, opts?: LLMCallOptions) => Promise<string>,
+    prompt: string,
+    opts?: LLMCallOptions,
   ): Promise<string> {
+    const path = resolveAuthMode(provider, this.config, presence)
+    if (path !== 'subscription') {
+      return apiFn(prompt, opts)
+    }
     try {
-      return await this.callGeminiSubscription(prompt, opts)
+      return await subscriptionFn(prompt, opts)
     } catch (err) {
       const reason = classifyFallbackReason(err)
-      const mode = this.config.GEMINI_AUTH_MODE ?? 'auto'
-      // auto + has API key + actionable reason = retry on API path.
+      const mode = authMode ?? 'auto'
+      // auto + has API key + actionable reason = retry on API path (I2).
       if (mode === 'auto' && presence.hasApiKey && reason !== null) {
-        opts?.onAuthFallback?.({ provider: 'gemini', reason, originalError: err as Error })
-        return this.callGeminiApi(prompt, opts)
+        opts?.onAuthFallback?.({ provider, reason, originalError: err as Error })
+        return apiFn(prompt, opts)
       }
       throw err
     }
@@ -256,31 +287,15 @@ export class LLMClient {
   }
 
   private async callAnthropic(prompt: string, opts?: LLMCallOptions): Promise<string> {
-    const presence = this.checkAnthropicPresence()
-    const path = resolveAuthMode('anthropic', this.config, presence)
-    if (path !== 'subscription') {
-      return this.callAnthropicApi(prompt, opts)
-    }
-    return this.callAnthropicWithFallback(prompt, opts, presence)
-  }
-
-  private async callAnthropicWithFallback(
-    prompt: string,
-    opts: LLMCallOptions | undefined,
-    presence: CredentialPresence,
-  ): Promise<string> {
-    try {
-      return await this.callAnthropicSubscription(prompt, opts)
-    } catch (err) {
-      const reason = classifyFallbackReason(err)
-      const mode = this.config.ANTHROPIC_AUTH_MODE ?? 'auto'
-      // auto + has API key + actionable reason = transparent retry on API path.
-      if (mode === 'auto' && presence.hasApiKey && reason !== null) {
-        opts?.onAuthFallback?.({ provider: 'anthropic', reason, originalError: err as Error })
-        return this.callAnthropicApi(prompt, opts)
-      }
-      throw err
-    }
+    return this.callWithFallback(
+      'anthropic',
+      this.checkAnthropicPresence(),
+      this.config.ANTHROPIC_AUTH_MODE,
+      (p, o) => this.callAnthropicSubscription(p, o),
+      (p, o) => this.callAnthropicApi(p, o),
+      prompt,
+      opts,
+    )
   }
 
   /**
@@ -393,31 +408,15 @@ export class LLMClient {
   }
 
   private async callOpenAI(prompt: string, opts?: LLMCallOptions): Promise<string> {
-    const presence = this.checkOpenAIPresence()
-    const path = resolveAuthMode('openai', this.config, presence)
-    if (path !== 'subscription') {
-      return this.callOpenAIApi(prompt, opts)
-    }
-    return this.callOpenAIWithFallback(prompt, opts, presence)
-  }
-
-  private async callOpenAIWithFallback(
-    prompt: string,
-    opts: LLMCallOptions | undefined,
-    presence: CredentialPresence,
-  ): Promise<string> {
-    try {
-      return await this.callOpenAISubscription(prompt, opts)
-    } catch (err) {
-      const reason = classifyFallbackReason(err)
-      const mode = this.config.OPENAI_AUTH_MODE ?? 'auto'
-      // auto + has API key + actionable reason = transparent retry on API path.
-      if (mode === 'auto' && presence.hasApiKey && reason !== null) {
-        opts?.onAuthFallback?.({ provider: 'openai', reason, originalError: err as Error })
-        return this.callOpenAIApi(prompt, opts)
-      }
-      throw err
-    }
+    return this.callWithFallback(
+      'openai',
+      this.checkOpenAIPresence(),
+      this.config.OPENAI_AUTH_MODE,
+      (p, o) => this.callOpenAISubscription(p, o),
+      (p, o) => this.callOpenAIApi(p, o),
+      prompt,
+      opts,
+    )
   }
 
   /**
@@ -680,8 +679,9 @@ function stripThinkingBlock(text: string): string {
 
 /**
  * §5.6.4.2 Step B — typed subscription failure carrying the AuthFallbackInfo.reason.
- * Thrown by `callGeminiSubscription` (and future claude/codex subscription paths)
- * so the wrapper `callGeminiWithFallback` can decide retry vs throw with one branch.
+ * Thrown by `callGeminiSubscription` / `callAnthropicSubscription` /
+ * `callOpenAISubscription` so the shared wrapper `callWithFallback` (§5.6.4.5
+ * Step E BLUE 3b) can decide retry vs throw with one branch.
  *
  * Plain `Error` subclass — no instanceof check across realms is required (single
  * bundle / single VM in Obsidian renderer + Node test runner).

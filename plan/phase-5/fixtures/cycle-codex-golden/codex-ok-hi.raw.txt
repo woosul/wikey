@@ -1,0 +1,19 @@
+OpenAI Codex v0.128.0 (research preview)
+--------
+workdir: /Users/denny/Project/wikey
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: workspace-write [workdir, /tmp, $TMPDIR, /Users/denny/.codex/memories]
+reasoning effort: xhigh
+reasoning summaries: none
+session id: 019e21b3-538b-70c3-8280-fd4b1d2a3953
+--------
+user
+say only the word: hi
+
+codex
+hi
+tokens used
+15,997
+hi

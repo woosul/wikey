@@ -724,67 +724,155 @@
 
 > **배경**. 로컬 추론 엔진 교체 PoC + 플랫폼 OCR fallback 실측. Phase 4 §4.5.3/§4.5.4 에서 이관.
 
-### 5.6.1 llama.cpp PoC (←§4.5.3)
+### 5.6.1 llama.cpp PoC (←§4.5.3) — 🟡 잠정보류 (Session 42, 2026-05-13)
 
-- [ ] **Ollama vs llama.cpp 실측 gap 측정** — M4 Pro 48GB 환경에서 동일 Qwen3.6:35b-a3b GGUF 로 비교
+> **status**: deferred. wikey 단일 사용자 + 순차 section 호출 패턴이라 Ollama overhead 큰 영향 없음. Phase 6 또는 사용자 요청 시 재진입.
+
+- [ ] (../defer) **Ollama vs llama.cpp 실측 gap 측정** — M4 Pro 48GB 환경에서 동일 Qwen3.6:35b-a3b GGUF 로 비교
   - Ollama 0.20.5 (MLX 백엔드) vs `brew install llama.cpp` + `llama-server`
   - 동일 section · 프롬프트로 latency/토큰/메모리 실측 (wikey 의 SEGMENTED Route 가 section 단위 LLM 호출이므로 측정도 section 기준)
   - 커뮤니티 측정치: 단일 요청 10~30% overhead (Go 런타임 + HTTP 직렬화)
   - wikey 는 단일 사용자 + 순차 section 호출 → 동시요청 3x gap 해당 없음
   - **판정 기준**: 실측 gap ≥15% 면 전환, 미만이면 Ollama 유지
-- [ ] **전환 시 통합 경로**
+- [ ] (../defer) **전환 시 통합 경로**
   - `llama-server` 는 OpenAI-compat API 제공 → `wikey-core/llm-client.ts` 에 `llamacpp` provider 추가
   - `llama-swap` (Go proxy) 로 모델 auto-load/unload → Ollama 스타일 UX 재현
   - GGUF 파일 직접 관리 (모델 경로 설정 UI 추가)
-- [ ] 장점: 속도↑, 세밀한 양자화 제어 (IQ2~BF16, Unsloth Dynamic 2.0), 백그라운드 데몬 불필요
-- [ ] 단점: 모델 스와핑 별도 도구 필요, provider 분기 재작성, GGUF 수동 다운로드
+- [ ] (../defer) 장점: 속도↑, 세밀한 양자화 제어 (IQ2~BF16, Unsloth Dynamic 2.0), 백그라운드 데몬 불필요
+- [ ] (../defer) 단점: 모델 스와핑 별도 도구 필요, provider 분기 재작성, GGUF 수동 다운로드
 
-### 5.6.2 rapidocr (paddleOCR PP-OCRv5 Korean) fallback 실측 — Linux/Windows 환경 (←§4.5.4)
+### 5.6.2 rapidMLX — Apple Silicon MLX backend 통합 검토 (placeholder, Session 42 raise, 2026-05-13)
+
+> **이슈 출처**: 사용자 raise 2026-05-13 — Apple Silicon (M4 Pro) 에서 MLX 백엔드 활용 가능성 검토 필요. Ollama 의 MLX 백엔드는 이미 채택 중이지만, MLX-LM (Apple ML Research) 의 native 통합 또는 mlx-server / mlx-omni-server 같은 OpenAI-compat wrapper 검토.
+> **분류**: P3 design / Apple Silicon 최적화
+> **status**: placeholder — 다음 세션 분석 필요 (사용자 영문명 "rapidMLX" 의 정확한 reference 도구 / 라이브러리 확정 포함)
+
+- [ ] **§5.6.2.1** rapidMLX 정확한 reference 확정 — 사용자 의도 명확화 (MLX-LM / mlx-server / mlx-omni-server / 기타?)
+- [ ] **§5.6.2.2** Apple Silicon native MLX vs Ollama (MLX 백엔드) 실측 gap 측정 — latency / 메모리 / quantization 정밀도
+- [ ] **§5.6.2.3** OpenAI-compat API endpoint 가용성 확인 (provider 추가 비용)
+- [ ] **§5.6.2.4** wikey-core `llm-client.ts` 에 `mlx` provider 추가 여부 결정
+
+### 5.6.3 rapidocr (paddleOCR PP-OCRv5 Korean) fallback 실측 — Linux/Windows 환경 (←§4.5.4) — 🟡 잠정보류 (Session 42, 2026-05-13)
+
+> **status**: deferred. 현재 사용자 환경은 macOS 단일 (ocrmac 동작 검증 완료). Linux/Windows 사용자 등장 시 재진입.
+> **이전 번호**: `was §5.6.2`.
 
 > **배경**. Phase 4 §4.1.3 에서 `defaultOcrEngine()` + `defaultOcrLangForEngine()` 로 platform 별 engine/lang 자동 매핑 등록 완료. macOS → ocrmac + `ko-KR,en-US`, Linux/Windows → rapidocr + `korean,english`. 코드 레벨은 등록됐으나 **macOS 세션에서 rapidocr 실제 OCR 품질 검증 불가**. Linux 환경에서 실측 필요.
 
-- [ ] **§5.6.2.1** Linux 환경 준비
+- [ ] (../defer) **§5.6.3.1** Linux 환경 준비
   - `uv tool install "docling[rapidocr]"` — rapidocr-onnxruntime extras 포함 설치
   - 테스트 환경: Ubuntu 22.04 또는 Docker (wikey-core 실행)
   - 기본 rapidocr 모델: Chinese + English (paddleOCR 기본 탑재). Korean 은 별도 모델 로드 필요할 가능성
 
-- [ ] **§5.6.2.2** rapidocr + `korean,english` CLI 실측
+- [ ] (../defer) **§5.6.3.2** rapidocr + `korean,english` CLI 실측
   - 명령: `docling <test.pdf> --to md --output /tmp --ocr-engine rapidocr --ocr-lang korean,english --force-ocr`
   - 테스트 코퍼스: CONTRACT (용역계약서, 한글 OCR 난도 높음), GOODSTREAM (사업자등록증)
   - 검증: rapidocr 가 `korean` lang 지정을 실제로 받아들이는지. 안 받으면 `--ocr-engine easyocr --ocr-lang ko,en` 대안 검토
 
-- [ ] **§5.6.2.3** PP-OCRv5 Korean 모델 수동 로드 (skill 권고 경로)
+- [ ] (../defer) **§5.6.3.3** PP-OCRv5 Korean 모델 수동 로드 (skill 권고 경로)
   - docling skill 문서 `~/.claude/skills/docling/reference/korean-ocr-advanced.md` 의 PaddleOCR PP-OCRv5 Korean 전환 가이드
   - CLI 로는 불가 — Python API (`RapidOcrOptions(rec_model_path=...)`) 경로
   - Korean 가중치 다운로드 (`huggingface_hub: PaddlePaddle/korean_PP-OCRv5_mobile_rec`)
   - `scripts/benchmark-tier-4-1-3.mjs` 를 Python 호출 방식으로 확장하거나 별도 `scripts/ocr-python-api.py` 헬퍼 추가
 
-- [ ] **§5.6.2.4** macOS ocrmac vs Linux rapidocr 품질 비교 (CONTRACT·GOODSTREAM)
+- [ ] (../defer) **§5.6.3.4** macOS ocrmac vs Linux rapidocr 품질 비교 (CONTRACT·GOODSTREAM)
   - 동일 PDF 에 대해 두 engine 결과 비교: 한글 자수, OCR 오류 건수, 본문 구조 정확도
   - ocrmac 대비 rapidocr 품질이 충분 (80%+) 하면 production fallback 으로 등록
   - 부족하면 Linux 환경에서는 `markitdown[pdf]` + OpenAI Vision fallback (tier 2/3) 경로 고려
 
-- [ ] **§5.6.2.5** 결과 기록 + fallback 매트릭스 문서화
-  - `activity/phase-5-resultx-5.6-rapidocr-linux-<date>.md` 신규
+- [ ] (../defer) **§5.6.3.5** 결과 기록 + fallback 매트릭스 문서화
+  - `activity/phase-5-resultx-5.6.3-rapidocr-linux-<date>.md` 신규
   - `~/.claude/skills/docling/reference/korean-ocr-advanced.md` 에 실측 갱신 (커뮤니티 consensus 와 일치 여부)
 
-### 5.6.3 LLM provider strategy — subscription 모델 + Ollama cloud + stage-aware routing (Session 23 raise, 2026-05-07)
+### 5.6.4 LLM Provider — subscription auth 통합 (Google / Anthropic / OpenAI) ✅ #done (Session 42 raise → 종결 2026-05-13~14)
 
-> **이슈 출처**: 사용자 raise 2026-05-07 — 현재 ingest 주력 모델 = Gemini 2.5 Flash (BYOAI API). 향상된 LLM (Claude Opus 4.7 등) 사용 시 ingest 결과 영향 의문 → provider strategy 재검토 필요. (이전 §5.16 자리에서 본 §5.6 LLM 엔진 영역으로 이동.)
-> **분류**: P3 design / cost-benefit 평가
-> **status**: draft / Phase 6 (웹 환경) 진입 전 또는 후 결정
+> **이슈 출처**: 사용자 raise 2026-05-13 — 현재 Google Gemini / Anthropic Claude / OpenAI Codex 3 provider 모두 API key 로 연결. 비용 부담으로 Gemini 2.5 Flash 만 사용 중. 사용자가 3 provider 모두 구독 ID 보유 → **구독형 로그인 우선, 구독형 불가 시 API key fallback**. 단일 todox: `plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md` 에 SDD+TDD spec + sub-step.
+> **이전 번호**: `was §5.6.3.A` (Subscription 모델 통합).
+> **분류**: P3 design + impl / BYOAI 확장 (Karpathy 4 원칙 #4)
+> **status**: plan 진입 (analyst Step A LOCK 대상, v0.7 — cycle #1h NEEDS_REVISION 2 finding 해소: codex marker-based parser + commit prefix lock)
+> **상세 spec**: [`plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md`](./phase-5-todox-5.6.4-llm-subscription.md) (v0.7)
+> **우선순위**: 1) Google → 2) Anthropic → 3) OpenAI 순. 각 provider 별 cycle 종결 후 다음 provider 진입.
 
-- [ ] **§5.6.3.A** Subscription 모델 통합 (BYOAI API → Claude.ai 구독 / ChatGPT Plus / Gemini Advanced 같은 *사용자 자체 구독* 활용)
-  - 현재: API 키 필요 (`~/.config/wikey/credentials.json`) + token 별 과금. ingest 1 cycle ≈ Gemini Flash $0.005 / Opus 4.7 $1.0
-  - 검토: **Claude Code SDK / Anthropic Console 의 사용자 plan** 을 외부에서 호출 가능한가? Claude.ai 구독 자체는 외부 API key 분리됨 — 즉 구독 ≠ API. 단, *Claude Code 의 SDK / web app remote* 는 구독 내 사용 가능 (별도 entry point)
-  - 옵션:
-    - (a) Anthropic Workbench / Console 의 *plan* 으로 전환 — Pro plan ($20/월) 으로 API 사용량 일부 무료 (단 한도 있음)
-    - (b) ChatGPT Team / Enterprise 같은 *flat-rate plan* 의 API 접근 — 일부 plan 만 가능
-    - (c) **Self-hosted via subscription proxy** — Claude.ai 의 web session cookie 로 API 흉내. 비공식, ToS 위반 우려
-  - 비용 trade-off: token 단위 과금 → flat-rate. ingest 빈도 ≥ 일 10회 시 break-even
-  - 구현: provider 추상화 layer 추가 (`wikey-core/src/llm-client.ts` 의 `provider: 'subscription'` 새 case + token bucket + rate limit + 한도 초과 시 BYOAI fallback)
+> **v0.3 + v0.4 + v0.5 lock bullets — 8 항목 (mirror byte-level 재동기화, #1f F4)**:
+> - **OAuth flow 자체 구현 0** — wikey 안 OAuth client / token endpoint 호출 코드 0. 모든 OAuth 는 외부 CLI (`gemini` / `claude` / `codex`) 가 own. wikey 는 CLI subprocess spawn + stdout / stderr parsing 만.
+> - **token refresh 자체 구현 0** — refresh / re-auth / expiry handling 은 외부 CLI native location (`~/.gemini/oauth_creds.json` / Keychain / `~/.codex/auth.json`) 에서 own. wikey 는 spawn 실패 시 `detectFallbackTrigger` 로 detect 만.
+> - **§3.7 48-cell matrix** (v0.6 #1g G1 nested shape) — `SubscriptionProvider = Exclude<LLMProvider, 'ollama'>` (3 provider) × `AuthPath = 'subscription' | 'api'` (2 path) × `LLMCliOptionField = Exclude<keyof LLMCallOptions, 'provider' | 'onAuthFallback'>` (8 field) = **48 cell** (nested shape `Record<SubscriptionProvider, Record<AuthPath, Record<LLMCliOptionField, SupportLevel>>>` runtime key product 정합). `provider-cli-options.test.ts` 48 assertion golden + cardinality assertion 2 case (`SubscriptionProvider` 3 / `LLMCliOptionField` 8).
+> - **`auth_mode` schema 명시** — `credentials.json` v0.3 schema 의 `auth.{provider}.mode` sub-object. 값 = `'auto' | 'api' | 'subscription'`. default = `'auto'`. round-trip + unknown field 보존 (`saveCredentials.test.ts` case 1~3).
+> - **`geminiApiKey` lower-camel** (F2 실측 confirm) — `credentials.json` 의 실제 schema 는 `geminiApiKey` / `anthropicApiKey` / `openaiApiKey` (main.ts line 1082~1115). v0.2 의 `GEMINI_API_KEY` upper-snake 표기는 drift.
+> - **`buildConfig` 정의 line 1561** + 5 호출 site (476 / 841 / 912 / 1495 / 1535) — F8 회귀 test `build-config-auth-mode.test.ts` 5 case 의무.
+> - **legal framing 영역 A/B 분리** (F6) — A "기술적 동작 가능 (PoC 확증)" / B "약관 허용 미확정 (wikey 가 web 본문 직접 조사 안 함)". 사용자 R1 명시 동의 + revert path 보존 (`authMode = 'api'` force / cycle revert 비용 ≈ 0).
+> - **codex Mode D Panel cycle #2 gate (push 전)** — 4 local commit 누적 → 통합 검증 → codex #2 → master verdict → 사용자 사전 보고 → push (F9 LOCK, F7 미커밋 위험 회피).
+>
+> **drift 4 건 정리 (mirror 명시)**:
+> - **web search 미수행** — wikey 는 provider ToS 본문 직접 조사 안 함. 사용자 책임 영역 + revert path 보존.
+> - **OAuth flow 자체 구현 폐기** — 외부 CLI 위임.
+> - **token refresh 자체 구현 폐기** — 외부 CLI native location 위임.
+> - **DESIGN.md sync 폐기** — Settings UI 카드 추가는 디자인 토큰 / `--wk-*` 변수 변경 0. CLAUDE.md §LLM 설정 sync 만 (사용자 승인 후).
+>
+> **v0.6 #1g finding 해소 lock (3 항목)**:
+> - **#1g G1 (HIGH)** — matrix nested shape `Record<SubscriptionProvider, Record<AuthPath, Record<LLMCliOptionField, SupportLevel>>>` 채택. `SubscriptionProvider = Exclude<LLMProvider, 'ollama'>` (3 element) 신설. v0.5 의 24-entry shape (path 축 부재) → v0.6 nested 로 정정 → runtime key product 3 × 2 × 8 = 48 cell 일치 lock.
+> - **#1g G2 → #1h H1 → #1i F1 통합 (HIGH)** — codex parser **marker-based extraction** (v0.7 lock): `codexMarker = raw.indexOf('\ncodex\n')` + `tokensMarker = raw.indexOf('\ntokens used')` line-start marker sandwich → `raw.slice(codexMarker + '\ncodex\n'.length, tokensMarker).trim()`. 비정상 (marker 부재 / 순서 역전) = `raw.trim()` fallback. separator paradigm (`segments.slice(2, -1)` / `segments[0]`) 완전 폐기. evidence = master 실측 golden `plan/phase-5/fixtures/cycle-codex-golden/codex-ok-hi.raw.txt`. 회귀 = prompt sentinel `say only the word:` leak 0 + banner / metadata / footer leak 0.
+> - **#1g G3 (MED)** — anchor (m) grep 범위 = active spec only (changelog history quote 제외). §3.9 sample code "기존 6 field" → "기존 8 option fields" 정정. todox §8.1 grep 결과 본문 직접 인용 (말로만 주장 X).
+>
+> **v0.5 #1f finding 해소 lock (5 항목, history quote)**:
+> - **#1f F1 (HIGH)** — `LLMCliOptionField` exclude union 도입.
+> - **#1f F2 (MED)** — CLI golden lock metric **13 fixture files / 8 fixture units / 11 parser test cases** byte-level 통일.
+> - **#1f F3 (MED)** — codex parser 위치 기반 (v0.6 4-segment 처리로 보강).
+> - **#1f F4 (MED)** — todox = canonical / phase-5-todo.md = mirror. "11 fixture" / "15 fixture" / "7 항목" / "5+3+3" 잔존 drift 청소.
+> - **#1f F5 (LOW)** — `check-cli-versions.sh --strict` flag + waiver mechanism + semver regex 견고 + fail-open LOCK 금지.
 
-- [ ] **§5.6.3.B** Ollama Cloud 대형 모델 (`llama3-70b-cloud` / `qwen3-72b-cloud` 같은 호스팅 대형 모델)
+- [x] **§5.6.4.0** 사전 PoC (analyst 의무, plan 작성 *전* §5.7.2 fail 학습 적용) — 2026-05-13 완료
+  - 3 provider 의 "구독형" 외부 호출 경로 master 직접 hello-world (5분 PoC) — *web search 미수행* (조사 도구 한계, §4.6 영역 A/B framing 분리)
+  - Google: `gemini -p` CLI OAuth (`~/.gemini/oauth_creds.json`) PASS — "hi" 응답
+  - Anthropic: `claude -p` CLI OAuth (macOS Keychain) PASS — "hi" 응답
+  - OpenAI: `codex exec` CLI OAuth (`~/.codex/auth.json`) PASS — OAuth session header 확증
+  - **결정**: 3 provider 모두 외부 호출 가능 → 3-provider 통합 진행 (todox §4)
+  - [x] v0.5 F5 fix 잔여: §4.0.7 CLI I/O 형식 골든 재실측 (codex 완료 응답 본문 / gemini header 변동 / claude header 부재 / codex bodylike leak 회귀) — Step A 진입 전 완료 (master 실측 golden + bodylike fixture commit `e901b84`)
+- [x] **§5.6.4.1** Provider 추상화 layer 확장 + Obsidian renderer spawn smoke (F4 gate)
+  - **A0 (F4 gate)** Obsidian Electron renderer 안 `child_process.spawn` smoke — PASS 시 A1 진입 / FAIL 시 R3 대체 IPC cycle
+  - `wikey-core/src/llm-client.ts` 에 auth mode 분기 — `callWithFallback` 공통 helper + `LLMCallOptions.onAuthFallback?` callback (UI 결합 0, core ↔ obsidian I10 isolation)
+  - `wikey-core/src/auth-resolver.ts` 신규 + `resolveAuthMode` + `detectFallbackTrigger`
+  - `wikey-core/src/cli-spawn.ts` 신규 + `spawnCliPrompt` (gemini / claude / codex) + AbortController timeout
+  - `wikey-core/src/cli-parser.ts` 신규 (v0.7 #1h H1 marker-based) — `parseSubscriptionOutput(provider, raw) → string`. **codex = marker-based extraction**: `indexOf('\ncodex\n')` + `indexOf('\ntokens used')` line-start marker sandwich → `raw.slice(...).trim()`. 비정상 형식 = `raw.trim()` fallback. separator paradigm (`segments.slice` / `segments[0]`) 폐기. evidence = master 실측 golden `codex-ok-hi.raw.txt`. **gemini = header strip (`/^Loaded cached credentials\.\n/`) + trim**. **claude = trim only**
+  - `wikey-core/src/provider-cli-options.ts` 신규 (v0.6 #1g G1) — `SubscriptionProvider = Exclude<LLMProvider, 'ollama'>` (3 element) + `LLMCliOptionField = Exclude<keyof LLMCallOptions, 'provider' | 'onAuthFallback'>` (8 element) + `AuthPath` (2 element) + **nested 48-cell matrix** (`Record<SubscriptionProvider, Record<AuthPath, Record<LLMCliOptionField, SupportLevel>>>`) + `CLI_VERSION_SNAPSHOT` const (v0.4 #1e F4)
+  - `~/.config/wikey/credentials.json` schema 확장 (F2) — 기존 lower-camel 3 키 (`geminiApiKey` / `anthropicApiKey` / `openaiApiKey`) + 신규 `auth.{provider}.mode` sub-object (default `'auto'`) + unknown field 보존 round-trip
+  - `./scripts/check-cli-versions.sh --strict` 신규 (v0.4 #1e F4 + v0.5 #1f F5) — 3 CLI `--version` capture (semver regex 견고: `\b(\d+)\.(\d+)\.(\d+)\b` 첫 match) + snapshot 비교 + **`--strict` 모드 (CI / production 의무)** = any drift exit 1 / 기본 모드 (개발 편의) = major exit 1 / minor warn / patch silent. waiver mechanism `./scripts/cli-version-waiver.json` (explicit review trail). main.ts `onload` background `--strict` 호출 → drift 시 Notice 영문 + Settings UI badge. fail-open LOCK 금지.
+  - `wikey-obsidian/src/main.ts` `loadCredentials` (line 1082) / `saveCredentials` (line 1098) v0.3 schema + `buildConfig` (정의 line **1561**) 5 호출 site (476/841/912/1495/1535) 회귀 (F8) — `build-config-auth-mode.test.ts` 5 case 의무
+  - subscription credential 저장 = wikey 안 0 (외부 CLI 의 native location 재사용, I7)
+  - golden test (v0.5 #1f F2 lock): `wikey-core/test/fixtures/cli-stdout/` **13 fixture files / 8 fixture units** (5 raw/clean pair + 3 error raw) + `cli-parser.test.ts` **11 parser test cases** (raw==clean 5 + banner/footer/header leak 회귀 3 + 401 detection 3)
+- [x] **§5.6.4.2** Google Gemini subscription 통합 (1순위)
+  - `callGeminiSubscription` 신규 — `child_process.spawn(geminiPath, ['-p', '-'])` + stdin = prompt + `mapOptionsToCliArgs('gemini', opts)`
+  - Settings UI 의 Google provider 카드에 "Sign in with Google" 버튼 + Auth mode dropdown 추가 (영문)
+  - API key 와 동시 등록 시 subscription 우선 routing 검증 test (16 case: AC-S1~S4 routing + AC-S9~S12 option preservation + 4 isolation, 단위 + 통합 시뮬레이션)
+  - obsidian-cdp 라이브 cycle smoke (master 직접) — Sign in → Settings 카드 status → chat 1 query 응답
+  - local commit 1 (push X) — `feat(§5.6.4 v0.7): provider auth abstraction + Google Gemini subscription`
+- [x] **§5.6.4.3** Anthropic Claude subscription 통합 (2순위, §5.6.4.2 종결 후)
+  - `callAnthropicSubscription` 신규 — `child_process.spawn(claudePath, ['-p'])` + stdin
+  - Settings UI Anthropic provider 카드 "Sign in with Claude" 버튼 + 안내 Modal (`claude /login` terminal 실행)
+  - 16 case test + 구독 quota 초과 시 API fallback 자동 전환 + `onAuthFallback` callback (Notice 영문)
+  - local commit 2 (push X) — `feat(§5.6.4 v0.7): Anthropic Claude subscription auth`
+- [x] **§5.6.4.4** OpenAI subscription 통합 (3순위, §5.6.4.3 종결 후)
+  - `callOpenAISubscription` 신규 — `child_process.spawn(codexPath, ['exec', '-'])` + stdin + §4.0.7 stdout parsing (v0.7 marker-based: `\ncodex\n` ~ `\ntokens used` slice)
+  - Settings UI OpenAI provider 카드 "Sign in with ChatGPT" 버튼 + 안내 Modal (`codex login` terminal)
+  - 16 case test + 구독 quota 초과 시 API fallback 자동 전환 + Notice 영문
+  - local commit 3 (push X) — `feat(§5.6.4 v0.7): OpenAI Codex subscription auth`
+- [x] **§5.6.4.5** 통합 검증 + 문서화
+  - 3 provider 모두 subscription + API key 동시 등록 → routing 우선순위 verify (6 case routing matrix smoke)
+  - validate-wiki + npm test + npm run build 회귀 0
+  - phase-5-resultx-5.6.4-llm-subscription-<date>.md 작성 — 12 AC + 5 buildConfig 회귀 + **nested 48-cell matrix golden (`SubscriptionProvider` × `AuthPath` × `LLMCliOptionField`) + 13 fixture files / 8 units / 11 parser cases + codex marker-based parser (v0.7 #1h H1, master 실측 golden `codex-ok-hi`) + prompt sentinel leak 회귀 + bodylike leak 회귀 + CLI version `--strict` drift check + waiver review trail** (v0.7 #1h H1 + v0.6 #1g G1 + v0.5 #1f F2 / F5) evidence
+  - **CLAUDE.md §LLM 설정** 동기화 (사용자 승인 후) — DESIGN.md sync 폐기 (v0.3 F7 drift fix — Settings UI 카드 추가는 디자인 토큰 변경 0)
+  - **wikey.schema.md §LLM 에이전트의 역할** BYOAI 표에 "구독 / API key 동시 등록 시 구독 우선" 한 줄 (사용자 승인 후)
+  - local commit 4 (push X) — `feat(§5.6.4 v0.7): 3-provider integration + BLUE refactor + docs sync`
+  - **codex Mode D Panel cycle #2 post-impl APPROVE** → master verdict 결정 → 사용자 사전 보고 → **push** (F9 LOCK)
+- [x] **wiki 재생성 없음 확증**: provider auth path 추가만, frontmatter / data model 무관, `wiki/` git diff = 0
+
+### 5.6.5 Ollama Cloud model 통합 (Session 42 raise, 2026-05-13)
+
+> **이전 번호**: `was §5.6.3.B`.
+> **status**: §5.6.4 종결 후 진입. provider 추상화 layer 확장 결과 활용.
+> **참고**: 기존 §5.6.3.C (Stage-aware routing) 는 본 리넘버링에서 **제외** — provider 추상화 + subscription 우선 routing 만으로 cost trade-off 충분.
+
+- [ ] **§5.6.5.1** Ollama Cloud 대형 모델 (`llama3-70b-cloud` / `qwen3-72b-cloud` 같은 호스팅 대형 모델)
   - 현재: Ollama = 로컬 only. 대형 모델 (≥ 30B) 은 로컬 GPU/RAM 부족으로 사실상 활용 불가
   - **Ollama Cloud (2025년 출시)**: ollama.com 의 hosted endpoint — 로컬 ollama 명령으로 cloud 모델 호출 가능 (`ollama run llama3:70b` 등)
   - 비용: subscription 기반 (Ollama Pro 등) 또는 token 기반. Anthropic 보다 저렴, 로컬 ollama 호환성 그대로
@@ -792,15 +880,6 @@
     - (a) Ollama Cloud 가입 후 `provider: 'ollama'` + `OLLAMA_HOST` 를 cloud endpoint 로 — 코드 변경 0 (`provider-defaults.ts` 의 ollama budget config 만 cloud 용으로 update)
     - (b) wikey config 에 `ollama_cloud` 별 provider key 추가 — local + cloud 분리 운영 (local fallback)
   - 가능성: ingest 의 canonicalize 단계만 cloud 70B 사용 + brief/mention 은 local 8B → 비용 효율 + 품질 균형
-
-- [ ] **§5.6.3.C** Stage-aware provider routing (현재 `'ingest'` 단일 키 → stage 별 분리)
-  - 현재 `wikey.conf` provider 키: `default` / `ingest` / `classify` / `chat` / `embedding`
-  - 제안 추가 키: `summary` (Stage 1) / `mention` (Stage 2) / `canonicalize` (Stage 3) — `'ingest'` 안에서 분리
-  - 효과:
-    - canonicalize → Opus 4.7 또는 Ollama cloud 70B (high quality, 비용 ↑)
-    - mention/brief → Flash / local 8B (low cost, 충분)
-    - summary → Sonnet 4.6 (중간)
-  - 추정 비용 절감: 단순 전체 Opus 대비 80%+ 절감 + canonicalize 품질만 보존
 
 ---
 

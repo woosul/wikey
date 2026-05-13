@@ -22,6 +22,9 @@
   - [`activity/phase-5/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](./phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md) — AC21 라이브 cycle smoke + Stage 3 inspect + Stage 4 alpha v1 wire 검증 (master 직접)
 - **§5.10 보조 문서** (2026-04-26 session 14 paradigm shift issue 등록 + 2026-05-04 v2~v5.4 D-wide 채택 + cycle #1~#8 진행 + C5 신규):
   - [`plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../../plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — graph emergent + LLM-only ontology paradigm shift 보조 plan. **v5.4 (2026-05-04, D-wide cycle #8 final + C5 신규)**: 사용자 5 concern (C1~C5) 추가 등록 + 사용자 D-wide 결정 (7-type schema gate `ENTITY_TYPES`/`CONCEPT_TYPES`/`buildSchemaPromptBlock` 까지 deprecate, LLM 자율 type 분류 + ripple R0~R8) + cycle #1~#7 master fix (7 cycle 누적, minor stale 패턴) + cycle #8 마지막 시도. codex cycle #8 검증 대기. **이력**: v1 (4 옵션) → v2 (C1~C4) → v3 (D-wide) → v4 (ripple R1~R8) → v5 (C5 신규) → v5.1 (numbering) → v5.2 (§14.2 본문) → v5.3 (§7+mirror migration cost+panel-dispatch fix) → v5.4 (§8 next action+§9.4+mirror 상단). **추가 fix (v5.3)**: panel-dispatch.sh `start_codex` update notification auto-skip 통합 (글로벌 skill 영구 fix).
+- **§5.6.4 보조 문서** (Session 42, 2026-05-13~14 LLM Provider subscription auth 통합):
+  - [`plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md`](../../plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md) — v0.7 (codex Mode D Panel plan cycle #1a~#1i 9 cycle 수렴) 3-provider OAuth + API fallback + 48-cell CLI option matrix
+  - [`activity/phase-5/phase-5-resultx-5.6.4-llm-subscription-2026-05-14.md`](./phase-5-resultx-5.6.4-llm-subscription-2026-05-14.md) — 4 commit 통합 + 12 AC line-by-line evidence + I1~I11 cross-check + codex 9 cycle plan 검증 학습
 - **추후 보조 문서**: `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식 (`CLAUDE.md §문서 명명규칙·조직화` 참조).
 - **프로젝트 공통**: [`plan/ref/decisions.md`](../../plan/ref/decisions.md) · [`plan/ref/plan_wikey-enterprise-kb.md`](../../plan/ref/plan_wikey-enterprise-kb.md).
 
@@ -1493,7 +1496,7 @@ obsidian-cdp 라이브 (ingest 90s + write 15s + query 정확 + Settings 5/5)
 | 후보 | 우선순위 | 비고 |
 |------|----------|------|
 | **§5.7.2 qmd SDK import** | P4 | vendored CLI → Node 바인딩 결정 (난이도 ↑). 별도 spec 분리 필요. |
-| §5.6.3 LLM provider strategy | P3 (draft) | session 24 환경 latency 관측 후속, LLM hang 근본 fix |
+| §5.6.4 LLM Provider subscription auth | ✅ 종결 (Session 42, 2026-05-13~14) | 3 provider OAuth + API fallback. 본 문서 하단 별 entry 참조. |
 | §5.5 / §5.8 / §5.9 | P3/P4 | 시간 여유 시 |
 
 #### 배운 점 / 패턴 메모
@@ -3350,7 +3353,7 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 - Gemini-2.5-flash 의 input-size 비례 latency: 76K char → 8분, 1.6K char → 2분
 - baseline ~1-2분 (Gemini 응답 자체 시작 latency)
 - 한국 latency / Gemini 서버 부하 가능성. *코드 회귀 아님* — 환경 자체 baseline.
-- 향후 §5.6.3 LLM provider strategy (subscription / Ollama cloud / stage-aware routing) 가 구조적 해결
+- 향후 §5.6.4 LLM Provider subscription auth (Session 42 리넘버링) + §5.6.5 Ollama Cloud 가 구조적 해결
 
 ---
 
@@ -4365,3 +4368,48 @@ Invariants I1~I8 (extension reject / raw-filename slug + existingBases fallback 
 - [x] Step G — master 라이브 obsidian-cdp smoke (2 cycle PASS, I7 라이브 보존 확증)
 
 → **§5.21 v0.3 종결**. Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9 / §5.20 (5 subject).
+
+
+## 5.6.4 LLM Provider subscription auth — Google + Anthropic + OpenAI 통합 ✅ 종결 (Session 42, 2026-05-13~14)
+
+> #provider-auth #subscription #byoai #google #anthropic #openai #done
+
+상세 evidence: [`activity/phase-5/phase-5-resultx-5.6.4-llm-subscription-2026-05-14.md`](./phase-5-resultx-5.6.4-llm-subscription-2026-05-14.md). spec/todox v0.7 (codex Mode D Panel plan cycle #1a~#1i 누적 9 cycle 수렴).
+
+§5.6.3.A → §5.6.4 리넘버링 후 진행. 3 provider (Google Gemini / Anthropic Claude / OpenAI Codex) 의 외부 CLI OAuth subscription path 를 wikey 통합 — 사용자 Gemini Advanced / Claude Pro·Max / ChatGPT Plus·Pro 구독 직접 활용 + API key 동시 등록 시 transparent fallback (auto mode, AC-S4).
+
+| 항목 | 결과 |
+|------|------|
+| SDD+TDD step | Step A (추상화) + B (Google) + C (Anthropic) + D (OpenAI) + E (통합) = 4 commit 누적 |
+| 신규 file (core) | `auth-resolver.ts` + `cli-spawn.ts` + `cli-parser.ts` + `provider-cli-options.ts` + golden fixture (`plan/phase-5/fixtures/cycle-codex-golden/codex-ok-hi.{raw,clean}.txt`) |
+| 기존 edit (core) | `types.ts` (AuthMode / SubscriptionProvider / LLMCliOptionField / AuthFallbackInfo / LLMCallOptions.onAuthFallback) + `llm-client.ts` (3 provider × subscription/api/withFallback + `callWithFallback` 공통 helper extract) |
+| 기존 edit (obsidian) | `main.ts` (loadCredentials + saveCredentials + buildConfig 5 호출 site auth mode 전파 + onAuthFallback Notice wiring) + `settings-tab.ts` (3 provider 카드 영문 — Sign in / Sign out / Auth mode dropdown / status) |
+| 신규 test (core) | `auth-resolver.test.ts` + `cli-spawn.test.ts` + `cli-parser.test.ts` + `provider-cli-options.test.ts` (48-cell golden) + 3 provider subscription test (gemini/anthropic/openai 각 16 case) + `llm-routing-matrix.test.ts` (8 case, Step E 통합) = 약 150 신규 case |
+| 회귀 | wikey-core **1091 PASS** / wikey-obsidian **209 PASS** (이전 baseline 1083 + 8 routing matrix it.each) |
+| build | 0 new errors (kiwi-wasm pre-existing warning 외) |
+| validate-wiki | PASS |
+| codex Mode D Panel plan cycle | #1a~#1i 누적 9 cycle (v0.1~v0.7 수렴, 마지막 #1i 도중 H1/H2 master 실측 golden fixture + commit prefix lock 으로 종결) |
+| BLUE 3b refactor (Step E) | `callWithFallback` 공통 helper extract — 기존 3 × `callXxxWithFallback` (~14 LOC each) → 단일 helper. test 변경 0 으로 1083 → 1091 회귀 PASS 확증 |
+| master CDP smoke | 별도 turn (사용자 직접 책임, Step E commit 4 후 진행 예정) |
+
+Invariants I1~I11 (subscription-first / transparent API fallback / 사용자 제어 force-api+force-subscription / wiki 재생성 0 / 영문 UI / credentials.json read 금지 / OAuth token 단일 source = 외부 CLI / 하드코딩 금지 / LLMCallOptions 8 field 계약 보존 / core↔UI 결합 0 / credentials migration round-trip) 전부 implement.
+
+Karpathy 4 원칙 cross-check:
+- **Explicit** (auth mode UI 가시화 — Settings 카드에 subscription/api/auto + status badge) ✅
+- **Yours** (OAuth token 외부 CLI 가 로컬 보관, wikey 안 token 0 + plain-text credentials.json) ✅
+- **File over app** (credentials.json + auth_mode JSON, 양방향 migration) ✅
+- **BYOAI** (provider 통합 옵션 확장 — subscription path 신설로 기존 BYOAI 4 원칙 강화) ✅
+
+- [x] Step A (§5.6.4.1) — provider 추상화 layer + AuthMode + CredentialResolver + onAuthFallback callback API + 16+8 test (commit `e901b84`)
+- [x] Step B (§5.6.4.2) — Google Gemini subscription (gemini CLI + `~/.gemini/oauth_creds.json`) + 16 test (commit `e901b84`)
+- [x] Step C (§5.6.4.3) — Anthropic Claude subscription (`claude -p` CLI + Keychain — binary-only presence) + 16 test (commit `f4cf417`)
+- [x] Step D (§5.6.4.4) — OpenAI Codex subscription (`codex exec -` CLI + `~/.codex/auth.json` + marker-based parser) + 16 test (commit `14b53f4`)
+- [x] Step E (§5.6.4.5) — BLUE 3b refactor (`callWithFallback` helper) + routing matrix 8 case smoke + 문서 동기화 (commit 4, 본 turn)
+- [ ] master CDP smoke (별도 turn, 사용자 책임)
+- [ ] codex Mode D Panel cycle #2 post-impl + push (사용자 사전 보고 후)
+
+배운 점:
+- **codex Mode D Panel plan 9 cycle 누적** — 매 cycle 마다 hallucination 차단 (가짜 separator 모델링 / 가짜 type 단언 / quote-mark 인용 패턴 분리) — master 실측 evidence 단일 source 의무 (`plan/phase-5/fixtures/cycle-codex-golden/`) 가 9 cycle 째 안정화. plan 단계 codex review = 코드 단계 못지않게 finding 다발.
+- **공통 helper extract 가 BLUE 3b 의 표본** — Step E refactor 가 3 provider 동일 try/catch/retry shape 을 단일 site 으로 모음. invariant I1+I2+I3 cross-check 가 한 site 에서 가능 + test 0 변경 확증.
+
+→ **§5.6.4 v0.7 종결**. Phase 5 잔여 = §5.5 / §5.6 (나머지) / §5.8 / §5.9 / §5.20 (5 subject).
