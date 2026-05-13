@@ -874,13 +874,13 @@ e.g. "Key specs of DJI O3?", "Compare RAG vs LLM Wiki"
 **Wikilinks**
 Click [[page name]] in answers to navigate to the wiki page.
 
+**Settings**
+\`Cmd+,\` → Wikey tab to manage models, API keys, Ollama connection.
+
 **Maintenance Modes**
 - **Status**: Read-only health metrics (pages, broken links, dangling refs, tombstones).
 - **Check**: Detect issues and fix them — broken wikilinks, dangling cross-links, stale tombstones, validate-wiki orphans. Each finding is opt-in; Apply fix opens a checkbox selector.
-- **Refactoring suggestions**: Detect structural opportunities — duplicate pages (>= 0.85 similarity) and low-utility pages (> 30 days old with 0 backlinks). Execute archives selected pages to \`wiki/archive/<original-path>\`.
-
-**Settings**
-\`Cmd+,\` → Wikey tab to manage models, API keys, Ollama connection.`
+- **Refactoring suggestions**: Detect structural opportunities — duplicate pages (>= 0.85 similarity) and low-utility pages (> 30 days old with 0 backlinks). Execute archives selected pages to \`wiki/archive/<original-path>\`.`
 
     MarkdownRenderer.render(this.app, helpMd, helpEl, '', this.plugin)
 

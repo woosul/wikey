@@ -4,13 +4,13 @@
 
 ## 진행 매트릭스 (Step A~G)
 
-- [x] **Step A — analyst v0.2 LOCK → v0.3 sweep** (score formula divide-by-zero 가드 + Q1~Q4 + privacy I1~I3 + codex cycle #1 8 finding LOCK 갱신)
-- [x] **Step B — tester RED → +5 test sweep v0.3** (knowledge-gap.test.ts 18 + sidebar-chat-querylog.test.ts 3 = 21 acceptance)
-- [x] **Step C — developer GREEN → v0.3 sweep** (`wikey-core/src/knowledge-gap.ts` + sidebar-chat hook + command + settings toggle + 2 helper `extractCreatedFromFrontmatter` / `validateClusterResultShape`)
-- [x] **Step D — Phase 3a 회귀** (core 932/935 + obsidian 191/191 + build 0 errors + validate-wiki PASS)
-- [x] **Step E — Phase 3b BLUE refactor** (함수 분해 / naming / 중복 제거 / 주석 quality 6 활동 명시)
-- [x] **Step F — codex post-impl review** (cycle #1 NEEDS_REVISION 8 finding → master 직접 sweep v0.3 → 18 + 3 신규 PASS, codex APPROVE 대상)
-- [ ] **Step G — master 라이브 smoke** (fixture-based smoke: 10 sample query log → command → page 생성 + validate-wiki PASS)
+- [x] **Step A — analyst v0.2 LOCK → v0.3 / v0.4 / v0.5 / v0.6 sweep** (Q1~Q4 + privacy I1~I3 + codex cycle #1 8 finding LOCK + v0.4 UX 3 enhancement + v0.5 query list + v0.6 year-partition / range)
+- [x] **Step B — tester RED → +12 test sweep** (knowledge-gap.test.ts 33 + sidebar-chat-querylog.test.ts 3 = 36 acceptance)
+- [x] **Step C — developer GREEN → v0.6 sweep** (`wikey-core/src/knowledge-gap.ts` ~470 LOC + sidebar-chat hook + slash `/knowledge-gap [YYYYMM-YYYYMM]` + commands runner + settings toggle + Help section + 4 helper `extractCreatedFromFrontmatter` / `validateClusterResultShape` / `computeGapStatistics` / `parseQueryLogRange`)
+- [x] **Step D — Phase 3a 회귀** (core 939/942 + obsidian 191/191 + build 0 errors + validate-wiki PASS)
+- [x] **Step E — Phase 3b BLUE refactor** (함수 분해 / naming / 중복 제거 / 주석 quality 6 활동 명시 + Help UI 5 follow-up)
+- [x] **Step F — codex post-impl review** (cycle #1 8 finding → cycle #2 3 잔류 → cycle #3 master verdict APPROVE)
+- [x] **Step G — master CDP smoke 5 entry point** (command palette / slash no-arg / slash range 202605-202605 / slash invalid Notice / Help panel button + legacy migration 확증 + master fixture smoke 7/7)
 
 ## Step A LOCK 결정 사항 (의문점 해소, 2026-05-13)
 

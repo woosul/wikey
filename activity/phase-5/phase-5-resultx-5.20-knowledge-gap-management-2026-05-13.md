@@ -9,11 +9,11 @@ version: v0.6
 
 # Phase 5 §5.20 Knowledge Gap management — Result (2026-05-13 session 41)
 
-> **상위 문서**: [`plan/phase-5/phase-5-todo.md §5.20`](../../plan/phase-5/phase-5-todo.md) · [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](../../plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md) (v0.2) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](../../plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md) (v0.2) #knowledge-gap #analytics #report #done
+> **상위 문서**: [`plan/phase-5/phase-5-todo.md §5.20`](../../plan/phase-5/phase-5-todo.md) · [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](../../plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md) (v0.4) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](../../plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md) (v0.3.1) #knowledge-gap #analytics #report #done
 
 ## 1. 종결 요약
 
-§5.20 = Phase 5 잔여 5 subject 중 첫 종결 (session 41). **query log capture + gap score formula + auto-report** 3 spec 의 SDD+TDD 7 step (A~G) 완료. 신규 `wikey-core/src/knowledge-gap.ts` (285 LOC, pure function) + sidebar-chat hook + `Wikey: Generate knowledge gap report` command + settings toggle (default ON). 16 신규 test (core 13 + obsidian 3) ALL GREEN, build 0 errors, validate-wiki PASS.
+§5.20 = Phase 5 잔여 5 subject 중 첫 종결 (session 41). **v0.3.1 → v0.4 → v0.5 → v0.6 + Help UI 5 follow-up = 누적 10 commit** 으로 진화. query log capture + gap score formula + auto-report 3 spec + 사용자 raise 4 enhancement (Summary/Statistics/3 entry / per-gap query list / year partition / range filter) + Help panel visual polish 누적. 신규 `wikey-core/src/knowledge-gap.ts` (~470 LOC, pure function) + sidebar-chat hook + `/knowledge-gap [YYYYMM-YYYYMM]` slash + `Wikey: Generate knowledge gap report` command + Help panel "Knowledge gap report" button (status line) + settings toggle (default ON). **36 신규 test** (core 33 knowledge-gap + obsidian 3 sidebar-chat-querylog) ALL GREEN, 회귀 core 939/942 + obsidian 191/191 PASS, build 0 errors, validate-wiki PASS. master CDP smoke 5 entry point ALL PASS + legacy auto-migration 확증.
 
 **Karpathy llm-wiki "Explicit" 원칙 강화** — 위키가 *무엇을 모르는지* 자체가 위키 page (`wiki/analyses/knowledge-gaps-YYYY-MM.md`) 로 가시화.
 
