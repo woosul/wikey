@@ -316,6 +316,42 @@
   color: var(--interactive-accent);
 }
 
+/* ── Help body text unified styling (사용자 raise 2026-05-13) ────────────── */
+/*  - body text size 통일 (paragraph + list 동일 0.9em)
+ *  - list bullet + indent 통일
+ *  - inline code (백틱) = command → bold + white (text-normal)
+ *  - 일반 텍스트 → grey (text-muted)
+ *  Heading strong (`> p > strong:first-child`) 은 별도 rule (line 2600+)에서
+ *  0.95em / weight 300 / accent purple 으로 처리 — 본 영역은 본문 전용.
+ */
+.wikey-chat-help p,
+.wikey-chat-help li {
+  font-size: 0.9em;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.wikey-chat-help p {
+  margin: 0 0 0.6em;
+}
+
+.wikey-chat-help ul {
+  margin: 0.25em 0 0.7em;
+  padding-left: 1.4em;
+}
+
+.wikey-chat-help li {
+  margin: 0.2em 0;
+}
+
+.wikey-chat-help code {
+  font-weight: 700;
+  color: var(--text-normal);
+  background: transparent;
+  padding: 0;
+  font-size: inherit;
+}
+
 /* ── Dashboard ── */
 
 .wikey-dashboard {
@@ -2598,12 +2634,19 @@ a.internal-link.wikey-broken-link,
 }
 
 .wikey-maintenance-section h3,
-.wikey-knowledge-gap-usage-section h3,
-.wikey-chat-help > p > strong:first-child {
+.wikey-knowledge-gap-usage-section h3 {
   font-size: 0.95em;
   font-weight: 300;
   color: var(--interactive-accent);
   margin: 0 0 0.5rem;
+}
+
+/* Heading strong (`<p><strong>Section</strong>...`) — parent paragraph 가 0.9em
+ *  cascade 라 1.06em 으로 보정 (root 기준 ≈ 12.6px, 본문 11.88 보다 살짝 큼). */
+.wikey-chat-help > p > strong:first-child {
+  font-size: 1.06em;
+  font-weight: 300;
+  color: var(--interactive-accent);
 }
 
 .wikey-knowledge-gap-usage-section {
