@@ -373,7 +373,115 @@ export class LLMClient {
     return data.content[0].text as string
   }
 
+  /**
+   * §5.6.4.4 Step D — credential presence detector for `openai` (codex CLI).
+   *
+   * Subscription detected = `~/.codex/auth.json` exists AND CLI binary
+   * (`CLI_DEFAULT_BINARY.openai`) exists. Unlike Anthropic (Keychain) the
+   * codex CLI persists OAuth tokens to a plain file, so we can probe it
+   * directly. Both checks are sync (no spawn) — safe on every request.
+   */
+  checkOpenAIPresence(): CredentialPresence {
+    const path = require('node:path') as typeof import('node:path')
+    const credsPath = path.join(this.subscriptionDeps.homeDir(), '.codex', 'auth.json')
+    const hasAuth = this.subscriptionDeps.fileExists(credsPath)
+    const hasBinary = this.subscriptionDeps.fileExists(CLI_DEFAULT_BINARY.openai)
+    return {
+      hasSubscription: hasAuth && hasBinary,
+      hasApiKey: !!this.config.OPENAI_API_KEY,
+    }
+  }
+
   private async callOpenAI(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const presence = this.checkOpenAIPresence()
+    const path = resolveAuthMode('openai', this.config, presence)
+    if (path !== 'subscription') {
+      return this.callOpenAIApi(prompt, opts)
+    }
+    return this.callOpenAIWithFallback(prompt, opts, presence)
+  }
+
+  private async callOpenAIWithFallback(
+    prompt: string,
+    opts: LLMCallOptions | undefined,
+    presence: CredentialPresence,
+  ): Promise<string> {
+    try {
+      return await this.callOpenAISubscription(prompt, opts)
+    } catch (err) {
+      const reason = classifyFallbackReason(err)
+      const mode = this.config.OPENAI_AUTH_MODE ?? 'auto'
+      // auto + has API key + actionable reason = transparent retry on API path.
+      if (mode === 'auto' && presence.hasApiKey && reason !== null) {
+        opts?.onAuthFallback?.({ provider: 'openai', reason, originalError: err as Error })
+        return this.callOpenAIApi(prompt, opts)
+      }
+      throw err
+    }
+  }
+
+  /**
+   * §5.6.4.4 Step D — openai subscription path (`codex exec -` CLI ChatGPT OAuth).
+   *
+   * Mirrors `callAnthropicSubscription` (same 5 failure modes):
+   *   - jsonMode requested → throw SubscriptionFallbackError('jsonMode-unsupported')
+   *   - spawn ENOENT       → throw with reason 'spawn-failed'
+   *   - aborted (timeout)  → throw with reason 'timeout'
+   *   - auth-missing       → detected from "not logged in" stderr → reason 'auth-missing'
+   *   - quota              → detected from stderr keywords → reason 'quota-exceeded'
+   *   - other nonzero exit → reason 'spawn-failed' (auto fallback in caller)
+   *
+   * stdout parsing = `parseSubscriptionOutput('openai', stdout)` = marker-based
+   * extraction (`\ncodex\n` ↔ `\ntokens used` sandwich; cli-parser.ts).
+   */
+  private async callOpenAISubscription(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const mapped = mapOptionsToCliArgs('openai', 'subscription', opts ?? {})
+    if (mapped.unsupported === 'jsonMode') {
+      throw new SubscriptionFallbackError(
+        'jsonMode-unsupported',
+        'openai subscription does not support jsonMode',
+      )
+    }
+
+    const spawnOpts: SpawnCliOptions = {
+      extraArgs: mapped.args,
+      timeoutMs: opts?.timeout,
+    }
+    let result: SpawnCliResult
+    try {
+      result = await this.subscriptionDeps.spawnCliPrompt('openai', prompt, spawnOpts)
+    } catch (err) {
+      throw new SubscriptionFallbackError(
+        'spawn-failed',
+        `openai CLI spawn failed: ${(err as Error).message}`,
+        err as Error,
+      )
+    }
+
+    if (result.aborted) {
+      throw new SubscriptionFallbackError(
+        'timeout',
+        'openai CLI aborted (timeout or external signal)',
+      )
+    }
+
+    if (result.exitCode !== 0) {
+      const triggerReason = detectFallbackTrigger({
+        status: 0,
+        stderr: result.stderr,
+        body: result.stdout,
+      })
+      const reason: FallbackReason = triggerReason ?? 'spawn-failed'
+      throw new SubscriptionFallbackError(
+        reason,
+        `openai CLI exit ${result.exitCode}: ${result.stderr.trim() || '<no stderr>'}`,
+      )
+    }
+
+    return parseSubscriptionOutput('openai', result.stdout)
+  }
+
+  private async callOpenAIApi(prompt: string, opts?: LLMCallOptions): Promise<string> {
     const apiKey = this.config.OPENAI_API_KEY
     if (!apiKey) throw new Error('OPENAI_API_KEY not set — configure API key in settings')
 

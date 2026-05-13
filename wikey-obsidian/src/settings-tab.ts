@@ -1211,6 +1211,8 @@ export class WikeySettingTab extends PluginSettingTab {
     // §5.6.4.3 Step C — Anthropic subscription (Claude Pro/Max via `claude` CLI OAuth).
     this.renderAnthropicAuthModeCard(containerEl)
     this.renderApiKeyField(containerEl, 'OpenAI Codex', 'openaiApiKey', 'sk-...', 'openai')
+    // §5.6.4.4 Step D — OpenAI subscription (ChatGPT Plus/Pro via `codex` CLI OAuth).
+    this.renderOpenAIAuthModeCard(containerEl)
   }
 
   /**
@@ -1369,6 +1371,87 @@ export class WikeySettingTab extends PluginSettingTab {
       // Same default as wikey-core/cli-spawn.ts `CLI_DEFAULT_BINARY.anthropic`.
       const binaryPath = '/usr/local/bin/claude'
       return fs.existsSync(binaryPath)
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * §5.6.4.4 Step D — OpenAI Codex Auth mode card.
+   *
+   * Mirrors `renderGoogleAuthModeCard` with OpenAI-specific copy. The `codex`
+   * CLI manages subscription auth via `codex login` (ChatGPT Plus / Pro OAuth)
+   * and persists the OAuth token to `~/.codex/auth.json` — probeable directly
+   * via fs.existsSync (unlike claude Keychain).
+   */
+  private renderOpenAIAuthModeCard(containerEl: HTMLElement): void {
+    const cardEl = containerEl.createDiv({ cls: 'wikey-settings-auth-mode-card' })
+
+    new Setting(cardEl)
+      .setName('Auth mode')
+      .setDesc('How wikey calls OpenAI. Auto = subscription first, API fallback.')
+      .addDropdown((dd) => {
+        dd.addOption('subscription', 'Subscription (ChatGPT Plus/Pro)')
+        dd.addOption('api', 'API key')
+        dd.addOption('auto', 'Auto (subscription first, API fallback)')
+        dd.setValue(this.plugin.settings.openaiAuthMode ?? 'auto')
+        dd.onChange(async (value) => {
+          if (value === 'subscription' || value === 'api' || value === 'auto') {
+            this.plugin.settings.openaiAuthMode = value
+            await this.plugin.saveSettings()
+          }
+        })
+      })
+
+    const statusEl = cardEl.createDiv({ cls: 'wikey-settings-status-row' })
+    const subscriptionDetected = this.detectOpenAISubscription()
+    const apiConfigured = !!this.plugin.settings.openaiApiKey
+    statusEl.createEl('span', {
+      text: `Subscription: ${subscriptionDetected ? 'detected' : 'not detected'}`,
+      cls: 'wikey-settings-status-label',
+    })
+    statusEl.createEl('span', {
+      text: ` · API key: ${apiConfigured ? 'configured' : 'empty'}`,
+      cls: 'wikey-settings-status-label',
+    })
+
+    new Setting(cardEl)
+      .addButton((btn) => {
+        btn.setButtonText('Sign in with ChatGPT').onClick(() => {
+          new GeminiAuthInstructionModal(
+            this.app,
+            'Sign in with ChatGPT',
+            'Run "codex login" in your terminal, then return here and reload Obsidian.',
+          ).open()
+        })
+      })
+      .addButton((btn) => {
+        btn.setButtonText('Sign out').onClick(() => {
+          new GeminiAuthInstructionModal(
+            this.app,
+            'Sign out',
+            'Run "codex logout" in your terminal.',
+          ).open()
+        })
+      })
+  }
+
+  /**
+   * §5.6.4.4 Step D — sync detection for the codex CLI binary + OAuth token file.
+   * Mirrors `LLMClient.checkOpenAIPresence`: both `~/.codex/auth.json` AND the
+   * CLI binary must exist (codex login persists OAuth to a plain file, unlike
+   * claude Keychain). The runtime detects 401/quota/rate-limit at first spawn
+   * via stderr classification (`detectFallbackTrigger`).
+   */
+  private detectOpenAISubscription(): boolean {
+    try {
+      const fs = require('node:fs') as typeof import('node:fs')
+      const os = require('node:os') as typeof import('node:os')
+      const path = require('node:path') as typeof import('node:path')
+      const credsPath = path.join(os.homedir(), '.codex', 'auth.json')
+      // Same default as wikey-core/cli-spawn.ts `CLI_DEFAULT_BINARY.openai`.
+      const binaryPath = '/usr/local/bin/codex'
+      return fs.existsSync(credsPath) && fs.existsSync(binaryPath)
     } catch {
       return false
     }
