@@ -374,6 +374,45 @@ describe('§5.20 Spec 3 — auto report generation (I9/I10/I11)', () => {
     expect(stats.periodEnd).toBe('2026-05-13')
   })
 
+  it('AC-S3-9 (v0.5): renderGapReportMarkdown lists actual queries per gap when entries provided', () => {
+    const sampleEntries: QueryLogEntry[] = [
+      { ts: '2026-05-13T08:00:00.000Z', query: 'how does X work', answerLen: 20, citationCount: 0, resolveFailed: true },
+      { ts: '2026-05-13T08:05:00.000Z', query: 'what is Y', answerLen: 22, citationCount: 0, resolveFailed: true },
+      { ts: '2026-05-13T09:00:00.000Z', query: 'tell me about Z', answerLen: 100, citationCount: 2, resolveFailed: false },
+    ]
+    const gaps: KnowledgeGap[] = [
+      {
+        topic: 'cluster-a',
+        frequency: 2,
+        avgAnswerLen: 21,
+        avgCitationCount: 0,
+        gapScore: 0.5,
+        queryIndices: [0, 1],
+      },
+      {
+        topic: 'cluster-b',
+        frequency: 1,
+        avgAnswerLen: 100,
+        avgCitationCount: 2,
+        gapScore: 0.1,
+        queryIndices: [2],
+      },
+    ]
+    const md = renderGapReportMarkdown(gaps, { yearMonth: '2026-05', entries: sampleEntries })
+    expect(md).toMatch(/Queries in this cluster:/i)
+    expect(md).toContain('(2026-05-13) "how does X work" — 20 chars, no citations')
+    expect(md).toContain('(2026-05-13) "what is Y" — 22 chars, no citations')
+    expect(md).toContain('(2026-05-13) "tell me about Z" — 100 chars, 2 cit')
+  })
+
+  it('AC-S3-10 (v0.5): renderGapReportMarkdown omits query list when entries not provided (backward compat)', () => {
+    const gaps: KnowledgeGap[] = [
+      { topic: 'x', frequency: 1, avgAnswerLen: 10, avgCitationCount: 0, gapScore: 0.1, queryIndices: [0] },
+    ]
+    const md = renderGapReportMarkdown(gaps, { yearMonth: '2026-05' })
+    expect(md).not.toMatch(/Queries in this cluster:/i)
+  })
+
   it('AC-S3-8 (v0.4): computeGapStatistics handles empty entries', () => {
     const stats = computeGapStatistics([], 0)
     expect(stats.totalQueries).toBe(0)

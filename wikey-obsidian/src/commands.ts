@@ -1119,6 +1119,7 @@ export async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promis
     updatedDate: isoDate,
     summary,
     statistics,
+    entries,
   })
   await plugin.wikiFS.write(pagePath, markdown)
 

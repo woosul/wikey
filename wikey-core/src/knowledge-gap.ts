@@ -320,9 +320,12 @@ export function renderGapReportMarkdown(
     updatedDate?: string
     summary?: string
     statistics?: GapStatistics
+    /** v0.5 — entries 주입 시 each gap section 에 actual query list 출력 (사용자
+     *  요청: 어떤 질문이 있었고 어떤 갭인지 직접 확인 가능). 미지정 시 query list 생략. */
+    entries?: readonly QueryLogEntry[]
   },
 ): string {
-  const { yearMonth, createdDate, updatedDate, summary, statistics } = opts
+  const { yearMonth, createdDate, updatedDate, summary, statistics, entries } = opts
   const firstOfMonth = `${yearMonth}-01`
   const created = createdDate ?? firstOfMonth
   const updated = updatedDate ?? firstOfMonth
@@ -370,6 +373,18 @@ export function renderGapReportMarkdown(
     )
     lines.push(`- average answer length: ${formatAvg(gap.avgAnswerLen)} chars`)
     lines.push(`- average citation count: ${formatAvg(gap.avgCitationCount)}`)
+    // v0.5 — actual query list per cluster (사용자 요청 — gap 정체 가시화).
+    if (entries && gap.queryIndices.length > 0) {
+      lines.push('')
+      lines.push('Queries in this cluster:')
+      for (const i of gap.queryIndices) {
+        const e = entries[i]
+        if (!e) continue
+        const date = e.ts.slice(0, 10)
+        const cit = e.citationCount === 0 ? 'no citations' : `${e.citationCount} cit`
+        lines.push(`- (${date}) "${e.query}" — ${e.answerLen} chars, ${cit}`)
+      }
+    }
     lines.push('')
   }
 
