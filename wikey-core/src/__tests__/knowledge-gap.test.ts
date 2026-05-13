@@ -37,9 +37,11 @@ import {
   renderGapReportMarkdown,
   extractCreatedFromFrontmatter,
   validateClusterResultShape,
+  computeGapStatistics,
   type QueryLogEntry,
   type ClusterResult,
   type TopicClusterer,
+  type GapStatistics,
 } from '../knowledge-gap.js'
 import type { WikiFS } from '../types.js'
 
@@ -287,7 +289,7 @@ describe('§5.20 Spec 3 — auto report generation (I9/I10/I11)', () => {
     ]
   }
 
-  it('AC-S3-1: renderGapReportMarkdown emits frontmatter + Top N gaps body', () => {
+  it('AC-S3-1 (v0.4): renderGapReportMarkdown emits frontmatter + Summary + All gaps body', () => {
     const md = renderGapReportMarkdown(sampleGaps(), { yearMonth: '2026-05' })
 
     // Frontmatter shape (I10).
@@ -300,8 +302,11 @@ describe('§5.20 Spec 3 — auto report generation (I9/I10/I11)', () => {
     // I10 v0.3 — schema 페이지 컨벤션 정합 (sources 필수 필드).
     expect(md).toMatch(/^sources:\s*\[\]\s*$/m)
 
-    // 본문 (I11): `## Top N gaps` + 각 cluster 별 `### name (gapScore: X.XX, frequency: N)`.
-    expect(md).toMatch(/##\s+Top\s+N\s+gaps/i)
+    // v0.4 본문 (I11): Summary section + All gaps section.
+    expect(md).toMatch(/##\s+Summary/i)
+    // Summary 미지정 시 graceful fallback 문구.
+    expect(md).toMatch(/LLM summary unavailable/i)
+    expect(md).toMatch(/##\s+All\s+gaps/i)
     expect(md).toMatch(/###\s+transformer architecture\s*\(gapScore:\s*1\.42,\s*frequency:\s*8\)/i)
     expect(md).toMatch(/###\s+embedding strategy\s*\(gapScore:\s*0\.18,\s*frequency:\s*4\)/i)
   })
@@ -321,6 +326,60 @@ describe('§5.20 Spec 3 — auto report generation (I9/I10/I11)', () => {
     })
     expect(md).toMatch(/^created:\s*2026-05-03$/m)
     expect(md).toMatch(/^updated:\s*2026-05-13$/m)
+  })
+
+  it('AC-S3-5 (v0.4): renderGapReportMarkdown includes LLM summary when provided', () => {
+    const summary = 'transformer 관련 질문이 자주 들어오는데 답변이 짧고 인용 없음.\n관련 raw source 추가 권고.'
+    const md = renderGapReportMarkdown(sampleGaps(), { yearMonth: '2026-05', summary })
+    expect(md).toMatch(/##\s+Summary/i)
+    expect(md).toContain('transformer 관련 질문이 자주')
+    expect(md).toContain('관련 raw source 추가 권고')
+    // Fallback message는 안 보임.
+    expect(md).not.toMatch(/LLM summary unavailable/i)
+  })
+
+  it('AC-S3-6 (v0.4): renderGapReportMarkdown includes Statistics block when provided', () => {
+    const statistics: GapStatistics = {
+      totalQueries: 25,
+      distinctTopics: 7,
+      zeroCitationCount: 12,
+      zeroCitationPercent: 48.0,
+      avgAnswerLen: 87.3,
+      periodStart: '2026-05-01',
+      periodEnd: '2026-05-13',
+    }
+    const md = renderGapReportMarkdown(sampleGaps(), { yearMonth: '2026-05', statistics })
+    expect(md).toMatch(/##\s+Statistics/i)
+    expect(md).toMatch(/Total queries logged:\s*25/)
+    expect(md).toMatch(/Distinct topic clusters:\s*7/)
+    expect(md).toMatch(/Queries with zero citations:\s*12\s*\(48\.0%\)/)
+    expect(md).toMatch(/Average answer length:\s*87\.30\s*chars/)
+    expect(md).toMatch(/Reporting period:\s*2026-05-01\s*~\s*2026-05-13/)
+  })
+
+  it('AC-S3-7 (v0.4): computeGapStatistics aggregates entries correctly', () => {
+    const entries: QueryLogEntry[] = [
+      { ts: '2026-05-01T01:00:00.000Z', query: 'a', answerLen: 100, citationCount: 0, resolveFailed: false },
+      { ts: '2026-05-05T01:00:00.000Z', query: 'b', answerLen: 50, citationCount: 0, resolveFailed: false },
+      { ts: '2026-05-10T01:00:00.000Z', query: 'c', answerLen: 150, citationCount: 3, resolveFailed: false },
+      { ts: '2026-05-13T01:00:00.000Z', query: 'd', answerLen: 100, citationCount: 2, resolveFailed: false },
+    ]
+    const stats = computeGapStatistics(entries, 3)
+    expect(stats.totalQueries).toBe(4)
+    expect(stats.distinctTopics).toBe(3)
+    expect(stats.zeroCitationCount).toBe(2)
+    expect(stats.zeroCitationPercent).toBe(50)
+    expect(stats.avgAnswerLen).toBe(100)
+    expect(stats.periodStart).toBe('2026-05-01')
+    expect(stats.periodEnd).toBe('2026-05-13')
+  })
+
+  it('AC-S3-8 (v0.4): computeGapStatistics handles empty entries', () => {
+    const stats = computeGapStatistics([], 0)
+    expect(stats.totalQueries).toBe(0)
+    expect(stats.zeroCitationPercent).toBe(0)
+    expect(stats.periodStart).toBeNull()
+    expect(stats.periodEnd).toBeNull()
   })
 
   it('AC-S3-4 (v0.3): extractCreatedFromFrontmatter reads `created` from existing page', () => {
@@ -364,6 +423,22 @@ describe('§5.20 Spec 2 v0.3 — LLM cluster shape validation', () => {
     expect(() =>
       validateClusterResultShape({ topics: [{ name: 't', queryIndices: [0, 'x'] }] }),
     ).toThrow()
+  })
+
+  it('AC-S2-11 (v0.4): rankKnowledgeGaps returns full list by default (no limit truncation)', async () => {
+    // 15 cluster → default limit 없음 → 모두 반환.
+    const entries: QueryLogEntry[] = Array.from({ length: 15 }, (_, i) =>
+      makeEntry({ query: `q${i}`, answerLen: 50 - i, citationCount: 0 }),
+    )
+    const clusterer: TopicClusterer = async () => ({
+      topics: Array.from({ length: 15 }, (_, i) => ({ name: `topic-${i}`, queryIndices: [i] })),
+    })
+    const gaps = await rankKnowledgeGaps(entries, clusterer)
+    expect(gaps.length).toBe(15)
+
+    // 명시 limit 시 잘림.
+    const limited = await rankKnowledgeGaps(entries, clusterer, 5)
+    expect(limited.length).toBe(5)
   })
 
   it('AC-S2-10 (v0.3 cycle #2): validateClusterResultShape rejects non-integer queryIndices', () => {

@@ -4,7 +4,7 @@ section: 5.20
 title: Knowledge Gap management — query log capture + gap score formula + auto-report (Result v0.3.1)
 created: 2026-05-13
 updated: 2026-05-13
-version: v0.3.1
+version: v0.4
 ---
 
 # Phase 5 §5.20 Knowledge Gap management — Result (2026-05-13 session 41)
@@ -133,7 +133,37 @@ grep -rE "fetch|XMLHttpRequest|requestUrl" wikey-core/src/knowledge-gap.ts wikey
 - **File over app**: JSONL append-only, vault 내. `jq`/`grep`/`wc -l` 호환.
 - **BYOAI**: clustering = `settings.basicModel` resolve (provider 자유 교체) + fallback deterministic.
 
-## 8. 다음
+## 8. v0.4 UX enhancement (사용자 요청 2026-05-13)
+
+v0.3.1 codex verdict APPROVE 직후 사용자 추가 요청 3건:
+1. report 본문이 단순 상위 N 리스트가 아닌 **LLM narrative summary + 통계 데이터 상단 block + 전체 listing**.
+2. `/knowledge-gap` slash command.
+3. Help panel "Wiki Maintenance" section 에 4번째 버튼 "Knowledge gap report".
+
+**구현**:
+- `renderGapReportMarkdown` 시그니처 확장: `{ yearMonth, createdDate?, updatedDate?, summary?, statistics? }`. 3 section render — `## Summary` / `## Statistics` / `## All gaps`. summary 미지정 시 graceful fallback message.
+- `computeGapStatistics(entries, topicCount)` 신규 helper — total queries / distinct topics / zero-citation % / avg answer length / reporting period.
+- `rankKnowledgeGaps` `limit` 옵셔널 변경 (default 전체 listing, 사용자 명시 시 제한).
+- commands runner — LLM summary call 추가 (graceful fail), statistics 계산, return path. **export** 해서 sidebar-chat / Help panel button 공유.
+- sidebar-chat `/knowledge-gap` slash command (handleSend 분기) + input placeholder 갱신.
+- Help panel 4번째 버튼 "Knowledge gap report" — modal 없이 직접 runner 호출 + status line ("Report generating…" → "Report generated. → path").
+
+**신규 test 5**:
+- AC-S2-11: rankKnowledgeGaps full listing default (15 cluster → 15 반환).
+- AC-S3-5: summary 주입 시 본문 포함.
+- AC-S3-6: statistics 주입 시 Statistics block 출력.
+- AC-S3-7: computeGapStatistics aggregation.
+- AC-S3-8: computeGapStatistics empty entries.
+
+**기존 test 갱신 2**:
+- AC-S3-1: `## Top N gaps` → `## Summary` + `## All gaps` (v0.4 새 본문 구조).
+- AC-UI-1 (maintenance-modal.test.ts): 3 버튼 → 4 버튼 (Knowledge gap report 추가).
+
+**실 보고서 생성**: `wiki/analyses/knowledge-gaps-2026-05.md` — 12 sample query → 7 cluster (transformer 0.15 top gap, bm25 / embedding / bucket / search / ingest / kiwi 순). validate-wiki PASS.
+
+**부산물 commit**: `.github/workflows/benchmark.yml` 삭제 — 계속 실패하던 GH Action (cache-dependency-path 해소 안 됨), 사용자 결정.
+
+## 9. 다음
 
 - **Phase 5 잔여 4** = §5.5 / §5.6 / §5.8 / §5.9 (4 subject).
-- **§5.20 자동 scheduler 통합** (out of scope of this cycle) — §5.19 maintenance suite 통합은 별 cycle 후보.
+- **§5.20 자동 scheduler 통합** (out of scope of this cycle) — §5.19 maintenance suite 통합은 별 cycle 후보 (v0.5+).

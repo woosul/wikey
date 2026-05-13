@@ -5,7 +5,7 @@ title: Knowledge Gap management — query log analysis + auto-report (Spec)
 status: lock
 created: 2026-05-11
 updated: 2026-05-13
-version: v0.3
+version: v0.4
 ---
 
 # Phase 5 §5.20 Knowledge Gap management (Spec, WHAT)
@@ -72,7 +72,7 @@ version: v0.3
   - **I5 (Topic clustering LLM-only, LOCK)**: topic 추출 = LLM clustering. **hardcoded keyword 0건** (§5.10.4 D-wide 정합). 사용 LLM = `settings.basicModel` resolve (Q2 LOCK).
     - Output schema (LLM 응답): `{ topics: [{ name: string, queryIndices: number[] }] }`. 단일 LLM call (batch). 일괄 분류.
     - Fallback (LLM 실패 시): deterministic token-overlap clustering — Kiwi 형태소 noun 교집합 (`@orama/orama` Kiwi tokenizer 재사용). hardcoded stopword / category 0건.
-  - **I6 (Top-N 출력, LOCK)**: gapScore desc 정렬 후 상위 N (default 10) 반환. N override 가능 (`limit` 파라미터).
+  - **I6 (출력 전체 listing, LOCK v0.4)**: gapScore desc 정렬. **default = 전체** (limit 없음). `limit` 파라미터로 제한 가능 (옵셔널, 사용자 명시 시만).
 - **Acceptance**:
   - 10 query log entry → LLM clustering 1회 호출 → topic cluster 3~5개 → gap score desc 정렬.
   - LLM 강제 fail (mock throw) → fallback deterministic clustering 동작, 결과 ≥ 1 topic.
@@ -97,16 +97,32 @@ version: v0.3
     sources: []  # schema §"페이지 컨벤션" 필수 필드 (auto-report 는 raw source 인용 없음)
     ---
     ```
-  - **I11 (본문 구조, LOCK v0.3)**: deterministic render —
+  - **I11 (본문 구조, LOCK v0.4)**: 3 section — (a) LLM narrative summary (b) deterministic statistics (c) 전체 gap listing.
     ```
-    ## Top N gaps
+    ## Summary
+
+    <LLM-generated narrative (3~6 줄): 어떤 주제 지식 부족 + 어떤 raw source
+     추가 권고. basicModel 1회 호출. 사용자 ingest 우선순위 결정 데이터.>
+
+    ## Statistics
+
+    - Total queries logged: N
+    - Distinct topic clusters: M
+    - Queries with zero citations: K (P%)
+    - Average answer length: X chars
+    - Reporting period: YYYY-MM-DD ~ YYYY-MM-DD
+
+    ## All gaps
 
     ### {topic.name} (gapScore: X.XX, frequency: N)
     - average answer length: M chars
     - average citation count: K
+    ...
     ```
-    LLM-generated source-suggestion lines are **Out of Scope v0.3** (v0.4 candidate). 본 cycle 은 deterministic 통계 surface 만 (사용자가 직접 ingest 우선순위 결정).
+    Summary LLM 호출 실패 시 graceful fallback: `## Summary` 본문 = `(LLM summary unavailable — see Statistics + listing below.)` — page 자체는 항상 생성.
   - **I12 (Schema 정합)**: 생성 후 `validate-wiki.sh` PASS (frontmatter / wikilink / 카테고리).
+  - **I13 (Slash command, LOCK v0.4)**: 사이드바 chat 에서 `/knowledge-gap` 입력 → command 와 동일 동작 trigger. handleSend 진입부에서 `/clear` 다음 분기로 처리.
+  - **I14 (Maintenance button, LOCK v0.4)**: Help panel 의 `Wiki Maintenance` section 에 4번째 버튼 "Knowledge gap report". 클릭 시 modal 없이 직접 runner 호출 (status/check/refactoring 와 다름 — findings/recovery 흐름 없음). 결과 = Notice + 생성된 page 경로. command palette / slash / button 3 entry 모두 동일 runner 공유 (single source of truth).
 - **Acceptance**:
   - command `Wikey: Generate knowledge gap report` 실행 → `wiki/analyses/knowledge-gaps-2026-05.md` 생성.
   - 결과 페이지 = wikilink 정합, `validate-wiki.sh` PASS (0 errors).
@@ -114,10 +130,10 @@ version: v0.3
   - index.md 갱신 (`## 분석` section 에 entry 추가 또는 `updated` 갱신).
   - log.md 1줄 추가 (`## [YYYY-MM-DD] ingest | Knowledge Gaps YYYY-MM`).
 
-## 2. Out of Scope (v0.3 LOCK)
+## 2. Out of Scope (v0.4 LOCK)
 
-- **자동 cron / scheduler** (Q3 LOCK) — manual command `Wikey: Generate knowledge gap report` 만. §5.19 maintenance suite 통합은 별 cycle.
-- **LLM source-suggestion generation** (v0.3 codex finding HIGH-1 master decision) — deterministic 통계 surface 만 본 cycle. LLM call 1회 추가 → 비용/지연 / Karpathy Simplicity 강화. v0.4 candidate.
+- **자동 cron / scheduler** (Q3 LOCK) — manual trigger 만 (command palette / chat slash / maintenance modal 3 entry point 모두 사용자 명시 호출). §5.19 maintenance suite 의 cron 통합은 별 cycle.
+- **(v0.3 의 LLM source-suggestion Out-of-Scope 항목은 v0.4 에서 in-scope 로 승격됨 — Spec 3 I11 §"## Summary" 영역. 사용자 요청 2026-05-13)**
 - **다중 process 동시 write** (I3a v0.3) — Obsidian plugin = renderer 단일 thread. 다중 Obsidian instance 동시 write 는 personal vault 사용 패턴 밖.
 - 외부 source 자동 fetch (사용자 결정 영역).
 - 다국어 query clustering (한국어 / 영문 mix 만, §5.7.9 candidate #3 별 cycle).
@@ -160,6 +176,11 @@ version: v0.3
 
 ## 5. 변경 이력
 
+- **v0.4 (2026-05-13, LOCK)** — 사용자 요청 3 enhancement (2026-05-13).
+  - I6 (Top-N 출력) → 전체 listing default (limit 옵셔널).
+  - I11 (본문 구조) → 3 section: LLM narrative summary + deterministic statistics + 전체 listing. v0.3 의 "추천 source 후보" Out-of-Scope 항목 in-scope 승격.
+  - I13 (NEW): `/knowledge-gap` slash command — chat 에서 직접 trigger.
+  - I14 (NEW): MaintenanceMode `'knowledge-gap'` + Help panel 4번째 버튼.
 - **v0.3 (2026-05-13, LOCK)** — codex post-impl review cycle #1 NEEDS_REVISION 8 finding master 결정 sweep.
   - HIGH-1 (I11 recommendation) → Out of Scope (v0.4 candidate). deterministic 통계 surface 만 본 cycle. Karpathy Simplicity.
   - MEDIUM-1 (I9 created preservation) → I9 + I10 명시: `created` 첫 생성 보존, `updated` 만 실제 run 날짜. render `{createdDate?, updatedDate?}` 옵션 + command 가 기존 frontmatter parse.

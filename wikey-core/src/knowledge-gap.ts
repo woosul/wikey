@@ -144,13 +144,14 @@ function parseEntryLine(line: string): QueryLogEntry | null {
 }
 
 /**
- * Spec 2 — log entries + clusterer → KnowledgeGap[] (gapScore desc, top-N).
+ * Spec 2 — log entries + clusterer → KnowledgeGap[] (gapScore desc).
+ * v0.4: `limit` is optional; default is the full sorted list (no truncation).
  * clusterer throw 시 token-overlap fallback 사용 (I5).
  */
 export async function rankKnowledgeGaps(
   entries: readonly QueryLogEntry[],
   clusterer: TopicClusterer,
-  limit: number = 10,
+  limit?: number,
 ): Promise<KnowledgeGap[]> {
   if (entries.length === 0) return []
 
@@ -185,7 +186,58 @@ export async function rankKnowledgeGaps(
   }
 
   gaps.sort((a, b) => b.gapScore - a.gapScore)
-  return gaps.slice(0, limit)
+  return typeof limit === 'number' ? gaps.slice(0, limit) : gaps
+}
+
+/**
+ * Spec 3 I11 v0.4 — deterministic statistics over the full log entry array.
+ * Used by the `## Statistics` block of the report (no LLM call required).
+ */
+export interface GapStatistics {
+  readonly totalQueries: number
+  readonly distinctTopics: number
+  readonly zeroCitationCount: number
+  readonly zeroCitationPercent: number
+  readonly avgAnswerLen: number
+  readonly periodStart: string | null
+  readonly periodEnd: string | null
+}
+
+export function computeGapStatistics(
+  entries: readonly QueryLogEntry[],
+  topicCount: number,
+): GapStatistics {
+  const totalQueries = entries.length
+  if (totalQueries === 0) {
+    return {
+      totalQueries: 0,
+      distinctTopics: topicCount,
+      zeroCitationCount: 0,
+      zeroCitationPercent: 0,
+      avgAnswerLen: 0,
+      periodStart: null,
+      periodEnd: null,
+    }
+  }
+  let sumLen = 0
+  let zeroCit = 0
+  let minTs = entries[0].ts
+  let maxTs = entries[0].ts
+  for (const e of entries) {
+    sumLen += e.answerLen
+    if (e.citationCount === 0) zeroCit += 1
+    if (e.ts < minTs) minTs = e.ts
+    if (e.ts > maxTs) maxTs = e.ts
+  }
+  return {
+    totalQueries,
+    distinctTopics: topicCount,
+    zeroCitationCount: zeroCit,
+    zeroCitationPercent: (zeroCit / totalQueries) * 100,
+    avgAnswerLen: sumLen / totalQueries,
+    periodStart: minTs.slice(0, 10),
+    periodEnd: maxTs.slice(0, 10),
+  }
 }
 
 /**
@@ -249,18 +301,28 @@ function tokenize(query: string): string[] {
 }
 
 /**
- * Spec 3 I10/I11 (v0.3) — knowledge-gaps-YYYY-MM.md markdown 생성. frontmatter +
- * `## Top N gaps` section + cluster entry. deterministic (idempotent rendering).
+ * Spec 3 I10/I11 (v0.4) — knowledge-gaps-YYYY-MM.md markdown 생성.
+ * 3 section: (a) `## Summary` (LLM narrative) (b) `## Statistics` (deterministic
+ * counts) (c) `## All gaps` (full listing, no truncation by default).
  *
- * `createdDate` / `updatedDate` 가 주어지면 그대로 사용 (I9 — 첫 생성 시 `created`
- * 를 보존하기 위해 command runner 가 기존 file frontmatter 를 parse 후 주입).
- * 미지정 시 `${yearMonth}-01` 으로 fallback (Step B/C 호환).
+ * `createdDate` / `updatedDate`: I9 — 첫 생성 시 `created` 보존을 위해 command
+ * runner 가 기존 file frontmatter parse 후 주입. 미지정 시 `${yearMonth}-01`.
+ *
+ * `summary`: optional LLM narrative. 미지정 시 graceful fallback message.
+ * `statistics`: optional precomputed `GapStatistics`. 미지정 시 Statistics block
+ * 생략 (v0.3 호환 — pure renderer test 가 statistics 미지정으로도 통과).
  */
 export function renderGapReportMarkdown(
   gaps: readonly KnowledgeGap[],
-  opts: { yearMonth: string; createdDate?: string; updatedDate?: string },
+  opts: {
+    yearMonth: string
+    createdDate?: string
+    updatedDate?: string
+    summary?: string
+    statistics?: GapStatistics
+  },
 ): string {
-  const { yearMonth, createdDate, updatedDate } = opts
+  const { yearMonth, createdDate, updatedDate, summary, statistics } = opts
   const firstOfMonth = `${yearMonth}-01`
   const created = createdDate ?? firstOfMonth
   const updated = updatedDate ?? firstOfMonth
@@ -274,9 +336,34 @@ export function renderGapReportMarkdown(
   lines.push('sources: []')
   lines.push('---')
   lines.push('')
-  lines.push(`## Top N gaps`)
+
+  lines.push('## Summary')
+  lines.push('')
+  lines.push(
+    summary && summary.trim().length > 0
+      ? summary.trim()
+      : '(LLM summary unavailable — see Statistics + listing below.)',
+  )
   lines.push('')
 
+  if (statistics) {
+    lines.push('## Statistics')
+    lines.push('')
+    lines.push(`- Total queries logged: ${statistics.totalQueries}`)
+    lines.push(`- Distinct topic clusters: ${statistics.distinctTopics}`)
+    lines.push(
+      `- Queries with zero citations: ${statistics.zeroCitationCount}` +
+        ` (${statistics.zeroCitationPercent.toFixed(1)}%)`,
+    )
+    lines.push(`- Average answer length: ${formatAvg(statistics.avgAnswerLen)} chars`)
+    if (statistics.periodStart && statistics.periodEnd) {
+      lines.push(`- Reporting period: ${statistics.periodStart} ~ ${statistics.periodEnd}`)
+    }
+    lines.push('')
+  }
+
+  lines.push('## All gaps')
+  lines.push('')
   for (const gap of gaps) {
     lines.push(
       `### ${gap.topic} (gapScore: ${gap.gapScore.toFixed(2)}, frequency: ${gap.frequency})`,

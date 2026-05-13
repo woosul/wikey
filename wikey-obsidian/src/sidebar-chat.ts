@@ -418,7 +418,7 @@ export class WikeyChatView extends ItemView {
 
     this.inputEl = inputArea.createEl('textarea', {
       cls: 'wikey-chat-input',
-      attr: { placeholder: 'Ask a question… (type /clear to reset)', rows: '3' },
+      attr: { placeholder: 'Ask a question… (/clear to reset, /knowledge-gap for report)', rows: '3' },
     })
 
     this.sendBtn = inputArea.createEl('button', { cls: 'wikey-chat-send-btn' })
@@ -614,6 +614,21 @@ export class WikeyChatView extends ItemView {
     if (rawInput === '/clear') {
       this.inputEl.value = ''
       this.clearChat()
+      return
+    }
+
+    // §5.20 v0.4 I13 — `/knowledge-gap` slash command. Same runner as command palette
+    // and the maintenance modal 'knowledge-gap' mode. Errors surface as Notice.
+    if (rawInput === '/knowledge-gap') {
+      this.inputEl.value = ''
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { runGenerateKnowledgeGapReport } = require('./commands') as typeof import('./commands')
+        await runGenerateKnowledgeGapReport(this.plugin)
+      } catch (err) {
+        console.error('[wikey] §5.20 /knowledge-gap failed:', err)
+        new Notice(`Knowledge gap report failed: ${(err as Error).message ?? String(err)}`)
+      }
       return
     }
 
@@ -910,6 +925,37 @@ Click [[page name]] in answers to navigate to the wiki page.
         this.openMaintenanceModal(mode)
       })
     }
+
+    // §5.20 v0.4 I14 — Knowledge gap report button. Distinct from modal-based
+    // maintenance modes (no findings/recovery flow); shares the runner with the
+    // command palette and `/knowledge-gap` slash command (single source of truth).
+    const gapBtn = btnRow.createEl('button', {
+      text: 'Knowledge gap report',
+      cls: 'wikey-maintenance-btn wikey-maintenance-btn-knowledge-gap',
+    })
+    // Status line shown below the button row (`Report generating…` → `Report generated.`).
+    const gapStatusEl = section.createDiv({
+      cls: 'wikey-maintenance-knowledge-gap-status',
+      attr: { style: 'margin-top: 8px; font-size: 0.9em; color: var(--text-muted); display: none;' },
+    })
+    gapBtn.addEventListener('click', async () => {
+      gapBtn.setAttr('disabled', 'true')
+      gapStatusEl.setText('Report generating of knowledge gap…')
+      gapStatusEl.style.display = ''
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { runGenerateKnowledgeGapReport } = require('./commands') as typeof import('./commands')
+        const pagePath = await runGenerateKnowledgeGapReport(this.plugin)
+        gapStatusEl.setText(
+          pagePath ? `Report generated. → ${pagePath}` : 'No query log entries yet.',
+        )
+      } catch (err) {
+        console.error('[wikey] §5.20 knowledge gap button failed:', err)
+        gapStatusEl.setText(`Report generation failed: ${(err as Error).message ?? String(err)}`)
+      } finally {
+        gapBtn.removeAttribute('disabled')
+      }
+    })
   }
 
   /**

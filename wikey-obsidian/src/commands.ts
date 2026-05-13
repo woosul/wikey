@@ -32,6 +32,7 @@ import {
   renderGapReportMarkdown,
   extractCreatedFromFrontmatter,
   validateClusterResultShape,
+  computeGapStatistics,
   appendLog,
   updateIndex,
   LLMClient,
@@ -1031,20 +1032,23 @@ async function runDiagnoseCitationMismatches(plugin: WikeyPlugin): Promise<void>
  * to deterministic fallback inside `rankKnowledgeGaps`) → render markdown →
  * write + appendLog + updateIndex (ingest pipeline 동급, I8).
  */
-async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promise<void> {
+/**
+ * §5.20 v0.4 — exported so `/knowledge-gap` slash command (sidebar-chat) and
+ * maintenance modal 'knowledge-gap' mode can share the same runner with the
+ * command palette entry. Returns the generated page path (or `null` if no
+ * log entries) so callers can show a Notice / link.
+ */
+export async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promise<string | null> {
   const entries = await loadQueryLogEntries(plugin.wikiFS)
   if (entries.length === 0) {
     new Notice('No query log entries yet.')
-    return
+    return null
   }
 
   const config = plugin.buildConfig()
   const llm = new LLMClient(plugin.httpClient, config)
   const { provider, model } = resolveProvider('default', config)
 
-  // §5.20 v0.3 MEDIUM-3 fix — validate LLM response shape so malformed payloads
-  // bubble up as throws and trigger rankKnowledgeGaps' deterministic fallback.
-  // §5.20 v0.3 LOW-2 fix — case-insensitive code-fence strip (```JSON / ``` json variants).
   const clusterer: TopicClusterer = async (es) => {
     const prompt = [
       `Group the following ${es.length} user questions into similar-topic clusters.`,
@@ -1055,22 +1059,50 @@ async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promise<void>
       ...es.map((e, i) => `${i}: ${e.query}`),
     ].join('\n')
     const raw = await llm.call(prompt, { provider, model })
-    // §5.20 v0.3 cycle #2 LOW-2 fix — allow optional whitespace between ``` and the
-    // language tag (handles ```json / ```JSON / ``` json / ``` JSON variants).
     const cleaned = raw.replace(/```\s*(?:json\s*)?/gi, '').trim()
     const parsed = JSON.parse(cleaned) as unknown
     return validateClusterResultShape(parsed)
   }
 
   const gaps = await rankKnowledgeGaps(entries, clusterer)
+  const statistics = computeGapStatistics(entries, gaps.length)
+
+  // §5.20 v0.4 — LLM narrative summary (graceful fallback to undefined → renderer
+  // emits "LLM summary unavailable" sentinel).
+  let summary: string | undefined
+  try {
+    const topGaps = gaps.slice(0, 5)
+    const summaryPrompt = [
+      'You are reviewing a personal knowledge wiki. Below are knowledge gaps detected from',
+      'the user\'s query log: topics they ask about but where wiki coverage is thin (short',
+      'answers, few citations). Write a 3 to 6 line narrative in Korean recommending:',
+      '  1) which topics most need new raw sources, and',
+      '  2) what kind of raw source would help (paper / docs / article / etc.).',
+      'Be concrete and actionable. No bullet points; flowing prose.',
+      '',
+      `Total queries: ${statistics.totalQueries}`,
+      `Distinct topic clusters: ${statistics.distinctTopics}`,
+      `Queries with zero citations: ${statistics.zeroCitationCount} (${statistics.zeroCitationPercent.toFixed(1)}%)`,
+      `Average answer length: ${statistics.avgAnswerLen.toFixed(0)} chars`,
+      '',
+      'Top gaps (descending gapScore):',
+      ...topGaps.map(
+        (g) =>
+          `- ${g.topic} (gapScore=${g.gapScore.toFixed(2)}, frequency=${g.frequency}, avgAnswerLen=${g.avgAnswerLen.toFixed(0)}, avgCitations=${g.avgCitationCount.toFixed(2)})`,
+      ),
+    ].join('\n')
+    const raw = await llm.call(summaryPrompt, { provider, model })
+    summary = raw.replace(/```\s*(?:markdown\s*)?/gi, '').trim()
+  } catch (err) {
+    console.warn('[wikey] §5.20 v0.4 LLM summary failed (fallback to deterministic message):', err)
+  }
+
   const now = new Date()
   const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const isoDate = now.toISOString().slice(0, 10)
   const filename = `knowledge-gaps-${yearMonth}.md`
   const pagePath = `wiki/analyses/${filename}`
 
-  // §5.20 v0.3 MEDIUM-1 fix — preserve `created` from existing frontmatter
-  // (first-run date), set `updated` to actual run date. I9 idempotent overwrite.
   let createdDate: string = isoDate
   try {
     if (await plugin.wikiFS.exists(pagePath)) {
@@ -1085,6 +1117,8 @@ async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promise<void>
     yearMonth,
     createdDate,
     updatedDate: isoDate,
+    summary,
+    statistics,
   })
   await plugin.wikiFS.write(pagePath, markdown)
 
@@ -1100,4 +1134,5 @@ async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promise<void>
   ])
 
   new Notice(`Knowledge gap report: ${gaps.length} gaps → ${pagePath}`)
+  return pagePath
 }

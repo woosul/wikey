@@ -46,12 +46,14 @@ export {
   renderGapReportMarkdown,
   extractCreatedFromFrontmatter,
   validateClusterResultShape,
+  computeGapStatistics,
 } from './knowledge-gap.js'
 export type {
   QueryLogEntry,
   KnowledgeGap,
   ClusterResult,
   TopicClusterer,
+  GapStatistics,
 } from './knowledge-gap.js'
 export {
   query,

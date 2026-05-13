@@ -18,6 +18,8 @@
 .wikey/manual-overrides.yaml
 .wikey/.migration-backup-*
 .wikey/mention-guard-*.jsonl
+# §5.20 query log (vault-local, privacy — never committed)
+.wikey/query-log.jsonl
 
 # Obsidian Web Clipper 기본 저장 폴더 — 개인 수집 자료, 공개 리포에 노출 금지
 Clippings/

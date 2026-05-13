@@ -62,18 +62,12 @@ function makeFakeLeaf() {
 
 // ── AC-UI-1: Help 패널 섹션 ──
 
-describe('§5.19 UI Spec — AC-UI-1: Help 패널 "Wiki Maintenance" 섹션 + 3 버튼 (v0.4 R9)', () => {
-  it('AC-UI-1: openHelp() 호출 후 .wikey-maintenance-buttons 영역 + Status/Check/Refactoring 3 버튼', async () => {
+describe('§5.19 UI Spec — AC-UI-1: Help 패널 "Wiki Maintenance" 섹션 + 4 버튼 (v0.4 R9 + §5.20 v0.4)', () => {
+  it('AC-UI-1: openHelp() 호출 후 .wikey-maintenance-buttons 영역 + Status/Check/Refactoring/KnowledgeGap 4 버튼', async () => {
     const plugin = makeFakePlugin()
     const leaf = makeFakeLeaf()
-    // ChatSidebarView 의 정확한 constructor signature 는 sidebar-chat.ts 정의에 의존.
-    // Cycle 의 GREEN 단계에서 view 인스턴스 생성 + help 패널 mount path 가 변경될 수 있으므로
-    // 본 test 는 *최소 contract* — view.openHelpForTest() (test exposure) 또는 selectPanel('help')
-    // 후 DOM 안 4 버튼 textContent 확인.
     const view = new ChatSidebarView(leaf as any, plugin as any)
-    // Lifecycle — onOpen + select help panel
     await view.onOpen()
-    // Test-helper or production method to open help; GREEN 단계에서 production method 사용.
     ;(view as any).selectPanel?.('help')
 
     const root = (view as any).containerEl as HTMLElement
@@ -81,11 +75,13 @@ describe('§5.19 UI Spec — AC-UI-1: Help 패널 "Wiki Maintenance" 섹션 + 3 
     expect(maintenanceSection, '`.wikey-maintenance-buttons` 섹션 미존재').not.toBeNull()
 
     const buttons = maintenanceSection?.querySelectorAll('button') ?? []
-    expect(buttons.length).toBe(3)
+    expect(buttons.length).toBe(4)
     const labels = Array.from(buttons).map((b) => b.textContent ?? '')
     expect(labels.some((l) => /status/i.test(l))).toBe(true)
     expect(labels.some((l) => /check/i.test(l))).toBe(true)
     expect(labels.some((l) => /refactor/i.test(l))).toBe(true)
+    // §5.20 v0.4 — Knowledge gap report 버튼 추가.
+    expect(labels.some((l) => /knowledge gap/i.test(l))).toBe(true)
     // v0.4 (R9): Recovery 버튼 폐기 — Check Fix link 가 흡수.
     expect(labels.some((l) => /recovery/i.test(l))).toBe(false)
   })
