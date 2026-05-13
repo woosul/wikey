@@ -25,7 +25,7 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 - **File over app** — plain-text credentials.json + auth_mode JSON, 양방향 migration
 - **BYOAI** — provider 선택 자유 확장 (기존 API key + 신규 subscription path)
 
-## 2. 6 commit (push X — codex cycle #3 + 사용자 사전 보고 후 진행)
+## 2. 10 commit (push X — codex cycle #4 + 사용자 사전 보고 후 진행)
 
 | commit | hash | scope | 주요 변경 |
 |--------|------|-------|----------|
@@ -34,7 +34,27 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 | 3 | `14b53f4` | Step D (OpenAI) | OpenAI Codex subscription (`codex exec -` CLI + `~/.codex/auth.json` + marker-based parser) + 16 test + master 실측 golden fixture `plan/phase-5/fixtures/cycle-codex-golden/codex-ok-hi.{raw,clean}.txt` |
 | 4 | `67c5e48` | Step E (통합) | BLUE 3b refactor `callWithFallback` 공통 helper extract (3 × `callXxxWithFallback` → 단일 site) + routing matrix 8 case smoke + 문서 동기화 + commit 1 staging gap 보정 (plan / fixtures / scripts) |
 | 5 | `356a44f` | Settings UI + AuthMode polish | Settings UI provider-centric subsection (Gemini / Claude / OpenAI 각 카드) + AuthMode `'auto'` polish out → `'subscription'` migration + master CDP smoke 1차 fix 통합 |
-| 6 | (본 turn) | codex cycle #2 6 finding fix + UI rename | F1 `resolveCliBinary` 단일 helper (env override + PATH + 정적 fallback + nvm glob) / F2 onAuthFallback Chat 경로 wiring (sidebar-chat + commands `/knowledge-gap` + query-pipeline) / F3 `save-credentials.test.ts` 4 case + pure helper extract / F4 baseConfig 3 AUTH_MODE 'api' / F5 §A0 PASS → Partial / F6 commit traceability gap 보정. UI heading `'API Keys'` → `'LLM Model Authentication'`. |
+| 6 | `35f777d` | codex cycle #2 6 finding fix + UI rename | F1 `resolveCliBinary` 단일 helper (env override + PATH + 정적 fallback + nvm glob) / F2 onAuthFallback Chat 경로 wiring (sidebar-chat + commands `/knowledge-gap` + query-pipeline) / F3 `save-credentials.test.ts` 4 case + pure helper extract / F4 baseConfig 3 AUTH_MODE 'api' / F5 §A0 PASS → Partial / F6 commit traceability gap 보정. UI heading `'API Keys'` → `'LLM Model Authentication'`. |
+| 7 | `608ee14` | UI 통합 block + badge | 3 분리 Setting → 1 통합 `wikey-auth-block` (heading + Auth Mode + Subscription + API Key). signed-in (green) / not-detected (grey) badge + button 바로 앞. provider 간 24px margin. 4 helper 분해. 8 CSS rule. |
+| 8 | `94340ea` | section heading right-align note | `'API keys are stored in ~/.config/wikey/credentials.json'` 문구를 LLM Model Authentication (h3) 행의 오른쪽 정렬 + deep grey + 13pt. flex space-between wrapper. |
+| 9 | `8836ff9` | provider heading outside + right-align controls + plain badge | Provider 명 (h3) block 밖. section title 동일 크기 + font-weight:300 + accent color (`var(--interactive-accent)`). selectbox + button 우측 정렬 (justify-content: flex-end). badge 배경 없이 텍스트만. section title ↔ 첫 block 16px 여백. h3 selector specificity 강화 (Obsidian native 600 override). |
+| 10 | `f19f313` | codex cycle #3 F1 — Notice 문구 | AuthMode 'auto' 폐기 후 Notice 문구 정정 — `'Switched to API key'` → `'<provider> subscription failed — switch Auth Mode to API Key if desired'` 계열 5 reason. `default-auth-fallback.test.ts` `not.toMatch(/Switched\|Using API key/)` assertion 보강. |
+| 11 | (본 turn) | codex cycle #3 F2 — resultx 8 commit 갱신 | 본 §2 표 11 commit 으로 갱신. §3 (Step E) → §3a (commit 6~11 추가). §7 master CDP smoke 결과 commit 9 후 재실행 → 3 provider `signed-in (green)` 확증 (binary resolver 실효성). 최신 wikey-core 1093 / wikey-obsidian 215 PASS. |
+
+### 2a. Commit 9 후 master CDP smoke 재실행 결과 (2026-05-14)
+
+| 검증 항목 | 결과 |
+|----------|------|
+| Section h3 font-size | 15px |
+| Section ↔ 첫 block margin-bottom | 16px ✅ |
+| Provider heading (block 밖) | h3 × 3, font-size 15px / font-weight 300 / color `rgb(138, 92, 245)` accent ✅ |
+| `h4 in block` 존재 여부 | false ✅ |
+| Controls justify-content | `flex-end` (우측 정렬) ✅ |
+| Badge background | `rgba(0, 0, 0, 0)` transparent ✅ |
+| Badge padding | `0px` (텍스트만) ✅ |
+| Badge color (signed-in) | `rgb(68, 207, 110)` green ✅ |
+| 3 provider Subscription detection | signed-in × 3 (binary resolver `command -v` + nvm glob 작동) ✅ |
+| 3 provider Button (signed-in 상태) | `Sign out` × 3 (conditional) ✅ |
 
 ## 3. Step E (본 cycle) 상세
 
