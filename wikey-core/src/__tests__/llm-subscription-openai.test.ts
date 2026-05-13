@@ -4,7 +4,9 @@
  * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.5 Step D +
  *       §3.3 AC-S6 (OpenAI) + §4.0.7 codex marker-based parser.
  *
- * Mirror of llm-subscription-anthropic.test.ts (provider='openai', CLI='codex').
+ * v0.7 (user plan 2026-05-14) — 'auto' polished out. Subscription failures throw
+ * after invoking onAuthFallback (UI Notice). Force-api / force-subscription /
+ * none semantics unchanged.
  *
  * Key OpenAI-specific differences vs Anthropic/Gemini:
  *   - presence detection = CLI binary existence AND ~/.codex/auth.json existence
@@ -14,24 +16,6 @@
  *   - subscription model flag = '-m <id>' (single dash, short form)
  *   - parseSubscriptionOutput('openai', raw) = marker-based extraction
  *     (`\ncodex\n` ↔ `\ntokens used` sandwich; v0.7 #1h H1)
- *
- * 16 cases:
- *   1. AC-S6 subscription only + auto          → spawn=1 / API=0
- *   2. AC-S6-api-only API only                 → spawn=0 / API=1
- *   3. AC-S6-both-auto both + auto             → spawn=1 / API=0
- *   4. AC-S6-quota subscription exit-1 + stderr quota → API fallback + onAuthFallback
- *   5. AC-S6-auth-missing subscription stderr "not logged in" → onAuthFallback('auth-missing')
- *   6. force-api → spawn=0 / API=1
- *   7. force-subscription + no creds          → throws (resolveAuthMode)
- *   8. spawn timeout (aborted)                 → onAuthFallback('timeout') + API fallback
- *   9. AC-S9 model option forwarded as -m <id>
- *  10. AC-S10 jsonMode unsupported            → onAuthFallback('jsonMode-unsupported') + API
- *  11. AC-S11 temperature silent ignore in CLI args (OpenAI API path supports natively)
- *  12. AC-S12 opts.timeout forwarded to spawn (timeoutMs)
- *  13. core ↔ UI 결합 0 (`from "obsidian"` / `new Notice(`) absent in llm-client.ts
- *  14. onAuthFallback NOT invoked on success — golden raw stdout → clean body (marker-based)
- *  15. checkOpenAIPresence — auth.json + binary both required for hasSubscription=true
- *  16. CLI binary missing (ENOENT) → onAuthFallback('spawn-failed') + API fallback
  */
 
 import { describe, it, expect } from 'vitest'
@@ -65,7 +49,7 @@ const baseConfig: WikeyConfig = {
   SUMMARIZE_PROVIDER: '',
   CONTEXTUAL_MODEL: 'gemma4',
   COST_LIMIT: 50,
-  OPENAI_AUTH_MODE: 'auto',
+  OPENAI_AUTH_MODE: 'subscription',
 }
 
 interface HttpCall {
@@ -86,7 +70,6 @@ function mockHttp(body: string, status = 200): { client: HttpClient; calls: Http
   }
 }
 
-// OpenAI Chat Completions API response shape: { choices: [{ message: { content: '...' } }] }
 const OPENAI_API_BODY = JSON.stringify({
   choices: [{ message: { content: 'api-result' } }],
 })
@@ -98,17 +81,10 @@ interface SpawnCall {
 }
 
 interface PresenceFlags {
-  /** ~/.codex/auth.json present (codex login persists OAuth here). */
   authFile: boolean
-  /** /usr/local/bin/codex (CLI binary) present. */
   binary: boolean
 }
 
-/**
- * OpenAI presence = auth.json AND CLI binary. Unlike Anthropic (Keychain) we
- * can probe the auth token file directly. Unlike Gemini, the path is
- * ~/.codex/auth.json (not oauth_creds.json).
- */
 function makeDeps(
   presence: PresenceFlags,
   spawnImpl: (call: SpawnCall) => Promise<SpawnCliResult>,
@@ -143,8 +119,6 @@ function spawnExit(exitCode: number, stderr: string): (c: SpawnCall) => Promise<
 }
 
 // Golden codex stdout (master-captured 2026-05-13, plan §4.0.7 H1).
-// Banner + metadata block + user prompt + `\ncodex\n` marker + response body + `\ntokens used` footer.
-// parseSubscriptionOutput('openai', raw) must extract the body between markers only.
 const CODEX_GOLDEN_RAW = readFileSync(
   join(__dirname, '..', '..', '..', 'plan', 'phase-5', 'fixtures', 'cycle-codex-golden', 'codex-ok-hi.raw.txt'),
   'utf-8',
@@ -156,8 +130,8 @@ const CODEX_GOLDEN_CLEAN = readFileSync(
 
 // ── tests ─────────────────────────────────────────────────────────────────
 
-describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () => {
-  it('AC-S6 — subscription only + auto → spawn=1 / API=0', async () => {
+describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing (v0.7)', () => {
+  it('AC-S6 — subscription only + mode=subscription → spawn=1 / API=0', async () => {
     const http = mockHttp(OPENAI_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { authFile: true, binary: true },
@@ -170,17 +144,18 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     expect(http.calls).toHaveLength(0)
   })
 
-  it('AC-S6-api-only — API only → spawn=0 / API=1', async () => {
+  it('AC-S6-api-only — API only + mode=api → spawn=0 / API=1', async () => {
     const http = mockHttp(OPENAI_API_BODY)
     const { deps, spawnCalls } = makeDeps({ authFile: false, binary: false }, spawnSuccess('unused'))
-    const llm = new LLMClient(http.client, { ...baseConfig, OPENAI_API_KEY: 'k' }, deps)
+    const cfg: WikeyConfig = { ...baseConfig, OPENAI_AUTH_MODE: 'api', OPENAI_API_KEY: 'k' }
+    const llm = new LLMClient(http.client, cfg, deps)
     const result = await llm.call('q', { provider: 'openai' })
     expect(result).toBe('api-result')
     expect(spawnCalls).toHaveLength(0)
     expect(http.calls).toHaveLength(1)
   })
 
-  it('AC-S6-both-auto — both registered + auto → subscription wins (spawn=1 / API=0)', async () => {
+  it('AC-S6-both — both registered + mode=subscription → spawn=1 / API=0', async () => {
     const http = mockHttp(OPENAI_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { authFile: true, binary: true },
@@ -192,7 +167,7 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     expect(http.calls).toHaveLength(0)
   })
 
-  it('AC-S6-quota — subscription exit 1 + "rate limit" stderr → onAuthFallback("quota-exceeded") + API fallback', async () => {
+  it('mode=subscription + exit 1 + "rate limit" stderr → onAuthFallback("quota-exceeded") + throws', async () => {
     const http = mockHttp(OPENAI_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { authFile: true, binary: true },
@@ -200,18 +175,16 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     )
     const llm = new LLMClient(http.client, { ...baseConfig, OPENAI_API_KEY: 'k' }, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'openai',
-      onAuthFallback: (info) => fallbacks.push(info),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'openai', onAuthFallback: (info) => fallbacks.push(info) }),
+    ).rejects.toThrow()
     expect(spawnCalls).toHaveLength(1)
-    expect(http.calls).toHaveLength(1)
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks).toHaveLength(1)
     expect(fallbacks[0]).toMatchObject({ provider: 'openai', reason: 'quota-exceeded' })
   })
 
-  it('AC-S6-auth-missing — subscription stderr "not logged in" → onAuthFallback("auth-missing") + API fallback', async () => {
+  it('mode=subscription + stderr "not logged in" → onAuthFallback("auth-missing") + throws', async () => {
     const http = mockHttp(OPENAI_API_BODY)
     const { deps } = makeDeps(
       { authFile: true, binary: true },
@@ -219,11 +192,9 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     )
     const llm = new LLMClient(http.client, { ...baseConfig, OPENAI_API_KEY: 'k' }, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'openai',
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'openai', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
     expect(fallbacks[0]?.reason).toBe('auth-missing')
   })
 
@@ -254,7 +225,7 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     )
   })
 
-  it('spawn aborted (timeout) + auto + API key → onAuthFallback("timeout") + API fallback', async () => {
+  it('mode=subscription + spawn aborted (timeout) → onAuthFallback("timeout") + throws', async () => {
     const http = mockHttp(OPENAI_API_BODY)
     const { deps } = makeDeps({ authFile: true, binary: true }, async () => ({
       stdout: '',
@@ -265,11 +236,10 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     const cfg: WikeyConfig = { ...baseConfig, OPENAI_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'openai',
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'openai', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('timeout')
   })
 
@@ -281,11 +251,10 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     )
     const llm = new LLMClient(http.client, { ...baseConfig }, deps)
     await llm.call('q', { provider: 'openai', model: 'gpt-5' })
-    // codex CLI uses short-form `-m <id>` (mirrors SUBSCRIPTION_MODEL_FLAG.openai).
     expect(spawnCalls[0]?.opts?.extraArgs).toEqual(['-m', 'gpt-5'])
   })
 
-  it('AC-S10 — jsonMode requested + auto + API key → onAuthFallback("jsonMode-unsupported") + API fallback', async () => {
+  it('mode=subscription + jsonMode → onAuthFallback("jsonMode-unsupported") + throws', async () => {
     const http = mockHttp(OPENAI_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { authFile: true, binary: true },
@@ -294,14 +263,15 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     const cfg: WikeyConfig = { ...baseConfig, OPENAI_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'openai',
-      jsonMode: true,
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
-    // spawn skipped because mapOptionsToCliArgs returned `unsupported: 'jsonMode'`
+    await expect(
+      llm.call('q', {
+        provider: 'openai',
+        jsonMode: true,
+        onAuthFallback: (i) => fallbacks.push(i),
+      }),
+    ).rejects.toThrow()
     expect(spawnCalls).toHaveLength(0)
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('jsonMode-unsupported')
   })
 
@@ -315,7 +285,7 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     await llm.call('q', { provider: 'openai', temperature: 0.7 })
     const args = spawnCalls[0]?.opts?.extraArgs ?? []
     expect(args.find((a) => a.includes('temp'))).toBeUndefined()
-    expect(args).toEqual([]) // no model + no temp arg → empty args
+    expect(args).toEqual([])
   })
 
   it('AC-S12 — opts.timeout forwarded to spawn (timeoutMs)', async () => {
@@ -330,8 +300,6 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
   })
 
   it('core ↔ UI 결합 0 — llm-client.ts contains no `from "obsidian"` import or `new Notice(`', () => {
-    // Same grep gate as Gemini/Anthropic tests; the plugin layer (main.ts) owns Notice
-    // surfacing via onAuthFallback callback. wikey-core must remain runtime-agnostic.
     const src = readFileSync(join(__dirname, '..', 'llm-client.ts'), 'utf-8')
     expect(src).not.toMatch(/from\s+['"]obsidian['"]/)
     expect(src).not.toMatch(/\bnew\s+Notice\s*\(/)
@@ -339,8 +307,6 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
 
   it('onAuthFallback NOT invoked on success — golden raw stdout → clean body (marker-based)', async () => {
     const http = mockHttp(OPENAI_API_BODY)
-    // Use the master-captured golden raw stdout as the spawn stdout to confirm
-    // the marker-based parser extracts the body (not the banner / prompt / footer).
     const { deps } = makeDeps(
       { authFile: true, binary: true },
       spawnSuccess(CODEX_GOLDEN_RAW),
@@ -353,7 +319,6 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     })
     expect(result).toBe(CODEX_GOLDEN_CLEAN)
     expect(fallbacks).toHaveLength(0)
-    // Marker-based parser guarantees no banner / metadata / prompt sentinel / footer leak.
     expect(result).not.toMatch(/OpenAI Codex/)
     expect(result).not.toMatch(/user prompt:/i)
     expect(result).not.toMatch(/workdir:/)
@@ -364,22 +329,23 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
   it('checkOpenAIPresence — auth.json + binary both required for hasSubscription', async () => {
     const http = mockHttp(OPENAI_API_BODY)
 
-    // both missing → hasSubscription=false → API path
+    // both missing → hasSubscription=false. mode='api' to keep call legal.
     const { deps: none, spawnCalls: callsA } = makeDeps(
       { authFile: false, binary: false },
       spawnSuccess('unused'),
     )
-    const llmA = new LLMClient(http.client, { ...baseConfig, OPENAI_API_KEY: 'k' }, none)
+    const cfgApi: WikeyConfig = { ...baseConfig, OPENAI_AUTH_MODE: 'api', OPENAI_API_KEY: 'k' }
+    const llmA = new LLMClient(http.client, cfgApi, none)
     expect(llmA.checkOpenAIPresence()).toEqual({ hasSubscription: false, hasApiKey: true })
     await llmA.call('q', { provider: 'openai' })
     expect(callsA).toHaveLength(0)
 
-    // binary present but auth.json absent → hasSubscription=false (incomplete login)
+    // binary present but auth.json absent → hasSubscription=false
     const { deps: binOnly } = makeDeps({ authFile: false, binary: true }, spawnSuccess('unused'))
     const llmB = new LLMClient(http.client, { ...baseConfig }, binOnly)
     expect(llmB.checkOpenAIPresence()).toEqual({ hasSubscription: false, hasApiKey: false })
 
-    // auth.json present but binary absent → hasSubscription=false (CLI not installed)
+    // auth.json present but binary absent → hasSubscription=false
     const { deps: authOnly } = makeDeps({ authFile: true, binary: false }, spawnSuccess('unused'))
     const llmC = new LLMClient(http.client, { ...baseConfig }, authOnly)
     expect(llmC.checkOpenAIPresence()).toEqual({ hasSubscription: false, hasApiKey: false })
@@ -390,9 +356,8 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     expect(llmD.checkOpenAIPresence()).toEqual({ hasSubscription: true, hasApiKey: true })
   })
 
-  it('CLI binary missing (spawn ENOENT) → onAuthFallback("spawn-failed") + API fallback', async () => {
+  it('mode=subscription + CLI binary missing (spawn ENOENT) → onAuthFallback("spawn-failed") + throws', async () => {
     const http = mockHttp(OPENAI_API_BODY)
-    // Force binary presence true so resolveAuthMode picks subscription, then spawn throws ENOENT.
     const { deps } = makeDeps({ authFile: true, binary: true }, async () => {
       const err = new Error('spawn ENOENT') as NodeJS.ErrnoException
       err.code = 'ENOENT'
@@ -401,12 +366,23 @@ describe('§5.6.4.4 Step D — LLMClient.callOpenAI subscription routing', () =>
     const cfg: WikeyConfig = { ...baseConfig, OPENAI_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'openai',
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'openai', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('spawn-failed')
+  })
+
+  it('mode=none → throws (provider disabled)', async () => {
+    const http = mockHttp(OPENAI_API_BODY)
+    const { deps, spawnCalls } = makeDeps({ authFile: true, binary: true }, spawnSuccess('unused'))
+    const cfg: WikeyConfig = { ...baseConfig, OPENAI_AUTH_MODE: 'none', OPENAI_API_KEY: 'k' }
+    const llm = new LLMClient(http.client, cfg, deps)
+    await expect(llm.call('q', { provider: 'openai' })).rejects.toThrow(
+      /Provider openai is disabled/i,
+    )
+    expect(spawnCalls).toHaveLength(0)
+    expect(http.calls).toHaveLength(0)
   })
 })
 

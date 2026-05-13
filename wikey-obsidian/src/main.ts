@@ -70,10 +70,12 @@ interface WikeySettings {
   geminiApiKey: string
   anthropicApiKey: string
   openaiApiKey: string
-  // §5.6.4 — per-provider auth mode (default 'auto').
-  geminiAuthMode: 'subscription' | 'api' | 'auto'
-  anthropicAuthMode: 'subscription' | 'api' | 'auto'
-  openaiAuthMode: 'subscription' | 'api' | 'auto'
+  // §5.6.4 v0.7 — per-provider auth mode (default 'subscription'). 'auto'
+  // polished out (user plan 2026-05-14); legacy 'auto' values migrate to
+  // 'subscription' at load time (auth-mode-bridge / loadCredentials).
+  geminiAuthMode: 'none' | 'subscription' | 'api'
+  anthropicAuthMode: 'none' | 'subscription' | 'api'
+  openaiAuthMode: 'none' | 'subscription' | 'api'
   ollamaUrl: string
   qmdPath: string
   costLimit: number
@@ -171,10 +173,11 @@ const DEFAULT_SETTINGS: WikeySettings = {
   geminiApiKey: '',
   anthropicApiKey: '',
   openaiApiKey: '',
-  // §5.6.4 — default 'auto' (subscription first with API fallback).
-  geminiAuthMode: 'auto',
-  anthropicAuthMode: 'auto',
-  openaiAuthMode: 'auto',
+  // §5.6.4 v0.7 — default 'subscription' (CLI OAuth path; no automatic API
+  // fallback — failure surfaces a Notice and the user picks mode manually).
+  geminiAuthMode: 'subscription',
+  anthropicAuthMode: 'subscription',
+  openaiAuthMode: 'subscription',
   ollamaUrl: 'http://localhost:11434',
   qmdPath: '',
   costLimit: 50,
@@ -1037,10 +1040,12 @@ export default class WikeyPlugin extends Plugin {
         ? 'off'
         : this.settings.advancedQueryTuningMode
 
-      // §5.6.4 — auth mode override from wikey.conf. Invalid values fall through
-      // to current settings (no silent acceptance). Recognised: 'subscription' | 'api' | 'auto'.
+      // §5.6.4 v0.7 — auth mode override from wikey.conf. Invalid values fall
+      // through to current settings (no silent acceptance). Recognised:
+      // 'none' | 'subscription' | 'api'. Legacy 'auto' migrates to 'subscription'.
       const parseAuthMode = (raw: unknown, current: WikeySettings['geminiAuthMode']): WikeySettings['geminiAuthMode'] => {
-        if (raw === 'subscription' || raw === 'api' || raw === 'auto') return raw
+        if (raw === 'none' || raw === 'subscription' || raw === 'api') return raw
+        if (raw === 'auto') return 'subscription'
         return current
       }
 
@@ -1156,16 +1161,22 @@ export default class WikeyPlugin extends Plugin {
       const fs = require('node:fs') as typeof import('node:fs')
       const raw = fs.readFileSync(this.credentialsPath, 'utf-8')
       const data = JSON.parse(raw) as Record<string, unknown>
-      const auth = (data.auth as Record<string, { mode?: 'subscription' | 'api' | 'auto' }> | undefined) ?? {}
+      const auth = (data.auth as Record<string, { mode?: string }> | undefined) ?? {}
+      // §5.6.4 v0.7 — 'auto' polished out; migrate legacy values to 'subscription'.
+      const migrateMode = (raw: string | undefined): WikeySettings['geminiAuthMode'] => {
+        if (raw === 'none' || raw === 'subscription' || raw === 'api') return raw
+        // Legacy 'auto' (v0.6 and earlier) → 'subscription' (closest non-fallback
+        // semantic; user can switch to 'api' or 'none' in Settings).
+        return 'subscription'
+      }
       this.settings = {
         ...this.settings,
         geminiApiKey: (data.geminiApiKey as string | undefined) ?? '',
         anthropicApiKey: (data.anthropicApiKey as string | undefined) ?? '',
         openaiApiKey: (data.openaiApiKey as string | undefined) ?? '',
-        // §5.6.4 — auth sub-object (default 'auto'). Missing fields → 'auto'.
-        geminiAuthMode: auth.gemini?.mode ?? 'auto',
-        anthropicAuthMode: auth.anthropic?.mode ?? 'auto',
-        openaiAuthMode: auth.openai?.mode ?? 'auto',
+        geminiAuthMode: migrateMode(auth.gemini?.mode),
+        anthropicAuthMode: migrateMode(auth.anthropic?.mode),
+        openaiAuthMode: migrateMode(auth.openai?.mode),
       }
       // F2: snapshot raw payload so unknown fields survive a save round-trip.
       this.credentialsRaw = data
@@ -1187,9 +1198,10 @@ export default class WikeyPlugin extends Plugin {
       anthropicApiKey: this.settings.anthropicApiKey,
       openaiApiKey: this.settings.openaiApiKey,
       auth: {
-        gemini: { mode: this.settings.geminiAuthMode ?? 'auto' },
-        anthropic: { mode: this.settings.anthropicAuthMode ?? 'auto' },
-        openai: { mode: this.settings.openaiAuthMode ?? 'auto' },
+        // §5.6.4 v0.7 — persist current mode (default 'subscription').
+        gemini: { mode: this.settings.geminiAuthMode ?? 'subscription' },
+        anthropic: { mode: this.settings.anthropicAuthMode ?? 'subscription' },
+        openai: { mode: this.settings.openaiAuthMode ?? 'subscription' },
       },
     }
     fs.writeFileSync(this.credentialsPath, JSON.stringify(out, null, 2))

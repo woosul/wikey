@@ -4,26 +4,32 @@
  * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.3 Step B (B1~B6) +
  *       §3.3 AC-S1~S4 (Google) + §3.9 onAuthFallback wiring.
  *
- * 16 cases:
- *   1. AC-S1 subscription only `auto`             → spawn=1 / API=0
- *   2. AC-S2 API only                             → spawn=0 / API=1
- *   3. AC-S3 both registered `auto`               → spawn=1 / API=0
- *   4. AC-S4 both + subscription 401              → API fallback + onAuthFallback('quota-exceeded')
- *   5. AC-S4-quota subscription quota stderr      → API fallback + onAuthFallback('quota-exceeded')
+ * v0.7 (user plan 2026-05-14) — 'auto' polished out. Subscription failures now
+ * throw (after invoking onAuthFallback for UI Notice surfacing) instead of
+ * silently retrying on the API path. Force-api / force-subscription / none
+ * semantics unchanged.
+ *
+ * Cases:
+ *   1. AC-S1 subscription only + mode='subscription'   → spawn=1 / API=0
+ *   2. AC-S2 API only + mode='api'                     → spawn=0 / API=1
+ *   3. AC-S3 both + mode='subscription'                → spawn=1 / API=0
+ *   4. mode='subscription' + quota stderr              → onAuthFallback("quota-exceeded") + throws
+ *   5. mode='subscription' + stderr quota exceeded     → onAuthFallback("quota-exceeded") + throws
  *   6. force-api → spawn=0 / API=1
- *   7. force-subscription + no creds              → throws (resolveAuthMode)
- *   8. spawn timeout (aborted)                    → onAuthFallback('timeout') + API fallback (auto)
+ *   7. force-subscription + no creds                   → throws (resolveAuthMode)
+ *   8. mode='subscription' + spawn timeout (aborted)   → onAuthFallback("timeout") + throws
  *   9. AC-S9 model option forwarded (mapOptionsToCliArgs '-m', value)
- *  10. AC-S10 jsonMode unsupported                → onAuthFallback('jsonMode-unsupported') + API
- *  11. AC-S11 temperature silent ignore           → no arg in spawn (gemini subscription)
- *  12. AC-S12 abort signal propagation            → external signal passed through opts.timeout
- *  13. core ↔ UI 결합 0                            → `from 'obsidian'` grep absent in llm-client.ts
- *  14. onAuthFallback NOT invoked on success      → spawn happy path, callback never called
- *  15. credential presence detection              → oauth_creds.json + binary both required
- *  16. CLI binary missing                         → onAuthFallback('spawn-failed') + API fallback
+ *  10. mode='subscription' + jsonMode unsupported      → onAuthFallback("jsonMode-unsupported") + throws
+ *  11. AC-S11 temperature silent ignore               → no arg in spawn (gemini subscription)
+ *  12. AC-S12 opts.timeout forwarded to spawn (timeoutMs)
+ *  13. core ↔ UI 결합 0 (`from 'obsidian'` absent in llm-client.ts)
+ *  14. onAuthFallback NOT invoked on success
+ *  15. credential presence detection                  → oauth_creds.json + binary both required
+ *  16. mode='subscription' + CLI binary missing (ENOENT) → onAuthFallback("spawn-failed") + throws
+ *  17. mode='none' + any creds                        → throws (provider disabled)
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { LLMClient, SubscriptionFallbackError, type SubscriptionDeps } from '../llm-client.js'
@@ -54,7 +60,7 @@ const baseConfig: WikeyConfig = {
   SUMMARIZE_PROVIDER: '',
   CONTEXTUAL_MODEL: 'gemma4',
   COST_LIMIT: 50,
-  GEMINI_AUTH_MODE: 'auto',
+  GEMINI_AUTH_MODE: 'subscription',
 }
 
 interface HttpCall {
@@ -124,8 +130,8 @@ function spawnExit(exitCode: number, stderr: string): (c: SpawnCall) => Promise<
 
 // ── tests ─────────────────────────────────────────────────────────────────
 
-describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () => {
-  it('AC-S1 — subscription only + auto → spawn=1 / API=0', async () => {
+describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing (v0.7)', () => {
+  it('AC-S1 — subscription only + mode=subscription → spawn=1 / API=0', async () => {
     const http = mockHttp(GEMINI_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { oauth: true, binary: true },
@@ -138,17 +144,18 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     expect(http.calls).toHaveLength(0)
   })
 
-  it('AC-S2 — API only → spawn=0 / API=1', async () => {
+  it('AC-S2 — API only + mode=api → spawn=0 / API=1', async () => {
     const http = mockHttp(GEMINI_API_BODY)
     const { deps, spawnCalls } = makeDeps({ oauth: false, binary: false }, spawnSuccess('unused'))
-    const llm = new LLMClient(http.client, { ...baseConfig, GEMINI_API_KEY: 'k' }, deps)
+    const cfg: WikeyConfig = { ...baseConfig, GEMINI_AUTH_MODE: 'api', GEMINI_API_KEY: 'k' }
+    const llm = new LLMClient(http.client, cfg, deps)
     const result = await llm.call('q', { provider: 'gemini' })
     expect(result).toBe('api-result')
     expect(spawnCalls).toHaveLength(0)
     expect(http.calls).toHaveLength(1)
   })
 
-  it('AC-S3 — both registered + auto → subscription wins (spawn=1 / API=0)', async () => {
+  it('AC-S3 — both registered + mode=subscription → spawn=1 / API=0', async () => {
     const http = mockHttp(GEMINI_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { oauth: true, binary: true },
@@ -160,7 +167,7 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     expect(http.calls).toHaveLength(0)
   })
 
-  it('AC-S4 — both + subscription exit 401 → onAuthFallback("quota-exceeded") + API fallback', async () => {
+  it('mode=subscription + exit 1 + "rate limit" stderr → onAuthFallback("quota-exceeded") + throws (no API retry)', async () => {
     const http = mockHttp(GEMINI_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { oauth: true, binary: true },
@@ -168,18 +175,16 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     )
     const llm = new LLMClient(http.client, { ...baseConfig, GEMINI_API_KEY: 'k' }, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'gemini',
-      onAuthFallback: (info) => fallbacks.push(info),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'gemini', onAuthFallback: (info) => fallbacks.push(info) }),
+    ).rejects.toThrow()
     expect(spawnCalls).toHaveLength(1)
-    expect(http.calls).toHaveLength(1)
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks).toHaveLength(1)
     expect(fallbacks[0]).toMatchObject({ provider: 'gemini', reason: 'quota-exceeded' })
   })
 
-  it('AC-S4-quota — stderr "quota exceeded" → onAuthFallback("quota-exceeded") + API fallback', async () => {
+  it('mode=subscription + stderr "quota exceeded" → onAuthFallback("quota-exceeded") + throws', async () => {
     const http = mockHttp(GEMINI_API_BODY)
     const { deps } = makeDeps(
       { oauth: true, binary: true },
@@ -187,7 +192,9 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     )
     const llm = new LLMClient(http.client, { ...baseConfig, GEMINI_API_KEY: 'k' }, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    await llm.call('q', { provider: 'gemini', onAuthFallback: (i) => fallbacks.push(i) })
+    await expect(
+      llm.call('q', { provider: 'gemini', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
     expect(fallbacks[0]?.reason).toBe('quota-exceeded')
   })
 
@@ -211,7 +218,7 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     )
   })
 
-  it('spawn aborted (timeout) + auto + API key → onAuthFallback("timeout") + API fallback', async () => {
+  it('mode=subscription + spawn aborted (timeout) → onAuthFallback("timeout") + throws', async () => {
     const http = mockHttp(GEMINI_API_BODY)
     const { deps } = makeDeps({ oauth: true, binary: true }, async () => ({
       stdout: '',
@@ -222,11 +229,10 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     const cfg: WikeyConfig = { ...baseConfig, GEMINI_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'gemini',
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'gemini', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('timeout')
   })
 
@@ -241,20 +247,22 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     expect(spawnCalls[0]?.opts?.extraArgs).toEqual(['-m', 'gemini-2.5-flash'])
   })
 
-  it('AC-S10 — jsonMode requested + auto + API key → onAuthFallback("jsonMode-unsupported") + API fallback', async () => {
+  it('mode=subscription + jsonMode → onAuthFallback("jsonMode-unsupported") + throws (no API retry)', async () => {
     const http = mockHttp(GEMINI_API_BODY)
     const { deps, spawnCalls } = makeDeps({ oauth: true, binary: true }, spawnSuccess('skipped'))
     const cfg: WikeyConfig = { ...baseConfig, GEMINI_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'gemini',
-      jsonMode: true,
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', {
+        provider: 'gemini',
+        jsonMode: true,
+        onAuthFallback: (i) => fallbacks.push(i),
+      }),
+    ).rejects.toThrow()
     // spawn never invoked because mapOptionsToCliArgs returned unsupported sentinel
     expect(spawnCalls).toHaveLength(0)
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('jsonMode-unsupported')
   })
 
@@ -283,12 +291,8 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
   })
 
   it('core ↔ UI 결합 0 — llm-client.ts contains no `from "obsidian"` import', () => {
-    // Grep guard so future edits cannot accidentally pull `Notice` / `Modal` from obsidian
-    // into wikey-core. The plugin layer (main.ts) owns Notice surfacing via onAuthFallback.
     const src = readFileSync(join(__dirname, '..', 'llm-client.ts'), 'utf-8')
     expect(src).not.toMatch(/from\s+['"]obsidian['"]/)
-    // Match `new Notice(` / `: Notice ` patterns (actual API usage); JSDoc prose "Notice"
-    // is tolerated. The plugin's main.ts is the sole Notice surface.
     expect(src).not.toMatch(/\bnew\s+Notice\s*\(/)
   })
 
@@ -307,19 +311,21 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
 
   it('checkGeminiPresence — oauth + binary both required', async () => {
     const http = mockHttp(GEMINI_API_BODY)
-    // oauth only (binary missing) → hasSubscription=false → falls to API path
+    // oauth only (binary missing) → hasSubscription=false. mode='api' so the
+    // call resolves cleanly to the API path (v0.7: no auto-fallback path).
     const { deps: oauthOnly, spawnCalls: callsA } = makeDeps(
       { oauth: true, binary: false },
       spawnSuccess('unused'),
     )
-    const llmA = new LLMClient(http.client, { ...baseConfig, GEMINI_API_KEY: 'k' }, oauthOnly)
+    const cfgA: WikeyConfig = { ...baseConfig, GEMINI_AUTH_MODE: 'api', GEMINI_API_KEY: 'k' }
+    const llmA = new LLMClient(http.client, cfgA, oauthOnly)
     expect(llmA.checkGeminiPresence()).toEqual({ hasSubscription: false, hasApiKey: true })
     await llmA.call('q', { provider: 'gemini' })
     expect(callsA).toHaveLength(0)
 
     // binary only (oauth missing) → hasSubscription=false
     const { deps: binOnly } = makeDeps({ oauth: false, binary: true }, spawnSuccess('unused'))
-    const llmB = new LLMClient(http.client, { ...baseConfig, GEMINI_API_KEY: 'k' }, binOnly)
+    const llmB = new LLMClient(http.client, cfgA, binOnly)
     expect(llmB.checkGeminiPresence()).toEqual({ hasSubscription: false, hasApiKey: true })
 
     // both present → hasSubscription=true
@@ -328,7 +334,7 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     expect(llmC.checkGeminiPresence()).toEqual({ hasSubscription: true, hasApiKey: false })
   })
 
-  it('CLI binary missing (spawn ENOENT) → onAuthFallback("spawn-failed") + API fallback', async () => {
+  it('mode=subscription + CLI binary missing (spawn ENOENT) → onAuthFallback("spawn-failed") + throws', async () => {
     const http = mockHttp(GEMINI_API_BODY)
     // Force binary presence true so resolveAuthMode picks subscription, then spawn throws ENOENT.
     const { deps } = makeDeps({ oauth: true, binary: true }, async () => {
@@ -339,12 +345,23 @@ describe('§5.6.4.2 Step B — LLMClient.callGemini subscription routing', () =>
     const cfg: WikeyConfig = { ...baseConfig, GEMINI_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'gemini',
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'gemini', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('spawn-failed')
+  })
+
+  it('mode=none → throws (provider disabled, regardless of credentials)', async () => {
+    const http = mockHttp(GEMINI_API_BODY)
+    const { deps, spawnCalls } = makeDeps({ oauth: true, binary: true }, spawnSuccess('unused'))
+    const cfg: WikeyConfig = { ...baseConfig, GEMINI_AUTH_MODE: 'none', GEMINI_API_KEY: 'k' }
+    const llm = new LLMClient(http.client, cfg, deps)
+    await expect(llm.call('q', { provider: 'gemini' })).rejects.toThrow(
+      /Provider gemini is disabled/i,
+    )
+    expect(spawnCalls).toHaveLength(0)
+    expect(http.calls).toHaveLength(0)
   })
 })
 

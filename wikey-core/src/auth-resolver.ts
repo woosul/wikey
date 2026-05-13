@@ -3,11 +3,16 @@
  *
  * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.2 / §5.2 A2.
  *
- * `resolveAuthMode` collapses the 3-state user preference (`subscription` /
- * `api` / `auto`) + credential presence into the binary AuthPath the caller
- * actually executes. `detectFallbackTrigger` classifies a subscription path
- * failure into the AuthFallbackInfo.reason union so the LLMClient can decide
- * whether to retry on the API path.
+ * `resolveAuthMode` collapses the user's per-provider mode preference
+ * (`none` / `subscription` / `api`) + credential presence into the binary
+ * AuthPath the caller actually executes. v0.7 (2026-05-14) — 'auto' polished
+ * out: explicit user choice replaces silent subscription→API fallback so
+ * API-key spend never happens without consent.
+ *
+ * `detectFallbackTrigger` still classifies a subscription-path failure into
+ * the AuthFallbackInfo.reason union — but the classification now feeds UI
+ * notices (no automatic retry on the API path). Users surface the failure,
+ * then manually switch mode if they want the API key path.
  */
 
 import type {
@@ -29,16 +34,30 @@ const AUTH_MODE_KEY: Record<SubscriptionProvider, keyof WikeyConfig> = {
   openai: 'OPENAI_AUTH_MODE',
 }
 
+/**
+ * Read raw config value + migrate legacy 'auto' → 'subscription' (user plan v0.7
+ * backward-compat). Unknown / undefined values fall through to the v0.7 default
+ * ('subscription') — matches Settings UI default.
+ */
 function readAuthMode(provider: SubscriptionProvider, config: WikeyConfig): AuthMode {
-  const value = config[AUTH_MODE_KEY[provider]] as AuthMode | undefined
-  if (value === 'subscription' || value === 'api' || value === 'auto') return value
-  return 'auto'
+  const value = config[AUTH_MODE_KEY[provider]] as AuthMode | 'auto' | undefined
+  if (value === 'none' || value === 'subscription' || value === 'api') return value
+  // Legacy 'auto' values written before v0.7 migrate to 'subscription' (the
+  // closest non-fallback semantic — subscription-first remains the default
+  // user expectation when API key spend gate is implicit).
+  if (value === 'auto') return 'subscription'
+  return 'subscription'
 }
 
 /**
- * §5.2 A2 8-row truth table. Throws when the requested mode lacks the required
- * credential (force-subscription without subscription / force-api without key /
- * auto with neither).
+ * §5.2 A2 v0.7 — 6-row truth table (auto polished out). Throws when the
+ * requested mode lacks the required credential, or when mode='none'.
+ *
+ *   authMode='none'                                   → throw (provider disabled)
+ *   authMode='subscription' + hasSubscription=true    → 'subscription'
+ *   authMode='subscription' + hasSubscription=false   → throw
+ *   authMode='api' + hasApiKey=true                   → 'api'
+ *   authMode='api' + hasApiKey=false                  → throw
  */
 export function resolveAuthMode(
   provider: SubscriptionProvider,
@@ -47,6 +66,10 @@ export function resolveAuthMode(
 ): AuthPath {
   const mode = readAuthMode(provider, config)
 
+  if (mode === 'none') {
+    throw new Error(`Provider ${provider} is disabled (auth mode = none)`)
+  }
+
   if (mode === 'subscription') {
     if (!presence.hasSubscription) {
       throw new Error(`No subscription credential for ${provider}`)
@@ -54,21 +77,19 @@ export function resolveAuthMode(
     return 'subscription'
   }
 
-  if (mode === 'api') {
-    if (!presence.hasApiKey) {
-      throw new Error(`No API key for ${provider}`)
-    }
-    return 'api'
+  // mode === 'api'
+  if (!presence.hasApiKey) {
+    throw new Error(`No API key for ${provider}`)
   }
-
-  // 'auto'
-  if (presence.hasSubscription) return 'subscription'
-  if (presence.hasApiKey) return 'api'
-  throw new Error(`No credential for ${provider} (neither subscription nor API key)`)
+  return 'api'
 }
 
 /**
  * §3.9 — classify a subscription-path failure signal into AuthFallbackInfo.reason.
+ *
+ * v0.7 (2026-05-14) — classification still drives the onAuthFallback callback so
+ * the UI can surface a Notice ("Subscription quota exceeded — switch to API key
+ * mode?"), but no automatic retry happens on the API path. Users decide.
  *
  * Inputs:
  *   - `status` : HTTP status when subscription path used an HTTP client (rare;
@@ -80,7 +101,7 @@ export function resolveAuthMode(
  *   1. Auth-missing (CLI not logged in) — distinct from quota (no retry on
  *      same path will succeed). Sources: gemini "auth login" / claude "/login"
  *      / codex "login".
- *   2. Quota / rate limit / 401 / 429 — fallback target.
+ *   2. Quota / rate limit / 401 / 429 — surfaced for Notice mapping.
  *   3. Timeout / spawn errors — typed by the spawn wrapper, not here.
  *   4. null = no actionable trigger (caller surfaces original error).
  */

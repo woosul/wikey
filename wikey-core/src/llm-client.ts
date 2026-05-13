@@ -132,29 +132,27 @@ export class LLMClient {
   }
 
   /**
-   * §5.6.4.5 Step E BLUE 3b — shared subscription→api fallback shell.
+   * §5.6.4 v0.7 — shared subscription / api routing shell (no auto fallback).
    *
    * Why one helper, three call sites: callGemini / callAnthropic / callOpenAI
-   * shared *identical* try/catch/retry shape (only the function bindings, the
-   * provider tag, and the AUTH_MODE config key differed). One helper removes
-   * three near-duplicate `callXxxWithFallback` methods (~14 LOC each → 0) and
-   * makes the routing invariant (I1+I2+I3) provable at one site.
+   * shared *identical* try/catch shape (only the function bindings + provider
+   * tag differed). One helper removes three near-duplicates and makes the
+   * routing invariant (I1+I2+I3) provable at one site.
    *
-   * Invariant guarantees (one place to read):
-   *   - I1 (subscription-first when resolveAuthMode → subscription)
-   *   - I2 (auto + actionable trigger + API key present = transparent retry +
-   *     onAuthFallback once)
-   *   - I3 (force-subscription = no fallback even when API key present;
-   *     force-api = no subscription attempt — handled by resolveAuthMode itself)
+   * Invariant guarantees (v0.7):
+   *   - I1: mode='subscription' → CLI path only (no automatic API retry).
+   *         Failure surfaces classified Notice via onAuthFallback, then throws.
+   *   - I2: mode='api'          → HTTP API path only (no subscription attempt).
+   *   - I3: mode='none'         → throws before this helper runs (resolveAuthMode).
    *
-   * `authMode` is the per-provider raw config value (`undefined` defaults to
-   * 'auto' — matches each callX's prior behaviour). Passing it in keeps the
-   * helper provider-agnostic without touching `this.config` via a key lookup.
+   * 'auto' was polished out (user plan 2026-05-14) — explicit mode selection
+   * eliminates surprise API-key spend when subscription quota / timeout /
+   * jsonMode unsupported triggers fired.
    */
   private async callWithFallback(
     provider: SubscriptionProvider,
     presence: CredentialPresence,
-    authMode: AuthMode | undefined,
+    _authMode: AuthMode | undefined,
     subscriptionFn: (prompt: string, opts?: LLMCallOptions) => Promise<string>,
     apiFn: (prompt: string, opts?: LLMCallOptions) => Promise<string>,
     prompt: string,
@@ -167,12 +165,12 @@ export class LLMClient {
     try {
       return await subscriptionFn(prompt, opts)
     } catch (err) {
+      // v0.7 — surface the classified reason for UI Notice mapping, then throw.
+      // The plugin layer (main.ts) renders a Notice that prompts the user to
+      // switch mode manually. No automatic API retry.
       const reason = classifyFallbackReason(err)
-      const mode = authMode ?? 'auto'
-      // auto + has API key + actionable reason = retry on API path (I2).
-      if (mode === 'auto' && presence.hasApiKey && reason !== null) {
+      if (reason !== null) {
         opts?.onAuthFallback?.({ provider, reason, originalError: err as Error })
-        return apiFn(prompt, opts)
       }
       throw err
     }

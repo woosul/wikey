@@ -31,12 +31,14 @@ const DEFAULTS: WikeyConfig = {
   SUMMARIZE_PROVIDER: '',
   CONTEXTUAL_MODEL: CONTEXTUAL_DEFAULT_MODEL,
   COST_LIMIT: 50,
-  // §5.6.4 — per-provider auth mode defaults. 'auto' = subscription first,
-  // API fallback on quota/401/429. Users override via wikey.conf or
-  // credentials.json `auth.<provider>.mode`.
-  GEMINI_AUTH_MODE: 'auto',
-  ANTHROPIC_AUTH_MODE: 'auto',
-  OPENAI_AUTH_MODE: 'auto',
+  // §5.6.4 v0.7 — per-provider auth mode defaults (user plan 2026-05-14).
+  // 'auto' polished out. 'subscription' is the v0.7 default: subscription-first
+  // intent preserved (most users have CLI OAuth set up) but failure now surfaces
+  // a Notice instead of silently spending API-key credit. Users explicitly
+  // switch to 'api' or 'none' from the Settings UI when needed.
+  GEMINI_AUTH_MODE: 'subscription',
+  ANTHROPIC_AUTH_MODE: 'subscription',
+  OPENAI_AUTH_MODE: 'subscription',
 }
 
 /**

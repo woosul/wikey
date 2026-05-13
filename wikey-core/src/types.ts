@@ -108,7 +108,11 @@ export interface WikeyConfig {
   readonly DOCLING_TIMEOUT_MS?: number          // 기본 300000
   readonly DOCLING_DISABLE?: boolean            // true = tier 1 스킵 (디버깅/벤치마크용)
 
-  // §5.6.4 — per-provider subscription auth mode (default 'auto').
+  // §5.6.4 v0.7 — per-provider subscription auth mode (default 'subscription').
+  // 'auto' polished out (user plan 2026-05-14): explicit user choice between
+  //   'none'         : provider disabled (resolveAuthMode throws)
+  //   'subscription' : CLI OAuth path only (no API fallback)
+  //   'api'          : HTTP API key path only (no subscription attempt)
   readonly GEMINI_AUTH_MODE?: AuthMode
   readonly ANTHROPIC_AUTH_MODE?: AuthMode
   readonly OPENAI_AUTH_MODE?: AuthMode
@@ -141,14 +145,19 @@ export interface ProvenanceEntry {
 export type LLMProvider = 'gemini' | 'anthropic' | 'openai' | 'ollama'
 
 /**
- * §5.6.4 — subscription/api/auto routing mode (per-provider).
+ * §5.6.4 v0.7 — user-selected routing mode (per-provider). 'auto' polished out
+ * (user plan 2026-05-14) — explicit choice eliminates surprise API-key spend
+ * from silent fallback when subscription path hits quota / timeout / jsonMode.
+ *   - 'none'         : provider disabled (resolveAuthMode throws)
  *   - 'subscription' : force CLI OAuth path (no API fallback on failure)
  *   - 'api'          : force HTTP API key path (no subscription attempt)
- *   - 'auto'         : subscription first, API fallback on quota/401/429
+ *
+ * Legacy 'auto' values found in stored configs are migrated to 'subscription'
+ * at load time (auth-mode-bridge / loadCredentials / parseWikeyConf).
  */
-export type AuthMode = 'subscription' | 'api' | 'auto'
+export type AuthMode = 'none' | 'subscription' | 'api'
 
-/** §5.6.4 — routing-resolved path (`AuthMode` minus 'auto', what the call site actually executes). */
+/** §5.6.4 — routing-resolved path. 'none' throws before resolution. */
 export type AuthPath = 'subscription' | 'api'
 
 /**

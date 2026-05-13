@@ -1,24 +1,23 @@
 /**
- * §5.6.4.1 Step A2 — auth-resolver RED.
+ * §5.6.4 v0.7 — auth-resolver test (user plan 2026-05-14).
  *
  * Plan reference:
  *   - plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.2 I1/I3, §5.2 A2 결정표
  *
+ * v0.7 — 'auto' polished out. 'none' added (provider disabled).
+ *
  * Spec — `resolveAuthMode(provider, config, presence) → 'subscription' | 'api'`
- *   8-row truth table (plan §5.2 A2):
- *     authMode='subscription' + hasSubscription=true              → 'subscription'
- *     authMode='subscription' + hasSubscription=false             → throw
- *     authMode='api' + hasApiKey=true                             → 'api'
- *     authMode='api' + hasApiKey=false                            → throw
- *     authMode='auto' + hasSubscription=true  + hasApiKey=true    → 'subscription'
- *     authMode='auto' + hasSubscription=true  + hasApiKey=false   → 'subscription'
- *     authMode='auto' + hasSubscription=false + hasApiKey=true    → 'api'
- *     authMode='auto' + hasSubscription=false + hasApiKey=false   → throw
+ *   6-row truth table:
+ *     authMode='none'                                     → throw (disabled)
+ *     authMode='subscription' + hasSubscription=true      → 'subscription'
+ *     authMode='subscription' + hasSubscription=false     → throw
+ *     authMode='api' + hasApiKey=true                     → 'api'
+ *     authMode='api' + hasApiKey=false                    → throw
+ *     legacy authMode='auto' (migrated)                   → resolves as 'subscription'
  *
  * Spec — `detectFallbackTrigger(stderr, status, body) → reason | null`
- *   AC-S4 / S5 / S6: quota / 401 / 429 / "rate limit" → 'quota-exceeded'
- *   401 + "not logged in" → 'auth-missing'
- *   no trigger → null
+ *   classification unchanged in v0.7 — callback fires for UI Notice, but the
+ *   runtime no longer auto-retries on the API path.
  */
 
 import { describe, it, expect } from 'vitest'
@@ -44,9 +43,9 @@ function makeConfig(overrides: Partial<WikeyConfig> = {}): WikeyConfig {
     SUMMARIZE_PROVIDER: '',
     CONTEXTUAL_MODEL: 'gemma4',
     COST_LIMIT: 50,
-    GEMINI_AUTH_MODE: 'auto',
-    ANTHROPIC_AUTH_MODE: 'auto',
-    OPENAI_AUTH_MODE: 'auto',
+    GEMINI_AUTH_MODE: 'subscription',
+    ANTHROPIC_AUTH_MODE: 'subscription',
+    OPENAI_AUTH_MODE: 'subscription',
     ...overrides,
   }
 }
@@ -57,8 +56,21 @@ function presence(hasSubscription: boolean, hasApiKey: boolean): CredentialPrese
 
 const PROVIDERS: readonly SubscriptionProvider[] = ['gemini', 'anthropic', 'openai']
 
-describe('§5.6.4 resolveAuthMode — 8-row truth table', () => {
-  it('row 1: force-subscription + hasSubscription → "subscription"', () => {
+describe('§5.6.4 v0.7 resolveAuthMode — 6-row truth table', () => {
+  it('row 1: none → throw (provider disabled, regardless of credentials)', () => {
+    for (const p of PROVIDERS) {
+      const cfg = makeConfig({
+        GEMINI_AUTH_MODE: 'none',
+        ANTHROPIC_AUTH_MODE: 'none',
+        OPENAI_AUTH_MODE: 'none',
+      })
+      expect(() => resolveAuthMode(p, cfg, presence(true, true))).toThrow(
+        new RegExp(`Provider ${p} is disabled.*none`, 'i'),
+      )
+    }
+  })
+
+  it('row 2: subscription + hasSubscription → "subscription"', () => {
     for (const p of PROVIDERS) {
       const cfg = makeConfig({
         GEMINI_AUTH_MODE: 'subscription',
@@ -69,14 +81,14 @@ describe('§5.6.4 resolveAuthMode — 8-row truth table', () => {
     }
   })
 
-  it('row 2: force-subscription + no subscription → throw', () => {
+  it('row 3: subscription + no subscription → throw', () => {
     const cfg = makeConfig({ GEMINI_AUTH_MODE: 'subscription' })
     expect(() => resolveAuthMode('gemini', cfg, presence(false, true))).toThrow(
       /No subscription credential.*gemini/i,
     )
   })
 
-  it('row 3: force-api + hasApiKey → "api"', () => {
+  it('row 4: api + hasApiKey → "api"', () => {
     for (const p of PROVIDERS) {
       const cfg = makeConfig({
         GEMINI_AUTH_MODE: 'api',
@@ -87,33 +99,33 @@ describe('§5.6.4 resolveAuthMode — 8-row truth table', () => {
     }
   })
 
-  it('row 4: force-api + no api key → throw', () => {
+  it('row 5: api + no api key → throw', () => {
     const cfg = makeConfig({ ANTHROPIC_AUTH_MODE: 'api' })
     expect(() => resolveAuthMode('anthropic', cfg, presence(true, false))).toThrow(
       /No API key.*anthropic/i,
     )
   })
 
-  it('row 5: auto + both → subscription wins', () => {
-    const cfg = makeConfig()
+  it('row 6: legacy "auto" value migrates to "subscription" semantics', () => {
+    // Older stored configs may still carry 'auto' if the disk-side migration
+    // failed (e.g. read-only filesystem). Resolver-side migration preserves the
+    // subscription-first user intent without re-introducing the silent API
+    // fallback.
+    const cfg = makeConfig({
+      GEMINI_AUTH_MODE: 'auto' as unknown as 'subscription',
+    })
     expect(resolveAuthMode('gemini', cfg, presence(true, true))).toBe('subscription')
-  })
-
-  it('row 6: auto + subscription only → "subscription"', () => {
-    const cfg = makeConfig()
-    expect(resolveAuthMode('openai', cfg, presence(true, false))).toBe('subscription')
-  })
-
-  it('row 7: auto + api only → "api"', () => {
-    const cfg = makeConfig()
-    expect(resolveAuthMode('anthropic', cfg, presence(false, true))).toBe('api')
-  })
-
-  it('row 8: auto + neither → throw', () => {
-    const cfg = makeConfig()
-    expect(() => resolveAuthMode('gemini', cfg, presence(false, false))).toThrow(
-      /No credential.*gemini/i,
+    expect(() => resolveAuthMode('gemini', cfg, presence(false, true))).toThrow(
+      /No subscription credential/i,
     )
+  })
+
+  it('row 7: undefined / missing AUTH_MODE defaults to "subscription"', () => {
+    // Strip the field entirely (covers fresh installs / legacy configs that
+    // omit the key). Resolver applies the v0.7 default.
+    const cfg = makeConfig()
+    const stripped: WikeyConfig = { ...cfg, GEMINI_AUTH_MODE: undefined }
+    expect(resolveAuthMode('gemini', stripped, presence(true, false))).toBe('subscription')
   })
 })
 

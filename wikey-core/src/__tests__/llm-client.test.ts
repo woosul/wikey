@@ -32,6 +32,12 @@ const baseConfig: WikeyConfig = {
   SUMMARIZE_PROVIDER: '',
   CONTEXTUAL_MODEL: 'gemma4',
   COST_LIMIT: 50,
+  // §5.6.4 v0.7 — this suite exercises the HTTP API path explicitly; force-api
+  // mode bypasses the subscription CLI presence check. (The subscription paths
+  // are covered by llm-subscription-{gemini,anthropic,openai}.test.ts.)
+  GEMINI_AUTH_MODE: 'api',
+  ANTHROPIC_AUTH_MODE: 'api',
+  OPENAI_AUTH_MODE: 'api',
 }
 
 describe('LLMClient — Gemini', () => {

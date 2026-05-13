@@ -9,19 +9,19 @@
  * others irrelevant). The matrix here pins down the *coexistence* invariant —
  * a single LLMClient instance with all 3 providers carrying both subscription
  * credential AND API key resolves each provider independently, in line with
- * its own AUTH_MODE config (auto → subscription / api → API path).
+ * its own AUTH_MODE config (subscription / api). v0.7: 'auto' polished out.
  *
  * Covers:
- *   AC-S7  — 3 providers all registered, all `auto` → each picks subscription.
+ *   AC-S7  — 3 providers all in `subscription` mode → each resolves to CLI.
  *   AC-S8  — per-provider force-api isolates routing (other 2 stay on subscription).
  *
  * 6 cases:
- *   gemini    + auto   → subscription path
- *   anthropic + auto   → subscription path
- *   openai    + auto   → subscription path
- *   gemini    + api    → API path
- *   anthropic + api    → API path
- *   openai    + api    → API path
+ *   gemini    + subscription → subscription path
+ *   anthropic + subscription → subscription path
+ *   openai    + subscription → subscription path
+ *   gemini    + api          → API path
+ *   anthropic + api          → API path
+ *   openai    + api          → API path
  */
 
 import { describe, it, expect } from 'vitest'
@@ -120,7 +120,7 @@ interface MatrixHarness {
  * Build an LLMClient with all 3 providers carrying both subscription credential
  * AND API key. Per-provider AUTH_MODE controls which path each call resolves to.
  */
-function makeMatrixClient(authModes: Record<SubscriptionProvider, 'auto' | 'api'>): MatrixHarness {
+function makeMatrixClient(authModes: Record<SubscriptionProvider, 'subscription' | 'api'>): MatrixHarness {
   const httpCalls: { url: string; opts: HttpRequestOptions }[] = []
   const spawnCalls: SpawnRecord[] = []
 
@@ -185,14 +185,17 @@ function makeMatrixClient(authModes: Record<SubscriptionProvider, 'auto' | 'api'
 
 // ── tests ─────────────────────────────────────────────────────────────────
 
-describe('§5.6.4.5 Step E — 3-provider routing matrix (subscription / api)', () => {
+describe('§5.6.4.5 Step E — 3-provider routing matrix (subscription / api, v0.7)', () => {
   it.each<SubscriptionProvider>(['gemini', 'anthropic', 'openai'])(
-    'auto + both creds → %s resolves to subscription path (spawn=1 / HTTP=0)',
+    'subscription mode + both creds → %s resolves to subscription path (spawn=1 / HTTP=0)',
     async (provider) => {
-      const harness = makeMatrixClient({ gemini: 'auto', anthropic: 'auto', openai: 'auto' })
+      const harness = makeMatrixClient({
+        gemini: 'subscription',
+        anthropic: 'subscription',
+        openai: 'subscription',
+      })
       const result = await harness.llm.call('q', { provider })
       expect(result).toBe(SUBSCRIPTION_CLEAN[provider])
-      // Subscription path = 1 spawn for this provider, 0 HTTP calls.
       expect(harness.spawnCalls).toEqual([{ provider, prompt: 'q' }])
       expect(harness.httpCalls).toHaveLength(0)
     },
@@ -204,14 +207,17 @@ describe('§5.6.4.5 Step E — 3-provider routing matrix (subscription / api)', 
       const harness = makeMatrixClient({ gemini: 'api', anthropic: 'api', openai: 'api' })
       const result = await harness.llm.call('q', { provider })
       expect(result).toBe(API_CLEAN[provider])
-      // API path = 0 spawns, 1 HTTP call for this provider.
       expect(harness.spawnCalls).toHaveLength(0)
       expect(harness.httpCalls).toHaveLength(1)
     },
   )
 
-  it('AC-S7 — all 3 providers in auto independently pick subscription (no cross-talk)', async () => {
-    const harness = makeMatrixClient({ gemini: 'auto', anthropic: 'auto', openai: 'auto' })
+  it('AC-S7 — all 3 providers in subscription mode independently resolve (no cross-talk)', async () => {
+    const harness = makeMatrixClient({
+      gemini: 'subscription',
+      anthropic: 'subscription',
+      openai: 'subscription',
+    })
 
     const [g, a, o] = await Promise.all([
       harness.llm.call('q', { provider: 'gemini' }),
@@ -223,7 +229,6 @@ describe('§5.6.4.5 Step E — 3-provider routing matrix (subscription / api)', 
     expect(a).toBe(SUBSCRIPTION_CLEAN.anthropic)
     expect(o).toBe(SUBSCRIPTION_CLEAN.openai)
 
-    // 3 spawns (1 per provider), 0 HTTP calls — subscription-only resolution.
     expect(harness.spawnCalls).toHaveLength(3)
     expect(new Set(harness.spawnCalls.map((c) => c.provider))).toEqual(
       new Set(['gemini', 'anthropic', 'openai']),
@@ -231,8 +236,12 @@ describe('§5.6.4.5 Step E — 3-provider routing matrix (subscription / api)', 
     expect(harness.httpCalls).toHaveLength(0)
   })
 
-  it('AC-S8 — per-provider force-api isolates routing (gemini=api, others=auto)', async () => {
-    const harness = makeMatrixClient({ gemini: 'api', anthropic: 'auto', openai: 'auto' })
+  it('AC-S8 — per-provider force-api isolates routing (gemini=api, others=subscription)', async () => {
+    const harness = makeMatrixClient({
+      gemini: 'api',
+      anthropic: 'subscription',
+      openai: 'subscription',
+    })
 
     const [g, a, o] = await Promise.all([
       harness.llm.call('q', { provider: 'gemini' }),

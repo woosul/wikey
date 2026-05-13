@@ -6,12 +6,31 @@ import {
   loadEffectiveIngestPrompt, loadEffectiveStage2Prompt, loadEffectiveStage3Prompt,
   fetchModelList, ANTHROPIC_PING_MODEL,
   previewReset,
+  resolveCliBinary,
 } from 'wikey-core'
 import type { LLMProvider, ResetScope } from 'wikey-core'
 import type WikeyPlugin from './main'
 import { ResetImpactModal } from './reset-modals'
 import { executeReset } from './commands'
 import { renderDeveloperUpdateItems } from './settings-tab-developer'
+
+/**
+ * §5.6.4 v0.7 — provider subsection spec (single source of truth for the three
+ * provider blocks rendered in the API Keys section). Bundles the per-provider
+ * literals (heading text, CLI commands, settings field names, placeholder)
+ * so the shared `renderProviderSubsection` stays provider-agnostic.
+ */
+interface ProviderSubsectionSpec {
+  readonly provider: 'gemini' | 'anthropic' | 'openai'
+  readonly heading: string
+  readonly apiKeyField: 'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey'
+  readonly authModeField: 'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode'
+  readonly apiKeyPlaceholder: string
+  readonly signInLabel: string
+  readonly signInCommand: string
+  readonly signOutCommand: string
+  readonly detectSubscription: () => boolean
+}
 
 export class WikeySettingTab extends PluginSettingTab {
   constructor(app: App, private readonly plugin: WikeyPlugin) {
@@ -1195,6 +1214,9 @@ export class WikeySettingTab extends PluginSettingTab {
   }
 
   // ── Section: API Keys ──
+  // §5.6.4 v0.7 (user plan 2026-05-14) — provider-centric subsections. Each
+  // provider gets one heading + one Auth Mode dropdown + Subscription row
+  // (status + Sign in/out) + API Key row (password input + Test).
   private renderApiKeysSection(containerEl: HTMLElement): void {
     containerEl.createEl('h3', { text: 'API Keys' })
 
@@ -1204,79 +1226,131 @@ export class WikeySettingTab extends PluginSettingTab {
       cls: 'wikey-settings-status-label',
     })
 
-    this.renderApiKeyField(containerEl, 'Google Gemini', 'geminiApiKey', 'AIza...', 'gemini')
-    // §5.6.4.2 Step B — Google subscription (Gemini Advanced via `gemini` CLI OAuth).
-    this.renderGoogleAuthModeCard(containerEl)
-    this.renderApiKeyField(containerEl, 'Anthropic Claude', 'anthropicApiKey', 'sk-ant-...', 'anthropic')
-    // §5.6.4.3 Step C — Anthropic subscription (Claude Pro/Max via `claude` CLI OAuth).
-    this.renderAnthropicAuthModeCard(containerEl)
-    this.renderApiKeyField(containerEl, 'OpenAI Codex', 'openaiApiKey', 'sk-...', 'openai')
-    // §5.6.4.4 Step D — OpenAI subscription (ChatGPT Plus/Pro via `codex` CLI OAuth).
-    this.renderOpenAIAuthModeCard(containerEl)
+    this.renderProviderSubsection(containerEl, {
+      provider: 'gemini',
+      heading: 'Google Gemini',
+      apiKeyField: 'geminiApiKey',
+      authModeField: 'geminiAuthMode',
+      apiKeyPlaceholder: 'AIza...',
+      signInLabel: 'Sign in with Google',
+      signInCommand: 'gemini login',
+      signOutCommand: 'gemini logout',
+      detectSubscription: () => this.detectGeminiSubscription(),
+    })
+    this.renderProviderSubsection(containerEl, {
+      provider: 'anthropic',
+      heading: 'Anthropic Claude',
+      apiKeyField: 'anthropicApiKey',
+      authModeField: 'anthropicAuthMode',
+      apiKeyPlaceholder: 'sk-ant-...',
+      signInLabel: 'Sign in with Claude',
+      signInCommand: 'claude /login',
+      signOutCommand: 'claude /logout',
+      detectSubscription: () => this.detectAnthropicSubscription(),
+    })
+    this.renderProviderSubsection(containerEl, {
+      provider: 'openai',
+      heading: 'OpenAI Codex',
+      apiKeyField: 'openaiApiKey',
+      authModeField: 'openaiAuthMode',
+      apiKeyPlaceholder: 'sk-...',
+      signInLabel: 'Sign in with ChatGPT',
+      signInCommand: 'codex login',
+      signOutCommand: 'codex logout',
+      detectSubscription: () => this.detectOpenAISubscription(),
+    })
   }
 
   /**
-   * §5.6.4.2 Step B — Google provider Auth mode card.
+   * §5.6.4 v0.7 — unified provider subsection. Replaces three near-duplicate
+   * `renderXxxAuthModeCard` methods (~75 LOC each) + the `renderApiKeyField`
+   * helper. All three providers share the same shape:
    *
-   * Three controls (all English per system language LOCK 2026-05-12):
-   *   1. dropdown — Auth mode: Subscription / API key / Auto (default)
-   *   2. status   — Subscription detected? + API key configured?
-   *   3. buttons  — Sign in with Google / Sign out (open instruction Modal)
-   *
-   * The subscription path runs `gemini` CLI via wikey-core's spawnCliPrompt. We do
-   * not invoke `gemini login` from the plugin (Obsidian renderer has no TTY); the
-   * user runs it in their terminal, then returns + reloads.
+   *   <h4>{heading}</h4>
+   *   Auth Mode: [None (disabled) | Subscription | API Key]
+   *   Subscription: <detected|not detected>   [Sign in] or [Sign out]
+   *   API Key: ••••••••  [Test]
    */
-  private renderGoogleAuthModeCard(containerEl: HTMLElement): void {
-    const cardEl = containerEl.createDiv({ cls: 'wikey-settings-auth-mode-card' })
+  private renderProviderSubsection(
+    containerEl: HTMLElement,
+    spec: ProviderSubsectionSpec,
+  ): void {
+    const subsection = containerEl.createDiv({ cls: 'wikey-settings-auth-mode-card' })
+    subsection.createEl('h4', { text: spec.heading })
 
-    new Setting(cardEl)
-      .setName('Auth mode')
-      .setDesc('How wikey calls Gemini. Auto = subscription first, API fallback.')
+    // Auth Mode dropdown.
+    new Setting(subsection)
+      .setName('Auth Mode')
+      .setDesc('How wikey calls this provider. Pick one — no automatic fallback.')
       .addDropdown((dd) => {
-        dd.addOption('subscription', 'Subscription (Gemini Advanced)')
-        dd.addOption('api', 'API key')
-        dd.addOption('auto', 'Auto (subscription first, API fallback)')
-        dd.setValue(this.plugin.settings.geminiAuthMode ?? 'auto')
+        dd.addOption('none', 'None (disabled)')
+        dd.addOption('subscription', 'Subscription')
+        dd.addOption('api', 'API Key')
+        dd.setValue(this.plugin.settings[spec.authModeField] ?? 'subscription')
         dd.onChange(async (value) => {
-          if (value === 'subscription' || value === 'api' || value === 'auto') {
-            this.plugin.settings.geminiAuthMode = value
+          if (value === 'none' || value === 'subscription' || value === 'api') {
+            this.plugin.settings[spec.authModeField] = value
             await this.plugin.saveSettings()
           }
         })
       })
 
-    const statusEl = cardEl.createDiv({ cls: 'wikey-settings-status-row' })
-    const subscriptionDetected = this.detectGeminiSubscription()
-    const apiConfigured = !!this.plugin.settings.geminiApiKey
-    statusEl.createEl('span', {
-      text: `Subscription: ${subscriptionDetected ? 'detected' : 'not detected'}`,
-      cls: 'wikey-settings-status-label',
-    })
-    statusEl.createEl('span', {
-      text: ` · API key: ${apiConfigured ? 'configured' : 'empty'}`,
-      cls: 'wikey-settings-status-label',
-    })
-
-    new Setting(cardEl)
-      .addButton((btn) => {
-        btn.setButtonText('Sign in with Google').onClick(() => {
-          new GeminiAuthInstructionModal(
-            this.app,
-            'Sign in with Google',
-            'Run "gemini login" in your terminal, then return here and reload Obsidian.',
-          ).open()
-        })
-      })
-      .addButton((btn) => {
+    // Subscription row: status text + Sign in / Sign out button (one or the other).
+    const subscriptionDetected = spec.detectSubscription()
+    const subscriptionSetting = new Setting(subsection)
+      .setName('Subscription')
+      .setDesc(subscriptionDetected ? 'Subscription: detected' : 'Subscription: not detected')
+    if (subscriptionDetected) {
+      subscriptionSetting.addButton((btn) => {
         btn.setButtonText('Sign out').onClick(() => {
           new GeminiAuthInstructionModal(
             this.app,
             'Sign out',
-            'Run "gemini logout" in your terminal.',
+            `Run "${spec.signOutCommand}" in your terminal.`,
           ).open()
         })
       })
+    } else {
+      subscriptionSetting.addButton((btn) => {
+        btn.setButtonText('Sign in').onClick(() => {
+          new GeminiAuthInstructionModal(
+            this.app,
+            spec.signInLabel,
+            `Run "${spec.signInCommand}" in your terminal, then return here and reload Obsidian.`,
+          ).open()
+        })
+      })
+    }
+
+    // API Key row: password input + Test button.
+    const apiKeySetting = new Setting(subsection).setName('API Key')
+    apiKeySetting.addText((text) => {
+      const input = text
+        .setPlaceholder(spec.apiKeyPlaceholder)
+        .setValue(this.plugin.settings[spec.apiKeyField])
+        .onChange(async (value) => {
+          this.plugin.settings[spec.apiKeyField] = value
+          await this.plugin.saveSettings()
+        })
+      input.inputEl.type = 'password'
+      return input
+    })
+    apiKeySetting.addButton((btn) => {
+      btn.setButtonText('Test').onClick(async () => {
+        btn.setButtonText('...')
+        btn.setDisabled(true)
+        const ok = await this.testApiConnection(spec.provider)
+        btn.setButtonText(ok ? '✓ Connected' : '✗ Failed')
+        btn.setDisabled(false)
+        if (ok) btn.buttonEl.addClass('wikey-btn-success')
+        else btn.buttonEl.addClass('wikey-btn-error')
+        setTimeout(() => {
+          btn.setButtonText('Test')
+          btn.buttonEl.removeClass('wikey-btn-success')
+          btn.buttonEl.removeClass('wikey-btn-error')
+        }, 3000)
+      })
+    })
   }
 
   /**
@@ -1290,8 +1364,7 @@ export class WikeySettingTab extends PluginSettingTab {
       const os = require('node:os') as typeof import('node:os')
       const path = require('node:path') as typeof import('node:path')
       const credsPath = path.join(os.homedir(), '.gemini', 'oauth_creds.json')
-      // CLI binary location — same default as wikey-core/cli-spawn.ts `CLI_DEFAULT_BINARY.gemini`.
-      const binaryPath = '/usr/local/bin/gemini'
+      const binaryPath = resolveCliBinary('gemini')
       return fs.existsSync(credsPath) && fs.existsSync(binaryPath)
     } catch {
       return false
@@ -1299,77 +1372,14 @@ export class WikeySettingTab extends PluginSettingTab {
   }
 
   /**
-   * §5.6.4.3 Step C — Anthropic Claude Auth mode card.
-   *
-   * Mirrors `renderGoogleAuthModeCard` with Anthropic-specific copy. The `claude`
-   * CLI manages subscription auth via `/login` (Claude Pro / Max OAuth) and stores
-   * tokens in the macOS Keychain — the runtime detects logged-out state via spawn
-   * stderr (handled by `detectFallbackTrigger`), not by probing a file.
-   */
-  private renderAnthropicAuthModeCard(containerEl: HTMLElement): void {
-    const cardEl = containerEl.createDiv({ cls: 'wikey-settings-auth-mode-card' })
-
-    new Setting(cardEl)
-      .setName('Auth mode')
-      .setDesc('How wikey calls Claude. Auto = subscription first, API fallback.')
-      .addDropdown((dd) => {
-        dd.addOption('subscription', 'Subscription (Claude Pro/Max)')
-        dd.addOption('api', 'API key')
-        dd.addOption('auto', 'Auto (subscription first, API fallback)')
-        dd.setValue(this.plugin.settings.anthropicAuthMode ?? 'auto')
-        dd.onChange(async (value) => {
-          if (value === 'subscription' || value === 'api' || value === 'auto') {
-            this.plugin.settings.anthropicAuthMode = value
-            await this.plugin.saveSettings()
-          }
-        })
-      })
-
-    const statusEl = cardEl.createDiv({ cls: 'wikey-settings-status-row' })
-    const subscriptionDetected = this.detectAnthropicSubscription()
-    const apiConfigured = !!this.plugin.settings.anthropicApiKey
-    statusEl.createEl('span', {
-      text: `Subscription: ${subscriptionDetected ? 'detected' : 'not detected'}`,
-      cls: 'wikey-settings-status-label',
-    })
-    statusEl.createEl('span', {
-      text: ` · API key: ${apiConfigured ? 'configured' : 'empty'}`,
-      cls: 'wikey-settings-status-label',
-    })
-
-    new Setting(cardEl)
-      .addButton((btn) => {
-        btn.setButtonText('Sign in with Claude').onClick(() => {
-          new GeminiAuthInstructionModal(
-            this.app,
-            'Sign in with Claude',
-            'Run "claude /login" in your terminal, then return here and reload Obsidian.',
-          ).open()
-        })
-      })
-      .addButton((btn) => {
-        btn.setButtonText('Sign out').onClick(() => {
-          new GeminiAuthInstructionModal(
-            this.app,
-            'Sign out',
-            'Run "claude /logout" in your terminal.',
-          ).open()
-        })
-      })
-  }
-
-  /**
    * §5.6.4.3 Step C — sync detection for the claude CLI binary. Mirrors
-   * `LLMClient.checkAnthropicPresence`: binary presence only (no oauth file
-   * probe — claude CLI stores subscription tokens in macOS Keychain). The
-   * runtime resolves the actual logged-in state at first spawn via stderr
-   * classification (`detectFallbackTrigger`).
+   * `LLMClient.checkAnthropicPresence`: binary presence only (claude CLI
+   * stores subscription tokens in macOS Keychain, not file-probeable).
    */
   private detectAnthropicSubscription(): boolean {
     try {
       const fs = require('node:fs') as typeof import('node:fs')
-      // Same default as wikey-core/cli-spawn.ts `CLI_DEFAULT_BINARY.anthropic`.
-      const binaryPath = '/usr/local/bin/claude'
+      const binaryPath = resolveCliBinary('anthropic')
       return fs.existsSync(binaryPath)
     } catch {
       return false
@@ -1377,71 +1387,8 @@ export class WikeySettingTab extends PluginSettingTab {
   }
 
   /**
-   * §5.6.4.4 Step D — OpenAI Codex Auth mode card.
-   *
-   * Mirrors `renderGoogleAuthModeCard` with OpenAI-specific copy. The `codex`
-   * CLI manages subscription auth via `codex login` (ChatGPT Plus / Pro OAuth)
-   * and persists the OAuth token to `~/.codex/auth.json` — probeable directly
-   * via fs.existsSync (unlike claude Keychain).
-   */
-  private renderOpenAIAuthModeCard(containerEl: HTMLElement): void {
-    const cardEl = containerEl.createDiv({ cls: 'wikey-settings-auth-mode-card' })
-
-    new Setting(cardEl)
-      .setName('Auth mode')
-      .setDesc('How wikey calls OpenAI. Auto = subscription first, API fallback.')
-      .addDropdown((dd) => {
-        dd.addOption('subscription', 'Subscription (ChatGPT Plus/Pro)')
-        dd.addOption('api', 'API key')
-        dd.addOption('auto', 'Auto (subscription first, API fallback)')
-        dd.setValue(this.plugin.settings.openaiAuthMode ?? 'auto')
-        dd.onChange(async (value) => {
-          if (value === 'subscription' || value === 'api' || value === 'auto') {
-            this.plugin.settings.openaiAuthMode = value
-            await this.plugin.saveSettings()
-          }
-        })
-      })
-
-    const statusEl = cardEl.createDiv({ cls: 'wikey-settings-status-row' })
-    const subscriptionDetected = this.detectOpenAISubscription()
-    const apiConfigured = !!this.plugin.settings.openaiApiKey
-    statusEl.createEl('span', {
-      text: `Subscription: ${subscriptionDetected ? 'detected' : 'not detected'}`,
-      cls: 'wikey-settings-status-label',
-    })
-    statusEl.createEl('span', {
-      text: ` · API key: ${apiConfigured ? 'configured' : 'empty'}`,
-      cls: 'wikey-settings-status-label',
-    })
-
-    new Setting(cardEl)
-      .addButton((btn) => {
-        btn.setButtonText('Sign in with ChatGPT').onClick(() => {
-          new GeminiAuthInstructionModal(
-            this.app,
-            'Sign in with ChatGPT',
-            'Run "codex login" in your terminal, then return here and reload Obsidian.',
-          ).open()
-        })
-      })
-      .addButton((btn) => {
-        btn.setButtonText('Sign out').onClick(() => {
-          new GeminiAuthInstructionModal(
-            this.app,
-            'Sign out',
-            'Run "codex logout" in your terminal.',
-          ).open()
-        })
-      })
-  }
-
-  /**
    * §5.6.4.4 Step D — sync detection for the codex CLI binary + OAuth token file.
-   * Mirrors `LLMClient.checkOpenAIPresence`: both `~/.codex/auth.json` AND the
-   * CLI binary must exist (codex login persists OAuth to a plain file, unlike
-   * claude Keychain). The runtime detects 401/quota/rate-limit at first spawn
-   * via stderr classification (`detectFallbackTrigger`).
+   * Mirrors `LLMClient.checkOpenAIPresence`: both must exist.
    */
   private detectOpenAISubscription(): boolean {
     try {
@@ -1449,51 +1396,11 @@ export class WikeySettingTab extends PluginSettingTab {
       const os = require('node:os') as typeof import('node:os')
       const path = require('node:path') as typeof import('node:path')
       const credsPath = path.join(os.homedir(), '.codex', 'auth.json')
-      // Same default as wikey-core/cli-spawn.ts `CLI_DEFAULT_BINARY.openai`.
-      const binaryPath = '/usr/local/bin/codex'
+      const binaryPath = resolveCliBinary('openai')
       return fs.existsSync(credsPath) && fs.existsSync(binaryPath)
     } catch {
       return false
     }
-  }
-
-  private renderApiKeyField(
-    containerEl: HTMLElement,
-    name: string,
-    settingsKey: 'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey',
-    placeholder: string,
-    provider: string,
-  ): void {
-    const setting = new Setting(containerEl).setName(name)
-
-    setting.addText((text) => {
-      const input = text
-        .setPlaceholder(placeholder)
-        .setValue(this.plugin.settings[settingsKey])
-        .onChange(async (value) => {
-          this.plugin.settings[settingsKey] = value
-          await this.plugin.saveSettings()
-        })
-      input.inputEl.type = 'password'
-      return input
-    })
-
-    setting.addButton((btn) => {
-      btn.setButtonText('Test').onClick(async () => {
-        btn.setButtonText('...')
-        btn.setDisabled(true)
-        const ok = await this.testApiConnection(provider)
-        btn.setButtonText(ok ? '✓ Connected' : '✗ Failed')
-        btn.setDisabled(false)
-        if (ok) btn.buttonEl.addClass('wikey-btn-success')
-        else btn.buttonEl.addClass('wikey-btn-error')
-        setTimeout(() => {
-          btn.setButtonText('Test')
-          btn.buttonEl.removeClass('wikey-btn-success')
-          btn.buttonEl.removeClass('wikey-btn-error')
-        }, 3000)
-      })
-    })
   }
 
   private async testApiConnection(provider: string): Promise<boolean> {

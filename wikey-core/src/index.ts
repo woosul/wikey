@@ -38,6 +38,9 @@ export {
 export type { CacheKeyInput, CacheIndexEntry } from './convert-cache.js'
 export { LLMClient, fetchModelList, SubscriptionFallbackError } from './llm-client.js'
 export type { SubscriptionDeps } from './llm-client.js'
+// §5.6.4 v0.7 — dynamic CLI binary resolver surfaced for plugin Settings UI
+// detectXxxSubscription() so the renderer probes the same path the runtime spawn will use.
+export { resolveCliBinary, CLI_DEFAULT_BINARY } from './cli-spawn.js'
 // §5.6.4 — auth-mode types surfaced for plugin Settings UI + Notice wiring.
 export type {
   AuthMode,

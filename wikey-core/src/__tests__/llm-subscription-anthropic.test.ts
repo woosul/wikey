@@ -4,34 +4,16 @@
  * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.4 Step C +
  *       §3.3 AC-S5 (Anthropic) + §3.9 onAuthFallback wiring.
  *
- * Mirror of llm-subscription-gemini.test.ts (provider='anthropic').
+ * v0.7 (user plan 2026-05-14) — 'auto' polished out. Subscription failures
+ * throw after invoking onAuthFallback for UI Notice surfacing (no silent API
+ * retry). Mirrors gemini test post-v0.7 conversion.
  *
  * Key Anthropic-specific differences vs Gemini:
  *   - presence detection = CLI binary existence only (no oauth_creds file —
  *     claude CLI stores tokens in macOS Keychain, inaccessible to fs.existsSync).
- *     `hasSubscription` therefore equals "binary present"; first-call 401 ↔
- *     "Please login" stderr is the runtime signal for missing subscription.
  *   - CLI base argv = ['-p'] (claude reads prompt from stdin)
  *   - subscription model flag = '--model <id>' (double-dash long form)
  *   - parseSubscriptionOutput('anthropic', raw) = raw.trim() (no header strip)
- *
- * 16 cases:
- *   1. AC-S5 subscription only `auto`             → spawn=1 / API=0
- *   2. AC-S5-api-only API only                    → spawn=0 / API=1
- *   3. AC-S5-both-auto both + auto                → spawn=1 / API=0
- *   4. AC-S5-quota subscription exit-1 + stderr quota → API fallback + onAuthFallback
- *   5. AC-S5-not-logged-in subscription stderr "Please login" → onAuthFallback('auth-missing')
- *   6. force-api → spawn=0 / API=1
- *   7. force-subscription + no binary             → throws (resolveAuthMode)
- *   8. spawn timeout (aborted)                    → onAuthFallback('timeout') + API fallback
- *   9. AC-S9 model option forwarded as --model <id>
- *  10. AC-S10 jsonMode unsupported                → onAuthFallback('jsonMode-unsupported') + API
- *  11. AC-S11 temperature silent ignore in CLI args (Anthropic API path supports natively)
- *  12. AC-S12 opts.timeout forwarded to spawn (timeoutMs)
- *  13. core ↔ UI 결합 0 (`from "obsidian"` / `new Notice(`) absent in llm-client.ts
- *  14. onAuthFallback NOT invoked on success
- *  15. checkAnthropicPresence — binary-only detection (no oauth_creds file probe)
- *  16. CLI binary missing (ENOENT) → onAuthFallback('spawn-failed') + API fallback
  */
 
 import { describe, it, expect } from 'vitest'
@@ -65,7 +47,7 @@ const baseConfig: WikeyConfig = {
   SUMMARIZE_PROVIDER: '',
   CONTEXTUAL_MODEL: 'gemma4',
   COST_LIMIT: 50,
-  ANTHROPIC_AUTH_MODE: 'auto',
+  ANTHROPIC_AUTH_MODE: 'subscription',
 }
 
 interface HttpCall {
@@ -86,7 +68,6 @@ function mockHttp(body: string, status = 200): { client: HttpClient; calls: Http
   }
 }
 
-// Anthropic API response shape: { content: [{ text: '...' }] }
 const ANTHROPIC_API_BODY = JSON.stringify({
   content: [{ text: 'api-result' }],
 })
@@ -101,12 +82,6 @@ interface PresenceFlags {
   binary: boolean
 }
 
-/**
- * Anthropic presence = CLI binary only. Unlike Gemini, claude CLI stores auth
- * tokens in macOS Keychain (~/.config/claude is empty for OAuth users), so
- * fs.existsSync cannot probe the "logged in" state. The runtime detects missing
- * subscription via spawn stderr ("Please login").
- */
 function makeDeps(
   presence: PresenceFlags,
   spawnImpl: (call: SpawnCall) => Promise<SpawnCliResult>,
@@ -140,8 +115,8 @@ function spawnExit(exitCode: number, stderr: string): (c: SpawnCall) => Promise<
 
 // ── tests ─────────────────────────────────────────────────────────────────
 
-describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', () => {
-  it('AC-S5 — subscription only + auto → spawn=1 / API=0', async () => {
+describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing (v0.7)', () => {
+  it('AC-S5 — subscription only + mode=subscription → spawn=1 / API=0', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { binary: true },
@@ -154,17 +129,18 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     expect(http.calls).toHaveLength(0)
   })
 
-  it('AC-S5-api-only — API only → spawn=0 / API=1', async () => {
+  it('AC-S5-api-only — API only + mode=api → spawn=0 / API=1', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
     const { deps, spawnCalls } = makeDeps({ binary: false }, spawnSuccess('unused'))
-    const llm = new LLMClient(http.client, { ...baseConfig, ANTHROPIC_API_KEY: 'k' }, deps)
+    const cfg: WikeyConfig = { ...baseConfig, ANTHROPIC_AUTH_MODE: 'api', ANTHROPIC_API_KEY: 'k' }
+    const llm = new LLMClient(http.client, cfg, deps)
     const result = await llm.call('q', { provider: 'anthropic' })
     expect(result).toBe('api-result')
     expect(spawnCalls).toHaveLength(0)
     expect(http.calls).toHaveLength(1)
   })
 
-  it('AC-S5-both-auto — both registered + auto → subscription wins (spawn=1 / API=0)', async () => {
+  it('AC-S5-both — both registered + mode=subscription → spawn=1 / API=0', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
     const { deps, spawnCalls } = makeDeps({ binary: true }, spawnSuccess('subscription wins'))
     const llm = new LLMClient(http.client, { ...baseConfig, ANTHROPIC_API_KEY: 'k' }, deps)
@@ -173,7 +149,7 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     expect(http.calls).toHaveLength(0)
   })
 
-  it('AC-S5-quota — subscription exit 1 + "rate limit" stderr → onAuthFallback("quota-exceeded") + API fallback', async () => {
+  it('mode=subscription + exit 1 + "rate limit" stderr → onAuthFallback("quota-exceeded") + throws', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
     const { deps, spawnCalls } = makeDeps(
       { binary: true },
@@ -181,18 +157,16 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     )
     const llm = new LLMClient(http.client, { ...baseConfig, ANTHROPIC_API_KEY: 'k' }, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'anthropic',
-      onAuthFallback: (info) => fallbacks.push(info),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'anthropic', onAuthFallback: (info) => fallbacks.push(info) }),
+    ).rejects.toThrow()
     expect(spawnCalls).toHaveLength(1)
-    expect(http.calls).toHaveLength(1)
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks).toHaveLength(1)
     expect(fallbacks[0]).toMatchObject({ provider: 'anthropic', reason: 'quota-exceeded' })
   })
 
-  it('AC-S5-not-logged-in — subscription stderr "Please login" → onAuthFallback("auth-missing") + API fallback', async () => {
+  it('mode=subscription + stderr "Please login" → onAuthFallback("auth-missing") + throws', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
     const { deps } = makeDeps(
       { binary: true },
@@ -200,11 +174,9 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     )
     const llm = new LLMClient(http.client, { ...baseConfig, ANTHROPIC_API_KEY: 'k' }, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'anthropic',
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'anthropic', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
     expect(fallbacks[0]?.reason).toBe('auth-missing')
   })
 
@@ -232,7 +204,7 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     )
   })
 
-  it('spawn aborted (timeout) + auto + API key → onAuthFallback("timeout") + API fallback', async () => {
+  it('mode=subscription + spawn aborted (timeout) → onAuthFallback("timeout") + throws', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
     const { deps } = makeDeps({ binary: true }, async () => ({
       stdout: '',
@@ -243,11 +215,10 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     const cfg: WikeyConfig = { ...baseConfig, ANTHROPIC_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'anthropic',
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'anthropic', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('timeout')
   })
 
@@ -259,24 +230,24 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     )
     const llm = new LLMClient(http.client, { ...baseConfig }, deps)
     await llm.call('q', { provider: 'anthropic', model: 'claude-sonnet-4-5' })
-    // claude CLI uses long-form `--model <id>` (not `-m`); mirrors SUBSCRIPTION_MODEL_FLAG.anthropic
     expect(spawnCalls[0]?.opts?.extraArgs).toEqual(['--model', 'claude-sonnet-4-5'])
   })
 
-  it('AC-S10 — jsonMode requested + auto + API key → onAuthFallback("jsonMode-unsupported") + API fallback', async () => {
+  it('mode=subscription + jsonMode → onAuthFallback("jsonMode-unsupported") + throws', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
     const { deps, spawnCalls } = makeDeps({ binary: true }, spawnSuccess('skipped'))
     const cfg: WikeyConfig = { ...baseConfig, ANTHROPIC_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'anthropic',
-      jsonMode: true,
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
-    // spawn skipped because mapOptionsToCliArgs returned `unsupported: 'jsonMode'`
+    await expect(
+      llm.call('q', {
+        provider: 'anthropic',
+        jsonMode: true,
+        onAuthFallback: (i) => fallbacks.push(i),
+      }),
+    ).rejects.toThrow()
     expect(spawnCalls).toHaveLength(0)
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('jsonMode-unsupported')
   })
 
@@ -290,7 +261,7 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     await llm.call('q', { provider: 'anthropic', temperature: 0.7 })
     const args = spawnCalls[0]?.opts?.extraArgs ?? []
     expect(args.find((a) => a.includes('temp'))).toBeUndefined()
-    expect(args).toEqual([]) // no model + no temp arg → empty args
+    expect(args).toEqual([])
   })
 
   it('AC-S12 — opts.timeout forwarded to spawn (timeoutMs)', async () => {
@@ -305,8 +276,6 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
   })
 
   it('core ↔ UI 결합 0 — llm-client.ts contains no `from "obsidian"` import or `new Notice(`', () => {
-    // Same grep gate as Gemini test; the plugin layer (main.ts) owns Notice surfacing
-    // via onAuthFallback callback. wikey-core must remain runtime-environment-agnostic.
     const src = readFileSync(join(__dirname, '..', 'llm-client.ts'), 'utf-8')
     expect(src).not.toMatch(/from\s+['"]obsidian['"]/)
     expect(src).not.toMatch(/\bnew\s+Notice\s*\(/)
@@ -327,25 +296,25 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
 
   it('checkAnthropicPresence — binary-only detection (keychain not probed)', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
-    // binary absent → hasSubscription=false → falls to API path
+    // binary absent → hasSubscription=false. mode='api' so call resolves to API path.
     const { deps: noBinary, spawnCalls: callsA } = makeDeps(
       { binary: false },
       spawnSuccess('unused'),
     )
-    const llmA = new LLMClient(http.client, { ...baseConfig, ANTHROPIC_API_KEY: 'k' }, noBinary)
+    const cfgA: WikeyConfig = { ...baseConfig, ANTHROPIC_AUTH_MODE: 'api', ANTHROPIC_API_KEY: 'k' }
+    const llmA = new LLMClient(http.client, cfgA, noBinary)
     expect(llmA.checkAnthropicPresence()).toEqual({ hasSubscription: false, hasApiKey: true })
     await llmA.call('q', { provider: 'anthropic' })
     expect(callsA).toHaveLength(0)
 
-    // binary present → hasSubscription=true (keychain auth state probed at first call)
+    // binary present → hasSubscription=true
     const { deps: withBinary } = makeDeps({ binary: true }, spawnSuccess('unused'))
     const llmB = new LLMClient(http.client, { ...baseConfig }, withBinary)
     expect(llmB.checkAnthropicPresence()).toEqual({ hasSubscription: true, hasApiKey: false })
   })
 
-  it('CLI binary missing (spawn ENOENT) → onAuthFallback("spawn-failed") + API fallback', async () => {
+  it('mode=subscription + CLI binary missing (spawn ENOENT) → onAuthFallback("spawn-failed") + throws', async () => {
     const http = mockHttp(ANTHROPIC_API_BODY)
-    // Force binary presence true so resolveAuthMode picks subscription, then spawn throws ENOENT.
     const { deps } = makeDeps({ binary: true }, async () => {
       const err = new Error('spawn ENOENT') as NodeJS.ErrnoException
       err.code = 'ENOENT'
@@ -354,12 +323,23 @@ describe('§5.6.4.3 Step C — LLMClient.callAnthropic subscription routing', ()
     const cfg: WikeyConfig = { ...baseConfig, ANTHROPIC_API_KEY: 'k' }
     const llm = new LLMClient(http.client, cfg, deps)
     const fallbacks: AuthFallbackInfo[] = []
-    const result = await llm.call('q', {
-      provider: 'anthropic',
-      onAuthFallback: (i) => fallbacks.push(i),
-    })
-    expect(result).toBe('api-result')
+    await expect(
+      llm.call('q', { provider: 'anthropic', onAuthFallback: (i) => fallbacks.push(i) }),
+    ).rejects.toThrow()
+    expect(http.calls).toHaveLength(0)
     expect(fallbacks[0]?.reason).toBe('spawn-failed')
+  })
+
+  it('mode=none → throws (provider disabled)', async () => {
+    const http = mockHttp(ANTHROPIC_API_BODY)
+    const { deps, spawnCalls } = makeDeps({ binary: true }, spawnSuccess('unused'))
+    const cfg: WikeyConfig = { ...baseConfig, ANTHROPIC_AUTH_MODE: 'none', ANTHROPIC_API_KEY: 'k' }
+    const llm = new LLMClient(http.client, cfg, deps)
+    await expect(llm.call('q', { provider: 'anthropic' })).rejects.toThrow(
+      /Provider anthropic is disabled/i,
+    )
+    expect(spawnCalls).toHaveLength(0)
+    expect(http.calls).toHaveLength(0)
   })
 })
 

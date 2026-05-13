@@ -21,18 +21,151 @@
  * file to inspect.
  */
 
+import { execSync } from 'node:child_process'
 import { spawn } from 'node:child_process'
+import { existsSync, readdirSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import type { SubscriptionProvider } from './types.js'
 
-/** §4.6 — default per-CLI binary locations on macOS dev box. Override via opts.cliPathOverride. */
-export const CLI_DEFAULT_BINARY: Record<SubscriptionProvider, string> = {
-  // Source: PoC §4 master probe (2026-05-13). Production callers SHOULD resolve
-  // via `which gemini` / `which claude` / `which codex` and pass cliPathOverride
-  // — these defaults exist for tests and as a fallback when PATH resolution fails.
-  gemini: '/usr/local/bin/gemini',
-  anthropic: '/usr/local/bin/claude',
-  openai: '/usr/local/bin/codex',
+/**
+ * §5.6.4 v0.7 — dynamic CLI binary resolution.
+ *
+ * Background: hardcoded `/usr/local/bin/{gemini,claude,codex}` failed when the
+ * user's actual binaries live under nvm (`~/.nvm/versions/node/<v>/bin`) or the
+ * cmux bundle (`/Applications/cmux.app/Contents/Resources/bin`). I8 invariant
+ * (no hardcoded paths; honour `wikey.conf` override) was violated, causing the
+ * Settings panel to render "Subscription: not detected" for all 3 providers
+ * even when each CLI was installed and logged in.
+ *
+ * Resolution order (first hit wins, memoized for process lifetime):
+ *   1. Env override — `WIKEY_<PROVIDER>_CLI_PATH` (e.g. WIKEY_GEMINI_CLI_PATH).
+ *      Path must exist; otherwise we ignore and fall through.
+ *   2. `command -v <name>` via login-style shell — picks up PATH including nvm,
+ *      Homebrew shims, asdf etc.
+ *   3. Static fallback candidates:
+ *      - `/opt/homebrew/bin/<name>` (Apple Silicon Homebrew)
+ *      - `/usr/local/bin/<name>` (Intel Homebrew / legacy)
+ *      - `/Applications/cmux.app/Contents/Resources/bin/<name>` (cmux bundle)
+ *      - `~/.nvm/versions/node/<v>/bin/<name>` (every installed Node version)
+ *   4. Fall back to `/usr/local/bin/<name>` so existing tests (which stub
+ *      `fileExists` to gate on this exact string) keep working unchanged.
+ */
+
+const PROVIDER_BINARY_NAME: Record<SubscriptionProvider, string> = {
+  gemini: 'gemini',
+  anthropic: 'claude',
+  openai: 'codex',
 }
+
+const PROVIDER_ENV_OVERRIDE: Record<SubscriptionProvider, string> = {
+  gemini: 'WIKEY_GEMINI_CLI_PATH',
+  anthropic: 'WIKEY_ANTHROPIC_CLI_PATH',
+  openai: 'WIKEY_OPENAI_CLI_PATH',
+}
+
+const STATIC_FALLBACK_DIRS = [
+  '/opt/homebrew/bin',
+  '/usr/local/bin',
+  '/Applications/cmux.app/Contents/Resources/bin',
+] as const
+
+const resolutionCache = new Map<SubscriptionProvider, string>()
+
+/** Expand `~/.nvm/versions/node/<v>/bin` for every installed node version. */
+function nvmCandidateDirs(): string[] {
+  try {
+    const root = join(homedir(), '.nvm', 'versions', 'node')
+    if (!existsSync(root)) return []
+    return readdirSync(root).map((v) => join(root, v, 'bin'))
+  } catch {
+    return []
+  }
+}
+
+/** Try `command -v <name>` in a login shell so nvm/asdf/homebrew shims resolve. */
+function whichBinary(name: string): string | null {
+  try {
+    const out = execSync(`command -v ${name}`, {
+      encoding: 'utf-8',
+      shell: '/bin/bash',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim()
+    return out.length > 0 && existsSync(out) ? out : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Resolve the absolute path of an external CLI for `provider`, with env
+ * override > PATH lookup > static fallbacks. Memoized per process.
+ *
+ * Returns the legacy `/usr/local/bin/<name>` string if every step fails so
+ * callers (and `fileExists`-stubbed tests) get a stable string for failure
+ * paths. Real callers should check `existsSync` on the result before spawn.
+ */
+export function resolveCliBinary(provider: SubscriptionProvider): string {
+  const cached = resolutionCache.get(provider)
+  if (cached !== undefined) return cached
+
+  const name = PROVIDER_BINARY_NAME[provider]
+
+  // 1. Env override (WIKEY_*_CLI_PATH)
+  const envKey = PROVIDER_ENV_OVERRIDE[provider]
+  const envVal = process.env[envKey]
+  if (envVal !== undefined && envVal.length > 0 && existsSync(envVal)) {
+    resolutionCache.set(provider, envVal)
+    return envVal
+  }
+
+  // 2. `command -v`
+  const fromPath = whichBinary(name)
+  if (fromPath !== null) {
+    resolutionCache.set(provider, fromPath)
+    return fromPath
+  }
+
+  // 3. Static fallback dirs + nvm glob
+  const candidates: string[] = [
+    ...STATIC_FALLBACK_DIRS.map((d) => join(d, name)),
+    ...nvmCandidateDirs().map((d) => join(d, name)),
+  ]
+  for (const c of candidates) {
+    if (existsSync(c)) {
+      resolutionCache.set(provider, c)
+      return c
+    }
+  }
+
+  // 4. Final fallback — legacy hardcoded path. Stable string for tests/logs.
+  const legacy = `/usr/local/bin/${name}`
+  resolutionCache.set(provider, legacy)
+  return legacy
+}
+
+/** Test-only: clear memoized resolutions (e.g. between env-override tests). */
+export function __resetCliBinaryResolutionCache(): void {
+  resolutionCache.clear()
+}
+
+/**
+ * §4.6 — per-CLI binary locations. Lazy-resolved via `resolveCliBinary` so the
+ * effective path follows env override → PATH → static fallbacks. Existing
+ * consumers (`CLI_DEFAULT_BINARY.gemini` etc.) keep working unchanged because
+ * each property access triggers the resolver.
+ */
+export const CLI_DEFAULT_BINARY: Record<SubscriptionProvider, string> = Object.freeze({
+  get gemini(): string {
+    return resolveCliBinary('gemini')
+  },
+  get anthropic(): string {
+    return resolveCliBinary('anthropic')
+  },
+  get openai(): string {
+    return resolveCliBinary('openai')
+  },
+}) as unknown as Record<SubscriptionProvider, string>
 
 /** §4.0.7 — locked argv tail per provider (additional flags appended by provider-cli-options.ts). */
 export const CLI_BASE_ARGS: Record<SubscriptionProvider, readonly string[]> = {

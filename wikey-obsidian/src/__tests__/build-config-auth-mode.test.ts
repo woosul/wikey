@@ -36,9 +36,9 @@ function makeSettings(overrides: Partial<WikeySettings> = {}): WikeySettings {
     geminiApiKey: '',
     anthropicApiKey: '',
     openaiApiKey: '',
-    geminiAuthMode: 'auto',
-    anthropicAuthMode: 'auto',
-    openaiAuthMode: 'auto',
+    geminiAuthMode: 'subscription',
+    anthropicAuthMode: 'subscription',
+    openaiAuthMode: 'subscription',
     ollamaUrl: 'http://localhost:11434',
     qmdPath: '',
     costLimit: 50,
@@ -92,12 +92,12 @@ describe('§5.6.4 A6 — buildConfig auth mode propagation (5 sites)', () => {
     const settings = makeSettings({
       geminiAuthMode: 'subscription',
       anthropicAuthMode: 'api',
-      openaiAuthMode: 'auto',
+      openaiAuthMode: 'none',
     })
     const cfg = buildAuthModesForConfig(settings)
     expect(cfg.GEMINI_AUTH_MODE).toBe('subscription')
     expect(cfg.ANTHROPIC_AUTH_MODE).toBe('api')
-    expect(cfg.OPENAI_AUTH_MODE).toBe('auto')
+    expect(cfg.OPENAI_AUTH_MODE).toBe('none')
   })
 
   it('case 2 (line 841): scripts-runner env keys list does NOT leak auth mode (security)', () => {
@@ -113,12 +113,12 @@ describe('§5.6.4 A6 — buildConfig auth mode propagation (5 sites)', () => {
   })
 
   it('case 3 (line 912): onSettingsSaved reload — updated auth modes reflected', () => {
-    const before = makeSettings({ geminiAuthMode: 'auto' })
-    const after = { ...before, geminiAuthMode: 'subscription' as const }
+    const before = makeSettings({ geminiAuthMode: 'subscription' })
+    const after = { ...before, geminiAuthMode: 'api' as const }
     const cfgBefore = buildAuthModesForConfig(before)
     const cfgAfter = buildAuthModesForConfig(after)
-    expect(cfgBefore.GEMINI_AUTH_MODE).toBe('auto')
-    expect(cfgAfter.GEMINI_AUTH_MODE).toBe('subscription')
+    expect(cfgBefore.GEMINI_AUTH_MODE).toBe('subscription')
+    expect(cfgAfter.GEMINI_AUTH_MODE).toBe('api')
   })
 
   it('case 4 (line 1495): buildFilterCallOptions — auth modes available in passed config', () => {
@@ -137,8 +137,8 @@ describe('§5.6.4 A6 — buildConfig auth mode propagation (5 sites)', () => {
     // Auth mode fields must survive spread.
     const overridden = { ...baseCfg, INGEST_PROVIDER: 'openai' as const }
     expect(overridden.OPENAI_AUTH_MODE).toBe('subscription')
-    expect(overridden.GEMINI_AUTH_MODE).toBe('auto')
-    expect(overridden.ANTHROPIC_AUTH_MODE).toBe('auto')
+    expect(overridden.GEMINI_AUTH_MODE).toBe('subscription')
+    expect(overridden.ANTHROPIC_AUTH_MODE).toBe('subscription')
   })
 })
 
@@ -167,5 +167,25 @@ describe('§5.6.4 A6 — env override priority (process.env > wikey.conf > crede
       if (orig === undefined) delete process.env.WIKEY_GEMINI_AUTH_MODE
       else process.env.WIKEY_GEMINI_AUTH_MODE = orig
     }
+  })
+
+  it('§5.6.4 v0.7 — legacy "auto" env value migrates to "subscription"', () => {
+    const orig = process.env.WIKEY_GEMINI_AUTH_MODE
+    try {
+      process.env.WIKEY_GEMINI_AUTH_MODE = 'auto'
+      // Settings carry 'api' but legacy env wins migration to 'subscription'.
+      const settings = makeSettings({ geminiAuthMode: 'api' })
+      const cfg = buildAuthModesForConfig(settings)
+      expect(cfg.GEMINI_AUTH_MODE).toBe('subscription')
+    } finally {
+      if (orig === undefined) delete process.env.WIKEY_GEMINI_AUTH_MODE
+      else process.env.WIKEY_GEMINI_AUTH_MODE = orig
+    }
+  })
+
+  it('§5.6.4 v0.7 — "none" is a valid mode (provider disabled)', () => {
+    const settings = makeSettings({ openaiAuthMode: 'none' })
+    const cfg = buildAuthModesForConfig(settings)
+    expect(cfg.OPENAI_AUTH_MODE).toBe('none')
   })
 })

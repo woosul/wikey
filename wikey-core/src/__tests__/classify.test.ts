@@ -68,6 +68,11 @@ const classifyBaseConfig: WikeyConfig = {
   SUMMARIZE_PROVIDER: '',
   CONTEXTUAL_MODEL: 'gemma4',
   COST_LIMIT: 50,
+  // §5.6.4 v0.7 — classify pipeline exercises the HTTP API path; force-api
+  // bypasses the subscription CLI presence check (no fs.existsSync surprises).
+  GEMINI_AUTH_MODE: 'api',
+  ANTHROPIC_AUTH_MODE: 'api',
+  OPENAI_AUTH_MODE: 'api',
 }
 
 function geminiBody(text: string): string {
