@@ -1,30 +1,48 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-13 session 41 — §5.20 v0.3.1 종결 (Knowledge Gap management full SDD+TDD)**. 회귀 core 933/936 + obsidian 191/191 / build 0 / validate-wiki **모든 검증 통과 0 errors**. master fixture smoke 7/7 (10 query → 5 gap clusters → idempotent render). codex 3 cycle 검토 — cycle #1 (8 finding) → cycle #2 (3 잔류) → cycle #3 (master verdict APPROVE).
+> 최신 갱신: **2026-05-13 session 41 — §5.20 v0.6 종결 + Help UI 5 follow-up (총 9 commit)**. v0.3.1 (SDD+TDD base + codex 3 cycle) → v0.4 (Summary/Statistics/3 entry points) → v0.5 (per-gap query list) → v0.6 (year-partitioned log + range filter) + Help UI 5 commit. 회귀 core 939/942 + obsidian 191/191 + build 0 + validate-wiki PASS. master CDP smoke 5 entry point ALL PASS.
 >
 > ## 다음 세션 첫 액션 (Session 42) — Phase 5 잔여 4 subject 진입
 >
 > **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** (4 subject). 우선순위 결정 → analyst Step A LOCK 진입.
 
-## Session 41 종결 종합 (2026-05-13)
+## Session 41 종결 종합 (2026-05-13) — §5.20 v0.6 + Help UI
 
-**§5.20 Knowledge Gap management (P2)** ✅ **v0.3.1 종결** — query log capture + gap score formula + auto-report (deterministic surface). Karpathy llm-wiki "Explicit" 원칙 강화 — 위키가 *무엇을 모르는지* 자체 `wiki/analyses/knowledge-gaps-YYYY-MM.md` 로 가시화.
+**§5.20 Knowledge Gap management (P2)** ✅ **v0.6 종결** — query log capture + gap score formula + auto-report + range filter + year partition. Karpathy llm-wiki "Explicit" 강화 — 위키가 *무엇을 모르는지* 자체 `wiki/analyses/knowledge-gaps-…md` 로 가시화.
 
-| 단계 | 핵심 |
-|------|------|
-| v0.2 → v0.3 | analyst LOCK Q1~Q4 + privacy I1~I3 + Karpathy 정합. codex cycle #1 8 finding → master sweep (HIGH-1 recommendation Out-of-scope / MEDIUM-1 created preservation / MEDIUM-2 single-process wording / MEDIUM-3 shape validate / LOW 1~3 + PII) |
-| v0.3.1 | codex cycle #2 3 잔류 sweep (todox body template 잔류 → 정합 / 공백 fence → `/```\s*(?:json\s*)?/gi` / queryIndices Number.isInteger) |
-| smoke | master fixture 7/7 — 10 query → 5 gap clusters (transformer freq=3 최대 gap) → idempotent render byte-identical |
+| Commit | 단계 | 핵심 |
+|--------|------|------|
+| `1c743b2` | v0.3.1 | SDD+TDD 7 step + codex 3 cycle 검토 (8→3→APPROVE) + master fixture smoke 7/7 |
+| `956ff8b` | v0.4 + ops | Summary (LLM narrative) + Statistics (deterministic) + 3 entry points (command/slash/button). benchmark.yml workflow 삭제 |
+| `8778e60` | v0.5 | per-gap actual query list (사용자 raise CDP smoke 도중 — "어떤 갭인지 확인 불가") |
+| `966ebb8` | v0.6 | year-partitioned `.wikey/query-log-YYYY.jsonl` + `/knowledge-gap YYYYMM-YYYYMM` range + legacy 자동 migration + Help section |
+| `e68701d` | UI 1 | Help section h3 (Knowledge Gap + Wiki Maintenance) 0.95em / 300 / accent |
+| `3c4122f` | UI 2 | Help body 5 heading (`<p><strong>`) 동일 적용 |
+| `7250b02` | UI 3 | Ingest heading `(Source → Wiki)` strong 포함 |
+| `820e398` | UI 4 | 본문 폰트 통일 (11.88px grey) + code bold + white |
+| `1fc8be3` | UI 5 | li item title (Status / Check / Refactoring) white |
 
 **산출**:
-- 신규 `wikey-core/src/knowledge-gap.ts` (~350 LOC) + 22 test (19 core + 3 obsidian)
-- 신규 `wikey-obsidian/src/sidebar-chat-helpers-querylog.ts` (`buildQueryLogEntry`)
-- 기존 edit: sidebar-chat hook + commands runner + settings toggle (default ON + PII warning)
-- helper export: `extractCreatedFromFrontmatter` / `validateClusterResultShape`
+- `wikey-core/src/knowledge-gap.ts` (~ 470 LOC) — 5 함수 + 4 helper (extractCreatedFromFrontmatter / validateClusterResultShape / computeGapStatistics / parseQueryLogRange + queryLogPathForYear)
+- `wikey-obsidian/src/sidebar-chat-helpers-querylog.ts` (`buildQueryLogEntry`)
+- 33 test (core 33 knowledge-gap + obsidian 3 sidebar-chat-querylog)
+- Help section "Knowledge Gap Report" (4 entry point 사용법 + multi-year merge note)
+- `styles.css` Help 본문 통일 + section heading 통일
 
-**Karpathy 4 원칙 모두 충족** (Explicit gap as wiki page + Yours local-only fetch 0 + File over app JSONL + BYOAI basicModel resolve).
+**CDP smoke 5 entry point ALL PASS**:
+1. Command palette `Wikey: Generate knowledge gap report`
+2. `/knowledge-gap` (no-arg, 전체 누적)
+3. `/knowledge-gap 202605-202605` (range)
+4. `/knowledge-gap bad-input` (invalid Notice)
+5. Help panel "Knowledge gap report" 버튼 (status line)
 
-**wikey schema 4 원칙 모두 충족** (Explicit / Yours / File over app / BYOAI).
+**실 생성 보고서** (vault local, gitignored):
+- `wiki/analyses/knowledge-gaps-2026-05.md` (누적 12 query → 6 cluster, transformer top 0.15)
+- `wiki/analyses/knowledge-gaps-202605-202605.md` (range 5월 → 5 cluster + title "Knowledge Gaps — 2026-05 ~ 2026-05")
+
+**Migration 확증**: legacy `.wikey/query-log.jsonl` (1606 bytes) → `.wikey/query-log-2026.jsonl` 자동 분할 + legacy 0 bytes marker.
+
+**Karpathy 4 원칙 + wikey schema 4 원칙 모두 충족**.
 
 **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** (4 subject — §5.20 완료로 -1).
 

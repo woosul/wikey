@@ -1,10 +1,10 @@
 ---
 phase: 5
 section: 5.20
-title: Knowledge Gap management — query log capture + gap score formula + auto-report (Result v0.3.1)
+title: Knowledge Gap management — query log capture + gap score formula + auto-report (Result v0.6 + Help UI polish)
 created: 2026-05-13
 updated: 2026-05-13
-version: v0.4
+version: v0.6
 ---
 
 # Phase 5 §5.20 Knowledge Gap management — Result (2026-05-13 session 41)
@@ -163,7 +163,70 @@ v0.3.1 codex verdict APPROVE 직후 사용자 추가 요청 3건:
 
 **부산물 commit**: `.github/workflows/benchmark.yml` 삭제 — 계속 실패하던 GH Action (cache-dependency-path 해소 안 됨), 사용자 결정.
 
-## 9. 다음
+## 9. v0.5 — gap section 별 actual query list (사용자 raise CDP smoke 도중)
 
-- **Phase 5 잔여 4** = §5.5 / §5.6 / §5.8 / §5.9 (4 subject).
-- **§5.20 자동 scheduler 통합** (out of scope of this cycle) — §5.19 maintenance suite 통합은 별 cycle 후보 (v0.5+).
+CDP smoke 결과 페이지 확인 중 사용자 raise — "어떤 부분에 gap 있는지 확인 불가, 실질적 질문 목록이 gap 섹션별로 나와야".
+
+**구현**: `renderGapReportMarkdown(opts)` 에 `entries?: QueryLogEntry[]` 옵셔널 추가. 주입 시 each gap section 하단에 "Queries in this cluster:" + actual query text + 날짜 + answer length + citation 개수 출력. backward-compat: entries 미주입 시 query list 생략 (v0.4 동작 보존).
+
+**Test 2 신규**: AC-S3-9 (query list inclusion) / AC-S3-10 (backward compat).
+
+commit `8778e60`.
+
+## 10. v0.6 — year-partitioned query log + range filter
+
+사용자 요청 4 항목:
+1. `/knowledge-gap` (no option) → 전체 누적 분석
+2. `/knowledge-gap 202605-202606` → 시작월-종료월 범위
+3. `query-log.jsonl` 년단위 분할 (`.wikey/query-log-YYYY.jsonl`)
+4. 다년도 range (예 `202612-202701`) → 두 year file merge
+
+**Data layer 신규**:
+- `LEGACY_QUERY_LOG_PATH` 보존 (migration 전용).
+- `queryLogPathForYear(year)`: vault-relative 경로.
+- `parseQueryLogRange(arg)`: `'YYYYMM-YYYYMM'` → `QueryLogRange | null` (공백 tolerant, month 범위 + start<=end 검증).
+- `appendQueryLogEntry`: entry.ts year 추출 → 해당 year file append.
+- `loadQueryLogEntries(wikiFS, range?)`: range 미지정 → 모든 year file walk + merge + ts asc / range 지정 → 해당 year file 만 load + yearMonth filter.
+- `migrateLegacyQueryLog` (idempotent): legacy file 존재 시 1회 분할 + 빈 string marker.
+- `discoverYearFiles`: `WikiFS.list('.wikey')` 로 pattern enumerate.
+
+**Report layer**:
+- `renderGapReportMarkdown` opts.titleLabel 추가 — range 시 "2026-05 ~ 2026-06" override.
+- commands.ts runner: range → filename `knowledge-gaps-{compactStart}-{compactEnd}.md` + title + appendLog/updateIndex label 반영.
+
+**UI**:
+- sidebar-chat `/knowledge-gap` parser: argPart 비면 range=undefined, 있으면 parseQueryLogRange + invalid Notice.
+- Help panel: maintenance section 위 "Knowledge Gap Report" section 추가 (4 entry point 사용법 + multi-year merge note).
+- input placeholder: `/clear, /knowledge-gap [YYYYMM-YYYYMM]`.
+
+**Test 7 신규**: AC-S1-6 (year split) + AC-V6-1~6 (parse / merge / filter / multi-year / migration).
+
+**CDP smoke 검증**:
+- legacy `.wikey/query-log.jsonl` (1606 bytes) → `.wikey/query-log-2026.jsonl` 자동 migration + 0 bytes marker.
+- `/knowledge-gap 202605-202605` → `wiki/analyses/knowledge-gaps-202605-202605.md` 생성 + title "Knowledge Gaps — 2026-05 ~ 2026-05" + 5 cluster + query list.
+- `/knowledge-gap bad-input` → "invalid range" Notice 정확.
+
+commit `966ebb8`.
+
+## 11. Help UI follow-up (5 commit)
+
+사용자 4 raise (visual polish):
+
+| commit | 변경 |
+|--------|------|
+| `e68701d` | Help section h3 (Knowledge Gap Report + Wiki Maintenance) 밸런싱 — 0.95em / weight 300 / accent |
+| `3c4122f` | Help body heading 5개 (`<p><strong>`) 동일 적용 — Ask Questions / Ingest / Wikilinks / Maintenance Modes / Settings |
+| `7250b02` | Ingest heading `(Source → Wiki)` 도 strong 포함 |
+| `820e398` | Help body 폰트 통일 (paragraph + li 0.9em / 11.88px / muted grey) + code bold + white |
+| `1fc8be3` | Help list item title (Status / Check / Refactoring) → white |
+
+**CDP 실측 최종**:
+- heading strong (7개): 12.59px / 300 / accent purple
+- paragraph + listItem: 11.88px / 400 / muted grey
+- code (command): 11.88px / **700 bold** / white
+- li strong (item title): 11.88px / 600 / white
+
+## 12. 다음
+
+- **Phase 5 잔여 4** = §5.5 / §5.6 / §5.8 / §5.9 (4 subject — §5.20 v0.6 종결로 -1).
+- **§5.20 v0.7+ candidate** (사용자 결정 영역): 자동 scheduler / multi-process write / 다국어 query clustering / LLM query 본문 PII redaction.
