@@ -236,7 +236,115 @@ export class LLMClient {
     return data.candidates[0].content.parts[0].text as string
   }
 
+  /**
+   * §5.6.4.3 Step C — credential presence detector for `anthropic`.
+   *
+   * Unlike Gemini (file-backed OAuth at `~/.gemini/oauth_creds.json`), the
+   * `claude` CLI stores subscription tokens in the macOS Keychain, which is
+   * not probeable via `fs.existsSync`. We therefore treat **CLI binary
+   * presence alone** as `hasSubscription=true`; the actual logged-in state
+   * surfaces at the first spawn through stderr ("Please login") and is
+   * classified by `detectFallbackTrigger` → `reason='auth-missing'`, then
+   * fallback-retried on the API path when available.
+   */
+  checkAnthropicPresence(): CredentialPresence {
+    const hasBinary = this.subscriptionDeps.fileExists(CLI_DEFAULT_BINARY.anthropic)
+    return {
+      hasSubscription: hasBinary,
+      hasApiKey: !!this.config.ANTHROPIC_API_KEY,
+    }
+  }
+
   private async callAnthropic(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const presence = this.checkAnthropicPresence()
+    const path = resolveAuthMode('anthropic', this.config, presence)
+    if (path !== 'subscription') {
+      return this.callAnthropicApi(prompt, opts)
+    }
+    return this.callAnthropicWithFallback(prompt, opts, presence)
+  }
+
+  private async callAnthropicWithFallback(
+    prompt: string,
+    opts: LLMCallOptions | undefined,
+    presence: CredentialPresence,
+  ): Promise<string> {
+    try {
+      return await this.callAnthropicSubscription(prompt, opts)
+    } catch (err) {
+      const reason = classifyFallbackReason(err)
+      const mode = this.config.ANTHROPIC_AUTH_MODE ?? 'auto'
+      // auto + has API key + actionable reason = transparent retry on API path.
+      if (mode === 'auto' && presence.hasApiKey && reason !== null) {
+        opts?.onAuthFallback?.({ provider: 'anthropic', reason, originalError: err as Error })
+        return this.callAnthropicApi(prompt, opts)
+      }
+      throw err
+    }
+  }
+
+  /**
+   * §5.6.4.3 Step C — anthropic subscription path (`claude -p` CLI OAuth).
+   *
+   * Mirrors `callGeminiSubscription` (same 5 failure modes):
+   *   - jsonMode requested → throw SubscriptionFallbackError('jsonMode-unsupported')
+   *   - spawn ENOENT       → throw with reason 'spawn-failed'
+   *   - aborted (timeout)  → throw with reason 'timeout'
+   *   - auth-missing       → detected from "Please login" stderr → reason 'auth-missing'
+   *   - quota              → detected from stderr keywords → reason 'quota-exceeded'
+   *   - other nonzero exit → reason 'spawn-failed' (auto fallback in caller)
+   *
+   * stdout parsing = `parseSubscriptionOutput('anthropic', stdout)` = `trim()` only
+   * (claude prints no banner / footer).
+   */
+  private async callAnthropicSubscription(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    const mapped = mapOptionsToCliArgs('anthropic', 'subscription', opts ?? {})
+    if (mapped.unsupported === 'jsonMode') {
+      throw new SubscriptionFallbackError(
+        'jsonMode-unsupported',
+        'anthropic subscription does not support jsonMode',
+      )
+    }
+
+    const spawnOpts: SpawnCliOptions = {
+      extraArgs: mapped.args,
+      timeoutMs: opts?.timeout,
+    }
+    let result: SpawnCliResult
+    try {
+      result = await this.subscriptionDeps.spawnCliPrompt('anthropic', prompt, spawnOpts)
+    } catch (err) {
+      throw new SubscriptionFallbackError(
+        'spawn-failed',
+        `anthropic CLI spawn failed: ${(err as Error).message}`,
+        err as Error,
+      )
+    }
+
+    if (result.aborted) {
+      throw new SubscriptionFallbackError(
+        'timeout',
+        'anthropic CLI aborted (timeout or external signal)',
+      )
+    }
+
+    if (result.exitCode !== 0) {
+      const triggerReason = detectFallbackTrigger({
+        status: 0,
+        stderr: result.stderr,
+        body: result.stdout,
+      })
+      const reason: FallbackReason = triggerReason ?? 'spawn-failed'
+      throw new SubscriptionFallbackError(
+        reason,
+        `anthropic CLI exit ${result.exitCode}: ${result.stderr.trim() || '<no stderr>'}`,
+      )
+    }
+
+    return parseSubscriptionOutput('anthropic', result.stdout)
+  }
+
+  private async callAnthropicApi(prompt: string, opts?: LLMCallOptions): Promise<string> {
     const apiKey = this.config.ANTHROPIC_API_KEY
     if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set — configure API key in settings')
 

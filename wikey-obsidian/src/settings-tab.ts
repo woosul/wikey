@@ -1208,6 +1208,8 @@ export class WikeySettingTab extends PluginSettingTab {
     // §5.6.4.2 Step B — Google subscription (Gemini Advanced via `gemini` CLI OAuth).
     this.renderGoogleAuthModeCard(containerEl)
     this.renderApiKeyField(containerEl, 'Anthropic Claude', 'anthropicApiKey', 'sk-ant-...', 'anthropic')
+    // §5.6.4.3 Step C — Anthropic subscription (Claude Pro/Max via `claude` CLI OAuth).
+    this.renderAnthropicAuthModeCard(containerEl)
     this.renderApiKeyField(containerEl, 'OpenAI Codex', 'openaiApiKey', 'sk-...', 'openai')
   }
 
@@ -1289,6 +1291,84 @@ export class WikeySettingTab extends PluginSettingTab {
       // CLI binary location — same default as wikey-core/cli-spawn.ts `CLI_DEFAULT_BINARY.gemini`.
       const binaryPath = '/usr/local/bin/gemini'
       return fs.existsSync(credsPath) && fs.existsSync(binaryPath)
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * §5.6.4.3 Step C — Anthropic Claude Auth mode card.
+   *
+   * Mirrors `renderGoogleAuthModeCard` with Anthropic-specific copy. The `claude`
+   * CLI manages subscription auth via `/login` (Claude Pro / Max OAuth) and stores
+   * tokens in the macOS Keychain — the runtime detects logged-out state via spawn
+   * stderr (handled by `detectFallbackTrigger`), not by probing a file.
+   */
+  private renderAnthropicAuthModeCard(containerEl: HTMLElement): void {
+    const cardEl = containerEl.createDiv({ cls: 'wikey-settings-auth-mode-card' })
+
+    new Setting(cardEl)
+      .setName('Auth mode')
+      .setDesc('How wikey calls Claude. Auto = subscription first, API fallback.')
+      .addDropdown((dd) => {
+        dd.addOption('subscription', 'Subscription (Claude Pro/Max)')
+        dd.addOption('api', 'API key')
+        dd.addOption('auto', 'Auto (subscription first, API fallback)')
+        dd.setValue(this.plugin.settings.anthropicAuthMode ?? 'auto')
+        dd.onChange(async (value) => {
+          if (value === 'subscription' || value === 'api' || value === 'auto') {
+            this.plugin.settings.anthropicAuthMode = value
+            await this.plugin.saveSettings()
+          }
+        })
+      })
+
+    const statusEl = cardEl.createDiv({ cls: 'wikey-settings-status-row' })
+    const subscriptionDetected = this.detectAnthropicSubscription()
+    const apiConfigured = !!this.plugin.settings.anthropicApiKey
+    statusEl.createEl('span', {
+      text: `Subscription: ${subscriptionDetected ? 'detected' : 'not detected'}`,
+      cls: 'wikey-settings-status-label',
+    })
+    statusEl.createEl('span', {
+      text: ` · API key: ${apiConfigured ? 'configured' : 'empty'}`,
+      cls: 'wikey-settings-status-label',
+    })
+
+    new Setting(cardEl)
+      .addButton((btn) => {
+        btn.setButtonText('Sign in with Claude').onClick(() => {
+          new GeminiAuthInstructionModal(
+            this.app,
+            'Sign in with Claude',
+            'Run "claude /login" in your terminal, then return here and reload Obsidian.',
+          ).open()
+        })
+      })
+      .addButton((btn) => {
+        btn.setButtonText('Sign out').onClick(() => {
+          new GeminiAuthInstructionModal(
+            this.app,
+            'Sign out',
+            'Run "claude /logout" in your terminal.',
+          ).open()
+        })
+      })
+  }
+
+  /**
+   * §5.6.4.3 Step C — sync detection for the claude CLI binary. Mirrors
+   * `LLMClient.checkAnthropicPresence`: binary presence only (no oauth file
+   * probe — claude CLI stores subscription tokens in macOS Keychain). The
+   * runtime resolves the actual logged-in state at first spawn via stderr
+   * classification (`detectFallbackTrigger`).
+   */
+  private detectAnthropicSubscription(): boolean {
+    try {
+      const fs = require('node:fs') as typeof import('node:fs')
+      // Same default as wikey-core/cli-spawn.ts `CLI_DEFAULT_BINARY.anthropic`.
+      const binaryPath = '/usr/local/bin/claude'
+      return fs.existsSync(binaryPath)
     } catch {
       return false
     }
