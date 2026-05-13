@@ -1219,12 +1219,13 @@ export class WikeySettingTab extends PluginSettingTab {
   // Subscription row (status + Sign in/out) + API Key row (password input + Test).
   // Section name covers both subscription OAuth and API-key auth, not just keys.
   private renderApiKeysSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'LLM Model Authentication' })
-
-    const keyInfo = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
-    keyInfo.createEl('span', {
+    // §5.6.4 v0.7 (user UI spec 2026-05-14) — heading row 의 오른쪽에 storage note
+    // 정렬. flex space-between 으로 h3 + note 한 행에 배치.
+    const headingRow = containerEl.createDiv({ cls: 'wikey-auth-section-heading' })
+    headingRow.createEl('h3', { text: 'LLM Model Authentication' })
+    headingRow.createEl('span', {
       text: 'API keys are stored in ~/.config/wikey/credentials.json',
-      cls: 'wikey-settings-status-label',
+      cls: 'wikey-auth-section-note',
     })
 
     this.renderProviderSubsection(containerEl, {
