@@ -1282,8 +1282,14 @@ export class WikeySettingTab extends PluginSettingTab {
     containerEl: HTMLElement,
     spec: ProviderSubsectionSpec,
   ): void {
+    // §5.6.4 v0.7 user UI spec 2026-05-14 (commit 9):
+    // - Provider 명을 block 밖으로 빼서 sub-heading (section title 동일 크기 + weight 300 + accent color)
+    // - block 안 controls 우측 정렬
+    containerEl.createEl('h3', {
+      text: spec.heading,
+      cls: 'wikey-auth-provider-heading',
+    })
     const block = containerEl.createDiv({ cls: 'wikey-auth-block' })
-    block.createEl('h4', { text: spec.heading, cls: 'wikey-auth-block-heading' })
 
     this.renderAuthModeRow(block, spec)
     this.renderSubscriptionRow(block, spec)
