@@ -2597,9 +2597,39 @@ a.internal-link.wikey-broken-link,
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.wikey-maintenance-section h3 {
+.wikey-maintenance-section h3,
+.wikey-knowledge-gap-usage-section h3 {
   font-size: 0.95em;
+  font-weight: 300;
+  color: var(--interactive-accent);
   margin: 0 0 0.5rem;
+}
+
+.wikey-knowledge-gap-usage-section {
+  margin-top: 1rem;
+}
+
+.wikey-knowledge-gap-usage-section ul {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.wikey-knowledge-gap-usage-section li {
+  margin: 0.15rem 0;
+  font-size: 0.9em;
+}
+
+.wikey-knowledge-gap-usage-section code {
+  font-size: 0.85em;
+  padding: 1px 4px;
+  background: var(--background-secondary);
+  border-radius: 3px;
+}
+
+.wikey-knowledge-gap-usage-section .wikey-help-note {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin: 0.4rem 0 0;
 }
 
 .wikey-maintenance-buttons {
