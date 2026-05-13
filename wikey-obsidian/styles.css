@@ -352,6 +352,13 @@
   font-size: inherit;
 }
 
+/* Item title strong (예: **Status**, **Check**, **Refactoring suggestions**)
+ * — li 의 muted-grey 위에서 강조용 white. heading strong 은 paragraph 직속
+ * 이므로 본 rule 범위 밖 (accent 유지). */
+.wikey-chat-help li strong {
+  color: var(--text-normal);
+}
+
 /* ── Dashboard ── */
 
 .wikey-dashboard {
