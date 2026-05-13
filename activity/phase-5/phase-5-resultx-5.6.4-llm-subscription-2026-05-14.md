@@ -17,7 +17,7 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 
 ## 1. Overview
 
-§5.6.3.A → §5.6.4 리넘버링 후 진행. 3 provider (Google Gemini / Anthropic Claude / OpenAI Codex) 의 외부 CLI OAuth subscription path 를 wikey 통합. 사용자 Gemini Advanced / Claude Pro·Max / ChatGPT Plus·Pro 구독을 wikey 안에서 직접 사용 + API key 동시 등록 시 transparent fallback (auto mode, AC-S4).
+§5.6.3.A → §5.6.4 리넘버링 후 진행. 3 provider (Google Gemini / Anthropic Claude / OpenAI Codex) 의 외부 CLI OAuth subscription path 를 wikey 통합. 사용자 Gemini Advanced / Claude Pro·Max / ChatGPT Plus·Pro 구독을 wikey 안에서 직접 사용 + API key 동시 등록 시 **explicit mode 사용자 수동 선택** (AuthMode `'none' | 'subscription' | 'api'` — commit 5 에서 `'auto'` 자동 retry 폐기). 실패 시 onAuthFallback Notice surface + throw (사용자가 Settings dropdown 으로 mode 전환).
 
 **철학 정합** (Karpathy 4 원칙):
 - **Explicit** — auth mode 가시화 (Settings 카드 영문 dropdown + status badge)
@@ -25,7 +25,7 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 - **File over app** — plain-text credentials.json + auth_mode JSON, 양방향 migration
 - **BYOAI** — provider 선택 자유 확장 (기존 API key + 신규 subscription path)
 
-## 2. 11 commit (push X — codex cycle #4 APPROVE + 사용자 사전 보고 후 진행)
+## 2. 12 commit (push X — codex cycle #5 APPROVE + 사용자 사전 보고 후 진행)
 
 | commit | hash | scope | 주요 변경 |
 |--------|------|-------|----------|
@@ -40,6 +40,7 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 | 9 | `8836ff9` | provider heading outside + right-align controls + plain badge | Provider 명 (h3) block 밖. section title 동일 크기 + font-weight:300 + accent color (`var(--interactive-accent)`). selectbox + button 우측 정렬 (justify-content: flex-end). badge 배경 없이 텍스트만. section title ↔ 첫 block 16px 여백. h3 selector specificity 강화 (Obsidian native 600 override). |
 | 10 | `f19f313` | codex cycle #3 F1 — Notice 문구 | AuthMode 'auto' 폐기 후 Notice 문구 정정 — `'Switched to API key'` → `'<provider> subscription failed — switch Auth Mode to API Key if desired'` 계열 5 reason. `default-auth-fallback.test.ts` `not.toMatch(/Switched\|Using API key/)` assertion 보강. |
 | 11 | `0bde7b7` | codex cycle #3 F2 — resultx 11 commit 갱신 | 본 §2 표 11 commit 갱신 + §2a commit 9 후 CDP smoke 결과 10 항목 PASS 표 추가. binary resolver 실효성 확증 (3 provider `signed-in` green). 최신 wikey-core 1093 / wikey-obsidian 215 PASS. |
+| 12 | `d8b71d7` | codex cycle #4 3 finding — resultx auto 폐기 mirror + CDP gate PASS | F1 §4 AC 표 + §5 invariants 'auto' 폐기 mirror (manual Auth Mode switch 의미). F2 §7 A0 status 'Partial' → 'PASS' (vitest + CDP 양쪽). F3 §2 title `'10 commit'` → `'11 commit'` 정정 + row 11 hash 명시. 코드 변경 0. |
 
 ### 2a. Commit 9 후 master CDP smoke 재실행 결과 (2026-05-14)
 
@@ -128,8 +129,9 @@ private async callWithFallback(
 
 **효과**:
 - **3 × `callXxxWithFallback` 메서드 (~14 LOC each = 42 LOC) → 0** (단일 `callWithFallback` 33 LOC 으로 substitution)
-- invariant I1 (subscription-first) + I2 (transparent retry) + I3 (force-mode 제어) 검증이 **한 site 에서 가능**
+- invariant I1 (subscription-first) + I2 (Notice surface + manual switch) + I3 (explicit-mode 제어) 검증이 **한 site 에서 가능**
 - 기존 16 × 3 = **48 subscription test + auth-resolver 8 test + 기타 isolation case 모두 test 변경 0 으로 회귀 PASS** (1083 → 1091, +8 = routing matrix it.each 6 + named 2)
+- **commit 5 'auto' 폐기 후** (codex cycle #2/#3 F1 mirror): 위 sample code 의 `mode === 'auto'` branch 는 v0.5 시점 historical artifact. 현재 (commit 10) = subscription 실패 시 `onAuthFallback` Notice + **throw** (자동 retry 안 함). 사용자가 Settings dropdown 으로 mode 수동 전환.
 
 ### 3.2 Routing matrix test (8 case)
 
@@ -137,17 +139,17 @@ private async callWithFallback(
 
 | # | case | 결과 |
 |---|------|------|
-| 1~3 | `auto` + both creds × {gemini, anthropic, openai} → subscription path (spawn=1 / HTTP=0) | PASS |
+| 1~3 | `subscription` + both creds × {gemini, anthropic, openai} → subscription path (spawn=1 / HTTP=0) | PASS |
 | 4~6 | `api` + both creds × {gemini, anthropic, openai} → API path (spawn=0 / HTTP=1) | PASS |
-| 7 | AC-S7 — 3 providers all `auto` 동시 호출, 각자 subscription 독립 picking (3 spawn / 0 HTTP) | PASS |
-| 8 | AC-S8 — gemini `api` + anthropic+openai `auto` → 격리 routing (2 spawn / 1 HTTP) | PASS |
+| 7 | AC-S7 — 3 providers all `subscription` 동시 호출, 각자 subscription 독립 picking (3 spawn / 0 HTTP) | PASS |
+| 8 | AC-S8 — gemini `api` + anthropic+openai `subscription` → 격리 routing (2 spawn / 1 HTTP) | PASS |
 
 ### 3.3 회귀 종합
 
 | 검증 | 결과 | baseline 대비 |
 |------|------|---------------|
-| wikey-core test | **1091 PASS / 3 skipped** (78 test files) | 1083 → 1091 (+8 routing matrix) |
-| wikey-obsidian test | **209 PASS / 1 skipped** (25 test files) | 회귀 0 |
+| wikey-core test | **1093 PASS / 3 skipped** (78 test files, commit 12 fresh re-run 시점) | 1083 → 1091 (Step E +8 routing matrix) → 1093 (commit 6 +2 binary resolver / save-credentials test) |
+| wikey-obsidian test | **215 PASS / 1 skipped** (26 test files, commit 12 fresh re-run 시점) | 209 → 215 (commit 6 +6 save-credentials + auth-mode-bridge isolation) |
 | wikey-core build | 0 errors | — |
 | wikey-obsidian build | 0 new errors (kiwi-wasm pre-existing warning 5) | — |
 | `./scripts/validate-wiki.sh` | PASS | — |
