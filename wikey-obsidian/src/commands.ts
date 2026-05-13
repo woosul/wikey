@@ -41,6 +41,7 @@ import {
   type QueryLogRange,
 } from 'wikey-core'
 import { ConflictModal, type ConflictChoice } from './conflict-modal'
+import { buildDefaultAuthFallback } from './main'
 import { WikeyChatView, WIKEY_CHAT_VIEW, triggerPanelRefresh } from './sidebar-chat'
 import { IngestFlowModal } from './ingest-modals'
 import { DeleteImpactModal, ResetImpactModal } from './reset-modals'
@@ -1052,6 +1053,9 @@ export async function runGenerateKnowledgeGapReport(
   const config = plugin.buildConfig()
   const llm = new LLMClient(plugin.httpClient, config)
   const { provider, model } = resolveProvider('default', config)
+  // §5.6.4 v0.7 (codex cycle #2 F2 fix) — Notice surface for fallback events on
+  // the /knowledge-gap command path (parity with primary Chat + filter / rewriter).
+  const onAuthFallback = buildDefaultAuthFallback((msg) => new Notice(msg))
 
   const clusterer: TopicClusterer = async (es) => {
     const prompt = [
@@ -1062,7 +1066,7 @@ export async function runGenerateKnowledgeGapReport(
       'queries:',
       ...es.map((e, i) => `${i}: ${e.query}`),
     ].join('\n')
-    const raw = await llm.call(prompt, { provider, model })
+    const raw = await llm.call(prompt, { provider, model, onAuthFallback })
     const cleaned = raw.replace(/```\s*(?:json\s*)?/gi, '').trim()
     const parsed = JSON.parse(cleaned) as unknown
     return validateClusterResultShape(parsed)
@@ -1095,7 +1099,7 @@ export async function runGenerateKnowledgeGapReport(
           `- ${g.topic} (gapScore=${g.gapScore.toFixed(2)}, frequency=${g.frequency}, avgAnswerLen=${g.avgAnswerLen.toFixed(0)}, avgCitations=${g.avgCitationCount.toFixed(2)})`,
       ),
     ].join('\n')
-    const raw = await llm.call(summaryPrompt, { provider, model })
+    const raw = await llm.call(summaryPrompt, { provider, model, onAuthFallback })
     summary = raw.replace(/```\s*(?:markdown\s*)?/gi, '').trim()
   } catch (err) {
     console.warn('[wikey] §5.20 v0.4 LLM summary failed (fallback to deterministic message):', err)

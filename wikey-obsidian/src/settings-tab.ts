@@ -16,7 +16,7 @@ import { renderDeveloperUpdateItems } from './settings-tab-developer'
 
 /**
  * §5.6.4 v0.7 — provider subsection spec (single source of truth for the three
- * provider blocks rendered in the API Keys section). Bundles the per-provider
+ * provider blocks rendered in the LLM Model Authentication section). Bundles the per-provider
  * literals (heading text, CLI commands, settings field names, placeholder)
  * so the shared `renderProviderSubsection` stays provider-agnostic.
  */
@@ -1213,12 +1213,13 @@ export class WikeySettingTab extends PluginSettingTab {
     )
   }
 
-  // ── Section: API Keys ──
-  // §5.6.4 v0.7 (user plan 2026-05-14) — provider-centric subsections. Each
-  // provider gets one heading + one Auth Mode dropdown + Subscription row
-  // (status + Sign in/out) + API Key row (password input + Test).
+  // ── Section: LLM Model Authentication ──
+  // §5.6.4 v0.7 (user plan 2026-05-14, codex cycle #2 rename) — provider-centric
+  // subsections. Each provider gets one heading + one Auth Mode dropdown +
+  // Subscription row (status + Sign in/out) + API Key row (password input + Test).
+  // Section name covers both subscription OAuth and API-key auth, not just keys.
   private renderApiKeysSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'API Keys' })
+    containerEl.createEl('h3', { text: 'LLM Model Authentication' })
 
     const keyInfo = containerEl.createDiv({ cls: 'wikey-settings-status-row' })
     keyInfo.createEl('span', {

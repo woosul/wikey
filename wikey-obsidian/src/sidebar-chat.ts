@@ -1,5 +1,6 @@
 import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
+import { buildDefaultAuthFallback } from './main'
 import {
   query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair,
   fetchModelList, LLMClient,
@@ -678,6 +679,10 @@ export class WikeyChatView extends ItemView {
       // toggle is OFF or the user opted out via `!nofilter`). Each layer is fail-open
       // inside wikey-core/orama-index — getQueryLayerOpts itself catches setup failures.
       const layerOpts = await this.plugin.getQueryLayerOpts(skipFilter)
+      // §5.6.4 v0.7 (codex cycle #2 F2 fix) — primary Chat path now forwards a
+      // Notice-surfacing auth-fallback callback to LLMClient.call, matching the
+      // filter / rewriter / expander coverage (AC-S4 UI Notice on Chat).
+      const chatAuthFallback = buildDefaultAuthFallback((msg) => new Notice(msg))
       const result = await query(question, config, this.plugin.httpClient, {
         basePath, wikiFS: this.plugin.wikiFS,
         execEnv: this.plugin.getExecEnv(),
@@ -688,6 +693,8 @@ export class WikeyChatView extends ItemView {
         tokenizerOverride,
         // §5.7.8 — runtime layer wiring (filter / rewriter / expander / vaultHint).
         ...layerOpts,
+        // §5.6.4 v0.7 F2 — auth-fallback Notice on the primary Chat surface.
+        onAuthFallback: chatAuthFallback,
       })
       loadingEl.remove()
       // §5.18 Spec 2 — wiki backlink section 통합.

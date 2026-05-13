@@ -25,14 +25,16 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 - **File over app** — plain-text credentials.json + auth_mode JSON, 양방향 migration
 - **BYOAI** — provider 선택 자유 확장 (기존 API key + 신규 subscription path)
 
-## 2. 4 commit (push X — codex cycle #2 + 사용자 사전 보고 후 진행)
+## 2. 6 commit (push X — codex cycle #3 + 사용자 사전 보고 후 진행)
 
 | commit | hash | scope | 주요 변경 |
 |--------|------|-------|----------|
 | 1 | `e901b84` | Step A + Step B (Google) | provider 추상화 layer (`types.ts` AuthMode/SubscriptionProvider/AuthFallbackInfo + `auth-resolver.ts` + `cli-spawn.ts` + `cli-parser.ts` + `provider-cli-options.ts` 48-cell matrix) + Google Gemini subscription (gemini CLI + `~/.gemini/oauth_creds.json`) + 16 test |
 | 2 | `f4cf417` | Step C (Anthropic) | Anthropic Claude subscription (`claude -p` CLI + Keychain — binary-only presence) + 16 test (mirror of gemini) |
 | 3 | `14b53f4` | Step D (OpenAI) | OpenAI Codex subscription (`codex exec -` CLI + `~/.codex/auth.json` + marker-based parser) + 16 test + master 실측 golden fixture `plan/phase-5/fixtures/cycle-codex-golden/codex-ok-hi.{raw,clean}.txt` |
-| 4 | (본 turn) | Step E (통합) | BLUE 3b refactor `callWithFallback` 공통 helper extract (3 × `callXxxWithFallback` → 단일 site) + routing matrix 8 case smoke + 문서 동기화 |
+| 4 | `67c5e48` | Step E (통합) | BLUE 3b refactor `callWithFallback` 공통 helper extract (3 × `callXxxWithFallback` → 단일 site) + routing matrix 8 case smoke + 문서 동기화 + commit 1 staging gap 보정 (plan / fixtures / scripts) |
+| 5 | `356a44f` | Settings UI + AuthMode polish | Settings UI provider-centric subsection (Gemini / Claude / OpenAI 각 카드) + AuthMode `'auto'` polish out → `'subscription'` migration + master CDP smoke 1차 fix 통합 |
+| 6 | (본 turn) | codex cycle #2 6 finding fix + UI rename | F1 `resolveCliBinary` 단일 helper (env override + PATH + 정적 fallback + nvm glob) / F2 onAuthFallback Chat 경로 wiring (sidebar-chat + commands `/knowledge-gap` + query-pipeline) / F3 `save-credentials.test.ts` 4 case + pure helper extract / F4 baseConfig 3 AUTH_MODE 'api' / F5 §A0 PASS → Partial / F6 commit traceability gap 보정. UI heading `'API Keys'` → `'LLM Model Authentication'`. |
 
 ## 3. Step E (본 cycle) 상세
 
@@ -170,7 +172,7 @@ private async callWithFallback(
 | I8 | 하드코딩 금지 | `cli-spawn.ts CLI_DEFAULT_BINARY` const + `provider-cli-options.ts CLI_OPTION_SUPPORT` const block + 각 const 에 출처 주석 |
 | I9 | LLMCallOptions 8 field 계약 보존 | `provider-cli-options.test.ts` 48-cell golden + AC-S10/S11/S12 evidence |
 | I10 | core ↔ UI 결합 0 | `grep -rn "from 'obsidian'" wikey-core/src/` 본문 = 0 (test fixture anchor 만) |
-| I11 | credentials migration round-trip | `wikey-obsidian/src/__tests__/save-credentials.test.ts` (v0.2 → v0.3 migration + unknown field 보존) PASS |
+| I11 | credentials migration round-trip | `wikey-obsidian/src/__tests__/save-credentials.test.ts` (commit 6 추가) — case 1 (v0.2 → v0.3 load + save 자동 auth 추가) / case 2 (v0.3 round-trip byte-identical) / case 3 (legacy 'auto' → 'subscription' migration) / case 4 (unknown user-added field `xaiApiKey` 보존) 4 PASS. `parseCredentialsPayload` / `serializeCredentialsPayload` pure helper 로 extract (테스트 격리). |
 
 ## 6. codex Mode D Panel plan cycle 9 학습
 
@@ -192,18 +194,45 @@ private async callWithFallback(
 - **commit prefix lock** — plan version 과 commit prefix 가 다르면 cycle 마다 codex 가 raise. 매 cycle 종결 시 grep gate.
 - **9 cycle 수렴**: 사용자 시간 비용 ≠ 0 이지만 codex finding 의 false-positive 가 거의 없어 master fix loop 비용 < codex 누락 발견 비용.
 
-## 7. master CDP smoke (별도 turn)
+## 7. master CDP smoke (별도 turn) — A0 gate
 
-본 turn = Step E commit 4 까지. master CDP smoke = 사용자 책임 영역 (CLAUDE.md §6 LOCK 2026-05-12).
+**A0 status (commit 6 정정, codex cycle #2 F5 fix)**: **Partial** — vitest layer PASS, renderer-layer master CDP smoke 별도 turn 의무.
+
+- vitest layer (spawn-smoke / cli-spawn / llm-subscription-*): PASS
+- master 1차 CDP smoke (2026-05-14, 사용자 명시 진행): 회귀 발견 — binary path 하드코딩 (`/usr/local/bin/{gemini,claude,codex}`) 으로 nvm / cmux / Homebrew 환경에서 "Subscription: not detected" → I8 invariant 위반 (commit 5 까지 잠재). **commit 6 F1 fix** (`resolveCliBinary` + env override + PATH 검색 + 정적 fallback + nvm glob) 로 회귀 차단.
+- 차기 master CDP smoke (commit 6 push 후) 가 최종 A0 gate.
 
 **예상 smoke scenario** (사용자 진행 시):
-- Vault open → Settings → Wikey → 3 provider 카드 영문 확증 (Auth mode dropdown / Sign in / Sign out / status badge)
-- Google: Sign in 클릭 → terminal `gemini` 가이드 Modal → 사용자 OAuth 완료 후 status "Subscription: detected"
-- Chat panel query "test 1" → spawn 호출 1건 (각 provider) + 응답 + Notice 영문
+- Vault open → Settings → Wikey → 3 provider 카드 영문 (`LLM Model Authentication` 섹션) 확증 — Auth mode dropdown / Sign in / Sign out / status badge
+- Google: Sign in 클릭 → terminal `gemini` 가이드 Modal → 사용자 OAuth 완료 후 status "Subscription: detected" (commit 6 resolver 적용 후 nvm 환경에서도 detected)
+- Chat panel query "test 1" → spawn 호출 1건 (각 provider) + 응답 + Notice 영문 (F2 fix 후 primary Chat 경로도 onAuthFallback Notice surface)
 - force-api toggle → 동일 query API path 호출 + Notice "Switched to API key"
-- Cross-provider: 동시 등록 시 isolation (1 provider force-api / others auto)
+- Cross-provider: 동시 등록 시 isolation (1 provider force-api / others subscription)
 
-**deferred reason**: CDP smoke 는 real OAuth login state + real CLI binary 의존. master Agent context 안 obsidian app 직접 control 가능하지만, 본 turn 의 scope (BLUE refactor + matrix smoke + docs sync + commit 4) 가 코드 결정성 영역에 focus.
+**deferred reason** (commit 5 까지): CDP smoke 는 real OAuth login state + real CLI binary 의존. 코드 결정성 영역 focus 로 보류. commit 6 master CDP smoke 결과는 다음 turn 에서 본 §7 갱신 + cycle #3 codex 송부 직전 확증.
+
+## 7a. Commit traceability (codex cycle #2 F6 fix, LOW)
+
+`e901b84` (commit 1) message 본문이 plan / fixtures / scripts 4 항목을 언급했으나 실제 staging 은 `67c5e48` (commit 4) 에 포함됨. history 보전 위해 commit message 수정 안 함. 본 traceability gap 인지 + 보정 항목 명시:
+
+- plan 갱신: commit 4 staging 포함 (`plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md` v0.7)
+- fixtures: commit 4 staging 포함 (`plan/phase-5/fixtures/cycle-codex-golden/codex-ok-hi.{raw,clean}.txt`)
+- scripts: commit 4 staging 포함 (`scripts/check-cli-versions.sh`)
+
+→ 4 항목 모두 master 작업 영역 안 + push 안 된 상태. commit 6 까지 누적 staging 정합 보정 완료.
+
+## 7b. Commit 6 — codex cycle #2 6 finding fix
+
+| finding | severity | 위치 | fix |
+|---------|----------|------|-----|
+| F1 | HIGH | I8 위반 — binary path 하드코딩 | `wikey-core/src/cli-spawn.ts` 의 `resolveCliBinary(provider)` 단일 helper + env override (`WIKEY_<P>_CLI_PATH`) > `command -v` > 정적 fallback (`/opt/homebrew/bin`, `/usr/local/bin`, `/Applications/cmux.app/Contents/Resources/bin`, `~/.nvm/versions/node/*/bin/`) + memoize. `CLI_DEFAULT_BINARY` 는 lazy getter 로 resolver 호출. `settings-tab.ts` 의 3 `detectXxxSubscription` 도 동일 resolver 사용 (commit 5 부분 적용, commit 6 확증). |
+| F2 | MED | onAuthFallback Chat 경로 누락 — AC-S4 UI Notice gap | `query-pipeline.ts` `QueryOptions.onAuthFallback` 추가 + 2 `llm.call` site forward (`Step 3/4 fallback` + `Step 4/4 synthesis`). `sidebar-chat.ts` primary Chat path 가 `buildDefaultAuthFallback(new Notice)` 주입. `commands.ts` `/knowledge-gap` 명령도 동일 주입 (clusterer + summary 2 site). |
+| F3 | MED | credentials migration test gap | `wikey-obsidian/src/__tests__/save-credentials.test.ts` 4 case (위 §I11). `parseCredentialsPayload` + `serializeCredentialsPayload` pure helper extract (main.ts). |
+| F4 | MED | R3 test isolation — legacy llm-client.test.ts API path | `baseConfig` 안 `GEMINI_AUTH_MODE: 'api'` / `ANTHROPIC_AUTH_MODE: 'api'` / `OPENAI_AUTH_MODE: 'api'` 명시 (commit 5 적용, commit 6 확증). |
+| F5 | MED | A0 / CDP gate 판정 부적정 | §7 status `PASS` → `Partial — vitest PASS / renderer-layer pending`. commit 6 F1 fix 후 master CDP smoke 가 최종 gate. |
+| F6 | LOW | commit traceability gap | §7a 항목 추가. history 수정 X. |
+
+**UI rename (사용자 명시 2026-05-14)**: settings-tab.ts `renderApiKeysSection` 의 `'API Keys'` heading → `'LLM Model Authentication'`. 영문 LOCK 준수.
 
 ## 8. Phase 5 진행 상태
 

@@ -303,6 +303,67 @@ export interface FilterCallOptionsResult {
  * Pure function — `noticeFn` injected for unit-testability (vitest does not run
  * inside Obsidian, so `new Notice` would throw). Default = real `Notice` in renderer.
  */
+/**
+ * §5.6.4 A5 — credentials.json v0.3 payload parse (load).
+ *
+ * Pure function — extracted from `WikeyPlugin.loadCredentials` (codex cycle #2 F3 fix)
+ * so the round-trip is unit-testable without spinning up the Obsidian renderer.
+ *
+ * Migration rule: legacy `auth.<provider>.mode === 'auto'` (v0.6 and earlier) maps
+ * to `'subscription'` — closest non-fallback semantic. User can switch to `'api'`
+ * or `'none'` in Settings if subscription is unavailable.
+ */
+export function parseCredentialsPayload(
+  data: Record<string, unknown>,
+): Pick<
+  WikeySettings,
+  'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey' |
+  'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode'
+> {
+  const auth = (data.auth as Record<string, { mode?: string }> | undefined) ?? {}
+  const migrateMode = (m: string | undefined): WikeySettings['geminiAuthMode'] => {
+    if (m === 'none' || m === 'subscription' || m === 'api') return m
+    return 'subscription'
+  }
+  return {
+    geminiApiKey: (data.geminiApiKey as string | undefined) ?? '',
+    anthropicApiKey: (data.anthropicApiKey as string | undefined) ?? '',
+    openaiApiKey: (data.openaiApiKey as string | undefined) ?? '',
+    geminiAuthMode: migrateMode(auth.gemini?.mode),
+    anthropicAuthMode: migrateMode(auth.anthropic?.mode),
+    openaiAuthMode: migrateMode(auth.openai?.mode),
+  }
+}
+
+/**
+ * §5.6.4 A5 — credentials.json v0.3 payload serialize (save).
+ *
+ * Pure function — extracted from `WikeyPlugin.saveCredentials` (codex cycle #2 F3 fix).
+ * Preserves user-added unknown fields by spreading `credentialsRaw` first; known
+ * fields override deterministically. Auth sub-object always written with current
+ * settings (default `'subscription'` if undefined).
+ */
+export function serializeCredentialsPayload(
+  settings: Pick<
+    WikeySettings,
+    'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey' |
+    'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode'
+  >,
+  credentialsRaw: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    ...credentialsRaw,
+    geminiApiKey: settings.geminiApiKey,
+    anthropicApiKey: settings.anthropicApiKey,
+    openaiApiKey: settings.openaiApiKey,
+    auth: {
+      gemini: { mode: settings.geminiAuthMode ?? 'subscription' },
+      anthropic: { mode: settings.anthropicAuthMode ?? 'subscription' },
+      openai: { mode: settings.openaiAuthMode ?? 'subscription' },
+    },
+  }
+}
+
 export function buildDefaultAuthFallback(
   noticeFn: (msg: string) => void,
 ): (info: AuthFallbackInfo) => void {
@@ -1161,23 +1222,8 @@ export default class WikeyPlugin extends Plugin {
       const fs = require('node:fs') as typeof import('node:fs')
       const raw = fs.readFileSync(this.credentialsPath, 'utf-8')
       const data = JSON.parse(raw) as Record<string, unknown>
-      const auth = (data.auth as Record<string, { mode?: string }> | undefined) ?? {}
-      // §5.6.4 v0.7 — 'auto' polished out; migrate legacy values to 'subscription'.
-      const migrateMode = (raw: string | undefined): WikeySettings['geminiAuthMode'] => {
-        if (raw === 'none' || raw === 'subscription' || raw === 'api') return raw
-        // Legacy 'auto' (v0.6 and earlier) → 'subscription' (closest non-fallback
-        // semantic; user can switch to 'api' or 'none' in Settings).
-        return 'subscription'
-      }
-      this.settings = {
-        ...this.settings,
-        geminiApiKey: (data.geminiApiKey as string | undefined) ?? '',
-        anthropicApiKey: (data.anthropicApiKey as string | undefined) ?? '',
-        openaiApiKey: (data.openaiApiKey as string | undefined) ?? '',
-        geminiAuthMode: migrateMode(auth.gemini?.mode),
-        anthropicAuthMode: migrateMode(auth.anthropic?.mode),
-        openaiAuthMode: migrateMode(auth.openai?.mode),
-      }
+      const parsed = parseCredentialsPayload(data)
+      this.settings = { ...this.settings, ...parsed }
       // F2: snapshot raw payload so unknown fields survive a save round-trip.
       this.credentialsRaw = data
     } catch {
@@ -1190,20 +1236,7 @@ export default class WikeyPlugin extends Plugin {
     const path = require('node:path') as typeof import('node:path')
     const dir = path.dirname(this.credentialsPath)
     fs.mkdirSync(dir, { recursive: true })
-    // §5.6.4 A5 — v0.3 schema (lower-camel keys + auth sub-object). Unknown fields
-    // from credentialsRaw are spread first; known fields override deterministically.
-    const out: Record<string, unknown> = {
-      ...this.credentialsRaw,
-      geminiApiKey: this.settings.geminiApiKey,
-      anthropicApiKey: this.settings.anthropicApiKey,
-      openaiApiKey: this.settings.openaiApiKey,
-      auth: {
-        // §5.6.4 v0.7 — persist current mode (default 'subscription').
-        gemini: { mode: this.settings.geminiAuthMode ?? 'subscription' },
-        anthropic: { mode: this.settings.anthropicAuthMode ?? 'subscription' },
-        openai: { mode: this.settings.openaiAuthMode ?? 'subscription' },
-      },
-    }
+    const out = serializeCredentialsPayload(this.settings, this.credentialsRaw)
     fs.writeFileSync(this.credentialsPath, JSON.stringify(out, null, 2))
   }
 

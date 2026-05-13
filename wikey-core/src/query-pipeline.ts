@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import { join as pathJoin } from 'node:path'
-import type { Citation, HttpClient, QueryResult, SearchResult, WikiFS, WikeyConfig } from './types.js'
+import type { AuthFallbackInfo, Citation, HttpClient, QueryResult, SearchResult, WikiFS, WikeyConfig } from './types.js'
 import { LLMClient } from './llm-client.js'
 import { resolveProvider, getSearchTopN } from './config.js'
 import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
@@ -87,6 +87,13 @@ export interface QueryOptions {
   readonly expander?: QueryExpander
   /** §5.7.8 Spec 6 — vault-supplied hint forwarded to the filter LLM. */
   readonly vaultHint?: VaultQueryHint
+  /**
+   * §5.6.4 v0.7 (codex cycle #2 F2 fix) — subscription→API fallback callback for
+   * the *primary Chat path*. Forwarded to `LLMClient.call` so Notice messages
+   * surface on the same UI surface as filter / rewriter / expander paths. Plugin
+   * layer (`sidebar-chat.ts`) injects `buildDefaultAuthFallback(new Notice)`.
+   */
+  readonly onAuthFallback?: (info: AuthFallbackInfo) => void
 }
 
 export async function query(
@@ -137,7 +144,7 @@ export async function query(
     try {
       const directAnswer = await llm.call(
         `당신은 wikey 위키 어시스턴트입니다. 위키 검색 결과가 없었습니다.\n\n질문: ${question}\n\n위키에 관련 내용이 없다면 솔직히 말하고, 일반적인 질문이면 간단히 답변하세요.`,
-        { provider, model },
+        { provider, model, onAuthFallback: opts?.onAuthFallback },
       )
       return { answer: directAnswer, sources: [] }
     } catch (err: any) {
@@ -158,7 +165,7 @@ export async function query(
   // Step 4: LLM synthesis
   try {
     const prompt = buildSynthesisPrompt(context, question)
-    const rawAnswer = await llm.call(prompt, { provider, model })
+    const rawAnswer = await llm.call(prompt, { provider, model, onAuthFallback: opts?.onAuthFallback })
     const citations = opts?.wikiFS
       ? await collectCitationsWithWikiFS(searchResults, opts.wikiFS)
       : collectCitationsFromFS(searchResults, basePath)
