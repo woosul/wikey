@@ -38,6 +38,7 @@ import {
   LLMClient,
   resolveProvider,
   type TopicClusterer,
+  type QueryLogRange,
 } from 'wikey-core'
 import { ConflictModal, type ConflictChoice } from './conflict-modal'
 import { WikeyChatView, WIKEY_CHAT_VIEW, triggerPanelRefresh } from './sidebar-chat'
@@ -1038,10 +1039,13 @@ async function runDiagnoseCitationMismatches(plugin: WikeyPlugin): Promise<void>
  * command palette entry. Returns the generated page path (or `null` if no
  * log entries) so callers can show a Notice / link.
  */
-export async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promise<string | null> {
-  const entries = await loadQueryLogEntries(plugin.wikiFS)
+export async function runGenerateKnowledgeGapReport(
+  plugin: WikeyPlugin,
+  range?: QueryLogRange,
+): Promise<string | null> {
+  const entries = await loadQueryLogEntries(plugin.wikiFS, range)
   if (entries.length === 0) {
-    new Notice('No query log entries yet.')
+    new Notice(range ? `No queries in range ${range.startYearMonth} ~ ${range.endYearMonth}.` : 'No query log entries yet.')
     return null
   }
 
@@ -1100,7 +1104,19 @@ export async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promis
   const now = new Date()
   const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const isoDate = now.toISOString().slice(0, 10)
-  const filename = `knowledge-gaps-${yearMonth}.md`
+
+  // v0.6 — range 지정 시 파일명/title 에 반영. 미지정 시 month 단위 (legacy).
+  let filename: string
+  let titleLabel: string
+  if (range) {
+    const compactStart = range.startYearMonth.replace('-', '')
+    const compactEnd = range.endYearMonth.replace('-', '')
+    filename = `knowledge-gaps-${compactStart}-${compactEnd}.md`
+    titleLabel = `${range.startYearMonth} ~ ${range.endYearMonth}`
+  } else {
+    filename = `knowledge-gaps-${yearMonth}.md`
+    titleLabel = yearMonth
+  }
   const pagePath = `wiki/analyses/${filename}`
 
   let createdDate: string = isoDate
@@ -1120,16 +1136,18 @@ export async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promis
     summary,
     statistics,
     entries,
+    titleLabel,
   })
   await plugin.wikiFS.write(pagePath, markdown)
 
+  const logLabel = range ? `${range.startYearMonth} ~ ${range.endYearMonth}` : yearMonth
   await appendLog(
     plugin.wikiFS,
-    `## [${isoDate}] ingest | Knowledge Gaps ${yearMonth}\n- Auto-report: [[${filename.replace(/\.md$/, '')}]]`,
+    `## [${isoDate}] ingest | Knowledge Gaps ${logLabel}\n- Auto-report: [[${filename.replace(/\.md$/, '')}]]`,
   )
   await updateIndex(plugin.wikiFS, [
     {
-      entry: `- [[${filename.replace(/\.md$/, '')}]] — Knowledge gap report for ${yearMonth}`,
+      entry: `- [[${filename.replace(/\.md$/, '')}]] — Knowledge gap report for ${logLabel}`,
       category: 'analyses',
     },
   ])

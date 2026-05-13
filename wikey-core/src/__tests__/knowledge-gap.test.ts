@@ -38,6 +38,9 @@ import {
   extractCreatedFromFrontmatter,
   validateClusterResultShape,
   computeGapStatistics,
+  parseQueryLogRange,
+  queryLogPathForYear,
+  LEGACY_QUERY_LOG_PATH,
   type QueryLogEntry,
   type ClusterResult,
   type TopicClusterer,
@@ -45,7 +48,8 @@ import {
 } from '../knowledge-gap.js'
 import type { WikiFS } from '../types.js'
 
-const QUERY_LOG_PATH = '.wikey/query-log.jsonl'
+// v0.6 — year-partitioned path helper (legacy single-file path replaced).
+const QUERY_LOG_PATH_2026 = queryLogPathForYear(2026)
 
 // ── Test fixtures: in-memory WikiFS (Spec 1 I3a — vault-relative path) ────────
 
@@ -102,8 +106,8 @@ describe('§5.20 Spec 1 — query log capture + privacy (I1/I2/I3)', () => {
 
     await appendQueryLogEntry(fs, entry)
 
-    expect(fs.files.has(QUERY_LOG_PATH)).toBe(true)
-    const raw = fs.files.get(QUERY_LOG_PATH) ?? ''
+    expect(fs.files.has(QUERY_LOG_PATH_2026)).toBe(true)
+    const raw = fs.files.get(QUERY_LOG_PATH_2026) ?? ''
     const lines = raw.split('\n').filter((ln) => ln.length > 0)
     expect(lines).toHaveLength(1)
 
@@ -123,7 +127,7 @@ describe('§5.20 Spec 1 — query log capture + privacy (I1/I2/I3)', () => {
     await appendQueryLogEntry(fs, makeEntry({ query: 'first' }))
     await appendQueryLogEntry(fs, makeEntry({ query: 'second' }))
 
-    const raw = fs.files.get(QUERY_LOG_PATH) ?? ''
+    const raw = fs.files.get(QUERY_LOG_PATH_2026) ?? ''
     const lines = raw.split('\n').filter((ln) => ln.length > 0)
     expect(lines).toHaveLength(2)
 
@@ -138,7 +142,7 @@ describe('§5.20 Spec 1 — query log capture + privacy (I1/I2/I3)', () => {
     const good1 = JSON.stringify(makeEntry({ query: 'q1' }))
     const malformed = '{this is not json'
     const good2 = JSON.stringify(makeEntry({ query: 'q2' }))
-    fs.files.set(QUERY_LOG_PATH, `${good1}\n${malformed}\n${good2}\n`)
+    fs.files.set(QUERY_LOG_PATH_2026, `${good1}\n${malformed}\n${good2}\n`)
 
     const entries = await loadQueryLogEntries(fs)
 
@@ -158,7 +162,7 @@ describe('§5.20 Spec 1 — query log capture + privacy (I1/I2/I3)', () => {
 
     await appendQueryLogEntry(fs, polluted)
 
-    const raw = fs.files.get(QUERY_LOG_PATH) ?? ''
+    const raw = fs.files.get(QUERY_LOG_PATH_2026) ?? ''
     const lines = raw.split('\n').filter((ln) => ln.length > 0)
     expect(lines).toHaveLength(1)
 
@@ -176,7 +180,94 @@ describe('§5.20 Spec 1 — query log capture + privacy (I1/I2/I3)', () => {
     // WikiFS.write 가 폴더 부재 시 자동 생성 (Wikey 표준) → log path 정상 write.
     expect(fs.files.has('.wikey')).toBe(false) // 사전 상태: 폴더 부재
     await appendQueryLogEntry(fs, makeEntry())
-    expect(fs.files.has(QUERY_LOG_PATH)).toBe(true)
+    expect(fs.files.has(QUERY_LOG_PATH_2026)).toBe(true)
+  })
+
+  it('AC-S1-6 (v0.6): appendQueryLogEntry partitions entries by ts year', async () => {
+    await appendQueryLogEntry(fs, makeEntry({ ts: '2026-05-13T01:00:00.000Z', query: 'q-2026' }))
+    await appendQueryLogEntry(fs, makeEntry({ ts: '2027-01-15T01:00:00.000Z', query: 'q-2027' }))
+    expect(fs.files.has(queryLogPathForYear(2026))).toBe(true)
+    expect(fs.files.has(queryLogPathForYear(2027))).toBe(true)
+    expect(fs.files.get(queryLogPathForYear(2026))).toContain('q-2026')
+    expect(fs.files.get(queryLogPathForYear(2027))).toContain('q-2027')
+    expect(fs.files.get(queryLogPathForYear(2026))).not.toContain('q-2027')
+  })
+})
+
+describe('§5.20 v0.6 — query log range + year merge', () => {
+  let fs: MemoryFS
+  beforeEach(() => {
+    fs = new MemoryFS()
+    fs.list = async (dir: string) => {
+      const prefix = dir.endsWith('/') ? dir : dir + '/'
+      return [...fs.files.keys()].filter((k) => k.startsWith(prefix))
+    }
+  })
+
+  it('AC-V6-1: parseQueryLogRange parses YYYYMM-YYYYMM', () => {
+    expect(parseQueryLogRange('202605-202606')).toEqual({
+      startYearMonth: '2026-05',
+      endYearMonth: '2026-06',
+    })
+    expect(parseQueryLogRange('202612-202701')).toEqual({
+      startYearMonth: '2026-12',
+      endYearMonth: '2027-01',
+    })
+    expect(parseQueryLogRange('202605 - 202606')).toEqual({
+      startYearMonth: '2026-05',
+      endYearMonth: '2026-06',
+    })
+  })
+
+  it('AC-V6-2: parseQueryLogRange returns null on malformed input', () => {
+    expect(parseQueryLogRange('not-a-range')).toBeNull()
+    expect(parseQueryLogRange('2026-05')).toBeNull()
+    expect(parseQueryLogRange('202613-202614')).toBeNull()
+    expect(parseQueryLogRange('202606-202605')).toBeNull()
+  })
+
+  it('AC-V6-3: loadQueryLogEntries merges all year files when range omitted', async () => {
+    await appendQueryLogEntry(fs, { ts: '2026-05-13T01:00:00.000Z', query: 'a', answerLen: 10, citationCount: 0, resolveFailed: false })
+    await appendQueryLogEntry(fs, { ts: '2027-01-15T01:00:00.000Z', query: 'b', answerLen: 20, citationCount: 1, resolveFailed: false })
+    const all = await loadQueryLogEntries(fs)
+    expect(all.map((e) => e.query)).toEqual(['a', 'b'])
+  })
+
+  it('AC-V6-4: loadQueryLogEntries with range filters by yearMonth', async () => {
+    await appendQueryLogEntry(fs, { ts: '2026-04-15T00:00:00.000Z', query: 'apr', answerLen: 10, citationCount: 0, resolveFailed: false })
+    await appendQueryLogEntry(fs, { ts: '2026-05-15T00:00:00.000Z', query: 'may', answerLen: 10, citationCount: 0, resolveFailed: false })
+    await appendQueryLogEntry(fs, { ts: '2026-06-15T00:00:00.000Z', query: 'jun', answerLen: 10, citationCount: 0, resolveFailed: false })
+    await appendQueryLogEntry(fs, { ts: '2026-07-15T00:00:00.000Z', query: 'jul', answerLen: 10, citationCount: 0, resolveFailed: false })
+
+    const range = parseQueryLogRange('202605-202606')
+    if (!range) throw new Error('range parse failed')
+    const within = await loadQueryLogEntries(fs, range)
+    expect(within.map((e) => e.query)).toEqual(['may', 'jun'])
+  })
+
+  it('AC-V6-5: loadQueryLogEntries multi-year range merges two files', async () => {
+    await appendQueryLogEntry(fs, { ts: '2026-12-15T00:00:00.000Z', query: 'dec', answerLen: 10, citationCount: 0, resolveFailed: false })
+    await appendQueryLogEntry(fs, { ts: '2027-01-15T00:00:00.000Z', query: 'jan', answerLen: 10, citationCount: 0, resolveFailed: false })
+    const range = parseQueryLogRange('202612-202701')
+    if (!range) throw new Error('range parse failed')
+    const within = await loadQueryLogEntries(fs, range)
+    expect(within.map((e) => e.query)).toEqual(['dec', 'jan'])
+  })
+
+  it('AC-V6-6: legacy .wikey/query-log.jsonl auto-migrates on first load', async () => {
+    fs.files.set(
+      LEGACY_QUERY_LOG_PATH,
+      JSON.stringify({ ts: '2026-05-15T00:00:00.000Z', query: 'a', answerLen: 10, citationCount: 0, resolveFailed: false }) + '\n' +
+      JSON.stringify({ ts: '2027-02-20T00:00:00.000Z', query: 'b', answerLen: 20, citationCount: 1, resolveFailed: false }) + '\n',
+    )
+    const all = await loadQueryLogEntries(fs)
+    expect(all.map((e) => e.query).sort()).toEqual(['a', 'b'])
+    expect(fs.files.has(queryLogPathForYear(2026))).toBe(true)
+    expect(fs.files.has(queryLogPathForYear(2027))).toBe(true)
+    expect(fs.files.get(LEGACY_QUERY_LOG_PATH)).toBe('')
+
+    const again = await loadQueryLogEntries(fs)
+    expect(again.length).toBe(2)
   })
 })
 

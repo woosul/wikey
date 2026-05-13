@@ -47,6 +47,8 @@ export {
   extractCreatedFromFrontmatter,
   validateClusterResultShape,
   computeGapStatistics,
+  parseQueryLogRange,
+  queryLogPathForYear,
 } from './knowledge-gap.js'
 export type {
   QueryLogEntry,
@@ -54,6 +56,7 @@ export type {
   ClusterResult,
   TopicClusterer,
   GapStatistics,
+  QueryLogRange,
 } from './knowledge-gap.js'
 export {
   query,

@@ -22,8 +22,39 @@
  */
 import type { WikiFS } from './types.js'
 
-/** I3a — vault-relative JSONL path (single source of truth). */
-export const QUERY_LOG_PATH = '.wikey/query-log.jsonl'
+/** I3a v0.6 — year-partitioned JSONL paths. Legacy single-file path retained
+ *  only for backward-compat migration (see `migrateLegacyQueryLog`). */
+export const LEGACY_QUERY_LOG_PATH = '.wikey/query-log.jsonl'
+
+/** v0.6 — `.wikey/query-log-YYYY.jsonl` (single source of truth for one year). */
+export function queryLogPathForYear(year: number | string): string {
+  return `.wikey/query-log-${year}.jsonl`
+}
+
+/** v0.6 — `{ startYearMonth, endYearMonth }` reporting range parsed from
+ *  `/knowledge-gap YYYYMM-YYYYMM` slash argument. Both inclusive. */
+export interface QueryLogRange {
+  readonly startYearMonth: string  // e.g. '2026-05'
+  readonly endYearMonth: string    // e.g. '2026-06'
+}
+
+/**
+ * v0.6 — parse `YYYYMM-YYYYMM` slash argument. Returns null on malformed input.
+ * Spaces tolerated. Start <= end enforced; otherwise returns null.
+ */
+export function parseQueryLogRange(arg: string): QueryLogRange | null {
+  const m = arg.trim().match(/^(\d{6})\s*-\s*(\d{6})$/)
+  if (!m) return null
+  const [, startRaw, endRaw] = m
+  const startYearMonth = `${startRaw.slice(0, 4)}-${startRaw.slice(4, 6)}`
+  const endYearMonth = `${endRaw.slice(0, 4)}-${endRaw.slice(4, 6)}`
+  // Basic month validity check (01~12).
+  const startMonth = parseInt(startRaw.slice(4, 6), 10)
+  const endMonth = parseInt(endRaw.slice(4, 6), 10)
+  if (startMonth < 1 || startMonth > 12 || endMonth < 1 || endMonth > 12) return null
+  if (startYearMonth > endYearMonth) return null
+  return { startYearMonth, endYearMonth }
+}
 
 /** Spec 1 I3 — log entry shape. 5 keys (privacy minimize). */
 export interface QueryLogEntry {
@@ -71,8 +102,9 @@ export function computeGapScore(input: {
 }
 
 /**
- * Spec 1 AC — JSONL append-only. extra 키 entry 에 포함되어도 정확히 5 키만
- * disk 에 기록 (I3 schema minimize).
+ * Spec 1 AC — JSONL append-only, year-partitioned (v0.6). extra 키 entry 에
+ * 포함되어도 정확히 5 키만 disk 에 기록 (I3 schema minimize). entry.ts 의 year
+ * 를 추출해 `.wikey/query-log-${year}.jsonl` 에 append.
  */
 export async function appendQueryLogEntry(wikiFS: WikiFS, entry: QueryLogEntry): Promise<void> {
   const minimal: QueryLogEntry = {
@@ -83,40 +115,151 @@ export async function appendQueryLogEntry(wikiFS: WikiFS, entry: QueryLogEntry):
     resolveFailed: entry.resolveFailed,
   }
   const line = JSON.stringify(minimal)
+  const year = extractYearFromTs(entry.ts)
+  const path = queryLogPathForYear(year)
 
   let existing = ''
   try {
-    if (await wikiFS.exists(QUERY_LOG_PATH)) {
-      existing = await wikiFS.read(QUERY_LOG_PATH)
+    if (await wikiFS.exists(path)) {
+      existing = await wikiFS.read(path)
     }
   } catch {
     existing = ''
   }
 
   const prefix = existing.length === 0 || existing.endsWith('\n') ? existing : existing + '\n'
-  await wikiFS.write(QUERY_LOG_PATH, prefix + line + '\n')
+  await wikiFS.write(path, prefix + line + '\n')
+}
+
+function extractYearFromTs(ts: string): string {
+  // ISO-8601 prefix `YYYY` (first 4 chars). Fallback to current year on bad input.
+  if (/^\d{4}/.test(ts)) return ts.slice(0, 4)
+  return String(new Date().getUTCFullYear())
 }
 
 /**
- * Spec 1 AC — JSONL parse. malformed line 1개 섞이면 skip + 나머지 정상 return.
- * 파일 부재 시 빈 array.
+ * Spec 1 AC v0.6 — JSONL parse, year-partitioned.
+ *
+ * `range` 미지정 시: legacy file (`.wikey/query-log.jsonl`) auto-migrate 후
+ * 모든 `.wikey/query-log-YYYY.jsonl` walk + merge (ts asc 정렬). 매번 호출
+ * 가능 (migration 은 idempotent — legacy file 부재 시 no-op).
+ *
+ * `range` 지정 시: 해당 year file 만 load → `ts` 범위 (start..=end 월) 필터.
+ *
+ * malformed line skip / 파일 부재 → 빈 array.
  */
-export async function loadQueryLogEntries(wikiFS: WikiFS): Promise<QueryLogEntry[]> {
-  let raw: string
-  try {
-    if (!(await wikiFS.exists(QUERY_LOG_PATH))) return []
-    raw = await wikiFS.read(QUERY_LOG_PATH)
-  } catch {
-    return []
+export async function loadQueryLogEntries(
+  wikiFS: WikiFS,
+  range?: QueryLogRange,
+): Promise<QueryLogEntry[]> {
+  await migrateLegacyQueryLog(wikiFS)
+
+  let years: string[]
+  if (range) {
+    const startYear = parseInt(range.startYearMonth.slice(0, 4), 10)
+    const endYear = parseInt(range.endYearMonth.slice(0, 4), 10)
+    years = []
+    for (let y = startYear; y <= endYear; y++) years.push(String(y))
+  } else {
+    years = await discoverYearFiles(wikiFS)
   }
 
   const out: QueryLogEntry[] = []
+  for (const y of years) {
+    const path = queryLogPathForYear(y)
+    if (!(await wikiFS.exists(path))) continue
+    let raw: string
+    try {
+      raw = await wikiFS.read(path)
+    } catch {
+      continue
+    }
+    for (const line of raw.split('\n')) {
+      if (line.length === 0) continue
+      const parsed = parseEntryLine(line)
+      if (!parsed) continue
+      if (range && !isWithinRange(parsed.ts, range)) continue
+      out.push(parsed)
+    }
+  }
+  out.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : 0))
+  return out
+}
+
+function isWithinRange(ts: string, range: QueryLogRange): boolean {
+  const yearMonth = ts.slice(0, 7) // YYYY-MM
+  return yearMonth >= range.startYearMonth && yearMonth <= range.endYearMonth
+}
+
+/**
+ * v0.6 — discover year files via WikiFS `list('.wikey')`. Returns sorted year
+ * strings (asc). On listing failure or empty dir → [].
+ */
+async function discoverYearFiles(wikiFS: WikiFS): Promise<string[]> {
+  let entries: readonly string[]
+  try {
+    entries = await wikiFS.list('.wikey')
+  } catch {
+    return []
+  }
+  const years = new Set<string>()
+  for (const p of entries) {
+    const m = p.match(/(?:^|\/)query-log-(\d{4})\.jsonl$/)
+    if (m) years.add(m[1])
+  }
+  return [...years].sort()
+}
+
+/**
+ * v0.6 — one-shot migration: legacy `.wikey/query-log.jsonl` → year-partitioned
+ * `.wikey/query-log-YYYY.jsonl`. Each entry's year is extracted from `entry.ts`
+ * and appended to the matching year file. Legacy file is removed (overwritten
+ * with empty string then ignored — WikiFS has no `delete`; treat empty as gone).
+ *
+ * Idempotent: legacy file absent / empty → no-op.
+ */
+async function migrateLegacyQueryLog(wikiFS: WikiFS): Promise<void> {
+  try {
+    if (!(await wikiFS.exists(LEGACY_QUERY_LOG_PATH))) return
+  } catch {
+    return
+  }
+  let raw: string
+  try {
+    raw = await wikiFS.read(LEGACY_QUERY_LOG_PATH)
+  } catch {
+    return
+  }
+  if (raw.length === 0) return
+
+  // Group entries by year.
+  const byYear = new Map<string, string[]>()
   for (const line of raw.split('\n')) {
     if (line.length === 0) continue
     const parsed = parseEntryLine(line)
-    if (parsed) out.push(parsed)
+    if (!parsed) continue
+    const year = extractYearFromTs(parsed.ts)
+    const arr = byYear.get(year) ?? []
+    arr.push(JSON.stringify(parsed))
+    byYear.set(year, arr)
   }
-  return out
+
+  // Append-merge into year files (preserve any existing year-file content).
+  for (const [year, lines] of byYear) {
+    const path = queryLogPathForYear(year)
+    let existing = ''
+    try {
+      if (await wikiFS.exists(path)) existing = await wikiFS.read(path)
+    } catch {
+      existing = ''
+    }
+    const prefix = existing.length === 0 || existing.endsWith('\n') ? existing : existing + '\n'
+    await wikiFS.write(path, prefix + lines.join('\n') + '\n')
+  }
+
+  // Clear legacy file (WikiFS has no delete primitive — empty string acts as
+  // "migrated marker"; subsequent calls hit the early-return on raw.length===0).
+  await wikiFS.write(LEGACY_QUERY_LOG_PATH, '')
 }
 
 function parseEntryLine(line: string): QueryLogEntry | null {
@@ -323,15 +466,18 @@ export function renderGapReportMarkdown(
     /** v0.5 — entries 주입 시 each gap section 에 actual query list 출력 (사용자
      *  요청: 어떤 질문이 있었고 어떤 갭인지 직접 확인 가능). 미지정 시 query list 생략. */
     entries?: readonly QueryLogEntry[]
+    /** v0.6 — frontmatter `title` override (range reports use `2026-05 ~ 2026-06`).
+     *  미지정 시 `Knowledge Gaps — ${yearMonth}` 기본값. */
+    titleLabel?: string
   },
 ): string {
-  const { yearMonth, createdDate, updatedDate, summary, statistics, entries } = opts
+  const { yearMonth, createdDate, updatedDate, summary, statistics, entries, titleLabel } = opts
   const firstOfMonth = `${yearMonth}-01`
   const created = createdDate ?? firstOfMonth
   const updated = updatedDate ?? firstOfMonth
   const lines: string[] = []
   lines.push('---')
-  lines.push(`title: Knowledge Gaps — ${yearMonth}`)
+  lines.push(`title: Knowledge Gaps — ${titleLabel ?? yearMonth}`)
   lines.push('type: analysis')
   lines.push(`created: ${created}`)
   lines.push(`updated: ${updated}`)

@@ -418,7 +418,7 @@ export class WikeyChatView extends ItemView {
 
     this.inputEl = inputArea.createEl('textarea', {
       cls: 'wikey-chat-input',
-      attr: { placeholder: 'Ask a question… (/clear to reset, /knowledge-gap for report)', rows: '3' },
+      attr: { placeholder: 'Ask a question… (/clear, /knowledge-gap [YYYYMM-YYYYMM])', rows: '3' },
     })
 
     this.sendBtn = inputArea.createEl('button', { cls: 'wikey-chat-send-btn' })
@@ -617,14 +617,25 @@ export class WikeyChatView extends ItemView {
       return
     }
 
-    // §5.20 v0.4 I13 — `/knowledge-gap` slash command. Same runner as command palette
-    // and the maintenance modal 'knowledge-gap' mode. Errors surface as Notice.
-    if (rawInput === '/knowledge-gap') {
+    // §5.20 v0.4 I13 / v0.6 — `/knowledge-gap [YYYYMM-YYYYMM]` slash command.
+    // No arg → full accumulated log. Arg → range filter (e.g. `/knowledge-gap 202605-202606`).
+    if (rawInput === '/knowledge-gap' || rawInput.startsWith('/knowledge-gap ')) {
       this.inputEl.value = ''
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { runGenerateKnowledgeGapReport } = require('./commands') as typeof import('./commands')
-        await runGenerateKnowledgeGapReport(this.plugin)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { parseQueryLogRange } = require('wikey-core') as typeof import('wikey-core')
+        const argPart = rawInput.slice('/knowledge-gap'.length).trim()
+        let range: ReturnType<typeof parseQueryLogRange> | undefined
+        if (argPart.length > 0) {
+          range = parseQueryLogRange(argPart) ?? undefined
+          if (!range) {
+            new Notice(`Knowledge gap: invalid range "${argPart}". Use YYYYMM-YYYYMM (e.g. 202605-202606).`)
+            return
+          }
+        }
+        await runGenerateKnowledgeGapReport(this.plugin, range ?? undefined)
       } catch (err) {
         console.error('[wikey] §5.20 /knowledge-gap failed:', err)
         new Notice(`Knowledge gap report failed: ${(err as Error).message ?? String(err)}`)
@@ -879,6 +890,9 @@ Click [[page name]] in answers to navigate to the wiki page.
     // wall of text. Inserted *before* each section heading except the first.
     this.insertHelpDividers(helpEl)
 
+    // §5.20 v0.6 — Knowledge gap usage section (maintenance 위, 사용자 raise 2026-05-13).
+    this.renderKnowledgeGapUsageSection(helpEl)
+
     // §5.19 v0.4 (R9) — Wiki Maintenance section. 3-button entry point
     // (Status / Check / Refactoring) opens `MaintenanceModal` in the requested
     // mode. Recovery was retired in v0.4 — Check's Fix link multi-mode absorbs
@@ -888,6 +902,57 @@ Click [[page name]] in answers to navigate to the wiki page.
     // paragraph 직전 `insertHelpDividers` 자동 hr 가 이미 시각 분리 cover, 추가
     // hr 가 사용자 눈에 "2 줄" 중복으로 보임.
     this.renderMaintenanceSection(helpEl)
+  }
+
+  /**
+   * §5.20 v0.6 — Knowledge gap usage card placed directly above Wiki
+   * Maintenance section. Documents the 3 entry points + slash command's
+   * optional range argument so the user does not need to read the spec.
+   */
+  private renderKnowledgeGapUsageSection(helpEl: HTMLElement): void {
+    const hr = document.createElement('hr')
+    hr.className = 'wikey-help-divider'
+    helpEl.appendChild(hr)
+
+    const section = helpEl.createDiv({ cls: 'wikey-knowledge-gap-usage-section' })
+    section.createEl('h3', { text: 'Knowledge Gap Report' })
+    const p = section.createEl('p')
+    p.createEl('span', {
+      text: 'Analyse the local query log and produce wiki/analyses/knowledge-gaps-…md.',
+    })
+
+    const ul = section.createEl('ul')
+    const items: ReadonlyArray<{ code: string; desc: string }> = [
+      {
+        code: '/knowledge-gap',
+        desc: 'Full accumulated log analysis (default).',
+      },
+      {
+        code: '/knowledge-gap 202605-202606',
+        desc: 'Filter by month range YYYYMM-YYYYMM (inclusive, crosses years).',
+      },
+      {
+        code: 'Command palette: Wikey: Generate knowledge gap report',
+        desc: 'Same as the slash command with no argument.',
+      },
+      {
+        code: 'Maintenance button: Knowledge gap report',
+        desc: 'Same as command palette; status line shown below the button.',
+      },
+    ]
+    for (const { code, desc } of items) {
+      const li = ul.createEl('li')
+      const codeEl = li.createEl('code')
+      codeEl.setText(code)
+      // happy-dom 호환 — `appendText` 는 Obsidian wrapper API 라 jsdom/happy-dom 부재. text node 사용.
+      li.appendChild(document.createTextNode(` — ${desc}`))
+    }
+
+    const note = section.createEl('p', { cls: 'wikey-help-note' })
+    note.setText(
+      'Query log is partitioned per year (.wikey/query-log-YYYY.jsonl, local only). ' +
+        'A multi-year range merges entries from both year files automatically.',
+    )
   }
 
   /**
