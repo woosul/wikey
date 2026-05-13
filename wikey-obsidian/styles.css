@@ -2598,7 +2598,8 @@ a.internal-link.wikey-broken-link,
 }
 
 .wikey-maintenance-section h3,
-.wikey-knowledge-gap-usage-section h3 {
+.wikey-knowledge-gap-usage-section h3,
+.wikey-chat-help > p > strong:first-child {
   font-size: 0.95em;
   font-weight: 300;
   color: var(--interactive-accent);
