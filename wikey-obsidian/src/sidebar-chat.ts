@@ -866,7 +866,7 @@ export class WikeyChatView extends ItemView {
 Ask anything about your wiki in natural language.
 e.g. "Key specs of DJI O3?", "Compare RAG vs LLM Wiki"
 
-**Ingest** (Source → Wiki)
+**Ingest (Source → Wiki)**
 - \`Cmd+Shift+I\`: Ingest current note
 - \`[+]\` button: Select or drag & drop files
 - Add files to \`raw/inbox/\` → auto-detected
