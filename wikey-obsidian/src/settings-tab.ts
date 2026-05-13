@@ -1263,94 +1263,127 @@ export class WikeySettingTab extends PluginSettingTab {
   }
 
   /**
-   * §5.6.4 v0.7 — unified provider subsection. Replaces three near-duplicate
-   * `renderXxxAuthModeCard` methods (~75 LOC each) + the `renderApiKeyField`
-   * helper. All three providers share the same shape:
+   * §5.6.4 v0.7 commit 7 — unified provider subsection rendered as a single
+   * block (heading + three rows) using direct DOM construction rather than
+   * Obsidian's `Setting` API. Direct DOM gives us controlled layout: each row
+   * is a flex container so the status badge can sit immediately to the left
+   * of the [Sign in] / [Sign out] button (per user spec 2026-05-14).
    *
-   *   <h4>{heading}</h4>
-   *   Auth Mode: [None (disabled) | Subscription | API Key]
-   *   Subscription: <detected|not detected>   [Sign in] or [Sign out]
-   *   API Key: ••••••••  [Test]
+   * Block layout:
+   *   <div class="wikey-auth-block">
+   *     <h4>{heading}</h4>
+   *     <div class="wikey-auth-block-row"> Auth Mode | <select> </div>
+   *     <div class="wikey-auth-block-row"> Subscription | <badge> <button> </div>
+   *     <div class="wikey-auth-block-row"> API Key | <password input> <Test> </div>
+   *   </div>
    */
   private renderProviderSubsection(
     containerEl: HTMLElement,
     spec: ProviderSubsectionSpec,
   ): void {
-    const subsection = containerEl.createDiv({ cls: 'wikey-settings-auth-mode-card' })
-    subsection.createEl('h4', { text: spec.heading })
+    const block = containerEl.createDiv({ cls: 'wikey-auth-block' })
+    block.createEl('h4', { text: spec.heading, cls: 'wikey-auth-block-heading' })
 
-    // Auth Mode dropdown.
-    new Setting(subsection)
-      .setName('Auth Mode')
-      .setDesc('How wikey calls this provider. Pick one — no automatic fallback.')
-      .addDropdown((dd) => {
-        dd.addOption('none', 'None (disabled)')
-        dd.addOption('subscription', 'Subscription')
-        dd.addOption('api', 'API Key')
-        dd.setValue(this.plugin.settings[spec.authModeField] ?? 'subscription')
-        dd.onChange(async (value) => {
-          if (value === 'none' || value === 'subscription' || value === 'api') {
-            this.plugin.settings[spec.authModeField] = value
-            await this.plugin.saveSettings()
-          }
-        })
-      })
+    this.renderAuthModeRow(block, spec)
+    this.renderSubscriptionRow(block, spec)
+    this.renderApiKeyRow(block, spec)
+  }
 
-    // Subscription row: status text + Sign in / Sign out button (one or the other).
-    const subscriptionDetected = spec.detectSubscription()
-    const subscriptionSetting = new Setting(subsection)
-      .setName('Subscription')
-      .setDesc(subscriptionDetected ? 'Subscription: detected' : 'Subscription: not detected')
-    if (subscriptionDetected) {
-      subscriptionSetting.addButton((btn) => {
-        btn.setButtonText('Sign out').onClick(() => {
-          new GeminiAuthInstructionModal(
-            this.app,
-            'Sign out',
-            `Run "${spec.signOutCommand}" in your terminal.`,
-          ).open()
-        })
-      })
-    } else {
-      subscriptionSetting.addButton((btn) => {
-        btn.setButtonText('Sign in').onClick(() => {
-          new GeminiAuthInstructionModal(
-            this.app,
-            spec.signInLabel,
-            `Run "${spec.signInCommand}" in your terminal, then return here and reload Obsidian.`,
-          ).open()
-        })
-      })
+  /** Auth Mode dropdown row. */
+  private renderAuthModeRow(block: HTMLElement, spec: ProviderSubsectionSpec): void {
+    const row = block.createDiv({ cls: 'wikey-auth-block-row' })
+    row.createSpan({ cls: 'wikey-auth-block-label', text: 'Auth Mode' })
+    const controls = row.createDiv({ cls: 'wikey-auth-block-controls' })
+    const select = controls.createEl('select', { cls: 'wikey-auth-mode-select dropdown' })
+    const current = this.plugin.settings[spec.authModeField] ?? 'subscription'
+    const options: ReadonlyArray<{ value: 'none' | 'subscription' | 'api'; text: string }> = [
+      { value: 'none', text: 'None (disabled)' },
+      { value: 'subscription', text: 'Subscription' },
+      { value: 'api', text: 'API Key' },
+    ]
+    for (const opt of options) {
+      const optionEl = select.createEl('option', { value: opt.value, text: opt.text })
+      if (opt.value === current) optionEl.selected = true
     }
-
-    // API Key row: password input + Test button.
-    const apiKeySetting = new Setting(subsection).setName('API Key')
-    apiKeySetting.addText((text) => {
-      const input = text
-        .setPlaceholder(spec.apiKeyPlaceholder)
-        .setValue(this.plugin.settings[spec.apiKeyField])
-        .onChange(async (value) => {
-          this.plugin.settings[spec.apiKeyField] = value
-          await this.plugin.saveSettings()
-        })
-      input.inputEl.type = 'password'
-      return input
+    select.addEventListener('change', async () => {
+      const value = select.value
+      if (value === 'none' || value === 'subscription' || value === 'api') {
+        this.plugin.settings[spec.authModeField] = value
+        await this.plugin.saveSettings()
+      }
     })
-    apiKeySetting.addButton((btn) => {
-      btn.setButtonText('Test').onClick(async () => {
-        btn.setButtonText('...')
-        btn.setDisabled(true)
-        const ok = await this.testApiConnection(spec.provider)
-        btn.setButtonText(ok ? '✓ Connected' : '✗ Failed')
-        btn.setDisabled(false)
-        if (ok) btn.buttonEl.addClass('wikey-btn-success')
-        else btn.buttonEl.addClass('wikey-btn-error')
-        setTimeout(() => {
-          btn.setButtonText('Test')
-          btn.buttonEl.removeClass('wikey-btn-success')
-          btn.buttonEl.removeClass('wikey-btn-error')
-        }, 3000)
-      })
+  }
+
+  /** Subscription row: badge (signed-in / not-detected) immediately before Sign in/out button. */
+  private renderSubscriptionRow(block: HTMLElement, spec: ProviderSubsectionSpec): void {
+    const detected = spec.detectSubscription()
+    const row = block.createDiv({ cls: 'wikey-auth-block-row' })
+    row.createSpan({ cls: 'wikey-auth-block-label', text: 'Subscription' })
+    const controls = row.createDiv({ cls: 'wikey-auth-block-controls' })
+
+    // Badge sits immediately before the button per user spec.
+    const badge = controls.createSpan({
+      cls: `wikey-auth-status-badge ${
+        detected ? 'wikey-auth-status-signed-in' : 'wikey-auth-status-not-detected'
+      }`,
+      text: detected ? 'signed-in' : 'not-detected',
+    })
+    void badge // silence unused (badge mounted into DOM)
+
+    const btn = controls.createEl('button', {
+      text: detected ? 'Sign out' : 'Sign in',
+      cls: 'wikey-auth-block-btn',
+    })
+    btn.addEventListener('click', () => {
+      if (detected) {
+        new GeminiAuthInstructionModal(
+          this.app,
+          'Sign out',
+          `Run "${spec.signOutCommand}" in your terminal.`,
+        ).open()
+      } else {
+        new GeminiAuthInstructionModal(
+          this.app,
+          spec.signInLabel,
+          `Run "${spec.signInCommand}" in your terminal, then return here and reload Obsidian.`,
+        ).open()
+      }
+    })
+  }
+
+  /** API Key row: password input + Test button. */
+  private renderApiKeyRow(block: HTMLElement, spec: ProviderSubsectionSpec): void {
+    const row = block.createDiv({ cls: 'wikey-auth-block-row' })
+    row.createSpan({ cls: 'wikey-auth-block-label', text: 'API Key' })
+    const controls = row.createDiv({ cls: 'wikey-auth-block-controls' })
+
+    const input = controls.createEl('input', {
+      cls: 'wikey-api-key-input',
+      attr: { type: 'password', placeholder: spec.apiKeyPlaceholder },
+    })
+    input.value = this.plugin.settings[spec.apiKeyField] ?? ''
+    input.addEventListener('change', async () => {
+      this.plugin.settings[spec.apiKeyField] = input.value
+      await this.plugin.saveSettings()
+    })
+
+    const testBtn = controls.createEl('button', {
+      text: 'Test',
+      cls: 'wikey-auth-block-btn',
+    })
+    testBtn.addEventListener('click', async () => {
+      testBtn.textContent = '...'
+      testBtn.disabled = true
+      const ok = await this.testApiConnection(spec.provider)
+      testBtn.textContent = ok ? '✓ Connected' : '✗ Failed'
+      testBtn.disabled = false
+      if (ok) testBtn.classList.add('wikey-btn-success')
+      else testBtn.classList.add('wikey-btn-error')
+      setTimeout(() => {
+        testBtn.textContent = 'Test'
+        testBtn.classList.remove('wikey-btn-success')
+        testBtn.classList.remove('wikey-btn-error')
+      }, 3000)
     })
   }
 
