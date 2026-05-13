@@ -2525,19 +2525,19 @@ v0.5 follow-up (Session 39, 2026-05-13):
 
 ---
 
-## 5.20 Knowledge Gap management — query log 분석 + 자동 리포트 (P2)
-> tag: #knowledge-gap, #analytics, #report
-> **draft v0.1 (2026-05-11)** — 사용자 테스트 2-2 통합. Phase 6 candidate → Phase 5 편입 (사용자 결정 2026-05-11).
+## 5.20 Knowledge Gap management — query log 분석 + 자동 리포트 (P2) ✅
+> tag: #knowledge-gap, #analytics, #report, #done
+> **v0.3.1 종결 (2026-05-13 session 41)** — SDD+TDD 7 step + codex 3 cycle (cycle #1 8 finding → cycle #2 3 잔류 → cycle #3 master verdict APPROVE) + master fixture smoke 7/7. 신규 `wikey-core/src/knowledge-gap.ts` (~ 350 LOC) + sidebar-chat hook + `Wikey: Generate knowledge gap report` command + settings toggle (default ON). 22 신규 test (core 19 + obsidian 3), core 933/936 + obsidian 191/191 PASS, build 0 errors, validate-wiki PASS. Karpathy llm-wiki "Explicit" 강화 — 위키가 *무엇을 모르는지* 자체 `wiki/analyses/knowledge-gaps-YYYY-MM.md` 로 가시화.
 >
-> **상위 plan**: [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](./phase-5-spec-5.20-knowledge-gap-management.md) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](./phase-5-todox-5.20-knowledge-gap-management.md)
+> **상위 plan**: [`plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](./phase-5-spec-5.20-knowledge-gap-management.md) (v0.3) · [`plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](./phase-5-todox-5.20-knowledge-gap-management.md) (v0.3.1) · [`activity/phase-5/phase-5-resultx-5.20-knowledge-gap-management-2026-05-13.md`](../../activity/phase-5/phase-5-resultx-5.20-knowledge-gap-management-2026-05-13.md)
 
-- [ ] **Step A — analyst v0.2** (score formula calibration + privacy 정책 LOCK)
-- [ ] **Step B — tester RED** (knowledge-gap + query log capture test)
-- [ ] **Step C — developer GREEN** (log capture + score formula + report 생성 command + settings toggle)
-- [ ] **Step D — Phase 3a 회귀**
-- [ ] **Step E — Phase 3b BLUE**
-- [ ] **Step F — codex post-impl review**
-- [ ] **Step G — master 라이브 cycle smoke** (10 query 후 report 생성)
+- [x] **Step A — analyst v0.2 LOCK → v0.3 codex sweep**
+- [x] **Step B — tester RED** (knowledge-gap.test.ts 19 + sidebar-chat-querylog.test.ts 3 = 22 acceptance)
+- [x] **Step C — developer GREEN** (`wikey-core/src/knowledge-gap.ts` + sidebar-chat hook + command + settings toggle + extractCreatedFromFrontmatter + validateClusterResultShape)
+- [x] **Step D — Phase 3a 회귀** (core 933/936 + obsidian 191/191 + build 0 errors + validate-wiki PASS)
+- [x] **Step E — Phase 3b BLUE** (함수 분해 / naming / DRY / 주석 quality / 가독성 / 회귀 재PASS 6 활동 명시)
+- [x] **Step F — codex post-impl review** (3 cycle — cycle #3 master verdict APPROVE 결정)
+- [x] **Step G — master fixture smoke** (10 sample query → 5 gap clusters → idempotent render, 7/7 step PASS)
 
 ---
 

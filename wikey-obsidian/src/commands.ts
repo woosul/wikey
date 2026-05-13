@@ -27,6 +27,16 @@ import {
   type ConversionResult,
   needsWikilinkSanitize,
   sanitizeWikilinkTarget,
+  loadQueryLogEntries,
+  rankKnowledgeGaps,
+  renderGapReportMarkdown,
+  extractCreatedFromFrontmatter,
+  validateClusterResultShape,
+  appendLog,
+  updateIndex,
+  LLMClient,
+  resolveProvider,
+  type TopicClusterer,
 } from 'wikey-core'
 import { ConflictModal, type ConflictChoice } from './conflict-modal'
 import { WikeyChatView, WIKEY_CHAT_VIEW, triggerPanelRefresh } from './sidebar-chat'
@@ -115,6 +125,15 @@ export function registerCommands(plugin: WikeyPlugin): void {
     name: 'Wikey: Diagnose citation mismatches',
     callback: () => {
       void runDiagnoseCitationMismatches(plugin)
+    },
+  })
+
+  // §5.20 — Knowledge gap report command (manual, Q3 LOCK out-of-scope auto schedule).
+  plugin.addCommand({
+    id: 'wikey-generate-knowledge-gap-report',
+    name: 'Wikey: Generate knowledge gap report',
+    callback: () => {
+      void runGenerateKnowledgeGapReport(plugin)
     },
   })
 
@@ -999,4 +1018,86 @@ async function runDiagnoseCitationMismatches(plugin: WikeyPlugin): Promise<void>
   }
   const scanResult = scanCitationMismatches(pageContents, registry)
   new MismatchDiagnosticModal(plugin.app, scanResult).open()
+}
+
+// ─────────────────────────────────────────────────────────────
+//  §5.20 — Knowledge gap report (manual command)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * §5.20 Spec 3 — generate `wiki/analyses/knowledge-gaps-YYYY-MM.md`.
+ *
+ * Flow: load `.wikey/query-log.jsonl` → LLM cluster (basicModel resolve, fail-open
+ * to deterministic fallback inside `rankKnowledgeGaps`) → render markdown →
+ * write + appendLog + updateIndex (ingest pipeline 동급, I8).
+ */
+async function runGenerateKnowledgeGapReport(plugin: WikeyPlugin): Promise<void> {
+  const entries = await loadQueryLogEntries(plugin.wikiFS)
+  if (entries.length === 0) {
+    new Notice('No query log entries yet.')
+    return
+  }
+
+  const config = plugin.buildConfig()
+  const llm = new LLMClient(plugin.httpClient, config)
+  const { provider, model } = resolveProvider('default', config)
+
+  // §5.20 v0.3 MEDIUM-3 fix — validate LLM response shape so malformed payloads
+  // bubble up as throws and trigger rankKnowledgeGaps' deterministic fallback.
+  // §5.20 v0.3 LOW-2 fix — case-insensitive code-fence strip (```JSON / ``` json variants).
+  const clusterer: TopicClusterer = async (es) => {
+    const prompt = [
+      `Group the following ${es.length} user questions into similar-topic clusters.`,
+      'Respond with JSON only:',
+      '{ "topics": [ { "name": "topic name", "queryIndices": [0,1,2] } ] }',
+      '',
+      'queries:',
+      ...es.map((e, i) => `${i}: ${e.query}`),
+    ].join('\n')
+    const raw = await llm.call(prompt, { provider, model })
+    // §5.20 v0.3 cycle #2 LOW-2 fix — allow optional whitespace between ``` and the
+    // language tag (handles ```json / ```JSON / ``` json / ``` JSON variants).
+    const cleaned = raw.replace(/```\s*(?:json\s*)?/gi, '').trim()
+    const parsed = JSON.parse(cleaned) as unknown
+    return validateClusterResultShape(parsed)
+  }
+
+  const gaps = await rankKnowledgeGaps(entries, clusterer)
+  const now = new Date()
+  const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const isoDate = now.toISOString().slice(0, 10)
+  const filename = `knowledge-gaps-${yearMonth}.md`
+  const pagePath = `wiki/analyses/${filename}`
+
+  // §5.20 v0.3 MEDIUM-1 fix — preserve `created` from existing frontmatter
+  // (first-run date), set `updated` to actual run date. I9 idempotent overwrite.
+  let createdDate: string = isoDate
+  try {
+    if (await plugin.wikiFS.exists(pagePath)) {
+      const existing = await plugin.wikiFS.read(pagePath)
+      createdDate = extractCreatedFromFrontmatter(existing) ?? isoDate
+    }
+  } catch {
+    // Existing file unreadable — fall through to new-file path with isoDate.
+  }
+
+  const markdown = renderGapReportMarkdown(gaps, {
+    yearMonth,
+    createdDate,
+    updatedDate: isoDate,
+  })
+  await plugin.wikiFS.write(pagePath, markdown)
+
+  await appendLog(
+    plugin.wikiFS,
+    `## [${isoDate}] ingest | Knowledge Gaps ${yearMonth}\n- Auto-report: [[${filename.replace(/\.md$/, '')}]]`,
+  )
+  await updateIndex(plugin.wikiFS, [
+    {
+      entry: `- [[${filename.replace(/\.md$/, '')}]] — Knowledge gap report for ${yearMonth}`,
+      category: 'analyses',
+    },
+  ])
+
+  new Notice(`Knowledge gap report: ${gaps.length} gaps → ${pagePath}`)
 }

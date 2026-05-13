@@ -5,7 +5,9 @@ import {
   fetchModelList, LLMClient,
   pairedSidecarSet, hasSidecar, filterOutPairedSidecars,
   recountAuditAfterPairedExclude,
+  appendQueryLogEntry,
 } from 'wikey-core'
+import { buildQueryLogEntry } from './sidebar-chat-helpers-querylog'
 import { runIngest, IngestFileSuggestModal } from './commands'
 import type { IngestRunResult } from './commands'
 
@@ -711,6 +713,21 @@ export class WikeyChatView extends ItemView {
       if (tokens && tokens.length > 0) {
         renderFilterMetadataBadges(this.messagesEl, tokens.map((t) => ({ token: t.token, keep: t.keep })))
         this.scrollToBottom()
+      }
+
+      // §5.20 Spec 1 — query log capture (opt-out via settings.knowledgeGapLogEnabled,
+      // default ON / I2 LOCK). Local-only JSONL append at `.wikey/query-log.jsonl`.
+      if (this.plugin.settings.knowledgeGapLogEnabled !== false) {
+        try {
+          const logEntry = buildQueryLogEntry(question, {
+            answer: result.answer,
+            sources: result.sources,
+            citations: result.citations,
+          })
+          await appendQueryLogEntry(this.plugin.wikiFS, logEntry)
+        } catch (err) {
+          console.warn('[wikey] §5.20 query log append failed:', err)
+        }
       }
 
       // §5.7.8 Finding 3 fix — auto-extend trigger. Fire-and-forget; cursor advance +

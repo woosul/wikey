@@ -1022,6 +1022,19 @@ export class WikeySettingTab extends PluginSettingTab {
           }),
       )
 
+    // §5.20 Spec 1 I2 — query log capture toggle (default ON).
+    new Setting(containerEl)
+      .setName('Knowledge gap log')
+      .setDesc('Record each query into .wikey/query-log.jsonl (local only) to enable knowledge gap reports. ON by default. Note: query text is stored verbatim — turn off if your queries may contain sensitive personal data.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.knowledgeGapLogEnabled)
+          .onChange(async (value) => {
+            this.plugin.settings.knowledgeGapLogEnabled = value
+            await this.plugin.saveSettings()
+          }),
+      )
+
     this.renderStandardDropdown(
       containerEl,
       'Auto Ingest Interval',

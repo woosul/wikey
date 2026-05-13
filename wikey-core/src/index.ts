@@ -39,6 +39,21 @@ export type { CacheKeyInput, CacheIndexEntry } from './convert-cache.js'
 export { LLMClient, fetchModelList } from './llm-client.js'
 export { createPage, updateIndex, appendLog, extractWikilinks } from './wiki-ops.js'
 export {
+  computeGapScore,
+  appendQueryLogEntry,
+  loadQueryLogEntries,
+  rankKnowledgeGaps,
+  renderGapReportMarkdown,
+  extractCreatedFromFrontmatter,
+  validateClusterResultShape,
+} from './knowledge-gap.js'
+export type {
+  QueryLogEntry,
+  KnowledgeGap,
+  ClusterResult,
+  TopicClusterer,
+} from './knowledge-gap.js'
+export {
   query,
   buildCitationFromContent,
   collectCitationsWithWikiFS,

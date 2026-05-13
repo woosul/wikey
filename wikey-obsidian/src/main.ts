@@ -145,6 +145,12 @@ interface WikeySettings {
   searchRrfK: number
   /** §5.7.7 Spec 1.4 I19 — Qwen3-Embedding model download status (4 phase). */
   searchQwen3DownloadStatus: 'idle' | 'downloading' | 'installed' | 'failed'
+  /**
+   * §5.20 Spec 1 I2 — query log capture toggle (default true, ON). When false,
+   * sidebar-chat skips the `.wikey/query-log.jsonl` append hook. Existing
+   * entries are preserved (deletion is a separate command, out of scope here).
+   */
+  knowledgeGapLogEnabled: boolean
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -198,6 +204,8 @@ const DEFAULT_SETTINGS: WikeySettings = {
   searchHybridEnabled: false,
   searchRrfK: 60,
   searchQwen3DownloadStatus: 'idle',
+  // §5.20 — knowledge gap log default ON (I2 LOCK).
+  knowledgeGapLogEnabled: true,
 }
 
 export type { WikeySettings }

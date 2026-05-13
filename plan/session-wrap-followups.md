@@ -1,10 +1,32 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-13 session 40 — §5.21 v0.5 종결 (Ingest mention guard paradigm 완성)**. 6 commit (e97a828 / deda7ce / cd745d4 / 834d50e / 26aa912 / 6e559ed). 회귀 1102 PASS / build 0 / validate-wiki **모든 검증 통과 0 errors**. 라이브 CDP smoke 3 cycle (cobit + Obsidian Web Clipper + iso) — iso v0.5 에서 Stage 2 pre-filter **~75% emit 감소 라이브 발동 확증** (8 → 2 concepts / 20 → 2 entries).
+> 최신 갱신: **2026-05-13 session 41 — §5.20 v0.3.1 종결 (Knowledge Gap management full SDD+TDD)**. 회귀 core 933/936 + obsidian 191/191 / build 0 / validate-wiki **모든 검증 통과 0 errors**. master fixture smoke 7/7 (10 query → 5 gap clusters → idempotent render). codex 3 cycle 검토 — cycle #1 (8 finding) → cycle #2 (3 잔류) → cycle #3 (master verdict APPROVE).
 >
-> ## 다음 세션 첫 액션 (Session 41) — §5.20 Knowledge Gap SDD+TDD 진입
+> ## 다음 세션 첫 액션 (Session 42) — Phase 5 잔여 4 subject 진입
 >
-> **§5.20 Knowledge Gap management (P2)** — §5.21 종결 후 Phase 5 잔여 5 subject 중 우선. Spec scope = query log capture + privacy + gap score formula + auto-report. §5.21 의 근본 원인 2 (mention only entity, 390건 67%) cover 영역 — §5.21 v0.4 에서 제거(clean) 영역은 cover, §5.20 는 진단/surface (gap candidate report). 동시 운영. 다음 = analyst Step A v0.2 (Q1 query log 저장 위치 / Q2 topic clustering LLM / Q3 자동 schedule scope / Q4 gap score formula 단위 LOCK).
+> **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** (4 subject). 우선순위 결정 → analyst Step A LOCK 진입.
+
+## Session 41 종결 종합 (2026-05-13)
+
+**§5.20 Knowledge Gap management (P2)** ✅ **v0.3.1 종결** — query log capture + gap score formula + auto-report (deterministic surface). Karpathy llm-wiki "Explicit" 원칙 강화 — 위키가 *무엇을 모르는지* 자체 `wiki/analyses/knowledge-gaps-YYYY-MM.md` 로 가시화.
+
+| 단계 | 핵심 |
+|------|------|
+| v0.2 → v0.3 | analyst LOCK Q1~Q4 + privacy I1~I3 + Karpathy 정합. codex cycle #1 8 finding → master sweep (HIGH-1 recommendation Out-of-scope / MEDIUM-1 created preservation / MEDIUM-2 single-process wording / MEDIUM-3 shape validate / LOW 1~3 + PII) |
+| v0.3.1 | codex cycle #2 3 잔류 sweep (todox body template 잔류 → 정합 / 공백 fence → `/```\s*(?:json\s*)?/gi` / queryIndices Number.isInteger) |
+| smoke | master fixture 7/7 — 10 query → 5 gap clusters (transformer freq=3 최대 gap) → idempotent render byte-identical |
+
+**산출**:
+- 신규 `wikey-core/src/knowledge-gap.ts` (~350 LOC) + 22 test (19 core + 3 obsidian)
+- 신규 `wikey-obsidian/src/sidebar-chat-helpers-querylog.ts` (`buildQueryLogEntry`)
+- 기존 edit: sidebar-chat hook + commands runner + settings toggle (default ON + PII warning)
+- helper export: `extractCreatedFromFrontmatter` / `validateClusterResultShape`
+
+**Karpathy 4 원칙 모두 충족** (Explicit gap as wiki page + Yours local-only fetch 0 + File over app JSONL + BYOAI basicModel resolve).
+
+**wikey schema 4 원칙 모두 충족** (Explicit / Yours / File over app / BYOAI).
+
+**Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** (4 subject — §5.20 완료로 -1).
 
 ## Session 40 종결 종합 (2026-05-13)
 
