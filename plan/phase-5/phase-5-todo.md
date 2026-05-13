@@ -915,10 +915,10 @@ Failed to fetch dynamically imported module: file:///Users/denny/Project/wikey/t
 - ✅ **Path A 패러다임** = "irreversible commitment" 가 아닌 "reversible experiment" — qmd 가 self-contained CLI script 이므로 회귀 비용 ≈ 0 (3 layer 안전망: git revert / qmd vendored 보존 / `WIKEY_SEARCH_BACKEND` feature flag)
 - ✅ **§5.7.4 진입 결정** — 다음 세션 (session 28) 에서 spec 작성 + 마이그레이션 진행
 
-### 5.7.4 Orama 마이그레이션 — Spec/Todo APPROVE_WITH_CHANGES (Session 28, 2026-05-09) → 다음 세션 구현 진입
+### 5.7.4 Orama 마이그레이션 ✅ 종결 (Session 29, 2026-05-09)
 
-> **상태** (2026-05-09 session 28 갱신): SDD+TDD spec v8 + todo v8 작성 완료 (7 cycle 누적). codex Mode D Panel cycle #7 verdict = **APPROVE_WITH_CHANGES** (HIGH 0 + MED 0 + LOW 1 fix 완료). 사용자 최종 승인 완료. 다음 세션 구현 진입.
-> #orama-migration #path-a #search-engine-replacement #spec-approved
+> **상태** (Session 29 종결): Step A 환경 + Step B TDD + Step C 라이브 smoke + Step D 문서 모두 `[x]`. spec v9 + todo v9 LOCK. codex 7 cycle APPROVE_WITH_CHANGES + 라이브 obsidian-cdp AC-L1/L2/L3 PASS + WIKEY_SEARCH_ENGINE=qmd 회귀 toggle 확증. WIKEY_SEARCH_ENGINE default `'orama'` (in-process Orama + Kiwi WASM tokenizer), qmd 는 fallback.
+> #orama-migration #path-a #search-engine-replacement #done
 
 **Spec/Todo 단일 소스** (실 작업 단위):
 - Spec (WHAT, 781 lines): [`plan/phase-5/phase-5-spec-5.7.4-orama-migration.md`](./phase-5-spec-5.7.4-orama-migration.md) — 28 AC + 14 Risk + 20 anchor self-check
