@@ -25,7 +25,7 @@ import { execSync } from 'node:child_process'
 import { spawn } from 'node:child_process'
 import { existsSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import type { SubscriptionProvider } from './types.js'
 
 /**
@@ -155,6 +155,34 @@ export function __resetCliBinaryResolutionCache(): void {
 }
 
 /**
+ * §5.6.4 follow-up (2026-05-14) — build PATH for child spawn so the resolved
+ * CLI's shebang (`#!/usr/bin/env node`) can locate its interpreter even when
+ * the parent process (e.g. Obsidian renderer) has a minimal PATH.
+ *
+ * Order: cliDir → /opt/homebrew/bin → /usr/local/bin → cmux bundle bin →
+ * every nvm node bin → process.env.PATH. Dedupe preserves first-seen order so
+ * the directory containing `cliPath` always wins (matches the resolver's own
+ * preference order).
+ */
+function buildAugmentedPath(cliPath: string): string {
+  const segments = [
+    dirname(cliPath),
+    ...STATIC_FALLBACK_DIRS,
+    ...nvmCandidateDirs(),
+    process.env.PATH ?? '',
+  ].filter((s) => s.length > 0)
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const s of segments) {
+    if (!seen.has(s)) {
+      seen.add(s)
+      out.push(s)
+    }
+  }
+  return out.join(':')
+}
+
+/**
  * §4.6 — per-CLI binary locations. Lazy-resolved via `resolveCliBinary` so the
  * effective path follows env override → PATH → static fallbacks. Existing
  * consumers (`CLI_DEFAULT_BINARY.gemini` etc.) keep working unchanged because
@@ -260,7 +288,20 @@ export async function spawnCliPrompt(
     signal: internalAc.signal,
     stdio: ['pipe', 'pipe', 'pipe'],
   }
-  if (opts.env !== undefined) spawnOpts.env = opts.env
+  if (opts.env !== undefined) {
+    spawnOpts.env = opts.env
+  } else {
+    // §5.6.4 follow-up (2026-05-14, user raise E0001): Obsidian renderer's
+    // process.env.PATH = `/usr/bin:/bin` only. The 3 external CLIs (gemini /
+    // claude / codex) ship as Node scripts with shebang `#!/usr/bin/env node`,
+    // so without PATH augmentation the child's `env` cannot resolve `node` and
+    // exits 127 ("env: node: No such file or directory"). resolveCliBinary
+    // already returns the absolute path of the CLI itself; we additionally
+    // prepend dirname(cliPath) so node co-located in the same nvm/Homebrew bin
+    // directory is also discoverable. Static fallback dirs cover the common
+    // install locations for shells launched outside a login environment.
+    spawnOpts.env = { ...process.env, PATH: buildAugmentedPath(cliPath) }
+  }
 
   return await new Promise<SpawnCliResult>((resolve, reject) => {
     let child

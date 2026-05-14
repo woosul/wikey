@@ -100,4 +100,73 @@ describe('§5.6.4 spawnCliPrompt — argv / stdin / exit contract', () => {
     // canonicalize of large sources routinely exceeded the 60s ceiling.
     expect(CLI_DEFAULT_TIMEOUT_MS).toBe(600_000)
   })
+
+  it('AC-A3.8: opts.env undefined → child PATH augmented with cliDir + STATIC_FALLBACK_DIRS', async () => {
+    // §5.6.4 follow-up (2026-05-14): User raise E0001 — Obsidian renderer spawns
+    // gemini CLI which has shebang `#!/usr/bin/env node`. Without PATH augmentation,
+    // child's `env` cannot resolve `node` (Obsidian PATH = /usr/bin:/bin only) →
+    // exit 127 "env: node: No such file or directory". Fix: prepend dirname(cliPath)
+    // + static fallback dirs (Homebrew/cmux/nvm) to PATH so the shebang's `env node`
+    // succeeds. Strict contract: temporarily clear process.env.PATH to a sentinel
+    // so the augmentation must actively re-introduce STATIC_FALLBACK_DIRS — without
+    // the fix the child sees only the sentinel.
+    const originalPath = process.env.PATH
+    process.env.PATH = '/sentinel/baseline'
+    try {
+      const result = await spawnCliPrompt('gemini', 'irrelevant', {
+        cliPathOverride: '/bin/sh',
+        argvOverride: ['-c', 'printf "PATH=%s\\n" "$PATH"'],
+      })
+      expect(result.exitCode).toBe(0)
+      expect(result.stdout).toMatch(/PATH=.*\/opt\/homebrew\/bin/)
+      expect(result.stdout).toMatch(/PATH=.*\/usr\/local\/bin/)
+      // Original baseline preserved (appended, not replaced)
+      expect(result.stdout).toContain('/sentinel/baseline')
+    } finally {
+      if (originalPath === undefined) delete process.env.PATH
+      else process.env.PATH = originalPath
+    }
+  })
+
+  it('AC-A3.9: opts.env explicit → respected verbatim (test override path preserved)', async () => {
+    // Counterpart to AC-A3.8 — when caller passes opts.env, the augmentation
+    // is skipped so test fixtures retain full control over the child's env.
+    const result = await spawnCliPrompt('gemini', 'irrelevant', {
+      cliPathOverride: '/bin/sh',
+      argvOverride: ['-c', 'printf "PATH=%s\\n" "$PATH"'],
+      env: { PATH: '/sentinel/path/only' },
+    })
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('PATH=/sentinel/path/only')
+    expect(result.stdout).not.toContain('/opt/homebrew/bin')
+  })
+
+  // AC-A3.10: PATH augmentation applies uniformly to all 4 SubscriptionProviders
+  // (user raise: gemini/anthropic/openai/ollama-cloud — confirm one fix covers all).
+  // ollama-cloud's chat path is HTTP API, but `ollama signin/signout` still goes
+  // through spawnCliPrompt, so the PATH guarantee must hold for it too.
+  describe.each([
+    ['gemini'],
+    ['anthropic'],
+    ['openai'],
+    ['ollama-cloud'],
+  ] as const)('AC-A3.10: PATH augmentation uniform across providers (%s)', (provider) => {
+    it('child PATH includes /opt/homebrew/bin even when parent PATH is minimal', async () => {
+      const originalPath = process.env.PATH
+      process.env.PATH = '/sentinel/baseline'
+      try {
+        const result = await spawnCliPrompt(provider, 'irrelevant', {
+          cliPathOverride: '/bin/sh',
+          argvOverride: ['-c', 'printf "PATH=%s\\n" "$PATH"'],
+        })
+        expect(result.exitCode).toBe(0)
+        expect(result.stdout).toMatch(/PATH=.*\/opt\/homebrew\/bin/)
+        expect(result.stdout).toMatch(/PATH=.*\/usr\/local\/bin/)
+        expect(result.stdout).toContain('/sentinel/baseline')
+      } finally {
+        if (originalPath === undefined) delete process.env.PATH
+        else process.env.PATH = originalPath
+      }
+    })
+  })
 })
