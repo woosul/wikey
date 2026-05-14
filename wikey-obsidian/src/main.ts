@@ -2056,15 +2056,11 @@ class ObsidianHttpClient implements HttpClient {
 /**
  * §5.6.6 v0.7 — resolve vendor OAuth client_id/secret. Priority:
  *   1. process.env (already set by tests / CI)
- *   2. wikey.conf (정식 설정 파일, 사용자 명시 2026-05-15) —
- *      `WIKEY_GEMINI_OAUTH_CLIENT_ID=...` `WIKEY_GEMINI_OAUTH_CLIENT_SECRET=...`
- *      `WIKEY_OPENAI_OAUTH_CLIENT_ID=...` `WIKEY_ANTHROPIC_OAUTH_CLIENT_ID=...`
- *      `GOOGLE_CLOUD_PROJECT=...` (user-owned GCP project, skips Code Assist
- *      auto-assigned hidden project — wikey-core resolveProjectId reads env first)
- *   3. Vendor CLI bundle grep (fallback — extracted PUBLIC values, not committed).
+ *   2. ~/.config/wikey/credentials.json — `gemini.{oauthClientId, oauthClientSecret,
+ *      cloudProject}` (user secret 격리, 2026-05-15 user request).
+ *   3. wikey.conf (Git tracked) — non-secret env vars only.
+ *   4. Vendor CLI bundle grep (fallback — extracted PUBLIC values, not committed).
  *
- * Values are PUBLIC inside each vendor's CLI bundle but match GitHub secret
- * scanning patterns; this indirection keeps wikey-core source string-free.
  * Failure is non-fatal — the corresponding REST client throws `auth-missing`
  * at first call when env stays unset.
  */
@@ -2073,7 +2069,27 @@ function bootstrapSubscriptionOAuthEnv(vaultBasePath?: string): void {
   const os = require('node:os') as typeof import('node:os')
   const path = require('node:path') as typeof import('node:path')
 
-  // Priority 2 — wikey.conf (정식 설정 파일).
+  // Priority 2 — ~/.config/wikey/credentials.json (user secret 격리).
+  try {
+    const credPath = path.join(os.homedir(), '.config', 'wikey', 'credentials.json')
+    if (fs.existsSync(credPath)) {
+      const cred = JSON.parse(fs.readFileSync(credPath, 'utf-8')) as {
+        gemini?: { oauthClientId?: string; oauthClientSecret?: string; cloudProject?: string }
+      }
+      const g = cred.gemini ?? {}
+      if (g.oauthClientId && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID) {
+        process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID = g.oauthClientId
+      }
+      if (g.oauthClientSecret && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET) {
+        process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET = g.oauthClientSecret
+      }
+      if (g.cloudProject && !process.env.GOOGLE_CLOUD_PROJECT) {
+        process.env.GOOGLE_CLOUD_PROJECT = g.cloudProject
+      }
+    }
+  } catch { /* credentials.json read error — fall through */ }
+
+  // Priority 3 — wikey.conf (Git tracked, non-secret only).
   try {
     const candidates = [vaultBasePath, process.cwd()].filter(Boolean) as string[]
     const confPath = candidates
