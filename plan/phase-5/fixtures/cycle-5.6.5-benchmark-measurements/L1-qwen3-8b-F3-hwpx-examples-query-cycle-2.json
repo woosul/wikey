@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 2,
+  "response": "문서는 주로 \"alley\"의 유형에 대한 예시 이미지를 제공하고 있으며, 이는 주로 도시 환경에서 발견되는 좁은 길이나 골목을 의미합니다. 이 문서는 주어진 이미지가 특정 유형의 골목이나 길을 설명하는 예시임을 나타내며, 주제는 도시 공간의 구조나 설계에 대한 것입니다.",
+  "latency_ms": 3490,
+  "token_count": 38,
+  "json_valid": true,
+  "pii_hits": []
+}

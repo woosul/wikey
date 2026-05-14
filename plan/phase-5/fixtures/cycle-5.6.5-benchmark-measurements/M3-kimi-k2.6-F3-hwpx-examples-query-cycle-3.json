@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서에서 설명하는 주요 대상은 **골목길(Alley)**의 유형을 보여주는 예시 이미지들입니다. 문서 제목이 \"Example Images for Type of the Alley\"로 되어 있으며, 다양한 종류의 골목길을 시각적으로 설명하고 있습니다.",
+  "latency_ms": 2785,
+  "token_count": 35,
+  "json_valid": true,
+  "pii_hits": []
+}

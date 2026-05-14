@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F2-rp1-peripherals",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "{\"refs\":[{\"target\":\"Creative Commons Attribution-NoDerivatives 4.0 International\",\"kind\":\"standard\"},{\"target\":\"Synopsys, Inc.\",\"kind\":\"organization\"},{\"target\":\"DesignWare\",\"kind\":\"product\"},{\"target\":\"ARM Limited\",\"kind\":\"organization\"},{\"target\":\"Cadence Design Systems, Inc.\",\"kind\":\"organization\"},{\"target\":\"Raspberry Pi products\",\"kind\":\"product\"}]}",
+  "latency_ms": 6208,
+  "token_count": 89,
+  "json_valid": true,
+  "pii_hits": []
+}

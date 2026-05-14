@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 2,
+  "response": "문서에서 설명하는 주요 제품은 제조 산업의 데이터 흐름을 체계적으로 관리하고 분석하기 위한 통합 솔루션 아키텍처입니다. 이 플랫폼은 설비와 IoT 센서에서 발생하는 대량의 데이터를 수집하는 **Peak9 Anchor**, 데이터를 정제하고 가공하는 **Peak9 Edge**, 빅데이터를 분석하여 인사이트를 도출하는 **Peak9 Insight**로 구성된 데이터 처리 계층과, 기업 특화형 로컬 인공지능을 실현하는 **Finetree AI Layer**(OCR, SQL, RAG, BOT)를 포함하고 있습니다. 또한 **Lotus Legacy** 시스템을 통해 기간계 데이터를 공급받아, 궁극적으로 기업의 의사결정을 지원하는 통합 아키텍처를 제공하는 것이 핵심입니다.",
+  "latency_ms": 2286,
+  "token_count": 94,
+  "json_valid": true,
+  "pii_hits": []
+}

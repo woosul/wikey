@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F2-rp1-peripherals",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Raspberry Pi Ltd\",\n      \"type\": \"Organization\",\n      \"aliases\": [\n        \"RPL\"\n      ]\n    },\n    {\n      \"name\": \"Creative Commons Attribution-NoDerivatives 4.0 International\",\n      \"type\": \"License\",\n      \"aliases\": [\n        \"CC BY-ND\"\n      ]\n    },\n    {\n      \"name\": \"Synopsys, Inc.\",\n      \"type\": \"Organization\",\n      \"aliases\": [\n        \"Synopsys\"\n      ]\n    },\n    {\n      \"name\": \"DesignWare\",\n      \"type\": \"IP Core\",",
+  "latency_ms": 17869,
+  "token_count": 122,
+  "json_valid": false,
+  "pii_hits": []
+}

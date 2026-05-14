@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F2-rp1-peripherals",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"Raspberry Pi Ltd\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND)\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Synopsys, Inc.\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"Synopsys\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"DesignWare\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"ARM Limited\",\n      \"kind",
+  "latency_ms": 18376,
+  "token_count": 122,
+  "json_valid": false,
+  "pii_hits": []
+}

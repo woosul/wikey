@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "SKIPPED (error or empty)"
+}

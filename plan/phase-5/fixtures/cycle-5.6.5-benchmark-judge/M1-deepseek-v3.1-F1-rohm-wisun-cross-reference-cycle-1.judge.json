@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 1,
+  "accuracy": 0.25,
+  "semantic": 0.25,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.25,\n  \"semantic\": 0.25\n}\n```"
+}

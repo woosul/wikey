@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"LOTUS PMS\",\n      \"type\": \"Product\",\n      \"aliases\": [\n        \"LOTUS PMS\",\n        \"프로젝트관리시스템\",\n        \"Project Management System\",\n        \"PMS\"\n      ]\n    },\n    {\n      \"name\": \"LOTUS SCM\",\n      \"type\": \"Product\",\n      \"aliases\": [\n        \"LOTUS SCM\",\n        \"공급망관리시스템\"\n      ]\n    },\n    {\n      \"name\": \"MOBILE APP\",\n      \"type\": \"Product\",\n      \"aliases\": [\n        \"MOBILE APP\",\n        \"모바일앱서비스\"\n      ]\n    },\n    {\n      \"name\": \"㈜굿스트림\",\n      \"type\": \"Organization\",\n      \"aliases\": [\n        \"㈜굿스트림\",\n        \"GOOD STREAM\"\n      ]\n    },\n    {\n      \"name\": \"PMBOK\",\n      \"type\": \"Standard\",\n      \"aliases\": [\n        \"PMBOK\",\n        \"Project Management Body of Knowledge\",\n        \"프로젝트관리 지식체계\"\n      ]\n    },\n    {\n      \"name\": \"WBS\",\n      \"type\": \"Concept\",\n      \"aliases\": [\n        \"WBS\",\n        \"Work Breakdown Structure\",\n        \"작업 분류 체계\"\n      ]\n    },\n    {\n      \"name\": \"Dashboard\",\n      \"type\": \"Feature\",\n      \"aliases\": [\n        \"대시보드\",\n        \"홈\",\n        \"Dashboard\",\n        \"Home\"\n      ]\n    },\n    {\n      \"name\": \"Groupware\",\n      \"type\": \"Feature\",\n      \"aliases\": [\n        \"그룹웨어\",\n        \"전자결재\",\n        \"업무공유형 그룹웨어\"\n      ]\n    }\n  ]\n}",
+  "latency_ms": 7498,
+  "token_count": 310,
+  "json_valid": true,
+  "pii_hits": []
+}

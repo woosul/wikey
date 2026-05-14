@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 2,
+  "accuracy": 1,
+  "semantic": 1,
+  "raw_judge": "{\"accuracy\": 1, \"semantic\": 1}"
+}

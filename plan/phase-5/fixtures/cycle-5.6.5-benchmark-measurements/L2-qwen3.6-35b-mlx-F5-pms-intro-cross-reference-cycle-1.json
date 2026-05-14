@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"LOTUS SCM\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"MOBILE APP\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"PMBOK\",\n      \"kind\": \"standard\"\n    }\n  ]\n}",
+  "latency_ms": 9544,
+  "token_count": 54,
+  "json_valid": true,
+  "pii_hits": []
+}

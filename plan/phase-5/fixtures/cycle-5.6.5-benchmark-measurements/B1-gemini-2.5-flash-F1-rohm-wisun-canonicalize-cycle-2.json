@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"ROHM\",\n      \"type\": \"Company\",\n      \"aliases\": [\"로옴\"]\n    },\n    {\n      \"name\": \"Wi-SUN JUTA\",\n      \"type\": \"Communication Standard\",\n      \"aliases\": [\"Wi-SUN JUTA\", \"무선 통신 규격 「Wi-SUN JUTA」\"]\n    },\n    {\n      \"name\": \"Smart Meter\",\n      \"type\": \"Product Category\",\n      \"aliases\": [\"스마트미터\"]\n    },\n    {\n      \"name\": \"Wireless Communication Module\",\n      \"type\": \"Product Category\",\n      \"aliases\": [\"무선 통신 모듈\"]\n    }\n  ]\n}\n```",
+  "latency_ms": 4697,
+  "token_count": 122,
+  "json_valid": true,
+  "pii_hits": []
+}

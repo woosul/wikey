@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"굿스트림\",\n      \"type\": \"COMPANY\",\n      \"aliases\": [\"GOOD STREAM\", \"( 주 ) 굿스트림\", \"㈜굿스트림\"]\n    },\n    {\n      \"name\": \"LOTUS PMS\",\n      \"type\": \"SOFTWARE\",\n      \"aliases\": [\"프로젝트관리시스템\", \"PMS\"]\n    },\n    {\n      \"name\": \"LOTUS SCM\",\n      \"type\": \"SOFTWARE\",\n      \"aliases\": [\"공급망관리시스템\"]\n    },\n    {\n      \"name\": \"MOBILE APP\",\n      \"type\": \"SOFTWARE\",\n      \"aliases\": [\"모바일앱서비스\"]\n    },\n    {\n      \"name\": \"PMBOK\",\n      \"type\": \"METHODOLOGY\",\n      \"aliases\": [\"Project Management Body of Knowledge\", \"프로젝트관리 지식체계\"]\n    },\n    {\n      \"name\": \"WBS\",\n      \"type\": \"METHODOLOGY\",\n      \"aliases\": [\"Work Breakdown Structure\", \"작업 분류 체계\"]\n    }\n  ]\n}\n```",
+  "latency_ms": 12544,
+  "token_count": 177,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,9 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "cross-reference",
+  "cycle": 3,
+  "accuracy": 0.5,
+  "semantic": 0.5,
+  "raw_judge": "{\"accuracy\": 0.5, \"semantic\": 0.5}"
+}

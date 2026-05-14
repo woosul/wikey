@@ -1,0 +1,11 @@
+{
+  "task": "canonicalize",
+  "fixture": "F3-hwpx-examples",
+  "model_outputs": {
+    "gemini": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Alley Type\",\n      \"type\": \"Architectural Feature Type\",\n      \"aliases\": [\n        \"Type of the Alley\"\n      ]\n    }\n  ]\n}\n```",
+    "claude": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"The Alley\",\n      \"type\": \"Location\",\n      \"aliases\": [\"Type of the Alley\"]\n    }\n  ]\n}\n```",
+    "openai": ""
+  },
+  "majority_vote": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Alley Type\",\n      \"type\": \"Architectural Feature Type\",\n      \"aliases\": [\n        \"Type of the Alley\"\n      ]\n    }\n  ]\n}\n```",
+  "dissent": false
+}

@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\"refs\":[{\"target\":\"LOTUS PMS\",\"kind\":\"product\"},{\"target\":\"LOTUS SCM\",\"kind\":\"product\"},{\"target\":\"MOBILE APP\",\"kind\":\"product\"},{\"target\":\"PMBOK\",\"kind\":\"standard\"},{\"target\":\"GOOD STREAM\",\"kind\":\"organization\"},{\"target\":\"㈜굿스트림\",\"kind\":\"organization\"}]}",
+  "latency_ms": 2548,
+  "token_count": 64,
+  "json_valid": true,
+  "pii_hits": []
+}

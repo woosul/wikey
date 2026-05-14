@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "accuracy": 0.5,
+  "semantic": 0.5,
+  "raw_judge": "{\"accuracy\": 0.5, \"semantic\": 0.5}"
+}

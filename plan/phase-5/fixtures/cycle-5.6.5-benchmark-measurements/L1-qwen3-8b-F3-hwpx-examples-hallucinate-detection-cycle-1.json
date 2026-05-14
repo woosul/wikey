@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "response": "{\n  \"facts\": [\n    {\n      \"statement\": \"Example Images for Type of the Alley\",\n      \"evidence_quote\": \"Example Images for Type of the Alley\"\n    },\n    {\n      \"statement\": \"![image](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAmAAAAFPCAYAAADqeXKuAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAIdUAACHVAQSctJ0AAIkASURBVHhe7b0HuBXFuq197z33nv+cs/N2b3WbkZwlI4KiSFBUjJgBAQNiBMwBBUQUQRRFFLOCGFBQERAEBSQjOUnOmUVmEb9/vgXFbtuec8W54nifZzxrze7q6p7dX1WNrqru+b9MCCGEEELkKDJgQgghhBA5jAyYEEIIIUQOIwMmhBBCCJHDyIAJIYQQQuQwMmBCCCGEEDmMDJgQQgghRA4jAyaEEEIIkcPIgAkhhBBC5DAyYEIIIYQQOYwMmBBCCCFEDiMDJoQQQgiRw8iACSGEEELkMDJgQgghhBA5jAyYEEIIIUQOIwMmhBBCCJHDyIAJIYQQQuQwMmBCCCGEEDmMDJgQQgghRA4jAyaEEEIIkcPIgAkhhBBC5DDJNWBHjtjh/dts8aSP7IkWTe2KRo2sUUJdak1bdbB3f1xj2/ceOZbJ7zmyN8VWj3nd7mvV2tr3GGK/bt1jh46t+y2HbPeWhTbo+bbWvMV91m/cOtuRGj/fjHBo/x5bN3u4vdX1Ybv95qZ2c8v7rGu/r23m6p124FAm9nHkgO3ZOscGv/a4Nb+ysV0SeX7+rUuvuNbu6vy+TVy8zQ5mZn+5yhE7sHeLzR7ax+6/vr7VqFLd6l7ZyroNWXJsfYAjhyx110abP3maLVizyfbFYurQzk0275On7JrrW1u3wYvtwLGkyeZI7Fj2bl9rkz7tbm2bXW/N7nnJvl+1zQ740x87tiMHU23n6un25WtP2l0PvmRfT15sG9ZMtwHPdbC2D3SzoUu32sFYOiGEEIWbpBuwQ/s22NSvO1rDs0+w/+9//S/7Xwn1H/aPkufbo58uss27Dx/L5Pcc2bPZFg6416qVKGnnteht09bt+HcjGCRmaravnWQ9rq9sZxWtZg99sdS2JjB26eOwpe5YbT/662AXlz7J/vv//m/73//7qP7v//zTyjVsa++OW2V7DsQ//iiOHNprW+cPsWduOd/OOuGv9uc//L//tD+fXMpafbz2WIqjHDl8IGZmptiHHVtaw2sfti+nrLL9hw/b7vUL7aPW5exvZ1a1h4dsjWO+sxl3M7HL1k3/xNpfVtH+9v/+204q1dieH7PS9h48dv5dmt22ZtLn9uQNNa3iFR1s4PgFtmL6h9a2fi2r2vAhG7ZSBkwIIUTShyCPuF6D1D07bOPaNbZ61SpbtXKZLZw1wl554BqrXrqa3dzlI/tx9hJbuXKlrZqtX7Nuo23fc9AOJfAvuW",
+  "latency_ms": 47829,
+  "token_count": 390,
+  "json_valid": false,
+  "pii_hits": []
+}

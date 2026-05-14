@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F4-business-registration",
+  "task": "brief",
+  "cycle": 3,
+  "accuracy": 0.4,
+  "semantic": 0.5,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.4,\n  \"semantic\": 0.5\n}\n```"
+}

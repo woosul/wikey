@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F4-business-registration",
+  "task": "cross-reference",
+  "cycle": 1,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "{\"accuracy\": 0, \"semantic\": 0}"
+}

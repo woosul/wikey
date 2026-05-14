@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서는 주식회사 굿스트림의 사업자등록증으로, 주요 내용은 이 회사가 소프트웨어 개발·자문·공급과 무선통신 응용 장치 제조를 핵심 사업으로 하고 있다는 점이에요.",
+  "latency_ms": 3112,
+  "token_count": 23,
+  "json_valid": true,
+  "pii_hits": []
+}

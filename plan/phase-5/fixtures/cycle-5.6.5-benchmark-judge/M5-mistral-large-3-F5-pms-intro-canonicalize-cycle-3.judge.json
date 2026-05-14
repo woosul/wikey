@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 3,
+  "accuracy": 0.4,
+  "semantic": 0.4,
+  "raw_judge": "{\"accuracy\": 0.4, \"semantic\": 0.4}"
+}

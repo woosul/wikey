@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"로옴\",\n      \"type\": \"기업\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"Wi-SUN JUTA\",\n      \"type\": \"무선통신규격\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"스마트미터\",\n      \"type\": \"제품\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"무선통신모듈\",\n      \"type\": \"제품\",\n      \"aliases\": []\n    }\n  ]\n}\n```",
+  "latency_ms": 3554,
+  "token_count": 87,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서의 주요 주제는 Raspberry Pi 5에 사용하기 위해 Raspberry Pi가 설계한 주변기기 컨트롤러인 **RP1**입니다. RP1은 PCIe 2.0 x4 버스를 통해 애플리케이션 프로세서(AP)에 연결되며, Raspberry Pi 5의 외부 인터페이스를 위한 다양한 디지털 컨트롤러와 아날로그 PHY를 통합하는 사우스브리지 역할을 수행합니다.",
+  "latency_ms": 2086,
+  "token_count": 50,
+  "json_valid": true,
+  "pii_hits": []
+}

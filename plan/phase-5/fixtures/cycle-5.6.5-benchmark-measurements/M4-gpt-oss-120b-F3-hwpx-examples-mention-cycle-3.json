@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"Example Images for Type of the Alley\",\n      \"normalized\": \"example images for type of the alley\"\n    },\n    {\n      \"surface\": \"Alley\",\n      \"normalized\": \"alley\"\n    }\n  ]\n}",
+  "latency_ms": 5690,
+  "token_count": 55,
+  "json_valid": true,
+  "pii_hits": []
+}

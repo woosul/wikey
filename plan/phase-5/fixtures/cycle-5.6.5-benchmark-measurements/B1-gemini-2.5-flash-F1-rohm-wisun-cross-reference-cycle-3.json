@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"Wi-SUN JUTA\",\n      \"kind\": \"standard\"\n    }\n  ]\n}\n```",
+  "latency_ms": 1257,
+  "token_count": 25,
+  "json_valid": true,
+  "pii_hits": []
+}

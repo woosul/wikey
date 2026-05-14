@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 2,
+  "accuracy": 0.6,
+  "semantic": 0.7,
+  "raw_judge": "{\"accuracy\": 0.6, \"semantic\": 0.7}"
+}

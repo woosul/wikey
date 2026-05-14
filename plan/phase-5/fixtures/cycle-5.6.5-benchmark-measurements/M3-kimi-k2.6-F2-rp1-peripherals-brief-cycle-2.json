@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 2,
+  "response": "이 문서는 Raspberry Pi 5용 주변 장치 컨트롤러인 RP1에 대한 기술 문서입니다. 시스템 설명, 주소 맵, 클럭 설정, GPIO, UART, PWM, I2C, SPI 등 저속 주변 장치부터 SDIO, USB, PCIe, 이더넷, 디스플레이, 카메라, DMA까지 다양한 하드웨어 구성 요소와 레지스터 정보를 상세히 다루고 있습니다. 문서는 Creative Commons BY-ND 4.0 라이선스로 제공되며, Raspberry Pi 제품 사용에 대한 법적 면책 조항과 고위험 활동 적합성 부인 내용을 포함하고 있습니다.",
+  "latency_ms": 5493,
+  "token_count": 74,
+  "json_valid": true,
+  "pii_hits": []
+}

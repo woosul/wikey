@@ -1,0 +1,9 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 2,
+  "accuracy": 0.2,
+  "semantic": 0.2,
+  "raw_judge": "{\"accuracy\": 0.2, \"semantic\": 0.2}"
+}

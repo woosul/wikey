@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "{\"refs\":[]}",
+  "latency_ms": 4281,
+  "token_count": 3,
+  "json_valid": true,
+  "pii_hits": []
+}

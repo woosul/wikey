@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 2,
+  "response": "이 문서는 Raspberry Pi RP1 Southbridge에 대한 기술 문서로, 라즈베리 파이 5에 사용되는 주변 장치 컨트롤러인 RP1의 하드웨어 사양과 기능을 상세히 설명하고 있습니다. RP1은 PCIe 2.0 x4 버스를 통해 응용 프로세서(AP)에 연결되며, 다양한 디지털 컨트롤러와 아날로그 PHY를 통합하여 라즈베리 파이 5의 외부 인터페이스를 관리합니다. 또한, 문서에는 저속 주변 장치, SDIO, USB, PCI Express 엔드포인트 컨트롤러, 이더넷, 디스플레이 및 카메라, DMA 등 다양한 하위 시스템에 대한 레지스터 맵과 동작 원리가 포함되어 있습니다.",
+  "latency_ms": 3607,
+  "token_count": 82,
+  "json_valid": true,
+  "pii_hits": []
+}

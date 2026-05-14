@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\"refs\": [\n  {\"target\": \"Finetree AI Layer\", \"kind\": \"product\"},\n  {\"target\": \"Peak9 Insight\", \"kind\": \"product\"},\n  {\"target\": \"Peak9 Edge\", \"kind\": \"product\"},\n  {\"target\": \"Peak9 Anchor\", \"kind\": \"product\"},\n  {\"target\": \"Lotus Legacy\", \"kind\": \"product\"},\n  {\"target\": \"Lotus:: SRM\", \"kind\": \"product\"},\n  {\"target\": \"Lotus:: MES\", \"kind\": \"product\"},\n  {\"target\": \"Lotus:: PMS\", \"kind\": \"product\"},\n  {\"target\": \"Finetree:: OCR\", \"kind\": \"product\"},\n  {\"target\": \"Finetree:: SQL\", \"kind\": \"product\"},\n  {\"target\": \"Finetree:: RAG\", \"kind\": \"product\"},\n  {\"target\": \"Finetree:: BOT\", \"kind\": \"product\"},\n  {\"target\": \"Peak9:: Anchor\", \"kind\": \"product\"},\n  {\"target\": \"Peak9:: Edge\", \"kind\": \"product\"},\n  {\"target\": \"Peak9:: Insight\", \"kind\": \"product\"},\n  {\"target\": \"Peak9:: Rail\", \"kind\": \"product\"},\n  {\"target\": \"Peak9:: RFID\", \"kind\": \"product\"},\n  {\"target\": \"REST API GW\", \"kind\": \"standard\"},\n  {\"target\": \"SSO/OAuth\", \"kind\": \"standard\"},\n  {\"target\": \"OPC/UA\", \"kind\": \"standard\"},\n  {\"target\": \"MQTT\", \"kind\": \"standard\"},\n  {\"target\": \"Modbus\", \"kind\": \"standard\"},\n  {\"target\": \"TCP\", \"kind\": \"standard\"},\n  {\"target\": \"TRDP\", \"kind\": \"standard\"},\n  {\"target\": \"ETH\", \"kind\": \"standard\"},\n  {\"target\": \"ECN/ETB\", \"kind\": \"standard\"},\n  {\"target\": \"RS485\", \"kind\": \"standard\"},\n  {\"target\": \"DI/DO\", \"kind\": \"standard\"},\n  {\"target\": \"GDPR\", \"kind\": \"standard\"},\n  {\"target\": \"MES\", \"kind\": \"product\"},\n  {\"target\": \"ERP\", \"kind\": \"product\"},\n  {\"target\": \"SCADA\", \"kind\": \"product\"},\n  {\"target\": \"PLM\", \"kind\": \"product\"},\n  {\"target\": \"IoT\", \"kind\": \"product\"},\n  {\"target\": \"Sensor\", \"kind\": \"product\"},\n  {\"target\": \"SRM\", \"kind\": \"product\"},\n  {\"target\": \"PMS\", \"kind\": \"product\"}\n]}",
+  "latency_ms": 7575,
+  "token_count": 427,
+  "json_valid": true,
+  "pii_hits": []
+}

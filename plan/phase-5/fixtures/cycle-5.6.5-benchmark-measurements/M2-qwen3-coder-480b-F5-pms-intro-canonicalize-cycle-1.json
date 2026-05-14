@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "{\"entities\":[{\"name\":\"LOTUS PMS\",\"type\":\"제품\",\"aliases\":[\"LOTUS PMS\"]},{\"name\":\"프로젝트관리시스템\",\"type\":\"솔루션\",\"aliases\":[\"Project Management System\",\"PMS\"]},{\"name\":\"제조 협업서비스\",\"type\":\"서비스\",\"aliases\":[\"제조 협업서비스\"]},{\"name\":\"LOTUS SCM\",\"type\":\"솔루션\",\"aliases\":[\"공급망관리시스템\"]},{\"name\":\"MOBILE APP\",\"type\":\"솔루션\",\"aliases\":[\"모바일앱서비스\"]},{\"name\":\"GOOD STREAM\",\"type\":\"회사\",\"aliases\":[\"㈜굿스트림\",\"( 주 ) 굿스트림\"]},{\"name\":\"PMBOK\",\"type\":\"표준\",\"aliases\":[\"Project Management Body of Knowledge\",\"프로젝트관리 지식체계\"]}]}",
+  "latency_ms": 9690,
+  "token_count": 121,
+  "json_valid": true,
+  "pii_hits": []
+}

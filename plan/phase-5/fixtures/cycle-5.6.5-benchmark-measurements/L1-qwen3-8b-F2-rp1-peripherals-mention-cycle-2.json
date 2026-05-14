@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F2-rp1-peripherals",
+  "task": "mention",
+  "cycle": 2,
+  "response": "{\"mentions\":[{\"surface\":\"Raspberry Pi Ltd\",\"normalized\":\"Raspberry Pi Ltd\"},{\"surface\":\"Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND)\",\"normalized\":\"Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND)\"},{\"surface\":\"Synopsys, Inc\",\"normalized\":\"Synopsys, Inc\"},{\"surface\":\"Synopsys\",\"normalized\":\"Synopsys\"},{\"surface\":\"DesignWare\",\"normalized\":\"DesignWare\"},{\"surface\":\"ARM Limited\",\"normalized\":\"ARM Limited\"},{\"surface\":\"Cadence Design Systems, Inc\",\"normalized\":\"Cadence Design Systems, Inc\"},{\"surface\":\"RPL\",\"normalized\":\"Raspberry Pi Ltd\"},{\"surface\":\"Raspberry Pi products\",\"normalized\":\"Raspberry Pi products\"},{\"surface\":\"Raspberry Pi\",\"normalized\":\"Raspberry Pi\"},{\"surface\":\"High Risk Activities\",\"normalized\":\"High Risk Activities\"}]}",
+  "latency_ms": 6232,
+  "token_count": 198,
+  "json_valid": true,
+  "pii_hits": []
+}

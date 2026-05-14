@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "response": "```json\n{\n  \"facts\": [\n    {\n      \"statement\": \"The document contains example images for the type of the alley.\",\n      \"evidence_quote\": \"Example Images for Type of the Alley\"\n    }\n  ]\n}\n```",
+  "latency_ms": 3269,
+  "token_count": 49,
+  "json_valid": true,
+  "pii_hits": []
+}

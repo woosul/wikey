@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"IoT\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"AI\",\n      \"kind\": \"other\"\n    },\n    {\n      \"target\": \"XR\",\n      \"kind\": \"other\"\n    },\n    {\n      \"target\": \"REST API\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"SSO\",\n      \"kind\": \"other\"\n    },\n    {\n      \"target\": \"OAuth\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Webhook\",\n      \"kind\": \"other",
+  "latency_ms": 18971,
+  "token_count": 110,
+  "json_valid": false,
+  "pii_hits": []
+}

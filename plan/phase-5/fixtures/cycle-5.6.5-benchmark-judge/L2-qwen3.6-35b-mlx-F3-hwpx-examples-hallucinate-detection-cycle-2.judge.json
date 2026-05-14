@@ -1,0 +1,9 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0,\n  \"semantic\": 0\n}\n```"
+}

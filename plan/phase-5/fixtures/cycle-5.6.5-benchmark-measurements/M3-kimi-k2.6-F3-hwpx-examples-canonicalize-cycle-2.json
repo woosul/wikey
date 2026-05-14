@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "```json\n{\"entities\":[{\"name\":\"Alley\",\"type\":\"location\",\"aliases\":[]},{\"name\":\"Type of the Alley\",\"type\":\"document_section\",\"aliases\":[]},{\"name\":\"Example Images\",\"type\":\"document_section\",\"aliases\":[]}]}\n```",
+  "latency_ms": 3096,
+  "token_count": 52,
+  "json_valid": true,
+  "pii_hits": []
+}

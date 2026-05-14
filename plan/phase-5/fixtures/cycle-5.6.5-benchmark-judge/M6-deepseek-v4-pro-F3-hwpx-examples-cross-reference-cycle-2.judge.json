@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "cross-reference",
+  "cycle": 2,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "{\"accuracy\": 0.0, \"semantic\": 0.0}"
+}

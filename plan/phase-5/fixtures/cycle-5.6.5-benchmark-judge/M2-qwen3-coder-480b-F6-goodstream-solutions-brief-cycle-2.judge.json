@@ -1,0 +1,9 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 2,
+  "accuracy": 0.7,
+  "semantic": 0.8,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.7,\n  \"semantic\": 0.8\n}\n```"
+}

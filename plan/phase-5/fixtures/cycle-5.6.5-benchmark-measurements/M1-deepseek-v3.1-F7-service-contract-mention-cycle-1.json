@@ -1,0 +1,20 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\"mentions\": [\n  {\"surface\": \"SK 바이오텍\", \"normalized\": \"SK Biotek\"},\n  {\"surface\": \"전자구매시스템\", \"normalized\": \"Electronic Procurement System\"},\n  {\"surface\": \"₩241,000,000\", \"normalized\": \"241000000 KRW\"},\n  {\"surface\": \"VAT\", \"normalized\": \"Value Added Tax\"},\n  {\"surface\": \"₩76,000,000\", \"normalized\": \"76000000 KRW\"},\n  {\"surface\": \"6MM\", \"normalized\": \"6 Million\"},\n  {\"surface\": \"2026년 4월 10일\", \"normalized\": \"2026-04-10\"},\n  {\"surface\": \"2026년 10월 30일\", \"normalized\": \"2026-10-30\"},\n  {\"surface\": \"선급금\", \"normalized\": \"Advance Payment\"},\n  {\"surface\": \"보증증권\", \"normalized\": \"Surety Bond\"},\n  {\"surface\": \"중도금\", \"normalized\": \"Interim Payment\"},\n  {\"surface\": \"잔금\", \"normalized\": \"Final Payment\"},\n  {\"surface\": \"하자이행증권\", \"normalized\": \"Defect Liability Bond\"},\n  {\"surface\": \"주)세포아소프트\", \"normalized\": \"Sepoasoft Co., Ltd.\"},\n  {\"surface\": \"갑\", \"normalized\": \"Party A\"},\n  {\"surface\": \"주)굿스트림\", \"normalized\": \"Goodstream Co., Ltd.\"},\n  {\"surface\": \"을\", \"normalized\": \"Party B\"},\n  {\"surface\": \"SK 바이오텍 주식회사\", \"normalized\": \"SK Biotek Co., Ltd.\"},\n  {\"surface\": \"고객사\", \"normalized\": \"Client\"},\n  {\"surface\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717호\", \"normalized\": \"62 Digital-ro 31-gil, Guro-gu, Seoul, Artis Forum 714~717\"},\n  {\"surface\": \"119-81-95926\", \"normalized\": \"119-81-95926\"},\n  {\"surface\": \"이 희림\", \"normalized\": \"Lee Hee-rim\"},\n  {\"surface\": \"충북 청주시 흥덕 공단로 134,613\", \"normalized\": \"134,613 Heungdeok Gongdan-ro, Cheongju-si, Chungcheongbuk-do\"},\n  {\"surface\": \"301-86-19385\", \"normalized\": \"301-86-19385\"},\n  {\"surface\": \"김명 호\", \"normalized\": \"Kim Myeong-ho\"},\n  {\"surface\": \"턴키\", \"normalized\": \"Turnkey\"},\n  {\"surface\": \"전자입찰시스템\", \"normalized\": \"Electronic Bidding System\"},\n  {\"surface\": \"DB 설계\", \"normalized\": \"Database Design\"},\n  {\"surface\": \"M/M\", \"normalized\": \"Man Month\"},\n  {\"surface\": \"2026년 4월 20일\", \"normalized\": \"2026-04-20\"},\n  {\"surface\": \"백투백\", \"normalized\": \"Back-to-Back\"},\n  {\"surface\": \"Back-to-Back\", \"normalized\": \"Back-to-Back\"},\n  {\"surface\": \"지체상금\", \"normalized\": \"Delay Penalty\"},\n  {\"surface\": \"이행보증보험증권\", \"normalized\": \"Performance Bond Insurance Certificate\"},\n  {\"surface\": \"하자이행보증보험 증권\", \"normalized\": \"Defect Liability Bond Insurance Certificate\"},\n  {\"surface\": \"서울중앙지방법원\", \"normalized\": \"Seoul Central District Court\"}\n]}",
+  "latency_ms": 18303,
+  "token_count": 567,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 4
+    },
+    {
+      "kind": "account",
+      "count": 4
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "query",
+  "cycle": 2,
+  "accuracy": 1,
+  "semantic": 1,
+  "raw_judge": "```json\n{\n  \"accuracy\": 1,\n  \"semantic\": 1\n}\n```"
+}

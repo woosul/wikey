@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "accuracy": 0.3,
+  "semantic": 0.3,
+  "raw_judge": "{\"accuracy\": 0.3, \"semantic\": 0.3}"
+}

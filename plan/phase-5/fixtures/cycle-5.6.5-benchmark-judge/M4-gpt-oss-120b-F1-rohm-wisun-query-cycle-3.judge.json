@@ -1,0 +1,9 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "query",
+  "cycle": 3,
+  "accuracy": 1,
+  "semantic": 1,
+  "raw_judge": "```json\n{\n  \"accuracy\": 1,\n  \"semantic\": 1\n}\n```"
+}

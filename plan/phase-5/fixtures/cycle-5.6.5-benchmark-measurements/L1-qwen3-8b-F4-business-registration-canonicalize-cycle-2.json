@@ -1,0 +1,20 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\"entities\":[{\"name\":\"주식회사 굿스트림\",\"type\":\"organization\",\"aliases\":[\"주식회사 굿스트림\"]},{\"name\":\"김명호\",\"type\":\"person\",\"aliases\":[\"김명호\"]},{\"name\":\"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\",\"type\":\"location\",\"aliases\":[\"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\"]},{\"name\":\"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\",\"type\":\"location\",\"aliases\":[\"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\"]},{\"name\":\"청주 세무서장\",\"type\":\"organization\",\"aliases\":[\"청주 세무서장\"]},{\"name\":\"301-86-19385\",\"type\":\"identifier\",\"aliases\":[\"301-86-19385\"]},{\"name\":\"150111-0166385\",\"type\":\"identifier\",\"aliases\":[\"150111-0166385\"]},{\"name\":\"소프트웨어개발,자문 및 공급 무선통신응용장치제조\",\"type\":\"service\",\"aliases\":[\"소프트웨어개발,자문 및 공급 무선통신응용장치제조\"]},{\"name\":\"정정\",\"type\":\"reason\",\"aliases\":[\"정정\"]}]}",
+  "latency_ms": 11671,
+  "token_count": 174,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 2
+    },
+    {
+      "kind": "account",
+      "count": 2
+    }
+  ]
+}

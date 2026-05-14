@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 1,
+  "accuracy": 0.3,
+  "semantic": 0.2,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.3,\n  \"semantic\": 0.2\n}\n```"
+}

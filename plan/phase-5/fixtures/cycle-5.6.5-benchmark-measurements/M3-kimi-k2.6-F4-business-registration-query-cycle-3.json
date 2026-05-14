@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서는 주식회사 굿스트림이라는 법인사업자의 사업자등록증이며, 이 회사의 주요 사업 내용은 소프트웨어개발·자문 및 공급과 무선통신응용장치제조입니다. 따라서 이 문서에서 기술하는 주요 제품이나 서비스는 소프트웨어 관련 서비스와 무선통신응용장치 제조입니다.",
+  "latency_ms": 11150,
+  "token_count": 36,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"Bowling Green Alley\",\n      \"type\": \"alley_type\",\n      \"aliases\": [\"bowling_green\"]\n    },\n    {\n      \"name\": \"Narrow Alley\",\n      \"type\": \"alley_type\",\n      \"aliases\": [\"narrow\"]\n    },\n    {\n      \"name\": \"Courtyard Alley\",\n      \"type\": \"alley_type\",\n      \"aliases\": [\"courtyard\"]\n    },\n    {\n      \"name\": \"Residential Alley\",\n      \"type\": \"alley_type\",\n      \"aliases\": [\"residential\"]\n    },\n    {\n      \"name\": \"Commercial Alley\",\n      \"type\": \"alley_type\",\n      \"aliases\": [\"commercial\"]\n    },\n    {\n      \"name\": \"Pedestrian Alley\",\n      \"type\": \"alley_type\",\n      \"aliases\": [\"pedestrian\"]\n    }\n  ]\n}",
+  "latency_ms": 10335,
+  "token_count": 166,
+  "json_valid": true,
+  "pii_hits": []
+}

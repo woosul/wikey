@@ -1,0 +1,12 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "",
+  "latency_ms": 4307,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": [],
+  "error": "Ollama error: model 'mistral-large-3:675b' is temporarily overloaded, please retry shortly or try a different model (ref: 4de2124d-7e86-4661-af74-9a29128b3aed)"
+}

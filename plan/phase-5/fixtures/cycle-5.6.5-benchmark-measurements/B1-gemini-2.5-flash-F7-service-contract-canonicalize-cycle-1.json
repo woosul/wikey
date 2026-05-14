@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F7-service-contract",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"(주)세포아소프트\",\n      \"type\": \"Organization\",\n      \"aliases\": [\n        \"갑\",\n        \"도급인\"\n      ]\n    },\n    {\n      \"name\": \"(주)굿스트림\",\n      \"type\": \"Organization\",\n      \"aliases\": [\n        \"을\",\n        \"수급인\"\n      ]\n    },\n    {\n      \"name\": \"SK 바이오텍 주식회사\",\n      \"type\": \"Organization\",\n      \"aliases\": [\n        \"고객사\",\n        \"SK 바이오텍\"\n      ]\n    },\n    {\n      ",
+  "latency_ms": 17176,
+  "token_count": 105,
+  "json_valid": false,
+  "pii_hits": []
+}

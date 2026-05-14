@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"corporation\",\n      \"aliases\": [\"굿스트림\"]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"person\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134\",\n      \"type\": \"address\",\n      \"aliases\": [\"세중테크노밸리\"]\n    },\n    {\n      \"name\": \"청주 세무서장\",\n      \"type\": \"government_office\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 4085,
+  "token_count": 99,
+  "json_valid": true,
+  "pii_hits": []
+}

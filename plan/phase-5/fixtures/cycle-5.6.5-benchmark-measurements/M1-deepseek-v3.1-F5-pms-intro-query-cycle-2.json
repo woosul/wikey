@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "query",
+  "cycle": 2,
+  "response": "본 문서의 주요 주제는 중소 및 중견기업을 위한 프로젝트 기반 제조 협업 서비스인 LOTUS PMS(프로젝트관리시스템)입니다. 이 시스템은 제조업, IT 기업, 컨설팅 등 다양한 기업에서 프로젝트형 제품 개발 및 공급을 지원하는 솔루션으로, 자원 관리, 작업 계획, 진행 현황 추적, 성과 관리 등의 기능을 포함합니다. 또한, LOTUS PMS는 공급망관리시스템(LOTUS SCM) 및 모바일앱서비스(MOBILE APP)와의 통합 연계를 통해 종합적인 프로젝트 관리 효율성을 제공하는 것을 목표로 합니다.",
+  "latency_ms": 9385,
+  "token_count": 71,
+  "json_valid": true,
+  "pii_hits": []
+}

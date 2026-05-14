@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "brief",
+  "cycle": 1,
+  "response": "(주)세포아소프트와 (주)굿스트림은 SK 바이오텍의 전자구매시스템 구축 사업을 수행하기 위해 턴키 방식으로 용역 계약을 체결하였습니다. 계약 금액은 241,000,000원이며, 추가 업무에 대해서는 실제 투입 공수에 따라 정산됩니다. 대금 지급은 선급금, 중도금, 잔금으로 나뉘어지며, 고객사의 지급 조건에 따라 백투백 방식으로 진행됩니다.",
+  "latency_ms": 6488,
+  "token_count": 48,
+  "json_valid": true,
+  "pii_hits": []
+}

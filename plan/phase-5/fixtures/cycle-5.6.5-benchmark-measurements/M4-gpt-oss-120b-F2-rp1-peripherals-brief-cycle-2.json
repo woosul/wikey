@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 2,
+  "response": "이 문서는 Raspberry Pi Ltd.가 2023년에 발행한 문서의 저작권 및 Creative Commons Attribution‑NoDerivatives 4.0 International 라이선스를 명시하고, Synopsys, ARM, Cadence 등 여러 회사의 저작권이 포함되어 있음을 알립니다.  \n또한 Raspberry Pi 제품에 대한 기술·신뢰성 데이터는 “있는 그대로” 제공되며, 명시적·묵시적 보증을 부인하고, 사용으로 인한 손해에 대해 Raspberry Pi Ltd.는 책임을 지지 않습니다.  \n이 자료는 라즈베리 Pi 제품과 함께 사용할 경우에만 허가되며, 고위험 산업(예: 원자력, 항공 등)에서는 사용이 금지되고, 설계 지식이 있는 숙련된 사용자가 책임을 지고 활용해야 합니다.",
+  "latency_ms": 14343,
+  "token_count": 99,
+  "json_valid": true,
+  "pii_hits": []
+}

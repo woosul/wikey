@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"주식회사 세포아소프트\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"(주)세포아소프트\", \"세포아소프트\", \"갑\"]\n    },\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"(주)굿스트림\", \"굿스트림\", \"을\"]\n    },\n    {\n      \"name\": \"SK 바이오텍\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"고객사\"]\n    },\n    {\n      \"name\": \"이희림\",\n      \"type\": \"Person\",\n      \"aliases\": [\"이 희림\", \"세포아소프트 대표자\"]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"Person\",\n      \"aliases\": [\"김명 호\", \"굿스트림 대표자\"]\n    },\n    {\n      \"name\": \"SK 바이오텍 전자구매시스템 구축 계약\",\n      \"type\": \"Contract\",\n      \"aliases\": [\"전자구매시스템 구축 계약\", \"명 SK 바이오텍 전자구매시스템 구축 계약\"]\n    },\n    {\n      \"name\": \"SK 바이오텍 전자입찰시스템 재구축 프로젝트\",\n      \"type\": \"Project\",\n      \"aliases\": [\"전자입찰시스템 재구축 프로젝트\", \"SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역\"]\n    },\n    {\n      \"name\": \"2026-04-10\",\n      \"type\": \"Date\",\n      \"aliases\": [\"2026년 4월 10일\", \"2026 년 4월 10일\", \"2026년 4월 10 일\"]\n    },\n    {\n      \"name\": \"2026-04-10 to 2026-10-30\",\n      \"type\": \"DateRange\",\n      \"aliases\": [\"2026년 4월 10일 ~ 2026년 10월 30일\", \"2026 년 4월 10일 ~ 2026년 10월 30일\"]\n    },\n    {\n      \"name\": \"2026-04-20 to 2026-10-30\",\n      \"type\": \"DateRange\",\n      \"aliases\": [\"2026년 4월 20일 ~ 2026년 10월 30일\"]\n    },\n    {\n      \"name\": \"241,000,000 KRW\",\n      \"type\": \"Money\",\n      \"aliases\": [\"이억사천일백만원정\", \"₩241,000,000 원\", \"241,000,000원\"]\n    },\n    {\n      \"name\": \"76,000,000 KRW\",\n      \"type\": \"Money\",\n      \"aliases\": [\"₩76,000,000 원\", \"7,600 만 원\", \"7,600만원\"]\n    }\n  ]\n}",
+  "latency_ms": 24516,
+  "token_count": 380,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"기업\",\n      \"aliases\": [\"굿스트림\", \"Goodstream\"]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"인물\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"청주 세무서\",\n      \"type\": \"정부기관\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"세중테크노밸리\",\n      \"type\": \"건물/단지\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134\",\n      \"type\": \"주소\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"송정동\",\n      \"type\": \"지역\",\n      \"aliases\": []\n    }\n  ]\n}\n```",
+  "latency_ms": 8346,
+  "token_count": 134,
+  "json_valid": true,
+  "pii_hits": []
+}

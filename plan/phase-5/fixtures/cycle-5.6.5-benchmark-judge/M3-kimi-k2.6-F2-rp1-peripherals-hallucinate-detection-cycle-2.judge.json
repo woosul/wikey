@@ -1,0 +1,9 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "accuracy": 0.47,
+  "semantic": 0.47,
+  "raw_judge": "{\"accuracy\": 0.47, \"semantic\": 0.47}"
+}

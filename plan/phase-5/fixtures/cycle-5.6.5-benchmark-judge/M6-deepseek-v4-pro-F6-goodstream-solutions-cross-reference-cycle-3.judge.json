@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "cross-reference",
+  "cycle": 3,
+  "accuracy": 0.4,
+  "semantic": 0.4,
+  "raw_judge": "{\"accuracy\": 0.4, \"semantic\": 0.4}"
+}

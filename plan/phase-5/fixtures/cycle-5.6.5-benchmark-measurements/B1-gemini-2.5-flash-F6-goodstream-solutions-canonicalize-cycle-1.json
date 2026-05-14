@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Artificial Intelligence\",\n      \"type\": \"Technology\",\n      \"aliases\": [\n        \"AI\",\n        \"인공지능\"\n      ]\n    },\n    {\n      \"name\": \"User UI/UX\",\n      \"type\": \"Architecture Component\",\n      \"aliases\": [\n        \"Desktop\",\n        \"Web\",\n        \"Mobile\",\n        \"XR\",\n        \"Dashboard\",\n        \"AI Apps\"\n      ]\n    },\n    {\n      \"name\": \"API Gateway\",\n      \"type\": \"Architecture Component\",\n      \"aliases\": [\n        \"REST API GW\",\n        \"SSO/OAuth\",",
+  "latency_ms": 15979,
+  "token_count": 129,
+  "json_valid": false,
+  "pii_hits": []
+}

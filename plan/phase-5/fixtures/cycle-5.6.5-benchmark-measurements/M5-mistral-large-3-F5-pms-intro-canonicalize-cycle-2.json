@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "[\n  {\n    \"name\": \"LOTUS PMS\",\n    \"type\": \"Project Management System\",\n    \"aliases\": [\"LOTUS Project Management System\", \"PMS\"]\n  },\n  {\n    \"name\": \"GOOD STREAM\",\n    \"type\": \"Organization\",\n    \"aliases\": [\"(주) 굿스트림\", \"㈜굿스트림\"]\n  },\n  {\n    \"name\": \"LOTUS SCM\",\n    \"type\": \"Supply Chain Management System\",\n    \"aliases\": [\"공급망관리시스템\"]\n  },\n  {\n    \"name\": \"MOBILE APP\",\n    \"type\": \"Mobile Application\",\n    \"aliases\": []\n  },\n  {\n    \"name\": \"PMBOK\",\n    \"type\": \"Project Management Framework\",\n    \"aliases\": [\"Project Management Body of Knowledge\"]\n  },\n  {\n    \"name\": \"WBS\",\n    \"type\": \"Project Management Tool\",\n    \"aliases\": [\"Work Breakdown Structure\"]\n  },\n  {\n    \"name\": \"Dashboard & Home\",\n    \"type\": \"User Interface Component\",\n    \"aliases\": [\"구성원별 맞춤형 대시보드\"]\n  }\n]",
+  "latency_ms": 14250,
+  "token_count": 197,
+  "json_valid": true,
+  "pii_hits": []
+}

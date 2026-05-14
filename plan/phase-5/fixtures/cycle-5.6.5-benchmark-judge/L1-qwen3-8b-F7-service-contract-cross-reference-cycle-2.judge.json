@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 2,
+  "accuracy": 0.1,
+  "semantic": 0.1,
+  "raw_judge": "```json\n{\"accuracy\": 0.1, \"semantic\": 0.1}\n```"
+}

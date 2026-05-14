@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "```json\n{\"refs\":[{\"target\":\"Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND)\",\"kind\":\"standard\"},{\"target\":\"Synopsys, Inc.\",\"kind\":\"organization\"},{\"target\":\"DesignWare\",\"kind\":\"product\"},{\"target\":\"ARM Limited\",\"kind\":\"organization\"},{\"target\":\"Cadence Design Systems, Inc.\",\"kind\":\"organization\"},{\"target\":\"Raspberry Pi Ltd\",\"kind\":\"organization\"},{\"target\":\"Raspberry Pi 5\",\"kind\":\"product\"},{\"target\":\"Broadcom BCM2712\",\"kind\":\"product\"},{\"target\":\"PCIe 2.0 x4\",\"kind\":\"standard\"},{\"target\":\"RPL's Standard Terms\",\"kind\":\"document\"}]}\n```",
+  "latency_ms": 7765,
+  "token_count": 142,
+  "json_valid": true,
+  "pii_hits": []
+}

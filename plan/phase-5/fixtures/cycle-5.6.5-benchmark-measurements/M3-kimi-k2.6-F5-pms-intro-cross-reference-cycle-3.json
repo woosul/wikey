@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "```json\n{\n  \"refs\": [\n    {\"target\": \"LOTUS SCM\", \"kind\": \"product\"},\n    {\"target\": \"MOBILE APP\", \"kind\": \"product\"},\n    {\"target\": \"PMBOK(Project Management Body of Knowledge, 프로젝트관리 지식체계)\", \"kind\": \"standard\"},\n    {\"target\": \"Work Breakdown Structure;WBS\", \"kind\": \"standard\"},\n    {\"target\": \"GOOD STREAM\", \"kind\": \"organization\"},\n    {\"target\": \"굿스트림\", \"kind\": \"organization\"},\n    {\"target\": \"㈜굿스트림\", \"kind\": \"organization\"}\n  ]\n}\n```",
+  "latency_ms": 2210,
+  "token_count": 111,
+  "json_valid": true,
+  "pii_hits": []
+}

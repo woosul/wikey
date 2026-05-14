@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 특정 골목의 유형을 보여주는 예시 이미지입니다. 이미지에는 다양한 골목의 모습이 담겨 있으며, 주로 시각적 요소를 통해 골목의 특징을 전달하고 있습니다. 이 자료는 골목의 형태나 분위기를 이해하는 데 도움을 주는 시각적 참고 자료로 활용될 수 있습니다.",
+  "latency_ms": 13561,
+  "token_count": 37,
+  "json_valid": true,
+  "pii_hits": []
+}

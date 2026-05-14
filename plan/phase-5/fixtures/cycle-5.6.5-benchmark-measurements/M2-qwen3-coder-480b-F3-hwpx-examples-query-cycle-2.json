@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 2,
+  "response": "The primary subject or product described is the \"Type of the Alley,\" as indicated by the title of the document and the example images provided which seem to illustrate different types or categories of alleys.",
+  "latency_ms": 2566,
+  "token_count": 52,
+  "json_valid": true,
+  "pii_hits": []
+}

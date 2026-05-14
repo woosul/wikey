@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F7-service-contract",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서는 SK 바이오텍의 전자구매시스템 구축을 위한 용역 계약에 관한 것입니다. 구체적으로는 SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역을 다루고 있습니다. 따라서, 본 문서에서 설명하는 주된 대상 또는 제품은 SK 바이오텍의 전자구매 및 입찰 시스템을 구축하고 개발하는 사업이라고 할 수 있습니다.",
+  "latency_ms": 7902,
+  "token_count": 44,
+  "json_valid": true,
+  "pii_hits": []
+}

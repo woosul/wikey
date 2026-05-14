@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"Good Stream\",\n      \"type\": \"Company\",\n      \"aliases\": [\n        \"(주) 굿스트림 자산\",\n        \"㈜굿스트림\",\n        \"GOOD STREAM\"\n      ]\n    },\n    {\n      \"name\": \"LOTUS PMS\",\n      \"type\": \"Product\",\n      \"aliases\": [\n        \"LOTUS PMS\",\n        \"LOTUS PMS 개요\",\n        \"LOTUS PMS 활용 범위\",\n        \"LOTUS PMS 특장점\",\n        \"LOTUS PMS 구성원별 맞춤형 대시보드\",\n        \"Dashboard & Home\"\n      ]\n    },\n    {\n      \"name\": \"LOTUS SCM\",\n      \"type\": \"System\",\n      \"aliases\": [\n        \"LOTUS SCM\",\n        \"공급망관리시스템 (LOTUS SCM)\",\n        \"SCM\"\n      ]\n    },\n    {\n      \"name\": \"MOBILE APP\",\n      \"type\": \"Application\",\n      \"aliases\": [\n        \"MOBILE APP\",\n        \"모바일앱서비스\"\n      ]\n    },\n    {\n      \"name\": \"PMBOK\",\n      \"type\": \"Standard\",\n      \"aliases\": [\n        \"PMBOK\",\n        \"Project Management Body of Knowledge\",\n        \"프로젝트관리 지식체계\"\n      ]\n    },\n    {\n      \"name\": \"Project Management System\",\n      \"type\": \"Concept\",\n      \"aliases\": [\n        \"프로젝트관리시스템\",\n        \"Project Management System\"\n      ]\n    },\n    {\n      \"name\": \"Dashboard & Home\",\n      \"type\": \"Feature\",\n      \"aliases\": [\n        \"Dashboard & Home\",\n        \"구성원별 맞춤형 대시보드 (홈)\",\n        \"대시보드\",\n        \"홈\"\n      ]\n    },\n    {\n      \"name\": \"제품소개서 | LOTUS PMS\",\n      \"type\": \"Document\",\n      \"aliases\": [\n        \"제품소개서\",\n        \"LOTUS PMS 소개서\",\n        \"제품소개서 | LOTUS PMS\"\n      ]\n    },\n    {\n      \"name\": \"Version 1.0\",\n      \"type\": \"Version\",\n      \"aliases\": [\n        \"Ver 1.0\",\n        \"2022.08.15\"\n      ]\n    }\n  ]\n}",
+  "latency_ms": 23134,
+  "token_count": 389,
+  "json_valid": true,
+  "pii_hits": []
+}

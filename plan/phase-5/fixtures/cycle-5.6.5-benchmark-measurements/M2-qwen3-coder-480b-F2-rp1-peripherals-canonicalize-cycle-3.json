@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\"entities\":[{\"name\":\"Raspberry Pi Ltd\",\"type\":\"organization\",\"aliases\":[\"Raspberry Pi\"]},{\"name\":\"Synopsys, Inc.\",\"type\":\"organization\",\"aliases\":[\"Synopsys\",\"DesignWare\"]},{\"name\":\"ARM Limited\",\"type\":\"organization\",\"aliases\":[\"ARM\"]},{\"name\":\"Cadence Design Systems, Inc.\",\"type\":\"organization\",\"aliases\":[\"Cadence\"]},{\"name\":\"RP1\",\"type\":\"product\",\"aliases\":[\"RP1 Southbridge\",\"Raspberry Pi RP1\"]},{\"name\":\"BCM2712\",\"type\":\"product\",\"aliases\":[\"Broadcom BCM2712\"]},{\"name\":\"PCIe\",\"type\":\"technology\",\"aliases\":[\"PCI Express\"]},{\"name\":\"USB\",\"type\":\"technology\",\"aliases\":[\"Universal Serial Bus\"]},{\"name\":\"Ethernet\",\"type\":\"technology\",\"aliases\":[\"Ethernet\"]},{\"name\":\"DSI\",\"type\":\"interface\",\"aliases\":[\"Display Serial Interface\"]},{\"name\":\"CSI-2\",\"type\":\"interface\",\"aliases\":[\"Camera Serial Interface 2\"]},{\"name\":\"DMA\",\"type\":\"technology\",\"aliases\":[\"Direct Memory Access\"]},{\"name\":\"GPIO\",\"type\":\"interface\",\"aliases\":[\"General Purpose Input/Output\"]},{\"name\":\"UART\",\"type\":\"interface\",\"aliases\":[\"Universal Asynchronous Receiver/Transmitter\"]},{\"name\":\"PWM\",\"type\":\"interface\",\"aliases\":[\"Pulse Width Modulation\"]},{\"name\":\"I2C\",\"type\":\"interface\",\"aliases\":[\"Inter-Integrated Circuit\"]},{\"name\":\"SPI\",\"type\":\"interface\",\"aliases\":[\"Serial Peripheral Interface\"]},{\"name\":\"I2S\",\"type\":\"interface\",\"aliases\":[\"Inter-IC Sound\"]},{\"name\":\"SDIO\",\"type\":\"interface\",\"aliases\":[\"Secure Digital Input Output\"]}]}",
+  "latency_ms": 10768,
+  "token_count": 354,
+  "json_valid": true,
+  "pii_hits": []
+}

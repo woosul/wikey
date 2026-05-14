@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 3,
+  "response": "기업 데이터 플랫폼은 제조 산업에서 설비와 IoT 센서에서 발생하는 대량의 데이터를 체계적으로 수집, 분석하고, 빅데이터 기반의 기업 특화형 인공지능을 구현하여 기업의 의사결정을 지원하는 통합 아키텍처입니다. 이 플랫폼은 데이터 수집, 처리, 분석, 그리고 AI 기반의 인사이트 도출까지 포함하며, 다양한 솔루션 계층으로 구성되어 있습니다. 데이터는 Peak9 Anchor를 통해 원천 시스템에서 수집되고, Peak9 Edge에서 필터링 및 정제되어 Data Lake에 저장되며, Peak9 Insight와 Finetree AI Layer를 통해 분석 및 인공지능 기반의 서비스가 제공됩니다. 이는 기업의 데이터 흐름을 효율적으로 관리하고, 데이터 기반의 의사결정을 지원하는 종합적인 솔루션입니다.",
+  "latency_ms": 7593,
+  "token_count": 98,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,20 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"Company\",\n      \"aliases\": [\n        \"Goodstream Co., Ltd.\",\n        \"Goodstream\"\n      ]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"Person\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"301-86-19385\",\n      \"type\": \"BusinessRegistrationNumber\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"150111-0166385\",\n      \"type\": \"CorporateRegistrationNumber\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134, 613(송정동) 세중테크노밸리\",\n      \"type\": \"Address\",\n      \"aliases\": [\n        \"본점소재지\",\n        \"Headquarters address\"\n      ]\n    },\n    {\n      \"name\": \"서비스 제조업\",\n      \"type\": \"BusinessCategory\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"소프트웨어개발, 자문 및 공급, 무선통신응용장치제조\",\n      \"type\": \"BusinessItem\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"청주 세무서\",\n      \"type\": \"TaxOffice\",\n      \"aliases\": [\n        \"Cheongju Tax Office\"\n      ]\n    },\n    {\n      \"name\": \"2012-10-02\",\n      \"type\": \"EstablishmentDate\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"2014-09-01\",\n      \"type\": \"IssueDate\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 13355,
+  "token_count": 285,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 1
+    },
+    {
+      "kind": "account",
+      "count": 1
+    }
+  ]
+}

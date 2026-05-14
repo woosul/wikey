@@ -1,0 +1,9 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F1-rohm-wisun",
+  "task": "query",
+  "cycle": 2,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "ERROR: Gemini returned no content (finishReason: unknown): The service is currently unavailable."
+}

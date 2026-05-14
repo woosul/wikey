@@ -1,0 +1,20 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F4-business-registration",
+  "task": "mention",
+  "cycle": 2,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"301-86-19385\",\n      \"normalized\": \"301-86-19385\"\n    },\n    {\n      \"surface\": \"주식회사 굿스트림\",\n      \"normalized\": \"주식회사 굿스트림\"\n    },\n    {\n      \"surface\": \"김명호\",\n      \"normalized\": \"김명호\"\n    },\n    {\n      \"surface\": \"2012년 10월 02일\",\n      \"normalized\": \"2012-10-02\"\n    },\n    {\n      \"surface\": \"150111-0166385\",\n      \"normalized\": \"150111-0166385\"\n    },\n    {\n      \"surface\": \"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리\",\n      \"normalized\": \"충청북도 청주시 흥덕구 공단로 134, 613 (송정동) 세중테크노밸리\"\n    },\n    {\n      \"surface\": \"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\",\n      \"normalized\": \"충청북도 청주시 흥덕구 공단로 134, 613 (송정동)\"\n    },\n    {\n      \"surface\": \"서비스 제조업\",\n      \"normalized\": \"서비스 제조업\"\n    },\n    {\n      \"surface\": \"소프트웨어개발,자문 및 공급\",\n      \"normalized\": \"소프트웨어개발, 자문 및 공급\"\n    },\n    {\n      \"surface\": \"무선통신응용장치제조\",\n      \"normalized\": \"무선통신응용장치제조\"\n    },\n    {\n      \"surface\": \"정정\",\n      \"normalized\": \"정정\"\n    },\n    {\n      \"surface\": \"2014년 09월 01일\",\n      \"normalized\": \"2014-09-01\"\n    },\n    {\n      \"surface\": \"청주 세무서장\",\n      \"normalized\": \"청주세무서\"\n    }\n  ]\n}",
+  "latency_ms": 4318,
+  "token_count": 277,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 2
+    },
+    {
+      "kind": "account",
+      "count": 2
+    }
+  ]
+}

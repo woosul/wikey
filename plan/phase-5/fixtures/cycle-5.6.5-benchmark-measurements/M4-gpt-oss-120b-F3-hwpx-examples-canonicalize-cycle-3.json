@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"Alley\",\n      \"type\": \"Location\",\n      \"aliases\": [\n        \"The Alley\"\n      ]\n    },\n    {\n      \"name\": \"Example Images\",\n      \"type\": \"ImageCollection\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 12318,
+  "token_count": 58,
+  "json_valid": true,
+  "pii_hits": []
+}

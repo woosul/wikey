@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 3,
+  "accuracy": 0.65,
+  "semantic": 0.7,
+  "raw_judge": "{\"accuracy\": 0.65, \"semantic\": 0.7}"
+}

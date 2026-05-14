@@ -1,0 +1,11 @@
+{
+  "task": "cross-reference",
+  "fixture": "F4-business-registration",
+  "model_outputs": {
+    "gemini": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"사업자등록증\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"주식회사 굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"세중테크노밸리\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"청주 세무서\",\n      \"kind\": \"organization\"\n    }\n  ]\n}\n```",
+    "claude": "```json\n{\"refs\":[{\"target\":\"청주 세무서장\",\"kind\":\"organization\"}]}\n```",
+    "openai": "{\n  \"refs\": [\n    {\n      \"target\": \"주식회사 굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"세중테크노밸리\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"청주 세무서장\",\n      \"kind\": \"organization\"\n    }\n  ]\n}"
+  },
+  "majority_vote": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"사업자등록증\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"주식회사 굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"세중테크노밸리\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"청주 세무서\",\n      \"kind\": \"organization\"\n    }\n  ]\n}\n```",
+  "dissent": false
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "response": "{\n  \"facts\": []\n}",
+  "latency_ms": 5130,
+  "token_count": 5,
+  "json_valid": true,
+  "pii_hits": []
+}

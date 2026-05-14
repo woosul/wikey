@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "mention",
+  "cycle": 2,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"Example Images for Type of the Alley\",\n      \"normalized\": \"Example Images for Type of the Alley\"\n    }\n  ]\n}",
+  "latency_ms": 5267,
+  "token_count": 38,
+  "json_valid": true,
+  "pii_hits": []
+}

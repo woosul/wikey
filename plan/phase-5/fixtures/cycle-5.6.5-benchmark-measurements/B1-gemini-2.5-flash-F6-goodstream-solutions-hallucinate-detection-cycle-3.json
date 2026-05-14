@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "response": "```json\n{\n  \"facts\": [\n    {\n      \"statement\": \"기업 데이터 플랫폼은 설비와 IoT 센서에서 발생하는 대량의 데이터를 체계적으로 수집하고 분석하는 플랫폼이다.\",\n      \"evidence_quote\": \"기업 데이터 플랫폼은 설비와 IoT 센서에서 발생하는 대량의 데이터를 체계적으로 수집하고 분석하는 플랫폼과 빅데이터를 기반으로 기업 특화용 인공지능(Artificial Intelligence)을 실현하여, 기업의 의사결정을 지원하는 통합 아키텍처입니다.\"\n    },\n    {\n      \"statement\": \"기업 데이터 플랫폼은 빅데이터를 기반으로 기업 특화용 인공지능(Artificial Intelligence)을 실현한다.\",\n      \"evidence_quote",
+  "latency_ms": 15276,
+  "token_count": 101,
+  "json_valid": false,
+  "pii_hits": []
+}

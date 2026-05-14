@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 골목 유형을 설명하는 예시 이미지들을 포함하고 있습니다. 다양한 골목의 형태와 특징을 시각적으로 보여주며, 도시 계획이나 건축 관련 참고 자료로 활용될 수 있습니다. 이미지를 통해 골목의 공간적 구성과 디자인 요소를 이해할 수 있습니다.",
+  "latency_ms": 3745,
+  "token_count": 35,
+  "json_valid": true,
+  "pii_hits": []
+}

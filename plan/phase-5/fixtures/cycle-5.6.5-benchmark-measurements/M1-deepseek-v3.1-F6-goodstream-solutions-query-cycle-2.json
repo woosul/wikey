@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서에서 설명하는 주요 주제 또는 제품은 제조 산업을 위한 기업 데이터 플랫폼과 이를 구성하는 통합 솔루션 아키텍처입니다. 이는 설비와 IoT 센서에서 발생하는 대량의 데이터를 체계적으로 수집(Peak9 Anchor), 정제(Peak9 Edge), 저장(Data Lake)하고, 이를 기반으로 AI/ML 분석(Peak9 Insight) 및 기업 특화형 로컬 LLM AI 애플리케이션(Finetree AI Layer)을 구현하여 최종적으로 의사결정을 지원하는 종합적인 솔루션 제품군입니다.",
+  "latency_ms": 8013,
+  "token_count": 69,
+  "json_valid": true,
+  "pii_hits": []
+}

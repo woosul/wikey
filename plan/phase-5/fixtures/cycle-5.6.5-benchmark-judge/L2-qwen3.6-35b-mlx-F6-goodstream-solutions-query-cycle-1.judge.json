@@ -1,0 +1,9 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 1,
+  "accuracy": 0.7,
+  "semantic": 0.8,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.7,\n  \"semantic\": 0.8\n}\n```"
+}

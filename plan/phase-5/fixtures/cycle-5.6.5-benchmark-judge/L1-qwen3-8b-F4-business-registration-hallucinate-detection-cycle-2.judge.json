@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F4-business-registration",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "accuracy": 0.7,
+  "semantic": 0.7,
+  "raw_judge": "{\"accuracy\": 0.7, \"semantic\": 0.7}"
+}

@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "[\n  {\n    \"name\": \"로옴\",\n    \"type\": \"ORGANIZATION\",\n    \"aliases\": [\"ROHM\"]\n  },\n  {\n    \"name\": \"Wi-SUN JUTA\",\n    \"type\": \"TECHNOLOGY\",\n    \"aliases\": [\"Wi-SUN\"]\n  },\n  {\n    \"name\": \"스마트미터\",\n    \"type\": \"PRODUCT\",\n    \"aliases\": [\"Smart Meter\"]\n  }\n]",
+  "latency_ms": 10725,
+  "token_count": 64,
+  "json_valid": true,
+  "pii_hits": []
+}

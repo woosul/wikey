@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Finetree AI Layer\",\n      \"type\": \"Solution Layer\",\n      \"aliases\": [\"Finetree\"]\n    },\n    {\n      \"name\": \"Peak9 Insight\",\n      \"type\": \"Solution\",\n      \"aliases\": [\"Peak9 Insight\", \"Peak9:: Insight\", \"Insight\"]\n    },\n    {\n      \"name\": \"Peak9 Edge\",\n      \"type\": \"Solution\",\n      \"aliases\": [\"Peak9 Edge\", \"Peak9:: Edge\", \"Edge\"]\n    },\n    {\n      \"name\": \"Peak9 Anchor\",\n      \"type\": \"Solution\",\n      \"aliases\": [\"Peak",
+  "latency_ms": 17415,
+  "token_count": 120,
+  "json_valid": false,
+  "pii_hits": []
+}

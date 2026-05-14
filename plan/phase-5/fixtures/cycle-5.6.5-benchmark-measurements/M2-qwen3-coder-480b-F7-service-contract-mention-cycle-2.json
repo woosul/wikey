@@ -1,0 +1,12 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 2,
+  "response": "",
+  "latency_ms": 120003,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": [],
+  "error": "This operation was aborted"
+}

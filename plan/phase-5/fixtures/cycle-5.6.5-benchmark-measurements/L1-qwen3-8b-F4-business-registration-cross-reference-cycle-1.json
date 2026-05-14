@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F4-business-registration",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "{\"refs\":[]}",
+  "latency_ms": 1426,
+  "token_count": 3,
+  "json_valid": true,
+  "pii_hits": []
+}

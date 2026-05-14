@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"굿스트림\",\n      \"type\": \"Company\",\n      \"aliases\": [\"(주) 굿스트림\", \"GOOD STREAM\"]\n    },\n    {\n      \"name\": \"LOTUS PMS\",\n      \"type\": \"Product\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"프로젝트 기반 제조 협업서비스\",\n      \"type\": \"Service\",\n      \"aliases\": [\"중소/중견기업 프로젝트 기반 제조 협업서비스\"]\n    },\n    {\n      \"name\": \"프로젝트관리시스템\",\n      \"type\": \"Concept\",\n      \"aliases\": [\"PMS\"]\n    },\n    {\n      \"name\": \"Project Management Body of Knowledge\",\n      \"type\": \"Concept\",\n      \"aliases\": [\"PMBOK\", \"프로젝트관리 지식체계\"]\n    },\n    {\n      \"name\": \"LOTUS SCM\",\n      \"type\": \"Product\",\n      \"aliases\": [\"공급망관리시스템\"]\n    },\n    {\n      \"name\": \"MOBILE APP\",\n      \"type\": \"Product\",\n      \"aliases\": [\"모바일앱서비스\"]\n    }\n  ]\n}\n```",
+  "latency_ms": 14016,
+  "token_count": 189,
+  "json_valid": true,
+  "pii_hits": []
+}

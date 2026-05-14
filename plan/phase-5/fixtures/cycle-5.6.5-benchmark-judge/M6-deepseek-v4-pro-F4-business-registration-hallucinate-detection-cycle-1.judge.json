@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F4-business-registration",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "accuracy": 0.9,
+  "semantic": 0.9,
+  "raw_judge": "{\"accuracy\": 0.9, \"semantic\": 0.9}"
+}

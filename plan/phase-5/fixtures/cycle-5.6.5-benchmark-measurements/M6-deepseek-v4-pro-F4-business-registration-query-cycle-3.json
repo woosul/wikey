@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 3,
+  "response": "해요체로 답변드리겠습니다.  \n이 문서에 기술된 주요 대상은 '주식회사 굿스트림'이라는 법인 사업자예요. 사업의 종류를 보면 소프트웨어 개발, 자문 및 공급과 무선통신응용장치 제조를 주된 사업으로 하고 있어요.",
+  "latency_ms": 1960,
+  "token_count": 30,
+  "json_valid": true,
+  "pii_hits": []
+}

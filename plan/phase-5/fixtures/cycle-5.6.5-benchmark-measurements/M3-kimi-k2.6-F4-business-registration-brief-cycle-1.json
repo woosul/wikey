@@ -1,0 +1,20 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F4-business-registration",
+  "task": "brief",
+  "cycle": 1,
+  "response": "주식회사 굿스트림은 2012년 10월 2일에 개업한 법인사업자로, 사업자등록번호는 301-86-19385입니다. 이 회사는 충청북도 청주시 흥덕구 공단로 134에 본점과 사업장을 두고 있으며, 소프트웨어 개발·자문·공급과 무선통신응용장치 제조를 주된 사업으로 합니다. 2014년 9월 1일 청주세무서장으로부터 정정 교부된 이 등록증은 사업자단위과세 미적용 사업자임을 확인해 줍니다.",
+  "latency_ms": 4603,
+  "token_count": 54,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 1
+    },
+    {
+      "kind": "account",
+      "count": 1
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "brief",
+  "cycle": 2,
+  "accuracy": 0.8,
+  "semantic": 0.8,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.8,\n  \"semantic\": 0.8\n}\n```"
+}

@@ -1,0 +1,9 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "accuracy": 0.9,
+  "semantic": 0.9,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.9,\n  \"semantic\": 0.9\n}\n```"
+}

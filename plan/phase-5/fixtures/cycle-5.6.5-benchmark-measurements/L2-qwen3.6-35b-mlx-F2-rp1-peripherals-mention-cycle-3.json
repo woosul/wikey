@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F2-rp1-peripherals",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n\"mentions\": [\n{\"surface\": \"Raspberry Pi Ltd\", \"normalized\": \"Raspberry Pi Ltd\"},\n{\"surface\": \"Synopsys, Inc.\", \"normalized\": \"Synopsys, Inc.\"},\n{\"surface\": \"Synopsys\", \"normalized\": \"Synopsys\"},\n{\"surface\": \"DesignWare\", \"normalized\": \"DesignWare\"},\n{\"surface\": \"ARM Limited\", \"normalized\": \"ARM Limited\"},\n{\"surface\": \"Cadence Design Systems, Inc.\", \"normalized\": \"Cadence Design Systems, Inc.\"},\n{\"surface\": \"Raspberry Pi Ltd\", \"normalized\": \"Raspberry Pi Ltd\"},\n{\"surface\": \"RPL\", \"normalized\": \"Raspberry Pi Ltd\"},\n{\"surface\": \"Synopsys &amp; DesignWare\", \"normalized\": \"Synopsys & DesignWare\"},\n{\"surface\": \"Raspberry Pi products\", \"normalized\": \"Raspberry Pi products\"},\n{\"surface\": \"RPL's Standard Terms\", \"normalized\": \"RPL's Standard Terms\"}\n]\n}",
+  "latency_ms": 9346,
+  "token_count": 189,
+  "json_valid": true,
+  "pii_hits": []
+}

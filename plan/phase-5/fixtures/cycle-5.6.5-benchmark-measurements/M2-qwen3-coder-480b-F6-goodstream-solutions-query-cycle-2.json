@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서에서 설명하는 주요 제품은 기업의 데이터 흐름을 지원하는 솔루션 아키텍처입니다. 이 아키텍처는 설비와 IoT 센서에서 발생하는 대량의 데이터를 수집하고 분석하며, 빅데이터 기반의 인공지능(AI)을 통해 기업의 의사결정을 지원하는 통합 플랫폼입니다. 특히 제조 산업을 중심으로 설비 데이터 수집, 데이터 정제 및 분석, AI 기반 인사이트 도출까지 전 과정을 아우르는 솔루션들이 포함되어 있으며, Lotus, Peak9, Finetree 등의 브랜드 아래 다양한 기능의 제품들이 소개되어 있습니다.",
+  "latency_ms": 14769,
+  "token_count": 71,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "response": "{\"facts\": [\n  {\"statement\": \"기업 데이터 플랫폼은 설비와 IoT 센서에서 발생하는 대량의 데이터를 체계적으로 수집하고 분석하는 플랫폼과 빅데이터를 기반으로 기업 특화용 인공지능(Artificial Intelligence)을 실현하여, 기업의 의사결정을 지원하는 통합 아키텍처입니다.\", \"evidence_quote\": \"기업 데이터 플랫폼은 설비와 IoT 센서에서 발생하는 대량의 데이터를 체계적으로 수집하고 분석하는 플랫폼과 빅데이터를 기반으로 기업 특화용 인공지능(Artificial Intelligence)을 실현하여, 기업의 의사결정을 지원하는 통합 아키텍처입니다.\"},\n  {\"statement\": \"Lotus:: SRM은 협력사 업무포탈 기반 통합 구매관리 시스템이다.\", \"evidence_quote\": \"**\\\\[ 협력사 업무포탈 기반 통합 구매관리 시스템 \\\\]**\"},\n  {\"statement\": \"Lotus:: MES는 중소/중견기업 ERP통합형 생산관리 시스템이다.\", \"evidence_quote\": \"**\\\\[ 중소/중견기업 ERP통합형 생산관리 시스템 \\\\]**\"},\n  {\"statement\": \"Lotus:: PMS는 제조 협업형 프로젝트관리 시스템이다.\", \"evidence_quote\": \"**\\\\[ 제조 협업형 프로젝트관리 시스템 \\\\]**\"},\n  {\"statement\": \"Finetree:: OCR은 FAX/이미지 AI기반 데이터 변환 솔루션이다.\", \"evidence_quote\": \"**\\\\[ FAX/이미지 AI기반 데이터 변환 솔루션 \\\\]**\"},\n  {\"statement\": \"Finetree:: SQL은 자연어/AI 기반 내부 데이터베이스 조회 솔루션이다.\", \"evidence_quote\": \"**\\\\[ 자연어/AI 기반 내부 데이터베이스 조회 솔루션 \\\\]**\"},\n  {\"statement\": \"Finetree:: RAG는 AI기반 기업 기술문서 통합 검색 시스템이다.\", \"evidence_quote\": \"**\\\\[ AI기반 기업 기술문서 통합 검색 시스템**\"},\n  {\"statement\": \"Finetree:: BOT은 기업 특화형 통합 AI 솔루션이다.\", \"evidence_quote\": \"**\\\\[ 기업 특화형 통합 AI 솔루션 \\\\]**\"},\n  {\"statement\": \"Peak9:: Anchor는 설비 및 Iot장치의 데이터 수집 솔루션이다.\", \"evidence_quote\": \"**\\\\[ 설비 및 Iot장치의 데이터 수집 솔루션 \\\\]**\"},\n  {\"statement\": \"Peak9:: Edge는 데이터 정제, 분류, 가공, 전달용 엣지 컴퓨팅 솔루션이다.\", \"evidence_quote\": \"**\\\\[ 데이터 정제, 분류, 가공, 전달용 엣지 컴퓨팅 솔루션 \\\\]**\"},\n  {\"statement\": \"Peak9:: Insight는 기업 내부 빅데이터 분석 및 시각화 솔루션이다.\", \"evidence_quote\": \"**\\\\[ 기업 내부 빅데이터 분석 및 시각화 솔루션 \\\\]**\"},\n  {\"statement\": \"Peak9:: Rail은 열차 TCMS 시뮬레이터이다.\", \"evidence_quote\": \"**\\\\[ 열차 TCMS 시뮬레이터 \\\\]**\"},\n  {\"statement\": \"Peak9:: RFID는 이기종 리더 통합형 RFID 미들웨어이다.\", \"evidence_quote\": \"**\\\\[ 이기종 리더 통합형 RFID 미들웨어 \\\\]**\"}\n]}",
+  "latency_ms": 11287,
+  "token_count": 431,
+  "json_valid": true,
+  "pii_hits": []
+}

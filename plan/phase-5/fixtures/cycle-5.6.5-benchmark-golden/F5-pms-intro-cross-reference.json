@@ -1,0 +1,11 @@
+{
+  "task": "cross-reference",
+  "fixture": "F5-pms-intro",
+  "model_outputs": {
+    "gemini": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"LOTUS PMS\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"LOTUS SCM\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"MOBILE APP\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"Work Breakdown Structure (WBS)\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Project Management Body of Knowledge (PMBOK)\",\n      \"kind\": \"standard\"\n    }\n  ]\n}\n```",
+    "claude": "Looking at this document, I can identify the following cross-references:\n\n```json\n{\"refs\":[\n{\"target\":\"굿스트림\",\"kind\":\"organization\"},\n{\"target\":\"GOOD STREAM\",\"kind\":\"organization\"},\n{\"target\":\"LOTUS PMS\",\"kind\":\"product\"},\n{\"target\":\"LOTUS SCM\",\"kind\":\"product\"},\n{\"target\":\"MOBILE APP\",\"kind\":\"product\"},\n{\"target\":\"Project Management System\",\"kind\":\"product\"},\n{\"target\":\"PMS\",\"kind\":\"product\"},\n{\"target\":\"Work Breakdown Structure\",\"kind\":\"standard\"},\n{\"target\":\"WBS\",\"kind\":\"standard\"},\n{\"target\":\"PMBOK\",\"kind\":\"standard\"},\n{\"target\":\"Project Management Body of Knowledge\",\"kind\":\"standard\"}\n]}\n```",
+    "openai": ""
+  },
+  "majority_vote": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"LOTUS PMS\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"LOTUS SCM\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"MOBILE APP\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"Work Breakdown Structure (WBS)\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Project Management Body of Knowledge (PMBOK)\",\n      \"kind\": \"standard\"\n    }\n  ]\n}\n```",
+  "dissent": true
+}

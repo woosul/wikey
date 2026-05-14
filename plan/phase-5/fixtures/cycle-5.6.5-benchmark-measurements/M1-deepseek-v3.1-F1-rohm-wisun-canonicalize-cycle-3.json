@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"로옴은 2023년 11월 21일, 무선 통신 모듈이 Wi-SUN JUTA 규격 인증을 취득했다고 발표했습니다. Wi-SUN JUTA는 일본의 전력 계통을 위한 무선 통신 규격으로, 주파수 대역은 920MHz 대역을 사용합니다. 이 인증은 일본 내 스마트 미터 및 스마트 그리드 구축에 필요한 필수 조건입니다.\",\n  \"이번에 인증을 받은 모듈은 BP35C5(JUTA) 모델로, 로옴의 무선 통신 모듈 중 최초로 Wi-SUN JUTA 규격을 지원합니다. 이를 통해 로옴은 일본 시장에 진출할 수 있는 발판을 마련했습니다.\",\n  \"Wi-SUN JUTA는 Wi-SUN Alliance에서 표준화된 규격 중 하나로, 일본 내에서 전력 회사들이 스마트 미터 통신에 사용하고 있습니다. 이 규격은 멀티ホップ 통신을 지원하여 넓은 커버리지를 제공하며, 저전력 소비로 오랜 시간 배터리 구동이 가능합니다.\",\n  \"로옴은 이번 인증을 통해 일본의 스마트 미터 시장에 공급을 확대할 계획이며, 향후 Wi-SUN을 지원하는 다른 제품 라인업도 확장해 나갈 예정입니다.\"\n}\n---\n```json\n{\n  \"entities\": [\n    {\n      \"name\": \"로옴\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"ROHM\"]\n    },\n    {\n      \"name\": \"Wi-SUN JUTA\",\n      \"type\": \"Standard\",\n      \"aliases\": [\"Wi-SUN JUTA 규격\"]\n    },\n    {\n      \"name\": \"BP35C5\",\n      \"type\": \"Product\",\n      \"aliases\": [\"BP35C5(JUTA)\"]\n    },\n    {\n      \"name\": \"Wi-SUN Alliance\",\n      \"type\": \"Organization\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"스마트 미터\",\n      \"type\": \"Product\",\n      \"aliases\": [\"스마트미터\"]\n    },\n    {\n      \"name\": \"스마트 그리드\",\n      \"type\": \"Concept\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"920MHz\",\n      \"type\": \"Frequency\",\n      \"aliases\": [\"920MHz 대역\"]\n    },\n    {\n      \"name\": \"멀티ホップ 통신\",\n      \"type\": \"Technology\",\n      \"aliases\": [\"멀티ホップ\"]\n    }\n  ]\n}\n```",
+  "latency_ms": 11692,
+  "token_count": 332,
+  "json_valid": false,
+  "pii_hits": []
+}

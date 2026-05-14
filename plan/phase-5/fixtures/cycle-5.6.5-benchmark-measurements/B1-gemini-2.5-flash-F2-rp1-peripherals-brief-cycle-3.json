@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 Raspberry Pi 5용 주변 장치 컨트롤러인 RP1의 기술 사양과 다양한 인터페이스 및 주변 장치에 대한 정보를 제공합니다. 본 문서는 Creative Commons Attribution-NoDerivatives 4.0 International(CC BY-ND) 라이선스를 따르며, 제품은 어떠한 보증도 없이 '있는 그대로' 제공되므로 사용자의 책임 하에 사용해야 합니다. 특히, Raspberry Pi 제품은 핵 시설, 항공 시스템, 생명 유지 장치 등 고위험 활동에 사용하도록 설계되지 않았으며, 이러한 용도로 인한 어떠한 책임도 지지 않습니다.",
+  "latency_ms": 9582,
+  "token_count": 79,
+  "json_valid": true,
+  "pii_hits": []
+}

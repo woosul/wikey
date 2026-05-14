@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"로옴\",\n      \"normalized\": \"ROHM\"\n    },\n    {\n      \"surface\": \"Wi-SUN JUTA\",\n      \"normalized\": \"Wi-SUN JUTA\"\n    }\n  ]\n}",
+  "latency_ms": 86309,
+  "token_count": 41,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 2,
+  "response": "```json\n{\n  \"mentions\": [\n    {\n      \"surface\": \"프로젝트 수행 용역 계약서 (턴키 방식)\",\n      \"normalized\": \"프로젝트 수행 용역 계약서 (턴키 방식)\"\n    },\n    {\n      \"surface\": \"SK 바이오텍 전자구매시스템 구축 계약\",\n      \"normalized\": \"SK 바이오텍 전자구매시스템 구축 계약\"\n    },\n    {\n      \"surface\": \"SK 바이오텍\",\n      \"normalized\": \"SK 바이오텍\"\n    },\n    {\n      \"surface\": \"전자구매시스템\",\n      \"normalized\": \"전자구매시스템\"\n    },\n    {\n      \"surface\": \"이억사천일백만원정\",",
+  "latency_ms": 18421,
+  "token_count": 101,
+  "json_valid": false,
+  "pii_hits": []
+}

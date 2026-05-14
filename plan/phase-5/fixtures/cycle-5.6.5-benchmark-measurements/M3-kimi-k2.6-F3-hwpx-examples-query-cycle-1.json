@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서에서 설명하는 주요 대상은 **Alley(골목/통로) 유형의 예시 이미지**입니다. 문서 제목이 \"Example Images for Type of the Alley\"로 명시되어 있으며, 다양한 종류의 골목이나 통로를 보여주는 예시 이미지들을 포함하고 있습니다. 이 이미지들은 도시 계획, 건축, 또는 공간 디자인 분야에서 골목의 다양한 형태와 특성을 시각적으로 설명하기 위한 참고 자료로 활용될 수 있습니다.",
+  "latency_ms": 10630,
+  "token_count": 58,
+  "json_valid": true,
+  "pii_hits": []
+}

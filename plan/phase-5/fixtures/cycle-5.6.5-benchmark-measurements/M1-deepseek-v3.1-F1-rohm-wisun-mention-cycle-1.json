@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\"mentions\":[{\"surface\":\"업계\",\"normalized\":\"업계\"},{\"surface\":\"로옴\",\"normalized\":\"로옴\"},{\"surface\":\"무선 통신 모듈\",\"normalized\":\"무선 통신 모듈\"},{\"surface\":\"스마트미터\",\"normalized\":\"스마트미터\"},{\"surface\":\"무선 통신 규격\",\"normalized\":\"무선 통신 규격\"},{\"surface\":\"Wi-SUN JUTA\",\"normalized\":\"Wi-SUN JUTA\"},{\"surface\":\"인증\",\"normalized\":\"인증\"}]}",
+  "latency_ms": 8501,
+  "token_count": 77,
+  "json_valid": true,
+  "pii_hits": []
+}

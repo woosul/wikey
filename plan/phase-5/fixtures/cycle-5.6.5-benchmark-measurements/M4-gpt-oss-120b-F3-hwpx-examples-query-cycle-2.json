@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서의 핵심은 웹 페이지 레이아웃을 구현하기 위한 CSS·HTML 코드와, 그 예시로 제시된 “Alley” 형식(타입)의 이미지·설명이며, 즉 “Alley”라는 레이아웃(또는 디자인) 요소를 중심으로 한 웹 디자인 구현 방법을 다루고 있습니다.",
+  "latency_ms": 6789,
+  "token_count": 35,
+  "json_valid": true,
+  "pii_hits": []
+}

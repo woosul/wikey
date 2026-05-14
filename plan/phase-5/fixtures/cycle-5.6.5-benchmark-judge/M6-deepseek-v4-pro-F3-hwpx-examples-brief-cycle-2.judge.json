@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 2,
+  "accuracy": 0.9,
+  "semantic": 0.9,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.9,\n  \"semantic\": 0.9\n}\n```"
+}

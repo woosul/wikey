@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 'Type of the Alley'의 예시 이미지와 관련되어 있는 것으로 보이나, 제공된 텍스트는 이미지의 데이터만 포함하고 있어 구체적인 내용을 파악하기 어렵습니다. 따라서 문서의 실제 내용이나 주제에 대한 명확한 요약은 불가능합니다. 결과적으로 이 문서에 대한 3문장 요약은 작성할 수 없습니다.",
+  "latency_ms": 3930,
+  "token_count": 44,
+  "json_valid": true,
+  "pii_hits": []
+}

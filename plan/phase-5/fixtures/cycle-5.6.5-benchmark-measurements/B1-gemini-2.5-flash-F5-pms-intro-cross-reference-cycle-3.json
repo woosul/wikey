@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"중소 / 중견기업 프로젝트 기반 제조 협업서비스\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"프로젝트관리시스템\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"제품소개서\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"LOTUS PMS\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"( 주 ) 굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"GOOD STREAM\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"LOTUS SCM\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"MOBILE APP\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"Project Management System\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"Work Breakdown Structure\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"WBS\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"PMBOK\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Project Management Body of Knowledge\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"프로젝트관리 지식체계\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"그룹웨어\",\n      \"kind\": \"other\"\n    },\n    {\n      \"target\": \"본 문서\",\n      \"kind\": \"document\"\n    }\n  ]\n}\n```",
+  "latency_ms": 17695,
+  "token_count": 290,
+  "json_valid": true,
+  "pii_hits": []
+}

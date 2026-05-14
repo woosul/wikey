@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F2-rp1-peripherals",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"Raspberry Pi Ltd\",\n      \"type\": \"Organization\",\n      \"aliases\": [\n        \"RPL\"\n      ]\n    },\n    {\n      \"name\": \"Synopsys, Inc.\",\n      \"type\": \"Organization\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"ARM Limited\",\n      \"type\": \"Organization\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"Cadence Design Systems, Inc.\",\n      \"type\": \"Organization\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"DesignWare\",\n      \"type\": \"Product\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 7313,
+  "token_count": 131,
+  "json_valid": true,
+  "pii_hits": []
+}

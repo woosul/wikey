@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 골목길의 유형을 보여주는 예시 이미지들을 포함하고 있습니다. 골목길은 주로 주거 지역이나 상업 지역에서 발견되는 좁은 도로로, 다양한 형태와 특징을 가지고 있습니다. 이러한 골목길들은 지역의 문화와 역사를 반영하며, 보행자와 자전거 이용에 적합한 공간으로 활용됩니다.",
+  "latency_ms": 3854,
+  "token_count": 39,
+  "json_valid": true,
+  "pii_hits": []
+}

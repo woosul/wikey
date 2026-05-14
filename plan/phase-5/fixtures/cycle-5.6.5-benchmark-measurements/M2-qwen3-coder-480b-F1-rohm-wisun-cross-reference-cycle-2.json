@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\"refs\":[{\"target\":\"Wi-SUN JUTA\",\"kind\":\"standard\"}]}",
+  "latency_ms": 2273,
+  "token_count": 14,
+  "json_valid": true,
+  "pii_hits": []
+}

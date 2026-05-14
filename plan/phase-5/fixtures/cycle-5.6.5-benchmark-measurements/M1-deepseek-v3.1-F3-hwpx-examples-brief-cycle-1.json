@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 골목의 유형을 보여주는 예시 이미지들을 포함하고 있습니다. 골목의 다양한 특성과 구조를 시각적으로 제시하며, 도시 계획 및 건축 디자인에 참고 자료로 활용될 수 있습니다. 이미지들은 골목의 공간적 구성과 환경적 요소를 분석하는 데 도움이 되는 정보를 제공합니다.",
+  "latency_ms": 7646,
+  "token_count": 38,
+  "json_valid": true,
+  "pii_hits": []
+}

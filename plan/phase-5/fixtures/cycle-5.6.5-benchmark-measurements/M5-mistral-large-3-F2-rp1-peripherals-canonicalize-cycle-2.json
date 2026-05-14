@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"Raspberry Pi Ltd\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"RPL\"]\n    },\n    {\n      \"name\": \"Creative Commons Attribution-NoDerivatives 4.0 International\",\n      \"type\": \"License\",\n      \"aliases\": [\"CC BY-ND\"]\n    },\n    {\n      \"name\": \"Synopsys, Inc.\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"Synopsys\", \"DesignWare\"]\n    },\n    {\n      \"name\": \"ARM Limited\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"ARM\"]\n    },\n    {\n      \"name\": \"Cadence Design Systems, Inc.\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"Cadence\"]\n    },\n    {\n      \"name\": \"Raspberry Pi 5\",\n      \"type\": \"Product\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"RP1\",\n      \"type\": \"Product\",\n      \"aliases\": [\"RP1-C0\"]\n    },\n    {\n      \"name\": \"Broadcom BCM2712\",\n      \"type\": \"Product\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 8420,
+  "token_count": 219,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F7-service-contract",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "response": "```json\n{\n  \"facts\": [\n    {\n      \"statement\": \"The contract name is 'SK 바이오텍 전자구매시스템 구축 계약'.\",\n      \"evidence_quote\": \"1) 계약 명 SK 바이오텍 전자구매시스템 구축 계약\"\n    },\n    {\n      \"statement\": \"The contract amount is ₩241,000,000 (VAT 별도).\",\n      \"evidence_quote\": \"2)계약금액 일금 이억사천일백만원정 (₩241,000,000 원, VAT 별도)\"\n    },\n    {\n      \"statement\": \"An additional development amount of ₩76,000,00",
+  "latency_ms": 16899,
+  "token_count": 96,
+  "json_valid": false,
+  "pii_hits": []
+}

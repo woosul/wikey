@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"ROHM\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"로옴\"]\n    },\n    {\n      \"name\": \"Wi-SUN JUTA\",\n      \"type\": \"Technology\",\n      \"aliases\": [\"Wi-SUN JUTA\"]\n    },\n    {\n      \"name\": \"Smart Meter\",\n      \"type\": \"Product\",\n      \"aliases\": [\"스마트미터\"]\n    },\n    {\n      \"name\": \"Wireless Communication Module\",\n      \"type\": \"Product\",\n      \"aliases\": [\"무선 통신 모듈\"]\n    },\n    {\n      \"name\": \"Wireless Communication Standard\",\n      \"type\": \"Concept\",\n      \"aliases\": [\"무선 통신 규격\"]\n    },\n    {\n      \"name\": \"Certification\",\n      \"type\": \"Concept\",\n      \"aliases\": [\"인증\"]\n    },\n    {\n      \"name\": \"Industry First\",\n      \"type\": \"Concept\",\n      \"aliases\": [\"업계 최초\"]\n    }\n  ]\n}",
+  "latency_ms": 15971,
+  "token_count": 183,
+  "json_valid": true,
+  "pii_hits": []
+}

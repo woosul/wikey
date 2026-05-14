@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 Raspberry Pi Ltd가 2023년에 발행한 RP1 주변장치 컨트롤러 문서의 저작권·라이선스 정보를 안내하고, Creative Commons BY‑ND 4.0으로 배포된다는 내용을 포함하고 있습니다. 또한 기술·신뢰성 데이터는 ‘있는 그대로’ 제공되며, 명시·묵시적 보증을 부인하고 사용자는 자체 위험을 감수하고 제품을 Raspberry Pi와 연동해서만 사용할 것을 요구합니다. 고위험 산업용(예: 원자력·항공·무기 등)에서는 사용을 금지하고, Raspberry Pi 표준 약관에 따라 책임을 제한한다는 법적 고지가 포함되어 있습니다.",
+  "latency_ms": 7853,
+  "token_count": 78,
+  "json_valid": true,
+  "pii_hits": []
+}

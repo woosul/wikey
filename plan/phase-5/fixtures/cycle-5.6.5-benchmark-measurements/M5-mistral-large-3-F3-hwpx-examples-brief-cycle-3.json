@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 골목 유형의 예시 이미지를 소개하고 있습니다. 다양한 골목의 형태와 특징을 시각적으로 보여주며, 도시나 마을의 골목이 지닌 독특한 분위기와 구조를 설명합니다. 각 이미지는 골목의 다양한 스타일과 환경적 요소를 담아내어 골목 디자인의 다양성을 강조합니다.",
+  "latency_ms": 15206,
+  "token_count": 37,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,9 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "mention",
+  "cycle": 2,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "SKIPPED (error or empty)"
+}

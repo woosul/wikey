@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 1,
+  "response": "문서는 주로 \"alley\"의 유형에 대한 예시 이미지를 제공하고 있으며, 이는 주로 도시 환경에서 발견되는 좁은 골목이나 골목길을 설명하고 있습니다. 이는 일반적으로 도시의 거리나 골목길을 의미하며, 주로 도시의 구조나 역사적 배경을 설명하는 데 사용됩니다. 따라서 이 문서의 주요 주제는 \"alley\" 또는 \"골목길\"입니다.",
+  "latency_ms": 14437,
+  "token_count": 46,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "brief",
+  "cycle": 3,
+  "response": "해당 문서는 주식회사 굿스트림의 사업자등록증입니다. 법인 대표자는 김명호이며, 소프트웨어 개발 및 무선통신응용장치 제조를 주요 종목으로 합니다. 개업일은 2012년 10월 2일이고 사업장 소재지는 충청북도 청주시 흥덕구입니다.",
+  "latency_ms": 3761,
+  "token_count": 32,
+  "json_valid": true,
+  "pii_hits": []
+}

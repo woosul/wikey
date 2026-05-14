@@ -1,0 +1,9 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F4-business-registration",
+  "task": "mention",
+  "cycle": 2,
+  "accuracy": 0.37,
+  "semantic": 0.37,
+  "raw_judge": "{\"accuracy\": 0.37, \"semantic\": 0.37}"
+}

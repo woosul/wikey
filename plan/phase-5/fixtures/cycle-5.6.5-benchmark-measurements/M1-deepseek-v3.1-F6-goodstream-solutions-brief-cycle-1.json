@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 제조 기업을 위한 통합 데이터 플랫폼 아키텍처와 핵심 솔루션을 소개합니다. 설비 및 IoT 센서에서 데이터를 수집하여 정제·분석하고, AI를 활용해 인사이트를 도출하는 종단간 흐름을 설명합니다. 또한 데이터 수집부터 의사결정 지원까지 각 단계별 역할을 수행하는 세부 솔루션들의 기능을 안내합니다.",
+  "latency_ms": 3116,
+  "token_count": 43,
+  "json_valid": true,
+  "pii_hits": []
+}

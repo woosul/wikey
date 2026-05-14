@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"PMBOK (Project Management Body of Knowledge)\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"LOTUS SCM\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"MOBILE APP\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"㈜굿스트림 (Goodstream Co., Ltd.)\",\n      \"kind\": \"organization\"\n    }\n  ]\n}",
+  "latency_ms": 8883,
+  "token_count": 86,
+  "json_valid": true,
+  "pii_hits": []
+}

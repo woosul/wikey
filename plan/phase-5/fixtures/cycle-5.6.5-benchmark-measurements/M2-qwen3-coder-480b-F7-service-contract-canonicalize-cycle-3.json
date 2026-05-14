@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"SK 바이오텍 주식회사\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"고객사\", \"SK 바이오텍\"]\n    },\n    {\n      \"name\": \"세포아소프트\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"갑\", \"(주)세포아소프트\"]\n    },\n    {\n      \"name\": \"굿스트림\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"을\", \"(주)굿스트림\"]\n    },\n    {\n      \"name\": \"이희림\",\n      \"type\": \"Person\",\n      \"aliases\": [\"세포아소프트 대표\"]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"Person\",\n      \"aliases\": [\"굿스트림 대표\"]\n    },\n    {\n      \"name\": \"SK 바이오텍 전자입찰시스템 재구축 프로젝트\",\n      \"type\": \"Project\",\n      \"aliases\": [\"전자구매시스템 구축 사업\", \"본 프로젝트\"]\n    }\n  ]\n}",
+  "latency_ms": 7333,
+  "token_count": 159,
+  "json_valid": true,
+  "pii_hits": []
+}

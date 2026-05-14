@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 2,
+  "accuracy": 0,
+  "semantic": 0.2,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.0,\n  \"semantic\": 0.2\n}\n```"
+}

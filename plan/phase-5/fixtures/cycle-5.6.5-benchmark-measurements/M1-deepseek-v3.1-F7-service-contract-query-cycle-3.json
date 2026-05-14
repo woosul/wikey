@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서에서 설명하는 주요 주제 또는 제품은 SK 바이오텍을 위한 '전자구매시스템' 구축 프로젝트로, (주)세포아소프트가 (주)굿스트림에게 턴키(일괄 도급) 방식으로 개발 용역을 계약한 내용입니다. 구체적으로는 전자입찰시스템의 재구축을 위한 상세 설계, DB 설계, 구현, 테스트, 안정화 등 전체 개발 과정을 포괄하는 것이 주된 내용입니다.",
+  "latency_ms": 2630,
+  "token_count": 48,
+  "json_valid": true,
+  "pii_hits": []
+}

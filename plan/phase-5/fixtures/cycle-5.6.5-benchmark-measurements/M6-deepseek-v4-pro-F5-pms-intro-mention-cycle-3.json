@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"중소 / 중견기업 프로젝트 기반 제조 협업서비스\",\n      \"normalized\": \"중소 / 중견기업 프로젝트 기반 제조 협업서비스\"\n    },\n    {\n      \"surface\": \"프로젝트관리시스템\",\n      \"normalized\": \"프로젝트관리시스템\"\n    },\n    {\n      \"surface\": \"LOTUS PMS\",\n      \"normalized\": \"LOTUS PMS\"\n    },\n    {\n      \"surface\": \"GOOD STREAM\",\n      \"normalized\": \"GOOD STREAM\"\n    },\n    {\n      \"surface\": \"PMS\",\n      \"normalized\": \"PMS\"\n    },\n    {\n      \"surface\": \"공급망관리시스템\",\n      \"normalized\": \"공급망관리시스템\"\n    },\n    {\n      \"surface\": \"LOTUS SCM\",\n      \"normalized\": \"LOTUS SCM\"\n    },\n    {\n      \"surface\": \"모바일앱서비스\",\n      \"normalized\": \"모바일앱서비스\"\n    },\n    {\n      \"surface\": \"MOBILE APP\",\n      \"normalized\": \"MOBILE APP\"\n    },\n    {\n      \"surface\": \"Project Management System\",\n      \"normalized\": \"Project Management System\"\n    },\n    {\n      \"surface\": \"WBS\",\n      \"normalized\": \"WBS\"\n    },\n    {\n      \"surface\": \"Work Breakdown Structure\",\n      \"normalized\": \"Work Breakdown Structure\"\n    },\n    {\n      \"surface\": \"PMBOK\",\n      \"normalized\": \"PMBOK\"\n    },\n    {\n      \"surface\": \"Project Management Body of Knowledge\",\n      \"normalized\": \"Project Management Body of Knowledge\"\n    },\n    {\n      \"surface\": \"전자결재\",\n      \"normalized\": \"전자결재\"\n    },\n    {\n      \"surface\": \"그룹웨어\",\n      \"normalized\": \"그룹웨어\"\n    },\n    {\n      \"surface\": \"Dashboard\",\n      \"normalized\": \"Dashboard\"\n    },\n    {\n      \"surface\": \"Home\",\n      \"normalized\": \"Home\"\n    }\n  ]\n}",
+  "latency_ms": 3929,
+  "token_count": 365,
+  "json_valid": true,
+  "pii_hits": []
+}

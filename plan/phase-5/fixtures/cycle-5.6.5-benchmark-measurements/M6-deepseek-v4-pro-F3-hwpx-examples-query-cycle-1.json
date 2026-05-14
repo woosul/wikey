@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서의 주요 주제는 '골목'의 유형을 설명하기 위한 예시 이미지들입니다. 문서에는 'Example Images for Type of the Alley'라는 제목 아래 두 장의 사진이 포함되어 있으며, 이 이미지들은 특정한 형태나 특징을 가진 골목의 모습을 시각적으로 보여주고 있습니다.",
+  "latency_ms": 5517,
+  "token_count": 41,
+  "json_valid": true,
+  "pii_hits": []
+}

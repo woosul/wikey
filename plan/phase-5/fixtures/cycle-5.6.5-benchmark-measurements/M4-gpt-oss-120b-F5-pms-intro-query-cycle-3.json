@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서에서 주로 소개하고 있는 것은 **LOTUS PMS**라는 프로젝트 관리 시스템입니다. LOTUS PMS는 제조·IT·컨설팅 등 다양한 기업에서 프로젝트형 제품 개발과 공급을 효율적으로 지원하도록 설계된 협업·관리 솔루션으로, 일정·작업·회의·이슈·결재 등 여러 업무 공유 기능을 포함하고 있습니다.",
+  "latency_ms": 2985,
+  "token_count": 43,
+  "json_valid": true,
+  "pii_hits": []
+}

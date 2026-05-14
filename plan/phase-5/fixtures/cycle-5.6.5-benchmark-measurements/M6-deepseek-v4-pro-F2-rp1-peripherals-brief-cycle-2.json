@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 2,
+  "response": "이 문서는 Raspberry Pi 5에 사용되는 RP1 주변장치 컨트롤러의 기술적 사양과 기능을 상세히 설명합니다. RP1은 PCIe 2.0 x4 버스를 통해 애플리케이션 프로세서에 연결되어 GPIO, UART, PWM, I2C, SPI, USB, PCIe, 이더넷, 디스플레이 및 카메라 인터페이스 등 다양한 디지털 컨트롤러와 아날로그 PHY를 통합합니다. 또한 문서에는 각 주변장치의 레지스터 기본 주소, 클록 시스템, 주소 맵, 그리고 법적 고지 사항 및 저작권 정보가 포함되어 있습니다.",
+  "latency_ms": 5749,
+  "token_count": 69,
+  "json_valid": true,
+  "pii_hits": []
+}

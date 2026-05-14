@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "```json\n{\n  \"refs\": [\n    {\"target\": \"Wi-SUN JUTA\", \"kind\": \"standard\"},\n    {\"target\": \"로옴\", \"kind\": \"organization\"}\n  ]\n}\n```",
+  "latency_ms": 9003,
+  "token_count": 32,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\"refs\":[{\"target\":\"SK 바이오텍\",\"kind\":\"organization\"},{\"target\":\"전자구매시스템 구축 사업\",\"kind\":\"document\"},{\"target\":\"용역도급 약정조건\",\"kind\":\"document\"},{\"target\":\"고객사\",\"kind\":\"organization\"},{\"target\":\"세포아소프트\",\"kind\":\"organization\"},{\"target\":\"굿스트림\",\"kind\":\"organization\"},{\"target\":\"전자입찰시스템 재구축 프로젝트 개발 용역\",\"kind\":\"document\"},{\"target\":\"보증보험증권\",\"kind\":\"other\"},{\"target\":\"하자이행보증\",\"kind\":\"other\"},{\"target\":\"계약 변경\",\"kind\":\"other\"},{\"target\":\"계약 연장\",\"kind\":\"other\"},{\"target\":\"계약 해지\",\"kind\":\"other\"}]}",
+  "latency_ms": 4464,
+  "token_count": 122,
+  "json_valid": true,
+  "pii_hits": []
+}

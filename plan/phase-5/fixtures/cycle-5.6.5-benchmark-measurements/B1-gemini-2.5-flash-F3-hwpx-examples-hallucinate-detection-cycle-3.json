@@ -1,0 +1,12 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "response": "",
+  "latency_ms": 15207,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": [],
+  "error": "Gemini returned no content (finishReason: STOP): {\"candidates\":[{\"content\":{\"role\":\"model\"},\"finishReason\":\"STOP\",\"index\":0}],\"usageMetadata\":{\"promptTokenCount\":56238,\"totalTokenCount\":59194,\"promptTokensDetails\":[{\"modality\":\"TEXT\",\"tokenCount\":56238}],\"thoughtsTokenCount\":2956,\"serviceTier\":\"standard\"},\"modelVersion\":\"gemini-2.5-flash\",\"respons"
+}

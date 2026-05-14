@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND)\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"Synopsys, Inc.\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"DesignWare\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"ARM Limited\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"Cadence Design Systems, Inc.\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"Raspberry Pi Ltd\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"Raspberry Pi 5\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"Broadcom BCM2712\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"PCIe 2.0\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"RPL's Standard Terms\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"HAT+ GPIO Interface\",\n      \"kind\": \"document\"\n    }\n  ]\n}",
+  "latency_ms": 11059,
+  "token_count": 224,
+  "json_valid": true,
+  "pii_hits": []
+}

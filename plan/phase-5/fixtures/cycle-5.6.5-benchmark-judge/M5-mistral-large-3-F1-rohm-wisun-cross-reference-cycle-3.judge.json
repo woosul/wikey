@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 3,
+  "accuracy": 1,
+  "semantic": 1,
+  "raw_judge": "{\"accuracy\": 1, \"semantic\": 1}"
+}

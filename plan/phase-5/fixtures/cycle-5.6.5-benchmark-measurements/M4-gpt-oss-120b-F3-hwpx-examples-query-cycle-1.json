@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서가 주로 다루는 대상은 **“Alley”**라는 제품(또는 개념)입니다.",
+  "latency_ms": 7417,
+  "token_count": 11,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,9 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 1,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0,\n  \"semantic\": 0\n}\n```"
+}

@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F7-service-contract",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "accuracy": 0.3,
+  "semantic": 0.3,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.3,\n  \"semantic\": 0.3\n}\n```"
+}

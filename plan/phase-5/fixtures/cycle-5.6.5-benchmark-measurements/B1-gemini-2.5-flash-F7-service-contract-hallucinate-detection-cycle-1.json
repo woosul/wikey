@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F7-service-contract",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "response": "```json\n{\n  \"facts\": [\n    {\n      \"statement\": \"The contract name is SK 바이오텍 전자구매시스템 구축 계약.\",\n      \"evidence_quote\": \"1) 계약 명 SK 바이오텍 전자구매시스템 구축 계약\"\n    },\n    {\n      \"statement\": \"The contract amount is ₩241,000,000, VAT 별도.\",\n      \"evidence_quote\": \"2)계약금액 일금 이억사천일백만원정 (₩241,000,000 원, VAT 별도)\"\n    },\n    {\n      \"statement\": \"Additional development for extra work requirements is ₩76,000,000 (6MM).\",\n      \"evidence_quote\": \"추가 업무요건 대응 개발 금액 ₩76,000,000 원 (6MM)\"\n    },\n    {\n      \"statement\": \"The additional development amount will be settled based on actual input during the contract period.\",\n      \"evidence_quote\": \"추가 업무요건 대응 개발 금액 ₩76,000,000 원 (6MM)은 계약기간 내 실제 투입 공수만큼 정산.\"\n    },\n    {\n      \"statement\": \"If there is no input for additional development, the amount will be excluded from the contract amount.\",\n      \"evidence_quote\": \"미투입시 계약금액에서 제외.\"\n    },\n    {\n      \"statement\": \"The contract period is from 2026년 4월 10일 to 2026년 10월 30일 (as stated in the table).\",\n      \"evidence_quote\": \"3)계약기간 2026 년 4월 10일 ~ 2026년 10월 30일\"\n    },\n    {\n      \"statement\": \"The advance payment is 30%, to be paid in cash within 60 days after the issuance of an advance payment guarantee.\",\n      \"evidence_quote\": \"1) 선급금 30%: 선급금 보증증권 발행 후, 60일 이내 현금 지급.\"\n    },\n    {\n      \"statement\": \"The interim payment is 30%,",
+  "latency_ms": 20915,
+  "token_count": 333,
+  "json_valid": false,
+  "pii_hits": []
+}

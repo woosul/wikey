@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"SK 바이오텍\",\n      \"type\": \"COMPANY\",\n      \"aliases\": [\"고객사\", \"SK 바이오텍 주식회사\"]\n    },\n    {\n      \"name\": \"세포아소프트\",\n      \"type\": \"COMPANY\",\n      \"aliases\": [\"갑\", \"(주)세포아소프트\"]\n    },\n    {\n      \"name\": \"굿스트림\",\n      \"type\": \"COMPANY\",\n      \"aliases\": [\"을\", \"(주)굿스트림\"]\n    },\n    {\n      \"name\": \"이희림\",\n      \"type\": \"PERSON\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"PERSON\",\n      \"aliases\": []\n    }\n  ]\n}\n```",
+  "latency_ms": 2732,
+  "token_count": 122,
+  "json_valid": true,
+  "pii_hits": []
+}

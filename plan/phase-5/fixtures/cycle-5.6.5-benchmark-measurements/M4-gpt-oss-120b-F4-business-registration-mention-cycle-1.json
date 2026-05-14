@@ -1,0 +1,20 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"사업자등록증\",\n      \"normalized\": \"Business Registration Certificate\"\n    },\n    {\n      \"surface\": \"법인사업자\",\n      \"normalized\": \"Corporate Business\"\n    },\n    {\n      \"surface\": \"301-86-19385\",\n      \"normalized\": \"301-86-19385\"\n    },\n    {\n      \"surface\": \"주식회사 굿스트림\",\n      \"normalized\": \"Goodstream Co., Ltd.\"\n    },\n    {\n      \"surface\": \"김명호\",\n      \"normalized\": \"Kim Myung-ho\"\n    },\n    {\n      \"surface\": \"2012년 10월 02일\",\n      \"normalized\": \"2012-10-02\"\n    },\n    {\n      \"surface\": \"150111-0166385\",\n      \"normalized\": \"150111-0166385\"\n    },\n    {\n      \"surface\": \"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리\",\n      \"normalized\": \"134 Gongdan-ro, Heungdeok-gu, Cheongju, Chungcheongbuk-do, 613 (Songjeong-dong), Sejung Techno Valley\"\n    },\n    {\n      \"surface\": \"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\",\n      \"normalized\": \"134 Gongdan-ro, Heungdeok-gu, Cheongju, Chungcheongbuk-do, 613 (Songjeong-dong)\"\n    },\n    {\n      \"surface\": \"세중테크노밸리\",\n      \"normalized\": \"Sejung Techno Valley\"\n    },\n    {\n      \"surface\": \"서비스 제조업\",\n      \"normalized\": \"Service Manufacturing\"\n    },\n    {\n      \"surface\": \"소프트웨어개발,자문 및 공급 무선통신응용장치제조\",\n      \"normalized\": \"Software Development, Consulting and Supply of Wireless Communication Application Devices\"\n    },\n    {\n      \"surface\": \"정정\",\n      \"normalized\": \"Correction\"\n    },\n    {\n      \"surface\": \"사업자단위과세 적용사업자 여부\",\n      \"normalized\": \"Business Unit Taxation Applicability\"\n    },\n    {\n      \"surface\": \"2014년 09월 01일\",\n      \"normalized\": \"2014-09-01\"\n    },\n    {\n      \"surface\": \"청주 세무서장\",\n      \"normalized\": \"Cheongju Tax Office Director\"\n    }\n  ]\n}",
+  "latency_ms": 14172,
+  "token_count": 414,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 2
+    },
+    {
+      "kind": "account",
+      "count": 2
+    }
+  ]
+}

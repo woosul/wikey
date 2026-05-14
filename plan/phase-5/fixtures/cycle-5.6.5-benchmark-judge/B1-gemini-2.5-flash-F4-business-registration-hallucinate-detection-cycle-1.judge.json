@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F4-business-registration",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "accuracy": 0.92,
+  "semantic": 0.92,
+  "raw_judge": "{\"accuracy\": 0.92, \"semantic\": 0.92}"
+}

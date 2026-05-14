@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"로옴\",\n      \"normalized\": \"로옴\"\n    },\n    {\n      \"surface\": \"무선 통신 모듈\",\n      \"normalized\": \"무선 통신 모듈\"\n    },\n    {\n      \"surface\": \"스마트미터\",\n      \"normalized\": \"스마트미터\"\n    },\n    {\n      \"surface\": \"Wi-SUN JUTA\",\n      \"normalized\": \"Wi-SUN JUTA\"\n    }\n  ]\n}",
+  "latency_ms": 14404,
+  "token_count": 76,
+  "json_valid": true,
+  "pii_hits": []
+}

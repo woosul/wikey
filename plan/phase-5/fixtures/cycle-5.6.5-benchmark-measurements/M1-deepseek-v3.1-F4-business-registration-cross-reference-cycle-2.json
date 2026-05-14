@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\"refs\": []}",
+  "latency_ms": 2656,
+  "token_count": 3,
+  "json_valid": true,
+  "pii_hits": []
+}

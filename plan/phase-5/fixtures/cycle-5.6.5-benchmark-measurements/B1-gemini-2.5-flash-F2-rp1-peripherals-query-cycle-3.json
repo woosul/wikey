@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서는 주로 \"RP1\"이라는 주변 장치 컨트롤러에 대해 설명하고 있습니다. RP1은 Raspberry Pi Ltd.에서 Raspberry Pi 5에 사용하기 위해 특별히 설계한 제품입니다. 이 컨트롤러는 PCIe 2.0 x4 버스를 통해 애플리케이션 프로세서(AP)에 연결되며, Raspberry Pi 5의 외부 인터페이스를 위한 다양한 디지털 컨트롤러와 아날로그 PHY를 통합하는 역할을 합니다.",
+  "latency_ms": 5724,
+  "token_count": 56,
+  "json_valid": true,
+  "pii_hits": []
+}

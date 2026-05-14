@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\"mentions\":[]}",
+  "latency_ms": 2588,
+  "token_count": 4,
+  "json_valid": true,
+  "pii_hits": []
+}

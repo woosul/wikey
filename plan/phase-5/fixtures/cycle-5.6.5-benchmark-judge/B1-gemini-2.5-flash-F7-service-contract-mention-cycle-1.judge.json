@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 1,
+  "accuracy": 0.3043,
+  "semantic": 0.3043,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.3043,\n  \"semantic\": 0.3043\n}\n```"
+}

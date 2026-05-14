@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"(주)세포아소프트\",\n      \"normalized\": \"(주)세포아소프트\"\n    },\n    {\n      \"surface\": \"갑\",\n      \"normalized\": \"(주)세포아소프트\"\n    },\n    {\n      \"surface\": \"(주)굿스트림\",\n      \"normalized\": \"(주)굿스트림\"\n    },\n    {\n      \"surface\": \"을\",\n      \"normalized\": \"(주)굿스트림\"\n    },\n    {\n      \"surface\": \"SK 바이오텍 주식회사\",\n      \"normalized\": \"SK 바이오텍 주식회사\"\n    },\n    {\n      \"surface\": \"고객사\",\n      \"normalized\": \"SK 바이오텍 주식회사\"\n    },\n    {\n      \"surface\": \"이 희림\",\n      \"normalized\": \"이희림\"\n    },\n    {\n      \"surface\": \"김명 호\",\n      \"normalized\": \"김명호\"\n    }\n  ]\n}",
+  "latency_ms": 21732,
+  "token_count": 146,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,9 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "accuracy": 0.7,
+  "semantic": 0.7,
+  "raw_judge": "{\"accuracy\": 0.7, \"semantic\": 0.7}"
+}

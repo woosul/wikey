@@ -1,0 +1,20 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F7-service-contract",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"SK 바이오텍\",\n      \"type\": \"organization\",\n      \"aliases\": [\"고객사\"]\n    },\n    {\n      \"name\": \"세포아소프트\",\n      \"type\": \"organization\",\n      \"aliases\": [\"도급인\"]\n    },\n    {\n      \"name\": \"굿스트림\",\n      \"type\": \"organization\",\n      \"aliases\": [\"수급인\"]\n    },\n    {\n      \"name\": \"전자구매시스템 구축 사업\",\n      \"type\": \"project\",\n      \"aliases\": [\"용역\"]\n    },\n    {\n      \"name\": \"전자입찰시스템 재구축 프로젝트\",\n      \"type\": \"project\",\n      \"aliases\": [\"용역명\"]\n    },\n    {\n      \"name\": \"계약금액\",\n      \"type\": \"financial\",\n      \"aliases\": [\"이억사천일백만원정\", \"₩241,000,000 원\", \"VAT 별도\"]\n    },\n    {\n      \"name\": \"계약기간\",\n      \"type\": \"date_range\",\n      \"aliases\": [\"2026년 4월 10일 ~ 2026년 10월 30일\"]\n    },\n    {\n      \"name\": \"선급금\",\n      \"type\": \"financial\",\n      \"aliases\": [\"30%\"]\n    },\n    {\n      \"name\": \"중도금\",\n      \"type\": \"financial\",\n      \"aliases\": [\"30%\"]\n    },\n    {\n      \"name\": \"잔금\",\n      \"type\": \"financial\",\n      \"aliases\": [\"40%\"]\n    },\n    {\n      \"name\": \"보증\",\n      \"type\": \"financial\",\n      \"aliases\": [\"계약 금액의 10%\"]\n    },\n    {\n      \"name\": \"지체상금\",\n      \"type\": \"financial\",\n      \"aliases\": [\"계약 금액의 0.15%\"]\n    },\n    {\n      \"name\": \"이행보증보험증권\",\n      \"type\": \"document\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"하자이행보증\",\n      \"type\": \"document\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"보증기간\",\n      \"type\": \"date_range\",\n      \"aliases\": [\"1년\"]\n    },\n    {\n      \"name\": \"대금지급\",\n      \"type\": \"financial\",\n      \"aliases\": [\"백투백 방식\"]\n    },\n    {\n      \"name\": \"추가정산\",\n      \"type\": \"financial\",\n      \"aliases\": [\"7,600 만 원 범위 내\"]\n    },\n    {\n      \"name\": \"작업장소\",\n      \"type\": \"location\",\n      \"aliases\": [\"갑이 지정한 장소\"]\n    },\n    {\n      \"name\": \"사업자번호\",\n      \"type\": \"identifier\",\n      \"aliases\": [\"119-81-95926\", \"301-86-19385\"]\n    },\n    {\n      \"name\": \"대표자\",\n      \"type\": \"person\",\n      \"aliases\": [\"이 희림\", \"김명 호\"]\n    },\n    {\n      \"name\": \"계약의 목적\",\n      \"type\": \"contract\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"계약의 변경\",\n      \"type\": \"contract\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"계약의 해지\",\n      \"type\": \"contract\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"검수\",\n      \"type\": \"process\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"용역의 범위\",\n      \"type\": \"contract\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"계약 성격\",\n      \"type\": \"contract\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 39679,
+  "token_count": 600,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 2
+    },
+    {
+      "kind": "account",
+      "count": 2
+    }
+  ]
+}

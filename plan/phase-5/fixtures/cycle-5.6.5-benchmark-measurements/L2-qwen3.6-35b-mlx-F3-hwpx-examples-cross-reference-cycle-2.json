@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F3-hwpx-examples",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\"refs\":[]}",
+  "latency_ms": 327,
+  "token_count": 3,
+  "json_valid": true,
+  "pii_hits": []
+}

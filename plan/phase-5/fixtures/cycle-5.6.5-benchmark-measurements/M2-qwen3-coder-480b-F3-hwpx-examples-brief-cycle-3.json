@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 3,
+  "response": "도시 골목의 유형을 분류하기 위한 예시 이미지들이 제공되며, 각 이미지는 특정 골목 스타일을 대표합니다. 이 이미지들은 딥러닝 모델 학습에 사용되어 골목 유형을 자동으로 인식하고 분류하는 데 목적을 두고 있습니다. 이를 통해 연구자들은 도시 구조 분석 및 계획 수립에 필요한 데이터를 효과적으로 수집할 수 있습니다.",
+  "latency_ms": 5742,
+  "token_count": 44,
+  "json_valid": true,
+  "pii_hits": []
+}

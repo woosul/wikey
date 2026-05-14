@@ -1,0 +1,9 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "canonicalize",
+  "cycle": 2,
+  "accuracy": 0.4,
+  "semantic": 0.4,
+  "raw_judge": "{\"accuracy\": 0.4, \"semantic\": 0.4}"
+}

@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "response": "{\n  \"facts\": []\n}",
+  "latency_ms": 13568,
+  "token_count": 5,
+  "json_valid": true,
+  "pii_hits": []
+}

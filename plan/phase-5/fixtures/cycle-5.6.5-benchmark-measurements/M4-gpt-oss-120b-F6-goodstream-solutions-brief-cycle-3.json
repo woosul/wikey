@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 3,
+  "response": "기업 데이터 플랫폼은 설비와 IoT 센서에서 발생하는 대량 데이터를 수집·정제·저장하고, Data Lake와 AI 레이어를 통해 실시간 분석·예측 인사이트를 제공하는 통합 아키텍처입니다. Lotus·Finetree·Peak9 등 모듈형 솔루션을 조합해 제조 기간계 시스템, OCR·LLM·RAG·BOT 등 AI 기능, 그리고 엣지·클렌징·분석 파이프라인을 필요에 맞게 선택·배치할 수 있습니다. 이를 통해 기업은 데이터 거버넌스와 품질 관리를 유지하면서 빠른 의사결정과 맞춤형 AI 서비스를 구현할 수 있습니다.",
+  "latency_ms": 11017,
+  "token_count": 72,
+  "json_valid": true,
+  "pii_hits": []
+}

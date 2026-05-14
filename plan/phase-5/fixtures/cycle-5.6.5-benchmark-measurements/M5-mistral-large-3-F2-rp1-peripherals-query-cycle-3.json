@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서에서 주로 설명하고 있는 제품은 **라즈베리 파이 5(Raspberry Pi 5)**에 사용되는 **RP1**이라는 이름의 주변 장치 컨트롤러(peripheral controller)입니다. RP1은 라즈베리 파이 5의 애플리케이션 프로세서(BCM2712)와 PCIe 2.0 x4 버스를 통해 연결되며, GPIO, UART, PWM, I2C, SPI, USB, PCI Express 등 다양한 디지털 컨트롤러와 아날로그 PHY를 통합하여 라즈베리 파이 5의 외부 인터페이스를 관리하는 역할을 합니다. (해요체)",
+  "latency_ms": 10409,
+  "token_count": 73,
+  "json_valid": true,
+  "pii_hits": []
+}

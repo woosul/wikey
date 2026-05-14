@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"Wi-SUN JUTA\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"로옴\",\n      \"kind\": \"organization\"\n    }\n  ]\n}",
+  "latency_ms": 10346,
+  "token_count": 38,
+  "json_valid": true,
+  "pii_hits": []
+}

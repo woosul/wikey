@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 3,
+  "response": "문서에 기술된 주요 주제는 제조 및 기업 환경에서 설비, IoT 센서, 레거시 시스템 등 다양한 소스에서 발생하는 대량의 데이터를 체계적으로 수집·정제하고 분석하여 기업 특화 인공지능(AI)을 실현함으로써 의사결정을 지원하는 통합 데이터 플랫폼 아키텍처입니다. 이 솔루션은 Peak9 Anchor와 같은 데이터 수집 계층, Data Lake를 통한 저장 및 관리, Finetree AI Layer의 로컬 LLM 기반 AI 애플리케이션, 그리고 최종 사용자를 위한 UI/UX 서비스까지 포괄하는 전체 생태계를 구성하며, 특히 제조 산업의 생산 관리(MES), 구매 관리(SRM), 프로젝트 관리(PMS) 등 기간계 시스템과의 연동을 통해 실시간 데이터 파이프라인을 구축하고 인사이트를 도출하는 것을 핵심 목표로 합니다.",
+  "latency_ms": 6933,
+  "token_count": 101,
+  "json_valid": true,
+  "pii_hits": []
+}

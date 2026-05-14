@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F4-business-registration",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "```json\n{\"refs\":[]}\n```",
+  "latency_ms": 10216,
+  "token_count": 6,
+  "json_valid": true,
+  "pii_hits": []
+}

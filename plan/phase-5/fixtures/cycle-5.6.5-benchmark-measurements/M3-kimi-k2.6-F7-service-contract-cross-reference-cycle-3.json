@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "```json\n{\"refs\":[{\"target\":\"SK 바이오텍\",\"kind\":\"organization\"},{\"target\":\"전자구매시스템 구축 계약\",\"kind\":\"document\"},{\"target\":\"(주)세포아소프트\",\"kind\":\"organization\"},{\"target\":\"(주)굿스트림\",\"kind\":\"organization\"},{\"target\":\"SK 바이오텍 주식회사\",\"kind\":\"organization\"},{\"target\":\"전자구매시스템 구축 사업\",\"kind\":\"document\"},{\"target\":\"원청 계약\",\"kind\":\"document\"},{\"target\":\"용역도급 약정조건\",\"kind\":\"document\"},{\"target\":\"SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역\",\"kind\":\"document\"},{\"target\":\"고객사 계약\",\"kind\":\"document\"},{\"target\":\"거래기본약관\",\"kind\":\"document\"},{\"target\":\"서울중앙지방법원\",\"kind\":\"organization\"}]}\n```",
+  "latency_ms": 3554,
+  "token_count": 138,
+  "json_valid": true,
+  "pii_hits": []
+}

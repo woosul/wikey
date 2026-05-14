@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "mention",
+  "cycle": 1,
+  "response": "```json\n{\n  \"mentions\": [\n    {\n      \"surface\": \"기업 데이터 흐름\",\n      \"normalized\": \"기업 데이터 흐름\"\n    },\n    {\n      \"surface\": \"솔루션 아키텍처\",\n      \"normalized\": \"솔루션 아키텍처\"\n    },\n    {\n      \"surface\": \"Architecture of solutions\",\n      \"normalized\": \"솔루션 아키텍처\"\n    },\n    {\n      \"surface\": \"data flow of enterprise\",\n      \"normalized\": \"기업 데이터 흐름\"\n    },\n    {\n      \"surface\": \"기업 데이터 플랫폼\",\n      \"normalized\": \"기업 데이터 플랫폼\"\n    },\n    {\n",
+  "latency_ms": 17559,
+  "token_count": 109,
+  "json_valid": false,
+  "pii_hits": []
+}

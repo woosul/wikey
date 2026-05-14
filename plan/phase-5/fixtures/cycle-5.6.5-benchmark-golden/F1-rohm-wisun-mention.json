@@ -1,0 +1,11 @@
+{
+  "task": "mention",
+  "fixture": "F1-rohm-wisun",
+  "model_outputs": {
+    "gemini": "```json\n{\n  \"mentions\": [\n    {\n      \"surface\": \"로옴\",\n      \"normalized\": \"로옴\"\n    },\n    {\n      \"surface\": \"무선 통신 모듈\",\n      \"normalized\": \"무선 통신 모듈\"\n    },\n    {\n      \"surface\": \"스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증\",\n      \"normalized\": \"스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증\"\n    }\n  ]\n}\n```",
+    "claude": "{\"mentions\":[\n{\"surface\":\"업계\",\"normalized\":\"업계\"},\n{\"surface\":\"로옴\",\"normalized\":\"로옴\"},\n{\"surface\":\"무선 통신 모듈\",\"normalized\":\"무선 통신 모듈\"},\n{\"surface\":\"스마트미터\",\"normalized\":\"스마트미터\"},\n{\"surface\":\"무선 통신 규격\",\"normalized\":\"무선 통신 규격\"},\n{\"surface\":\"Wi-SUN JUTA\",\"normalized\":\"Wi-SUN JUTA\"},\n{\"surface\":\"인증\",\"normalized\":\"인증\"},\n{\"surface\":\"취득\",\"normalized\":\"취득\"}\n]}",
+    "openai": ""
+  },
+  "majority_vote": "```json\n{\n  \"mentions\": [\n    {\n      \"surface\": \"로옴\",\n      \"normalized\": \"로옴\"\n    },\n    {\n      \"surface\": \"무선 통신 모듈\",\n      \"normalized\": \"무선 통신 모듈\"\n    },\n    {\n      \"surface\": \"스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증\",\n      \"normalized\": \"스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증\"\n    }\n  ]\n}\n```",
+  "dissent": true
+}

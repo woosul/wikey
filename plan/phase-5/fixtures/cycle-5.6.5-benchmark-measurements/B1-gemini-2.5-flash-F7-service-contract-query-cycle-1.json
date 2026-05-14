@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F7-service-contract",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서에서 설명하는 주요 주제 또는 제품은 SK 바이오텍의 전자구매시스템 구축입니다. 본 계약은 (주)세포아소프트가 SK 바이오텍 주식회사로부터 수주한 전자구매시스템 구축 사업의 개발 부문을 (주)굿스트림에 일괄 도급하여, SK 바이오텍을 위한 전자구매시스템을 기한 내에 완성하는 것을 목적으로 하고 있습니다.",
+  "latency_ms": 9188,
+  "token_count": 44,
+  "json_valid": true,
+  "pii_hits": []
+}

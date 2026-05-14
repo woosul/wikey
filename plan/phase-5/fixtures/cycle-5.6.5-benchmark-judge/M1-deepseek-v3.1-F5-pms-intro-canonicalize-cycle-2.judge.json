@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 2,
+  "accuracy": 0.6,
+  "semantic": 0.6,
+  "raw_judge": "{\"accuracy\": 0.6, \"semantic\": 0.6}"
+}

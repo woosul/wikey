@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "mention",
+  "cycle": 2,
+  "accuracy": 0.35,
+  "semantic": 0.35,
+  "raw_judge": "{\"accuracy\": 0.35, \"semantic\": 0.35}"
+}

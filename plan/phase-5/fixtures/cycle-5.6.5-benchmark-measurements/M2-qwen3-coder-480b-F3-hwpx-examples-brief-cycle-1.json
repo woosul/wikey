@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 1,
+  "response": "도시 골목의 유형을 분류하기 위한 예시 이미지들이 제공되며, 각 이미지는 서로 다른 골목의 특징을 보여줍니다. 이 이미지들은 골목의 형태나 구조적 차이를 시각적으로 설명하는 데 사용됩니다. 전체적으로 이 자료는 골목의 다양한 유형을 이해하고 구분하는 데 도움을 주기 위한 것입니다.",
+  "latency_ms": 7072,
+  "token_count": 40,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "mention",
+  "cycle": 2,
+  "response": "```json\n{\n  \"mentions\": [\n    {\n      \"surface\": \"굿스트림\",\n      \"normalized\": \"굿스트림\"\n    },\n    {\n      \"surface\": \"LOTUS PMS\",\n      \"normalized\": \"LOTUS PMS\"\n    },\n    {\n      \"surface\": \"PMS\",\n      \"normalized\": \"Project Management System\"\n    },\n    {\n      \"surface\": \"LOTUS SCM\",\n      \"normalized\": \"LOTUS SCM\"\n    },\n    {\n      \"surface\": \"MOBILE APP\",\n      \"normalized\": \"MOBILE APP\"\n    },\n    {\n      \"surface\": \"제조업\",\n      \"normalized\": \"제조업\"\n    },\n    {\n      \"surface\": \"IT 기업\",\n      \"normalized\": \"IT 기업\"\n    },\n    {\n      \"surface\": \"컨설팅\",\n      \"normalized\": \"컨설팅\"\n    },\n    {\n      \"surface\": \"PMBOK\",\n      \"normalized\": \"Project Management Body of Knowledge\"\n    },\n    {\n      \"surface\": \"그룹웨어\",\n      \"normalized\": \"그룹웨어\"\n    },\n    {\n      \"surface\": \"GOOD STREAM\",\n      \"normalized\": \"GOOD STREAM\"\n    }\n  ]\n}\n```",
+  "latency_ms": 7704,
+  "token_count": 212,
+  "json_valid": true,
+  "pii_hits": []
+}

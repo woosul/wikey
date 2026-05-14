@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F4-business-registration",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"사업자등록증\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"주식회사 굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"세중테크노밸리\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"청주 세무서\",\n      \"kind\": \"organization\"\n    }\n  ]\n}\n```",
+  "latency_ms": 3270,
+  "token_count": 76,
+  "json_valid": true,
+  "pii_hits": []
+}

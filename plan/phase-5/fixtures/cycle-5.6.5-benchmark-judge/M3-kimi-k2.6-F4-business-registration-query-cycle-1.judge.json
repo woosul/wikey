@@ -1,0 +1,9 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 1,
+  "accuracy": 0.5,
+  "semantic": 0.5,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.5,\n  \"semantic\": 0.5\n}\n```"
+}

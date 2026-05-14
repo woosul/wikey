@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F6-goodstream-solutions",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\"refs\":[{\"target\":\"https://www.goodstream.co.kr/docs/solution/solution-datalake.svg\",\"kind\":\"document\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/finetree/index.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/peaknine/peak9-insight.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/peaknine/peak9-edge.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/peaknine/peak9-anchor.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/lotus/index.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/lotus/lotus-srm.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/lotus/lotus-mes.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/lotus/lotus-pms.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/finetree/finetree-ocr.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/finetree/finetree-sql.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/finetree/finetree-rag.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/docs/solution/finetree/finetree-bot.html\",\"kind\":\"product\"},{\"target\":\"https://www.goodstream.co.kr/do\",\"kind\":\"document\"}]}",
+  "latency_ms": 12598,
+  "token_count": 334,
+  "json_valid": true,
+  "pii_hits": []
+}

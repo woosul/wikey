@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "```json\n{\n  \"entities\": []\n}\n```",
+  "latency_ms": 4977,
+  "token_count": 8,
+  "json_valid": true,
+  "pii_hits": []
+}

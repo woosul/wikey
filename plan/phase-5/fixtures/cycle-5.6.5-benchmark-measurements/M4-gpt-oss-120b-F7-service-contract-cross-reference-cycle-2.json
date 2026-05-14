@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"SK 바이오텍\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"(주)세포아소프트\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"(주)굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"전자구매시스템\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"전자입찰시스템\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"Back-to-Back\",\n      \"kind\": \"other\"\n    },\n    {\n      \"target\": \"VAT\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"서울중앙지방법원\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"보증보험증권\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"보안 서약서\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"계약서\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"Turn-key\",\n      \"kind\": \"other\"\n    }\n  ]\n}",
+  "latency_ms": 13224,
+  "token_count": 202,
+  "json_valid": true,
+  "pii_hits": []
+}

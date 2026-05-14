@@ -1,0 +1,11 @@
+{
+  "task": "cross-reference",
+  "fixture": "F1-rohm-wisun",
+  "model_outputs": {
+    "gemini": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"Wi-SUN JUTA\",\n      \"kind\": \"standard\"\n    }\n  ]\n}\n```",
+    "claude": "{\"refs\":[{\"target\":\"Wi-SUN JUTA\",\"kind\":\"standard\"},{\"target\":\"Wi-SUN\",\"kind\":\"standard\"},{\"target\":\"JUTA\",\"kind\":\"standard\"},{\"target\":\"로옴\",\"kind\":\"organization\"}]}",
+    "openai": ""
+  },
+  "majority_vote": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"Wi-SUN JUTA\",\n      \"kind\": \"standard\"\n    }\n  ]\n}\n```",
+  "dissent": true
+}

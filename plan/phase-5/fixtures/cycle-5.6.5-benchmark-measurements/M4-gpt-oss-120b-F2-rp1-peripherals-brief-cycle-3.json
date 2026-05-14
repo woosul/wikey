@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 라즈베리 파이(Raspberry Pi) 제품에 대한 문서의 저작권 정보와 Creative Commons Attribution‑NoDerivatives 4.0 라이선스를 명시하고, Synopsys, ARM, Cadence 등 외부 업체의 기여 부분을 포함하고 있습니다. 또한 “as is” 형태로 제공되는 기술 자료에 대해 책임을 부인하고, 고위험 분야에서는 사용을 금지한다는 법적 면책 조항을 포함하고 있어 사용자는 모든 위험을 스스로 감수해야 합니다. 본문에서는 라즈베리 파이 5에 탑재되는 RP1 주변 컨트롤러의 개요와 PCIe 2.0 ×4 버스를 통한 연결 방식, 시스템 구성 및 다양한 저속·고속 주변 장치 인터페이스를 상세히 설명하고 있습니다.",
+  "latency_ms": 8023,
+  "token_count": 93,
+  "json_valid": true,
+  "pii_hits": []
+}

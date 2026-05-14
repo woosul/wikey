@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서에 따르면, 주식회사 굿스트림의 주요 사업 또는 제품은 소프트웨어 개발, 자문 및 공급 서비스와 무선통신응용장치 제조입니다.",
+  "latency_ms": 6724,
+  "token_count": 19,
+  "json_valid": true,
+  "pii_hits": []
+}

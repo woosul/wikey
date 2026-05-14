@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서에서 주된 내용은 로옴이 만든 스마트미터용 무선 통신 모듈이 업계 최초로 Wi‑SUN JUTA 인증을 획득했다는 점이에요.",
+  "latency_ms": 5851,
+  "token_count": 18,
+  "json_valid": true,
+  "pii_hits": []
+}

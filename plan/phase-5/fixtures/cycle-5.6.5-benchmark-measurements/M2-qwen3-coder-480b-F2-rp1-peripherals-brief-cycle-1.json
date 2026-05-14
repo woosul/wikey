@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 라즈베리 파이 RP1 주변 장치 컨트롤러에 대한 기술 사양과 라이선스 정보를 포함하고 있습니다.  \nRP1은 라즈베리 파이 5에 사용되며, PCIe 버스를 통해 애플리케이션 프로세서와 연결되어 다양한 외부 인터페이스를 지원합니다.  \n문서는 또한 저작권 및 사용 제한에 대한 법적 고지와 함께 제공되며, 고위험 활동에는 적합하지 않다는 점을 명시하고 있습니다.",
+  "latency_ms": 9077,
+  "token_count": 52,
+  "json_valid": true,
+  "pii_hits": []
+}

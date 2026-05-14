@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서에서 설명하는 주요 주제 또는 제품은 **로옴(Rohm)의 Wi-SUN JUTA 인증을 받은 스마트미터용 무선 통신 모듈**입니다. 이 모듈은 업계 최초로 Wi-SUN JUTA라는 무선 통신 규격을 채택하여 스마트미터에 특화된 무선 통신 기능을 제공하며, 에너지 관리 및 원격 검침 시스템 등에서 활용될 수 있는 혁신적인 솔루션으로 소개됩니다. (haeyo-che)",
+  "latency_ms": 12119,
+  "token_count": 52,
+  "json_valid": true,
+  "pii_hits": []
+}

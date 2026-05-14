@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F4-business-registration",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "```json\n{\"refs\":[{\"target\":\"청주 세무서\",\"kind\":\"organization\"},{\"target\":\"세중테크노밸리\",\"kind\":\"organization\"}]}\n```",
+  "latency_ms": 8259,
+  "token_count": 27,
+  "json_valid": true,
+  "pii_hits": []
+}

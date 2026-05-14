@@ -1,0 +1,20 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"301-86-19385\",\n      \"type\": \"사업자등록번호\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"법인명\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"대표자\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"2012년 10월 02일\",\n      \"type\": \"개업년월일\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"150111-0166385\",\n      \"type\": \"법인등록번호\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리\",\n      \"type\": \"사업장 소재지\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\",\n      \"type\": \"본점소재지\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"서비스 제조업\",\n      \"type\": \"업태\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"소프트웨어개발,자문 및 공급 무선통신응용장치제조\",\n      \"type\": \"종목\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"청주 세무서장\",\n      \"type\": \"발급기관\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"2014년 09월 01일\",\n      \"type\": \"발급일자\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 43655,
+  "token_count": 251,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 1
+    },
+    {
+      "kind": "account",
+      "count": 1
+    }
+  ]
+}

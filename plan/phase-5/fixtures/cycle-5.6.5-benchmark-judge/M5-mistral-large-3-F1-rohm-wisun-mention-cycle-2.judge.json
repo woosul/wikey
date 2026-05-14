@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 2,
+  "accuracy": 0.25,
+  "semantic": 0.25,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.25,\n  \"semantic\": 0.25\n}\n```"
+}

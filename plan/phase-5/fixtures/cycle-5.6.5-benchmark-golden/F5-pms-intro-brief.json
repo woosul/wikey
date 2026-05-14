@@ -1,0 +1,11 @@
+{
+  "task": "brief",
+  "fixture": "F5-pms-intro",
+  "model_outputs": {
+    "gemini": "LOTUS PMS는 제조업, IT 기업 등 다양한 프로젝트 기반 중소/중견기업의 효율적인 업무 관리를 돕는 솔루션입니다. 이 시스템은 프로젝트의 정량적 성과와 진행 현황을 체계적으로 관리하며, 자원 배분 및 업무 공유 기능을 통합하여 생산성을 높입니다. 특히, PMBOK 기반의 프로젝트 관리 기능은 물론, 전자결재 및 업무 공유형 그룹웨어 기능을 내부에 포함하여 중소/중견기업이 부담 없이 도입할 수 있도록 설계되었습니다.",
+    "claude": "This document is about LOTUS PMS, a project management system designed for small and medium-sized enterprises. It is a collaborative manufacturing service solution that helps companies in various industries (manufacturing, IT, consulting) manage project-based product development and supply operations efficiently. The system includes features like project planning, resource management, work breakdown structure, progress tracking, and team collaboration tools including announcements, scheduling, meetings, and approval workflows.\n\n이 문서는 중소·중견기업을 위한 프로젝트관리시스템인 LOTUS PMS에 대해 설명합니다. 제조업, IT기업, 컨설팅 등 다양한 형태의 기업에서 프로젝트형 제품 개발 및 공급을 위한 협업 솔루션입니다. 작업계획, 자원관리, 작업분류체계, 진척관리 및 공지, 일정, 회의, 결재 등의 팀원 간 업무공유 기능을 포함한 종합적인 프로젝트 관리 도구입니다.",
+    "openai": ""
+  },
+  "majority_vote": "LOTUS PMS는 제조업, IT 기업 등 다양한 프로젝트 기반 중소/중견기업의 효율적인 업무 관리를 돕는 솔루션입니다. 이 시스템은 프로젝트의 정량적 성과와 진행 현황을 체계적으로 관리하며, 자원 배분 및 업무 공유 기능을 통합하여 생산성을 높입니다. 특히, PMBOK 기반의 프로젝트 관리 기능은 물론, 전자결재 및 업무 공유형 그룹웨어 기능을 내부에 포함하여 중소/중견기업이 부담 없이 도입할 수 있도록 설계되었습니다.",
+  "dissent": true
+}

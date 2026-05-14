@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 3,
+  "response": "해당 문서는 제조 기업의 설비와 IoT 센서에서 발생하는 데이터를 수집·정제·분석하고, 이를 기반으로 기업 특화형 AI를 구현하여 의사결정을 지원하는 통합 데이터 플랫폼 아키텍처를 소개합니다. 전체 계층은 Legacy 시스템과 설비 데이터를 수집하는 Peak9 Anchor·Edge를 거쳐 Data Lake에 저장하고, Peak9 Insight로 분석하며, Finetree AI Layer에서 LLM 기반 OCR·SQL·RAG·BOT 기능을 제공하는 구조로 구성되어 있습니다. 각 솔루션은 기업 내 데이터 흐름에 맞춰 선택적으로 도입할 수 있도록 Lotus(기간계), Peak9(데이터 수집·처리·분석), Finetree(로컬 AI) 세 영역으로 구분되어 제시됩니다.",
+  "latency_ms": 9670,
+  "token_count": 94,
+  "json_valid": true,
+  "pii_hits": []
+}

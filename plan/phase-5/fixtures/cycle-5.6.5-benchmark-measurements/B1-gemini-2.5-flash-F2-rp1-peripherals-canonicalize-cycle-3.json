@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F2-rp1-peripherals",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Raspberry Pi Ltd\",\n      \"type\": \"Company\",\n      \"aliases\": [\"RPL\", \"Raspberry Pi Ltd ('RPL')\"]\n    },\n    {\n      \"name\": \"Raspberry Pi\",\n      \"type\": \"Brand\",\n      \"aliases\": [\"Raspberry Pi Products\", \"Raspberry Pi 5\"]\n    },\n    {\n      \"name\": \"Synopsys, Inc.\",\n      \"type\": \"Company\",\n      \"aliases\": [\"Synopsys\"]\n    },\n    {\n      \"name\": \"DesignWare\",\n      \"type\": \"Trademark\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"ARM Limited\",\n      \"type\": \"Company\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"Cadence Design Systems, Inc.\",\n      \"type\": \"Company\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"Creative Commons Attribution-NoDerivatives 4.0 International\",\n      \"type\": \"License\",\n      \"aliases\": [\"CC BY-ND\"]\n    },\n    {\n      \"name\": \"RP1\",\n      \"type\": \"Chip/Controller\",\n      \"aliases\": [\"Raspberry Pi RP1 Southbridge\"]\n    },\n    {\n      \"name\": \"Broadcom\",\n      \"type\": \"Company\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"BCM2712\",\n      \"type\": \"Chip\",\n      \"aliases\": []\n    }\n  ]\n}\n```",
+  "latency_ms": 12868,
+  "token_count": 273,
+  "json_valid": true,
+  "pii_hits": []
+}

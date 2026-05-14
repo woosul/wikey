@@ -1,0 +1,20 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "mention",
+  "cycle": 2,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"301-86-19385\",\n      \"normalized\": \"Business Registration Number 301-86-19385\"\n    },\n    {\n      \"surface\": \"주식회사 굿스트림\",\n      \"normalized\": \"Goodstream Co., Ltd.\"\n    },\n    {\n      \"surface\": \"김명호\",\n      \"normalized\": \"Kim Myung-ho\"\n    },\n    {\n      \"surface\": \"2012년 10월 02일\",\n      \"normalized\": \"2012-10-02\"\n    },\n    {\n      \"surface\": \"150111-0166385\",\n      \"normalized\": \"Corporate Registration Number 150111-0166385\"\n    },\n    {\n      \"surface\": \"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리\",\n      \"normalized\": \"134 Gongdan-ro, 613 Songjeong-dong, Heungdeok-gu, Cheongju, Chungcheongbuk-do, South Korea\"\n    },\n    {\n      \"surface\": \"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\",\n      \"normalized\": \"134 Gongdan-ro, 613 Songjeong-dong, Heungdeok-gu, Cheongju, Chungcheongbuk-do, South Korea\"\n    },\n    {\n      \"surface\": \"서비스 제조업\",\n      \"normalized\": \"Service Manufacturing\"\n    },\n    {\n      \"surface\": \"소프트웨어개발,자문 및 공급 무선통신응용장치제조\",\n      \"normalized\": \"Software Development, Consulting and Supply, Wireless Communication Application Device Manufacturing\"\n    },\n    {\n      \"surface\": \"청주 세무서장\",\n      \"normalized\": \"Cheongju Tax Office\"\n    },\n    {\n      \"surface\": \"2014년 09월 01일\",\n      \"normalized\": \"2014-09-01\"\n    }\n  ]\n}",
+  "latency_ms": 12516,
+  "token_count": 320,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 2
+    },
+    {
+      "kind": "account",
+      "count": 2
+    }
+  ]
+}

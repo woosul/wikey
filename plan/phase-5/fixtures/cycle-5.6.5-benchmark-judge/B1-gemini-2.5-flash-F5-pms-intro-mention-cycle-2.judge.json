@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F5-pms-intro",
+  "task": "mention",
+  "cycle": 2,
+  "accuracy": 0.89,
+  "semantic": 0.92,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.89,\n  \"semantic\": 0.92\n}\n```"
+}

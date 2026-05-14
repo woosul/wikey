@@ -1,0 +1,9 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "canonicalize",
+  "cycle": 3,
+  "accuracy": 0.5,
+  "semantic": 0.5,
+  "raw_judge": "{\"accuracy\": 0.5, \"semantic\": 0.5}"
+}

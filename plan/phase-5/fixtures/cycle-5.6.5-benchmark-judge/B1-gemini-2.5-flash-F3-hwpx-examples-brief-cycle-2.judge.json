@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 2,
+  "accuracy": 1,
+  "semantic": 1,
+  "raw_judge": "{\"accuracy\": 1, \"semantic\": 1}"
+}

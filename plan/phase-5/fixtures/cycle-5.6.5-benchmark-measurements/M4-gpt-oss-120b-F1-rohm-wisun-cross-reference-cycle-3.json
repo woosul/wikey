@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "",
+  "latency_ms": 47191,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": []
+}

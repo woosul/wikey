@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 2,
+  "response": "사업자등록증에 기재된 주된 사업 종목은 소프트웨어 개발, 자문 및 공급과 무선통신응용장치 제조입니다.",
+  "latency_ms": 1014,
+  "token_count": 14,
+  "json_valid": true,
+  "pii_hits": []
+}

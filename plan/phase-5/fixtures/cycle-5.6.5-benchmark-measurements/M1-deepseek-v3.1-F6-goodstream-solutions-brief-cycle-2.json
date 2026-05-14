@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 2,
+  "response": "해당 문서는 제조 기업을 위한 통합 데이터 플랫폼 아키텍처와 핵심 솔루션을 소개합니다. 설비와 IoT 센서에서 데이터를 수집하여 정제 및 분석하는 end-to-end 흐름을 구축하고, AI를 활용해 의사결정을 지원하는 것이 주요 목표입니다. Lotus, Peak9, Finetree 세 가지 주요 솔루션군이 각각 데이터 생성, 처리/분석, AI 적용의 역할을 담당하여 전체 데이터 생태계를 구성합니다.",
+  "latency_ms": 6326,
+  "token_count": 56,
+  "json_valid": true,
+  "pii_hits": []
+}

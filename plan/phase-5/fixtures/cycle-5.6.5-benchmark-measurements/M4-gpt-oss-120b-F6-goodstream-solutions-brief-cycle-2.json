@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 2,
+  "response": "기업 데이터 플랫폼은 설비와 IoT 센서에서 발생하는 대량 데이터를 수집·정제·저장하고, Data Lake와 메타데이터 관리 기반으로 전사적인 데이터 흐름을 통합합니다. Peak9 시리즈는 데이터 수집(Anchor), 엣지 정제(Edge), 분석·인사이트(Insight) 등 전 단계의 파이프라인을 제공하며, Finetree AI 레이어는 OCR, SQL, RAG, BOT 등 로컬 LLM 기반 AI 서비스를 Data Lake와 연동합니다. 이러한 계층형 아키텍처는 제조 현장의 MES·ERP·SCADA 등 레거시 시스템과 연계해 실시간 의사결정을 지원하고, 사용자 UI/UX와 API Gateway를 통해 다양한 디바이스와 애플리케이션에 서비스를 제공합니다.",
+  "latency_ms": 6849,
+  "token_count": 93,
+  "json_valid": true,
+  "pii_hits": []
+}

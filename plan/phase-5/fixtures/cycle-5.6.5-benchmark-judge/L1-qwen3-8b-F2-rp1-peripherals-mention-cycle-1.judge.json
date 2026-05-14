@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F2-rp1-peripherals",
+  "task": "mention",
+  "cycle": 1,
+  "accuracy": 0.15,
+  "semantic": 0.15,
+  "raw_judge": "{\"accuracy\": 0.15, \"semantic\": 0.15}"
+}

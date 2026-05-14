@@ -1,0 +1,20 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "response": "{\n  \"facts\": [\n    {\n      \"statement\": \"법인사업자 등록번호는 301-86-19385이다\",\n      \"evidence_quote\": \"등록번호 : 301-86-19385\"\n    },\n    {\n      \"statement\": \"법인명은 주식회사 굿스트림이다\",\n      \"evidence_quote\": \"법인명(단체명) : 주식회사 굿스트림\"\n    },\n    {\n      \"statement\": \"대표자는 김명호이다\",\n      \"evidence_quote\": \"대표자 : 김명호\"\n    },\n    {\n      \"statement\": \"개업년월일은 2012년 10월 02일이다\",\n      \"evidence_quote\": \"개업년월일 : 2012년 10월 02일\"\n    },\n    {\n      \"statement\": \"법인등록번호는 150111-0166385이다\",\n      \"evidence_quote\": \"법인등록번호 : 150111-0166385\"\n    },\n    {\n      \"statement\": \"사업장 소재지는 충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리이다\",\n      \"evidence_quote\": \"사업장 소재지 : 충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리\"\n    },\n    {\n      \"statement\": \"본점소재지는 충청북도 청주시 흥덕구 공단로 134 , 613(송정동)이다\",\n      \"evidence_quote\": \"본점소재지 : 충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\"\n    },\n    {\n      \"statement\": \"사업의 종류는 업태 서비스 제조업이다\",\n      \"evidence_quote\": \"사업의 종류 : 업태 서비스 제조업\"\n    },\n    {\n      \"statement\": \"종목은 소프트웨어개발,자문 및 공급 무선통신응용장치제조이다\",\n      \"evidence_quote\": \"종목 소프트웨어개발,자문 및 공급 무선통신응용장치제조\"\n    },\n    {\n      \"statement\": \"교 부사유는 정정이다\",\n      \"evidence_quote\": \"교 부사유 : 정정\"\n    },\n    {\n      \"statement\": \"사업자단위과세 적용사업자 여부는 부이다\",\n      \"evidence_quote\": \"사업자단위과세 적용사업자 여부 : 여( ) 부(V )\"\n    },\n    {\n      \"statement\": \"전자세금계산서 전용메일주소가 기재되어 있다\",\n      \"evidence_quote\": \"전자세금계산서 전용메일주소 :\"\n    },\n    {\n      \"statement\": \"발급일자는 2014년 09월 01일이다\",\n      \"evidence_quote\": \"2014년 09월 01일\"\n    },\n    {\n      \"statement\": \"발급기관은 청주 세무서장이다\",\n      \"evidence_quote\": \"청주 세무서장\"\n    }\n  ]\n}",
+  "latency_ms": 15707,
+  "token_count": 384,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 2
+    },
+    {
+      "kind": "account",
+      "count": 2
+    }
+  ]
+}

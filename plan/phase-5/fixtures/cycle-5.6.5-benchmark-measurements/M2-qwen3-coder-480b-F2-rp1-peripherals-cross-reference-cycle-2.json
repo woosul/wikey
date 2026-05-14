@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\"refs\":[]}",
+  "latency_ms": 3887,
+  "token_count": 3,
+  "json_valid": true,
+  "pii_hits": []
+}

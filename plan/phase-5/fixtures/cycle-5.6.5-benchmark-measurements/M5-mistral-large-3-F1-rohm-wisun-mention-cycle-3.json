@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"로옴\",\n      \"normalized\": \"ROHM\"\n    },\n    {\n      \"surface\": \"Wi-SUN JUTA\",\n      \"normalized\": \"Wi-SUN JUTA\"\n    },\n    {\n      \"surface\": \"Wi-SUN\",\n      \"normalized\": \"Wi-SUN\"\n    },\n    {\n      \"surface\": \"JUTA\",\n      \"normalized\": \"JUTA\"\n    }\n  ]\n}",
+  "latency_ms": 5727,
+  "token_count": 75,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서는 Raspberry Pi RP1 Southbridge에 대한 기술 문서입니다. RP1은 Raspberry Pi 5에 사용되도록 Raspberry Pi Ltd에서 설계한 주변 장치 컨트롤러로, PCIe 2.0 x4 버스를 통해 응용 프로세서(AP)에 연결되며 Raspberry Pi 5의 다양한 외부 인터페이스를 위한 디지털 컨트롤러와 아날로그 PHY를 집약합니다. Raspberry Pi 5의 경우 AP는 16nm Broadcom BCM2712입니다. 문서는 RP1의 시스템 설명, 주변 장치, 저속 주변 장치, 법적 고지 사항, 목차 등을 포함하여 하드웨어의 다양한 측면을 다룹니다. 따라서 이 문서에서 설명하는 주요 주제나 제품은 Raspberry Pi RP1 Southbridge 컨트롤러입니다.",
+  "latency_ms": 15588,
+  "token_count": 100,
+  "json_valid": true,
+  "pii_hits": []
+}

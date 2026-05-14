@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 2,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"SK 바이오텍\",\n      \"normalized\": \"SK 바이오텍\"\n    },\n    {\n      \"surface\": \"(주)세포아소프트\",\n      \"normalized\": \"세포아소프트\"\n    },\n    {\n      \"surface\": \"(주)굿스트림\",\n      \"normalized\": \"굿스트림\"\n    },\n    {\n      \"surface\": \"이희림\",\n      \"normalized\": \"이희림\"\n    },\n    {\n      \"surface\": \"김명호\",\n      \"normalized\": \"김명호\"\n    },\n    {\n      \"surface\": \"2026년 4월 10일\",\n      \"normalized\": \"2026-04-10\"\n    },\n    {\n      \"surface\": \"2026년 4월 20일\",\n      \"normalized\": \"2026-04-20\"\n    },\n    {\n      \"surface\": \"2026년 10월 30일\",\n      \"normalized\": \"2026-10-30\"\n    },\n    {\n      \"surface\": \"₩241,000,000 원\",\n      \"normalized\": \"241000000 KRW\"\n    },\n    {\n      \"surface\": \"₩76,000,000 원\",\n      \"normalized\": \"76000000 KRW\"\n    },\n    {\n      \"surface\": \"30%\",\n      \"normalized\": \"30%\"\n    },\n    {\n      \"surface\": \"40%\",\n      \"normalized\": \"40%\"\n    },\n    {\n      \"surface\": \"10%\",\n      \"normalized\": \"10%\"\n    },\n    {\n      \"surface\": \"0.15%\",\n      \"normalized\": \"0.15%\"\n    },\n    {\n      \"surface\": \"7일\",\n      \"normalized\": \"7 days\"\n    },\n    {\n      \"surface\": \"60일\",\n      \"normalized\": \"60 days\"\n    },\n    {\n      \"surface\": \"1년\",\n      \"normalized\": \"1 year\"\n    },\n    {\n      \"surface\": \"서울중앙지방법원\",\n      \"normalized\": \"Seoul Central District Court\"\n    },\n    {\n      \"surface\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717 호\",\n      \"normalized\": \"31길 62, 아티스포럼 714-717, 구로구, 서울시\"\n    },\n    {\n      \"surface\": \"충북 청주시 흥덕 공단로 134,613\",\n      \"normalized\": \"134-613, 흥덕 공단로, 청주시, 충청북도\"\n    }\n  ]\n}",
+  "latency_ms": 31411,
+  "token_count": 385,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "canonicalize",
+  "cycle": 1,
+  "accuracy": 0.5,
+  "semantic": 0.6,
+  "raw_judge": "{\"accuracy\": 0.5, \"semantic\": 0.6}"
+}

@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"로옴\",\n      \"type\": \"Organization\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"Wi-SUN JUTA\",\n      \"type\": \"Standard\",\n      \"aliases\": [\n        \"무선 통신 규격\"\n      ]\n    },\n    {\n      \"name\": \"스마트미터\",\n      \"type\": \"Product\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 72960,
+  "token_count": 75,
+  "json_valid": true,
+  "pii_hits": []
+}

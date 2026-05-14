@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"LOTUS SCM\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"MOBILE APP\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"PMBOK (Project Management Body of Knowledge)\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"WBS (Work Breakdown Structure)\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"㈜굿스트림\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"GOOD STREAM\",\n      \"kind\": \"organization\"\n    }\n  ]\n}",
+  "latency_ms": 2010,
+  "token_count": 121,
+  "json_valid": true,
+  "pii_hits": []
+}

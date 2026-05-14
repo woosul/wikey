@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F7-service-contract",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"SK 바이오텍\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"고객사\", \"SK 바이오텍 주식회사\"]\n    },\n    {\n      \"name\": \"(주)세포아소프트\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"갑\", \"도급인\", \"세포아소프트\"]\n    },\n    {\n      \"name\": \"(주)굿스트림\",\n      \"type\": \"Organization\",\n      \"aliases\": [\"을\", \"수급인\", \"굿스트림\"]\n    },\n    {\n      \"name\": \"이희림\",\n      \"type\": \"Person\",\n      \"aliases\": [\"이 희림\"]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"Person\",\n      \"aliases\": [\"김명 호\"]\n    },\n    {\n      \"name\": \"SK 바이오텍 전자구매시스템 구축 계약\",\n      \"type\": \"Contract\",\n      \"aliases\": [\"전자구매시스템 구축 사업\", \"SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역\"]\n    },\n    {\n      \"name\": \"서울중앙지방법원\",\n      \"type\": \"Organization\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"아티스포럼\",\n      \"type\": \"Location\",\n      \"aliases\": [\"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717호\"]\n    },\n    {\n      \"name\": \"충북 청주시 흥덕 공단로 134, 613\",\n      \"type\": \"Location\",\n      \"aliases\": []\n    }\n  ]\n}\n```",
+  "latency_ms": 3063,
+  "token_count": 246,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F4-business-registration",
+  "task": "mention",
+  "cycle": 2,
+  "accuracy": 0.16,
+  "semantic": 0.16,
+  "raw_judge": "{\"accuracy\": 0.16, \"semantic\": 0.16}"
+}

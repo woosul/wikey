@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F4-business-registration",
+  "task": "brief",
+  "cycle": 2,
+  "response": "주식회사 굿스트림은 김명호 대표이사가 이끄는 소프트웨어 개발 및 무선통신응용장치 제조업을 영위하는 법인사업자입니다. 해당 법인은 2012년 10월 2일 개업했으며, 충청북도 청주시 흥덕구에 본점과 사업장을 두고 있습니다. 또한 이 문서는 2014년 9월 1일자로 청주 세무서장으로부터 발급된 사업자등록증입니다.",
+  "latency_ms": 4411,
+  "token_count": 44,
+  "json_valid": true,
+  "pii_hits": []
+}

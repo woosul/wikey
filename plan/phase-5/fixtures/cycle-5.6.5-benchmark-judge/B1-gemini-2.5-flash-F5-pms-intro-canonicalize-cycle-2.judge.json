@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 2,
+  "accuracy": 0.7,
+  "semantic": 0.7,
+  "raw_judge": "{\"accuracy\": 0.7, \"semantic\": 0.7}"
+}

@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "mention",
+  "cycle": 1,
+  "response": "",
+  "latency_ms": 41371,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": []
+}

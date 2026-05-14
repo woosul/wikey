@@ -1,0 +1,11 @@
+{
+  "task": "cross-reference",
+  "fixture": "F3-hwpx-examples",
+  "model_outputs": {
+    "gemini": "```json\n{\"refs\": [{\"target\": \"Example Images for Type of the Alley\", \"kind\": \"document\"}]}\n```",
+    "claude": "{\"refs\":[{\"target\":\"Example Images for Type of the Alley\",\"kind\":\"document\"}]}",
+    "openai": ""
+  },
+  "majority_vote": "```json\n{\"refs\": [{\"target\": \"Example Images for Type of the Alley\", \"kind\": \"document\"}]}\n```",
+  "dissent": false
+}

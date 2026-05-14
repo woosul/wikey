@@ -1,0 +1,9 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 2,
+  "accuracy": 1,
+  "semantic": 1,
+  "raw_judge": "{\"accuracy\": 1, \"semantic\": 1}"
+}

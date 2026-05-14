@@ -1,0 +1,9 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "SKIPPED (error or empty)"
+}

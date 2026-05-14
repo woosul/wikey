@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"Example Images for Type of the Alley\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"ISO\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"ASTM\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"IEEE\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"National Electrical Code (NEC)\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"UL (Underwriters Laboratories)\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"ANSI (American National Standards Institute)\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"OSHA (Occupational Safety and Health Administration)\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"iPhone\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"Samsung Galaxy\",\n      \"kind\": \"product\"\n    }\n  ]\n}",
+  "latency_ms": 14688,
+  "token_count": 208,
+  "json_valid": true,
+  "pii_hits": []
+}

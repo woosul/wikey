@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"주식회사 굿스트림\",\n      \"normalized\": \"주식회사 굿스트림\"\n    },\n    {\n      \"surface\": \"김명호\",\n      \"normalized\": \"김명호\"\n    },\n    {\n      \"surface\": \"충청북도 청주시 흥덕구 공단로 134\",\n      \"normalized\": \"충청북도 청주시 흥덕구 공단로 134\"\n    },\n    {\n      \"surface\": \"송정동\",\n      \"normalized\": \"송정동\"\n    },\n    {\n      \"surface\": \"세중테크노밸리\",\n      \"normalized\": \"세중테크노밸리\"\n    },\n    {\n      \"surface\": \"청주 세무서장\",\n      \"normalized\": \"청주 세무서장\"\n    }\n  ]\n}",
+  "latency_ms": 6318,
+  "token_count": 116,
+  "json_valid": true,
+  "pii_hits": []
+}

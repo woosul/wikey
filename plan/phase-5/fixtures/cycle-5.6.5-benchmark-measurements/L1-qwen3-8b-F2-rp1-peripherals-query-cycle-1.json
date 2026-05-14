@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서는 라즈베리파이 제품과 관련된 기술적 정보와 법적 고지 사항을 설명하고 있으며, 주로 라즈베리파이 제품의 사용 조건, 책임 면제, 저작권 및 라이선스 관련 내용을 다룹니다. 따라서 주요 주제는 라즈베리파이 제품의 사용자에게 제공되는 자료 및 법적 조건입니다.",
+  "latency_ms": 6641,
+  "token_count": 37,
+  "json_valid": true,
+  "pii_hits": []
+}

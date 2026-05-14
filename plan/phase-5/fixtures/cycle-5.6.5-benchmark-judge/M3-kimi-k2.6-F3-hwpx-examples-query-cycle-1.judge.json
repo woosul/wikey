@@ -1,0 +1,9 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 1,
+  "accuracy": 1,
+  "semantic": 0.9,
+  "raw_judge": "```json\n{\n  \"accuracy\": 1,\n  \"semantic\": 0.9\n}\n```"
+}

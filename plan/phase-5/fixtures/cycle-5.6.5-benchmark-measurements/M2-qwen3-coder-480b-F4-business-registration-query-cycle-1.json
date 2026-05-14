@@ -1,0 +1,20 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서는 주식회사 굿스트림이라는 법인사업자의 사업자등록증입니다. 주요 정보로는 등록번호 301-86-19385, 대표자 김명호, 개업년월일 2012년 10월 2일, 그리고 충청북도 청주시 흥덕구 공단로 134에 위치한 사업장 주소가 포함되어 있습니다. 또한 이 회사는 소프트웨어 개발, 자문 및 공급, 무선통신응용장치 제조 등의 서비스 제조업을 영위하고 있으며, 2014년 9월 1일자로 정정된 교부사유가 기재되어 있습니다.",
+  "latency_ms": 9305,
+  "token_count": 60,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 1
+    },
+    {
+      "kind": "account",
+      "count": 1
+    }
+  ]
+}

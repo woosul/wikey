@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"SK 바이오텍\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"전자구매시스템 구축 사업\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"용역도급 약정조건\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"SK 바이오텍 전자입찰시스템 재구축 프로젝트\",\n      \"kind\": \"document\"\n    }\n  ]\n}",
+  "latency_ms": 9737,
+  "token_count": 77,
+  "json_valid": true,
+  "pii_hits": []
+}

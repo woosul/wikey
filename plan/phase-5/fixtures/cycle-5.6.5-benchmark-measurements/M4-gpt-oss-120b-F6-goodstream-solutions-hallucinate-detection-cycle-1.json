@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "response": "{\n  \"facts\": [\n    {\n      \"statement\": \"The enterprise data platform collects and analyzes large amounts of data from equipment and IoT sensors, and realizes AI based",
+  "latency_ms": 39407,
+  "token_count": 42,
+  "json_valid": false,
+  "pii_hits": []
+}

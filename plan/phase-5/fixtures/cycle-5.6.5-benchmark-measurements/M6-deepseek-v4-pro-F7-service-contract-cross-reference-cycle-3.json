@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"SK 바이오텍 전자구매시스템 구축 계약\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"SK 바이오텍 주식회사\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"전자구매시스템 구축 사업\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"SK 바이오텍\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역\",\n      \"kind\": \"document\"\n    },\n    {\n      \"target\": \"서울중앙지방법원\",\n      \"kind\": \"organization\"\n    }\n  ]\n}\n```",
+  "latency_ms": 1907,
+  "token_count": 121,
+  "json_valid": true,
+  "pii_hits": []
+}

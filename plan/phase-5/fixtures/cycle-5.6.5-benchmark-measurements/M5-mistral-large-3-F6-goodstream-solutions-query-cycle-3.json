@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서에서 설명하는 **주요 제품 또는 주제**는 **기업용 데이터 플랫폼 솔루션**입니다. 특히 제조 산업을 중심으로 **IoT 센서와 설비에서 발생하는 대량의 데이터를 수집, 정제, 저장 및 분석**하고, 이를 기반으로 **AI(인공지능)를 활용한 의사결정 지원 시스템**을 구축하는 통합 아키텍처를 제공합니다. 문서에는 **Peak9, Finetree, Lotus** 등 다양한 하위 솔루션들이 소개되어 있으며, 이들은 각각 데이터 수집(Anchor), 정제(Edge), 분석(Insight), AI 기반 자연어 처리(BOT/SQL/RAG/OCR) 등 기업의 데이터 흐름을 체계적으로 관리하는 역할을 수행합니다.",
+  "latency_ms": 5071,
+  "token_count": 87,
+  "json_valid": true,
+  "pii_hits": []
+}

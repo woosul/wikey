@@ -1,0 +1,20 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"(주)세포아소프트\",\n      \"type\": \"Company\",\n      \"aliases\": [\n        \"세포아소프트\",\n        \"주식회사 세포아소프트\",\n        \"갑\"\n      ]\n    },\n    {\n      \"name\": \"(주)굿스트림\",\n      \"type\": \"Company\",\n      \"aliases\": [\n        \"굿스트림\",\n        \"주식회사 굿스트림\",\n        \"을\"\n      ]\n    },\n    {\n      \"name\": \"SK 바이오텍\",\n      \"type\": \"Company\",\n      \"aliases\": [\n        \"SK 바이오텍\",\n        \"SK바이오텍\",\n        \"고객사\",\n        \"SK 바이오텍 주식회사\"\n      ]\n    },\n    {\n      \"name\": \"SK 바이오텍 전자구매시스템 구축 프로젝트\",\n      \"type\": \"Project\",\n      \"aliases\": [\n        \"전자구매시스템 구축 사업\",\n        \"전자입찰시스템 재구축 프로젝트\",\n        \"SK 바이오텍 전자구매시스템 구축 계약\"\n      ]\n    },\n    {\n      \"name\": \"2026-04-10\",\n      \"type\": \"Date\",\n      \"aliases\": [\n        \"2026년 4월 10일\",\n        \"2026년 4월 10 일\"\n      ]\n    },\n    {\n      \"name\": \"2026-04-10 ~ 2026-10-30\",\n      \"type\": \"Period\",\n      \"aliases\": [\n        \"2026년 4월 10일 ~ 2026년 10월 30일\",\n        \"2026년 4월 20일 ~ 2026년 10월 30일\"\n      ]\n    },\n    {\n      \"name\": \"241,000,000 KRW\",\n      \"type\": \"Money\",\n      \"aliases\": [\n        \"241,000,000원\",\n        \"이억사천일백만원정\",\n        \"₩241,000,000 원\",\n        \"241,000,000 원\"\n      ]\n    },\n    {\n      \"name\": \"76,000,000 KRW\",\n      \"type\": \"Money\",\n      \"aliases\": [\n        \"76,000,000원\",\n        \"₩76,000,000 원\",\n        \"7,600만원\",\n        \"7,600 만 원\"\n      ]\n    },\n    {\n      \"name\": \"이희림\",\n      \"type\": \"Person\",\n      \"aliases\": [\n        \"이 희림\"\n      ]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"Person\",\n      \"aliases\": [\n        \"김명 호\"\n      ]\n    },\n    {\n      \"name\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717 호\",\n      \"type\": \"Address\",\n      \"aliases\": [\n        \"서울 구로구 디지털로31길 62, 아티스포럼 714~717 호\",\n        \"서울시 구로구 디지털로 31길 62\"\n      ]\n    },\n    {\n      \"name\": \"충북 청주시 흥덕 공단로 134,613\",\n      \"type\": \"Address\",\n      \"aliases\": [\n        \"청주시 흥덕 공단로 134,613\"\n      ]\n    },\n    {\n      \"name\": \"119-81-95926\",\n      \"type\": \"BusinessNumber\",\n      \"aliases\": [\n        \"세포아소프트 사업자번호\",\n        \"119-81-95926\"\n      ]\n    },\n    {\n      \"name\": \"301-86-19385\",\n      \"type\": \"BusinessNumber\",\n      \"aliases\": [\n        \"굿스트림 사업자번호\",\n        \"301-86-19385\"\n      ]\n    },\n    {\n      \"name\": \"서울중앙지방법원\",\n      \"type\": \"Court\",\n      \"aliases\": [\n        \"서울중앙지법\",\n        \"서울중앙지방법원 1심\"\n      ]\n    }\n  ]\n}",
+  "latency_ms": 26143,
+  "token_count": 578,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 4
+    },
+    {
+      "kind": "account",
+      "count": 4
+    }
+  ]
+}

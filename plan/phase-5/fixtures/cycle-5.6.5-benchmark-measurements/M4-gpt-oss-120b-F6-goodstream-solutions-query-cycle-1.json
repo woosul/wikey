@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서에서 주로 다루는 내용은 제조 현장의 설비·IoT 센서 등에서 발생하는 방대한 데이터를 체계적으로 수집·정제·저장하고, 빅데이터와 AI·LLM 기반 분석을 통해 기업 의사결정을 지원하는 **기업 데이터 플랫폼**입니다. 이 플랫폼은 데이터 레이크, Peak9 Anchor·Edge·Insight·Rail·RFID 등 다양한 데이터 파이프라인 모듈과 Finetree OCR·SQL·RAG·BOT 같은 로컬 AI 솔루션, 그리고 Lotus SRM·MES·PMS 같은 기간계 시스템을 연계해 전체 데이터 흐름을 관리하고, 사용자 UI/UX와 API Gateway를 통해 최종 서비스까지 연결하는 통합 아키텍처를 제공합니다.",
+  "latency_ms": 5934,
+  "token_count": 88,
+  "json_valid": true,
+  "pii_hits": []
+}

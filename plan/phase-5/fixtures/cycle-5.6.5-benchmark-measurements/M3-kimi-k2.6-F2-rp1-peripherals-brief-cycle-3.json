@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 Raspberry Pi 5용 주변 장치 컨트롤러인 RP1에 대한 기술 문서입니다. RP1은 PCIe 2.0 x4 버스를 통해 애플리케이션 프로세서와 연결되며, GPIO, UART, PWM, I2C, SPI, USB, 이더넷, 디스플레이 및 카메라 인터페이스 등 다양한 디지털 컨트롤러와 아날로그 PHY를 통합하고 있습니다. 이 문서는 시스템 설명, 주소 맵, 클럭 구성, 저속 주변 장치, SDIO, USB, PCIe, 이더넷, DMA 등의 상세한 레지스터 정보와 함께 법적 면책 조항 및 저작권 정보를 포함하고 있습니다.",
+  "latency_ms": 7415,
+  "token_count": 75,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "{\"refs\":[{\"target\":\"SK 바이오텍\",\"kind\":\"organization\"},{\"target\":\"전자구매시스템\",\"kind\":\"product\"},{\"target\":\"전자입찰시스템\",\"kind\":\"product\"},{\"target\":\"(주)세포아소프트\",\"kind\":\"organization\"},{\"target\":\"(주)굿스트림\",\"kind\":\"organization\"}]}",
+  "latency_ms": 15403,
+  "token_count": 55,
+  "json_valid": true,
+  "pii_hits": []
+}

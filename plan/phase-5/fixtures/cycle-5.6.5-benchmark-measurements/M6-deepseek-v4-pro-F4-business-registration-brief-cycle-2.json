@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F4-business-registration",
+  "task": "brief",
+  "cycle": 2,
+  "response": "주식회사 굿스트림은 충청북도 청주시 흥덕구에 위치한 법인사업자로, 2012년 10월 2일에 개업하였습니다. 이 회사는 소프트웨어 개발 및 공급과 무선통신응용장치 제조업을 주된 사업으로 영위하고 있습니다. 해당 사업자등록증은 정정 사유로 2014년 9월 1일에 청주세무서장이 발급하였습니다.",
+  "latency_ms": 10852,
+  "token_count": 41,
+  "json_valid": true,
+  "pii_hits": []
+}

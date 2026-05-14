@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "query",
+  "cycle": 3,
+  "response": "LOTUS PMS는 중소 및 중견 기업을 위한 프로젝트 기반 제조 협업 서비스로, 프로젝트형 제품 개발 및 공급을 지원하는 프로젝트 관리 시스템(Project Management System)입니다. 이 솔루션은 기업의 자원을 효과적으로 계획, 조직, 관리하고, 프로젝트의 성과와 진행 상황을 체계적으로 관리할 수 있도록 설계되었습니다. 특히, 프로젝트 내 팀원 간의 업무 공유 기능(공지, 일정, 작업, 회의, 이슈, 결재 등)을 포함하여 중소기업도 부담 없이 활용할 수 있는 통합형 프로젝트 관리 플랫폼입니다.",
+  "latency_ms": 14237,
+  "token_count": 72,
+  "json_valid": true,
+  "pii_hits": []
+}

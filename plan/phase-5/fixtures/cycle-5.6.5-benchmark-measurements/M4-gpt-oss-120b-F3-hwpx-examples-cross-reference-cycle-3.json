@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\n  \"refs\": []\n}",
+  "latency_ms": 9608,
+  "token_count": 4,
+  "json_valid": true,
+  "pii_hits": []
+}

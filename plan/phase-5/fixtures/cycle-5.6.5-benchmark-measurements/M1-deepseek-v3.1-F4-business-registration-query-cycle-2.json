@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서에서 설명하는 주요 주제 또는 제품은 '소프트웨어 개발, 자문 및 공급'과 '무선통신응용장치 제조'로, 주식회사 굿스트림의 사업 종류를 나타내는 사업자등록증입니다.",
+  "latency_ms": 3497,
+  "token_count": 24,
+  "json_valid": true,
+  "pii_hits": []
+}

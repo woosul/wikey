@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\n  \"mentions\": [\n    {\"surface\": \"SK 바이오텍\", \"normalized\": \"SK 바이오텍\"},\n    {\"surface\": \"세포아소프트\", \"normalized\": \"세포아소프트\"},\n    {\"surface\": \"굿스트림\", \"normalized\": \"굿스트림\"},\n    {\"surface\": \"전자구매시스템 구축 사업\", \"normalized\": \"전자구매시스템 구축 사업\"},\n    {\"surface\": \"전자입찰시스템 재구축 프로젝트\", \"normalized\": \"전자입찰시스템 재구축 프로젝트\"},\n    {\"surface\": \"이희림\", \"normalized\": \"이희림\"},\n    {\"surface\": \"김명호\", \"normalized\": \"김명호\"},\n    {\"surface\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717호\", \"normalized\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717호\"},\n    {\"surface\": \"충북 청주시 흥덕 공단로 134,613\", \"normalized\": \"충북 청주시 흥덕 공단로 134,613\"},\n    {\"surface\": \"Turn-key 방식\", \"normalized\": \"Turn-key 방식\"}\n  ]\n}",
+  "latency_ms": 9850,
+  "token_count": 163,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"로옴\",\n      \"normalized\": \"로옴\"\n    },\n    {\n      \"surface\": \"Wi‑SUN JUTA\",\n      \"normalized\": \"Wi‑SUN JUTA\"\n    },\n    {\n      \"surface\": \"스마트미터\",\n      \"normalized\": \"스마트미터\"\n    },\n    {\n      \"surface\": \"무선 통신 모듈\",\n      \"normalized\": \"무선 통신 모듈\"\n    },\n    {\n      \"surface\": \"무선 통신 규격\",\n      \"normalized\": \"무선 통신 규격\"\n    },\n    {\n      \"surface\": \"Wi‑SUN\",\n      \"normalized\": \"Wi‑SUN\"\n    },\n    {\n      \"surface\": \"Wi‑SUN JUTA 인증\",\n      \"normalized\": \"Wi‑SUN JUTA 인증\"\n    },\n    {\n      \"surface\": \"Wi‑SUN JUTA 규격\",\n      \"normalized\": \"Wi‑SUN JUTA 규격\"\n    }\n  ]\n}",
+  "latency_ms": 23839,
+  "token_count": 154,
+  "json_valid": true,
+  "pii_hits": []
+}

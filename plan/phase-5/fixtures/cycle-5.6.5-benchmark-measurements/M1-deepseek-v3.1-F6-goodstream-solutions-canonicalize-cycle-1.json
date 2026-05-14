@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Finetree AI Layer\",\n      \"type\": \"AI Application Layer\",\n      \"aliases\": [\"Finetree\"]\n    },\n    {\n      \"name\": \"Peak9 Insight\",\n      \"type\": \"Data Analysis Solution\",\n      \"aliases\": [\"Peak9 Insight\"]\n    },\n    {\n      \"name\": \"Data Lake\",\n      \"type\": \"Data Storage\",\n      \"aliases\": [\"Cloud Store\", \"TSDB\", \"RDB\", \"NoSQL\", \"File Store\"]\n    },\n    {\n      \"name\": \"Peak9 Edge\",\n      \"type\": \"Data Processing Solution\",\n      \"aliases\": [\"Peak9 Edge\"]\n    },\n    {\n      \"name\": \"Peak9 Anchor\",\n      \"type\": \"Data Collection Solution\",\n      \"aliases\": [\"Peak9 Anchor\"]\n    },\n    {\n      \"name\": \"Lotus Legacy\",\n      \"type\": \"Legacy System\",\n      \"aliases\": [\"Lotus\"]\n    },\n    {\n      \"name\": \"Lotus SRM\",\n      \"type\": \"Procurement Management System\",\n      \"aliases\": [\"SRM\"]\n    },\n    {\n      \"name\": \"Lotus MES\",\n      \"type\": \"Manufacturing Execution System\",\n      \"aliases\": [\"MES\"]\n    },\n    {\n      \"name\": \"Lotus PMS\",\n      \"type\": \"Project Management System\",\n      \"aliases\": [\"PMS\"]\n    },\n    {\n      \"name\": \"Finetree OCR\",\n      \"type\": \"OCR Solution\",\n      \"aliases\": [\"OCR\"]\n    },\n    {\n      \"name\": \"Finetree SQL\",\n      \"type\": \"Natural Language Query Solution\",\n      \"aliases\": [\"SQL\", \"Text-to-SQL\"]\n    },\n    {\n      \"name\": \"Finetree RAG\",\n      \"type\": \"Document Search Solution\",\n      \"aliases\": [\"RAG\"]\n    },\n    {\n      \"name\": \"Finetree BOT\",\n      \"type\": \"AI Chatbot Solution\",\n      \"aliases\": [\"BOT\"]\n    },\n    {\n      \"name\": \"Peak9 Rail\",\n      \"type\": \"Train Simulator\",\n      \"aliases\": [\"TCMS Simulator\"]\n    },\n    {\n      \"name\": \"Peak9 RFID\",\n      \"type\": \"RFID Middleware\",\n      \"aliases\": [\"RFID\"]\n    }\n  ]\n}\n```",
+  "latency_ms": 19439,
+  "token_count": 434,
+  "json_valid": true,
+  "pii_hits": []
+}

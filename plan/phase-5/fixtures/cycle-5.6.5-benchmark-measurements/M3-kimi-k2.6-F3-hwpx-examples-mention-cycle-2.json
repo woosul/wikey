@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "mention",
+  "cycle": 2,
+  "response": "```json\n{\"mentions\":[{\"surface\":\"Alley\",\"normalized\":\"Alley\"},{\"surface\":\"Type of the Alley\",\"normalized\":\"Type of the Alley\"},{\"surface\":\"Example Images\",\"normalized\":\"Example Images\"}]}\n```",
+  "latency_ms": 2947,
+  "token_count": 48,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n  \"로옴은 2023년 11월 30일, 무선 통신 모듈 「BP35C5 JUTA」가 스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증을 취득했다고 발표했습니다. 이는 업계 최초의 사례입니다.\"\n}\n&lt;/개요&gt;\n\n&lt;배경&gt;\n스마트미터는 전력 사용량을 자동으로 검침하고 원격으로 제어할 수 있는 차세대 전력 계량기입니다. Wi-SUN (Wireless Smart Utility Network)은 스마트미터 및 스마트 그리드 구축을 위한 무선 통신 규격 중 하나로, 저전력·장거리 통신이 가능해 스마트미터에 적합합니다. Wi-SUN Alliance에서는 표준 규격을 제정하고 인증을 수행하며, 「Wi-SUN JUTA」는 일본에서 스마트미터용으로 사용되는 Wi-SUN 프로파일입니다.\n&lt;/배경&gt;\n\n&lt;의의&gt;\n로옴의 「BP35C5 JUTA」 모듈이 Wi-SUN JUTA 인증을 취득함으로써, 해당 모듈이 일본의 스마트미터 통신 규격에 완벽히 부합함을 입증했습니다. 이를 통해 로옴은 스마트미터 및 관련 인프라 시장에 강력한 솔루션을 제공할 수 있게 되었으며, 특히 일본 내 전력 회사 및 계통 제조사에 대한 공급이 용이해질 전망입니다. 또한, 업계 최초의 인증 취득은 로옴의 기술력과 시장 선도적 위치를 보여주는 중요한里程碑가 될 것입니다.\n&lt;/의의&gt;\n\n&lt;전망&gt;\n로옴은 이번 인증을 바탕으로 스마트미터 시장에서의 경쟁력을 더욱 강화할 계획입니다. 또한, Wi-SUN 기술을 활용한 다양한 IoT 애플리케이션으로 사업 영역을 확대해 나갈 예정입니다. 이를 통해 에너지 관리 효율화와 스마트 사회 구현에 기여할 것으로 기대됩니다.\n&lt;/전망&gt;---\n```json\n{\n  \"mentions\": [\n    {\n      \"surface\": \"로옴\",\n      \"normalized\": \"ROHM\"\n    },\n    {\n      \"surface\": \"무선 통신 모듈\",\n      \"normalized\": \"wireless communication module\"\n    },\n    {\n      \"surface\": \"스마트미터\",\n      \"normalized\": \"smart meter\"\n    },\n    {\n      \"surface\": \"Wi-SUN JUTA\",\n      \"normalized\": \"Wi-SUN JUTA\"\n    },\n    {\n      \"surface\": \"BP35C5 JUTA\",\n      \"normalized\": \"BP35C5 JUTA\"\n    },\n    {\n      \"surface\": \"Wi-SUN Alliance\",\n      \"normalized\": \"Wi-SUN Alliance\"\n    },\n    {\n      \"surface\": \"일본\",\n      \"normalized\": \"Japan\"\n    },\n    {\n      \"surface\": \"IoT\",\n      \"normalized\": \"Internet of Things\"\n    }\n  ]\n}\n```",
+  "latency_ms": 12888,
+  "token_count": 375,
+  "json_valid": false,
+  "pii_hits": []
+}

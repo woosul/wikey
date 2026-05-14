@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 1,
+  "response": "기업 데이터 플랫폼은 IoT 센서와 기존 시스템에서 수집된 대량의 데이터를 체계적으로 정제 및 저장하여, 기업 특화 인공지능을 통해 의사결정을 지원합니다. 이 아키텍처는 제조 현장의 원천 데이터 수집부터 Data Lake 기반 분석, 그리고 최종 사용자를 위한 AI 애플리케이션 제공까지 전 계층을 포괄하는 통합 구조로 구성되어 있습니다. 특히 Finetree와 Peak9 시리즈 솔루션을 활용하여 비정형 데이터 처리, 자연어 기반 질의응답, 실시간 분석 등 다양한 비즈니스 인사이트를 도출할 수 있습니다.",
+  "latency_ms": 11150,
+  "token_count": 71,
+  "json_valid": true,
+  "pii_hits": []
+}

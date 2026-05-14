@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F1-rohm-wisun",
+  "task": "brief",
+  "cycle": 2,
+  "response": "로옴은 업계 최초로 스마트미터용 무선 통신 모듈의 무선 통신 규격 「Wi-SUN JUTA」 인증을 취득했습니다. 이 인증은 무선 통신의 안정성과 효율성을 높이는 데 기여할 것으로 기대됩니다. 이 성과는 스마트 그리드 분야에서의 기술 경쟁력 강화를 위한 중요한 마일석으로 평가받고 있습니다.",
+  "latency_ms": 13955,
+  "token_count": 41,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 1,
+  "accuracy": 0.8,
+  "semantic": 0.8,
+  "raw_judge": "{\"accuracy\": 0.8, \"semantic\": 0.8}"
+}

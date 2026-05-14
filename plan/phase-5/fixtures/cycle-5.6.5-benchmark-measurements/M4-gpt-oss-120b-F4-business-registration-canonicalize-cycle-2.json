@@ -1,0 +1,20 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"Company\",\n      \"aliases\": [\n        \"Goodstream Co., Ltd.\",\n        \"Goodstream\"\n      ]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"Person\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"301-86-19385\",\n      \"type\": \"Business Registration Number\",\n      \"aliases\": [\n        \"사업자등록번호\"\n      ]\n    },\n    {\n      \"name\": \"150111-0166385\",\n      \"type\": \"Corporate Registration Number\",\n      \"aliases\": [\n        \"법인등록번호\"\n      ]\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134, 613(송정동) 세중테크노밸리\",\n      \"type\": \"Address\",\n      \"aliases\": [\n        \"사업장 소재지\"\n      ]\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134, 613(송정동) 세중테크노밸리\",\n      \"type\": \"Address\",\n      \"aliases\": [\n        \"본점소재지\"\n      ]\n    },\n    {\n      \"name\": \"서비스 제조업\",\n      \"type\": \"Industry\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"소프트웨어개발, 자문 및 공급, 무선통신응용장치제조\",\n      \"type\": \"Business Activity\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"2012-10-02\",\n      \"type\": \"Establishment Date\",\n      \"aliases\": [\n        \"개업년월일\"\n      ]\n    },\n    {\n      \"name\": \"2014-09-01\",\n      \"type\": \"Document Issue Date\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"청주 세무서\",\n      \"type\": \"Tax Office\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"청주 세무서장\",\n      \"type\": \"Tax Officer\",\n      \"aliases\": []\n    }\n  ]\n}",
+  "latency_ms": 13997,
+  "token_count": 345,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 1
+    },
+    {
+      "kind": "account",
+      "count": 1
+    }
+  ]
+}

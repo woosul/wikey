@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 3,
+  "response": "기업 데이터 플랫폼은 설비 및 IoT 센서에서 발생하는 대량의 데이터를 수집·분석하여 인공지능 기반 의사결정 지원까지 이르는 통합 아키텍처를 제공합니다. 이 플랫폼은 데이터 생성부터 수집, 정제, 분석에 이르는 전 과정을 지원하며, 제조 산업에 특화된 다양한 솔루션으로 구성되어 있습니다. 또한, 로컬 AI 및 LLM 기술을 활용해 비정형 데이터 처리와 자연어 기반 인사이트 도출까지 가능하도록 설계되었습니다.",
+  "latency_ms": 15912,
+  "token_count": 58,
+  "json_valid": true,
+  "pii_hits": []
+}

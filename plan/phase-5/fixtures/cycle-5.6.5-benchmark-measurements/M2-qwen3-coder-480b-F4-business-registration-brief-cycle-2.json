@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "brief",
+  "cycle": 2,
+  "response": "주식회사 굿스트림은 2012년 10월 2일에 개업한 법인사업자로, 충청북도 청주시 흥덕구에 본점을 두고 있습니다.该公司主要从事软件开发、咨询及供应、无线通信应用装置制造等服务制造业务。该公司是适用电子税务发票的单位，并已于2014年9月1日由청주税务署长签发了相关证明。",
+  "latency_ms": 11665,
+  "token_count": 36,
+  "json_valid": true,
+  "pii_hits": []
+}

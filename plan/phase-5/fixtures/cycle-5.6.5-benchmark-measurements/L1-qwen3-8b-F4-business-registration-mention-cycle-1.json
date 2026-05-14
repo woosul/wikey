@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F4-business-registration",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\"mentions\":[{\"surface\":\"주식회사 굿스트림\",\"normalized\":\"주식회사 굿스트림\"},{\"surface\":\"김명호\",\"normalized\":\"김명호\"},{\"surface\":\"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리\",\"normalized\":\"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리\"},{\"surface\":\"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\",\"normalized\":\"충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\"}]}",
+  "latency_ms": 7311,
+  "token_count": 75,
+  "json_valid": true,
+  "pii_hits": []
+}

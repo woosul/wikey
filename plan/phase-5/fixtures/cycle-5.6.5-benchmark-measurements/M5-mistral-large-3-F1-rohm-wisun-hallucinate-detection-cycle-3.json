@@ -1,0 +1,12 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "response": "",
+  "latency_ms": 6847,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": [],
+  "error": "Ollama error: model 'mistral-large-3:675b' is temporarily overloaded, please retry shortly or try a different model (ref: eb2e4eb4-970d-4513-a517-d1924e69f4a7)"
+}

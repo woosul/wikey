@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F2-rp1-peripherals",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\"refs\":[{\"target\":\"Raspberry Pi Ltd\",\"kind\":\"organization\"},{\"target\":\"Synopsys, Inc\",\"kind\":\"organization\"},{\"target\":\"ARM Limited\",\"kind\":\"organization\"},{\"target\":\"Cadence Design Systems, Inc\",\"kind\":\"organization\"},{\"target\":\"Raspberry Pi products\",\"kind\":\"product\"},{\"target\":\"Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND)\",\"kind\":\"standard\"},{\"target\":\"RPL\",\"kind\":\"organization\"},{\"target\":\"Raspberry Pi Standard Terms\",\"kind\":\"document\"}]}",
+  "latency_ms": 3773,
+  "token_count": 119,
+  "json_valid": true,
+  "pii_hits": []
+}

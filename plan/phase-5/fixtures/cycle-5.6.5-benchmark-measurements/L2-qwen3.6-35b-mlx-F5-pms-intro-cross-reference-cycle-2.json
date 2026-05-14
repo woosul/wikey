@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"LOTUS SCM\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"MOBILE APP\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"PMBOK\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Project Management Body of Knowledge\",\n      \"kind\": \"standard\"\n    }\n  ]\n}",
+  "latency_ms": 4715,
+  "token_count": 77,
+  "json_valid": true,
+  "pii_hits": []
+}

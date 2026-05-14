@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 제조 산업을 위한 기업 데이터 플랫폼의 전체 아키텍처와 솔루션 구성 요소를 설명하고 있습니다. 설비 및 IoT 센서에서 수집된 데이터는 Peak9 Anchor와 Edge를 통해 정제되어 Data Lake에 저장되며, 이를 기반으로 Finetree AI Layer에서 OCR, SQL, RAG, BOT 등의 인공지능 기술이 활용됩니다. 또한 Lotus Legacy 시스템과의 연동을 통해 기존 시스템의 데이터도 통합 관리할 수 있도록 구성되어 있습니다.",
+  "latency_ms": 20017,
+  "token_count": 65,
+  "json_valid": true,
+  "pii_hits": []
+}

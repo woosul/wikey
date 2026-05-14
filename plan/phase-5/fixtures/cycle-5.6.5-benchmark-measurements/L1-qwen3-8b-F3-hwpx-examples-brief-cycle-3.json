@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 골목길의 유형을 보여주는 예시 이미지입니다. 이미지에는 다양한 골목길의 모습이 담겨 있으며, 주로 도시의 작은 길거리나 상업 지역을 표현하고 있습니다. 이 이미지는 골목길의 시각적 특징을 이해하는 데 도움을 줍니다.",
+  "latency_ms": 2950,
+  "token_count": 32,
+  "json_valid": true,
+  "pii_hits": []
+}

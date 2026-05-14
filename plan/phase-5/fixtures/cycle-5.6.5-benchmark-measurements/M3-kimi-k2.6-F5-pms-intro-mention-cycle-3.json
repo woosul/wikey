@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "mention",
+  "cycle": 3,
+  "response": "```json\n{\n  \"mentions\": [\n    {\"surface\": \"중소 / 중견기업 프로젝트 기반 제조 협업서비스\", \"normalized\": \"중소/중견기업 프로젝트 기반 제조 협업서비스\"},\n    {\"surface\": \"프로젝트관리시스템\", \"normalized\": \"프로젝트관리시스템\"},\n    {\"surface\": \"LOTUS PMS\", \"normalized\": \"LOTUS PMS\"},\n    {\"surface\": \"( 주 ) 굿스트림\", \"normalized\": \"(주)굿스트림\"},\n    {\"surface\": \"㈜굿스트림\", \"normalized\": \"㈜굿스트림\"},\n    {\"surface\": \"GOOD STREAM\", \"normalized\": \"GOOD STREAM\"},\n    {\"surface\": \"공급망관리시스템\", \"normalized\": \"공급망관리시스템\"},\n    {\"surface\": \"LOTUS SCM\", \"normalized\": \"LOTUS SCM\"},\n    {\"surface\": \"모바일앱서비스\", \"normalized\": \"모바일앱서비스\"},\n    {\"surface\": \"MOBILE APP\", \"normalized\": \"MOBILE APP\"},\n    {\"surface\": \"제조업\", \"normalized\": \"제조업\"},\n    {\"surface\": \"IT 기업\", \"normalized\": \"IT 기업\"},\n    {\"surface\": \"컨설팅\", \"normalized\": \"컨설팅\"},\n    {\"surface\": \"프로젝트관리시스템\", \"normalized\": \"프로젝트관리시스템\"},\n    {\"surface\": \"Project Management System\", \"normalized\": \"Project Management System\"},\n    {\"surface\": \"PMBOK\", \"normalized\": \"PMBOK\"},\n    {\"surface\": \"Project Management Body of Knowledge\", \"normalized\": \"Project Management Body of Knowledge\"},\n    {\"surface\": \"프로젝트관리 지식체계\", \"normalized\": \"프로젝트관리 지식체계\"},\n    {\"surface\": \"Dashboard & Home\", \"normalized\": \"Dashboard & Home\"},\n    {\"surface\": \"Work Breakdown Structure\", \"normalized\": \"Work Breakdown Structure\"},\n    {\"surface\": \"WBS\", \"normalized\": \"WBS\"}\n  ]\n}\n```",
+  "latency_ms": 4942,
+  "token_count": 334,
+  "json_valid": true,
+  "pii_hits": []
+}

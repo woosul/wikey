@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Alley\",\n      \"type\": \"Location\",\n      \"aliases\": [\"the Alley\"]\n    }\n  ]\n}\n```",
+  "latency_ms": 2427,
+  "token_count": 32,
+  "json_valid": true,
+  "pii_hits": []
+}

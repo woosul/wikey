@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 2,
+  "accuracy": 0.66,
+  "semantic": 0.75,
+  "raw_judge": "{\"accuracy\": 0.66, \"semantic\": 0.75}"
+}

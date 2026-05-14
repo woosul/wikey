@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "query",
+  "cycle": 3,
+  "response": "본 문서의 주요 제품은 로옴(ROHM)이 업계 최초로 스마트미터용 무선 통신 규격인 「Wi-SUN JUTA」 인증을 취득한 무선 통신 모듈입니다.",
+  "latency_ms": 1574,
+  "token_count": 21,
+  "json_valid": true,
+  "pii_hits": []
+}

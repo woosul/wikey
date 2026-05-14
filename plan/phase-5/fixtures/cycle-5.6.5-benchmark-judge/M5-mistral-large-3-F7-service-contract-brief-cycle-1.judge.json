@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "brief",
+  "cycle": 1,
+  "accuracy": 0.6,
+  "semantic": 0.7,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.6,\n  \"semantic\": 0.7\n}\n```"
+}

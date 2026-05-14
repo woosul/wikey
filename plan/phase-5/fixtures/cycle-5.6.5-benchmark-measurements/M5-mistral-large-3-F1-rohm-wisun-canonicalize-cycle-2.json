@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "[\n  {\n    \"name\": \"ROHM\",\n    \"type\": \"Organization\",\n    \"aliases\": []\n  },\n  {\n    \"name\": \"Wi-SUN JUTA\",\n    \"type\": \"Standard\",\n    \"aliases\": []\n  }\n]",
+  "latency_ms": 11271,
+  "token_count": 39,
+  "json_valid": true,
+  "pii_hits": []
+}

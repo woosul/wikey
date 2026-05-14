@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "brief",
+  "cycle": 1,
+  "accuracy": 0.8,
+  "semantic": 0.9,
+  "raw_judge": "{\"accuracy\": 0.8, \"semantic\": 0.9}"
+}

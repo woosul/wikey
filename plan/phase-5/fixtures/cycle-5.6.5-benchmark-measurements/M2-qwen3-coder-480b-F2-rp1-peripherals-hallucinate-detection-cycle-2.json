@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "response": "{\n  \"facts\": [\n    {\n      \"statement\": \"RP1 is a peripheral controller, designed by Raspberry Pi for use on Raspberry Pi 5.\",\n      \"evidence_quote\": \"RP1  is  a  peripheral  controller,  designed  by  Raspberry  Pi  for  use  on  Raspberry  Pi  5.\"\n    },\n    {\n      \"statement\": \"RP1 connects to an application processor (AP) via a PCIe 2.0 x4 bus.\",\n      \"evidence_quote\": \"It  connects  to  an  application processor (AP) via a PCIe 2.0 x4 bus\"\n    },\n    {\n      \"statement\": \"In the case of Raspberry Pi 5, the AP is the 16nm Broadcom BCM2712.\",\n      \"evidence_quote\": \"In the case of Raspberry Pi 5, the AP is the 16nm Broadcom BCM2712.\"\n    },\n    {\n      \"statement\": \"RP1 aggregates many digital controllers and analog PHYs for Raspberry Pi 5's external interfaces.\",\n      \"evidence_quote\": \"It  connects  to  an  application processor (AP) via a PCIe 2.0 x4 bus, and aggregates many digital controllers and analog PHYs for Raspberry Pi 5's external interfaces.\"\n    }\n  ]\n}",
+  "latency_ms": 11698,
+  "token_count": 248,
+  "json_valid": true,
+  "pii_hits": []
+}

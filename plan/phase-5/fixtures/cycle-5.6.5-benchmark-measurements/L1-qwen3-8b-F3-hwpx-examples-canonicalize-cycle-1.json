@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "{\"entities\":[{\"name\":\"Example Images for Type of the Alley\",\"type\":\"image\",\"aliases\":[\"Example Images for Type of the Alley\"]}]}",
+  "latency_ms": 11703,
+  "token_count": 32,
+  "json_valid": true,
+  "pii_hits": []
+}

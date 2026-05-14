@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "brief",
+  "cycle": 2,
+  "response": "이 문서는 중소 및 중견기업을 위한 프로젝트 기반 제조 협업 서비스인 LOTUS PMS의 제품 소개서입니다. LOTUS PMS는 프로젝트 관리에 필요한 작업 계획, 자원 관리, 위험 평가 등의 기능을 제공하며, 전자결재 및 업무 공유형 그룹웨어 기능을 내부에 포함하고 있습니다. 또한 구성원별 맞춤형 대시보드를 통해 업무 목록을 부여하고, 수행된 업무를 집계 및 분석하여 프로젝트 관리자에게 효율적인 정보를 제공합니다.",
+  "latency_ms": 31378,
+  "token_count": 59,
+  "json_valid": true,
+  "pii_hits": []
+}

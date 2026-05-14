@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "accuracy": 0.95,
+  "semantic": 0.95,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.95,\n  \"semantic\": 0.95\n}\n```"
+}

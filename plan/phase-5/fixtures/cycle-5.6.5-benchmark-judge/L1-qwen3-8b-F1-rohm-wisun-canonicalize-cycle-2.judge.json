@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 2,
+  "accuracy": 0.1,
+  "semantic": 0.1,
+  "raw_judge": "{\"accuracy\": 0.1, \"semantic\": 0.1}"
+}

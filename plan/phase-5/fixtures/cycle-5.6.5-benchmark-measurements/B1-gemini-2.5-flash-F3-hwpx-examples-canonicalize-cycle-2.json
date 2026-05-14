@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"Alley Type\",\n      \"type\": \"Classification\",\n      \"aliases\": [\n        \"Type of the Alley\"\n      ]\n    }\n  ]\n}\n```",
+  "latency_ms": 11645,
+  "token_count": 41,
+  "json_valid": true,
+  "pii_hits": []
+}

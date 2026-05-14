@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"Company\",\n      \"aliases\": [\n        \"굿스트림\"\n      ]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"Person\",\n      \"aliases\": [\n        \"대표자 김명호\"\n      ]\n    },\n    {\n      \"name\": \"청주 세무서\",\n      \"type\": \"Government Agency\",\n      \"aliases\": [\n        \"청주 세무서장\"\n      ]\n    }\n  ]\n}\n```",
+  "latency_ms": 8898,
+  "token_count": 91,
+  "json_valid": true,
+  "pii_hits": []
+}

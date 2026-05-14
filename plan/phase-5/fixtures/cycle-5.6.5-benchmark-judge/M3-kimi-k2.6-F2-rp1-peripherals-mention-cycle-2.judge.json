@@ -1,0 +1,9 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "mention",
+  "cycle": 2,
+  "accuracy": 0.75,
+  "semantic": 0.75,
+  "raw_judge": "{\"accuracy\": 0.75, \"semantic\": 0.75}"
+}

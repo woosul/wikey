@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "cross-reference",
+  "cycle": 1,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"Wi‑SUN JUTA\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Wi‑SUN\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Wi‑SUN JUTA certification\",\n      \"kind\": \"document\"\n    }\n  ]\n}",
+  "latency_ms": 34150,
+  "token_count": 59,
+  "json_valid": true,
+  "pii_hits": []
+}

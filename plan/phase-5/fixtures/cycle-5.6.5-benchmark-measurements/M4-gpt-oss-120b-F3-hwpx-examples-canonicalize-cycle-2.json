@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"Alley\",\n      \"type\": \"Location\",\n      \"aliases\": [\n        \"type of the Alley\",\n        \"Alley (type)\",\n        \"Alley feature\"\n      ]\n    },\n    {\n      \"name\": \"Example Images for Type of the Alley\",\n      \"type\": \"Document\",\n      \"aliases\": [\n        \"Example Images\",\n        \"Alley type images\",\n        \"Alley example images\"\n      ]\n    }\n  ]\n}",
+  "latency_ms": 9243,
+  "token_count": 99,
+  "json_valid": true,
+  "pii_hits": []
+}

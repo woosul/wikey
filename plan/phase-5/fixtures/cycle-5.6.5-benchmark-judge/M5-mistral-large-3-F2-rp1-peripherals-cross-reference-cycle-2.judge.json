@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "cross-reference",
+  "cycle": 2,
+  "accuracy": 0.7,
+  "semantic": 0.7,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.7,\n  \"semantic\": 0.7\n}\n```"
+}

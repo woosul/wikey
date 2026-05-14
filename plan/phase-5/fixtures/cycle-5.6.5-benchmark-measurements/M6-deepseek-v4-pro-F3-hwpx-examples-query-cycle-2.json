@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서의 주요 주제 또는 제품은 **골목길의 유형(Type of the Alley)**입니다. 제공된 이미지들은 다양한 형태와 분위기를 가진 골목길의 예시를 보여주고 있습니다.",
+  "latency_ms": 1604,
+  "token_count": 25,
+  "json_valid": true,
+  "pii_hits": []
+}

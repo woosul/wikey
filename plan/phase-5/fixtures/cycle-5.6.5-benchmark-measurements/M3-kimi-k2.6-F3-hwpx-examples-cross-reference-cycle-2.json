@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "```json\n{\"refs\":[{\"target\":\"Type of the Alley\",\"kind\":\"document\"}]}\n```",
+  "latency_ms": 2509,
+  "token_count": 18,
+  "json_valid": true,
+  "pii_hits": []
+}

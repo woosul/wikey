@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F2-rp1-peripherals",
+  "task": "mention",
+  "cycle": 3,
+  "accuracy": 0.95,
+  "semantic": 0.95,
+  "raw_judge": "{\"accuracy\": 0.95, \"semantic\": 0.95}"
+}

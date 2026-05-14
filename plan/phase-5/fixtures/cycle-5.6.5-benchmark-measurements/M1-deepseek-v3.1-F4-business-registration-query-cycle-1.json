@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 1,
+  "response": "해당 문서의 주요 주제는 '주식회사 굿스트림'이라는 법인 사업자의 사업자 등록증이며, 이 회사의 주요 제품 및 서비스는 소프트웨어 개발, 자문, 공급과 무선통신응용장치 제조입니다.",
+  "latency_ms": 4052,
+  "token_count": 25,
+  "json_valid": true,
+  "pii_hits": []
+}

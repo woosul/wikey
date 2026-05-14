@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서의 주요 대상은 라즈베리파이 5(Raspberry Pi 5)용으로 설계된 주변 장치 컨트롤러인 **RP1(Raspberry Pi RP1 Southbridge)**입니다. 문서에는 RP1의 시스템 설계, 인터커넥트 세부 정보, 주소 맵, 클럭, GPIO, UART, PWM, I2C, SPI, SDIO, USB, PCIe, 이더넷, 디스플레이 및 카메라 인터페이스, DMA 등 다양한 주변 장치와 기술 사양이 상세히 기술되어 있습니다. 또한 법적 면책 조항과 문서의 저작권 정보, 빌드 날짜 및 버전 등의 출판 정보(colophon)도 포함되어 있습니다.",
+  "latency_ms": 4642,
+  "token_count": 79,
+  "json_valid": true,
+  "pii_hits": []
+}

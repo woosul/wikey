@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F3-hwpx-examples",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서에서 설명하는 주요 주제는 '골목길의 유형'입니다. 문서의 제목이 'Example Images for Type of the Alley'로 명시되어 있듯이, 다양한 종류의 골목길과 그에 대한 예시 이미지들을 다루고 있습니다.",
+  "latency_ms": 2805,
+  "token_count": 32,
+  "json_valid": true,
+  "pii_hits": []
+}

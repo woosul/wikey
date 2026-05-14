@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 2,
+  "response": "```json\n{\n  \"mentions\": [\n    {\"surface\": \"로옴\", \"normalized\": \"로옴\"},\n    {\"surface\": \"Wi-SUN JUTA\", \"normalized\": \"Wi-SUN JUTA\"},\n    {\"surface\": \"스마트미터\", \"normalized\": \"스마트미터\"},\n    {\"surface\": \"무선 통신 모듈\", \"normalized\": \"무선 통신 모듈\"},\n    {\"surface\": \"무선 통신 규격\", \"normalized\": \"무선 통신 규격\"},\n    {\"surface\": \"업계 최초\", \"normalized\": \"업계 최초\"}\n  ]\n}\n```",
+  "latency_ms": 6127,
+  "token_count": 87,
+  "json_valid": true,
+  "pii_hits": []
+}

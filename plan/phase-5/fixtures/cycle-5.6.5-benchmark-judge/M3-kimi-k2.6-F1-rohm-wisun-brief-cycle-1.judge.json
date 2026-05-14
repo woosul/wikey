@@ -1,0 +1,9 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "brief",
+  "cycle": 1,
+  "accuracy": 0.8,
+  "semantic": 0.8,
+  "raw_judge": "{\"accuracy\": 0.8, \"semantic\": 0.8}"
+}

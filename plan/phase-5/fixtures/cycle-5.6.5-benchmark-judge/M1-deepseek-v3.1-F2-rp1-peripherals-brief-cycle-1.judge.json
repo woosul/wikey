@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 1,
+  "accuracy": 0.9,
+  "semantic": 0.95,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.9,\n  \"semantic\": 0.95\n}\n```"
+}

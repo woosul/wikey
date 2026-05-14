@@ -1,0 +1,9 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 3,
+  "accuracy": 0.4782608695652174,
+  "semantic": 0.4782608695652174,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.4782608695652174,\n  \"semantic\": 0.4782608695652174\n}\n```"
+}

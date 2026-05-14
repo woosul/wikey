@@ -1,0 +1,12 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "response": "",
+  "latency_ms": 120005,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": [],
+  "error": "This operation was aborted"
+}

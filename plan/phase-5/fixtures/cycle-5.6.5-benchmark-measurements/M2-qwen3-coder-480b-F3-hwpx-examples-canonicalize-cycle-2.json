@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\"entities\":[]}",
+  "latency_ms": 8543,
+  "token_count": 4,
+  "json_valid": true,
+  "pii_hits": []
+}

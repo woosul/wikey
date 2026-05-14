@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 1,
+  "response": "문서에 기술된 주요 주제는 제조 및 기업 환경에서 설비와 IoT 센서 등 다양한 소스에서 발생하는 대량의 데이터를 체계적으로 수집, 정제, 저장하여 분석하고 인공지능(AI)을 적용함으로써 기업의 의사결정을 지원하는 통합 데이터 플랫폼 아키텍처입니다. 이 솔루션은 Lotus Legacy를 통한 기간계 시스템 연동, Peak9 Anchor 및 Edge를 활용한 원천 데이터 수집 및 처리, Data Lake 기반의 데이터 저장소, 그리고 Finetree AI Layer와 Peak9 Insight를 통한 기업 특화형 로컬 인공지능 및 분석 기능을 포함하는 전체 생태계를 포괄하며, 최종 사용자에게는 다양한 디바이스를 통한 UI/UX 서비스와 API 게이트웨이 관리를 제공합니다.",
+  "latency_ms": 15813,
+  "token_count": 95,
+  "json_valid": true,
+  "pii_hits": []
+}

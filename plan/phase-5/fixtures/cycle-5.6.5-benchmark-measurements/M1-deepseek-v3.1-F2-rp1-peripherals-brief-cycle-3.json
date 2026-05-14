@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 Raspberry Pi RP1 주변 장치 컨트롤러에 대한 기술 문서입니다. RP1은 Raspberry Pi 5에 사용되며 PCIe 2.0 x4 버스를 통해 애플리케이션 프로세서에 연결되고 다양한 디지털 컨트롤러와 아날로그 PHY를 집계합니다. 문서에는 저작권 정보, 법적 면책 조항 및 시스템 설명, 주변 장치 주소 맵, 저속 주변 장치, 클록, DMA 등에 대한 상세한 기술 사양이 포함되어 있습니다.",
+  "latency_ms": 3569,
+  "token_count": 58,
+  "json_valid": true,
+  "pii_hits": []
+}

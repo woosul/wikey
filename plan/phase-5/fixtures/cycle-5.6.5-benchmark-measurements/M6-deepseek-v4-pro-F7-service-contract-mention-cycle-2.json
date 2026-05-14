@@ -1,0 +1,20 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 2,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"SK 바이오텍\",\n      \"normalized\": \"SK 바이오텍\"\n    },\n    {\n      \"surface\": \"SK 바이오텍 전자구매시스템 구축 계약\",\n      \"normalized\": \"SK 바이오텍 전자구매시스템 구축 계약\"\n    },\n    {\n      \"surface\": \"SK 바이오텍 주식회사\",\n      \"normalized\": \"SK 바이오텍\"\n    },\n    {\n      \"surface\": \"SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역\",\n      \"normalized\": \"SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역\"\n    },\n    {\n      \"surface\": \"(주)세포아소프트\",\n      \"normalized\": \"세포아소프트\"\n    },\n    {\n      \"surface\": \"(주)굿스트림\",\n      \"normalized\": \"굿스트림\"\n    },\n    {\n      \"surface\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717 호\",\n      \"normalized\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717호\"\n    },\n    {\n      \"surface\": \"119-81-95926\",\n      \"normalized\": \"119-81-95926\"\n    },\n    {\n      \"surface\": \"이 희림\",\n      \"normalized\": \"이희림\"\n    },\n    {\n      \"surface\": \"충북 청주시 흥덕 공단로 134,613\",\n      \"normalized\": \"충북 청주시 흥덕 공단로 134,613\"\n    },\n    {\n      \"surface\": \"301-86-19385\",\n      \"normalized\": \"301-86-19385\"\n    },\n    {\n      \"surface\": \"김명 호\",\n      \"normalized\": \"김명호\"\n    },\n    {\n      \"surface\": \"서울중앙지방법원\",\n      \"normalized\": \"서울중앙지방법원\"\n    },\n    {\n      \"surface\": \"2026 년 4월 10일\",\n      \"normalized\": \"2026-04-10\"\n    },\n    {\n      \"surface\": \"2026년 10월 30일\",\n      \"normalized\": \"2026-10-30\"\n    },\n    {\n      \"surface\": \"2026년 4월 20일\",\n      \"normalized\": \"2026-04-20\"\n    },\n    {\n      \"surface\": \"₩241,000,000\",\n      \"normalized\": \"241000000\"\n    },\n    {\n      \"surface\": \"₩76,000,000\",\n      \"normalized\": \"76000000\"\n    },\n    {\n      \"surface\": \"7,600 만 원\",\n      \"normalized\": \"76000000\"\n    },\n    {\n      \"surface\": \"이억사천일백만원정\",\n      \"normalized\": \"241000000\"\n    },\n    {\n      \"surface\": \"VAT\",\n      \"normalized\": \"부가가치세\"\n    },\n    {\n      \"surface\": \"턴키\",\n      \"normalized\": \"턴키\"\n    },\n    {\n      \"surface\": \"Turn-key\",\n      \"normalized\": \"턴키\"\n    },\n    {\n      \"surface\": \"Back-to-Back\",\n      \"normalized\": \"백투백\"\n    },\n    {\n      \"surface\": \"백투백\",\n      \"normalized\": \"백투백\"\n    },\n    {\n      \"surface\": \"M/M\",\n      \"normalized\": \"맨먼스\"\n    },\n    {\n      \"surface\": \"DB\",\n      \"normalized\": \"데이터베이스\"\n    },\n    {\n      \"surface\": \"전자구매시스템\",\n      \"normalized\": \"전자구매시스템\"\n    },\n    {\n      \"surface\": \"전자입찰시스템\",\n      \"normalized\": \"전자입찰시스템\"\n    },\n    {\n      \"surface\": \"선급금\",\n      \"normalized\": \"선급금\"\n    },\n    {\n      \"surface\": \"중도금\",\n      \"normalized\": \"중도금\"\n    },\n    {\n      \"surface\": \"잔금\",\n      \"normalized\": \"잔금\"\n    },\n    {\n      \"surface\": \"이행보증보험증권\",\n      \"normalized\": \"이행보증보험증권\"\n    },\n    {\n      \"surface\": \"하자이행보증보험증권\",\n      \"normalized\": \"하자이행보증보험증권\"\n    },\n    {\n      \"surface\": \"지체상금\",\n      \"normalized\": \"지체상금\"\n    },\n    {\n      \"surface\": \"보안 서약서\",\n      \"normalized\": \"보안 서약서\"\n    },\n    {\n      \"surface\": \"갑\",\n      \"normalized\": \"갑\"\n    },\n    {\n      \"surface\": \"을\",\n      \"normalized\": \"을\"\n    },\n    {\n      \"surface\": \"고객사\",\n      \"normalized\": \"고객사\"\n    }\n  ]\n}",
+  "latency_ms": 9128,
+  "token_count": 727,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 4
+    },
+    {
+      "kind": "account",
+      "count": 4
+    }
+  ]
+}

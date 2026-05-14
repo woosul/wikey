@@ -1,0 +1,20 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"301-86-19385\",\n      \"type\": \"business_registration_number\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"company_name\",\n      \"aliases\": [\"굿스트림\"]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"representative_name\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"2012년 10월 02일\",\n      \"type\": \"business_start_date\",\n      \"aliases\": [\"2012-10-02\"]\n    },\n    {\n      \"name\": \"150111-0166385\",\n      \"type\": \"corporate_registration_number\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134, 613(송정동)세중테크노밸리\",\n      \"type\": \"business_location\",\n      \"aliases\": [\"충청북도 청주시 흥덕구 공단로 134, 613(송정동)\", \"충청북도 청주시 흥덕구 송정동\"]\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134, 613(송정동)\",\n      \"type\": \"headquarters_location\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"서비스 제조업\",\n      \"type\": \"business_type\",\n      \"aliases\": [\"업태\"]\n    },\n    {\n      \"name\": \"소프트웨어개발,자문 및 공급\",\n      \"type\": \"business_category\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"무선통신응용장치제조\",\n      \"type\": \"business_category\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"청주 세무서장\",\n      \"type\": \"tax_office\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"2014년 09월 01일\",\n      \"type\": \"document_date\",\n      \"aliases\": [\"2014-09-01\"]\n    }\n  ]\n}",
+  "latency_ms": 8227,
+  "token_count": 331,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 1
+    },
+    {
+      "kind": "account",
+      "count": 1
+    }
+  ]
+}

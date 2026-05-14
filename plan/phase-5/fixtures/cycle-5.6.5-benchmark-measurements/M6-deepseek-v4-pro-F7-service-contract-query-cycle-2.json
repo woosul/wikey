@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F7-service-contract",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서의 주요 대상 또는 제품은 SK 바이오텍의 전자구매시스템 구축 프로젝트입니다. 구체적으로는 기존 전자입찰시스템을 재구축하는 개발 용역으로, 상세 설계부터 구현, 테스트, 안정화 및 고객사 검수 대응까지를 포함하는 턴키 방식의 성과물 완성 중심 계약입니다.",
+  "latency_ms": 1446,
+  "token_count": 37,
+  "json_valid": true,
+  "pii_hits": []
+}

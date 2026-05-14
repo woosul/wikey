@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F3-hwpx-examples",
+  "task": "canonicalize",
+  "cycle": 2,
+  "accuracy": 0.5,
+  "semantic": 0.7,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.5,\n  \"semantic\": 0.7\n}\n```"
+}

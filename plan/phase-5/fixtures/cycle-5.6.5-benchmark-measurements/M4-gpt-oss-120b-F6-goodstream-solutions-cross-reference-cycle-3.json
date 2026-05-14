@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\n  \"refs\": [\n    { \"target\": \"Finetree AI Layer\", \"kind\": \"product\" },\n    { \"target\": \"Peak9 Insight\", \"kind\": \"product\" },\n    { \"target\": \"Peak9 Edge\", \"kind\": \"product\" },\n    { \"target\": \"Data Lake\", \"kind\": \"product\" },\n    { \"target\": \"Peak9 Anchor\", \"kind\": \"product\" },\n    { \"target\": \"Lotus Legacy\", \"kind\": \"product\" },\n    { \"target\": \"Lotus:: SRM\", \"kind\": \"product\" },\n    { \"target\": \"Lotus:: MES\", \"kind\": \"product\" },\n    { \"target\": \"Lotus:: PMS\", \"kind\": \"product\" },\n    { \"target\": \"Finetree:: OCR\", \"kind\": \"product\" },\n    { \"target\": \"Finetree:: SQL\", \"kind\": \"product\" },\n    { \"target\": \"Finetree:: RAG\", \"kind\": \"product\" },\n    { \"target\": \"Finetree:: BOT\", \"kind\": \"product\" },\n    { \"target\": \"Peak9:: Anchor\", \"kind\": \"product\" },\n    { \"target\": \"Peak9:: Edge\", \"kind\": \"product\" },\n    { \"target\": \"Peak9:: Insight\", \"kind\": \"product\" },\n    { \"target\": \"Peak9:: Rail\", \"kind\": \"product\" },\n    { \"target\": \"Peak9:: RFID\", \"kind\": \"product\" },\n    { \"target\": \"API Gateway\", \"kind\": \"product\" },\n    { \"target\": \"REST API GW\", \"kind\": \"product\" },\n    { \"target\": \"OAuth\", \"kind\": \"standard\" },\n    { \"target\": \"Webhook\", \"kind\": \"product\" },\n    { \"target\": \"Cloud Store\", \"kind\": \"product\" },\n    { \"target\": \"TSDB\", \"kind\": \"",
+  "latency_ms": 37186,
+  "token_count": 316,
+  "json_valid": false,
+  "pii_hits": []
+}

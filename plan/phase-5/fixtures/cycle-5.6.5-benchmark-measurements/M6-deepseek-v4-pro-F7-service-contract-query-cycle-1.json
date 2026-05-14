@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F7-service-contract",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서의 주요 제품 또는 서비스는 **SK 바이오텍의 전자구매시스템(전자입찰시스템) 재구축 프로젝트**입니다. 구체적으로는 (주)세포아소프트가 고객사인 SK 바이오텍으로부터 수주한 전자구매시스템 구축 사업의 개발 부문을 (주)굿스트림에 일괄 도급하여, 상세 설계부터 구현, 테스트, 안정화 및 검수 대응까지 포함하는 시스템 완성을 목적으로 하고 있습니다.",
+  "latency_ms": 4703,
+  "token_count": 50,
+  "json_valid": true,
+  "pii_hits": []
+}

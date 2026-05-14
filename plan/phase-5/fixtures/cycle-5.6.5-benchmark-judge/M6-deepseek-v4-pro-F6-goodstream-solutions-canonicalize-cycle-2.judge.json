@@ -1,0 +1,9 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "canonicalize",
+  "cycle": 2,
+  "accuracy": 0.5,
+  "semantic": 0.5,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.5,\n  \"semantic\": 0.5\n}\n```"
+}

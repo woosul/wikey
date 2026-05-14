@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F6-goodstream-solutions",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\"mentions\":[{\"surface\":\"기업 데이터 플랫폼\",\"normalized\":\"기업 데이터 플랫폼\"},{\"surface\":\"Finetree AI Layer\",\"normalized\":\"Finetree AI Layer\"},{\"surface\":\"Peak9 Insight\",\"normalized\":\"Peak9 Insight\"},{\"surface\":\"Data Lake\",\"normalized\":\"Data Lake\"},{\"surface\":\"Peak9 Edge\",\"normalized\":\"Peak9 Edge\"},{\"surface\":\"Peak9 Anchor\",\"normalized\":\"Peak9 Anchor\"},{\"surface\":\"Lotus Legacy\",\"normalized\":\"Lotus Legacy\"},{\"surface\":\"Central Services\",\"normalized\":\"Central Services\"},{\"surface\":\"Lotus:: SRM\",\"normalized\":\"Lotus:: SRM\"},{\"surface\":\"Lotus:: MES\",\"normalized\":\"Lotus:: MES\"},{\"surface\":\"Lotus:: PMS\",\"normalized\":\"Lotus:: PMS\"},{\"surface\":\"Finetree:: OCR\",\"normalized\":\"Finetree:: OCR\"},{\"surface\":\"Finetree:: SQL\",\"normalized\":\"Finetree:: SQL\"},{\"surface\":\"Finetree:: RAG\",\"normalized\":\"Finetree:: RAG\"},{\"surface\":\"Finetree:: BOT\",\"normalized\":\"Finetree:: BOT\"},{\"surface\":\"Peak9:: Anchor\",\"normalized\":\"Peak9:: Anchor\"}]}",
+  "latency_ms": 15162,
+  "token_count": 229,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서의 주요 내용은 로옴이 개발한 스마트미터용 무선 통신 모듈, 즉 Wi‑SUN JUTA 규격을 인증받은 무선 통신 모듈에 관한 것입니다.",
+  "latency_ms": 4385,
+  "token_count": 20,
+  "json_valid": true,
+  "pii_hits": []
+}

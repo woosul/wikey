@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F4-business-registration",
+  "task": "brief",
+  "cycle": 3,
+  "response": "이 문서는 주식회사 굿스트림의 사업자등록증입니다. 주식회사 굿스트림은 소프트웨어 개발, 자문 및 공급과 무선통신응용장치 제조를 주요 사업으로 하고 있습니다. 이 회사는 2012년 10월 2일에 개업하였으며, 충청북도 청주시에 사업장을 두고 있습니다.",
+  "latency_ms": 6350,
+  "token_count": 35,
+  "json_valid": true,
+  "pii_hits": []
+}

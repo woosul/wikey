@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 골목 유형을 분류하기 위한 예시 이미지들을 보여줍니다. 각 이미지는 다양한 형태의 골목 공간과 그 주변 환경의 특징을 시각적으로 나타내고 있습니다. 따라서 이 자료는 특정 골목 유형을 정의하거나 판별하는 기준을 제시하는 데 활용될 수 있습니다.",
+  "latency_ms": 14992,
+  "token_count": 36,
+  "json_valid": true,
+  "pii_hits": []
+}

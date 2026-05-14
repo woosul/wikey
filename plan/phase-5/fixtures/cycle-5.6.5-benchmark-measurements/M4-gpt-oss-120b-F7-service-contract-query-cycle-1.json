@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서에서 주된 내용은 SK 바이오텍을 위한 전자구매(전자입찰) 시스템을 새롭게 설계·구축·테스트·안정화하는 턴키(일괄 도급) 프로젝트이며, 이를 수행하기 위한 용역 계약과 금액·기간·대금지급 조건 등이 상세히 명시되어 있습니다.",
+  "latency_ms": 3339,
+  "token_count": 33,
+  "json_valid": true,
+  "pii_hits": []
+}

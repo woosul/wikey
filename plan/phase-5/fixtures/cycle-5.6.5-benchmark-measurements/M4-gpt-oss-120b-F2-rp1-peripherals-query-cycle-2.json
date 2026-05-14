@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 2,
+  "response": "이 문서는 라즈베리 파이 5에 탑재되는 **RP1 Southbridge**(라즈베리 파이 5용 주변장치 컨트롤러) 를 상세히 설명하는 기술 자료이며, RP1이 PCIe 2.0 x4 버스로 애플리케이션 프로세서와 연결되어 다양한 디지털·아날로그 인터페이스를 제공하는 제품을 중심으로 다루고 있습니다.",
+  "latency_ms": 3491,
+  "token_count": 42,
+  "json_valid": true,
+  "pii_hits": []
+}

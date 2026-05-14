@@ -1,0 +1,9 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "canonicalize",
+  "cycle": 1,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "SKIPPED (error or empty)"
+}

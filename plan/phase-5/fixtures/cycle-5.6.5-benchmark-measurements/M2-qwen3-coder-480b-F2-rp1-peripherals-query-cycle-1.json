@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 1,
+  "response": "이 문서의 주요 주제는 라즈베리 파이 5에 사용되는 RP1 주변 장치 컨트롤러입니다. RP1은 애플리케이션 프로세서와 PCIe 2.0 x4 버스를 통해 연결되며, 라즈베리 파이 5의 외부 인터페이스를 위한 다양한 디지털 컨트롤러와 아날로그 PHY를 통합한 제품입니다. 특히 GPIO, UART, I2C, SPI, USB, 이더넷 등 주요 주변 장치의 기술 사양과 레지스터 정보를 포함하고 있습니다.",
+  "latency_ms": 12016,
+  "token_count": 56,
+  "json_valid": true,
+  "pii_hits": []
+}

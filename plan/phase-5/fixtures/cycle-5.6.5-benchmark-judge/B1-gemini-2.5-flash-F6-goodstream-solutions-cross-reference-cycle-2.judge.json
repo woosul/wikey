@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "cross-reference",
+  "cycle": 2,
+  "accuracy": 0.21,
+  "semantic": 0.21,
+  "raw_judge": "{\"accuracy\": 0.21, \"semantic\": 0.21}"
+}

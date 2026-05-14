@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\n  \"refs\": [\n    {\n      \"target\": \"SK 바이오텍\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"(주)세포아소프트\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"(주)굿스트림\",\n      \"kind\": \"organization\"\n    }\n  ]\n}",
+  "latency_ms": 3893,
+  "token_count": 57,
+  "json_valid": true,
+  "pii_hits": []
+}

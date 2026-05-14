@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 2,
+  "response": "{\n  \"entities\": [\n    {\n      \"name\": \"로옴\",\n      \"type\": \"COMPANY\",\n      \"aliases\": [\"ROHM\"]\n    },\n    {\n      \"name\": \"Wi-SUN JUTA\",\n      \"type\": \"PRODUCT\",\n      \"aliases\": [\"Wi-SUN\", \"JUTA\"]\n    }\n  ]\n}",
+  "latency_ms": 3822,
+  "token_count": 53,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"로옴\",\n      \"normalized\": \"로옴\"\n    },\n    {\n      \"surface\": \"무선 통신 모듈\",\n      \"normalized\": \"무선 통신 모듈\"\n    },\n    {\n      \"surface\": \"스마트미터용 무선 통신 규격\",\n      \"normalized\": \"스마트미터용 무선 통신 규격\"\n    },\n    {\n      \"surface\": \"Wi-SUN JUTA\",\n      \"normalized\": \"Wi-SUN JUTA\"\n    }\n  ]\n}",
+  "latency_ms": 12454,
+  "token_count": 81,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 2,
+  "response": "```json\n{\n  \"refs\": [\n    {\n      \"target\": \"PMBOK\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"Work Breakdown Structure;WBS\",\n      \"kind\": \"standard\"\n    },\n    {\n      \"target\": \"LOTUS SCM\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"MOBILE APP\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"GOOD STREAM\",\n      \"kind\": \"organization\"\n    },\n    {\n      \"target\": \"LOTUS PMS\",\n      \"kind\": \"product\"\n    },\n    {\n      \"target\": \"PMS\",\n      \"kind\": \"product\"\n    }\n  ]\n}\n```",
+  "latency_ms": 4954,
+  "token_count": 128,
+  "json_valid": true,
+  "pii_hits": []
+}

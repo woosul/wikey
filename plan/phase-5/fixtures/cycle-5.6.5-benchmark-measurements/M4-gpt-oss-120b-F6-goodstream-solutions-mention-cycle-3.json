@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "mention",
+  "cycle": 3,
+  "response": "",
+  "latency_ms": 40405,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": []
+}

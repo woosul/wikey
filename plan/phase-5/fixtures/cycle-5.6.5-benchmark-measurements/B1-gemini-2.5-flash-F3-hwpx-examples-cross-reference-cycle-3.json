@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F3-hwpx-examples",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "```json\n{\"refs\":[{\"target\":\"Example Images for Type of the Alley\",\"kind\":\"document\"}]}\n```",
+  "latency_ms": 1638,
+  "token_count": 23,
+  "json_valid": true,
+  "pii_hits": []
+}

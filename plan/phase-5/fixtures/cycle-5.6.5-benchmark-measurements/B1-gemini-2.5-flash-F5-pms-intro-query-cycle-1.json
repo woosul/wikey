@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F5-pms-intro",
+  "task": "query",
+  "cycle": 1,
+  "response": "본 문서에서 주로 설명하는 주된 대상 또는 제품은 'LOTUS PMS'입니다. 이는 중소/중견기업을 위한 '프로젝트 기반 제조 협업 서비스'로서, 특히 제조업, IT 기업, 컨설팅 등 다양한 분야의 기업들이 프로젝트형 제품 개발 및 공급을 효율적으로 관리할 수 있도록 돕는 '프로젝트관리시스템(Project Management System)' 솔루션입니다. LOTUS PMS는 프로젝트의 계획, 조직, 자원 관리, 업무 공유, 진행 현황 및 성과물 관리 등 전반적인 프로젝트 관리 활동을 체계화하여 업무 생산성을 향상시키는 것을 목표로 합니다.",
+  "latency_ms": 8368,
+  "token_count": 76,
+  "json_valid": true,
+  "pii_hits": []
+}

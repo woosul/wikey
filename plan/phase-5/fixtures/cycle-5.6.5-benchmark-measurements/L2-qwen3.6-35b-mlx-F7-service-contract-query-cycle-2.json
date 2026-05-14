@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F7-service-contract",
+  "task": "query",
+  "cycle": 2,
+  "response": "본 문서에서 설명하는 주요 대상은 SK 바이오텍 주식회사를 위한 전자입찰시스템 재구축 프로젝트 개발 용역입니다. 이는 (주)세포아소프트가 (주)굿스트림에게 일괄 도급(턴키 방식)하여 수행하도록 하는 계약으로, 상세 설계부터 DB 설계, 구현, 테스트, 안정화 및 고객사 검수 대응까지의 전 과정을 포함합니다.",
+  "latency_ms": 3779,
+  "token_count": 43,
+  "json_valid": true,
+  "pii_hits": []
+}

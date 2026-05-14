@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "response": "{\"facts\":[{\"statement\":\"Example Images for Type of the Alley\",\"evidence_quote\":\"Example Images for Type of the Alley\"}]}",
+  "latency_ms": 2959,
+  "token_count": 30,
+  "json_valid": true,
+  "pii_hits": []
+}

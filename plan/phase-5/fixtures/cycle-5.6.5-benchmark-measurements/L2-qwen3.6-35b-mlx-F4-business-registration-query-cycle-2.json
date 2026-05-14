@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F4-business-registration",
+  "task": "query",
+  "cycle": 2,
+  "response": "해당 문서인 사업자등록증에 기재된 주식회사 굿스트림의 주요 사업 종류는 서비스 제조업이며, 구체적인 종목으로는 소프트웨어 개발, 자문 및 공급과 무선통신응용장치 제조가 명시되어 있습니다.",
+  "latency_ms": 2244,
+  "token_count": 26,
+  "json_valid": true,
+  "pii_hits": []
+}

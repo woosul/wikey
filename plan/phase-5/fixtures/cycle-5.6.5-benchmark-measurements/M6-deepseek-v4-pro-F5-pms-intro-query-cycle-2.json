@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F5-pms-intro",
+  "task": "query",
+  "cycle": 2,
+  "response": "본 문서의 주요 제품은 중소 및 중견기업을 대상으로 하는 프로젝트 기반 제조 협업 서비스인 'LOTUS PMS(프로젝트 관리 시스템)'입니다. 이 솔루션은 제조업, IT 기업, 컨설팅 등 다양한 형태의 기업에서 프로젝트형 제품 개발 및 공급을 위해 기업이 보유한 자원을 계획, 조직, 관리하고 프로젝트의 정량적 성과 및 진행 지표를 체계적으로 관리할 수 있도록 도와주는 소프트웨어입니다.",
+  "latency_ms": 5914,
+  "token_count": 54,
+  "json_valid": true,
+  "pii_hits": []
+}

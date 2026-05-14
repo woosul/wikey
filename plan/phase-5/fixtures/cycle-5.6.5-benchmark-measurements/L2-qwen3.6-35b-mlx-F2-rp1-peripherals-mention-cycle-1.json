@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F2-rp1-peripherals",
+  "task": "mention",
+  "cycle": 1,
+  "response": "{\n\"mentions\": [\n{\n\"surface\": \"Raspberry Pi Ltd\",\n\"normalized\": \"Raspberry Pi Ltd\"\n},\n{\n\"surface\": \"Synopsys, Inc.\",\n\"normalized\": \"Synopsys, Inc.\"\n},\n{\n\"surface\": \"Synopsys\",\n\"normalized\": \"Synopsys\"\n},\n{\n\"surface\": \"DesignWare\",\n\"normalized\": \"DesignWare\"\n},\n{\n\"surface\": \"ARM Limited\",\n\"normalized\": \"ARM Limited\"\n},\n{\n\"surface\": \"Cadence Design Systems, Inc.\",\n\"normalized\": \"Cadence Design Systems, Inc.\"\n},\n{\n\"surface\": \"Raspberry Pi Ltd\",\n\"normalized\": \"Raspberry Pi Ltd\"\n},\n{\n\"surface\": \"RPL\",\n\"normalized\": \"Raspberry Pi Ltd\"\n},\n{\n\"surface\": \"Raspberry Pi products\",\n\"normalized\": \"Raspberry Pi Products\"\n},\n{\n\"surface\": \"RPL\",\n\"normalized\": \"Raspberry Pi Ltd\"\n},\n{\n\"surface\": \"Raspberry Pi products\",\n\"normalized\": \"Raspberry Pi Products\"\n},\n{\n\"surface\": \"RPL\",\n\"normalized\": \"Raspberry Pi Ltd\"\n}\n]\n}",
+  "latency_ms": 14842,
+  "token_count": 203,
+  "json_valid": true,
+  "pii_hits": []
+}

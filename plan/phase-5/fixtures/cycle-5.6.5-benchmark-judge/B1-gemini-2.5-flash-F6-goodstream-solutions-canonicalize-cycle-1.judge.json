@@ -1,0 +1,9 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "canonicalize",
+  "cycle": 1,
+  "accuracy": 0.4,
+  "semantic": 0.4,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0.4,\n  \"semantic\": 0.4\n}\n```"
+}

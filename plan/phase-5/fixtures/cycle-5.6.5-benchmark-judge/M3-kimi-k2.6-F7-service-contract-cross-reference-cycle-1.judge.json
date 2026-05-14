@@ -1,0 +1,9 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 1,
+  "accuracy": 0.73,
+  "semantic": 0.73,
+  "raw_judge": "{\"accuracy\": 0.73, \"semantic\": 0.73}"
+}

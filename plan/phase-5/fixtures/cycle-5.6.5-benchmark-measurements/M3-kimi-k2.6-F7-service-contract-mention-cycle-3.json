@@ -1,0 +1,20 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 3,
+  "response": "```json\n{\n  \"mentions\": [\n    {\"surface\": \"SK 바이오텍\", \"normalized\": \"SK 바이오텍\"},\n    {\"surface\": \"전자구매시스템\", \"normalized\": \"전자구매시스템\"},\n    {\"surface\": \"이억사천일백만원정\", \"normalized\": \"241000000원\"},\n    {\"surface\": \"₩241,000,000 원\", \"normalized\": \"241000000원\"},\n    {\"surface\": \"VAT 별도\", \"normalized\": \"VAT 별도\"},\n    {\"surface\": \"₩76,000,000 원\", \"normalized\": \"76000000원\"},\n    {\"surface\": \"6MM\", \"normalized\": \"6MM\"},\n    {\"surface\": \"2026 년 4월 10일\", \"normalized\": \"2026년 4월 10일\"},\n    {\"surface\": \"2026년 10월 30일\", \"normalized\": \"2026년 10월 30일\"},\n    {\"surface\": \"선급금 30%\", \"normalized\": \"선급금 30%\"},\n    {\"surface\": \"중도금 30%\", \"normalized\": \"중도금 30%\"},\n    {\"surface\": \"잔 금 40%\", \"normalized\": \"잔금 40%\"},\n    {\"surface\": \"(주)세포아소프트\", \"normalized\": \"(주)세포아소프트\"},\n    {\"surface\": \"갑\", \"normalized\": \"갑\"},\n    {\"surface\": \"(주)굿스트림\", \"normalized\": \"(주)굿스트림\"},\n    {\"surface\": \"을\", \"normalized\": \"을\"},\n    {\"surface\": \"SK 바이오텍 주식회사\", \"normalized\": \"SK 바이오텍 주식회사\"},\n    {\"surface\": \"고객사\", \"normalized\": \"고객사\"},\n    {\"surface\": \"전자구매시스템 구축 사업\", \"normalized\": \"전자구매시스템 구축 사업\"},\n    {\"surface\": \"2026 년 4월 10 일\", \"normalized\": \"2026년 4월 10일\"},\n    {\"surface\": \"도급인\", \"normalized\": \"도급인\"},\n    {\"surface\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717 호\", \"normalized\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717호\"},\n    {\"surface\": \"119-81-95926\", \"normalized\": \"119-81-95926\"},\n    {\"surface\": \"이 희림\", \"normalized\": \"이희림\"},\n    {\"surface\": \"수급인\", \"normalized\": \"수급인\"},\n    {\"surface\": \"충북 청주시 흥덕 공단로 134,613\", \"normalized\": \"충북 청주시 흥덕 공단로 134, 613\"},\n    {\"surface\": \"301-86-19385\", \"normalized\": \"301-86-19385\"},\n    {\"surface\": \"김명 호\", \"normalized\": \"김명호\"},\n    {\"surface\": \"Turn-key\", \"normalized\": \"턴키\"},\n    {\"surface\": \"SK 바이오텍\", \"normalized\": \"SK 바이오텍\"},\n    {\"surface\": \"원청 계약\", \"normalized\": \"원청 계약\"},\n    {\"surface\": \"용역도급 약정\", \"normalized\": \"용역도급 약정\"},\n    {\"surface\": \"SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역\", \"normalized\": \"SK 바이오텍 전자입찰시스템 재구축 프로젝트 개발 용역\"},\n    {\"surface\": \"DB 설계\", \"normalized\": \"DB 설계\"},\n    {\"surface\": \"M/M\", \"normalized\": \"MM\"},\n    {\"surface\": \"2026년 4월 20일\", \"normalized\": \"2026년 4월 20일\"},\n    {\"surface\": \"이억사천일백만원정\", \"normalized\": \"241000000원\"},\n    {\"surface\": \"₩241,000,000 원\", \"normalized\": \"241000000원\"},\n    {\"surface\": \"7,600 만 원\", \"normalized\": \"76000000원\"},\n    {\"surface\": \"Back-to-Back\", \"normalized\": \"백투백\"},\n    {\"surface\": \"설계 및 화면 구성\", \"normalized\": \"설계 및 화면 구성\"},\n    {\"surface\": \"최종 검수\", \"normalized\": \"최종 검수\"},\n    {\"surface\": \"보안\", \"normalized\": \"보안\"},\n    {\"surface\": \"공정 보고\", \"normalized\": \"공정 보고\"},\n    {\"surface\": \"작업 장소\", \"normalized\": \"작업 장소\"},\n    {\"surface\": \"완료검사원\", \"normalized\": \"완료검사원\"},\n    {\"surface\": \"0. 15%\", \"normalized\": \"0.15%\"},\n    {\"surface\": \"계약이행보증\", \"normalized\": \"계약이행보증\"},\n    {\"surface\": \"이행보증보험증권\", \"normalized\": \"이행보증보험증권\"},\n    {\"surface\": \"하자이행보증\", \"normalized\": \"하자이행보증\"},\n    {\"surface\": \"하자이 행보증보험 증권\", \"normalized\": \"하자이행보증보험증권\"},\n    {\"surface\": \"1년\", \"normalized\": \"1년\"},\n    {\"surface\": \"운영유지보수\", \"normalized\": \"운영유지보수\"},\n    {\"surface\": \"2 개월\", \"normalized\": \"2개월\"},\n    {\"surface\": \"보안 서약서\", \"normalized\": \"보안 서약서\"},\n    {\"surface\": \"서울중앙지방법원\", \"normalized\": \"서울중앙지방법원\"},\n    {\"surface\": \"1 심\", \"normalized\": \"1심\"}\n  ]\n}\n```",
+  "latency_ms": 17699,
+  "token_count": 796,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 4
+    },
+    {
+      "kind": "account",
+      "count": 4
+    }
+  ]
+}

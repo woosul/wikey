@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 1,
+  "response": "이 문서는 'Type of the Alley'의 예시 이미지와 함께 관련 로고 및 설명을 포함하고 있습니다. 제공된 텍스트는 이미지의 데이터 URI와 함께 문서의 제목을 명시하고 있습니다. 전체 내용은 시각적 자료와 간단한 식별 정보를 담고 있는 것으로 보입니다.",
+  "latency_ms": 9115,
+  "token_count": 37,
+  "json_valid": true,
+  "pii_hits": []
+}

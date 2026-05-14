@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"SK 바이오텍\",\n      \"normalized\": \"SK Biotech\"\n    },\n    {\n      \"surface\": \"(주)세포아소프트\",\n      \"normalized\": \"Cellasoft Co., Ltd.\"\n    },\n    {\n      \"surface\": \"(주)굿스트림\",\n      \"normalized\": \"Goodstream Co., Ltd.\"\n    },\n    {\n      \"surface\": \"갑\",\n      \"normalized\": \"Cellasoft (Party A)\"\n    },\n    {\n      \"surface\": \"을\",\n      \"normalized\": \"Goodstream (Party B)\"\n    },\n    {\n      \"surface\": \"고객사\",\n      \"normalized\": \"Client (SK Biotech)\"\n    },\n    {\n      \"surface\": \"이희림\",\n      \"normalized\": \"Lee Hee-rim\"\n    },\n    {\n      \"surface\": \"김명호\",\n      \"normalized\": \"Kim Myung-ho\"\n    },\n    {\n      \"surface\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717 호\",\n      \"normalized\": \"Seoul, Guro-gu, Digital-ro 31-gil 62, Artis Forum 714-717\"\n    },\n    {\n      \"surface\": \"충북 청주시 흥덕 공단로 134,613\",\n      \"normalized\": \"Cheongju, Chungbuk, Heungdeok Industrial Complex-ro 134, 613\"\n    },\n    {\n      \"surface\": \"서울중앙지방법원\",\n      \"normalized\": \"Seoul Central District Court\"\n    },\n    {\n      \"surface\": \"2026년 4월 10일\",\n      \"normalized\": \"2026-04-10\"\n    },\n    {\n      \"surface\": \"2026년 4월 20일\",\n      \"normalized\": \"2026-04-20\"\n    },\n    {\n      \"surface\": \"2026년 10월 30일\",\n      \"normalized\": \"2026-10-30\"\n    },\n    {\n      \"surface\": \"전자구매시스템 구축 사업\",\n      \"normalized\": \"Electronic Procurement System Construction Project\"\n    },\n    {\n      \"surface\": \"전자입찰시스템 재구축 프로젝트\",\n      \"normalized\": \"Electronic Bidding System Reconstruction Project\"\n    },\n    {\n      \"surface\": \"Back-to-Back\",\n      \"normalized\": \"Back-to-Back payment method\"\n    }\n  ]\n}",
+  "latency_ms": 16488,
+  "token_count": 400,
+  "json_valid": true,
+  "pii_hits": []
+}

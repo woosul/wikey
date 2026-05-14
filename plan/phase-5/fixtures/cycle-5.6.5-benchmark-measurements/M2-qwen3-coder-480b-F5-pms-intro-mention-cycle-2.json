@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "mention",
+  "cycle": 2,
+  "response": "{\"mentions\":[{\"surface\":\"LOTUS PMS\",\"normalized\":\"LOTUS PMS\"},{\"surface\":\"㈜굿스트림\",\"normalized\":\"㈜굿스트림\"},{\"surface\":\"GOOD STREAM\",\"normalized\":\"GOOD STREAM\"},{\"surface\":\"LOTUS SCM\",\"normalized\":\"LOTUS SCM\"},{\"surface\":\"MOBILE APP\",\"normalized\":\"MOBILE APP\"},{\"surface\":\"PMS\",\"normalized\":\"PMS\"},{\"surface\":\"Project Management System\",\"normalized\":\"Project Management System\"},{\"surface\":\"PMBOK\",\"normalized\":\"PMBOK\"},{\"surface\":\"Project Management Body of Knowledge\",\"normalized\":\"Project Management Body of Knowledge\"}]}",
+  "latency_ms": 7084,
+  "token_count": 130,
+  "json_valid": true,
+  "pii_hits": []
+}

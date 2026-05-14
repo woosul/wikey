@@ -1,0 +1,20 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F4-business-registration",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"주식회사 굿스트림\",\n      \"type\": \"CORPORATION\",\n      \"aliases\": [\"굿스트림\"]\n    },\n    {\n      \"name\": \"김명호\",\n      \"type\": \"PERSON\",\n      \"aliases\": []\n    },\n    {\n      \"name\": \"301-86-19385\",\n      \"type\": \"REGISTRATION_NUMBER\",\n      \"aliases\": [\"사업자등록번호\"]\n    },\n    {\n      \"name\": \"150111-0166385\",\n      \"type\": \"REGISTRATION_NUMBER\",\n      \"aliases\": [\"법인등록번호\"]\n    },\n    {\n      \"name\": \"충청북도 청주시 흥덕구 공단로 134, 613(송정동)세중테크노밸리\",\n      \"type\": \"ADDRESS\",\n      \"aliases\": [\"사업장 소재지\", \"본점소재지\"]\n    },\n    {\n      \"name\": \"2012-10-02\",\n      \"type\": \"DATE\",\n      \"aliases\": [\"개업년월일\"]\n    },\n    {\n      \"name\": \"2014-09-01\",\n      \"type\": \"DATE\",\n      \"aliases\": [\"발급일자\"]\n    },\n    {\n      \"name\": \"청주 세무서장\",\n      \"type\": \"ORGANIZATION\",\n      \"aliases\": [\"청주세무서\"]\n    },\n    {\n      \"name\": \"소프트웨어개발,자문 및 공급\",\n      \"type\": \"BUSINESS_TYPE\",\n      \"aliases\": [\"종목\"]\n    },\n    {\n      \"name\": \"무선통신응용장치제조\",\n      \"type\": \"BUSINESS_TYPE\",\n      \"aliases\": [\"종목\"]\n    },\n    {\n      \"name\": \"서비스 제조업\",\n      \"type\": \"BUSINESS_TYPE\",\n      \"aliases\": [\"업태\"]\n    }\n  ]\n}\n```",
+  "latency_ms": 3805,
+  "token_count": 281,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 1
+    },
+    {
+      "kind": "account",
+      "count": 1
+    }
+  ]
+}

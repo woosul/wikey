@@ -1,0 +1,11 @@
+{
+  "task": "hallucinate-detection",
+  "fixture": "F3-hwpx-examples",
+  "model_outputs": {
+    "gemini": "2/sCH2fvcH7PJqJey0IufZfe/+aCvWr3cGrPKpf7H//svJdk6DFvbM6/3tq68+s7e63m9XnFvGilXqbE9+PMbmLRxn3ZseM2AfL7Z165bZ6LcfskbVKljNxrdZx1c/sq+HDbdvPn/Xut53ndUoWcKq39DVxqzYbvvT6sA6tM+2LR9pPdveYpfUihmlk/9l5erfYX1GLLQUhsKOJcsUh/bYxoWf2V",
+    "claude": "",
+    "openai": "{\n  \"facts\": [\n    {\n      \"statement\": \"Example Images for Type of the Alley\",\n      \"evidence_quote\": \"Example Images for Type of the Alley\"\n    }\n  ]\n}"
+  },
+  "majority_vote": "2/sCH2fvcH7PJqJey0IufZfe/+aCvWr3cGrPKpf7H//svJdk6DFvbM6/3tq68+s7e63m9XnFvGilXqbE9+PMbmLRxn3ZseM2AfL7Z165bZ6LcfskbVKljNxrdZx1c/sq+HDbdvPn/Xut53ndUoWcKq39DVxqzYbvvT6sA6tM+2LR9pPdveYpfUihmlk/9l5erfYX1GLLQUhsKOJcsUh/bYxoWf2V",
+  "dissent": true
+}

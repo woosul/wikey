@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F1-rohm-wisun",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "response": "로옴은, 스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증을 취득한 무선 통신 모듈을 업계 최초로 개발했습니다. 이 모듈은 Wi-SUN JUTA 규격에 대응하는 세계 최초의 무선 통신 모듈입니다.\n\n이 모듈은 Wi-SUN JUTA 규격에 따라 920MHz 대역을 사용하며, 멀티ホップ 통신을 지원하여 넓은 범위의 커버리지를 실현합니다. 또한, 소비 전력을 크게 낮춰 스마트미터에 장착했을 때의 배터리 수명을 길게 할 수 있습니다.\n\n앞으로도 로옴은 Wi-SUN JUTA 규격을 충실히 준수한 무선 통신 모듈을 제공함으로써, 스마트미터의 보급과 에너지 관리 시스템의 발전에 기여할 예정입니다.\n\n&lt;본 건의 개요&gt;\n■Wi-SUN JUTA란\n　스마트미터(주로 가스미터)와 데이터 수집 장치 간의 무선 통신을 위한 규격으로, 일본의 가스 업계 단체인 「JUTA(Utility Telemetry Association)」가 표준화했습니다.\n　920MHz 대역을 사용하며, 멀티ホップ 통신을 지원합니다.\n\n■주요 특징\n　・920MHz 대역을 사용하는 무선 통신 규격\n　・멀티ホップ 통신을 지원하여 넓은 범위 커버리지 실현\n　・저소비 전력 설계로 배터리 수명 연장\n\n■제품 페이지\n　「BP35C5 JUTA版」 제품 페이지\n　URL: https://www.rohm.co.kr/products/wireless-communication/wireless-communication-module/bp35c5-juta\n\n■로옴의 무선 통신 모듈\n　로옴은 Wi-SUN JUTA 규격 외에도, Wi-SUN FAN (B-mode) / Wi-SUN ECHONET Lite 등의 규격에 대응하는 무선 통신 모듈을 제공하고 있습니다.\n\n&lt;용어 설명&gt;\n※) 업계 최초\n　로옴 조사 (2024년 1월 현재)",
+  "latency_ms": 13302,
+  "token_count": 224,
+  "json_valid": false,
+  "pii_hits": []
+}

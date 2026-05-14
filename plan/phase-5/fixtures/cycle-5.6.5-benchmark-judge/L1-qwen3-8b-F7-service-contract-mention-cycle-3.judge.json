@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 3,
+  "accuracy": 0.3,
+  "semantic": 0.3,
+  "raw_judge": "{\"accuracy\": 0.3, \"semantic\": 0.3}"
+}

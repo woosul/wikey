@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 2,
+  "response": "기업 데이터 플랫폼은 설비 및 IoT 센서, 기간계 시스템 등 다양한 원천에서 발생하는 대량의 데이터를 체계적으로 수집하고 분석하는 통합 아키텍처입니다. 이 아키텍처는 원천 데이터 수집부터 정제, 저장, 분석을 거쳐 기업 특화형 인공지능(AI)을 활용한 의사결정 지원까지 데이터 흐름 전반을 포괄합니다. 특히 제조 산업에 특화된 Lotus 기간계 시스템, Peak9 데이터 처리 솔루션, Finetree AI 솔루션 등을 통해 효율적인 데이터 관리와 심층적인 인사이트 도출을 돕습니다.",
+  "latency_ms": 8089,
+  "token_count": 68,
+  "json_valid": true,
+  "pii_hits": []
+}

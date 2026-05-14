@@ -1,0 +1,20 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "response": "{\"facts\": [\n  {\"statement\": \"The entity is a corporate business.\", \"evidence_quote\": \"(법인사업자)\"},\n  {\"statement\": \"The registration number is 301-86-19385.\", \"evidence_quote\": \"등록번호 : 301-86-19385\"},\n  {\"statement\": \"The corporate name is 주식회사 굿스트림.\", \"evidence_quote\": \"법인명(단체명) : 주식회사 굿스트림\"},\n  {\"statement\": \"The representative is 김명호.\", \"evidence_quote\": \"대표자 : 김명호\"},\n  {\"statement\": \"The business opening date is October 02, 2012.\", \"evidence_quote\": \"개업년월일 : 2012년 10월 02일\"},\n  {\"statement\": \"The corporate registration number is 150111-0166385.\", \"evidence_quote\": \"법인등록번호 : 150111-0166385\"},\n  {\"statement\": \"The business location is 충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리.\", \"evidence_quote\": \"사업장 소재지 : 충청북도 청주시 흥덕구 공단로 134 , 613(송정동)세중테크노밸리\"},\n  {\"statement\": \"The head office location is 충청북도 청주시 흥덕구 공단로 134 , 613(송정동).\", \"evidence_quote\": \"본점소재지 : 충청북도 청주시 흥덕구 공단로 134 , 613(송정동)\"},\n  {\"statement\": \"The type of business is a service manufacturing business.\", \"evidence_quote\": \"사업의 종류 : 업태\\n서비스 제조업\"},\n  {\"statement\": \"The business items are software development, consulting and supply, and wireless communication application device manufacturing.\", \"evidence_quote\": \"종목 소프트웨어개발,자문 및 공급 무선통신응용장치제조\"},\n  {\"statement\": \"The reason for issuance is correction.\", \"evidence_quote\": \"교 부사유 : 정정\"},\n  {\"statement\": \"The business is not a business unit taxation applicable business.\", \"evidence_quote\": \"사업자단위과세 적용사업자 여부 : 여( ) 부(V )\"},\n  {\"statement\": \"The document was issued by the Cheongju Tax Office Chief.\", \"evidence_quote\": \"청주 세무서장\"},\n  {\"statement\": \"The date on the document is September 01, 2014.\", \"evidence_quote\": \"2014년 09월 01일\"}\n]}",
+  "latency_ms": 9643,
+  "token_count": 414,
+  "json_valid": true,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 2
+    },
+    {
+      "kind": "account",
+      "count": 2
+    }
+  ]
+}

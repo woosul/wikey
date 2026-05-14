@@ -1,0 +1,9 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F4-business-registration",
+  "task": "hallucinate-detection",
+  "cycle": 2,
+  "accuracy": 0.92,
+  "semantic": 0.92,
+  "raw_judge": "{\"accuracy\": 0.92, \"semantic\": 0.92}"
+}

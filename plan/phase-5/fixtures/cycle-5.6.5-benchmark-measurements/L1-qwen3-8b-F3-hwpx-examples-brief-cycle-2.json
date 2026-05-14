@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 2,
+  "response": "이 문서는 특정 골목의 유형을 보여주는 예시 이미지입니다. 이미지는 데이터 형식으로 제공되어 실제 이미지가 보이지 않습니다. 문서는 주로 이미지의 유형과 관련된 설명을 담고 있으며, 구체적인 내용은 이미지에 포함되어 있습니다.",
+  "latency_ms": 2581,
+  "token_count": 32,
+  "json_valid": true,
+  "pii_hits": []
+}

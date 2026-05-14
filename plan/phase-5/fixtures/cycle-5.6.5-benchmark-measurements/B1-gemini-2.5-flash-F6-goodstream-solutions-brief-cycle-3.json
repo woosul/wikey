@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 3,
+  "response": "기업 데이터 플랫폼은 설비 및 IoT 센서에서 발생하는 대량의 데이터를 수집하고 분석하여 기업의 의사결정을 지원하는 통합 아키텍처입니다. 이 아키텍처는 원천 데이터 수집부터 정제, 데이터 레이크 저장, 빅데이터 및 AI/ML 기반 분석까지 데이터 흐름의 전 과정을 포괄합니다. Lotus는 기간계 시스템 연동을, Peak9은 데이터 수집/처리/분석을, Finetree는 기업 특화 AI 애플리케이션을 제공하여 효율적인 데이터 활용을 돕습니다.",
+  "latency_ms": 8513,
+  "token_count": 62,
+  "json_valid": true,
+  "pii_hits": []
+}

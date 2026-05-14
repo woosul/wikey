@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F1-rohm-wisun",
+  "task": "canonicalize",
+  "cycle": 3,
+  "response": "```json\n{\n  \"entities\": [\n    {\n      \"name\": \"ROHM\",\n      \"type\": \"Company\",\n      \"aliases\": [\n        \"로옴\"\n      ]\n    },\n    {\n      \"name\": \"Wi-SUN JUTA\",\n      \"type\": \"Communication Standard\",\n      \"aliases\": []\n    }\n  ]\n}\n```",
+  "latency_ms": 3477,
+  "token_count": 59,
+  "json_valid": true,
+  "pii_hits": []
+}

@@ -1,0 +1,11 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F3-hwpx-examples",
+  "task": "brief",
+  "cycle": 2,
+  "response": "이 문서는 'Type of the Alley'의 예시 이미지와 함께 관련 로고 및 마크에 대한 설명을 담고 있습니다. 제공된 이미지는 PNG 형식의 데이터로, 특정 디자인 요소를 시각적으로 보여줍니다. 문서의 주요 목적은 해당 유형의 알레리에 대한 시각적 참고 자료를 제시하는 것입니다.",
+  "latency_ms": 4301,
+  "token_count": 40,
+  "json_valid": true,
+  "pii_hits": []
+}

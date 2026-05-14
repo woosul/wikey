@@ -1,0 +1,11 @@
+{
+  "model": "kimi-k2.6:cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "query",
+  "cycle": 3,
+  "response": "이 문서에서 주로 다루는 제품은 제조 산업을 대상으로 한 기업 데이터 플랫폼 솔루션입니다. 설비와 IoT 센서에서 발생하는 대량의 데이터를 수집·정제·분석하고, 이를 바탕으로 기업 특화형 인공지능(AI)을 구현하여 의사결정을 지원하는 통합 아키텍처를 제공합니다. 주요 구성 요소로는 기간계 시스템(Lotus SRM/MES/PMS), 데이터 수집·처리·분석 솔루션(Peak9 Anchor/Edge/Insight/Rail/RFID), 그리고 기업 특화형 로컬 LLM AI 솔루션(Finetree OCR/SQL/RAG/BOT)이 포함되어 있으며, 이 모든 것들이 Data Lake를 중심으로 연결되는 엔드투엔드 데이터 플랫폼 생태계를 구축하고 있습니다.",
+  "latency_ms": 4579,
+  "token_count": 91,
+  "json_valid": true,
+  "pii_hits": []
+}

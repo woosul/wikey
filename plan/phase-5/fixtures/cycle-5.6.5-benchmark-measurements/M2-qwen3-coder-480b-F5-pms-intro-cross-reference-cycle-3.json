@@ -1,0 +1,11 @@
+{
+  "model": "qwen3-coder:480b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\"refs\":[{\"target\":\"PMBOK\",\"kind\":\"standard\"}]}",
+  "latency_ms": 15012,
+  "token_count": 12,
+  "json_valid": true,
+  "pii_hits": []
+}

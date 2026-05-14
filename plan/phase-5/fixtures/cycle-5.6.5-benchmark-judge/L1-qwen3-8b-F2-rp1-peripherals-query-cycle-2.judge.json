@@ -1,0 +1,9 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F2-rp1-peripherals",
+  "task": "query",
+  "cycle": 2,
+  "accuracy": 0,
+  "semantic": 0,
+  "raw_judge": "```json\n{\n  \"accuracy\": 0,\n  \"semantic\": 0\n}\n```"
+}

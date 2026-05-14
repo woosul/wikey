@@ -1,0 +1,11 @@
+{
+  "model": "gpt-oss:120b-cloud",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 1,
+  "response": "",
+  "latency_ms": 47908,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": []
+}

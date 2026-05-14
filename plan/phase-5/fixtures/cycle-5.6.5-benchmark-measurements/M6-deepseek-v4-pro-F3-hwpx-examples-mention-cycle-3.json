@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v4-pro:cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "mention",
+  "cycle": 3,
+  "response": "{\n  \"mentions\": [\n    {\n      \"surface\": \"Alley\",\n      \"normalized\": \"alley\"\n    }\n  ]\n}",
+  "latency_ms": 4980,
+  "token_count": 23,
+  "json_valid": true,
+  "pii_hits": []
+}

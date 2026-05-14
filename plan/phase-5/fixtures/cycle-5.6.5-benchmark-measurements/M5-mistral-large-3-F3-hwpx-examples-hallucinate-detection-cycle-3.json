@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F3-hwpx-examples",
+  "task": "hallucinate-detection",
+  "cycle": 3,
+  "response": "{\n  \"facts\": [\n    {\n      \"statement\": \"Example Images for Type of the Alley\",\n      \"evidence_quote\": \"Example Images for Type of the Alley\"\n    },\n    {\n      \"statement\": \"The document contains a schema for listing facts explicitly stated within it.\",\n      \"evidence_quote\": \"Schema: {\\\"facts\\\":[{\\\"statement\\\":string,\\\"evidence_quote\\\":string}]}\"\n    }\n  ]\n}",
+  "latency_ms": 10185,
+  "token_count": 91,
+  "json_valid": true,
+  "pii_hits": []
+}

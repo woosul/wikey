@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 2,
+  "response": "```json\n{\n  \"mentions\": [\n    {\n      \"surface\": \"SK 바이오텍\",\n      \"normalized\": \"SK Biotech\"\n    },\n    {\n      \"surface\": \"전자구매시스템\",\n      \"normalized\": \"Electronic Procurement System\"\n    },\n    {\n      \"surface\": \"(주)세포아소프트\",\n      \"normalized\": \"Cell-A Soft Co., Ltd.\"\n    },\n    {\n      \"surface\": \"갑\",\n      \"normalized\": \"Party A\"\n    },\n    {\n      \"surface\": \"(주)굿스트림\",\n      \"normalized\": \"Good Stream Co., Ltd.\"\n    },\n    {\n      \"surface\": \"을\",\n      \"normalized\": \"Party B\"\n    },\n    {\n      \"surface\": \"SK 바이오텍 주식회사\",\n      \"normalized\": \"SK Biotech Co., Ltd.\"\n    },\n    {\n      \"surface\": \"고객사\",\n      \"normalized\": \"Client Company\"\n    },\n    {\n      \"surface\": \"이 희림\",\n      \"normalized\": \"Lee Hee-rim\"\n    },\n    {\n      \"surface\": \"김명 호\",\n      \"normalized\": \"Kim Myeong-ho\"\n    },\n    {\n      \"surface\": \"전자입찰시스템\",\n      \"normalized\": \"Electronic Bidding System\"\n    },\n    {\n      \"surface\": \"서울시 구로구 디지털로 31길 62, 아티스포럼 714~717 호\",\n      \"normalized\": \"Artis Forum 714~717, 62 Digital-ro 31-gil, Guro-gu, Seoul\"\n    },\n    {\n      \"surface\": \"충북 청주시 흥덕 공단로 134,613\",\n      \"normalized\": \"134,613 Heungdeok Gongdan-ro, Cheongju-si, Chungcheongbuk-do\"\n    },\n    {\n      \"surface\": \"서울중앙지방법원\",\n      \"normalized\": \"Seoul Central District Court\"\n    }\n  ]\n}\n```",
+  "latency_ms": 6935,
+  "token_count": 321,
+  "json_valid": true,
+  "pii_hits": []
+}

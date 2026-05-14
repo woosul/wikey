@@ -1,0 +1,11 @@
+{
+  "model": "qwen3:8b",
+  "fixture": "F7-service-contract",
+  "task": "mention",
+  "cycle": 2,
+  "response": "{\"mentions\":[{\"surface\":\"(주)세포아소프트\",\"normalized\":\"세포아소프트\"},{\"surface\":\"(주)굿스트림\",\"normalized\":\"굿스트림\"},{\"surface\":\"SK 바이오텍\",\"normalized\":\"SK 바이오텍\"},{\"surface\":\"고객사\",\"normalized\":\"고객사\"},{\"surface\":\"이희림\",\"normalized\":\"이희림\"},{\"surface\":\"김명호\",\"normalized\":\"김명호\"},{\"surface\":\"전자구매시스템 구축 사업\",\"normalized\":\"전자구매시스템 구축 사업\"},{\"surface\":\"전자입찰시스템 재구축 프로젝트 개발 용역\",\"normalized\":\"전자입찰시스템 재구축 프로젝트 개발 용역\"},{\"surface\":\"VAT\",\"normalized\":\"VAT\"},{\"surface\":\"241,000,000 원\",\"normalized\":\"241,000,000 원\"},{\"surface\":\"76,000,000 원\",\"normalized\":\"76,000,000 원\"},{\"surface\":\"6MM\",\"normalized\":\"6MM\"},{\"surface\":\"2026 년 4월 10일\",\"normalized\":\"2026년 4월 10일\"},{\"surface\":\"2026 년 10월 30일\",\"normalized\":\"2026년 10월 30일\"},{\"surface\":\"선급금\",\"normalized\":\"선급금\"},{\"surface\":\"중도금\",\"normalized\":\"중도금\"},{\"surface\":\"잔금\",\"normalized\":\"잔금\"},{\"surface\":\"보증\",\"normalized\":\"보증\"},{\"surface\":\"하자보수\",\"normalized\":\"하자보수\"},{\"surface\":\"지체상금\",\"normalized\":\"지체상금\"},{\"surface\":\"계약 해지\",\"normalized\":\"계약 해지\"},{\"surface\":\"경고문서\",\"normalized\":\"경고문서\"},{\"surface\":\"보증증권\",\"normalized\":\"보증증권\"},{\"surface\":\"이행보증보험증권\",\"normalized\":\"이행보증보험증권\"},{\"surface\":\"하자이행보증보험 증권\",\"normalized\":\"하자이행보증보험 증권\"},{\"surface\":\"계약 변경\",\"normalized\":\"계약 변경\"},{\"surface\":\"계약 연장\",\"normalized\":\"계약 연장\"},{\"surface\":\"계약의 해제 · 해지\",\"normalized\":\"계약의 해제 · 해지\"}]}",
+  "latency_ms": 18945,
+  "token_count": 317,
+  "json_valid": true,
+  "pii_hits": []
+}

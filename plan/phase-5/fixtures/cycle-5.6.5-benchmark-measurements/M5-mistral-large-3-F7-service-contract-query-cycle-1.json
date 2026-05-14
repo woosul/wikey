@@ -1,0 +1,12 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "query",
+  "cycle": 1,
+  "response": "",
+  "latency_ms": 2395,
+  "token_count": 0,
+  "json_valid": false,
+  "pii_hits": [],
+  "error": "Ollama error: model 'mistral-large-3:675b' is temporarily overloaded, please retry shortly or try a different model (ref: edcba138-979b-4037-8180-3df111bcca25)"
+}

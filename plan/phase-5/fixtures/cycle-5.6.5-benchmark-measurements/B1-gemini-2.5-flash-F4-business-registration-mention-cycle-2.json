@@ -1,0 +1,20 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F4-business-registration",
+  "task": "mention",
+  "cycle": 2,
+  "response": "```json\n{\n  \"mentions\": [\n    {\n      \"surface\": \"사업자등록증\",\n      \"normalized\": \"사업자등록증\"\n    },\n    {\n      \"surface\": \"법인사업자\",\n      \"normalized\": \"법인사업자\"\n    },\n    {\n      \"surface\": \"등록번호\",\n      \"normalized\": \"등록번호\"\n    },\n    {\n      \"surface\": \"301-86-19385\",\n      \"normalized\": \"301-86-19385\"\n    },\n    {\n      \"surface\": \"법인명(단체명)\",\n      \"normalized\": \"법인명\"\n",
+  "latency_ms": 16814,
+  "token_count": 93,
+  "json_valid": false,
+  "pii_hits": [
+    {
+      "kind": "biz-reg",
+      "count": 2
+    },
+    {
+      "kind": "account",
+      "count": 2
+    }
+  ]
+}

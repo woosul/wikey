@@ -1,0 +1,11 @@
+{
+  "model": "deepseek-v3.1:671b-cloud",
+  "fixture": "F7-service-contract",
+  "task": "cross-reference",
+  "cycle": 3,
+  "response": "{\"refs\":[{\"target\":\"SK 바이오텍\",\"kind\":\"organization\"},{\"target\":\"전자구매시스템\",\"kind\":\"product\"},{\"target\":\"전자입찰시스템\",\"kind\":\"product\"},{\"target\":\"SK 바이오텍 전자입찰시스템 재구축 프로젝트\",\"kind\":\"document\"},{\"target\":\"원청 계약\",\"kind\":\"document\"},{\"target\":\"용역도급 약정조건\",\"kind\":\"document\"}]}",
+  "latency_ms": 2544,
+  "token_count": 66,
+  "json_valid": true,
+  "pii_hits": []
+}

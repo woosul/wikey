@@ -1,0 +1,11 @@
+{
+  "model": "gemini-2.5-flash",
+  "fixture": "F1-rohm-wisun",
+  "task": "hallucinate-detection",
+  "cycle": 1,
+  "response": "```json\n{\n  \"facts\": [\n    {\n      \"statement\": \"로옴의 무선 통신 모듈이 스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증을 취득했습니다.\",\n      \"evidence_quote\": \"로옴의 무선 통신 모듈 스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증 취득\"\n    },\n    {\n      \"statement\": \"로옴의 무선 통신 모듈은 업계 최초로 스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증을 취득했습니다.\",\n      \"evidence_quote\": \"업계 최초※, 로옴의 무선 통신 모듈 스마트미터용 무선 통신 규격 「Wi-SUN JUTA」 인증 취득\"\n    }\n  ]\n}\n```",
+  "latency_ms": 4688,
+  "token_count": 95,
+  "json_valid": true,
+  "pii_hits": []
+}

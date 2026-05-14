@@ -1,0 +1,9 @@
+{
+  "model": "qwen3.6:35b-a3b-nvfp4",
+  "fixture": "F5-pms-intro",
+  "task": "canonicalize",
+  "cycle": 1,
+  "accuracy": 0.6,
+  "semantic": 0.6,
+  "raw_judge": "{\"accuracy\": 0.6, \"semantic\": 0.6}"
+}

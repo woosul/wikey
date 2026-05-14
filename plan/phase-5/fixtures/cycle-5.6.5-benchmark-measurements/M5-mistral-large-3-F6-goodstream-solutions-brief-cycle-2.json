@@ -1,0 +1,11 @@
+{
+  "model": "mistral-large-3:675b-cloud",
+  "fixture": "F6-goodstream-solutions",
+  "task": "brief",
+  "cycle": 2,
+  "response": "이 기업 데이터 플랫폼은 IoT 센서와 설비에서 발생하는 대량의 데이터를 수집하고 정제하여 빅데이터 기반으로 AI 분석을 수행함으로써 기업의 효율적인 의사결정을 지원합니다. 특히 제조 산업에서는 레거시 시스템, MES, ERP 등 다양한 데이터 소스를 통합하고, 엣지 컴퓨팅을 통해 실시간으로 데이터를 처리하여 생산성과 품질을 최적화합니다. 또한 자연어 처리, OCR, RAG 등 기업 맞춤형 AI 솔루션을 통해 비정형 데이터까지 활용 가능한 통합 아키텍처를 제공합니다.",
+  "latency_ms": 7065,
+  "token_count": 66,
+  "json_valid": true,
+  "pii_hits": []
+}
