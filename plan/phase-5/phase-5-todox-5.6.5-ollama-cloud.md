@@ -154,9 +154,9 @@ N-local commit (local only) — push 보류, §5.6.5.5 종결 시점 일괄 push
 |--------|-------|
 | **(h) 사용자 직접 작성** | master 가 fixture corpus 의 7 file 별 정답 markdown 작성 후 사용자 검토. 신뢰도 ↑, 시간 ↑ (estimated 4~8h). |
 | **(i) gemini-2.5-flash baseline 으로 작성** | 사용자 baseline (gemini-2.5-flash subscription) 으로 1회 ingest → 결과를 golden 으로 채택 → 다른 모델은 baseline 과의 ratio 비교. 비교 가능 + 시간 ↓ (estimated 1~2h), 단 baseline 자체 결함이 golden 으로 lock 됨. |
-| **(j) LLM committee LOCK trio** | **`gemini-2.5-flash` + `claude-3.5-sonnet` + `gpt-4.1`** 3 model 의 ingest 결과를 LLM committee 가 합의 → golden (codex cycle #3 ID-5 fix — 이전 stale `claude-haiku-4-5 + gpt-4.1-mini` 표기 정정). 시간 ↑↑, 신뢰도 ↑↑. |
+| **(j) LLM committee LOCK trio** | **`gemini-2.5-flash` + `claude-sonnet-4-20250514` + `gpt-4.1`** 3 model 의 ingest 결과를 LLM committee 가 합의 → golden (codex cycle #3 ID-5 fix — 이전 stale `claude-haiku-4-5 + gpt-4.1-mini` 표기 정정). 시간 ↑↑, 신뢰도 ↑↑. |
 
-**사용자 결정 LOCK (2026-05-14) = (γ) LLM committee** — `gemini-2.5-flash` + `claude-3.5-sonnet` + `gpt-4.1` 3 model 의 ingest 결과 → committee 합의 → golden lock. 시간 ↑↑ 단 신뢰도 ↑↑. baseline 1개 결함이 golden 으로 lock 되는 risk 회피 (raise 6 best-fit 정확도 1순위 정합).
+**사용자 결정 LOCK (2026-05-14) = (γ) LLM committee** — `gemini-2.5-flash` + `claude-sonnet-4-20250514` + `gpt-4.1` 3 model 의 ingest 결과 → committee 합의 → golden lock. 시간 ↑↑ 단 신뢰도 ↑↑. baseline 1개 결함이 golden 으로 lock 되는 risk 회피 (raise 6 best-fit 정확도 1순위 정합).
 > Note: analyst plan §10.6 표기는 (α/β/γ). 본 todox 의 (h/i/j) 와 1:1 매핑 — (h)→(α), (i)→(β), (j)→(γ).
 
 ### 3.5 Q5 (선택) — Production 채택 모델 결정 시점

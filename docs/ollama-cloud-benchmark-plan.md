@@ -10,7 +10,7 @@
 >
 > **v0.2 사용자 결정 LOCK** (2026-05-14):
 > - **Q3 harness layer = (g) hybrid** — bash orchestration (obsidian-cdp 라이브 ingest cycle smoke) + ts metric 집계 (golden 비교 algorithm / latency 통계 / cost calc). bash = master 의 라이브 가시 영역 + ts = developer 의 코드 단위 영역.
-> - **Q4 golden answer = (γ) LLM committee** — `gemini-2.5-flash` + `claude-3.5-sonnet` + `gpt-4.1` 3 model 의 ingest 결과 → committee 합의 → golden lock. golden 파일 = `plan/phase-5/fixtures/cycle-5.6.5-benchmark-golden/<fixture>/<task>.json|md`.
+> - **Q4 golden answer = (γ) LLM committee** — `gemini-2.5-flash` + `claude-sonnet-4-20250514` + `gpt-4.1` 3 model 의 ingest 결과 → committee 합의 → golden lock. golden 파일 = `plan/phase-5/fixtures/cycle-5.6.5-benchmark-golden/<fixture>/<task>.json|md`.
 > - **fixture corpus = 7 file 유지** (용역계약서 포함). PII redaction 강화 — 결과 markdown 안 사업자등록번호 / 계약 당사자명 / 금액 grep 0건 의무. 별도 redaction config (`.wikey/pii-patterns.yaml` 의 `kind: redaction` rule 추가).
 > - **catalog lock 의 위치** = master PoC §0 (사용자 Ollama Pro 계정 접근 필수 + 사용자 승인). developer 위임과 비-중복 — developer 는 catalog lock 결과를 input 으로 받음.
 >
@@ -310,9 +310,9 @@ Ollama Cloud catalog 에 없는 강자 모델은 *reference column* 으로만 �
 |------|------|-----------|
 | (α) 사용자 직접 | 사용자가 각 fixture 의 canonical entity / concept / mention / brief / 3~5 query 직접 작성 | 가장 정확. 단 사용자 시간 ≈ 4~8 시간 — rejected (시간 부담) |
 | (β) baseline 채택 | `gemini-2.5-flash` 출력을 golden 으로 채택 (gemini = baseline) | 작성 시간 0. 단 baseline circular — gemini 가 1위 자동 — rejected (bias) |
-| **(γ) LLM committee LOCK** | **`gemini-2.5-flash` + `claude-3.5-sonnet` + `gpt-4.1` 3 모델 합의** (majority vote, model trio 단일화 codex cycle #2 ID-1 fix) → 사용자 spot-check 30분 | 시간 ≈ 30분~1시간. circular 회피. 사용자 부담 ↓ |
+| **(γ) LLM committee LOCK** | **`gemini-2.5-flash` + `claude-sonnet-4-20250514` + `gpt-4.1` 3 모델 합의** (majority vote, model trio 단일화 codex cycle #2 ID-1 fix) → 사용자 spot-check 30분 | 시간 ≈ 30분~1시간. circular 회피. 사용자 부담 ↓ |
 
-**committee model trio LOCK** (codex cycle #2 ID-1 fix): `gemini-2.5-flash` + `claude-3.5-sonnet` + `gpt-4.1` (단일화, 이전 docs 안 `gpt-4o` 표기는 drift — `gpt-4.1` 로 통일).
+**committee model trio LOCK** (codex cycle #2 ID-1 fix): `gemini-2.5-flash` + `claude-sonnet-4-20250514` + `gpt-4.1` (단일화, 이전 docs 안 `gpt-4o` 표기는 drift — `gpt-4.1` 로 통일).
 
 ### 5.4 PII 회피 (AC-S19) + 용역계약서 redaction rule (codex cycle #2 ID-5 fix)
 
@@ -509,7 +509,7 @@ winner 모델의 `score` 가 `gemini-2.5-flash.score` 보다 **낮으면 product
 - **8 model × 7 fixture × 6 task = 336 cell** (raise 17 5 cloud + raise 18 baseline subscription B1 + local L1, deep paradigm 6 task raise 19)
 - **deep multi-cycle repeat = 294 cell × 3 cycle = 1,008 measurement** (raise 19 deterministic consistency)
 - 추가 LLM-judge call (semantic preservation 3 sub-metric × judge 평가) = 294 × ~3 = ~882 judge call (gemini-2.5-flash)
-- 추가 golden committee call (Q4=γ LOCK 3 model = gemini + claude-3.5-sonnet + gpt-4.1) per fixture × task = 7 fixture × 6 task × 3 model = **126 golden call** (1회 cycle)
+- 추가 golden committee call (Q4=γ LOCK 3 model = gemini + claude-sonnet-4-20250514 + gpt-4.1) per fixture × task = 7 fixture × 6 task × 3 model = **126 golden call** (1회 cycle)
 - 각 cell ≈ source size 의 1~3배 token (input + output) — 평균 10K token 가정
 - 140 × 10K = **1.4M token / 모델 set 1회 cycle**
 - LLM-judge (semantic preservation) 추가 = 140 × 1K = 140K token

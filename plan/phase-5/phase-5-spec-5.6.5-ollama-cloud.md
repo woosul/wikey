@@ -118,6 +118,7 @@ version: v0.4
 - **(I10) core ↔ UI 결합 0** (§5.6.4 v0.5 I10 mirror) — `wikey-core/src/llm-client.ts` 안 Obsidian API import 0. fallback 알림 = `LLMCallOptions.onAuthFallback?` callback (§5.6.4 §3.9 mirror).
 - **(I11) PII 누출 0** — 벤치마크 결과 markdown (`docs/ollama-cloud-benchmark-result.md`) 안 fixture corpus 의 PII (사업자등록번호 / 주소 / 인명) 미노출. `check-pii.sh` 회귀 0 + 결과 markdown 추가 grep 의무.
 - **(I12) 벤치마크 결정성** (단위 test 영역) — golden 비교 algorithm (Jaccard / F1 / ROUGE-L) deterministic. 동일 input → 동일 score. 단 라이브 실측 자체는 LLM stochastic — 5 cycle repeat + p50/p95 명시.
+- **(I13) Node CLI 환경 LLMClient `SubscriptionDeps` 인젝션 의무** (developer Step D 4차 raise mirror 2026-05-14) — wikey-core 가 ESM 으로 build 되는 `wikey-core/src/scripts/` 의 CLI (e.g. `benchmark-models.ts`) 에서 `LLMClient` 를 직접 인스턴스화할 때 `SubscriptionDeps { fileExists, homeDir }` 를 명시 인젝션 의무 (production renderer 는 default — `node:fs` / `node:os` lazy require — 그대로 동작). ESM-built CLI 가 `require('node:fs')` 동기 호출 시 `ERR_REQUIRE_ESM` 또는 fileExists 미정의 risk → 신규 CLI 가 LLMClient 사용 시 deps 인자 명시 의무.
 
 ### 1.3 Acceptance scenarios (AC-S1~AC-S31)
 
@@ -286,7 +287,7 @@ export const CLI_OPTION_SUPPORT: Record<
 - **Q1 (LLM provider type)**: (a) URL switch / (b) 별 `'ollama-cloud'` provider key — **사용자 결정 LOCK (b)** (raise 2 2026-05-14 — local + cloud 병행 사용 + UI 4번째 subsection 사용자 강조 #3). PoC §0 결과로 endpoint / auth flow 만 추가 확정.
 - **Q2 (Settings UI helper)**: (c) `renderProviderSubsection` 재사용 / (d) 신규 helper — analyst 권장 (c), DRY
 - **Q3 (벤치마크 harness layer)**: (e) bash / (f) ts / **(g) hybrid LOCK** (사용자 결정 2026-05-14, codex cycle #2 ID-1 fix) — bash orchestration (obsidian-cdp 라이브 master 영역) + ts metric (developer 영역)
-- **Q4 (Golden answer 작성)**: (h) 사용자 직접 / (i) gemini-2.5-flash baseline / **(j) LLM committee LOCK** (사용자 결정 2026-05-14, codex cycle #2 ID-1 fix). committee model trio = `gemini-2.5-flash` + `claude-3.5-sonnet` + `gpt-4.1` (단일화)
+- **Q4 (Golden answer 작성)**: (h) 사용자 직접 / (i) gemini-2.5-flash baseline / **(j) LLM committee LOCK** (사용자 결정 2026-05-14, codex cycle #2 ID-1 fix). committee model trio = `gemini-2.5-flash` + `claude-sonnet-4-20250514` + `gpt-4.1` (단일화)
 - **Q5 (production 채택)**: (k) basic slot / (l) advanced (canonicalize 분기) / (m) default 변경 — analyst 권장 (k) or (l), 사용자 결정 deferred (benchmark winner 결정 후)
 - **모델 set LOCK (raise 17 + 18 + 22 2026-05-14, v0.4)**: 5 cloud (M1 `deepseek-v3.1:671b-cloud` / M2 `qwen3-coder:480b-cloud` / M3 `kimi-k2.6:cloud` / M4 `gpt-oss:120b-cloud` / M5 `mistral-large-3:675b-cloud` — PoC §0 §1 LOCK) + 1 subscription baseline (B1 `gemini-2.5-flash`) + 2 local baseline (L1 `qwen3:8b` + L2 `qwen3.6:35b-a3b-nvfp4` raise 22) = **8 model**
 - **deep benchmark paradigm LOCK (raise 19 2026-05-14)**: 4 task → 6 task (canonicalize / mention / brief / query + cross-reference + hallucinate detection) + multi-cycle 3 repeat + deterministic consistency metric + PII redaction quality metric
