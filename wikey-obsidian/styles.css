@@ -320,10 +320,20 @@
   margin: 0;
   padding-left: 18px;
   list-style-type: disc;
+  /* User UI request 2026-05-15 — bullet color = error red (matches the
+     red border-left + background of `.wikey-chat-error`). The ::marker
+     selector targets the bullet only, leaving li text color unchanged. */
+  color: var(--text-error);
+}
+
+.wikey-chat-error-hint-list li::marker {
+  color: var(--text-error);
 }
 
 .wikey-chat-error-hint-list li {
   margin: 2px 0;
+  /* Restore normal text color (overriding ul.color inheritance). */
+  color: var(--text-normal);
 }
 
 .wikey-chat-error-details {
