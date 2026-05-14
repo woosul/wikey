@@ -175,8 +175,18 @@ export const CLI_BASE_ARGS: Record<SubscriptionProvider, readonly string[]> = {
   openai: ['exec', '-'], // codex exec - (stdin = prompt)
 }
 
-/** AC-S12 default spawn timeout — 60s. Override via opts.timeoutMs. */
-export const CLI_DEFAULT_TIMEOUT_MS = 60_000
+/**
+ * AC-S12 default spawn timeout — 600s (10 min). Override via opts.timeoutMs.
+ *
+ * §5.6.4 commit 16 (2026-05-14): bumped 60s → 600s after user raise that
+ * gemini-2.5-pro ingest of large markdown sources (canonicalize prompt with
+ * mention table + body sample) routinely exceeded 60s and surfaced as
+ * "gemini CLI aborted (timeout of external signal)". 10 min covers the
+ * slowest observed canonicalize call while still bounding hung CLI processes.
+ * Per-call override via `opts.timeoutMs` is preserved for short calls (brief,
+ * classify) that intentionally fail fast.
+ */
+export const CLI_DEFAULT_TIMEOUT_MS = 600_000
 
 export interface SpawnCliOptions {
   /** Extra CLI flags (e.g. ['-m', 'gemini-2.5-flash']) appended AFTER CLI_BASE_ARGS. */

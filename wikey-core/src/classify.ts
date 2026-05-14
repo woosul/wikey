@@ -358,7 +358,11 @@ JSON만 반환하세요. 다른 텍스트 없이. 형식:
 - 4차 제품 slug (NNN_topic): 위 "기존 NNN_topic 폴더" 목록에 매칭되는 slug 가 있으면 **재사용 우선**. 목록에 없는 slug 를 제안할 때는 reason 에 "신규: <근거>" 로 이유 명시. 신규 slug 네이밍: 영문 kebab 또는 한글, 3~20자, 숫자 prefix(NNN_) 포함.
 - 애매하면 3_resources/{2차 힌트}/ 까지만 반환 가능`
 
-  const callOpts: LLMCallOptions = { provider: provider as any, model, timeout: 60000 }
+  // §5.6.4 commit 16 (2026-05-14): classify LLM timeout 60s → 600s. Classify
+  // prompts are smaller than canonicalize but still routed through the same
+  // subscription CLI path; aligning all LLM-call timeouts removes the 60s
+  // ceiling that triggered "external signal" abort on slow providers.
+  const callOpts: LLMCallOptions = { provider: provider as any, model, timeout: 600000 }
   let raw = ''
   try {
     raw = await llm.call(prompt, callOpts)

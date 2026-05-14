@@ -9,7 +9,7 @@
  *     gemini → [geminiPath, '-p', '-']  + stdin = prompt
  *     claude → [claudePath, '-p']       + stdin = prompt
  *     codex  → [codexPath, 'exec', '-'] + stdin = prompt
- *   AbortController + opts.timeout (default 60s) → AC-S12.
+ *   AbortController + opts.timeout (default 600s, was 60s pre-commit 16) → AC-S12.
  *
  * 6 cases:
  *   (1) gemini happy path — stdin written, stdout captured, exitCode 0
@@ -95,7 +95,9 @@ describe('§5.6.4 spawnCliPrompt — argv / stdin / exit contract', () => {
     expect(result.aborted).toBe(false)
   })
 
-  it('AC-A3.7 (sanity): CLI_DEFAULT_TIMEOUT_MS = 60s', () => {
-    expect(CLI_DEFAULT_TIMEOUT_MS).toBe(60_000)
+  it('AC-A3.7 (sanity): CLI_DEFAULT_TIMEOUT_MS = 600s (§5.6.4 commit 16)', () => {
+    // §5.6.4 commit 16 (2026-05-14): bumped 60s → 600s after gemini-2.5-pro
+    // canonicalize of large sources routinely exceeded the 60s ceiling.
+    expect(CLI_DEFAULT_TIMEOUT_MS).toBe(600_000)
   })
 })

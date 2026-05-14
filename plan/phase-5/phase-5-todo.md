@@ -881,6 +881,14 @@
     - (b) wikey config 에 `ollama_cloud` 별 provider key 추가 — local + cloud 분리 운영 (local fallback)
   - 가능성: ingest 의 canonicalize 단계만 cloud 70B 사용 + brief/mention 은 local 8B → 비용 효율 + 품질 균형
 
+- [ ] **§5.6.5.2** Ollama Cloud jsonMode 처리 (사용자 raise 2026-05-14)
+  - §5.6.4 commit 15 (`cda9ff7`) 에서 anthropic / openai / gemini subscription 의 jsonMode 'unsupported' → prompt 강제 JSON 적응 처리 도입. Ollama Cloud 도 동일 검토 필요:
+    - (a) Ollama Cloud endpoint 가 OpenAI-compat API → `response_format: { type: 'json_object' }` 지원 여부 (모델별 차이)
+    - (b) 미지원 모델 (llama3 / qwen3 등 일부) 시 canonicalizer/ingest-pipeline 의 adaptive jsonMode strip + prompt prefix 동일 적용 가능
+    - (c) `provider-cli-options.ts CLI_OPTION_SUPPORT` 의 ollama row 추가 (현재 4 provider 매트릭스에서 ollama 미포함)
+    - (d) `getConfiguredAuthPath` 가 ollama 도 인식 (현재 SubscriptionProvider exclude — 단 cloud 는 별 path)
+  - 검증: Ollama Cloud 가입 후 1 cloud model (예: `llama3:70b-cloud`) 실측 — jsonMode 지원 여부 + prompt 강제 JSON 안정성
+
 ---
 
 ## 5.7 운영 인프라 포팅 (P4)
@@ -2454,7 +2462,29 @@ Phase 6: master verdict + commit + push + result 문서
 - [x] codex P2 — result doc §5.13.4 라이브 evidence 에 AC-A1-3 다양 확장자 라이브 prove 한계 명시 (unit test 6 PASS 로 cover, code path extension-agnostic)
 - [x] 회귀: wikey-core 635 PASS / 3 skip / 0 build errors / validate-wiki PASS / fixture test 10/10 PASS
 
----
+### 5.13 follow-up — §5.6.4 ingest 사용 중 raise (session 42, 2026-05-14)
+
+- [-] **5.13.X1 stale model error state bug** (HIGH, commit 16 조사 결과 = deferred — 재현 step 추가 필요) — 한 provider/model 에서 에러 발생 후 사용자가 model 변경해도 동일 에러 잔존, plugin restart 까지 사라지지 않음.
+  - **조사 결과 (commit 16, 2026-05-14)**: 코드 path 전 영역 stale state 미발견.
+    - `WikeyPlugin.saveSettings()` (main.ts:1036) — settings 저장 후 `this.llmClient = new LLMClient(...)` 항상 재생성 + 4 query-layer cache nullify
+    - `buildConfig()` (main.ts:1697) — 매 호출 `this.settings` fresh read, 캐시 0
+    - `LLMClient` — readonly httpClient + readonly config 만, mutable error 필드 0
+    - `resolveProvider()` (config.ts:125) — pure function, config arg only
+    - `runIngestCore` (commands.ts:627) — 매 호출 `plugin.buildConfig()` fresh 전달
+    - `ingest()` core (ingest-pipeline.ts:528, 1525) — 매 호출 `new LLMClient(httpClient, config)` 신규 instance
+    - `canonicalizer.callLLMWithRetry` — module-level state 0
+    - settings-tab.ts — 매 dropdown 변경 시 `await saveSettings()`
+  - **가설 1 (commit 16 으로 해소 추정)**: 실제 root cause = 60s timeout 자체. 동일 prompt + 동일 source 라 model 변경해도 새 model 도 60s 초과 → 동일 timeout error. 사용자가 "동일 에러" 로 인지. CLI_DEFAULT_TIMEOUT_MS 60s → 600s 적용으로 대부분 해소 예상.
+  - **가설 2 (미해결)**: Notice 표시 잔존 (Notice duration 12s) — 다음 ingest 시 사용자가 이전 Notice 를 새 에러로 오인. UX 개선 영역.
+  - **가설 3 (미해결)**: `wikey.conf` / `credentials.json` 외부 파일 stale — 다만 loadSettings() 에서 항상 reload.
+  - **deferred 조건**: 사용자 재현 step 정밀화 필요 — (a) provider→provider? model→model? (b) 정확한 에러 문자열, (c) save 후 즉시 ingest? 몇 초 후?
+  - 영향: 사용자 경험 critical — model 전환 의미 무효화. commit 16 timeout fix 가 대부분의 case 해소 예상.
+
+- [ ] **5.13.X2 md 파일 ingest modal 늦은 현상** (MED) — 이전에 여러번 raise 했던 사항 미해소. 현상:
+  - md 파일 ingest 시 modal 창 늦게 뜸
+  - pdf → md converting 케이스는 빨리 뜸 (대조)
+  - 의심: ingest-pipeline 의 md 파일 detect → modal trigger 사이 sync 작업 (file read / parse / pre-process) 차단
+  - 조사: pre-modal phase 의 blocking call site + setTimeout 0 또는 microtask 활용 가능 여부
 
 ## 5.15 Pipeline v2 후속 — Session 23, 2026-05-07
 

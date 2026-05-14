@@ -1532,7 +1532,10 @@ ${llmSample}`
 
   console.info(`[Wikey brief] start: provider=${provider} model=${model} file=${sourceFilename}`)
   try {
-    const resp = await llm.call(prompt, { provider: provider as any, model, timeout: 60000 })
+    // §5.6.4 commit 16 (2026-05-14): brief LLM timeout 60s → 600s (matches
+    // CLI_DEFAULT_TIMEOUT_MS bump). User raise: brief for large sources via
+    // gemini-2.5-pro also hit 60s ceiling.
+    const resp = await llm.call(prompt, { provider: provider as any, model, timeout: 600000 })
     return (resp ?? '').trim()
   } catch (err) {
     const msg = errorMessage(err)
