@@ -22,6 +22,7 @@ import {
 import { mapOptionsToCliArgs } from './provider-cli-options.js'
 import { parseSubscriptionOutput } from './cli-parser.js'
 import { isCloudModel, lookupCloudModel } from './ollama-model-catalog.js'
+import { notifyOllamaUsage } from './ollama-usage-hook.js'
 
 const DEFAULT_TIMEOUT = 300_000
 const DEFAULT_MAX_TOKENS = 65_536
@@ -577,7 +578,13 @@ export class LLMClient {
       throw err
     }
 
-    let data: { message?: { content?: string }; error?: string }
+    let data: {
+      message?: { content?: string }
+      error?: string
+      prompt_eval_count?: number
+      eval_count?: number
+      total_duration?: number
+    }
     try {
       data = JSON.parse(response.body)
     } catch {
@@ -609,6 +616,17 @@ export class LLMClient {
     if (isCloud && lookupCloudModel(model)?.jsonMode === 'markdown-wrap') {
       text = stripJsonFence(text)
     }
+
+    // §5.6.5 옵션 A v2 — emit usage info to wikey-obsidian statusbar chip.
+    // Local and cloud both notify (user spec 2026-05-14: 로컬은 모델명만,
+    // 클라우드는 모델+5h+7d). Listener decides rendering policy.
+    notifyOllamaUsage({
+      provider: isCloud ? 'ollama-cloud' : 'ollama',
+      model,
+      promptTokens: data.prompt_eval_count ?? 0,
+      evalTokens: data.eval_count ?? 0,
+      totalDurationNs: data.total_duration ?? 0,
+    })
 
     return text.trim()
   }

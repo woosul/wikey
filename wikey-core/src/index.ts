@@ -423,3 +423,22 @@ export {
 export { rrfFuse } from './search/rrf-fusion.js'
 export type { RrfFuseOptions } from './search/rrf-fusion.js'
 export type { EmbedderFn } from './search/orama-index.js'
+
+// §5.6.5 옵션 A v2 — Ollama Cloud usage statusbar plumbing.
+export {
+  setOllamaUsageListener,
+  __clearOllamaUsageListener,
+} from './ollama-usage-hook.js'
+export type { OllamaUsageInfo } from './ollama-usage-hook.js'
+export {
+  fetchOllamaCloudUsage,
+  parseOllamaSettingsHtml,
+  OllamaUsageFetchError,
+} from './ollama-cloud-usage-fetcher.js'
+export type {
+  OllamaUsageFetchResult,
+  OllamaUsageHttpClient,
+  OllamaUsageHttpResponse,
+} from './ollama-cloud-usage-fetcher.js'
+export { isCloudModel, lookupCloudModel, CLOUD_MODEL_CATALOG } from './ollama-model-catalog.js'
+export type { CloudModelEntry } from './ollama-model-catalog.js'

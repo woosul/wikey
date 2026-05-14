@@ -37,6 +37,11 @@ import {
   BUNDLED_QUERY_EXPANDER_PROMPT,
   BUNDLED_QUERY_ANALYZER_PROMPT,
   resolveProvider,
+  setOllamaUsageListener,
+  fetchOllamaCloudUsage,
+  OllamaUsageFetchError,
+  type OllamaUsageInfo,
+  type OllamaUsageHttpClient,
   type QueryAnswerPair,
   type AnalyzeResult,
   type VaultQueryHint,
@@ -58,6 +63,10 @@ export const DOC_EXT_RE = /\.(md|txt|pdf|hwp|hwpx|docx|pptx|xlsx|csv|html|htm|pn
 import { WikeyChatView, WIKEY_CHAT_VIEW } from './sidebar-chat'
 import { WikeySettingTab } from './settings-tab'
 import { WikeyStatusBar } from './status-bar'
+import {
+  renderOllamaChip,
+  type OllamaUsageChipState,
+} from './status-bar-ollama-usage'
 import { registerCommands } from './commands'
 import { detectEnvironment, buildExecEnv } from './env-detect'
 import type { EnvStatus } from './env-detect'
@@ -531,6 +540,10 @@ export default class WikeyPlugin extends Plugin {
   /** Session-only: set to true when user clicks "Skip briefs this session" in Stage 1 modal. Cleared on reload. */
   skipIngestBriefsThisSession = false
   private statusBar!: WikeyStatusBar
+  // §5.6.5 옵션 A v2 — Ollama usage statusbar chip state + interval handle.
+  private ollamaChipEl: HTMLElement | null = null
+  private ollamaChipState: OllamaUsageChipState = {}
+  private ollamaChipPollId: ReturnType<typeof setInterval> | null = null
   private chatSaveTimer: ReturnType<typeof setTimeout> | null = null
   /**
    * §4.2.4 S4-1: movePair 가 발행 예정 rename 을 pre-register 하고, vault listener 가
@@ -619,6 +632,11 @@ export default class WikeyPlugin extends Plugin {
 
     this.statusBar = new WikeyStatusBar(this)
     this.statusBar.register()
+
+    // §5.6.5 옵션 A v2 — second statusbar chip: Ollama model + (cloud) quota.
+    // Hidden until the first callOllama dispatch (user spec 2026-05-14:
+    // 로딩된 모델 없으면 chip 제외).
+    this.registerOllamaUsageChip()
 
     registerCommands(this)
 
@@ -852,6 +870,105 @@ export default class WikeyPlugin extends Plugin {
       }
     }
     new Notice(`Auto-ingest complete: ${ok} succeeded / ${fail} failed`)
+  }
+
+  /**
+   * §5.6.5 옵션 A v2 — Ollama usage statusbar chip wiring.
+   *
+   * Three responsibilities:
+   *   1. addStatusBarItem() for the second chip (right of the wiki page counter).
+   *   2. setOllamaUsageListener — every callOllama dispatch updates the chip
+   *      with the model name (and provider). Cloud quota numbers come from
+   *      the periodic ollama.com/settings fetch (step 3); they ride along on
+   *      the chip state but don't reset on each LLM call.
+   *   3. setInterval(5min) → fetchOllamaCloudUsage(cookie) when configured.
+   *      No fetch when cookie empty (chip stays at model-only display).
+   *
+   * Chip stays hidden until at least one ollama / ollama-cloud dispatch
+   * happens (user spec 2026-05-14: 로딩된 모델 없으면 chip 제외).
+   */
+  private registerOllamaUsageChip(): void {
+    this.ollamaChipEl = this.addStatusBarItem()
+    this.ollamaChipEl.addClass('wikey-statusbar-ollama-chip')
+    this.refreshOllamaChip()
+
+    setOllamaUsageListener((info: OllamaUsageInfo) => {
+      this.ollamaChipState = {
+        ...this.ollamaChipState,
+        provider: info.provider,
+        model: info.model,
+      }
+      this.refreshOllamaChip()
+      // Trigger an immediate quota fetch when we transition to a cloud model
+      // (statusbar would otherwise wait up to 5min for the next poll tick).
+      if (info.provider === 'ollama-cloud' && this.settings.ollamaCloudSessionCookie) {
+        void this.pollOllamaCloudUsage()
+      }
+    })
+
+    this.ollamaChipPollId = setInterval(() => {
+      void this.pollOllamaCloudUsage()
+    }, 5 * 60 * 1000)
+
+    this.register(() => {
+      setOllamaUsageListener(undefined)
+      if (this.ollamaChipPollId) {
+        clearInterval(this.ollamaChipPollId)
+        this.ollamaChipPollId = null
+      }
+    })
+  }
+
+  private refreshOllamaChip(): void {
+    if (this.ollamaChipEl) {
+      renderOllamaChip(this.ollamaChipEl, this.ollamaChipState)
+    }
+  }
+
+  private async pollOllamaCloudUsage(): Promise<void> {
+    const cookie = this.settings.ollamaCloudSessionCookie
+    if (!cookie || cookie.length === 0) return
+    if (this.ollamaChipState.provider !== 'ollama-cloud') return
+
+    const httpClient: OllamaUsageHttpClient = {
+      async fetch(url, opts) {
+        // Obsidian's `requestUrl` bypasses CORS and lets us attach a Cookie
+        // header — the same path CodexBar uses on macOS (#534 docs).
+        const resp = await requestUrl({
+          url,
+          method: 'GET',
+          headers: { Cookie: opts.cookie },
+          throw: false,
+        })
+        return {
+          status: resp.status,
+          body: resp.text,
+          headers: { location: (resp.headers ?? {})['location'] ?? '' },
+        }
+      },
+    }
+    try {
+      const result = await fetchOllamaCloudUsage(cookie, { httpClient })
+      this.ollamaChipState = {
+        ...this.ollamaChipState,
+        sessionPct: result.sessionPct,
+        weeklyPct: result.weeklyPct,
+      }
+      this.refreshOllamaChip()
+    } catch (err) {
+      // Auth / parse / network failures: hide quota numbers but keep model
+      // name visible. Surface the reason once via Notice on the first
+      // auth-class failure so the user knows to re-paste the cookie.
+      if (err instanceof OllamaUsageFetchError && err.reason === 'auth') {
+        new Notice('Ollama Cloud session cookie expired — re-paste from ollama.com/settings.')
+      }
+      this.ollamaChipState = {
+        ...this.ollamaChipState,
+        sessionPct: undefined,
+        weeklyPct: undefined,
+      }
+      this.refreshOllamaChip()
+    }
   }
 
   onunload() {
