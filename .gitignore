@@ -33,8 +33,9 @@ Clippings/
 local-llm/*.gguf
 local-llm/*.bin
 
-# API keys
+# API keys / secrets (§5.6.6 — wikey.conf 안 OAuth client_secret 평문 저장 가능)
 .env
+wikey.conf
 
 # OS
 .DS_Store
