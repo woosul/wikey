@@ -1,6 +1,6 @@
 import { App, Modal, Notice, PluginSettingTab, Setting, TFile, requestUrl } from 'obsidian'
 import {
-  costTrackerSummary, validateWiki, checkPii, reindexWiki, reindexCheck,
+  validateWiki, checkPii, reindexWiki, reindexCheck,
   INGEST_PROMPT_PATH, STAGE1_SUMMARY_PROMPT_PATH, STAGE2_MENTION_PROMPT_PATH, STAGE3_CANONICALIZE_PROMPT_PATH,
   BUNDLED_INGEST_PROMPT, BUNDLED_STAGE2_MENTION_PROMPT,
   loadEffectiveIngestPrompt, loadEffectiveStage2Prompt, loadEffectiveStage3Prompt,
@@ -53,7 +53,6 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderApiKeysSection(containerEl)
     this.renderSearchSection(containerEl)
     this.renderAdvancedQueryTuningSection(containerEl)
-    this.renderCostSection(containerEl)
     this.renderToolsSection(containerEl)
     this.renderResetSection(containerEl)
     this.renderAdvancedSection(containerEl)
@@ -1577,49 +1576,6 @@ export class WikeySettingTab extends PluginSettingTab {
             await this.plugin.saveSettings()
           }),
       )
-  }
-
-  // ── Section: Cost ──
-  private renderCostSection(containerEl: HTMLElement): void {
-    containerEl.createEl('h3', { text: 'Cost Management' })
-
-    new Setting(containerEl)
-      .setName('Monthly Limit ($)')
-      .addText((text) =>
-        text
-          .setPlaceholder('50')
-          .setValue(String(this.plugin.settings.costLimit))
-          .onChange(async (value) => {
-            const num = Number(value)
-            if (!isNaN(num) && num > 0) {
-              this.plugin.settings.costLimit = num
-              await this.plugin.saveSettings()
-            }
-          }),
-      )
-
-    const costBox = containerEl.createDiv({ cls: 'wikey-settings-result-box' })
-    costBox.createEl('span', { text: 'Click below to load cost summary.', cls: 'wikey-settings-result-placeholder' })
-
-    new Setting(containerEl).addButton((btn) =>
-      btn.setButtonText('Cost Summary').onClick(async () => {
-        btn.setButtonText('Loading...')
-        btn.setDisabled(true)
-        const basePath = (this.plugin.app.vault.adapter as any).basePath ?? ''
-        const env = this.plugin.getExecEnv()
-        const result = await costTrackerSummary(basePath, env)
-        costBox.empty()
-        if (result.success && result.stdout.trim()) {
-          costBox.createEl('pre', { text: result.stdout.trim(), cls: 'wikey-settings-result-output' })
-        } else if (!result.success) {
-          costBox.createEl('pre', { text: result.stderr || 'Cost tracker script failed', cls: 'wikey-settings-result-error' })
-        } else {
-          costBox.createEl('span', { text: 'No cost records', cls: 'wikey-settings-result-placeholder' })
-        }
-        btn.setButtonText('Cost Summary')
-        btn.setDisabled(false)
-      }),
-    )
   }
 
   // ── Section: Wiki Tools ──

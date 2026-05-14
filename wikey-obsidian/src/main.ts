@@ -87,7 +87,6 @@ interface WikeySettings {
   openaiAuthMode: 'none' | 'subscription' | 'api'
   ollamaUrl: string
   qmdPath: string
-  costLimit: number
   advancedLLM: boolean
   ingestProvider: string
   ingestModel: string
@@ -195,7 +194,6 @@ const DEFAULT_SETTINGS: WikeySettings = {
   openaiAuthMode: 'subscription',
   ollamaUrl: 'http://localhost:11434',
   qmdPath: '',
-  costLimit: 50,
   advancedLLM: false,
   ingestProvider: '',
   ingestModel: '',
@@ -1251,7 +1249,6 @@ export default class WikeyPlugin extends Plugin {
         basicModel: (conf.WIKEY_BASIC_MODEL as string) || this.settings.basicModel,
         cloudModel: (conf.WIKEY_MODEL as string) || this.settings.cloudModel,
         ollamaUrl: (conf.OLLAMA_URL as string) || this.settings.ollamaUrl,
-        costLimit: (conf.COST_LIMIT as number) || this.settings.costLimit,
         ingestProvider: (conf.INGEST_PROVIDER as string) || '',
         lintProvider: (conf.LINT_PROVIDER as string) || '',
         summarizeProvider: (conf.SUMMARIZE_PROVIDER as string) || '',
@@ -1282,7 +1279,6 @@ export default class WikeyPlugin extends Plugin {
         WIKEY_BASIC_MODEL: this.settings.basicModel,
         WIKEY_MODEL: this.settings.cloudModel || 'wikey',
         OLLAMA_URL: this.settings.ollamaUrl,
-        COST_LIMIT: String(this.settings.costLimit),
         // §5.7.7 cycle #3 codex HIGH #2 fix — Hybrid wiring conf bridge (CLI parity).
         // §5.7.7 cycle #5 codex HIGH #1 fix — sub-control gate: master toggle ON 시만 'on'.
         WIKEY_HYBRID_MODE:
@@ -1875,7 +1871,6 @@ export default class WikeyPlugin extends Plugin {
       LINT_PROVIDER: this.settings.advancedLLM ? this.settings.lintProvider : '',
       SUMMARIZE_PROVIDER: this.settings.advancedLLM ? this.settings.summarizeProvider : '',
       CONTEXTUAL_MODEL: CONTEXTUAL_DEFAULT_MODEL,
-      COST_LIMIT: this.settings.costLimit,
       OCR_PROVIDER: this.settings.ocrProvider || undefined,
       OCR_MODEL: this.settings.ocrModel || undefined,
       WIKEY_EXTRACTION_DETERMINISM: this.settings.extractionDeterminism || undefined,

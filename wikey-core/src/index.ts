@@ -257,8 +257,6 @@ export {
   reindexQuick,
   reindexCheckJson,
   waitUntilFresh,
-  costTrackerSummary,
-  costTrackerAdd,
 } from './scripts-runner.js'
 export type { ScriptResult, ReindexCheckResult, ReindexFreshness } from './scripts-runner.js'
 export {

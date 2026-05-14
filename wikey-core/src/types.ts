@@ -84,8 +84,6 @@ export interface WikeyConfig {
   readonly CLASSIFY_PROVIDER?: string
   readonly CLASSIFY_MODEL?: string
 
-  readonly COST_LIMIT: number
-
   /**
    * §4.5.1.6.1: when true, extraction LLM calls (summary, mentions, canonicalize)
    * inject `temperature=0 + seed=42` for deterministic sampling. Measured against

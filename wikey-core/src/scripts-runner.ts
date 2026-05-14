@@ -2,10 +2,10 @@
  * scripts-runner.ts — Phase 5 §5.7.1 (2026-05-08) refactor.
  *
  * 기존: `child_process.execFile` 로 `scripts/*.sh` spawn.
- * 변경: in-process TS logic (validate-wiki / check-pii / cost-tracker / reindex) 직접 호출.
+ * 변경: in-process TS logic (validate-wiki / check-pii / reindex) 직접 호출.
  *
  * Public interface (`ScriptResult`, `validateWiki`, `checkPii`, `reindex`, `reindexCheck`,
- * `reindexCheckJson`, `reindexQuick`, `costTrackerSummary`, `costTrackerAdd`, `waitUntilFresh`)
+ * `reindexCheckJson`, `reindexQuick`, `waitUntilFresh`)
  * 동일 — plugin 호출 사이트 (commands.ts + settings-tab.ts) 변경 0.
  *
  * `env` 파라미터는 호환성 위해 받되 in-process 호출에 영향 없음 (logger / timestamps 만
@@ -14,12 +14,6 @@
 
 import { runValidateWiki } from './scripts/validate-wiki.js'
 import { runCheckPii } from './scripts/check-pii.js'
-import {
-  cmdAdd,
-  cmdProviders,
-  cmdSummary,
-  type AddArgs,
-} from './scripts/cost-tracker.js'
 import {
   cmdCheck,
   cmdCheckJson,
@@ -179,45 +173,6 @@ export async function reindexCheck(
 ): Promise<ScriptResult> {
   return captureRun(async (write, _writeErr, signal) => {
     const r = await cmdCheck({ basePath, env, write, signal, ...envOverrides(env) })
-    return r.exitCode
-  })
-}
-
-export async function costTrackerSummary(
-  basePath: string,
-  _env: Record<string, string>,
-): Promise<ScriptResult> {
-  return captureRun(async (write, writeErr) => {
-    const r = cmdSummary({ basePath, write, writeErr }, {})
-    return r.exitCode
-  })
-}
-
-/**
- * @deprecated 기존 .sh 의 cost-tracker add 는 (basePath, env, provider, task, cost-string)
- *   3쌍 단순 인자만 받음. 새 in-process API 는 inputTokens / outputTokens 등 풍부한 args
- *   지원하지만, 호환성 위해 기존 시그니처 그대로 유지.
- */
-export async function costTrackerAdd(
-  basePath: string,
-  _env: Record<string, string>,
-  provider: string,
-  task: string,
-  desc: string,
-): Promise<ScriptResult> {
-  return captureRun(async (write, writeErr) => {
-    const args: AddArgs = { provider, task, desc }
-    const r = cmdAdd({ basePath, write, writeErr }, args)
-    return r.exitCode
-  })
-}
-
-export async function costTrackerProviders(
-  basePath: string,
-  _env: Record<string, string>,
-): Promise<ScriptResult> {
-  return captureRun(async (write) => {
-    const r = cmdProviders({ basePath, write })
     return r.exitCode
   })
 }

@@ -3,7 +3,7 @@ import { PROVIDER_CHAT_DEFAULTS, CONTEXTUAL_DEFAULT_MODEL } from './provider-def
 
 const NUMERIC_KEYS = new Set([
   // §5.7.5 — WIKEY_SEARCH_TOP_N (canonical) + WIKEY_QMD_TOP_N (deprecated alias).
-  'WIKEY_SEARCH_TOP_N', 'WIKEY_QMD_TOP_N', 'COST_LIMIT',
+  'WIKEY_SEARCH_TOP_N', 'WIKEY_QMD_TOP_N',
   'OCR_DPI', 'OCR_PARALLEL', 'OCR_MAX_PAGES',
   'DOCLING_TIMEOUT_MS',
   // §5.7.7 — Hybrid search env override (RRF k).
@@ -30,7 +30,6 @@ const DEFAULTS: WikeyConfig = {
   LINT_PROVIDER: '',
   SUMMARIZE_PROVIDER: '',
   CONTEXTUAL_MODEL: CONTEXTUAL_DEFAULT_MODEL,
-  COST_LIMIT: 50,
   // §5.6.4 v0.7 — per-provider auth mode defaults (user plan 2026-05-14).
   // 'auto' polished out. 'subscription' is the v0.7 default: subscription-first
   // intent preserved (most users have CLI OAuth set up) but failure now surfaces
