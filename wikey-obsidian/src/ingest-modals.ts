@@ -81,7 +81,7 @@ export class IngestFlowModal extends Modal {
 
   constructor(
     app: App,
-    private readonly sourcePath: string,
+    private sourcePath: string,
     initialBrief: string,
     private readonly defaultVerify: boolean,
   ) {
@@ -99,6 +99,14 @@ export class IngestFlowModal extends Modal {
     if (this.phase === 'converting' || this.phase === 'brief') {
       this.phase = 'brief'
       this.progressStep = 2
+      this.rerender()
+    }
+  }
+
+  /** §5.6.4 v0.7 commit 18 — sanitize 후 filename 갱신 (modal 표시 후 호출). */
+  setSourcePath(newPath: string) {
+    if (newPath !== this.sourcePath) {
+      this.sourcePath = newPath
       this.rerender()
     }
   }

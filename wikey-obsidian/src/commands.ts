@@ -487,12 +487,6 @@ async function runIngestInner(
 ): Promise<IngestRunResult> {
   const basePath = (plugin.app.vault.adapter as any).basePath ?? ''
 
-  // §5.15.D: ingest 진입 시 raw 파일명 wikilink-safe normalize. raw 파일 자체를 vault rename
-  //   → disk 와 wikilink target 일관 보장. wikilink-unsafe character (`|` `[` `]` `#` `^` `\`
-  //   + Unicode 특수문자 등) 포함 시 sanitize 결과로 rename. 사용자 통찰: blacklist 가 아닌
-  //   whitelist (`wikilink-safe.ts`) 라 향후 reserved char 자동 cover.
-  sourcePath = await sanitizeRawFilenameIfNeeded(plugin, sourcePath)
-
   const briefMode = plugin.settings.ingestBriefs
   const shouldShowFlow = !runOpts?.skipBriefModal
     && briefMode !== 'never'
@@ -500,6 +494,8 @@ async function runIngestInner(
 
   // ── Fast path: no modal (auto-ingest or "never" mode) ──
   if (!shouldShowFlow) {
+    // §5.15.D sanitize — fast path 는 modal 없으므로 진입 직전 sync.
+    sourcePath = await sanitizeRawFilenameIfNeeded(plugin, sourcePath)
     return await runIngestCore(plugin, sourcePath, basePath, {
       guideHint: undefined,
       planGate: undefined,
@@ -513,8 +509,18 @@ async function runIngestInner(
   // (`convertSourceToMarkdown`) 호출 → brief + ingest 가 동일 결과 공유.
   // §5.10.3.10 옵션 C: stepper 4 단계 (Converting / Brief / Processing / Preview) — 변환 단계 시각화.
   // Cancel 시 vault write 0 invariant (AC-C1.4): runIngestCore 호출 안 함. cache 만 ephemeral 보존.
+  //
+  // §5.6.4 v0.7 commit 18 (사용자 raise §5.13.X2): modal.open() 을 sanitize 보다
+  // 먼저 호출 — 사용자 즉시 modal 표시 (md 116KB 파일 16s sanitize 차단 회피).
+  // sanitize 결과는 modal.setSourcePath() 로 후행 반영.
   const modal = new IngestFlowModal(plugin.app, sourcePath, '', plugin.settings.verifyIngestResults)
   modal.open()
+  // §5.15.D sanitize — modal 표시 후 background. 결과로 filename 갱신.
+  const sanitizedPath = await sanitizeRawFilenameIfNeeded(plugin, sourcePath)
+  if (sanitizedPath !== sourcePath) {
+    sourcePath = sanitizedPath
+    modal.setSourcePath(sourcePath)
+  }
 
   const sourceFilename = sourcePath.split('/').pop() ?? sourcePath
   const ext = sourceFilename.toLowerCase().split('.').pop() ?? ''
