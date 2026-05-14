@@ -1282,12 +1282,21 @@ export class WikeySettingTab extends PluginSettingTab {
     containerEl: HTMLElement,
     spec: ProviderSubsectionSpec,
   ): void {
-    // §5.6.4 v0.7 user UI spec 2026-05-14 (commit 9):
-    // - Provider 명을 block 밖으로 빼서 sub-heading (section title 동일 크기 + weight 300 + accent color)
+    // §5.6.4 v0.7 user UI spec 2026-05-14 (commit 9 / commit 17):
+    // - Provider 명을 block 밖 sub-heading (section title 동일 크기 + weight 300 + accent color)
+    // - subsection title 행 오른쪽에 CLI install status badge (installed green / not detected orange)
     // - block 안 controls 우측 정렬
-    containerEl.createEl('h3', {
+    const headingRow = containerEl.createDiv({ cls: 'wikey-auth-provider-row' })
+    headingRow.createEl('h3', {
       text: spec.heading,
       cls: 'wikey-auth-provider-heading',
+    })
+    const cliInstalled = resolveCliBinary(spec.provider) !== null
+    headingRow.createEl('span', {
+      text: cliInstalled ? 'installed' : 'not detected',
+      cls: `wikey-cli-status-badge ${
+        cliInstalled ? 'wikey-cli-status-installed' : 'wikey-cli-status-not-detected'
+      }`,
     })
     const block = containerEl.createDiv({ cls: 'wikey-auth-block' })
 

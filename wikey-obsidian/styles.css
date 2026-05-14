@@ -1827,12 +1827,31 @@ a.internal-link.wikey-broken-link,
 
 /* §5.6.4 v0.7 commit 9 — provider heading (block 밖, section title 동일 크기 +
    weight 300 + accent color). h3 selector 명시 specificity 강화 (Obsidian h3
-   기본 weight: 600 override). */
+   기본 weight: 600 override).
+   commit 17 — title 행 오른쪽에 CLI install status badge (flex space-between). */
+.wikey-auth-provider-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--wk-spacing-4);
+  margin-top: var(--wk-spacing-8);
+  margin-bottom: var(--wk-spacing-4);
+}
 h3.wikey-auth-provider-heading {
   font-weight: 300;
   color: var(--interactive-accent, #7f6df2);
-  margin-top: var(--wk-spacing-8);
-  margin-bottom: var(--wk-spacing-4);
+  margin: 0;
+}
+.wikey-cli-status-badge {
+  font-size: var(--wk-font-size-s);
+  font-weight: var(--wk-font-weight-medium);
+  line-height: 1.4;
+}
+.wikey-cli-status-installed {
+  color: var(--color-green, #2da44e);
+}
+.wikey-cli-status-not-detected {
+  color: var(--color-orange, #ff8c00);
 }
 
 .wikey-auth-block {
