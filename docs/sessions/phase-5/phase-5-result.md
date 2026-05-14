@@ -4436,6 +4436,37 @@ Karpathy 4 원칙 cross-check:
 → **§5.6.4 v0.7 종결**. **14 commit push 완료** (`6ead5fb..e68c53d` origin/master). Phase 5 잔여 = §5.5 / §5.6.5 (Ollama Cloud) / §5.8 / §5.9 (4 subject).
 
 
+## 5.6.6 Subscription REST direct — 3 vendor unified paradigm ✅ 종결 (Session 45, 2026-05-15)
+
+> #provider-auth #rest-direct #paradigm-shift #done
+
+상세 evidence: [`docs/sessions/phase-5/phase-5-resultx-5.6.6-rest-direct-2026-05-15.md`](./phase-5-resultx-5.6.6-rest-direct-2026-05-15.md). spec/todox v0.6 (codex Mode D Panel plan 5 cycle 누적 수렴).
+
+§5.6.6 = gemini CLI / claude CLI / codex CLI 의 agentic loop bypass paradigm (옵션 D, 사용자 LOCK 2026-05-14). 3 vendor 비공개 REST endpoint (cloudcode-pa / chatgpt.com backend-api/codex/responses / api.anthropic.com OAuth) 직접 호출. Step A0 `APPROVED_LOCAL_ONLY` (local 개인 사용 한정, public 배포 금지, README disclaimer 의무 충족) → Step A~H 모두 종결. M1 R8 라이브 fix (Electron renderer fetch CORS → Node https wrapper) + OpenAI 400 max_output_tokens drop + OAuth secret 마스킹 + 사용자 UI live UX series 9건. 라이브 chat panel: Anthropic 4392ms PASS / OpenAI 14940ms PASS / Gemini = 사용자 subscription quota 도달 (paradigm 자체 OK).
+
+## 5.6.6.I wikey 내장 Google OAuth sign-in flow ❌ ABANDONED (Session 46, 2026-05-15)
+
+> #provider-auth #oauth #paradigm-limit #abandoned
+
+상세 evidence: [`docs/sessions/phase-5/phase-5-resultx-5.6.6.I-google-oauth-signin-abandoned-2026-05-15.md`](./phase-5-resultx-5.6.6.I-google-oauth-signin-abandoned-2026-05-15.md).
+
+§5.6.6.I 시도 = 사용자 본인 GCP project OAuth client 로 token 직접 발급 → cloudcode-pa endpoint 호출 → user wallet quota 추적 (§5.6.6 본체의 gemini CLI token 차용 paradigm 한계 해결 시도).
+
+| 단계 | 결과 |
+|------|------|
+| 구현 (~280 LOC) | PASS — oauth-google-signin.ts (PKCE + loopback + state CSRF) + GoogleRESTClient path 분기 + Settings UI 버튼 |
+| 회귀 GREEN | PASS — wikey-core 1250 / wikey-obsidian 242 (이전 +12 신규 test) |
+| 라이브 OAuth flow | PASS — token 발급 34s, audience = `818938387936-adti...` (사용자 본인 client) |
+| 라이브 chat 호출 | **FAIL 403** from cloudcode-pa.googleapis.com |
+
+**Paradigm 한계 진단**: `cloudcode-pa.googleapis.com` 은 Google internal endpoint — hardcoded gemini CLI client (`681255809395-***`) 만 호출 권한. 사용자 본인 OAuth client token 으로는 항상 403 (project ID 무관, 권한 부여 무관). Desktop OAuth client 로 우회 불가.
+
+**사용자 결정 (옵션 A) — 완전 원복**: 4 modified file `git checkout HEAD` + 2 new file rm + todox rm + post-compact-handoff rm. 회귀 0 확증 (wikey-core 1247 / wikey-obsidian 234, 이전 §5.6.6 base 동일). 라이브 UI: "wikey OAuth" row 미존재 (count=0, 정상 회귀). §5.6.6 본체 paradigm (gemini CLI token 차용) 유지.
+
+**별 cycle 의제 (Session 47+)**: (B) generativelanguage.googleapis.com paradigm shift (free 50 req/day, user wallet ✓) / (C) Vertex AI aiplatform.googleapis.com (paid) / (X) API key path 강조 (§5.6.4).
+
+**Phase 5 잔여**: §5.5 / §5.8 / §5.9 (3 subject).
+
 ## 5.6.5 Ollama Cloud — large-model integration + cross-provider benchmark ✅ 종결 (Session 43, 2026-05-14)
 
 > #provider-auth #ollama-cloud #benchmark #byoai #paradigm-shift #done
