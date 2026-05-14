@@ -1,12 +1,10 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-14 session 42 — §5.6.4 LLM Provider subscription auth 종결 (14 commit push, `6ead5fb..e68c53d`)**. Google Gemini / Anthropic Claude / OpenAI Codex 3 provider subscription OAuth 통합 + Settings UI provider-centric 재구성 (LLM Model Authentication / 통합 block / installed-not-detected badge / Sign in-out + Auth Mode dropdown) + AuthMode 'auto' 폐기 → explicit `'none'|'subscription'|'api'`. plan cycle 9 + post-impl cycle 6 + 사용자 라이브 raise 7 R 모두 처리. 라이브 ingest 11 wiki 페이지 (116KB md / Processing 151s) CDP 확증. wikey-core 1104 / wikey-obsidian 215 PASS.
+> 최신 갱신: **2026-05-14 session 43 — §5.6.5 Ollama Cloud 종결 (paradigm v0.5 LOCK, "다른 LLM과 동일한 구조")**. PoC §0 master probe (deepseek-v3.1/qwen3-coder/kimi-k2.6/gpt-oss/mistral-large-3 5 cloud + deepseek-v4-pro 추가 1.6T) + provider 추상화 layer 확장 (`LLMProvider` 5 element, `SubscriptionProvider` 4 element) + Settings UI 4번째 subsection (`renderProviderSubsection` 공유 helper, 3 row = Auth Mode / Subscription / API Key) + callOllama Bearer header + 9 model × 7 fixture × 6 task × 3 cycle = 1,134 cell benchmark. cookie scrape paradigm 폐기 (v0.4 → v0.5 사용자 LOCK). wikey-core 1175 / wikey-obsidian 223 PASS. CDP smoke 4 entry PASS.
 >
-> ## 다음 세션 첫 액션 (Session 43) — Phase 5 잔여 4 subject 진입
+> ## 다음 세션 첫 액션 (Session 44) — Phase 5 잔여 3 subject 진입
 >
-> **Phase 5 잔여 = §5.5 / §5.6.5 (Ollama Cloud) / §5.8 / §5.9** (4 subject). 우선순위 결정 → analyst Step A LOCK 진입.
->
-> §5.6.5 Ollama Cloud 는 Session 42 사용자 R1 raise 로 §5.6.5.2 항목 신규 등록 — Ollama Cloud endpoint jsonMode 지원 여부 + adaptive matrix 확장 + `provider-cli-options.ts CLI_OPTION_SUPPORT` 의 ollama row 추가 검토.
+> **Phase 5 잔여 = §5.5 / §5.8 / §5.9** (3 subject). 우선순위 결정 → analyst Step A LOCK 진입.
 
 ## Session 42 종결 종합 (2026-05-14) — §5.6.4 LLM Provider subscription auth
 

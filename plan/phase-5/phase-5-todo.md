@@ -910,11 +910,10 @@
   - adaptive-json-mode.ts:43 ollama / ollama-cloud 분리 처리
   - CLI_VERSION_SNAPSHOT ollama 0.22.1 (PoC §0 master probe)
 
-- [x] **§5.6.5.3** Settings UI 4번째 subsection — Step B `ccae0db` 종결
-  - renderOllamaCloudSubsection (Q2=d, Karpathy "no speculative flexibility")
-  - Signin status badge + Sign in / Sign out button (PoC §0 §3 SSH+signin paradigm)
-  - Session Cookie input + Open Dashboard button (옵션 A v2 part 1/2 `eef2afa`)
-  - CDP smoke 5/5 entry PASS (2026-05-14): costRemoved / authSection / 4 subsections / Ollama Cloud rows = [Signin, Session Cookie] / statusbar chip present + hidden
+- [x] **§5.6.5.3** Settings UI 4번째 subsection — Step B `ccae0db` 종결 → **v0.5 paradigm `653b204`** ("다른 LLM과 동일한 구조" 사용자 LOCK 2026-05-14)
+  - v0.4 (`ccae0db`): renderOllamaCloudSubsection (Q2=d) + Signin status badge + Sign in/out + Session Cookie input + Open Dashboard (옵션 A v2 `eef2afa`)
+  - **v0.5 (`653b204`)**: cookie scrape paradigm 폐기 → `renderProviderSubsection` 공유 helper 재사용 (4 provider 통일). 3 rows = [Auth Mode dropdown (none/subscription/api) / Subscription badge + Sign in-out / API Key password + Test]. callOllama Bearer header (auth=api 시 주입). ollama-cloud-usage-fetcher.ts (-9 test) + settings-tab-ollama-cloud.ts (-7 test) 삭제.
+  - CDP smoke PASS (2026-05-14 v0.5 재확증): 4 H3 provider / Ollama Cloud 3 rows = [Auth Mode='subscription'(SEL) / Subscription badge='signed-in' / API Key password empty] / statusbar chip mounted + display:none (모델 미로드 시 정상)
 
 - [x] **§5.6.5.4** Step D 벤치마크 (3-agent 위임: analyst plan → developer 실측 → master 분석)
   - Step D (8 model × 7 fixture × 6 task × 3 cycle = 1,008 cell, developer 3차 위임)

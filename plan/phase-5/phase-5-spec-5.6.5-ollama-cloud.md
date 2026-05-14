@@ -5,7 +5,7 @@ title: Ollama Cloud — large-model integration + cross-provider benchmark (Spec
 status: planning
 created: 2026-05-14
 updated: 2026-05-14
-version: v0.4
+version: v0.5
 ---
 
 # Phase 5 §5.6.5 Ollama Cloud — large-model integration + cross-provider benchmark (Spec, WHAT)
@@ -15,6 +15,11 @@ version: v0.4
 > **이력**:
 > - v0.1 (2026-05-14, 초안) — analyst 산출 (사용자 raise 정식 plan 진입 결정).
 > - v0.2 (2026-05-14, master 1차 검증 fix) — 사용자 라이브 raise 3건 반영 (회귀 검증 / 병행 사용 / 모델 식별자 자동 구분).
+> - **v0.5 (2026-05-14, paradigm shift — "다른 LLM과 동일한 구조" 사용자 LOCK)** — Ollama Cloud auth = **Subscription + APIKey** (기존 v0.4 SSH+signin only paradigm 폐기, 다른 3 provider 와 동일). 변경 4 영역:
+>   - **SubscriptionProvider 재정의**: `Exclude<LLMProvider, 'ollama'>` → 4 element (gemini/anthropic/openai/ollama-cloud). `CliOptionMatrixProvider = SubscriptionProvider` (alias) → 4 row × 2 path × 8 field = 64 cell 유지.
+>   - **credentials.json schema**: `ollamaCloudApiKey: string` + `auth['ollama-cloud'].mode: 'none'|'subscription'|'api'` 4-provider 통일.
+>   - **callOllama Bearer header**: `OLLAMA_CLOUD_AUTH_MODE === 'api' && OLLAMA_CLOUD_API_KEY` 시 `Authorization: Bearer <key>` 주입. subscription path = signin state 위임 (no header).
+>   - **cookie scrape paradigm 폐기**: `ollama-cloud-usage-fetcher.ts` (9 test) + `settings-tab-ollama-cloud.ts` (7 test) 삭제. statusbar chip 은 `callOllama` 의 `notifyOllamaUsage` emit 만으로 모델명 표시 (5min poll 폐기).
 > - **v0.4 (2026-05-14, PoC §0 paradigm shift + raise 22 L2 추가 mirror sweep)** — 변경 5 영역 (PoC §0 SUMMARY.md §6 LOCK):
 >   - **M1~M5 정확 식별자 LOCK** — `deepseek-v3.1:671b-cloud` / `qwen3-coder:480b-cloud` / `kimi-k2.6:cloud` / `gpt-oss:120b-cloud` / `mistral-large-3:675b-cloud` (이전 alias 표기 → ollama 식별자)
 >   - **L2 추가** (raise 22) — local baseline `qwen3.6:35b-a3b-nvfp4` (qwen3_5_moe 35.1B, 256K ctx, nvfp4). jsonMode adaptive prefix 의무 (mlx runner `format:json` unsupported). 측정 model count 7 → **8 model** (line 165 AC-S17 + line 252 R3 + line 285 모델 set mirror)

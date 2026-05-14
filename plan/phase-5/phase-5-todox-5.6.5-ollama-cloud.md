@@ -5,13 +5,19 @@ title: Ollama Cloud — large-model integration + cross-provider benchmark — T
 status: planning
 created: 2026-05-14
 updated: 2026-05-14
-version: v0.3
+version: v0.5
 tags: [provider-auth, ollama-cloud, benchmark, byoai, model-selection]
 ---
 
 # Phase 5 §5.6.5 Ollama Cloud — large-model integration + cross-provider benchmark (Todo, HOW)
 
 > **버전 이력**:
+> - **v0.5 (2026-05-14, paradigm shift — "다른 LLM과 동일한 구조" 사용자 LOCK)** — Ollama Cloud auth = **Subscription + APIKey** (v0.4 SSH+signin only paradigm 폐기). 변경 4 영역:
+>   - **SubscriptionProvider 4-element**: `Exclude<LLMProvider,'ollama'>` (gemini/anthropic/openai/ollama-cloud). `CliOptionMatrixProvider = SubscriptionProvider` alias. 64-cell matrix 유지 (ollama-cloud subscription column = api column mirror, HTTP body shape 동일).
+>   - **credentials.json 4-provider**: `ollamaCloudApiKey: string` + `auth['ollama-cloud']: {mode: 'none'|'subscription'|'api'}`. parse/serialize 4-provider 통일.
+>   - **callOllama Bearer header**: `isCloudModel && OLLAMA_CLOUD_AUTH_MODE === 'api' && OLLAMA_CLOUD_API_KEY` 시 `Authorization: Bearer <key>` HTTP header 주입. subscription path = no header (signin state 의존).
+>   - **cookie scrape paradigm 폐기**: `ollama-cloud-usage-fetcher.ts` + 9 test + `settings-tab-ollama-cloud.ts` + 7 test + 5min poll 삭제. statusbar chip = `notifyOllamaUsage` 모델명만.
+> - 회귀: wikey-core 1175/1178 PASS · wikey-obsidian 223/224 PASS · build 0 errors · validate-wiki PASS.
 > - v0.1 (2026-05-14, 본 todox 초안) — Spec 6 요소 + SDD+TDD 6 step (§5.6.5.0~§5.6.5.5) + §7 사용자 결정 4 항목 + 벤치마크 sub-step volume ~46%
 > - v0.2 (2026-05-14, master 1차 검증 fix) — 사용자 라이브 raise 3건 반영:
 >   - **raise 1** — 기존 ollama (local) 코드 회귀 검증 강화 (13 source file enumeration, §5.1 grep matrix 확장, §6 step E 회귀 의무 강화)
