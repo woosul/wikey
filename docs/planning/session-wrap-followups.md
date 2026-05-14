@@ -1,10 +1,34 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-14 session 43 — §5.6.5 Ollama Cloud 종결 (paradigm v0.5 LOCK, "다른 LLM과 동일한 구조")**. PoC §0 master probe (deepseek-v3.1/qwen3-coder/kimi-k2.6/gpt-oss/mistral-large-3 5 cloud + deepseek-v4-pro 추가 1.6T) + provider 추상화 layer 확장 (`LLMProvider` 5 element, `SubscriptionProvider` 4 element) + Settings UI 4번째 subsection (`renderProviderSubsection` 공유 helper, 3 row = Auth Mode / Subscription / API Key) + callOllama Bearer header + 9 model × 7 fixture × 6 task × 3 cycle = 1,134 cell benchmark. cookie scrape paradigm 폐기 (v0.4 → v0.5 사용자 LOCK). wikey-core 1175 / wikey-obsidian 223 PASS. CDP smoke 4 entry PASS.
+> 최신 갱신: **2026-05-14 session 44 — §5.6.6 Subscription REST direct plan v0.5 LOCK (codex Mode D 5 cycle 검증)**. cycle #1 → #5 점진 수렴 — #1 9 finding (4H+4M+1L) → #2 8 (4H+3M+1L) → #3 7 (3H+4M) → #4 4 OK + 5 PARTIAL → #5 7 OK + 2 PARTIAL + 3 X. 핵심 paradigm 결함 모두 fix 완료 (F1 Legal Gate / F2 OpenAI 용어 / F3 WikeyConfig / F4 option matrix / F7 schema / F8 rotation / F9 mirror). 3 vendor PoC spike `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` + SPIKE.md 보존. master B 결정 — v0.5 commit + 다음 세션 잔여 5 fix 진입.
 >
-> ## 다음 세션 첫 액션 (Session 44) — Phase 5 잔여 3 subject 진입
+> ## 다음 세션 첫 액션 (Session 45) — §5.6.6 v0.6 잔여 5 fix → Step A0 진입
 >
-> **Phase 5 잔여 = §5.5 / §5.8 / §5.9** (3 subject). 우선순위 결정 → analyst Step A LOCK 진입.
+> **잔여 5 fix (cycle #5 PARTIAL + X1~X3, 다음 세션 첫 30분)**:
+> 1. **F5 PARTIAL** — Spec §1.5 안 AC-S25 본문 시나리오 (`LLMCallOptions pass-through`) 명시 (현재 매핑표만)
+> 2. **F6 PARTIAL** — `docs/spikes/phase-5/5.6.6/SPIKE.md` 안 sha256 baseline 실 측정값으로 갱신 (현재 "나중에 측정" placeholder)
+> 3. **X1 HIGH** — todox §0 Step E dependency 정정: "B/C/D 모두 완료" → "approved vendor steps only + rejected vendor cli stub/forced cli branch" (`APPROVED_PARTIAL` 분기 정합)
+> 4. **X2 MID** — Spec AC-S23 + todox Step G kill-switch smoke를 3 vendor env (`WIKEY_GEMINI/ANTHROPIC/OPENAI_REST_DISABLE`) 모두 명시 (현재 Gemini만)
+> 5. **X3 LOW** — Spec §3 Self_Check + §4 PoC reference 의 옛 invariant ID (I15→I18, AC-S20→AC-S25, R8→R10, ~600 LOC→~1150) sweep
+>
+> **그 후 Step A0 (Legal/Terms Gate, BLOCKING) 진입**:
+> - 사용자 explicit 결정 — `APPROVED_EXPERIMENTAL` / `APPROVED_LOCAL_ONLY` / `APPROVED_PARTIAL` (vendor별 byte-level 포맷 e.g. `gemini=APPROVED, anthropic=APPROVED, openai=REJECTED`) / `REJECTED` 중 1
+> - 결과 `phase-5-todo §5.6.6 Step A0 결정` 라인 + spec/todox 이력 mirror
+> - 통과 후 Step A → H 구현 진입 (~5.5시간 견적, ~900 LOC + ~250 test)
+>
+> **plan 산출물 (이번 session 44)**:
+> - `docs/planning/phase-5/phase-5-spec-5.6.6-subscription-rest.md` v0.5 (8 step + 25 AC + 18 invariants + 10 risks)
+> - `docs/planning/phase-5/phase-5-todox-5.6.6-subscription-rest.md` v0.5 (T-A1~T-F4 + Step G manual smoke)
+> - `docs/planning/phase-5/phase-5-todo.md` §5.6.6 entry (Step A0 + A~H 8 step 체크박스)
+> - `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` (3 spike, Session 44 PoC) + `SPIKE.md` (endpoint baseline + canonical reference)
+>
+> **Session 44 부수 commit** (push 완료):
+> - `5d0bbbd` §5.6.4 follow-up: spawnCliPrompt PATH augmentation (E0001 exit 127 fix)
+> - `45b692b` §5.18 v0.7 Referenced count-only + Provider 4-label 표준화 + claude-code 중복 fix
+
+## Session 43 종결 (2026-05-14) — §5.6.5 Ollama Cloud (paradigm v0.5 LOCK)
+
+PoC §0 master probe (deepseek-v3.1/qwen3-coder/kimi-k2.6/gpt-oss/mistral-large-3 5 cloud + deepseek-v4-pro 추가 1.6T) + provider 추상화 layer 확장 (`LLMProvider` 5 element, `SubscriptionProvider` 4 element) + Settings UI 4번째 subsection (`renderProviderSubsection` 공유 helper, 3 row = Auth Mode / Subscription / API Key) + callOllama Bearer header + 9 model × 7 fixture × 6 task × 3 cycle = 1,134 cell benchmark. cookie scrape paradigm 폐기 (v0.4 → v0.5 사용자 LOCK). wikey-core 1175 / wikey-obsidian 223 PASS. CDP smoke 4 entry PASS.
 
 ## Session 42 종결 종합 (2026-05-14) — §5.6.4 LLM Provider subscription auth
 

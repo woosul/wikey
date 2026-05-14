@@ -932,6 +932,35 @@
   - WikeyConfig.COST_LIMIT + WikeySettings.costLimit + renderCostSection + parseWikeyConf / buildConfig / saveToWikeyConf 모두 제거
   - 회귀 baseline 동일 (wikey-core 1184 / wikey-obsidian 230 / build 0 errors / validate-wiki PASS)
 
+### 5.6.6 Subscription REST direct — 3 vendor unified paradigm (CLI agentic bypass) (Session 44 plan v0.5, 2026-05-14)
+
+> **status**: §5.6.4 + §5.6.5 종결 후 진입. Session 44 PoC §1~§4 (3 vendor 검증 완료) 기반 plan 작성 + codex Mode D Panel 4 cycle 검증 — #1 NEEDS_REVISION 9 finding (v0.2) → #2 NEEDS_REVISION 8 finding (v0.3) → #3 NEEDS_REVISION 7 finding (v0.4) → #4 4 OK + 5 PARTIAL (v0.5 작은 정합성 sweep) → **plan v0.5** (`docs/planning/phase-5/phase-5-spec-5.6.6-subscription-rest.md` + `phase-5-todox-5.6.6-subscription-rest.md` + spike `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` + SPIKE.md). **다음 세션 = Step A0 (Legal Gate, BLOCKING) → A~H 구현 cycle**.
+>
+> **사용자 결정 LOCK (Session 44, 2026-05-14)**:
+> - 옵션 D (REST direct) 채택 — gemini CLI / claude CLI / codex CLI 의 agentic loop bypass
+> - 3 vendor (Google / **OpenAI private Codex backend** / Anthropic) 모두 동일 paradigm 적용
+> - master 가 직접 plan 수립 (analyst 위임 X) + codex Mode D Panel 검증
+> - PoC reference (canonical): `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` (3 vendor 모두 PASS — Session 44 휘발 path `/tmp/poc-{cloudcode,codex,anthropic}.mjs` 는 Step A0 통과 후 mv 완료, codex F6 fix v0.4)
+> - **Step A0 결정 (다음 세션 시작 의무)**: `APPROVED_EXPERIMENTAL` / `APPROVED_LOCAL_ONLY` / `APPROVED_PARTIAL` / `REJECTED` 중 사용자 명시
+>
+> **PoC 측정 baseline** (정상시):
+> - Google: ~1-3초 (loadCodeAssist 550ms + generateContent ~1-2s)
+> - OpenAI: ttfb 926ms / total 1945ms (gpt-5.5, SSE — private Codex backend `chatgpt.com/backend-api/codex/responses`)
+> - Anthropic: 1932ms (claude-sonnet-4-5)
+> - 기존 CLI agentic: 30-60초+ (10-30배 latency 개선)
+>
+> **codex cycle #1 fix (v0.2)**: F1 Step A0 / F2 OpenAI 용어 + R1/R2 HIGH + R9 신설 / F3 WikeyConfig 3 field / F4 REST option matrix / F5 AC↔T 매핑표 + 누락 test 보강 / F6 spike 보존 + version-guard / F7 transport-level tool 0 + I3 SLO 강등 / F8 refresh rotation / F9 Step H mirror 일관
+
+- [ ] **§5.6.6.A0** Legal/Terms Gate (BLOCKING, codex F1 신설 v0.2) — 사용자 explicit 결정 + 4-state byte-level 기록
+- [ ] **§5.6.6.A** shared abstraction (`subscription-rest-shared.ts` + `subscription-rest-version-guard.ts` + `mapOptionsToRESTOptions`, ~180 LOC) + spike 보존 — 12 unit case (T-A1~T-A12)
+- [ ] **§5.6.6.B** Google REST client (`google-rest-client.ts`, ~150 LOC, PoC 1:1) — **11 unit case (T-B1~T-B11)** (codex F9 fix v0.4)
+- [ ] **§5.6.6.C** OpenAI **private Codex backend** REST client (`openai-rest-client.ts` + SSE helper, ~200 LOC) — **12 unit case (T-C1~T-C12)** (codex F9 fix v0.4)
+- [ ] **§5.6.6.D** Anthropic REST client (`anthropic-rest-client.ts`, ~150 LOC, Keychain access + macOS detect) — **15 unit case (T-D1~T-D15)** (codex F9 fix v0.4)
+- [ ] **§5.6.6.E** `llm-client.ts` integration — `subscriptionMode = 'cli' \| 'rest' \| 'pending'` 분기 + WikeyConfig 3 field + buildConfig + auth-mode-bridge (~150 LOC) — **11 case (T-E1~T-E11)** (codex F9 + F1/F3 fix v0.4)
+- [ ] **§5.6.6.F** Settings UI per-provider Subscription Mode toggle + kill-switch UX (~80 LOC) — **4 case (T-F1~T-F4)** (codex F5+F9 fix v0.4)
+- [ ] **§5.6.6.G** 회귀 + master CDP smoke 3 vendor (BLUE 3a) + latency SLO N=10 + endpoint hash drift smoke + kill-switch test — `docs/sessions/phase-5/phase-5-resultx-5.6.6-rest-direct-<date>.md`
+- [ ] **§5.6.6.H** BLUE 3b refactor + commit/push (6 활동 + commit prefix policy)
+
 ---
 
 ## 5.7 운영 인프라 포팅 (P4)

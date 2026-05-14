@@ -70,3 +70,8 @@ wikey-obsidian/kiwi-wasm.wasm
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .venv-smoke/
+
+# §5.6.6 spike scripts contain vendor OAuth client_id/secret (extracted from public
+# CLI bundles, but blocked by GitHub secret scanning). Keep on disk for reference,
+# exclude from git. SPIKE.md documents endpoint baseline + bundle source location.
+docs/spikes/phase-5/5.6.6/poc-*.mjs
