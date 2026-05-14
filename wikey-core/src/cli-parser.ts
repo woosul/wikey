@@ -44,5 +44,11 @@ export function parseSubscriptionOutput(provider: SubscriptionProvider, raw: str
       }
       return raw.slice(codexAt + CODEX_RESPONSE_MARKER.length, tokensAt).trim()
     }
+    case 'ollama-cloud':
+      // §5.6.5 v0.5 — ollama-cloud subscription path doesn't spawn a CLI
+      // for prompt I/O (chat still goes through /api/chat HTTP), so this
+      // parser is never invoked for it. Return raw unmodified for safety
+      // — covers the TypeScript exhaustiveness check.
+      return raw.trim()
   }
 }

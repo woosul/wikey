@@ -108,10 +108,14 @@ export const CLI_OPTION_SUPPORT: Record<
       timeout: 'native',
     },
   },
-  // §5.6.5 Step C — ollama-cloud row (PoC §0 §4 LOCK, 2026-05-14).
-  // api column = HTTP body fields callOllama already wires. subscription
-  // column = all 'na' (Ollama Cloud has no CLI OAuth path, signin is
-  // SSH-key + browser OAuth handled outside the CLI option flow).
+  // §5.6.5 v0.5 — ollama-cloud row (user lock 2026-05-14, "다른 LLM과 동일한
+  // 구조"). api column = `/api/chat` HTTP body fields callOllama wires
+  // (Bearer header when AUTH_MODE='api'). subscription column = no CLI flag
+  // surface — `ollama signin` only registers the SSH key; the actual chat
+  // call still hits `/api/chat` with no auth header (relies on the local
+  // signin state). Mirrors the gemini/anthropic/openai subscription-row
+  // semantics: model='flag' is conceptual (caller bakes the model into the
+  // HTTP body, no CLI arg); the rest are 'native' / 'na' as appropriate.
   'ollama-cloud': {
     api: {
       model: 'native',           // body.model
@@ -124,14 +128,14 @@ export const CLI_OPTION_SUPPORT: Record<
       timeout: 'native',         // HTTP request timeout
     },
     subscription: {
-      model: 'na',
-      temperature: 'na',
-      maxTokens: 'na',
+      model: 'native',           // body.model (signin path also uses /api/chat)
+      temperature: 'native',
+      maxTokens: 'native',
       seed: 'na',
       responseMimeType: 'na',
-      jsonMode: 'na',
+      jsonMode: 'native',
       thinkingBudget: 'na',
-      timeout: 'na',
+      timeout: 'native',
     },
   },
 }
@@ -159,6 +163,10 @@ const SUBSCRIPTION_MODEL_FLAG: Record<SubscriptionProvider, string> = {
   gemini: '-m',
   anthropic: '--model',
   openai: '-m',
+  // §5.6.5 v0.5 — ollama-cloud subscription path doesn't shell out for chat;
+  // the model is baked into the HTTP body (callOllama). Kept for type
+  // completeness; not consumed by mapOptionsToCliArgs.
+  'ollama-cloud': '',
 }
 
 export interface MapOptionsResult {

@@ -422,21 +422,14 @@ export { rrfFuse } from './search/rrf-fusion.js'
 export type { RrfFuseOptions } from './search/rrf-fusion.js'
 export type { EmbedderFn } from './search/orama-index.js'
 
-// §5.6.5 옵션 A v2 — Ollama Cloud usage statusbar plumbing.
+// §5.6.5 v0.5 — Ollama Cloud usage statusbar plumbing (paradigm-A v3 simplified).
+// The cookie-based ollama.com/settings fetcher (paradigm-A v2 — CodexBar mirror)
+// was retired with the auth shift to Subscription + API Key; the chip now shows
+// the model name only, populated via the usage-hook emitter.
 export {
   setOllamaUsageListener,
   __clearOllamaUsageListener,
 } from './ollama-usage-hook.js'
 export type { OllamaUsageInfo } from './ollama-usage-hook.js'
-export {
-  fetchOllamaCloudUsage,
-  parseOllamaSettingsHtml,
-  OllamaUsageFetchError,
-} from './ollama-cloud-usage-fetcher.js'
-export type {
-  OllamaUsageFetchResult,
-  OllamaUsageHttpClient,
-  OllamaUsageHttpResponse,
-} from './ollama-cloud-usage-fetcher.js'
 export { isCloudModel, lookupCloudModel, CLOUD_MODEL_CATALOG } from './ollama-model-catalog.js'
 export type { CloudModelEntry } from './ollama-model-catalog.js'

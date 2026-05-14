@@ -897,20 +897,41 @@
 > - 벤치마크 핵심 목적 = wikey 도메인 best-fit 모델 1개 발견 (raise 6) + community 평가 reference (raise 7)
 > - §5.6.5.4 Step D = analyst → developer → master 3-agent 위임 (raise 4/5/11/12) + analyst 산출 `docs/ollama-cloud-benchmark.md` (raise 8)
 
-- [ ] **§5.6.5.1** Ollama Cloud 대형 모델 통합 (Q1=b LOCK)
-  - 현재: Ollama = 로컬 only. 대형 모델 (≥ 30B) 은 로컬 GPU/RAM 부족으로 사실상 활용 불가
-  - **Ollama Cloud (2025년 출시)**: ollama.com 의 hosted endpoint — 로컬 ollama 명령으로 cloud 모델 호출 가능 (`ollama run llama3:70b` 등)
-  - 비용: subscription 기반 (Ollama Pro 등) 또는 token 기반. Anthropic 보다 저렴, 로컬 ollama 호환성 그대로
-  - **결정** (Q1=b LOCK 2026-05-14): wikey config 에 `'ollama-cloud'` 별 provider key 추가. UI 4번째 subsection 표시 + local + cloud 병행 사용 가능. 내부 dispatch 는 모델 식별자 자동 구분 (`isCloudModel` helper).
-  - 가능성: ingest 의 canonicalize 단계만 cloud 70B 사용 + brief/mention 은 local 8B → 비용 효율 + 품질 균형 (Q5 결정)
+- [x] **§5.6.5.1** Ollama Cloud 대형 모델 통합 (Q1=b LOCK) — Step A `46c0f47` 종결
+  - LLMProvider 5 element (`'ollama-cloud'`) + callOllama unified + ollama-model-catalog.ts (CLOUD_MODEL_CATALOG + isCloudModel)
+  - AuthFallbackInfo.provider 확장 (`auth-missing` / `quota-exceeded` surface)
+  - M5 mistral-large-3 markdown ```json``` fence strip
+  - PROVIDER_CHAT_DEFAULTS / VISION_DEFAULTS / CONTEXT_BUDGETS ollama-cloud row 추가
+  - wikey-core 1184 / wikey-obsidian 230 PASS / build 0 errors
 
-- [ ] **§5.6.5.2** Ollama Cloud jsonMode 처리 (사용자 raise 2026-05-14)
-  - §5.6.4 commit 15 (`cda9ff7`) 에서 anthropic / openai / gemini subscription 의 jsonMode 'unsupported' → prompt 강제 JSON 적응 처리 도입. Ollama Cloud 도 동일 검토 필요:
-    - (a) Ollama Cloud endpoint 가 OpenAI-compat API → `response_format: { type: 'json_object' }` 지원 여부 (모델별 차이)
-    - (b) 미지원 모델 (llama3 / qwen3 등 일부) 시 canonicalizer/ingest-pipeline 의 adaptive jsonMode strip + prompt prefix 동일 적용 가능
-    - (c) `provider-cli-options.ts CLI_OPTION_SUPPORT` 의 ollama row 추가 (현재 4 provider 매트릭스에서 ollama 미포함)
-    - (d) `getConfiguredAuthPath` 가 ollama 도 인식 (현재 SubscriptionProvider exclude — 단 cloud 는 별 path)
-  - 검증: Ollama Cloud 가입 후 1 cloud model (예: `llama3:70b-cloud`) 실측 — jsonMode 지원 여부 + prompt 강제 JSON 안정성
+- [x] **§5.6.5.2** Ollama Cloud jsonMode 처리 — Step C `99cc94e` 종결
+  - CliOptionMatrixProvider type 신설 (`SubscriptionProvider | 'ollama-cloud'`, 4 element)
+  - CLI_OPTION_SUPPORT 48 → 64 cell (ollama-cloud row 16 cell)
+  - adaptive-json-mode.ts:43 ollama / ollama-cloud 분리 처리
+  - CLI_VERSION_SNAPSHOT ollama 0.22.1 (PoC §0 master probe)
+
+- [x] **§5.6.5.3** Settings UI 4번째 subsection — Step B `ccae0db` 종결
+  - renderOllamaCloudSubsection (Q2=d, Karpathy "no speculative flexibility")
+  - Signin status badge + Sign in / Sign out button (PoC §0 §3 SSH+signin paradigm)
+  - Session Cookie input + Open Dashboard button (옵션 A v2 part 1/2 `eef2afa`)
+  - CDP smoke 5/5 entry PASS (2026-05-14): costRemoved / authSection / 4 subsections / Ollama Cloud rows = [Signin, Session Cookie] / statusbar chip present + hidden
+
+- [x] **§5.6.5.4** Step D 벤치마크 (3-agent 위임: analyst plan → developer 실측 → master 분석)
+  - Step D (8 model × 7 fixture × 6 task × 3 cycle = 1,008 cell, developer 3차 위임)
+  - **Step D-9** deepseek-v4-pro:cloud 추가 (raise 17 1순위, 1.6T / 1M ctx) → 9 model × 1,134 cell (developer 4차)
+  - 9-model ranking: gemini-2.5-flash 0.711 (1위) > kimi-k2.6 0.590 > deepseek-v4-pro 0.588 > deepseek-v3.1 0.578
+  - `docs/ollama-cloud-benchmark-result.md` 357 line multi-chapter (10 chapter)
+  - PII 6 pattern × 0 hit on report markdown
+  - 결론: cloud 6 model 모두 gemini-2.5-flash 미달 (wikey 도메인 한정). v4-pro = canonicalize 2위 (gemini 0.005pp 차) + latency 1위
+
+- [x] **§5.6.5.5** 옵션 A v2 statusbar chip (CodexBar paradigm, `38a1d66`)
+  - ollama-usage-hook.ts + callOllama emit + statusbar chip 5min poll + cookie input + light-purple `●` dot
+  - paradigm B (Claude Code statusline) — `claude-harness-helper/common/ollama-statusline.sh` (별 repo 이동 `628533f`)
+
+- [x] **§5.6.5.6** cost section dead code 정리 (`932d547`, 사용자 명시 2026-05-14)
+  - scripts/cost-tracker.sh + wikey-core/src/scripts/cost-tracker.{ts,test.ts} 삭제 (-792 LOC)
+  - WikeyConfig.COST_LIMIT + WikeySettings.costLimit + renderCostSection + parseWikeyConf / buildConfig / saveToWikeyConf 모두 제거
+  - 회귀 baseline 동일 (wikey-core 1184 / wikey-obsidian 230 / build 0 errors / validate-wiki PASS)
 
 ---
 

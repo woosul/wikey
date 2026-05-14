@@ -38,10 +38,7 @@ import {
   BUNDLED_QUERY_ANALYZER_PROMPT,
   resolveProvider,
   setOllamaUsageListener,
-  fetchOllamaCloudUsage,
-  OllamaUsageFetchError,
   type OllamaUsageInfo,
-  type OllamaUsageHttpClient,
   type QueryAnswerPair,
   type AnalyzeResult,
   type VaultQueryHint,
@@ -85,6 +82,12 @@ interface WikeySettings {
   geminiAuthMode: 'none' | 'subscription' | 'api'
   anthropicAuthMode: 'none' | 'subscription' | 'api'
   openaiAuthMode: 'none' | 'subscription' | 'api'
+  // §5.6.5 v0.5 (2026-05-14) — Ollama Cloud uses the same Subscription + APIKey
+  // schema as the three subscription providers (user lock 2026-05-14: "다른
+  // LLM과 동일한 구조"). Auth mode dropdown + Sign in via `ollama signin` +
+  // API Key path (Bearer header against /api/chat).
+  ollamaCloudApiKey: string
+  ollamaCloudAuthMode: 'none' | 'subscription' | 'api'
   ollamaUrl: string
   qmdPath: string
   advancedLLM: boolean
@@ -173,12 +176,6 @@ interface WikeySettings {
    * entries are preserved (deletion is a separate command, out of scope here).
    */
   knowledgeGapLogEnabled: boolean
-  // ── §5.6.5 옵션 A v2 — Ollama Cloud usage statusbar (CodexBar paradigm) ──
-  // `__Secure-session` cookie copied from ollama.com/settings; wikey fetches
-  // the same page on a 5min poll and displays session % + weekly % in a
-  // statusbar chip. Stored in credentials.json (security-sensitive — never
-  // logged, never Read by Claude per CLAUDE.md). Empty = chip hidden.
-  ollamaCloudSessionCookie: string
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -238,8 +235,12 @@ const DEFAULT_SETTINGS: WikeySettings = {
   searchQwen3DownloadStatus: 'idle',
   // §5.20 — knowledge gap log default ON (I2 LOCK).
   knowledgeGapLogEnabled: true,
-  // §5.6.5 옵션 A v2 — default empty; user pastes from ollama.com/settings.
-  ollamaCloudSessionCookie: '',
+  // §5.6.5 v0.5 — Ollama Cloud auth (same shape as the three subscription
+  // providers, user lock 2026-05-14). Subscription path = `ollama signin`;
+  // API path = Ollama Pro API key (Bearer header). Default 'subscription'
+  // matches the gemini/anthropic/openai default.
+  ollamaCloudApiKey: '',
+  ollamaCloudAuthMode: 'subscription',
 }
 
 export type { WikeySettings }
@@ -334,7 +335,7 @@ export function parseCredentialsPayload(
   WikeySettings,
   'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey' |
   'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode' |
-  'ollamaCloudSessionCookie'
+  'ollamaCloudApiKey' | 'ollamaCloudAuthMode'
 > {
   const auth = (data.auth as Record<string, { mode?: string }> | undefined) ?? {}
   const migrateMode = (m: string | undefined): WikeySettings['geminiAuthMode'] => {
@@ -348,8 +349,11 @@ export function parseCredentialsPayload(
     geminiAuthMode: migrateMode(auth.gemini?.mode),
     anthropicAuthMode: migrateMode(auth.anthropic?.mode),
     openaiAuthMode: migrateMode(auth.openai?.mode),
-    // §5.6.5 옵션 A v2 — round-trip Ollama Cloud session cookie (CodexBar paradigm).
-    ollamaCloudSessionCookie: (data.ollamaCloudSessionCookie as string | undefined) ?? '',
+    // §5.6.5 v0.5 — Ollama Cloud auth (Subscription + API Key, mirrors the
+    // three subscription providers' schema). Legacy `ollamaCloudSessionCookie`
+    // is dropped on load (was paradigm-A v2 — CodexBar cookie scrape).
+    ollamaCloudApiKey: (data.ollamaCloudApiKey as string | undefined) ?? '',
+    ollamaCloudAuthMode: migrateMode(auth['ollama-cloud']?.mode),
   }
 }
 
@@ -366,23 +370,25 @@ export function serializeCredentialsPayload(
     WikeySettings,
     'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey' |
     'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode' |
-    'ollamaCloudSessionCookie'
+    'ollamaCloudApiKey' | 'ollamaCloudAuthMode'
   >,
   credentialsRaw: Record<string, unknown>,
 ): Record<string, unknown> {
+  // §5.6.5 v0.5 — drop the legacy session-cookie field if it lingers in the
+  // round-tripped raw payload (paradigm-A v2 → paradigm-A v3 migration).
+  const { ollamaCloudSessionCookie: _drop, ...rest } = credentialsRaw as Record<string, unknown>
   return {
-    ...credentialsRaw,
+    ...rest,
     geminiApiKey: settings.geminiApiKey,
     anthropicApiKey: settings.anthropicApiKey,
     openaiApiKey: settings.openaiApiKey,
+    ollamaCloudApiKey: settings.ollamaCloudApiKey ?? '',
     auth: {
       gemini: { mode: settings.geminiAuthMode ?? 'subscription' },
       anthropic: { mode: settings.anthropicAuthMode ?? 'subscription' },
       openai: { mode: settings.openaiAuthMode ?? 'subscription' },
+      'ollama-cloud': { mode: settings.ollamaCloudAuthMode ?? 'subscription' },
     },
-    // §5.6.5 옵션 A v2 — persist Ollama Cloud session cookie alongside API keys
-    // (same security tier; CodexBar precedent). Never written elsewhere.
-    ollamaCloudSessionCookie: settings.ollamaCloudSessionCookie ?? '',
   }
 }
 
@@ -538,10 +544,9 @@ export default class WikeyPlugin extends Plugin {
   /** Session-only: set to true when user clicks "Skip briefs this session" in Stage 1 modal. Cleared on reload. */
   skipIngestBriefsThisSession = false
   private statusBar!: WikeyStatusBar
-  // §5.6.5 옵션 A v2 — Ollama usage statusbar chip state + interval handle.
+  // §5.6.5 v0.5 — Ollama usage statusbar chip state (paradigm-A v3, no poll).
   private ollamaChipEl: HTMLElement | null = null
   private ollamaChipState: OllamaUsageChipState = {}
-  private ollamaChipPollId: ReturnType<typeof setInterval> | null = null
   private chatSaveTimer: ReturnType<typeof setTimeout> | null = null
   /**
    * §4.2.4 S4-1: movePair 가 발행 예정 rename 을 pre-register 하고, vault listener 가
@@ -871,19 +876,15 @@ export default class WikeyPlugin extends Plugin {
   }
 
   /**
-   * §5.6.5 옵션 A v2 — Ollama usage statusbar chip wiring.
+   * §5.6.5 v0.5 — Ollama usage statusbar chip wiring (simplified, paradigm-A
+   * v3). The cookie-based ollama.com/settings poll (paradigm-A v2) was
+   * retired with the auth-paradigm shift to Subscription + API Key (user lock
+   * 2026-05-14, "다른 LLM과 동일한 구조"). Ollama has no public quota
+   * endpoint (issue #15663 dormant) so the chip now shows the model name
+   * only; 5h/7d numbers stay null.
    *
-   * Three responsibilities:
-   *   1. addStatusBarItem() for the second chip (right of the wiki page counter).
-   *   2. setOllamaUsageListener — every callOllama dispatch updates the chip
-   *      with the model name (and provider). Cloud quota numbers come from
-   *      the periodic ollama.com/settings fetch (step 3); they ride along on
-   *      the chip state but don't reset on each LLM call.
-   *   3. setInterval(5min) → fetchOllamaCloudUsage(cookie) when configured.
-   *      No fetch when cookie empty (chip stays at model-only display).
-   *
-   * Chip stays hidden until at least one ollama / ollama-cloud dispatch
-   * happens (user spec 2026-05-14: 로딩된 모델 없으면 chip 제외).
+   * Chip remains hidden until the first callOllama dispatch (user spec:
+   * 로딩된 모델 없으면 chip 제외).
    */
   private registerOllamaUsageChip(): void {
     this.ollamaChipEl = this.addStatusBarItem()
@@ -897,75 +898,16 @@ export default class WikeyPlugin extends Plugin {
         model: info.model,
       }
       this.refreshOllamaChip()
-      // Trigger an immediate quota fetch when we transition to a cloud model
-      // (statusbar would otherwise wait up to 5min for the next poll tick).
-      if (info.provider === 'ollama-cloud' && this.settings.ollamaCloudSessionCookie) {
-        void this.pollOllamaCloudUsage()
-      }
     })
-
-    this.ollamaChipPollId = setInterval(() => {
-      void this.pollOllamaCloudUsage()
-    }, 5 * 60 * 1000)
 
     this.register(() => {
       setOllamaUsageListener(undefined)
-      if (this.ollamaChipPollId) {
-        clearInterval(this.ollamaChipPollId)
-        this.ollamaChipPollId = null
-      }
     })
   }
 
   private refreshOllamaChip(): void {
     if (this.ollamaChipEl) {
       renderOllamaChip(this.ollamaChipEl, this.ollamaChipState)
-    }
-  }
-
-  private async pollOllamaCloudUsage(): Promise<void> {
-    const cookie = this.settings.ollamaCloudSessionCookie
-    if (!cookie || cookie.length === 0) return
-    if (this.ollamaChipState.provider !== 'ollama-cloud') return
-
-    const httpClient: OllamaUsageHttpClient = {
-      async fetch(url, opts) {
-        // Obsidian's `requestUrl` bypasses CORS and lets us attach a Cookie
-        // header — the same path CodexBar uses on macOS (#534 docs).
-        const resp = await requestUrl({
-          url,
-          method: 'GET',
-          headers: { Cookie: opts.cookie },
-          throw: false,
-        })
-        return {
-          status: resp.status,
-          body: resp.text,
-          headers: { location: (resp.headers ?? {})['location'] ?? '' },
-        }
-      },
-    }
-    try {
-      const result = await fetchOllamaCloudUsage(cookie, { httpClient })
-      this.ollamaChipState = {
-        ...this.ollamaChipState,
-        sessionPct: result.sessionPct,
-        weeklyPct: result.weeklyPct,
-      }
-      this.refreshOllamaChip()
-    } catch (err) {
-      // Auth / parse / network failures: hide quota numbers but keep model
-      // name visible. Surface the reason once via Notice on the first
-      // auth-class failure so the user knows to re-paste the cookie.
-      if (err instanceof OllamaUsageFetchError && err.reason === 'auth') {
-        new Notice('Ollama Cloud session cookie expired — re-paste from ollama.com/settings.')
-      }
-      this.ollamaChipState = {
-        ...this.ollamaChipState,
-        sessionPct: undefined,
-        weeklyPct: undefined,
-      }
-      this.refreshOllamaChip()
     }
   }
 

@@ -59,6 +59,9 @@ describe('§5.6.4 A5 / I11 — credentials migration round-trip', () => {
         gemini: { mode: 'subscription' },
         anthropic: { mode: 'subscription' },
         openai: { mode: 'subscription' },
+        // §5.6.5 v0.5 — ollama-cloud joined SubscriptionProvider (user lock
+        // 2026-05-14, "다른 LLM과 동일한 구조"). Default 'subscription'.
+        'ollama-cloud': { mode: 'subscription' },
       })
     })
   })
@@ -113,6 +116,8 @@ describe('§5.6.4 A5 / I11 — credentials migration round-trip', () => {
       expect(auth.gemini.mode).toBe('subscription')
       expect(auth.anthropic.mode).toBe('subscription')
       expect(auth.openai.mode).toBe('subscription')
+      // §5.6.5 v0.5 — ollama-cloud default also 'subscription'.
+      expect(auth['ollama-cloud'].mode).toBe('subscription')
     })
   })
 
@@ -133,11 +138,14 @@ describe('§5.6.4 A5 / I11 — credentials migration round-trip', () => {
       expect(after.xaiApiKey).toBe('xai-secret-99')
       expect(after.customMetadata).toEqual({ addedBy: 'user', version: 99 })
       expect(after.geminiApiKey).toBe('AIza1')
-      // auth sub-object always overwritten with v0.3 canonical 3-provider shape.
+      // §5.6.5 v0.5 — auth sub-object now carries 4 providers (added
+      // ollama-cloud); user-added fields outside `auth` (xaiApiKey,
+      // customMetadata) still survive verbatim.
       const auth = after.auth as Record<string, { mode: string }>
       expect(auth.gemini.mode).toBe('api')
       expect(auth.anthropic.mode).toBe('subscription')
       expect(auth.openai.mode).toBe('subscription')
+      expect(auth['ollama-cloud'].mode).toBe('subscription')
     })
   })
 })

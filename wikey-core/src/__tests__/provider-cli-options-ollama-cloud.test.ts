@@ -79,11 +79,20 @@ describe('§5.6.5 Step C — CLI_OPTION_SUPPORT 64-cell matrix', () => {
     expect(CLI_OPTION_SUPPORT['ollama-cloud'].api.jsonMode).toBe('native')
   })
 
-  it("C4: ollama-cloud.subscription column all 'na' (SSH+signin, no CLI OAuth)", () => {
+  it("C4 (v0.5): ollama-cloud.subscription column mirrors api semantics (HTTP body, no CLI flag surface)", () => {
+    // §5.6.5 v0.5 — ollama-cloud joined SubscriptionProvider (user lock
+    // 2026-05-14, "다른 LLM과 동일한 구조"). Both auth paths still hit
+    // /api/chat directly, so the subscription column carries the same
+    // native/na cells as the api column.
     const subRow = CLI_OPTION_SUPPORT['ollama-cloud'].subscription
-    for (const field of Object.keys(subRow)) {
-      expect(subRow[field as keyof typeof subRow]).toBe('na')
-    }
+    expect(subRow.model).toBe('native')
+    expect(subRow.temperature).toBe('native')
+    expect(subRow.maxTokens).toBe('native')
+    expect(subRow.jsonMode).toBe('native')
+    expect(subRow.timeout).toBe('native')
+    expect(subRow.seed).toBe('na')
+    expect(subRow.responseMimeType).toBe('na')
+    expect(subRow.thinkingBudget).toBe('na')
   })
 
   it('C4: ollama-cloud.api reflects /api/chat HTTP body (model/temperature/maxTokens/timeout native)', () => {

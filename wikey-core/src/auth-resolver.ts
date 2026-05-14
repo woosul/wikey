@@ -32,6 +32,8 @@ const AUTH_MODE_KEY: Record<SubscriptionProvider, keyof WikeyConfig> = {
   gemini: 'GEMINI_AUTH_MODE',
   anthropic: 'ANTHROPIC_AUTH_MODE',
   openai: 'OPENAI_AUTH_MODE',
+  // §5.6.5 v0.5 — ollama-cloud joined SubscriptionProvider.
+  'ollama-cloud': 'OLLAMA_CLOUD_AUTH_MODE',
 }
 
 /**

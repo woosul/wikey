@@ -13,7 +13,6 @@ import type WikeyPlugin from './main'
 import { ResetImpactModal } from './reset-modals'
 import { executeReset } from './commands'
 import { renderDeveloperUpdateItems } from './settings-tab-developer'
-import { renderOllamaCloudSubsection } from './settings-tab-ollama-cloud'
 
 /**
  * §5.6.4 v0.7 — provider subsection spec (single source of truth for the three
@@ -22,10 +21,21 @@ import { renderOllamaCloudSubsection } from './settings-tab-ollama-cloud'
  * so the shared `renderProviderSubsection` stays provider-agnostic.
  */
 interface ProviderSubsectionSpec {
-  readonly provider: 'gemini' | 'anthropic' | 'openai'
+  // §5.6.5 v0.5 (2026-05-14) — ollama-cloud joins the three subscription
+  // providers using the same Auth Mode + Subscription + API Key shape
+  // (user lock 2026-05-14: "다른 LLM과 동일한 구조").
+  readonly provider: 'gemini' | 'anthropic' | 'openai' | 'ollama-cloud'
   readonly heading: string
-  readonly apiKeyField: 'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey'
-  readonly authModeField: 'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode'
+  readonly apiKeyField:
+    | 'geminiApiKey'
+    | 'anthropicApiKey'
+    | 'openaiApiKey'
+    | 'ollamaCloudApiKey'
+  readonly authModeField:
+    | 'geminiAuthMode'
+    | 'anthropicAuthMode'
+    | 'openaiAuthMode'
+    | 'ollamaCloudAuthMode'
   readonly apiKeyPlaceholder: string
   readonly signInLabel: string
   readonly signInCommand: string
@@ -1262,38 +1272,22 @@ export class WikeySettingTab extends PluginSettingTab {
       detectSubscription: () => this.detectOpenAISubscription(),
     })
 
-    // §5.6.5 Step B — 4th subsection (Ollama Cloud).
-    // PoC §0 §3 paradigm: SSH+signin auth (no Auth Mode dropdown / no API Key
-    // row / no Endpoint URL row). Rendered via a dedicated helper rather than
-    // bolted onto ProviderSubsectionSpec to avoid 3 optional fields the
-    // shared helper never reads (Karpathy "no speculative flexibility").
-    // §5.6.5 옵션 A v2 — adds the Session Cookie row + Open Dashboard for the
-    // CodexBar paradigm statusbar chip (ollama.com/settings polling).
-    renderOllamaCloudSubsection(containerEl, {
-      ollamaCliInstalled: this.detectOllamaCliInstalled(),
-      signinDetected: this.detectOllamaCloudSignin(),
-      onSignin: () => {
-        new GeminiAuthInstructionModal(
-          this.app,
-          'Sign in to Ollama Cloud',
-          'Run "ollama signin" in your terminal, complete the browser OAuth flow, then return here and reload Obsidian.',
-        ).open()
-      },
-      onSignout: () => {
-        new GeminiAuthInstructionModal(
-          this.app,
-          'Sign out',
-          'Run "ollama signout" in your terminal.',
-        ).open()
-      },
-      sessionCookie: this.plugin.settings.ollamaCloudSessionCookie ?? '',
-      onCookieChange: async (value) => {
-        this.plugin.settings.ollamaCloudSessionCookie = value
-        await this.plugin.saveSettings()
-      },
-      onOpenDashboard: () => {
-        window.open('https://ollama.com/settings')
-      },
+    // §5.6.5 v0.5 (2026-05-14) — 4th subsection uses the shared
+    // renderProviderSubsection now that Ollama Cloud auth mirrors the three
+    // subscription providers (user lock: "다른 LLM과 동일한 구조"). Earlier
+    // paradigm (SSH+signin only, no Auth Mode / no API Key, cookie scrape)
+    // was retired here — the dedicated renderOllamaCloudSubsection helper
+    // is gone too.
+    this.renderProviderSubsection(containerEl, {
+      provider: 'ollama-cloud',
+      heading: 'Ollama Cloud',
+      apiKeyField: 'ollamaCloudApiKey',
+      authModeField: 'ollamaCloudAuthMode',
+      apiKeyPlaceholder: 'Ollama Pro API key',
+      signInLabel: 'Sign in with Ollama',
+      signInCommand: 'ollama signin',
+      signOutCommand: 'ollama signout',
+      detectSubscription: () => this.detectOllamaCloudSubscription(),
     })
   }
 
@@ -1488,30 +1482,15 @@ export class WikeySettingTab extends PluginSettingTab {
   }
 
   /**
-   * §5.6.5 Step B — sync detect for the `ollama` CLI binary on PATH. PoC §0 §0
-   * confirmed the CLI is the same binary used for local Ollama; presence here
-   * gates both Settings UI badge and the [Sign in] button (signin needs the
-   * CLI to invoke `ollama signin`).
+   * §5.6.5 v0.5 — Ollama Cloud subscription detection (cheap sync proxy).
+   * `ollama signin` registers the user's `~/.ollama/id_ed25519` public key
+   * with ollama.com OAuth, so the SSH key existing locally is the closest
+   * synchronous signal that signin has been run. OAuth state expiry surfaces
+   * later via callOllama's onAuthFallback({reason:'auth-missing'}) on the
+   * next request. (Renamed from detectOllamaCloudSignin in v0.5 to match
+   * the gemini/anthropic/openai naming.)
    */
-  private detectOllamaCliInstalled(): boolean {
-    try {
-      const cp = require('node:child_process') as typeof import('node:child_process')
-      const result = cp.spawnSync('command', ['-v', 'ollama'], { shell: true, encoding: 'utf-8' })
-      return result.status === 0 && (result.stdout ?? '').trim().length > 0
-    } catch {
-      return false
-    }
-  }
-
-  /**
-   * §5.6.5 Step B — Ollama Cloud signin detection via SSH key probe.
-   * PoC §0 §3 LOCK (2026-05-14): `ollama signin` registers the user's
-   * `~/.ollama/id_ed25519` public key with ollama.com OAuth. The private key
-   * file existing locally is the cheapest sync proxy for "user has run
-   * signin". OAuth state expiry surfaces later via `callOllama`'s
-   * `onAuthFallback({reason:'auth-missing'})` on the next request.
-   */
-  private detectOllamaCloudSignin(): boolean {
+  private detectOllamaCloudSubscription(): boolean {
     try {
       const fs = require('node:fs') as typeof import('node:fs')
       const os = require('node:os') as typeof import('node:os')

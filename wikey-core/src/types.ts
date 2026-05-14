@@ -69,6 +69,8 @@ export interface WikeyConfig {
   readonly GEMINI_API_KEY: string
   readonly ANTHROPIC_API_KEY: string
   readonly OPENAI_API_KEY: string
+  // §5.6.5 v0.5 — Ollama Pro API key for the api path (Bearer header).
+  readonly OLLAMA_CLOUD_API_KEY?: string
   readonly OLLAMA_URL: string
 
   readonly INGEST_PROVIDER: string
@@ -114,6 +116,8 @@ export interface WikeyConfig {
   readonly GEMINI_AUTH_MODE?: AuthMode
   readonly ANTHROPIC_AUTH_MODE?: AuthMode
   readonly OPENAI_AUTH_MODE?: AuthMode
+  // §5.6.5 v0.5 (2026-05-14, user lock "다른 LLM과 동일한 구조").
+  readonly OLLAMA_CLOUD_AUTH_MODE?: AuthMode
 }
 
 // ── Provenance (§4.3.2 Part A, Phase 4.3) ──
@@ -159,28 +163,23 @@ export type AuthMode = 'none' | 'subscription' | 'api'
 export type AuthPath = 'subscription' | 'api'
 
 /**
- * §5.6.4 — providers that support a subscription OAuth path. ollama (local)
- * is local-only and ollama-cloud uses SSH+signin auth (no OAuth CLI flow), so
- * both ollama variants are excluded. PoC §0 §3 (2026-05-14) confirmed
- * Ollama Cloud auth = `~/.ollama/id_ed25519` + `ollama signin` — distinct
- * from gemini/anthropic/openai subscription CLI semantics.
+ * §5.6.4 + §5.6.5 v0.5 — providers that support a subscription OAuth path
+ * AND an API key path (Auth Mode dropdown). v0.5 (2026-05-14, user lock
+ * "다른 LLM과 동일한 구조") promoted Ollama Cloud into this union — its
+ * subscription path is `ollama signin` (registers `~/.ollama/id_ed25519`)
+ * and its API path is the Ollama Pro API key (Bearer header against
+ * `/api/chat`). Local ollama (`'ollama'`) stays excluded — no CLI
+ * OAuth path at all.
  */
-export type SubscriptionProvider = Exclude<LLMProvider, 'ollama' | 'ollama-cloud'>
+export type SubscriptionProvider = Exclude<LLMProvider, 'ollama'>
 
 /**
- * §5.6.5 §5.6.5.3 Step C — providers that have a row in the
- * `CLI_OPTION_SUPPORT` matrix (provider × path × field → SupportLevel).
- *
- * `SubscriptionProvider` (3) + `'ollama-cloud'` (1) = 4 rows × 2 paths ×
- * 8 fields = 64 cells (was 48 in §5.6.4). ollama-cloud's `subscription`
- * column is all 'na' — it uses SSH+signin auth, not the CLI OAuth path
- * gemini/anthropic/openai share.
- *
- * Local ollama (`'ollama'`) stays out — it has no CLI subscription path
- * at all, so callOllama directly issues HTTP without consulting the
- * matrix.
+ * §5.6.5.3 Step C — providers with a row in the `CLI_OPTION_SUPPORT`
+ * matrix (provider × path × field → SupportLevel). v0.5 (2026-05-14)
+ * unified with `SubscriptionProvider` now that ollama-cloud has the
+ * same Subscription + API Key shape. 4 rows × 2 paths × 8 fields = 64 cells.
  */
-export type CliOptionMatrixProvider = SubscriptionProvider | 'ollama-cloud'
+export type CliOptionMatrixProvider = SubscriptionProvider
 
 /**
  * §5.6.4 — single source of truth for the path-support matrix row union.
@@ -197,13 +196,10 @@ export type LLMCliOptionField = Exclude<keyof LLMCallOptions, 'provider' | 'onAu
  * core/ui decoupled — wikey-core never imports `obsidian` (I10).
  */
 export interface AuthFallbackInfo {
-  /**
-   * §5.6.5 Step A (2026-05-14) — provider extended to include 'ollama-cloud'
-   * so callOllama cloud branch can surface auth-missing (HTTP 401, `ollama
-   * signin` required) / quota-exceeded (HTTP 429, Ollama Pro monthly limit)
-   * via the same callback shape gemini/anthropic/openai already use.
-   */
-  readonly provider: SubscriptionProvider | 'ollama-cloud'
+  // §5.6.5 v0.5 — ollama-cloud now lives inside SubscriptionProvider
+  // (Auth Mode dropdown + Subscription + API Key, same shape as the
+  // other three subscription providers).
+  readonly provider: SubscriptionProvider
   readonly reason:
     | 'quota-exceeded'       // 401/429 from subscription path
     | 'auth-missing'         // CLI not signed in

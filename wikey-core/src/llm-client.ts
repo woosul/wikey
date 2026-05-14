@@ -560,9 +560,20 @@ export class LLMClient {
       payload.think = false
     }
 
+    // §5.6.5 v0.5 — Ollama Cloud Bearer header on the API path (user lock
+    // 2026-05-14, "다른 LLM과 동일한 구조" + API key 발급 확인).
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (isCloud) {
+      const apiKey = (this.config as { OLLAMA_CLOUD_API_KEY?: string }).OLLAMA_CLOUD_API_KEY
+      const authMode = this.config.OLLAMA_CLOUD_AUTH_MODE
+      if (apiKey && (authMode === 'api' || authMode === undefined)) {
+        headers.Authorization = `Bearer ${apiKey}`
+      }
+    }
+
     const response = await this.httpClient.request(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
       timeout: opts?.timeout ?? DEFAULT_TIMEOUT,
     })

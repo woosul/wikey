@@ -56,12 +56,17 @@ const PROVIDER_BINARY_NAME: Record<SubscriptionProvider, string> = {
   gemini: 'gemini',
   anthropic: 'claude',
   openai: 'codex',
+  // §5.6.5 v0.5 — ollama-cloud signin/signout uses the same `ollama` CLI as
+  // local ollama; the cloud-vs-local distinction is at the model identifier
+  // (isCloudModel) rather than at the binary level.
+  'ollama-cloud': 'ollama',
 }
 
 const PROVIDER_ENV_OVERRIDE: Record<SubscriptionProvider, string> = {
   gemini: 'WIKEY_GEMINI_CLI_PATH',
   anthropic: 'WIKEY_ANTHROPIC_CLI_PATH',
   openai: 'WIKEY_OPENAI_CLI_PATH',
+  'ollama-cloud': 'WIKEY_OLLAMA_CLI_PATH',
 }
 
 const STATIC_FALLBACK_DIRS = [
@@ -165,6 +170,10 @@ export const CLI_DEFAULT_BINARY: Record<SubscriptionProvider, string> = Object.f
   get openai(): string {
     return resolveCliBinary('openai')
   },
+  // §5.6.5 v0.5 — ollama-cloud signin uses the `ollama` binary.
+  get 'ollama-cloud'(): string {
+    return resolveCliBinary('ollama-cloud')
+  },
 }) as unknown as Record<SubscriptionProvider, string>
 
 /** §4.0.7 — locked argv tail per provider (additional flags appended by provider-cli-options.ts). */
@@ -173,6 +182,11 @@ export const CLI_BASE_ARGS: Record<SubscriptionProvider, readonly string[]> = {
   gemini: ['-p', '-'], // gemini -p '<prompt>' or -p - (stdin)
   anthropic: ['-p'], // claude -p (stdin = prompt)
   openai: ['exec', '-'], // codex exec - (stdin = prompt)
+  // §5.6.5 v0.5 — ollama-cloud subscription path doesn't spawn a CLI for
+  // prompt input (the chat call still goes through /api/chat HTTP), so the
+  // argv is empty. Kept in the record for type completeness; not used by
+  // any spawn site.
+  'ollama-cloud': [],
 }
 
 /**
