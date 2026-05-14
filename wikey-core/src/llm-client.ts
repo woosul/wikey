@@ -21,6 +21,7 @@ import {
 } from './cli-spawn.js'
 import { mapOptionsToCliArgs } from './provider-cli-options.js'
 import { parseSubscriptionOutput } from './cli-parser.js'
+import { isCloudModel, lookupCloudModel } from './ollama-model-catalog.js'
 
 const DEFAULT_TIMEOUT = 300_000
 const DEFAULT_MAX_TOKENS = 65_536
@@ -91,6 +92,7 @@ export class LLMClient {
       case 'openai':
         return this.callOpenAI(prompt, opts)
       case 'ollama':
+      case 'ollama-cloud':
         return this.callOllama(prompt, opts)
       default:
         throw new Error(`Unknown provider: ${provider}`)
@@ -511,6 +513,23 @@ export class LLMClient {
     const baseUrl = this.config.OLLAMA_URL || 'http://localhost:11434'
     const url = `${baseUrl}/api/chat`
 
+    // §5.6.5 Step A — cloud branch detect (PoC §0 paradigm, SUMMARY.md §2):
+    // endpoint is identical for local + cloud, so dispatch == one HTTP path
+    // with a model-identifier-driven branch (debug log + auth surfacing +
+    // M5 markdown ```json``` strip). isCloudModel funnels every check
+    // through ollama-model-catalog.ts (single source of truth).
+    const isCloud = isCloudModel(model)
+    if (opts?.provider === 'ollama-cloud' && !isCloud) {
+      throw new Error(
+        `provider='ollama-cloud' but model='${model}' is local-only (mismatch). ` +
+          `Use a cloud model (e.g. deepseek-v3.1:671b-cloud) or set provider='ollama'.`,
+      )
+    }
+    if (isCloud) {
+      // eslint-disable-next-line no-console
+      console.debug(`[callOllama] cloud dispatch: ${model}`)
+    }
+
     const isGemma = model.toLowerCase().includes('gemma')
 
     const payload: Record<string, unknown> = {
@@ -547,6 +566,17 @@ export class LLMClient {
       timeout: opts?.timeout ?? DEFAULT_TIMEOUT,
     })
 
+    // §5.6.5 Step A — cloud auth surface (HTTP 401 → signin required, 429 →
+    // Ollama Pro quota). Local (non-cloud) ollama daemon doesn't issue these
+    // codes, so the branch is cloud-gated.
+    if (isCloud && (response.status === 401 || response.status === 429)) {
+      const reason: 'auth-missing' | 'quota-exceeded' =
+        response.status === 401 ? 'auth-missing' : 'quota-exceeded'
+      const err = new Error(`Ollama Cloud auth failure (status=${response.status}): ${response.body.slice(0, 200)}`)
+      opts?.onAuthFallback?.({ provider: 'ollama-cloud', reason, originalError: err })
+      throw err
+    }
+
     let data: { message?: { content?: string }; error?: string }
     try {
       data = JSON.parse(response.body)
@@ -555,6 +585,13 @@ export class LLMClient {
     }
 
     if (data.error) {
+      // §5.6.5 Step A — cloud quota detect from body text (Ollama returns 200
+      // + error body in some quota cases, not 429).
+      if (isCloud && /quota exceeded|monthly limit reached/i.test(data.error)) {
+        const err = new Error(`Ollama Cloud quota exceeded: ${data.error}`)
+        opts?.onAuthFallback?.({ provider: 'ollama-cloud', reason: 'quota-exceeded', originalError: err })
+        throw err
+      }
       // Surface Ollama's own error message (e.g., "model 'X' not found, try pulling it first")
       if (/not found|does not exist/i.test(data.error)) {
         throw new Error(`Ollama model '${model}' not found. Run: ollama pull ${model}`)
@@ -566,8 +603,24 @@ export class LLMClient {
 
     text = stripThinkingBlock(text)
 
+    // §5.6.5 Step A — M5 mistral-large-3 wraps JSON in ```json``` fence even
+    // under `format:json`. Catalog lookup gates the strip (other models pass
+    // through unchanged, raise 1 regression 0).
+    if (isCloud && lookupCloudModel(model)?.jsonMode === 'markdown-wrap') {
+      text = stripJsonFence(text)
+    }
+
     return text.trim()
   }
+}
+
+/**
+ * §5.6.5 Step A — strip ```json ... ``` markdown fence from M5 cloud responses.
+ * No-op when fence absent (defensive — Ollama may eventually fix M5's wrap).
+ */
+function stripJsonFence(text: string): string {
+  const m = text.match(/^\s*```(?:json)?\s*\n?([\s\S]*?)\n?\s*```\s*$/)
+  return m ? m[1] : text
 }
 
 export async function fetchModelList(

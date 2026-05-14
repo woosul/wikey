@@ -142,7 +142,7 @@ export interface ProvenanceEntry {
 
 // ── LLM ──
 
-export type LLMProvider = 'gemini' | 'anthropic' | 'openai' | 'ollama'
+export type LLMProvider = 'gemini' | 'anthropic' | 'openai' | 'ollama' | 'ollama-cloud'
 
 /**
  * §5.6.4 v0.7 — user-selected routing mode (per-provider). 'auto' polished out
@@ -161,10 +161,13 @@ export type AuthMode = 'none' | 'subscription' | 'api'
 export type AuthPath = 'subscription' | 'api'
 
 /**
- * §5.6.4 — providers that support a subscription OAuth path. ollama is
- * local-only (no subscription concept) so it is excluded.
+ * §5.6.4 — providers that support a subscription OAuth path. ollama (local)
+ * is local-only and ollama-cloud uses SSH+signin auth (no OAuth CLI flow), so
+ * both ollama variants are excluded. PoC §0 §3 (2026-05-14) confirmed
+ * Ollama Cloud auth = `~/.ollama/id_ed25519` + `ollama signin` — distinct
+ * from gemini/anthropic/openai subscription CLI semantics.
  */
-export type SubscriptionProvider = Exclude<LLMProvider, 'ollama'>
+export type SubscriptionProvider = Exclude<LLMProvider, 'ollama' | 'ollama-cloud'>
 
 /**
  * §5.6.4 — single source of truth for the path-support matrix row union.
@@ -181,7 +184,13 @@ export type LLMCliOptionField = Exclude<keyof LLMCallOptions, 'provider' | 'onAu
  * core/ui decoupled — wikey-core never imports `obsidian` (I10).
  */
 export interface AuthFallbackInfo {
-  readonly provider: SubscriptionProvider
+  /**
+   * §5.6.5 Step A (2026-05-14) — provider extended to include 'ollama-cloud'
+   * so callOllama cloud branch can surface auth-missing (HTTP 401, `ollama
+   * signin` required) / quota-exceeded (HTTP 429, Ollama Pro monthly limit)
+   * via the same callback shape gemini/anthropic/openai already use.
+   */
+  readonly provider: SubscriptionProvider | 'ollama-cloud'
   readonly reason:
     | 'quota-exceeded'       // 401/429 from subscription path
     | 'auth-missing'         // CLI not signed in

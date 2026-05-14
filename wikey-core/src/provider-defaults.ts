@@ -25,6 +25,10 @@ export const PROVIDER_CHAT_DEFAULTS: Readonly<Record<LLMProvider, string>> = {
   anthropic: 'claude-haiku-4-5-20251001', // haiku = flash 동급 (속도+저비용)
   openai: 'gpt-4.1-mini',                  // 4.1 mini = flash 동급
   ollama: 'qwen3:8b',                      // 로컬 mid-size (5.2GB)
+  // §5.6.5 Step A — provisional default until Step E (benchmark winner) lands.
+  // PoC §0 SUMMARY.md §1 LOCK: M1 deepseek-v3.1:671b-cloud has the best
+  // breadth (completion+tools+thinking) among the 5 cloud models.
+  'ollama-cloud': 'deepseek-v3.1:671b-cloud',
 }
 
 /**
@@ -37,6 +41,11 @@ export const PROVIDER_VISION_DEFAULTS: Readonly<Record<LLMProvider, string>> = {
   anthropic: 'claude-haiku-4-5-20251001', // (미사용 경로, fallback으로 이동)
   openai: 'gpt-4o-mini',                   // 4o-mini는 vision 확정 + 가성비
   ollama: 'gemma4:26b',                    // qwen3:8b는 vision 미지원
+  // §5.6.5 Step A — PoC §0 SUMMARY.md §1: M3 kimi-k2.6:cloud + M5
+  // mistral-large-3:675b-cloud are the two cloud models with vision
+  // capability. M3 wins by default (smaller, faster); benchmark §5.6.5.4
+  // re-evaluates.
+  'ollama-cloud': 'kimi-k2.6:cloud',
 }
 
 /**
@@ -81,6 +90,13 @@ export const PROVIDER_CONTEXT_BUDGETS: Readonly<Record<string, ContextBudget>> =
   'gpt-4.1-mini':              { contextTokens: 1_000_000, outputReserve: 0.25, promptOverhead: 2000 },
   'gpt-4.1':                   { contextTokens: 1_000_000, outputReserve: 0.25, promptOverhead: 2000 },
   'qwen3:8b':                  { contextTokens:    32_000, outputReserve: 0.30, promptOverhead: 2000 },
+  // §5.6.5 Step A — Ollama Cloud catalog (PoC §0 SUMMARY.md §1, 2026-05-14).
+  // M3 kimi-k2.6 context "unknown" from `ollama show` → 32K conservative fallback.
+  'deepseek-v3.1:671b-cloud':    { contextTokens:    32_000, outputReserve: 0.30, promptOverhead: 2000 },
+  'qwen3-coder:480b-cloud':      { contextTokens:    32_000, outputReserve: 0.30, promptOverhead: 2000 },
+  'kimi-k2.6:cloud':             { contextTokens:    32_000, outputReserve: 0.30, promptOverhead: 2000 },
+  'gpt-oss:120b-cloud':          { contextTokens:   131_072, outputReserve: 0.25, promptOverhead: 2000 },
+  'mistral-large-3:675b-cloud':  { contextTokens:   262_144, outputReserve: 0.25, promptOverhead: 2000 },
 }
 
 /** Provider 의 폴백 모델 (PROVIDER_CHAT_DEFAULTS) budget 을 기본으로 반환. */

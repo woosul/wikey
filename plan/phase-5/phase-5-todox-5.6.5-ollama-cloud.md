@@ -180,7 +180,7 @@ N-local commit (local only) — push 보류, §5.6.5.5 종결 시점 일괄 push
 | commit | prefix (v0.3 fix codex #1 ID-7) | 영역 | scope |
 |--------|--------------------------------|------|-------|
 | commit 1 | `docs(§5.6.5 v0.3): PoC ollama cloud fixtures` | Step 0 PoC evidence | `plan/phase-5/fixtures/cycle-5.6.5-ollama-cloud-poc/` 안 raw stdout capture (endpoint probe / model catalog / jsonMode probe) — 4~6 file. PoC 결과를 todox §3 결정 항목에 mirror. |
-| commit 2 | `feat(§5.6.5 v0.3): provider abstraction + ollama-cloud type` | Step A — provider 추상화 | `wikey-core/src/types.ts` (Q1=b LOCK type 추가) + `wikey-core/src/auth-resolver.ts` (ollama-cloud row 추가) + `wikey-core/src/llm-client.ts` (신규 `callOllamaCloud` + 기존 `callOllama` 보존) + `wikey-core/src/ollama-model-catalog.ts` (신규 `isCloudModel` helper) + 단위 test |
+| commit 2 | `feat(§5.6.5 v0.4): provider abstraction + ollama-cloud type` | Step A — provider 추상화 | `wikey-core/src/types.ts` (Q1=b LOCK type 5 element 확장) + `wikey-core/src/auth-resolver.ts` (`SubscriptionProvider` `Exclude<LLMProvider, 'ollama' \| 'ollama-cloud'>` 단순 확장) + `wikey-core/src/llm-client.ts` (`callOllama` 안 cloud 분기 + 별 함수 분리 X, PoC §0 paradigm) + `wikey-core/src/ollama-model-catalog.ts` (신규 `CLOUD_MODEL_CATALOG` + `isCloudModel` helper) + `wikey-core/src/provider-defaults.ts` (`PROVIDER_CONTEXT_BUDGETS.ollama-cloud` 5 model 추가) + 단위 test |
 | commit 3 | `feat(§5.6.5 v0.3): Settings UI 4번째 Ollama Cloud subsection` | Step B — Settings UI | `wikey-obsidian/src/settings-tab.ts` (Q2=c LOCK helper 재사용) + 4번째 subsection 추가 + 단위 test |
 | commit 4 | `feat(§5.6.5 v0.3): jsonMode adaptive + 64-cell matrix CliOptionMatrixProvider` | Step C — matrix + adaptive jsonMode | `wikey-core/src/provider-cli-options.ts` (`CliOptionMatrixProvider = SubscriptionProvider \| 'ollama-cloud'`, 64 cell) + `wikey-core/src/adaptive-json-mode.ts` (line 43 ollama 분기 정정) + 단위 test |
 | commit 5 | `feat(§5.6.5 v0.3): benchmark harness (analyst plan from docs/)` | Step D — benchmark harness | (analyst 산출 `docs/ollama-cloud-benchmark-plan.md` mirror) + (Q3 결정 결과 hybrid) `scripts/benchmark-ollama-cloud.sh` + `wikey-core/src/scripts/benchmark-models.ts` + fixture corpus copy + golden set + 단위 test |
@@ -201,7 +201,7 @@ N-local commit (local only) — push 보류, §5.6.5.5 종결 시점 일괄 push
 **13 source file 영역 (ollama 분기 보존 LOCK, 사용자 raise 1)**:
 | # | file | 분기 위치 | 회귀 의무 |
 |---|------|----------|----------|
-| 1 | `wikey-core/src/llm-client.ts` | `callOllama` line 509, `case 'ollama'` line 93, `OLLAMA_URL` fallback line 631 | 기존 `callOllama` body 영향 0 + 신규 `callOllamaCloud` 또는 URL switch helper 만 추가 |
+| 1 | `wikey-core/src/llm-client.ts` | `callOllama` line 509, `case 'ollama'` line 93, `OLLAMA_URL` fallback line 631 | `callOllama` 안에 `if (isCloudModel(modelId))` 분기 추가 (debug log + post-process). transport 시그니처 변경 0. 별 `callOllamaCloud` 함수 분리 X (PoC §0 paradigm LOCK). 신규 `case 'ollama-cloud'` 분기 추가 (callOllama 위임) |
 | 2 | `wikey-core/src/ingest-pipeline.ts` | line 1768 (Anthropic vision → Ollama fallback), 1773 (vision branch), 1744 (ollamaBase), 1747 (fallbackProvider) | vision fallback 그대로 + cloud 모델은 별 분기 |
 | 3 | `wikey-core/src/provider-defaults.ts` | line 27 (`PROVIDER_CHAT_DEFAULTS.ollama: 'qwen3:8b'`), 39 (`PROVIDER_VISION_DEFAULTS.ollama`), 95 (fallback), 119 (context budget) | local default model 그대로 + ollama-cloud row 추가 |
 | 4 | `wikey-core/src/adaptive-json-mode.ts` | line 43 `if (provider === 'ollama') return true` | local 분기 그대로 + ollama-cloud 분기 추가 (모델별 jsonMode 차이) |
@@ -292,31 +292,31 @@ n+1. npm test fresh — ollama 관련 기존 test 모두 PASS (AC-S26 mirror)
 
 ### §5.6.5.1 — Step A: Provider 추상화 layer 확장
 
-Q1=b LOCK (사용자 결정 2026-05-14 + codex cycle #2 ID-3 fix) — 항상 별 provider key `'ollama-cloud'`. PoC §0 결과는 callOllamaCloud 내부 transport variant 만 결정.
+Q1=b LOCK (사용자 결정 2026-05-14 + codex cycle #2 ID-3 fix) — 항상 별 provider key `'ollama-cloud'`. **PoC §0 결과 (2026-05-14 v0.4 paradigm shift)**: cloud endpoint = local endpoint (`http://localhost:11434`) 동일 → **`callOllamaCloud` 별 함수 분리 불필요 (Karpathy Simplicity First)**. `callOllama` 안에서 모델 식별자 cloud suffix 분기 (debug log) + 동일 transport.
 
 **RED**: 신규 test file `wikey-core/test/llm-client-ollama-cloud.test.ts` + `wikey-core/test/ollama-cloud-dispatch.test.ts`
 - A1: Q1=b LOCK — `LLMProvider` type 에 `'ollama-cloud'` 포함 (compile time check, `expectType<LLMProvider>('ollama-cloud')`)
-- A2: `callOllamaCloud` — mock HTTP client + cloud endpoint → 정상 응답
-- A3: 401 / 429 detection → AuthFallbackInfo `'quota-exceeded'` reason 발화 (Ollama Cloud 의 subscription / api path 가 PoC §0 결과 의존)
-- A4: timeout `600000ms` (§5.6.4 v0.6 mirror) 적용 — spawn signal + AbortController
-- A5: 사용자 Ollama Pro quota 소진 stderr ("quota exceeded" / "monthly limit reached") detect → AuthFallbackInfo 발화
+- A2: `callOllama` 안 cloud 분기 — mock HTTP client + 모델 식별자 `:cloud` suffix (e.g. `deepseek-v3.1:671b-cloud`) → 동일 `localhost:11434` endpoint POST + debug log `'[callOllama] cloud dispatch'` capture
+- A3: 401 / 429 detection → AuthFallbackInfo `'auth-missing'` (signin 안됨) / `'quota-exceeded'` reason 발화 (Ollama Cloud 의 SSH+signin auth 기반, PoC §0 §3 mirror)
+- A4: timeout `600000ms` (§5.6.4 v0.6 mirror) 적용 — fetch AbortController
+- A5: 사용자 Ollama Pro quota 소진 stderr / response body ("quota exceeded" / "monthly limit reached") detect → AuthFallbackInfo 발화
 - **A6 (사용자 raise 3 2026-05-14)**: `isCloudModel(modelId)` helper 단위 test
-  - cloud 모델 식별자 (`llama3:70b-cloud` / `qwen3:72b-cloud` / `deepseek-v3-cloud` / `mistral-large-cloud`) → `true`
-  - local 모델 (`qwen3:8b` / `gemma4:26b` / `qwen3:0.6b-embedding`) → `false`
-  - 경계 case (empty string / `'llama3:70b'` cloud 없이) → `false`
-- **A7 (사용자 raise 3 2026-05-14)**: 자동 dispatch — provider='ollama' + 모델 식별자 cloud → callOllamaCloud 자동 dispatch (mock spy assert). provider='ollama-cloud' + 모델 식별자 local-only → 모순 detect throw + Notice
-- **A8 (사용자 raise 1 2026-05-14)**: 기존 `callOllama` (local) 회귀 — mock HTTP client + local endpoint (`http://localhost:11434`) + 모델 `qwen3:8b` → 정상 응답 + cloud endpoint 호출 0 (spy assert)
+  - cloud 모델 식별자 (`deepseek-v3.1:671b-cloud` / `qwen3-coder:480b-cloud` / `kimi-k2.6:cloud` / `gpt-oss:120b-cloud` / `mistral-large-3:675b-cloud`) → `true` (PoC §0 SUMMARY.md §1 LOCK)
+  - local 모델 (`qwen3:8b` / `qwen3.6:35b-a3b-nvfp4` / `gemma4:26b` / `qwen3:0.6b-embedding`) → `false`
+  - 경계 case (empty string / `'llama3:70b'` cloud suffix 없이) → `false`
+- **A7 (사용자 raise 3 2026-05-14)**: 자동 dispatch — provider='ollama' + 모델 식별자 cloud → `callOllama` 안 cloud 분기 자동 진입 (mock spy assert: cloud debug log emit). provider='ollama-cloud' + 모델 식별자 local-only (`qwen3:8b`) → 모순 detect throw + Notice
+- **A8 (사용자 raise 1 2026-05-14)**: 기존 `callOllama` (local) 회귀 — mock HTTP client + local endpoint + 모델 `qwen3:8b` → 정상 응답 + cloud debug log 0 (spy assert) + endpoint URL 동일
 
-**GREEN**: 
-- `wikey-core/src/types.ts` — `LLMProvider` 확장 (5 element) + `OLLAMA_CLOUD_URL` config 신규
-- `wikey-core/src/config.ts` — `OLLAMA_CLOUD_URL` default 추가 (PoC §0 endpoint lock — placeholder `'https://ollama.com'`)
-- `wikey-core/src/llm-client.ts` — `callOllamaCloud` 신규 함수 (Q1=b LOCK) + `case 'ollama-cloud'` 분기 + 기존 `callOllama` 변경 0 (raise 1 회귀 0 의무)
-- `wikey-core/src/ollama-model-catalog.ts` (신규, 사용자 raise 3) — const `CLOUD_MODEL_CATALOG` (PoC §0 결과 lock) + `isCloudModel(modelId): boolean` helper. 단일 source. 하드코딩 금지 LOCK 영구 룰 (`feedback_no_hardcoding_general.md`) 정합 — catalog 변경 시 본 file 1곳만 수정.
-- `wikey-core/src/auth-resolver.ts` — `SubscriptionProvider` 재정의 (PoC §0 결과 의존: ollama-cloud 가 subscription path 보유 시 include / api-only 시 별 type `OllamaCloudProvider`)
+**GREEN**:
+- `wikey-core/src/types.ts` — `LLMProvider` 확장 (5 element: `'gemini' | 'anthropic' | 'openai' | 'ollama' | 'ollama-cloud'`). **`OLLAMA_CLOUD_URL` config 추가 X** (PoC §0 §2 — endpoint 동일 `localhost:11434`, 별 URL 불필요). **`SubscriptionProvider` 재정의 X** (`Exclude<LLMProvider, 'ollama' | 'ollama-cloud'>` 로 단순 확장 — Ollama Cloud 도 SSH+signin auth 라 subscription path 아님)
+- `wikey-core/src/llm-client.ts` — `callOllama` 함수 안에 `if (isCloudModel(modelId))` 분기 추가 (debug log + 응답 후처리 dispatch 영역만, transport 동일). 별 함수 분리 X (Karpathy Simplicity First, PoC §0 §6 항목 2 LOCK). 기존 `callOllama` 의 transport 시그니처 변경 0 (raise 1 회귀 0 의무)
+- `wikey-core/src/ollama-model-catalog.ts` (신규, 사용자 raise 3) — const `CLOUD_MODEL_CATALOG` (PoC §0 SUMMARY §1 LOCK 5 model + capabilities + context length) + `isCloudModel(modelId): boolean` helper. 단일 source. 하드코딩 금지 LOCK 영구 룰 (`feedback_no_hardcoding_general.md`) 정합 — catalog 변경 시 본 file 1곳만 수정.
+- `wikey-core/src/provider-defaults.ts` — `PROVIDER_CONTEXT_BUDGETS` 에 ollama-cloud 5 model context length 추가 (M3 unknown 은 default 32K fallback, PoC §0 §6 항목 5 mirror). `PROVIDER_CHAT_DEFAULTS.ollama-cloud` 슬롯 (Step E benchmark winner 결정 후 채움, 임시 default = `'deepseek-v3.1:671b-cloud'`).
+- `wikey-core/src/auth-resolver.ts` — `SubscriptionProvider` 재정의 (PoC §0 §3 결과: ollama-cloud 가 SSH+signin auth → subscription path **없음** → `Exclude<LLMProvider, 'ollama' | 'ollama-cloud'>` 로 단순 확장). 단 별 type `OllamaCloudProvider` 신설 X — `'ollama-cloud'` literal 직접 사용.
 
 **3a 회귀**: `npm test` (wikey-core + wikey-obsidian fresh) / `npm run build` / `./scripts/validate-wiki.sh`
 
-**3b BLUE**: `callOllama` / `callOllamaCloud` 의 공통 로직 (jsonMode 분기 / temperature / timeout) extract — 함수 분해 50+ LOC 검토. Naming: `callOllama` (local) vs `callOllamaCloud` (cloud) 명시 구분. DRY: `buildOllamaPayload(opts, isCloud)` helper 추출 검토.
+**3b BLUE**: `callOllama` 안 cloud 분기 helper extract 검토 — 함수 분해 50+ LOC 검토. Naming: `dispatchOllamaModel(modelId, opts)` helper 만 추출 검토 (cloud / local 동일 endpoint 라 분기 ≤ 10 LOC 예상 → extract 불필요 가능성). DRY: `buildOllamaPayload(opts)` helper 가 이미 있다면 그대로 재사용 + cloud-only post-process (M5 markdown wrap strip) 만 추가.
 
 ---
 
