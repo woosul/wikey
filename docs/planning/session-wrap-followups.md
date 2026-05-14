@@ -1,34 +1,29 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-15 session 45 종결 — §5.6.6 Subscription REST direct paradigm Step A0~H 완전 종결 + live UX series 9건 + credentials.json reference syntax**. Step A0 = `APPROVED_LOCAL_ONLY`. 9 commit push (`4f85ef5..a3bf978`).
+> 최신 갱신: **2026-05-15 session 46 종결 — §5.6.6.I wikey 내장 Google OAuth sign-in flow paradigm 한계 발견 후 완전 원복 (옵션 A 사용자 결정)**.
 >
-> ## 다음 세션 첫 액션 (Session 46) — §5.6.6.I wikey 내장 Google OAuth sign-in flow (사용자 결정 2026-05-15)
+> ## 다음 세션 첫 액션 (Session 47) — Phase 5 잔여 3 subject 우선순위 결정
 >
-> **배경 (Session 45 마지막 진단)**:
-> - 사용자 본인 GCP project (`n8n-starter-480602`) 의 `Obsidian` Desktop app client (`818938387936-adti...`) 발급 + credentials.json 등록 완료
-> - 그러나 `~/.gemini/oauth_creds.json` 의 token audience = **`681255809395-***`** (gemini CLI 공용 hardcoded client) — 사용자 본인 client 와 mismatch
-> - gemini CLI `auth logout && auth login` 으로는 client 변경 불가 (CLI bundle 안 hardcoded)
-> - 사용자 본인 quota 추적 = **wikey 내장 sign-in flow 구현 필수** — paradigm 분리
+> **Phase 5 잔여**: §5.5 / §5.8 / §5.9 (3 subject). Session 47 첫 turn 에서 master 가 사용자에게 우선순위 raise + 진입 결정.
 >
-> **§5.6.6.I 구현 spec (Session 46 plan)**:
-> 1. **Settings UI** — LLM Model Authentication > Google block 안 "Sign in with Google (wikey)" 버튼 추가 (Auth Mode = Subscription + Subscription Mode = REST 일 때만 노출)
-> 2. **OAuth flow helper** — `wikey-obsidian/src/oauth-google-signin.ts` 신규:
->    - `http.createServer` 임시 loopback callback server (`http://127.0.0.1:<random-port>/oauth/callback`)
->    - `crypto.randomBytes` state + PKCE code_verifier/challenge (Desktop app PKCE OAuth 2.0)
->    - browser open via `shell.openExternal(authUrl)`
->    - callback code → `oauth2.googleapis.com/token` POST → 새 access_token + refresh_token (audience = 사용자 client_id)
-> 3. **Token storage 별 path** — `~/.config/wikey/google-oauth.json` 신규. wikey-core 의 `GoogleRESTClient.loadToken` 분기:
->    - 사용자 client 사용 시 (`process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID !== gemini-cli-builtin-default`) → wikey path
->    - default 시 → 기존 `~/.gemini/oauth_creds.json` (회귀 0)
-> 4. **회귀 0 보존** — Spec I7. 일반 사용자는 sign-in 버튼 안 누르면 기존 paradigm (gemini CLI token 차용) 그대로
-> 5. **견적**: ~150 LOC plugin + ~40 LOC wikey-core path 분기 + test 5~10 case
+> ### Session 46 산출물 (§5.6.6.I ABANDONED)
 >
-> **선행 작업 (사용자, GCP Console)**:
-> - `Obsidian` client 발급 완료 ✓
-> - n8n-starter project 의 `cloudaicompanion.googleapis.com` API 활성화 ✓
-> - OAuth consent screen: testing user 에 woosul@gmail.com 추가 의무 (`https://console.cloud.google.com/apis/credentials/consent?project=n8n-starter-480602`)
+> **paradigm 한계 발견** — `cloudcode-pa.googleapis.com` 은 **audience-restricted endpoint** (Google internal API, hardcoded gemini CLI client `681255809395-***` 만 권한). 사용자 본인 OAuth client (`818938387936-adti...`) 의 token 으로는 **항상 403** (project ID 무관, 권한 부여 무관).
 >
-> **§5.6.6 완전 종결 후 Phase 5 잔여**: §5.5 / §5.8 / §5.9 (3 subject).
+> 구현 진행 → 라이브 검증 → paradigm 한계 발견 → 사용자 결정 (옵션 A) **완전 원복**. 회귀 0 보장, §5.6.6 본체 paradigm (gemini CLI token 차용, audience=681255809395) 유지.
+>
+> 상세 evidence: [`docs/sessions/phase-5/phase-5-resultx-5.6.6.I-google-oauth-signin-abandoned-2026-05-15.md`](../sessions/phase-5/phase-5-resultx-5.6.6.I-google-oauth-signin-abandoned-2026-05-15.md).
+>
+> ### 별 cycle 의제 (Session 47+ — 사용자 결정 의무, 우선순위 X)
+>
+> §5.6.6.I 폐기로 인한 paradigm 옵션 (사용자 wallet quota 추적 의지가 있을 때):
+> - **(B) generativelanguage.googleapis.com paradigm shift** — public Google AI API endpoint. user OAuth token + project ID → user wallet quota ✓. free tier 50 req/day (gemini-2.5-flash). 구현 견적 ~50 LOC endpoint 변경. **세션 46 코드 (oauth-google-signin.ts) 가 재사용 가능 — 별도 cycle 진입 시 git history 에서 복원**.
+> - **(C) Vertex AI aiplatform.googleapis.com** — user OAuth + project. 유료 (free tier 없음). user wallet ✓.
+> - **(X) API key path 강조** — Google AI Studio key 발급 (§5.6.4 path). 가장 단순. user wallet ✓.
+>
+> ### 별 cycle (§5.6.6 본체, REST path 무관)
+> - chat panel `handleSend` dispatcher (search + rerank + synthesis chain) 일부 분기 issue
+> - 7-Option burst quota 우회 옵션 ((3) sub-call delay / (4) Advanced query tuning OFF) — 사용자 UI 토글로 즉시 가능
 >
 > **별 cycle (REST path 무관)**:
 > - chat panel `handleSend` dispatcher (search + rerank + synthesis chain) 일부 분기 issue
