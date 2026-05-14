@@ -2056,10 +2056,11 @@ class ObsidianHttpClient implements HttpClient {
 /**
  * §5.6.6 v0.7 — resolve vendor OAuth client_id/secret. Priority:
  *   1. process.env (already set by tests / CI)
- *   2. ~/.config/wikey/credentials.json — `gemini.{oauthClientId, oauthClientSecret,
- *      cloudProject}` (user secret 격리, 2026-05-15 user request).
- *   3. wikey.conf (Git tracked) — non-secret env vars only.
- *   4. Vendor CLI bundle grep (fallback — extracted PUBLIC values, not committed).
+ *   2. wikey.conf (Git tracked) — single env entrypoint. Supports
+ *      `${credentials.<dot.path>}` reference syntax that pulls the actual
+ *      value from `~/.config/wikey/credentials.json` (secret 격리).
+ *      Plain literal values (non-secret) also supported.
+ *   3. Vendor CLI bundle grep (fallback — extracted PUBLIC values).
  *
  * Failure is non-fatal — the corresponding REST client throws `auth-missing`
  * at first call when env stays unset.
@@ -2069,33 +2070,39 @@ function bootstrapSubscriptionOAuthEnv(vaultBasePath?: string): void {
   const os = require('node:os') as typeof import('node:os')
   const path = require('node:path') as typeof import('node:path')
 
-  // Priority 2 — ~/.config/wikey/credentials.json (user secret 격리).
-  try {
-    const credPath = path.join(os.homedir(), '.config', 'wikey', 'credentials.json')
-    if (fs.existsSync(credPath)) {
-      const cred = JSON.parse(fs.readFileSync(credPath, 'utf-8')) as {
-        gemini?: { oauthClientId?: string; oauthClientSecret?: string; cloudProject?: string }
-      }
-      const g = cred.gemini ?? {}
-      if (g.oauthClientId && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID) {
-        process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID = g.oauthClientId
-      }
-      if (g.oauthClientSecret && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET) {
-        process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET = g.oauthClientSecret
-      }
-      if (g.cloudProject && !process.env.GOOGLE_CLOUD_PROJECT) {
-        process.env.GOOGLE_CLOUD_PROJECT = g.cloudProject
-      }
-    }
-  } catch { /* credentials.json read error — fall through */ }
-
-  // Priority 3 — wikey.conf (Git tracked, non-secret only).
+  // Priority 2 — wikey.conf (entrypoint) + `${credentials.<path>}` reference.
   try {
     const candidates = [vaultBasePath, process.cwd()].filter(Boolean) as string[]
     const confPath = candidates
       .map((dir) => path.join(dir, 'wikey.conf'))
       .find((p) => fs.existsSync(p))
     if (confPath) {
+      // §5.6.6 v0.7 (user request 2026-05-15) — wikey.conf 가 `${credentials.<path>}`
+      // reference syntax 지원. 실 값은 credentials.json (secret 격리), wikey.conf
+      // 는 단일 reference 만 (Git tracked OK). 사용자 mental model: wikey.conf 가
+      // env 매핑의 단일 진입점, credentials.json 은 storage backend.
+      let credJsonCache: Record<string, unknown> | null = null
+      const credPath = path.join(os.homedir(), '.config', 'wikey', 'credentials.json')
+      try {
+        if (fs.existsSync(credPath)) {
+          credJsonCache = JSON.parse(fs.readFileSync(credPath, 'utf-8')) as Record<string, unknown>
+        }
+      } catch { /* credentials.json read error */ }
+      const resolveCredentialsPath = (dotPath: string): string | undefined => {
+        if (!credJsonCache) return undefined
+        const segs = dotPath.split('.')
+        let cur: unknown = credJsonCache
+        for (const seg of segs) {
+          if (cur && typeof cur === 'object' && seg in (cur as Record<string, unknown>)) {
+            cur = (cur as Record<string, unknown>)[seg]
+          } else {
+            return undefined
+          }
+        }
+        return typeof cur === 'string' ? cur : undefined
+      }
+      const REFERENCE_RE = /^\$\{credentials\.([\w.]+)\}$/
+
       const conf = fs.readFileSync(confPath, 'utf-8')
       for (const line of conf.split('\n')) {
         const trimmed = line.trim()
@@ -2103,18 +2110,17 @@ function bootstrapSubscriptionOAuthEnv(vaultBasePath?: string): void {
         const eq = trimmed.indexOf('=')
         if (eq === -1) continue
         const key = trimmed.slice(0, eq).trim()
-        const value = trimmed.slice(eq + 1).replace(/#.*$/, '').trim()
+        const rawValue = trimmed.slice(eq + 1).replace(/#.*$/, '').trim()
+        if (!rawValue) continue
+        // Resolve `${credentials.<dot.path>}` reference.
+        const refMatch = REFERENCE_RE.exec(rawValue)
+        const value = refMatch ? resolveCredentialsPath(refMatch[1]) : rawValue
         if (!value) continue
         if (
           key === 'WIKEY_GEMINI_OAUTH_CLIENT_ID' ||
           key === 'WIKEY_GEMINI_OAUTH_CLIENT_SECRET' ||
           key === 'WIKEY_OPENAI_OAUTH_CLIENT_ID' ||
           key === 'WIKEY_ANTHROPIC_OAUTH_CLIENT_ID' ||
-          // §5.6.6 v0.7 user request 2026-05-15 — route wikey REST to the user's
-          // own GCP project (instead of Code Assist's auto-assigned hidden
-          // `dependable-sentry-*` project). Read at runtime so the value is
-          // never embedded in wikey-core source. wikey-core's resolveProjectId
-          // uses process.env.GOOGLE_CLOUD_PROJECT first → skips loadCodeAssist.
           key === 'GOOGLE_CLOUD_PROJECT'
         ) {
           if (!process.env[key]) process.env[key] = value
