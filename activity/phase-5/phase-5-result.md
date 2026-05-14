@@ -4434,3 +4434,39 @@ Karpathy 4 원칙 cross-check:
 - **master CDP 실 ingest smoke 의무** — 사용자 raise "CDP smoke 왜 이런 검증 안 했어" 정당. UI 렌더만 검증 → 실 cycle (modal → Processing → wiki write) 까지 의무 (R6 처리 후 LOCK).
 
 → **§5.6.4 v0.7 종결**. **14 commit push 완료** (`6ead5fb..e68c53d` origin/master). Phase 5 잔여 = §5.5 / §5.6.5 (Ollama Cloud) / §5.8 / §5.9 (4 subject).
+
+
+## 5.6.5 Ollama Cloud — large-model integration + cross-provider benchmark ✅ 종결 (Session 43, 2026-05-14)
+
+> #provider-auth #ollama-cloud #benchmark #byoai #paradigm-shift #done
+
+상세 evidence: [`activity/phase-5/phase-5-resultx-5.6.5-ollama-cloud-2026-05-14.md`](./phase-5-resultx-5.6.5-ollama-cloud-2026-05-14.md). spec/todox v0.5 (paradigm v0.1 → v0.2 → v0.3 → v0.4 → v0.5 5 paradigm 진화 + 사용자 LOCK "다른 LLM과 동일한 구조").
+
+§5.6.4 종결 직후 Session 42 R1 사용자 raise (Ollama Pro 구독중) 정식 plan 진입. Session 43 단일 세션 종결 — paradigm v0.4 SSH+signin → **v0.5 Subscription+APIKey 통일** (cookie scrape paradigm 폐기).
+
+| 항목 | 결과 |
+|------|------|
+| 17 commit push | `b957122..2731353` origin/master |
+| paradigm shift | v0.4 SSH+signin → **v0.5 Subscription+APIKey** (사용자 LOCK 2026-05-14) |
+| 9-model benchmark | 9 × 7 × 6 × 3 = **1,134 cell**. winner gemini-2.5-flash 0.711 (5/6 task). kimi-k2.6 cloud 1위 (0.590), deepseek-v4-pro 3위 (0.588, canonicalize 2위 + latency 1위) |
+| Settings UI 통일 | `renderProviderSubsection` 공유 helper — 4 provider 동일 3-row 구조 (Auth Mode / Subscription / API Key) |
+| callOllama Bearer | `isCloudModel && AUTH_MODE='api' && API_KEY` 시 `Authorization: Bearer <key>` HTTP header 주입 |
+| cost section 정리 | scripts/cost-tracker + WikeyConfig.COST_LIMIT + Settings renderCostSection 삭제 (-792 LOC) |
+| 회귀 | wikey-core **1175 / 1178** PASS · wikey-obsidian **223 / 224** PASS · build 0 errors · validate-wiki PASS |
+| CDP smoke 라이브 | 4 entry PASS (H3 4 provider / Ollama Cloud 3 rows / Auth Mode dropdown / chip mounted) + 사용자 라이브 Test API Key PASS (commit 17 fix 후) |
+
+- [x] §5.6.5.1 — Ollama Cloud 대형 모델 통합 (Step A, commit `46c0f47`)
+- [x] §5.6.5.2 — jsonMode 처리 (Step C, commit `99cc94e`)
+- [x] §5.6.5.3 — Settings UI 4번째 subsection (Step B `ccae0db` → **v0.5 paradigm `653b204`**)
+- [x] §5.6.5.4 — Step D 벤치마크 9 model × 1,134 cell + multi-chapter report (commit `4420cbe`/`0b8e0ea`)
+- [x] §5.6.5.5 — 옵션 A v2 statusbar chip (commit `38a1d66`, paradigm v0.5 에서 5min poll 폐기 + 모델명만)
+- [x] §5.6.5.6 — cost section dead code 정리 (commit `932d547`, -792 LOC)
+- [x] **paradigm v0.5 shift** — Subscription+APIKey 통일 (commit `653b204`) + spec/todox/todo mirror (commit `f12ec5b`) + 라이브 Test fix (commit `2731353`)
+
+배운 점:
+- **paradigm shift 의 즉시 수용 가능 = code 결합도 낮음의 증거** — v0.4 cookie paradigm → v0.5 Subscription+APIKey 의 변환이 단일 commit (-9+-7 test 삭제 + 4 provider unification) 으로 완료. `renderProviderSubsection` 공유 helper 가 paradigm-agnostic 으로 설계된 결과.
+- **9-model benchmark 의 가치 = 향후 vendor 추가 시 baseline** — gemini-2.5-flash 5/6 task 우승은 wikey 도메인 한정. 새 모델 출시 시 동일 1,134-cell harness 로 비교 가능 (`scripts/benchmark-ollama-cloud.sh` + `wikey-core/src/scripts/benchmark-models.ts`).
+- **라이브 라이저 fix → 즉시 push 패턴** — `testApiConnection` switch default fail (1 line gap) 은 회귀 테스트에서 자연히 잡히지 않음 (Test 버튼 UI smoke 단위). 사용자 라이브 raise 의 가치 = UI-level 검증의 마지막 보루.
+- **`/api/tags` + Bearer header = ollama health + 인증 단순 검증** — ollama daemon (0.22+) 가 Bearer header 통과 + 200 응답. cloud endpoint 의 정확한 URL 명세가 명확하지 않은 상태에서 robust health check.
+
+→ **§5.6.5 v0.5 종결**. **17 commit push 완료** (`b957122..2731353` origin/master). Phase 5 잔여 = §5.5 / §5.8 / §5.9 (3 subject).
