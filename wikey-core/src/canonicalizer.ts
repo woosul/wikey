@@ -1,6 +1,6 @@
 import type { LLMClient } from './llm-client.js'
 import type {
-  CanonicalizedResult, Mention, WikiPage,
+  CanonicalizedResult, Mention, SubscriptionProvider, WikeyConfig, WikiPage,
 } from './types.js'
 // §5.10.4 D-wide: schema gate · anti-pattern detector · standard decomposition 모두 폐기.
 // canonicalizer = LLM 자율 type 분류 + canonicalizeSlug alias normalization 만.
@@ -16,6 +16,11 @@ import {
   DEFAULT_CEILING_MIN,
   type PromotionThresholdConfig,
 } from './promotion-config.js'
+import {
+  JSON_ONLY_PROMPT_PREFIX,
+  buildAdaptiveLlmOpts,
+  resolveJsonModeNative,
+} from './adaptive-json-mode.js'
 
 /**
  * Stage 3 Canonicalizer (D-wide). Single document-global LLM call that:
@@ -169,6 +174,15 @@ export interface CanonicalizeArgs {
    * 값 < 1 은 caller 책임 (loader 가 fallback 보장).
    */
   readonly promotionThreshold?: number
+  /**
+   * §5.6.4 commit 15 (2026-05-14): optional WikeyConfig for adaptive jsonMode
+   * dispatch. When present, canonicalizer LLM call looks up
+   * `CLI_OPTION_SUPPORT[provider][configuredAuthPath].jsonMode` — unsupported
+   * (anthropic/openai subscription) strips the jsonMode flag and prefixes the
+   * prompt with an 'Output ONLY valid JSON' instruction. Absent (default):
+   * legacy `jsonMode:true` behavior — preserves existing test expectations.
+   */
+  readonly config?: WikeyConfig
 }
 
 interface RawCanonical {
@@ -181,7 +195,7 @@ interface RawCanonical {
 export async function canonicalize(args: CanonicalizeArgs): Promise<CanonicalizedResult> {
   const { llm, mentions, existingEntityBases, existingConceptBases,
           sourceFilename, rawSourceFilename, sourcePageBase, today, guideHint, provider, model, userAliases,
-          deterministic, overridePrompt, sourceBody, promotionThreshold } = args
+          deterministic, overridePrompt, sourceBody, promotionThreshold, config } = args
 
   if (mentions.length === 0) {
     return { entities: [], concepts: [], dropped: [] }
@@ -192,7 +206,7 @@ export async function canonicalize(args: CanonicalizeArgs): Promise<Canonicalize
     sourceFilename, guideHint, overridePrompt,
   })
 
-  const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
+  const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic, config)
   return assembleCanonicalResult(
     raw, mentions, sourceFilename, rawSourceFilename, sourcePageBase, today,
     userAliases, sourceBody, promotionThreshold,
@@ -691,13 +705,15 @@ function computeDropReason(mention: Mention): string {
 async function callLLMWithRetry(
   llm: LLMClient, prompt: string, provider: string, model: string,
   deterministic?: boolean,
+  config?: WikeyConfig,
 ): Promise<RawCanonical> {
   const detOpts = deterministic ? { temperature: 0, seed: 42 } : {}
+  // §5.6.4 commit 15: see adaptive-json-mode.ts for matrix + fallback rules.
+  const jsonModeNative = resolveJsonModeNative(provider, config)
+  const effectivePrompt = jsonModeNative ? prompt : `${JSON_ONLY_PROMPT_PREFIX}${prompt}`
   for (let attempt = 0; attempt <= MAX_JSON_RETRIES; attempt++) {
-    const llmOpts = provider === 'gemini'
-      ? { provider: provider as any, model, responseMimeType: 'application/json' as const, jsonMode: true, ...detOpts }
-      : { provider: provider as any, model, jsonMode: true, ...detOpts }
-    const response = await llm.call(prompt, llmOpts)
+    const llmOpts = buildAdaptiveLlmOpts(provider, model, jsonModeNative, detOpts)
+    const response = await llm.call(effectivePrompt, llmOpts)
     const parsed = extractJsonBlock(response)
     if (parsed) return parsed
   }

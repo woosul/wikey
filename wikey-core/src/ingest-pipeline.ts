@@ -59,6 +59,11 @@ import {
   EXAMPLE_ORG_BASE, EXAMPLE_PRODUCT_BASE, EXAMPLE_CONCEPT_ALIAS,
 } from './example-placeholders.js'
 import type { Mention, EntityType, ConceptType } from './types.js'
+import {
+  JSON_ONLY_PROMPT_PREFIX,
+  buildAdaptiveLlmOpts,
+  resolveJsonModeNative,
+} from './adaptive-json-mode.js'
 import { PROVIDER_VISION_DEFAULTS } from './provider-defaults.js'
 import { stripEmbeddedImages, countEmbeddedImages } from './rag-preprocess.js'
 import { computeCacheKey, getCached, setCached } from './convert-cache.js'
@@ -587,12 +592,12 @@ export async function ingest(
     onProgress?.({ step: 2, total: 4, subStep: 0, subTotal: 3, message: `Summary (${model}) [FULL]` })
     // Phase 5 §5.8.1: LLM prompt 로 전달되는 filename 은 sanitize 된 버전 사용.
     const tSummary0 = Date.now()
-    const summaryParsed = await callLLMForSummary(llm, content, llmSourceFilename, indexContent, provider, model, promptTemplate, deterministic)
+    const summaryParsed = await callLLMForSummary(llm, content, llmSourceFilename, indexContent, provider, model, promptTemplate, deterministic, config)
     log(`stage 2.1 summary done in ${Date.now() - tSummary0}ms (FULL, ${content.length} chars)`)
 
     onProgress?.({ step: 2, total: 4, subStep: 1, subTotal: 3, message: `Extracting mentions (${model}) [FULL]` })
     const tMentions0 = Date.now()
-    const rawMentions = await extractMentions(llm, content, llmSourceFilename, provider, model, undefined, deterministic, stage2Template)
+    const rawMentions = await extractMentions(llm, content, llmSourceFilename, provider, model, undefined, deterministic, stage2Template, config)
     log(`stage 2.2 mention extraction done in ${Date.now() - tMentions0}ms (FULL, ${rawMentions.length} mentions)`)
 
     // §5.21 v0.5 — Stage 2 pre-filter (사용자 raise: Stage 1 over-emit 자원 낭비).
@@ -615,6 +620,7 @@ export async function ingest(
       // §5.11 promotion threshold (FULL): deterministic Layer 2 gate (substring count ≥ N in body).
       sourceBody: content,
       promotionThreshold,
+      config,
       log,
     })
   } else {
@@ -633,7 +639,7 @@ export async function ingest(
     const summaryContent = isLocal ? truncateSource(sourceContent) : sourceContent
     // Phase 5 §5.8.1: LLM prompt 로 전달되는 filename 은 sanitize 된 버전 사용.
     const tSegSummary0 = Date.now()
-    const summaryParsed = await callLLMForSummary(llm, summaryContent, llmSourceFilename, indexContent, provider, model, promptTemplate, deterministic)
+    const summaryParsed = await callLLMForSummary(llm, summaryContent, llmSourceFilename, indexContent, provider, model, promptTemplate, deterministic, config)
     log(`stage 2.1 summary done in ${Date.now() - tSegSummary0}ms (SEGMENTED) — index_additions=${summaryParsed.index_additions?.length ?? 0}`)
 
     const allMentions: Mention[] = []
@@ -649,7 +655,7 @@ export async function ingest(
       const peer = formatPeerContext(sectionIndex, section.idx, 300)
       const content = buildSectionWithPeer(peer, section, isLocal)
       try {
-        const mentions = await extractMentions(llm, content, llmSourceFilename, provider, model, section.idx, deterministic, stage2Template)
+        const mentions = await extractMentions(llm, content, llmSourceFilename, provider, model, section.idx, deterministic, stage2Template, config)
         allMentions.push(...mentions)
         sectionOk++
       } catch (err) {
@@ -681,6 +687,7 @@ export async function ingest(
       // — per-section 합산이 아닌 본문 전체가 substring count 의 ground truth.
       sourceBody: sourceContent,
       promotionThreshold,
+      config,
       log,
     })
   }
@@ -1067,9 +1074,10 @@ async function callLLMForSummary(
   llm: LLMClient, sourceContent: string, sourceFilename: string,
   indexContent: string, provider: string, model: string,
   promptTemplate?: string, deterministic?: boolean,
+  config?: WikeyConfig,
 ): Promise<IngestRawResult> {
   const prompt = buildIngestPrompt(sourceContent, sourceFilename, indexContent, promptTemplate)
-  const parsed = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
+  const parsed = await callLLMWithRetry(llm, prompt, provider, model, deterministic, config)
   // §5.13.C4: LLM emit drift 방어 — `source_page.filename` 의 `source-` prefix 누락
   //   또는 다른 prefix (raw-, archive- 등) 를 force normalize. assembleCanonicalResult
   //   의 sourcePageBase derive (normalizeBase) 보다 먼저 진행 → entity/concept `## 출처`
@@ -1123,12 +1131,14 @@ async function canonicalizeAndAssembleParsed(args: {
   sourceBody: string
   /** §5.15.B: page promotion threshold (`.wikey/promotion-threshold.yaml` 의 `default:`). */
   promotionThreshold: number
+  /** §5.6.4 commit 15: adaptive jsonMode dispatch for canonicalizer LLM call. */
+  config?: WikeyConfig
   log: (msg: string) => void
 }): Promise<IngestRawResult> {
   const {
     llm, mentions, existingEntityBases, existingConceptBases,
     llmSourceFilename, rawSourceFilename, summaryParsed, today, guideHint, provider, model,
-    userAliases, deterministic, stage3OverridePrompt, sourceBody, promotionThreshold, log,
+    userAliases, deterministic, stage3OverridePrompt, sourceBody, promotionThreshold, config, log,
   } = args
   const tCanon0 = Date.now()
   const sourcePageBase = normalizeBase(summaryParsed.source_page.filename)
@@ -1142,6 +1152,7 @@ async function canonicalizeAndAssembleParsed(args: {
     overridePrompt: stage3OverridePrompt,
     sourceBody,
     promotionThreshold,
+    config,
   })
   log(`stage 2.3 canonicalize done in ${Date.now() - tCanon0}ms — entities=${canon.entities.length}, concepts=${canon.concepts.length}, dropped=${canon.dropped.length}`)
   if (canon.dropped.length > 0) {
@@ -1168,13 +1179,14 @@ async function extractMentions(
   llm: LLMClient, chunkContent: string, sourceFilename: string,
   provider: string, model: string, chunkIdx?: number, deterministic?: boolean,
   promptTemplate?: string,
+  config?: WikeyConfig,
 ): Promise<Mention[]> {
   const template = promptTemplate ?? BUNDLED_STAGE2_MENTION_PROMPT
   const prompt = template
     .replaceAll('{{SOURCE_FILENAME}}', sourceFilename)
     .replaceAll('{{CHUNK_CONTENT}}', chunkContent)
 
-  const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic)
+  const raw = await callLLMWithRetry(llm, prompt, provider, model, deterministic, config)
   const mentions = ((raw as any).mentions ?? []) as Array<{ name?: string; type_hint?: string; evidence?: string }>
   return mentions
     .filter((m) => m.name && m.name.trim().length > 0)
@@ -1302,13 +1314,15 @@ ${chunkContent}`
 export async function callLLMWithRetry(
   llm: LLMClient, prompt: string, provider: string, model: string,
   deterministic?: boolean,
+  config?: WikeyConfig,
 ): Promise<IngestRawResult> {
   const detOpts = deterministic ? { temperature: 0, seed: 42 } : {}
+  // §5.6.4 commit 15: see adaptive-json-mode.ts for matrix + fallback rules.
+  const jsonModeNative = resolveJsonModeNative(provider, config)
+  const effectivePrompt = jsonModeNative ? prompt : `${JSON_ONLY_PROMPT_PREFIX}${prompt}`
   for (let attempt = 0; attempt <= MAX_JSON_RETRIES; attempt++) {
-    const llmOpts = provider === 'gemini'
-      ? { provider: provider as any, model, responseMimeType: 'application/json' as const, jsonMode: true, ...detOpts }
-      : { provider: provider as any, model, jsonMode: true, ...detOpts }
-    const response = await llm.call(prompt, llmOpts)
+    const llmOpts = buildAdaptiveLlmOpts(provider, model, jsonModeNative, detOpts)
+    const response = await llm.call(effectivePrompt, llmOpts)
     const parsed = extractJsonBlock(response)
     if (parsed) return parsed
   }

@@ -50,6 +50,31 @@ function readAuthMode(provider: SubscriptionProvider, config: WikeyConfig): Auth
 }
 
 /**
+ * §5.6.4 commit 15 (2026-05-14) — Pure read of the user's configured AuthPath
+ * (subscription / api) without touching credential presence. Used by LLM call
+ * sites (canonicalizer, ingest-pipeline.callLLMWithRetry) to look up the
+ * `CLI_OPTION_SUPPORT[provider][path].jsonMode` cell *before* dispatching, so
+ * unsupported subscription paths can strip the `jsonMode` flag and rely on a
+ * prompt-instructed JSON contract instead of triggering a CLI error.
+ *
+ * Behavior:
+ *   - reads WikeyConfig.{PROVIDER}_AUTH_MODE
+ *   - legacy 'auto' → 'subscription' (matches `readAuthMode` migration)
+ *   - 'none' → 'subscription' (gate is `resolveAuthMode` — this helper is
+ *     a *path lookup* only, not a permission check)
+ *   - default (undefined) → 'subscription' (matches Settings UI default)
+ *
+ * Pure function — no fs / network / credential presence read.
+ */
+export function getConfiguredAuthPath(
+  provider: SubscriptionProvider,
+  config: WikeyConfig,
+): AuthPath {
+  const mode = readAuthMode(provider, config)
+  return mode === 'api' ? 'api' : 'subscription'
+}
+
+/**
  * §5.2 A2 v0.7 — 6-row truth table (auto polished out). Throws when the
  * requested mode lacks the required credential, or when mode='none'.
  *

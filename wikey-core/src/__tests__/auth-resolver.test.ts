@@ -25,6 +25,7 @@ import type { WikeyConfig, SubscriptionProvider } from '../types.js'
 import {
   resolveAuthMode,
   detectFallbackTrigger,
+  getConfiguredAuthPath,
   type CredentialPresence,
 } from '../auth-resolver.js'
 
@@ -126,6 +127,29 @@ describe('§5.6.4 v0.7 resolveAuthMode — 6-row truth table', () => {
     const cfg = makeConfig()
     const stripped: WikeyConfig = { ...cfg, GEMINI_AUTH_MODE: undefined }
     expect(resolveAuthMode('gemini', stripped, presence(true, false))).toBe('subscription')
+  })
+})
+
+describe('§5.6.4 commit 15 getConfiguredAuthPath — pure path lookup (no presence)', () => {
+  it('subscription mode → "subscription"', () => {
+    const cfg = makeConfig({ ANTHROPIC_AUTH_MODE: 'subscription' })
+    expect(getConfiguredAuthPath('anthropic', cfg)).toBe('subscription')
+  })
+
+  it('api mode → "api"', () => {
+    const cfg = makeConfig({ OPENAI_AUTH_MODE: 'api' })
+    expect(getConfiguredAuthPath('openai', cfg)).toBe('api')
+  })
+
+  it('undefined / missing AUTH_MODE defaults to "subscription"', () => {
+    const cfg = makeConfig()
+    const stripped: WikeyConfig = { ...cfg, GEMINI_AUTH_MODE: undefined }
+    expect(getConfiguredAuthPath('gemini', stripped)).toBe('subscription')
+  })
+
+  it('legacy "auto" value migrates to "subscription"', () => {
+    const cfg = makeConfig({ ANTHROPIC_AUTH_MODE: 'auto' as unknown as 'subscription' })
+    expect(getConfiguredAuthPath('anthropic', cfg)).toBe('subscription')
   })
 })
 
