@@ -13,6 +13,7 @@ import type WikeyPlugin from './main'
 import { ResetImpactModal } from './reset-modals'
 import { executeReset } from './commands'
 import { renderDeveloperUpdateItems } from './settings-tab-developer'
+import { renderOllamaCloudSubsection } from './settings-tab-ollama-cloud'
 
 /**
  * §5.6.4 v0.7 — provider subsection spec (single source of truth for the three
@@ -1261,6 +1262,30 @@ export class WikeySettingTab extends PluginSettingTab {
       signOutCommand: 'codex logout',
       detectSubscription: () => this.detectOpenAISubscription(),
     })
+
+    // §5.6.5 Step B — 4th subsection (Ollama Cloud).
+    // PoC §0 §3 paradigm: SSH+signin auth (no Auth Mode dropdown / no API Key
+    // row / no Endpoint URL row). Rendered via a dedicated helper rather than
+    // bolted onto ProviderSubsectionSpec to avoid 3 optional fields the
+    // shared helper never reads (Karpathy "no speculative flexibility").
+    renderOllamaCloudSubsection(containerEl, {
+      ollamaCliInstalled: this.detectOllamaCliInstalled(),
+      signinDetected: this.detectOllamaCloudSignin(),
+      onSignin: () => {
+        new GeminiAuthInstructionModal(
+          this.app,
+          'Sign in to Ollama Cloud',
+          'Run "ollama signin" in your terminal, complete the browser OAuth flow, then return here and reload Obsidian.',
+        ).open()
+      },
+      onSignout: () => {
+        new GeminiAuthInstructionModal(
+          this.app,
+          'Sign out',
+          'Run "ollama signout" in your terminal.',
+        ).open()
+      },
+    })
   }
 
   /**
@@ -1448,6 +1473,42 @@ export class WikeySettingTab extends PluginSettingTab {
       const credsPath = path.join(os.homedir(), '.codex', 'auth.json')
       const binaryPath = resolveCliBinary('openai')
       return fs.existsSync(credsPath) && fs.existsSync(binaryPath)
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * §5.6.5 Step B — sync detect for the `ollama` CLI binary on PATH. PoC §0 §0
+   * confirmed the CLI is the same binary used for local Ollama; presence here
+   * gates both Settings UI badge and the [Sign in] button (signin needs the
+   * CLI to invoke `ollama signin`).
+   */
+  private detectOllamaCliInstalled(): boolean {
+    try {
+      const cp = require('node:child_process') as typeof import('node:child_process')
+      const result = cp.spawnSync('command', ['-v', 'ollama'], { shell: true, encoding: 'utf-8' })
+      return result.status === 0 && (result.stdout ?? '').trim().length > 0
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * §5.6.5 Step B — Ollama Cloud signin detection via SSH key probe.
+   * PoC §0 §3 LOCK (2026-05-14): `ollama signin` registers the user's
+   * `~/.ollama/id_ed25519` public key with ollama.com OAuth. The private key
+   * file existing locally is the cheapest sync proxy for "user has run
+   * signin". OAuth state expiry surfaces later via `callOllama`'s
+   * `onAuthFallback({reason:'auth-missing'})` on the next request.
+   */
+  private detectOllamaCloudSignin(): boolean {
+    try {
+      const fs = require('node:fs') as typeof import('node:fs')
+      const os = require('node:os') as typeof import('node:os')
+      const path = require('node:path') as typeof import('node:path')
+      const sshKeyPath = path.join(os.homedir(), '.ollama', 'id_ed25519')
+      return fs.existsSync(sshKeyPath)
     } catch {
       return false
     }
