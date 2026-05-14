@@ -1,7 +1,7 @@
 /**
  * §5.21 Ingest pipeline mention guard — RED test suite (Step B).
  *
- * Spec source: `plan/phase-5/phase-5-spec-5.21-ingest-mention-guard.md` v0.3.
+ * Spec source: `docs/planning/phase-5/phase-5-spec-5.21-ingest-mention-guard.md` v0.3.
  * 7 acceptance criteria 1:1 mapping (AC-S1-1~4 + AC-S2-1~3).
  *
  * 현재 Step B 단계 — applyMentionGuard / parseWikilinksWithRanges 는 stub throw.

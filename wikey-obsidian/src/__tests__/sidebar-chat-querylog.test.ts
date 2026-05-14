@@ -1,7 +1,7 @@
 /**
  * §5.20 sidebar-chat query log hook — RED test suite (Step B).
  *
- * Spec source: `plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md` v0.2 (LOCK).
+ * Spec source: `docs/planning/phase-5/phase-5-spec-5.20-knowledge-gap-management.md` v0.2 (LOCK).
  *
  * 3 acceptance criteria for sidebar-chat-side helper `buildQueryLogEntry`:
  *   B-1: 'buildQueryLogEntry maps answer.length, citations.length, sources.length → entry shape'

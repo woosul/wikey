@@ -1,7 +1,7 @@
 /**
  * §5.19 Step B (RED) — Spec 4 wiki-refactoring (`getRefactoringSuggestions`).
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1 Spec 4
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1 Spec 4
  *
  * AC mapping (1:1):
  *   - AC-R4-1 → suggestion list (duplicates + lowUtility 두 카테고리)

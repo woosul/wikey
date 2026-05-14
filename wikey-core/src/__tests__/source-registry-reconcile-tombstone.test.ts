@@ -1,7 +1,7 @@
 /**
  * §5.16 Spec 2 (B2) — Stale tombstone reconcile (false tombstone 자동 복구).
  *
- * Source of truth: plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md v0.2 §1.2
+ * Source of truth: docs/planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md v0.2 §1.2
  *
  * Spec 2 Acceptance Scenarios → test 1:1 매핑:
  *   - AC-5 case A (Step "1" evidence): MarkItDown 109KB MD — disk 존재 + tombstone=true

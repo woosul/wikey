@@ -29,7 +29,7 @@ plan 작성 / 신규 issue 등록 / paradigm shift 검토 / architecture 결정 
 | # | 문서 | 역할 |
 |---|------|------|
 | 1 | [`wikey.schema.md`](../../wikey.schema.md) | 마스터 스키마 (Karpathy 철학, 단일 진실 소스) |
-| 2 | [`plan/plan-full.md`](../../plan/plan-full.md) | 전체 로드맵 + Phase 별 목표·핵심 spec 상세 |
+| 2 | [`docs/planning/plan-full.md`](../../docs/planning/plan-full.md) | 전체 로드맵 + Phase 별 목표·핵심 spec 상세 |
 | 3 | [`CLAUDE.md`](../../CLAUDE.md) | Claude Code 도구 사용 + 실행 체크리스트 |
 
 산출 plan 의 acceptance criteria 에 schema 일치 검증 항목 포함 의무.
@@ -39,7 +39,7 @@ plan 작성 / 신규 issue 등록 / paradigm shift 검토 / architecture 결정 
 설계 충돌 발생 시:
 
 ```
-wikey.schema.md > plan/plan-full.md > 본 task 의 새 제안
+wikey.schema.md > docs/planning/plan-full.md > 본 task 의 새 제안
 ```
 
 충돌 발견 시:

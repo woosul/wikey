@@ -1,7 +1,7 @@
 /**
  * §5.6.4.2 Step B — Gemini subscription wiring (LLMClient.callGemini routing).
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.3 Step B (B1~B6) +
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.3 Step B (B1~B6) +
  *       §3.3 AC-S1~S4 (Google) + §3.9 onAuthFallback wiring.
  *
  * v0.7 (user plan 2026-05-14) — 'auto' polished out. Subscription failures now

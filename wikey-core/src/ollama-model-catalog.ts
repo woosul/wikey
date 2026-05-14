@@ -2,7 +2,7 @@
  * §5.6.5 Step A — Ollama Cloud model catalog (single source of truth).
  *
  * Catalog locked from PoC §0 master direct probe (2026-05-14):
- *   plan/phase-5/fixtures/cycle-5.6.5-ollama-cloud-poc/SUMMARY.md §1
+ *   docs/planning/phase-5/fixtures/cycle-5.6.5-ollama-cloud-poc/SUMMARY.md §1
  *
  * Why a single file: catalog changes (new cloud models, removed models,
  * capability shifts) must edit exactly one location. Karpathy "Yours"

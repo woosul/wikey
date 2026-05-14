@@ -1,7 +1,7 @@
 /**
  * §5.16 Spec 3 (B3) — Panel refresh trigger 정합 (ingest 완료 후 자동 re-render).
  *
- * Source of truth: plan/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md v0.2 §1.3
+ * Source of truth: docs/planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md v0.2 §1.3
  *
  * Spec 3 Acceptance Scenarios → test 1:1 매핑:
  *   - AC-9 Happy path: runIngest success 완료 → refreshAuditPanel + refreshDashboard 호출

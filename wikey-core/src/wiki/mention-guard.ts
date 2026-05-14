@@ -1,7 +1,7 @@
 /**
  * §5.21 Ingest pipeline mention guard — post-process deterministic safety net.
  *
- * Single truth source: `plan/phase-5/phase-5-spec-5.21-ingest-mention-guard.md` v0.3.
+ * Single truth source: `docs/planning/phase-5/phase-5-spec-5.21-ingest-mention-guard.md` v0.3.
  *
  * Karpathy 4 principles:
  *   - Explicit: every wikilink transformation is logged (MentionGuardLogEntry).

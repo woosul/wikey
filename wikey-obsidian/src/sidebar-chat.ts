@@ -1111,15 +1111,15 @@ Click [[page name]] in answers to navigate to the wiki page.
           '• sources: one summary per original source\n' +
           '• analyses: query synthesis results\n\n' +
           'Why split: search accuracy + reuse + backlink graph\n' +
-          'Details: docs/ingest-decomposition.md',
+          'Details: docs/architecture/ingest-decomposition.md',
       },
     })
     wikiInfo.addEventListener('click', async () => {
-      const file = this.app.vault.getAbstractFileByPath('docs/ingest-decomposition.md')
+      const file = this.app.vault.getAbstractFileByPath('docs/architecture/ingest-decomposition.md')
       if (file) {
         await this.app.workspace.getLeaf(false).openFile(file as any)
       } else {
-        new Notice('docs/ingest-decomposition.md not found')
+        new Notice('docs/architecture/ingest-decomposition.md not found')
       }
     })
 

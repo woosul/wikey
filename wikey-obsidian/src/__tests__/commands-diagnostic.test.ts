@@ -1,7 +1,7 @@
 /**
  * §5.18 Step B (RED) — Spec 3 diagnostic command + MismatchDiagnosticModal
  *
- * Spec: plan/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.2 §1 Spec 3
+ * Spec: docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.2 §1 Spec 3
  *
  * Invariants under test:
  *   - I8: 신규 command `wikey-diagnose-citation-mismatches` registerCommands 등록.

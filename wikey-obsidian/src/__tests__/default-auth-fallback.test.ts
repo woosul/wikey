@@ -1,7 +1,7 @@
 /**
  * §5.6.4.2 Step B — `buildDefaultAuthFallback` Notice mapping.
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.3 Step B (B4).
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.3 Step B (B4).
  *
  * Asserts every AuthFallbackInfo.reason maps to an English-only Notice string
  * (system language LOCK 2026-05-12) and includes the provider name. The injection

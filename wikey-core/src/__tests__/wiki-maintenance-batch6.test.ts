@@ -1,7 +1,7 @@
 /**
  * §5.19 v0.4 Batch 6 fix — wiki-check report recursive feedback loop closure.
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.4
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.4
  *
  * Invariants under test:
  *   - `isWikiCheckReportPath` matches only `wiki/analyses/wiki-check-YYYY-MM-DD.md`.

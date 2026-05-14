@@ -1,8 +1,8 @@
 /**
  * §5.20 Knowledge Gap management — implementation (Step C + Step F sweep v0.3).
  *
- * Spec source: `plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md` v0.3 (LOCK).
- * Todox source: `plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md` v0.3.
+ * Spec source: `docs/planning/phase-5/phase-5-spec-5.20-knowledge-gap-management.md` v0.3 (LOCK).
+ * Todox source: `docs/planning/phase-5/phase-5-todox-5.20-knowledge-gap-management.md` v0.3.
  *
  * Invariants honored:
  *   I1 — local-only WikiFS interactions. No network IO inside this module.

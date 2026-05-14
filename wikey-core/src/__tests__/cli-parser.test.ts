@@ -2,7 +2,7 @@
  * §5.6.4.1 Step A3-1 — cli-parser RED (marker-based, v0.7 #1h H1).
  *
  * Plan reference:
- *   - plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §4.0.7, §5.2 A3-1
+ *   - docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §4.0.7, §5.2 A3-1
  *
  * 11 cases lock (v0.7 #1h H1):
  *   1~5  raw==clean parsing      (gemini-ok / gemini-noheader-ok / claude-ok / codex-ok-hi / codex-bodylike)

@@ -25,7 +25,7 @@ cd wikey
 ./scripts/setup.sh
 ```
 
-하나의 명령어로 설치 완료. 상세 가이드: [docs/getting-started.md](docs/getting-started.md)
+하나의 명령어로 설치 완료. 상세 가이드: [docs/guides/getting-started.md](docs/guides/getting-started.md)
 
 ### LLM 선택 (하나만 있으면 됩니다)
 
@@ -114,9 +114,9 @@ wikey/                          ← 이 폴더 = Obsidian 볼트 = Git 저장소
 
 | 문서 | 내용 |
 |------|------|
-| [설치 및 활용 가이드](docs/getting-started.md) | 초보자를 위한 단계별 가이드 |
-| [모델 선택 가이드](local-llm/model-selection-guide.md) | 프로바이더별 비교, 비용, 시나리오 |
-| [Phase 3 UX 아키텍처](plan/phase3-ux-architecture.md) | Obsidian 플러그인 → 웹 확장 계획 |
+| [설치 및 활용 가이드](docs/guides/getting-started.md) | 초보자를 위한 단계별 가이드 |
+| [모델 선택 가이드](docs/model/model-selection-guide.md) | 프로바이더별 비교, 비용, 시나리오 |
+| [Phase 3 UX 아키텍처](docs/planning/phase3-ux-architecture.md) | Obsidian 플러그인 → 웹 확장 계획 |
 
 ## 영감
 

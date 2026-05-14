@@ -2,7 +2,7 @@
  * §5.6.4.1 Step A3 — cli-spawn RED.
  *
  * Plan reference:
- *   - plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.2 A3
+ *   - docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.2 A3
  *
  * Spec — `spawnCliPrompt(provider, prompt, opts) → Promise<{stdout, stderr, exitCode}>`
  *   3 providers × spawn args:

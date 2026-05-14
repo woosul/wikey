@@ -1,7 +1,7 @@
 /**
  * §5.6.4 A5 / I11 — credentials.json migration round-trip (codex cycle #2 F3 fix).
  *
- * Spec ref: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.6.4 A5 I11
+ * Spec ref: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.6.4 A5 I11
  * (v0.2 → v0.3 migration + unknown-field preservation).
  *
  * Approach: exercise the *pure* `parseCredentialsPayload` / `serializeCredentialsPayload`

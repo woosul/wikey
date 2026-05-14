@@ -1,7 +1,7 @@
 /**
  * §5.19 Step B (RED) — Spec 1 wiki-status (`getWikiStatus`).
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1 Spec 1
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1 Spec 1
  *
  * AC mapping (1:1):
  *   - AC-S1-1 → "AC-S1-1: 6 metric 모두 number/null shape + 정확 count"

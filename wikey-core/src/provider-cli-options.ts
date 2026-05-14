@@ -1,7 +1,7 @@
 /**
  * §5.6.4 — LLMCallOptions × provider × auth-path support matrix.
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.7 (nested shape, 48 cells).
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.7 (nested shape, 48 cells).
  *
  * Sources for cell values:
  *   - gemini  --help (v0.40.1)  → only `-m <model>` flag forwards

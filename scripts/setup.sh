@@ -75,11 +75,11 @@ if command -v ollama &>/dev/null; then
   if ollama list 2>/dev/null | grep -q "wikey"; then
     ok "wikey 커스텀 모델 존재"
   else
-    if [ "$CHECK_ONLY" = false ] && [ -f "${PROJECT_DIR}/local-llm/Modelfile" ]; then
-      ollama create wikey -f "${PROJECT_DIR}/local-llm/Modelfile" 2>/dev/null
+    if [ "$CHECK_ONLY" = false ] && [ -f "${PROJECT_DIR}/docs/model/Modelfile" ]; then
+      ollama create wikey -f "${PROJECT_DIR}/docs/model/Modelfile" 2>/dev/null
       ok "wikey 커스텀 모델 생성"
     else
-      warn "wikey 커스텀 모델 없음 — ollama create wikey -f local-llm/Modelfile"
+      warn "wikey 커스텀 모델 없음 — ollama create wikey -f docs/model/Modelfile"
     fi
   fi
 else

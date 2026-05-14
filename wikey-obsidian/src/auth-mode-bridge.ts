@@ -1,7 +1,7 @@
 /**
  * §5.6.4 A5 — auth-mode bridge between Obsidian plugin Settings and wikey-core WikeyConfig.
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.4 / §5.2 A5.
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.4 / §5.2 A5.
  *
  * v0.7 (user plan 2026-05-14) — 'auto' polished out. AuthMode union becomes
  * `'none' | 'subscription' | 'api'`. Legacy 'auto' values from older configs

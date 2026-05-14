@@ -1,7 +1,7 @@
 /**
  * §5.19 cycle #4 — Finding 2 (signal propagation).
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.3 §1.5 AC-UI-6.
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.3 §1.5 AC-UI-6.
  *
  * Asserts every long-running core path (`getWikiStatus` / `runWikiCheck` /
  * `applyWikiRecovery` / `getRefactoringSuggestions`) honours the cooperative

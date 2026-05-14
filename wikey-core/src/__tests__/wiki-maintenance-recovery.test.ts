@@ -1,7 +1,7 @@
 /**
  * §5.19 Step B (RED) — Spec 3 wiki-recovery (`applyWikiRecovery`).
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1 Spec 3
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1 Spec 3
  *
  * AC mapping (1:1):
  *   - AC-W3-1 → §5.18 38-page dangling (`sha256:679cf2dd6db75e3a`) cleanup

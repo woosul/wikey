@@ -1,7 +1,7 @@
 /**
  * §5.20 sidebar-chat query log helper — GREEN implementation (Step C).
  *
- * Spec source: `plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md` v0.2 (LOCK).
+ * Spec source: `docs/planning/phase-5/phase-5-spec-5.20-knowledge-gap-management.md` v0.2 (LOCK).
  *
  * `buildQueryLogEntry` normalizes a (question, query result) pair into the I3
  * 5-key `QueryLogEntry` shape. Privacy minimize — answer body / wiki path /

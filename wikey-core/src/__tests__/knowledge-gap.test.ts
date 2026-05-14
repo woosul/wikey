@@ -1,8 +1,8 @@
 /**
  * §5.20 Knowledge Gap management — RED test suite (Step B).
  *
- * Spec source: `plan/phase-5/phase-5-spec-5.20-knowledge-gap-management.md` v0.2 (LOCK).
- * Todox source: `plan/phase-5/phase-5-todox-5.20-knowledge-gap-management.md` v0.2.
+ * Spec source: `docs/planning/phase-5/phase-5-spec-5.20-knowledge-gap-management.md` v0.2 (LOCK).
+ * Todox source: `docs/planning/phase-5/phase-5-todox-5.20-knowledge-gap-management.md` v0.2.
  *
  * 13 acceptance criteria 1:1 mapping:
  *   Spec 1 (query log capture + privacy)  — AC-S1-1 ~ AC-S1-5

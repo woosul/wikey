@@ -1,7 +1,7 @@
 /**
  * §5.19 Step B (RED) — Spec 2 wiki-check (`runWikiCheck` orchestrator).
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1 Spec 2
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1 Spec 2
  *
  * AC mapping (1:1):
  *   - AC-C2-1 → "AC-C2-1: validate-wiki exit code 와 동일 verdict + finding list"

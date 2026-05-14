@@ -1,7 +1,7 @@
 /**
  * §5.6.4.5 Step E — 3-provider integration smoke (routing matrix).
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.6 E2
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.6 E2
  *       (routing matrix 6 case = 3 SubscriptionProvider × 2 AuthPath).
  *
  * Why this exists (separate from per-provider 16-case suites): the per-provider

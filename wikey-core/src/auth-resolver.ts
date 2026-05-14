@@ -1,7 +1,7 @@
 /**
  * §5.6.4 — auth mode resolver + fallback trigger detector.
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.2 / §5.2 A2.
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.2 / §5.2 A2.
  *
  * `resolveAuthMode` collapses the user's per-provider mode preference
  * (`none` / `subscription` / `api`) + credential presence into the binary

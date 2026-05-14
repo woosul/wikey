@@ -18,7 +18,7 @@
 #   - source-path 는 raw/ 하위
 #   - ~/.claude/skills/obsidian-cdp/scripts/wikey-cdp.py 헬퍼 존재 (reference_obsidian_cdp_e2e.md)
 #
-# 출력: activity/ablation-<slug>-<date>.md (4 실험 결과 + variance 성분 파이차트 데이터)
+# 출력: docs/sessions/ablation-<slug>-<date>.md (4 실험 결과 + variance 성분 파이차트 데이터)
 #
 # 이 스크립트는 §4.5.1.5 v2 의 ablation gate 입력:
 #   - 섹션 경계 기여 > 50% → 30-run PMS main 진행
@@ -36,7 +36,7 @@ usage() {
 
 옵션:
   -n N       각 실험 run 수 (기본 10)
-  -o PATH    출력 경로 (기본 activity/ablation-<slug>-<date>.md)
+  -o PATH    출력 경로 (기본 docs/sessions/ablation-<slug>-<date>.md)
   -h, --help
 EOF
   exit 0
@@ -78,7 +78,7 @@ if [[ -z "$OUTPUT_PATH" ]]; then
   src_basename=$(basename "$SOURCE_PATH")
   src_slug=$(echo "${src_basename%.*}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
   date_str=$(date '+%Y-%m-%d')
-  OUTPUT_PATH="activity/ablation-${src_slug}-${date_str}.md"
+  OUTPUT_PATH="docs/sessions/ablation-${src_slug}-${date_str}.md"
 fi
 ABS_OUTPUT="${PROJECT_DIR}/${OUTPUT_PATH}"
 
@@ -91,7 +91,7 @@ echo
 # 이 실험은 기존 measure-determinism.sh 가 이미 수행하는 것과 동일 —
 # 캐시가 적용되어 있어 source 변환은 자동으로 캐시 히트. 따라서 measure-determinism.sh 재사용.
 echo "[ablation] 실험 1: Frozen markdown (measure-determinism.sh 위임)..."
-"${SCRIPT_DIR}/measure-determinism.sh" "$SOURCE_PATH" -n "$N_RUNS" -o "activity/ablation-exp1-${src_slug}-${date_str}.md" || {
+"${SCRIPT_DIR}/measure-determinism.sh" "$SOURCE_PATH" -n "$N_RUNS" -o "docs/sessions/ablation-exp1-${src_slug}-${date_str}.md" || {
   echo "[ablation] 실험 1 실패" >&2
   exit 3
 }
@@ -117,7 +117,7 @@ cat > "$ABS_OUTPUT" <<EOF
 Docling 변환본은 cache 히트로 고정. 매 run 마다 \`extractMentions\` → \`canonicalize\` 만 반복.
 전처리 variance 가 제거된 상태의 순수 LLM variance 측정.
 
-결과: \`activity/ablation-exp1-${src_slug}-${date_str}.md\` 참조 (measure-determinism.sh 출력).
+결과: \`docs/sessions/ablation-exp1-${src_slug}-${date_str}.md\` 참조 (measure-determinism.sh 출력).
 
 ## 실험 2: Extraction-only (미구현)
 

@@ -18,7 +18,7 @@
  *   4. best-fit   — weighted aggregate: W1=0.50 accuracy + W2=0.25 semantic +
  *                   W3=0.10 latency + W4=0.05 cost + W5=0.10 community.
  *                   Tie-break = W4 (cost).
- *   5. report     — docs/ollama-cloud-benchmark-result.md.
+ *   5. report     — docs/model/ollama-cloud-benchmark-result.md.
  *
  * Spec mirror: phase-5-todox-5.6.5-ollama-cloud.md §3 (Q3=g hybrid, Q4=j committee).
  * Master LOCK: 9 model (8 original + deepseek-v4-pro:cloud append) + 7 fixture +
@@ -459,7 +459,7 @@ async function generateOneGolden(
 }
 
 export async function runGoldenPhase(rootDir: string, client: LLMClient): Promise<{ count: number; dissents: number }> {
-  const goldenDir = join(rootDir, 'plan/phase-5/fixtures/cycle-5.6.5-benchmark-golden')
+  const goldenDir = join(rootDir, 'docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-golden')
   mkdirSync(goldenDir, { recursive: true })
   let dissents = 0
   let count = 0
@@ -531,7 +531,7 @@ export async function runMeasurementPhase(
   client: LLMClient,
   filter?: { onlyModels?: readonly string[] },
 ): Promise<{ total: number; ok: number; errors: number }> {
-  const measureDir = join(rootDir, 'plan/phase-5/fixtures/cycle-5.6.5-benchmark-measurements')
+  const measureDir = join(rootDir, 'docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-measurements')
   mkdirSync(measureDir, { recursive: true })
   const models = filter?.onlyModels
     ? BENCHMARK_MODELS.filter((m) => filter.onlyModels!.includes(m.id))
@@ -636,9 +636,9 @@ ${cell.response.slice(0, 8000)}`
 }
 
 export async function runJudgePhase(rootDir: string, client: LLMClient): Promise<{ scored: number; skipped: number }> {
-  const measureDir = join(rootDir, 'plan/phase-5/fixtures/cycle-5.6.5-benchmark-measurements')
-  const goldenDir = join(rootDir, 'plan/phase-5/fixtures/cycle-5.6.5-benchmark-golden')
-  const judgeDir = join(rootDir, 'plan/phase-5/fixtures/cycle-5.6.5-benchmark-judge')
+  const measureDir = join(rootDir, 'docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-measurements')
+  const goldenDir = join(rootDir, 'docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-golden')
+  const judgeDir = join(rootDir, 'docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-judge')
   mkdirSync(judgeDir, { recursive: true })
   let scored = 0
   let skipped = 0
@@ -854,7 +854,7 @@ export function buildReport(
 // ── CLI orchestration (when run as main) ───────────────────────────────────
 
 function loadAllMeasurements(rootDir: string): MeasurementCell[] {
-  const dir = join(rootDir, 'plan/phase-5/fixtures/cycle-5.6.5-benchmark-measurements')
+  const dir = join(rootDir, 'docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-measurements')
   if (!existsSync(dir)) return []
   return readdirSync(dir)
     .filter((f) => f.endsWith('.json') && !f.endsWith('.judge.json'))
@@ -862,7 +862,7 @@ function loadAllMeasurements(rootDir: string): MeasurementCell[] {
 }
 
 function loadAllJudges(rootDir: string): JudgeScore[] {
-  const dir = join(rootDir, 'plan/phase-5/fixtures/cycle-5.6.5-benchmark-judge')
+  const dir = join(rootDir, 'docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-judge')
   if (!existsSync(dir)) return []
   return readdirSync(dir)
     .filter((f) => f.endsWith('.judge.json'))
@@ -870,7 +870,7 @@ function loadAllJudges(rootDir: string): JudgeScore[] {
 }
 
 function countGoldenFiles(rootDir: string): number {
-  const dir = join(rootDir, 'plan/phase-5/fixtures/cycle-5.6.5-benchmark-golden')
+  const dir = join(rootDir, 'docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-golden')
   if (!existsSync(dir)) return 0
   return readdirSync(dir).filter((f) => f.endsWith('.json')).length
 }
@@ -933,7 +933,7 @@ async function main(): Promise<void> {
         judgeCount: judges.length,
         piiHitsOnReport: piiOnReport,
       })
-      const reportPath = join(rootDir, 'docs/ollama-cloud-benchmark-result.md')
+      const reportPath = join(rootDir, 'docs/model/ollama-cloud-benchmark-result.md')
       writeFileSync(reportPath, report)
       process.stdout.write(`\nReport written: ${reportPath} (${report.split('\n').length} lines)\n`)
       process.stdout.write(`Winner: ${aggregates[0]?.model ?? 'NONE'} weighted=${aggregates[0]?.weighted.toFixed(3) ?? 'N/A'}\n`)

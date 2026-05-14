@@ -12,7 +12,7 @@
 #
 # 출력:
 #   - 콘솔: 각 run의 entities/concepts/total + 통계 (mean/std/CV)
-#   - 파일: activity/determinism-<source-name>-<date>.md (Markdown 표)
+#   - 파일: docs/sessions/determinism-<source-name>-<date>.md (Markdown 표)
 #
 # 종료 코드:
 #   0  성공
@@ -31,7 +31,7 @@ usage() {
 
 옵션:
   -n N                반복 횟수 (기본 5)
-  -o PATH             출력 Markdown 경로 (기본 activity/determinism-<name>-<date>.md)
+  -o PATH             출력 Markdown 경로 (기본 docs/sessions/determinism-<name>-<date>.md)
   -f, --force         크기 가드 우회 (15KB 미만/chunk<3 예상 소스)
   -d, --determinism   §4.5.1.6.1 — plugin.settings.extractionDeterminism=true 강제
                       (runs 동안 temperature=0 + seed=42 주입, 종료 시 원복)
@@ -107,7 +107,7 @@ if [[ -z "$OUTPUT_PATH" ]]; then
   src_basename=$(basename "$SOURCE_PATH")
   src_slug=$(echo "${src_basename%.*}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
   date_str=$(date '+%Y-%m-%d')
-  OUTPUT_PATH="activity/determinism-${src_slug}-${date_str}.md"
+  OUTPUT_PATH="docs/sessions/determinism-${src_slug}-${date_str}.md"
 fi
 ABS_OUTPUT="${PROJECT_DIR}/${OUTPUT_PATH}"
 

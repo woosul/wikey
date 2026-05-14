@@ -2,7 +2,7 @@
  * §5.6.4 v0.7 — auth-resolver test (user plan 2026-05-14).
  *
  * Plan reference:
- *   - plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.2 I1/I3, §5.2 A2 결정표
+ *   - docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.2 I1/I3, §5.2 A2 결정표
  *
  * v0.7 — 'auto' polished out. 'none' added (provider disabled).
  *

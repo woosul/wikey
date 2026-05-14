@@ -1,7 +1,7 @@
 /**
  * §5.19 Wiki maintenance suite — barrel re-export.
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2
  *
  * Implementation split across `maintenance/{status,check,recovery,refactoring,helpers}.ts`
  * (BLUE refactor 2026-05-12 — keep each ≤ 200 LOC per spec §3 Dependencies).

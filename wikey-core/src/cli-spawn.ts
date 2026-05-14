@@ -1,7 +1,7 @@
 /**
  * §5.6.4 — subscription CLI spawn wrapper.
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.2 A3.
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.2 A3.
  *
  * Single entry point for child_process.spawn against the 3 external CLIs
  * (claude / codex / gemini). Concerns:

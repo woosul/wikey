@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # §5.6.4.1 A3-2 — CLI version drift detector (v0.4 #1e F4 / v0.5 #1f F5).
 #
-# Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.7.1.
+# Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.7.1.
 #
 # Usage:
 #   ./scripts/check-cli-versions.sh             # default — major drift fatal, minor warn, patch silent

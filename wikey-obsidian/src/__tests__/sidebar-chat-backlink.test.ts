@@ -1,7 +1,7 @@
 /**
  * §5.18 Step B (RED) — Spec 2 wiki backlink section
  *
- * Spec: plan/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.6 §1 Spec 2
+ * Spec: docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.6 §1 Spec 2
  *
  * Invariants under test:
  *   - I4: backlink 조회는 resolvedLinks 역방향 lookup (pure function on map).
@@ -79,9 +79,9 @@ describe('§5.18 Spec 2 — collectBacklinks (resolvedLinks 역방향 lookup)', 
     const resolvedLinks: Record<string, Record<string, number>> = {
       'wiki/entities/jeff.md': { 'wiki/entities/lotus-pms.md': 1 }, // wiki/ ✓
       'raw/3_resources/legacy.md': { 'wiki/entities/lotus-pms.md': 1 }, // raw/ ✗
-      'plan/phase-5/phase-5-todo.md': { 'wiki/entities/lotus-pms.md': 1 }, // plan/ ✗ (scope=wiki)
+      'docs/planning/phase-5/phase-5-todo.md': { 'wiki/entities/lotus-pms.md': 1 }, // plan/ ✗ (scope=wiki)
       '.obsidian/widgets/foo.md': { 'wiki/entities/lotus-pms.md': 1 }, // .obsidian/ ✗
-      'activity/phase-5/note.md': { 'wiki/entities/lotus-pms.md': 1 }, // activity/ ✗
+      'docs/sessions/phase-5/note.md': { 'wiki/entities/lotus-pms.md': 1 }, // activity/ ✗
     }
     const mentioned = new Set<string>(['wiki/entities/lotus-pms.md'])
     const backlinks = collectBacklinks(resolvedLinks, mentioned)
@@ -95,14 +95,14 @@ describe('§5.18 Spec 2 — collectBacklinks (resolvedLinks 역방향 lookup)', 
     const resolvedLinks: Record<string, Record<string, number>> = {
       'wiki/entities/jeff.md': { 'wiki/entities/lotus-pms.md': 1 },
       'raw/3_resources/legacy.md': { 'wiki/entities/lotus-pms.md': 1 }, // raw/ → 항상 제외
-      'plan/phase-5/phase-5-todo.md': { 'wiki/entities/lotus-pms.md': 1 },
-      'activity/phase-5/note.md': { 'wiki/entities/lotus-pms.md': 1 },
+      'docs/planning/phase-5/phase-5-todo.md': { 'wiki/entities/lotus-pms.md': 1 },
+      'docs/sessions/phase-5/note.md': { 'wiki/entities/lotus-pms.md': 1 },
     }
     const mentioned = new Set<string>(['wiki/entities/lotus-pms.md'])
     const backlinks = collectBacklinks(resolvedLinks, mentioned, { scope: 'extended' })
     expect(backlinks.wiki).toEqual(['wiki/entities/jeff.md'])
     expect(backlinks.external).toEqual(
-      expect.arrayContaining(['plan/phase-5/phase-5-todo.md', 'activity/phase-5/note.md']),
+      expect.arrayContaining(['docs/planning/phase-5/phase-5-todo.md', 'docs/sessions/phase-5/note.md']),
     )
     expect(backlinks.external).toHaveLength(2)
     // raw/ 는 어디에도 없음
@@ -158,7 +158,7 @@ describe('§5.18 Spec 2 — buildBacklinkSection (HTML <details> 2 section 분�
   it('T16: I5 (v0.6) — wiki + external 모두 있으면 `Referenced` + `Extended` 두 section 분리 출현', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/jeff.md'],
-      external: ['plan/phase-5/phase-5-todo.md', 'activity/phase-5/note.md'],
+      external: ['docs/planning/phase-5/phase-5-todo.md', 'docs/sessions/phase-5/note.md'],
     })
     expect(markup).toMatch(/<summary>Referenced\s*\(1\)/)
     expect(markup).toMatch(/<summary>Extended\s*\(2\)/)
@@ -166,15 +166,15 @@ describe('§5.18 Spec 2 — buildBacklinkSection (HTML <details> 2 section 분�
     expect(markup).not.toMatch(/\(\+\)/)
     // 각 section 안 entry 정확
     expect(markup).toMatch(/\[\[wiki\/entities\/jeff\.md\]\]/)
-    expect(markup).toMatch(/\[\[plan\/phase-5\/phase-5-todo\.md\]\]/)
-    expect(markup).toMatch(/\[\[activity\/phase-5\/note\.md\]\]/)
+    expect(markup).toMatch(/\[\[docs\/planning\/phase-5\/phase-5-todo\.md\]\]/)
+    expect(markup).toMatch(/\[\[docs\/sessions\/phase-5\/note\.md\]\]/)
   })
 
   // T17 ↔ Spec 2 I6 (v0.6) — wiki=0 + external>0 → `Extended` 만 출현
   it('T17: I6 — wiki=0 + external>0 → `Referenced` 미출력, `Extended` 만 출현', () => {
     const markup = buildBacklinkSection({
       wiki: [],
-      external: ['plan/phase-5/phase-5-todo.md'],
+      external: ['docs/planning/phase-5/phase-5-todo.md'],
     })
     expect(markup).not.toMatch(/<summary>Referenced/)
     expect(markup).toMatch(/<summary>Extended\s*\(1\)/)

@@ -2,7 +2,7 @@
  * §5.6.4.1 Step A3-1 — provider-cli-options 48-cell matrix RED (v0.6 #1g G1).
  *
  * Plan reference:
- *   - plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.7 (nested shape table)
+ *   - docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.7 (nested shape table)
  *
  * Matrix axes:
  *   3 SubscriptionProvider × 2 AuthPath × 8 LLMCliOptionField = 48 cells.

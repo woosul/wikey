@@ -1,7 +1,7 @@
 /**
  * §5.6.4.4 Step D — OpenAI Codex subscription wiring (LLMClient.callOpenAI routing).
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.5 Step D +
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.5 Step D +
  *       §3.3 AC-S6 (OpenAI) + §4.0.7 codex marker-based parser.
  *
  * v0.7 (user plan 2026-05-14) — 'auto' polished out. Subscription failures throw
@@ -120,11 +120,11 @@ function spawnExit(exitCode: number, stderr: string): (c: SpawnCall) => Promise<
 
 // Golden codex stdout (master-captured 2026-05-13, plan §4.0.7 H1).
 const CODEX_GOLDEN_RAW = readFileSync(
-  join(__dirname, '..', '..', '..', 'plan', 'phase-5', 'fixtures', 'cycle-codex-golden', 'codex-ok-hi.raw.txt'),
+  join(__dirname, '..', '..', '..', 'docs', 'planning', 'phase-5', 'fixtures', 'cycle-codex-golden', 'codex-ok-hi.raw.txt'),
   'utf-8',
 )
 const CODEX_GOLDEN_CLEAN = readFileSync(
-  join(__dirname, '..', '..', '..', 'plan', 'phase-5', 'fixtures', 'cycle-codex-golden', 'codex-ok-hi.clean.txt'),
+  join(__dirname, '..', '..', '..', 'docs', 'planning', 'phase-5', 'fixtures', 'cycle-codex-golden', 'codex-ok-hi.clean.txt'),
   'utf-8',
 ).trim()
 

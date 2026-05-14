@@ -7,7 +7,7 @@
 #   2. golden     — 42 files (7 fixture × 6 task) via committee trio
 #   3. measure    — 1,008 cells (8 model × 7 fixture × 6 task × 3 cycle)
 #   4. judge      — 1,008 scores (single judge = gemini-2.5-flash)
-#   5. report     — docs/ollama-cloud-benchmark-result.md
+#   5. report     — docs/model/ollama-cloud-benchmark-result.md
 #   6. pii-check  — grep result markdown for 6 PII patterns (must be 0)
 #
 # Usage:
@@ -27,10 +27,10 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 HARNESS_SRC="$REPO_ROOT/wikey-core/src/scripts/benchmark-models.ts"
 HARNESS_BUILT="$REPO_ROOT/wikey-core/dist/scripts/benchmark-models.js"
 INBOX="$REPO_ROOT/raw/0_inbox/benchmark-5.6.5"
-GOLDEN_DIR="$REPO_ROOT/plan/phase-5/fixtures/cycle-5.6.5-benchmark-golden"
-MEASURE_DIR="$REPO_ROOT/plan/phase-5/fixtures/cycle-5.6.5-benchmark-measurements"
-JUDGE_DIR="$REPO_ROOT/plan/phase-5/fixtures/cycle-5.6.5-benchmark-judge"
-REPORT_PATH="$REPO_ROOT/docs/ollama-cloud-benchmark-result.md"
+GOLDEN_DIR="$REPO_ROOT/docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-golden"
+MEASURE_DIR="$REPO_ROOT/docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-measurements"
+JUDGE_DIR="$REPO_ROOT/docs/planning/phase-5/fixtures/cycle-5.6.5-benchmark-judge"
+REPORT_PATH="$REPO_ROOT/docs/model/ollama-cloud-benchmark-result.md"
 
 # LLMClient uses CJS-style `require('node:fs')` for lazy loading. Source paths
 # under tsx fail with "require is not defined" in pure ESM, so route through the

@@ -2,7 +2,7 @@
  * pii-over-mask-prevention.test.ts — Phase 5 §5.1 follow-up (2026-04-25).
  *
  * Master CDP smoke 에서 발견된 over-masking 4건 회귀 방지.
- * 계획서: `plan/post-compact-handoff.md` ① — bundled YAML 의
+ * 계획서: `docs/planning/post-compact-handoff.md` ① — bundled YAML 의
  * ceo-multiline-form valueExcludePrefixes 에 일반 폼 라벨 13종 추가 +
  * isCandidateExcluded 가 same-line 모든 토큰을 검사하도록 보강.
  *

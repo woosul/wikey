@@ -2,7 +2,7 @@
  * pii-structural.test.ts — Phase 5 §5.1 (2026-04-25).
  *
  * 구조적 (multi-line 폼) PII 탐지 테스트.
- * 계획서: `plan/phase-5/phase-5-todox-5.1-structural-pii.md` §8.2.
+ * 계획서: `docs/planning/phase-5/phase-5-todox-5.1-structural-pii.md` §8.2.
  *
  * 최소 10 tests — RED 먼저 작성, 구현 후 GREEN 확인.
  */

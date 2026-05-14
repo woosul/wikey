@@ -494,7 +494,7 @@ describe('appendOriginalLinks — Phase 4 D.0.h (v6 §4.5.2)', () => {
 })
 
 // §5.18 Step B (RED) — Query citation UX
-// Spec: plan/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.2
+// Spec: docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.2
 // Tester: 13 신규 test 중 wikey-core 측 7개 (T1~T7). 13/13 = wikey-core 7 + wikey-obsidian 6.
 describe('§5.18 Spec 1 — appendOriginalLinks format (1줄 = 1 raw, ext badge, list)', () => {
   const ID_A = 'sha256:1111111111111111'

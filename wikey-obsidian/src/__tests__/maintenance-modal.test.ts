@@ -1,7 +1,7 @@
 /**
  * §5.19 Step B (RED) — UI flow Spec (`MaintenanceModal` + Help 패널 섹션).
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1.5 UI flow
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.2 §1.5 UI flow
  *
  * AC mapping (1:1):
  *   - AC-UI-1 → Help 패널 안 "Wiki Maintenance" 섹션 + 4 버튼

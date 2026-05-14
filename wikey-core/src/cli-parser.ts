@@ -1,7 +1,7 @@
 /**
  * §5.6.4 — subscription CLI stdout → clean response body parser.
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §4.0.7 (v0.7 #1h H1 marker-based).
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §4.0.7 (v0.7 #1h H1 marker-based).
  *
  * Strategy per provider:
  *   gemini : strip optional "Loaded cached credentials.\n" header → trim

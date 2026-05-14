@@ -1,7 +1,7 @@
 /**
  * §5.6.4.3 Step C — Anthropic Claude subscription wiring (LLMClient.callAnthropic routing).
  *
- * Plan: plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.4 Step C +
+ * Plan: docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §5.4 Step C +
  *       §3.3 AC-S5 (Anthropic) + §3.9 onAuthFallback wiring.
  *
  * v0.7 (user plan 2026-05-14) — 'auto' polished out. Subscription failures

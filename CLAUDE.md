@@ -10,7 +10,7 @@
 
 4 핵심 문서 (README.md 갱신 source):
 - [`wikey.schema.md`](./wikey.schema.md) — 마스터 스키마 (단일 진실 소스, Karpathy 철학)
-- [`plan/plan-full.md`](./plan/plan-full.md) — 전체 로드맵 + 각 Phase 목표·핵심 spec 상세
+- [`docs/planning/plan-full.md`](./docs/planning/plan-full.md) — 전체 로드맵 + 각 Phase 목표·핵심 spec 상세
 - [`CLAUDE.md`](./CLAUDE.md) — 본 파일 (Claude Code 도구 사용 + 실행 체크리스트)
 - [`DESIGN.md`](./DESIGN.md) — 디자인 시스템 (`--wk-*` CSS 변수 토큰 + 5 패널 패턴 + `styles.css` 마이그레이션 계획)
 
@@ -96,7 +96,7 @@ git diff --name-only HEAD~5 -- wiki/
 
 ## 세션 실행 체크리스트
 
-5개 세션 유형 (인제스트·쿼리·린트·소스 삭제·분류) + 대용량 소스 2단계 처리 절차는 **[`rules/session-checklists.md`](./rules/session-checklists.md)** 에 정리. 각 유형의 순차 단계·scripts 호출 순서를 필요 시 참조.
+5개 세션 유형 (인제스트·쿼리·린트·소스 삭제·분류) + 대용량 소스 2단계 처리 절차는 **[`docs/maintenance/session-checklists.md`](./docs/maintenance/session-checklists.md)** 에 정리. 각 유형의 순차 단계·scripts 호출 순서를 필요 시 참조.
 
 ## 시스템 언어 = 영문 (2026-05-12 LOCK)
 
@@ -104,7 +104,7 @@ git diff --name-only HEAD~5 -- wiki/
 
 **예외 (한글 허용)**:
 - 내부 코드 주석 / JSDoc / variable name
-- `plan/` · `activity/` · `wiki/` · `wiki/log.md` · `docs/` (개발자 documentation + 사용자 콘텐츠)
+- `docs/planning/` · `docs/sessions/` · `wiki/` · `wiki/log.md` · `docs/` (개발자 documentation + 사용자 콘텐츠)
 - `scripts/validate-wiki.sh` 등 script output 의 parse regex (production format 으로 고정된 한글 키워드 — 예: `깨진 위키링크`)
 - wiki content (LLM 이 생성한 한글 page 본문)
 
@@ -156,7 +156,7 @@ git diff --name-only HEAD~5 -- wiki/
 
 ## Obsidian 플러그인 (Phase 3 산출물)
 
-wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`rules/obsidian-plugin.md`](./rules/obsidian-plugin.md)** 참조. npm 스크립트: `npm run build`, `npm test`, `npm run dev`.
+wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`docs/maintenance/obsidian-plugin.md`](./docs/maintenance/obsidian-plugin.md)** 참조. npm 스크립트: `npm run build`, `npm test`, `npm run dev`.
 
 **사이드바 패널 5종** (sidebar-chat.ts, §5.10.4 D-wide 후 Suggestions 폐기):
 
@@ -172,14 +172,14 @@ wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`
 
 ## 활동 기록 문서 규칙
 
-`activity/phase-N/phase-N-result.md` 작성·재구성 규칙은 **`result-doc-writer` 스킬**에 정의되어 있다. 해당 문서를 수정하거나 세션 결과를 기록할 때 그 스킬이 자동 트리거된다. (이전에 이 CLAUDE.md에 직접 기록하던 3원칙·번호체계·`#tag` 규칙은 2026-04-20에 스킬로 이관, 전역 토큰 절약.)
+`docs/sessions/phase-N/phase-N-result.md` 작성·재구성 규칙은 **`result-doc-writer` 스킬**에 정의되어 있다. 해당 문서를 수정하거나 세션 결과를 기록할 때 그 스킬이 자동 트리거된다. (이전에 이 CLAUDE.md에 직접 기록하던 3원칙·번호체계·`#tag` 규칙은 2026-04-20에 스킬로 이관, 전역 토큰 절약.)
 
 ## 문서 명명규칙·조직화 (필수)
 
-상세 규칙은 **[`rules/docs-organization.md`](./rules/docs-organization.md)** 에 정리. 핵심만 요약:
+상세 규칙은 **[`docs/maintenance/docs-organization.md`](./docs/maintenance/docs-organization.md)** 에 정리. 핵심만 요약:
 
-- 중심: `plan/phase-N/phase-N-todo.md` · `activity/phase-N/phase-N-result.md`
-- 보조: `plan/phase-N/phase-N-todox-<section>-<topic>.md` · `activity/phase-N/phase-N-resultx-<section>-<topic>-<date>.md` (`x` 접미사가 alphabet-sort 에서 중심을 맨 앞에 오게 보장 — `_`·`-` 금지)
+- 중심: `docs/planning/phase-N/phase-N-todo.md` · `docs/sessions/phase-N/phase-N-result.md`
+- 보조: `docs/planning/phase-N/phase-N-todox-<section>-<topic>.md` · `docs/sessions/phase-N/phase-N-resultx-<section>-<topic>-<date>.md` (`x` 접미사가 alphabet-sort 에서 중심을 맨 앞에 오게 보장 — `_`·`-` 금지)
 - 중심 문서 의무: meta 블록 직후 `## 관련 문서` 섹션 + 보조 문서 section 번호 순 나열.
 - 보조 문서 의무: 타이틀 아래 `> **상위 문서**:` 역참조 블록 + todo 체크박스 금지 (phase-N-todo 단일 소스).
 - `/sync` 스킬 Phase 0-4.7 이 무결성 자동 검증.
@@ -188,9 +188,9 @@ wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`
 
 사용자가 "문서 동기화", "sync docs", "관련 문서 정리", "result/todo 업데이트" 유사 요청을 하면 **반드시 다음 순서**로 진행한다 (2026-04-21 고정):
 
-1. **result/todo 먼저** — `result-doc-writer` 스킬을 invoke해서 `activity/phase-N/phase-N-result.md` + `plan/phase-N/phase-N-todo.md`의 구조·번호·제목·태그·mirror를 점검·보강. 신규 subject가 있으면 result에 먼저 반영하고 todo가 그 구조를 따른다.
-2. **체크박스 갱신 의무** (2026-05-12 LOCK) — result/todo mirror 이후 **반드시** 이번 세션 종결 작업의 `plan/phase-N/phase-N-todo.md` + `plan/phase-N/phase-N-todox-<section>-<topic>.md` 체크박스 갱신: `[ ]` → `[x]` (완료) 또는 `[-]` (의도적 스킵). result 에 종결 표기했는데 todo 체크박스가 `[ ]` 그대로면 drift — mirror 미완성. 종결 cycle 의 경우 §section title 에 ✅ + tag `#done` 추가. 단일 진실 소스: `~/.claude/skills/sync/SKILL.md §0-4.5.5`.
-3. **관련 문서 동기화** — `wiki/log.md` (해당 작업 eval/ingest/lint 엔트리), `plan/session-wrap-followups.md` (다음 세션 시작점), `~/.claude/projects/-Users-denny-Project-wikey/memory/` (phase status, MEMORY.md 인덱스), 필요 시 `wikey.schema.md`·`README.md` 등 result가 참조되는 곳 모두 업데이트.
+1. **result/todo 먼저** — `result-doc-writer` 스킬을 invoke해서 `docs/sessions/phase-N/phase-N-result.md` + `docs/planning/phase-N/phase-N-todo.md`의 구조·번호·제목·태그·mirror를 점검·보강. 신규 subject가 있으면 result에 먼저 반영하고 todo가 그 구조를 따른다.
+2. **체크박스 갱신 의무** (2026-05-12 LOCK) — result/todo mirror 이후 **반드시** 이번 세션 종결 작업의 `docs/planning/phase-N/phase-N-todo.md` + `docs/planning/phase-N/phase-N-todox-<section>-<topic>.md` 체크박스 갱신: `[ ]` → `[x]` (완료) 또는 `[-]` (의도적 스킵). result 에 종결 표기했는데 todo 체크박스가 `[ ]` 그대로면 drift — mirror 미완성. 종결 cycle 의 경우 §section title 에 ✅ + tag `#done` 추가. 단일 진실 소스: `~/.claude/skills/sync/SKILL.md §0-4.5.5`.
+3. **관련 문서 동기화** — `wiki/log.md` (해당 작업 eval/ingest/lint 엔트리), `docs/planning/session-wrap-followups.md` (다음 세션 시작점), `~/.claude/projects/-Users-denny-Project-wikey/memory/` (phase status, MEMORY.md 인덱스), 필요 시 `wikey.schema.md`·`README.md` 등 result가 참조되는 곳 모두 업데이트.
 4. **추가·변경 파일 포함 commit/push** — 이 turn에서 미커밋인 변경 전체를 하나의 논리적 커밋으로 묶어 메시지에 "docs 동기화 + 관련 문서" 취지를 명시한 뒤 push.
 
 예외: 단순 오타 수정·한 줄 코드 변경처럼 문서 mirror가 불필요한 경우는 이 플로우를 건너뛰어도 된다. 판단 기준은 "result에 기록할 새 작업인가" — 그렇다면 반드시 이 순서.
@@ -218,5 +218,5 @@ wikey-core / wikey-obsidian 의 디렉터리 맵 + 빌드·개발 세션은 **[`
 - bash 1-3 command 즉답
 - 사용자가 "직접 처리" 명시
 
-**참조**: `plan/phase-a/phase-a-session-maintenance.md §3.D`, `feedback_no_defer_to_next_session.md`, `feedback_reuse_prior_artifacts.md`, [`rules/subagent-visibility.md`](./rules/subagent-visibility.md) (가시성 3 패턴, 2026-04-25), [`rules/master-pre-validation.md`](./rules/master-pre-validation.md) (subagent 산출물 → codex 직송 금지, master 1차 검증 의무, 2026-04-25).
+**참조**: `docs/planning/phase-a/phase-a-session-maintenance.md §3.D`, `feedback_no_defer_to_next_session.md`, `feedback_reuse_prior_artifacts.md`, [`docs/maintenance/subagent-visibility.md`](./docs/maintenance/subagent-visibility.md) (가시성 3 패턴, 2026-04-25), [`docs/maintenance/master-pre-validation.md`](./docs/maintenance/master-pre-validation.md) (subagent 산출물 → codex 직송 금지, master 1차 검증 의무, 2026-04-25).
 

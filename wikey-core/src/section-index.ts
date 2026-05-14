@@ -7,7 +7,7 @@
  *   2. Route SEGMENTED 의 섹션별 호출 단위
  *   3. 소스 페이지에 섹션 TOC append (Phase C enablement)
  *
- * 설계 근거: plan/phase-4-change-phase-abc.md §1, §7.1. schema.md §19 (LLM 이 독자) 부합.
+ * 설계 근거: docs/planning/phase-4-change-phase-abc.md §1, §7.1. schema.md §19 (LLM 이 독자) 부합.
  */
 
 export type SectionWarning =

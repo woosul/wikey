@@ -6,7 +6,7 @@
  *   - automatic cloud dispatch + provider/model mismatch detection (todox A7)
  *   - `CLOUD_MODEL_CATALOG` shape + PoC §0 LOCK identifiers (5 models)
  *
- * Single source of truth: `plan/phase-5/fixtures/cycle-5.6.5-ollama-cloud-poc/SUMMARY.md`.
+ * Single source of truth: `docs/planning/phase-5/fixtures/cycle-5.6.5-ollama-cloud-poc/SUMMARY.md`.
  * Catalog change requires editing `ollama-model-catalog.ts` only
  * (feedback_no_hardcoding_general.md LOCK).
  */

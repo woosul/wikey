@@ -2,8 +2,8 @@
  * §5.6.4.1 Step A0 — F4 gate: `child_process.spawn` smoke (RED→GREEN→BLUE)
  *
  * Plan reference:
- *   - plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.6 R3 + §5.2 A0
- *   - plan/phase-5/phase-5-todo.md §5.6.4.1 A0 gate
+ *   - docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.6 R3 + §5.2 A0
+ *   - docs/planning/phase-5/phase-5-todo.md §5.6.4.1 A0 gate
  *
  * Goal (Spec):
  *   F4 raises that subscription auth path = `child_process.spawn(cliPath, args)`

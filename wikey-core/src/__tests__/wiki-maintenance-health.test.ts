@@ -1,7 +1,7 @@
 /**
  * §5.19 v0.4 (R6/R10/I-HEALTH-1) — `isWikiHealthy` / `isRefactoringHealthy`.
  *
- * Spec: plan/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.4 I-HEALTH-1.
+ * Spec: docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md v0.4 I-HEALTH-1.
  *
  * AC mapping:
  *   - AC-S1-3  → isWikiHealthy returns false when any metric > 0

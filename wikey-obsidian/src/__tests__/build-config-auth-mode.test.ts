@@ -2,7 +2,7 @@
  * §5.6.4.1 Step A6 — buildConfig auth mode propagation RED (F8).
  *
  * Plan reference:
- *   - plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.5 buildConfig 5-site matrix
+ *   - docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md §3.5 buildConfig 5-site matrix
  *
  * 5 sites verified via direct buildConfig() invocation + scripts-runner env probe:
  *   case 1 (line 476): constructor LLMClient    → buildConfig contains 3 auth modes

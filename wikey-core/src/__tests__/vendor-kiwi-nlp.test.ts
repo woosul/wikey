@@ -40,6 +40,6 @@ describe('kiwi-nlp vendor (B-2 sparse vendor)', () => {
 
     // (f) VENDOR.md (master 추적용) + sync docs
     expect(existsSync(join(VENDOR_ROOT, 'VENDOR.md'))).toBe(true)
-    expect(existsSync(join(REPO_ROOT, 'docs', 'kiwi-nlp-vendor-sync.md'))).toBe(true)
+    expect(existsSync(join(REPO_ROOT, 'docs', 'architecture', 'kiwi-nlp-vendor-sync.md'))).toBe(true)
   })
 })

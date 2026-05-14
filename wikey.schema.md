@@ -1,21 +1,21 @@
 # Wikey Schema — LLM Wiki 마스터 스키마
 
 > 프로바이더 독립 마스터 스키마. LLM 에이전트는 이 파일을 **먼저 읽고** 위키의 구조, 컨벤션, 워크플로우를 파악한 후 작업한다.
-> 프로바이더별 도구 사용법은 각 설정 파일을 참조: `CLAUDE.md` (Claude Code), `AGENTS.md` (Codex), `local-llm/system-prompt.md` (로컬 LLM).
+> 프로바이더별 도구 사용법은 각 설정 파일을 참조: `CLAUDE.md` (Claude Code), `AGENTS.md` (Codex), `docs/model/system-prompt.md` (로컬 LLM).
 >
 > ## 참조문서로서의 역할 (필수 준수)
 >
 > 본 파일은 **Karpathy 의 [llm-wiki.md](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) 철학** 을 wikey 프로젝트에 고스란히 녹여둔 *유일한 단일 진실 소스* 이다. 따라서:
 >
 > 1. **모든 작업 / 계획 / 구현의 시작점**: master / analyst / developer / tester / reviewer 모든 에이전트는 작업 진입 시 본 파일을 첫 read 대상으로 삼는다.
-> 2. **계획서 작성 시 필수 참고**: `plan/phase-N/phase-N-todo.md` / `plan/phase-N/phase-N-todox-*.md` / 신규 issue 등록 / paradigm shift 검토 — 모든 plan 산출물은 본 파일의 4 원칙 (Explicit / Yours / File over app / BYOAI) + 3계층 + 워크플로우 + 페이지 컨벤션과 일치하는지 검증 후 작성.
+> 2. **계획서 작성 시 필수 참고**: `docs/planning/phase-N/phase-N-todo.md` / `docs/planning/phase-N/phase-N-todox-*.md` / 신규 issue 등록 / paradigm shift 검토 — 모든 plan 산출물은 본 파일의 4 원칙 (Explicit / Yours / File over app / BYOAI) + 3계층 + 워크플로우 + 페이지 컨벤션과 일치하는지 검증 후 작성.
 > 3. **architecture 결정의 단일 기준**: 코드 / schema / data model / UI 변경 시 본 파일과 충돌하면 본 파일이 우선. 본 파일 자체 수정은 사용자 승인 필수 (CLAUDE.md 쓰기 규칙).
 >
 > Karpathy 의 핵심 통찰 4 가지 — 본 파일 §"LLM Wiki 개인화의 4가지 장점 (Karpathy)" 섹션 참조. 모든 architecture 결정의 epistemology base.
 >
 > **본 파일이 다루지 않는 것** (분리 원칙):
-> - 개발 단계 history / 진행 중 issue / phase 별 구현 상태 → `plan/plan-full.md`, `plan/phase-N/phase-N-todo.md`, `activity/phase-N/phase-N-result.md`
-> - 도구별 사용법 / 실행 체크리스트 → `CLAUDE.md`, `AGENTS.md`, `local-llm/system-prompt.md`
+> - 개발 단계 history / 진행 중 issue / phase 별 구현 상태 → `docs/planning/plan-full.md`, `docs/planning/phase-N/phase-N-todo.md`, `docs/sessions/phase-N/phase-N-result.md`
+> - 도구별 사용법 / 실행 체크리스트 → `CLAUDE.md`, `AGENTS.md`, `docs/model/system-prompt.md`
 > - 디자인 시스템 / CSS 토큰 → `DESIGN.md`
 
 ## 프로젝트 개요
@@ -178,7 +178,7 @@ raw 소스 **1개**는 wiki 페이지 **여러 개**(통상 5~15개)로 분해�
 - `sources < 원본 수` = 인제스트 안 된 원본 존재
 - `entities + concepts ≈ sources × 5~10` = 건전 상태
 
-> 상세: [`docs/ingest-decomposition.md`](docs/ingest-decomposition.md) — 예시, 흐름도, 운영 원칙
+> 상세: [`docs/architecture/ingest-decomposition.md`](docs/architecture/ingest-decomposition.md) — 예시, 흐름도, 운영 원칙
 
 ## 분해 정책 (D-wide LLM-only ontology, §5.10.4)
 
@@ -189,7 +189,7 @@ PMBOK / ISO 27001 / ITIL 같이 component 가 정형화된 외부 표준 자료�
 > 2. "굳이 어려운 말 써가면서 지식을 분류할 필요 없잖아. LLM 이라는 든든한 백 위에서 움직이는 건데."
 > → 결론: §5.4 Stage 1~4 (BUILTIN_STANDARD_DECOMPOSITIONS / suggestion-detector / self-declaration / convergence) 모두 폐기. Suggestions panel UI 폐기 (sidebar 6→5 패널). schema.yaml 의 보존 영역은 **`aliases` (canonical slug normalization) 만**. PII custom rule 은 별도 file (`.wikey/pii-patterns.yaml` + `~/.config/wikey/pii-patterns.yaml`) 의 `patterns: - id/kind/mask` shape 으로 관리 (PII engine 별 layer).
 >
-> 이전 정책 (Phase 5 §5.4 self-extending) 의 history reference: `plan/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 + `activity/phase-5/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md`.
+> 이전 정책 (Phase 5 §5.4 self-extending) 의 history reference: `docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md` v5.4 + `docs/sessions/phase-5/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md`.
 
 `.wikey/schema.yaml` 보존 section:
 - `aliases:` — canonical slug variant mapping (다국어 / 동명이인 / 약어). `canonicalizer.canonicalizeSlug` 가 이를 SLUG_ALIASES 와 merge 하여 dedup.
@@ -200,8 +200,8 @@ PII custom rule 은 본 schema.yaml 에 두지 **않음**. 별 file:
 - shape: `patterns: - id: <name>\n  kind: regex|structural\n  ...`. 상세는 `wikey-core/src/pii-patterns.ts`.
 
 > 진행 상태 / 구현 commit / paradigm shift 검토는 schema 가 다루지 않음. 진입점:
-> - `plan/phase-5/phase-5-todo.md` §5.10 (D-wide regroup Phase 1~4)
-> - `activity/phase-5/phase-5-result.md` §5.10 + `activity/phase-5/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md` (D-wide cycle evidence)
+> - `docs/planning/phase-5/phase-5-todo.md` §5.10 (D-wide regroup Phase 1~4)
+> - `docs/sessions/phase-5/phase-5-result.md` §5.10 + `docs/sessions/phase-5/phase-5-resultx-5.10.4-d-wide-cycle-2026-05-05.md` (D-wide cycle evidence)
 
 ## 시스템 워크플로우 (전체 흐름)
 
@@ -363,7 +363,7 @@ LLM: 해당 소스의 wiki/sources/source-{name}.md 확인
 
 ### 자동화 진화
 
-워크플로우 4종 (인제스트 / 쿼리 / 린트 / 소스 삭제) 은 동일한 핵심 코어 (LLM + raw → wiki) 를 공유하며, 인터페이스만 단계적으로 진화한다 — CLI 스크립트 → Obsidian 플러그인 → 웹 → 팀 서버. 각 단계의 구체 매트릭스 (Phase 별 인터페이스 / 자동화 수준) 와 진행 상태는 `plan/plan-full.md` 에 단일 source 로 기록.
+워크플로우 4종 (인제스트 / 쿼리 / 린트 / 소스 삭제) 은 동일한 핵심 코어 (LLM + raw → wiki) 를 공유하며, 인터페이스만 단계적으로 진화한다 — CLI 스크립트 → Obsidian 플러그인 → 웹 → 팀 서버. 각 단계의 구체 매트릭스 (Phase 별 인터페이스 / 자동화 수준) 와 진행 상태는 `docs/planning/plan-full.md` 에 단일 source 로 기록.
 
 ### 검색/인덱스 확장 전략
 
@@ -388,7 +388,7 @@ LLM Wiki (우리 방식): LLM이 쿼리 확장 → 외부 검색 → LLM이 리�
 
 ### 검색 코어의 안정성
 
-검색 코어 = **검색 인프라 (Orama default — TypeScript 네이티브 BM25, ESM CommonJS bundle, file 1개 atomic write persist / qmd fallback — `WIKEY_SEARCH_ENGINE=qmd` toggle 시) + LLM (지능 레이어: 쿼리 확장 / 리랭킹 / 합성) + 한국어 특화 (Kiwi WASM bindings vendored at `wikey-core/vendor/kiwi-nlp/` + Contextual Retrieval + Qwen3-Embedding 0.6B)**. 인터페이스가 진화 (CLI → Obsidian → 웹 → 팀 서버) 해도 코어는 동일하며, 단계별 capability 와 진행 상태는 `plan/plan-full.md` 참조 (§5.7.4 Orama 마이그레이션 완료, qmd 회귀 path 보존).
+검색 코어 = **검색 인프라 (Orama default — TypeScript 네이티브 BM25, ESM CommonJS bundle, file 1개 atomic write persist / qmd fallback — `WIKEY_SEARCH_ENGINE=qmd` toggle 시) + LLM (지능 레이어: 쿼리 확장 / 리랭킹 / 합성) + 한국어 특화 (Kiwi WASM bindings vendored at `wikey-core/vendor/kiwi-nlp/` + Contextual Retrieval + Qwen3-Embedding 0.6B)**. 인터페이스가 진화 (CLI → Obsidian → 웹 → 팀 서버) 해도 코어는 동일하며, 단계별 capability 와 진행 상태는 `docs/planning/plan-full.md` 참조 (§5.7.4 Orama 마이그레이션 완료, qmd 회귀 path 보존).
 
 ### 참조 프로젝트의 검색 해법
 
@@ -639,7 +639,7 @@ tags: [태그1, 태그2]
 - **kepano/obsidian-skills**: Claude Code용 공식 스킬셋
 - **Obsidian Web Clipper**: 웹 기사 → 마크다운 변환
 - **Orama** (default): TypeScript BM25 검색 엔진 (`@orama/orama@3.x` npm dep, `wikey-core/src/search/orama-index.ts`, Kiwi WASM 한국어 tokenizer)
-- **Kiwi WASM** (한국어 tokenizer): `wikey-core/vendor/kiwi-nlp/` (sparse vendor of `bab2min/Kiwi/bindings/wasm/package/`, `docs/kiwi-nlp-vendor-sync.md` 수동 sync 절차)
+- **Kiwi WASM** (한국어 tokenizer): `wikey-core/vendor/kiwi-nlp/` (sparse vendor of `bab2min/Kiwi/bindings/wasm/package/`, `docs/architecture/kiwi-nlp-vendor-sync.md` 수동 sync 절차)
 - **qmd** (fallback, `WIKEY_SEARCH_ENGINE=qmd` toggle 시): 마크다운 검색 인프라 (BM25 + 벡터 + RRF 융합, `tools/qmd/`에 vendored, `scripts/update-qmd.sh`로 upstream 관리)
 - **Marp**: 위키 콘텐츠 → 슬라이드 덱
 - **Git**: 버전 관리, 변경 이력 추적
