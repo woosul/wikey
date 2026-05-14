@@ -2059,6 +2059,8 @@ class ObsidianHttpClient implements HttpClient {
  *   2. wikey.conf (정식 설정 파일, 사용자 명시 2026-05-15) —
  *      `WIKEY_GEMINI_OAUTH_CLIENT_ID=...` `WIKEY_GEMINI_OAUTH_CLIENT_SECRET=...`
  *      `WIKEY_OPENAI_OAUTH_CLIENT_ID=...` `WIKEY_ANTHROPIC_OAUTH_CLIENT_ID=...`
+ *      `GOOGLE_CLOUD_PROJECT=...` (user-owned GCP project, skips Code Assist
+ *      auto-assigned hidden project — wikey-core resolveProjectId reads env first)
  *   3. Vendor CLI bundle grep (fallback — extracted PUBLIC values, not committed).
  *
  * Values are PUBLIC inside each vendor's CLI bundle but match GitHub secret
@@ -2091,7 +2093,13 @@ function bootstrapSubscriptionOAuthEnv(vaultBasePath?: string): void {
           key === 'WIKEY_GEMINI_OAUTH_CLIENT_ID' ||
           key === 'WIKEY_GEMINI_OAUTH_CLIENT_SECRET' ||
           key === 'WIKEY_OPENAI_OAUTH_CLIENT_ID' ||
-          key === 'WIKEY_ANTHROPIC_OAUTH_CLIENT_ID'
+          key === 'WIKEY_ANTHROPIC_OAUTH_CLIENT_ID' ||
+          // §5.6.6 v0.7 user request 2026-05-15 — route wikey REST to the user's
+          // own GCP project (instead of Code Assist's auto-assigned hidden
+          // `dependable-sentry-*` project). Read at runtime so the value is
+          // never embedded in wikey-core source. wikey-core's resolveProjectId
+          // uses process.env.GOOGLE_CLOUD_PROJECT first → skips loadCodeAssist.
+          key === 'GOOGLE_CLOUD_PROJECT'
         ) {
           if (!process.env[key]) process.env[key] = value
         }
@@ -2103,19 +2111,30 @@ function bootstrapSubscriptionOAuthEnv(vaultBasePath?: string): void {
 
   // Priority 3 — vendor CLI bundle grep (last resort; values are PUBLIC).
   if (!process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID || !process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET) {
-    const geminiBundle = path.join(
+    // 2026-05-15 — bundle path 가 gemini CLI 업데이트 시 변경됨 (chunk-UN6XCVMJ.js
+    // → chunk-DN4XSYRG.js 등). bundle 디렉토리 글롭으로 모든 chunk 검색.
+    // 또한 bundle 안 2개 client_id 존재 — `OAUTH_CLIENT_ID`(정확) vs
+    // `CLOUD_SDK_CLIENT_ID`(refresh 호환 X). prefixed name 매칭 의무.
+    const bundleDir = path.join(
       os.homedir(),
-      '.nvm/versions/node/v22.17.0/lib/node_modules/@google/gemini-cli/bundle/chunk-UN6XCVMJ.js',
+      '.nvm/versions/node/v22.17.0/lib/node_modules/@google/gemini-cli/bundle',
     )
     try {
-      const text = fs.readFileSync(geminiBundle, 'utf-8')
-      const idMatch = text.match(/"(\d{6,}-[a-z0-9]+\.apps\.googleusercontent\.com)"/)
-      const secretMatch = text.match(/"(GOCSPX-[A-Za-z0-9_-]{20,})"/)
-      if (idMatch && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID) {
-        process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID = idMatch[1]
-      }
-      if (secretMatch && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET) {
-        process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET = secretMatch[1]
+      const chunks = fs.readdirSync(bundleDir).filter((f: string) => f.endsWith('.js'))
+      for (const chunk of chunks) {
+        const text = fs.readFileSync(path.join(bundleDir, chunk), 'utf-8')
+        // OAUTH_CLIENT_ID specific match — avoids CLOUD_SDK_CLIENT_ID (different client).
+        const idMatch =
+          text.match(/var\s+OAUTH_CLIENT_ID\s*=\s*"([^"]+)"/) ??
+          text.match(/OAUTH_CLIENT_ID\s*=\s*"([^"]+\.apps\.googleusercontent\.com)"/)
+        const secretMatch = text.match(/"(GOCSPX-[A-Za-z0-9_-]{20,})"/)
+        if (idMatch && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID) {
+          process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID = idMatch[1]
+        }
+        if (secretMatch && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET) {
+          process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET = secretMatch[1]
+        }
+        if (process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID && process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET) break
       }
     } catch { /* bundle not found */ }
   }
