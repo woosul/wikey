@@ -1,6 +1,6 @@
 # Obsidian E2E Test Plan — Phase 3 (2026-04-18 Carryover)
 
-> **상위 문서**: [`docs/sessions/phase-3/phase-3-result.md`](../../docs/sessions/phase-3/phase-3-result.md) · [`docs/planning/phase-3/phase-3-todo.md`](./phase-3-todo.md) — 본 문서는 §3.B (Obsidian E2E 테스트 플랜) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-3/phase-3-result.md`](../../sessions/phase-3/phase-3-result.md) · [`docs/planning/phase-3/phase-3-todo.md`](./phase-3-todo.md) — 본 문서는 §3.B (Obsidian E2E 테스트 플랜) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 > **체크박스 주의**: 본 문서 내부의 `- [ ]` 는 설계 당시의 플래닝 아티팩트이며 **실 todo 아님**. 실제 추적은 `plan/phase-N/phase-N-todo.md` 의 해당 section 에서 수행. (sync 스킬 Phase 0-4.6 의 "미이관 결정 케이스" — historical plan)
 

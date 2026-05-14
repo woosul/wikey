@@ -1,6 +1,6 @@
 # Phase 4.3 구현 계획 v3 — 인제스트 본체 (완료 기록 + codex 2차 검증 결과 반영)
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../docs/sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.3 (인제스트 본체 + provenance 플랜 v3) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.3 (인제스트 본체 + provenance 플랜 v3) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 > 작성: 2026-04-23 session 2 · v2 업데이트: session 3 · **v3 업데이트: session 4 (완료 기록 + codex 2차 재시도)** / 대상: `docs/planning/phase-4/phase-4-todo.md §4.3`.

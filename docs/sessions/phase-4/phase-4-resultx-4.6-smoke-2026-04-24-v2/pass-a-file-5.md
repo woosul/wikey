@@ -1,6 +1,6 @@
 # Pass A File 5: 스마트공장 보급확산 합동설명회 개최.hwp
 
-> **상위 문서**: [`README.md`](../README.md) · [`pass-a-readme.md`](../pass-a-readme.md)
+> **상위 문서**: [`README.md`](../../../../README.md) · [`pass-a-readme.md`](pass-a-readme.md)
 
 ## 메타
 - 크기: 17 KB

@@ -1,6 +1,6 @@
 # Pass A File 3: C20260410_용역계약서_SK바이오텍전자구매시스템구축.pdf
 
-> **상위 문서**: [`README.md`](../README.md) · [`pass-a-readme.md`](../pass-a-readme.md)
+> **상위 문서**: [`README.md`](../../../../README.md) · [`pass-a-readme.md`](pass-a-readme.md)
 
 ## 메타
 - 크기: 3.2 MB

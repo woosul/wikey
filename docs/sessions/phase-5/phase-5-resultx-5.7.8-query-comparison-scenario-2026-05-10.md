@@ -9,10 +9,10 @@ updated: 2026-05-10
 # Phase 5 §5.7.8 Query Comparison Scenario — Advanced Tuning OFF vs ON
 
 > **상위 문서**:
-> - [`docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 (Spec, WHAT — 단일 진실 소스)
-> - [`docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.4 (Todo, HOW)
-> - [`docs/planning/phase-5/phase-5-todo.md`](../../docs/planning/phase-5/phase-5-todo.md) §5.7.8 (체크박스 단일 소스)
-> - [`wikey.schema.md`](../../wikey.schema.md) §"LLM 참여형 다층 검색" — 4 원칙 (Explicit / Yours / File over app / BYOAI) 부합 검증 source
+> - [`docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 (Spec, WHAT — 단일 진실 소스)
+> - [`docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.4 (Todo, HOW)
+> - [`docs/planning/phase-5/phase-5-todo.md`](../../planning/phase-5/phase-5-todo.md) §5.7.8 (체크박스 단일 소스)
+> - [`wikey.schema.md`](../../../wikey.schema.md) §"LLM 참여형 다층 검색" — 4 원칙 (Explicit / Yours / File over app / BYOAI) 부합 검증 source
 >
 > **본 문서 성격**: 라이브 비교 시나리오 *문서* (analyst 작성). 실 측정값은 master 가 CDP 직접 실행 후 §3 표 / §4 분석 / §6 개선점 항목에 채움. analyst 는 query 선정 / 절차 / framework / PASS 기준만 정의.
 

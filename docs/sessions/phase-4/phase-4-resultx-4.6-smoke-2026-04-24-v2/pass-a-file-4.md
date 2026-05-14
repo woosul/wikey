@@ -1,6 +1,6 @@
 # Pass A File 4: PMS_제품소개_R10_20220815.pdf
 
-> **상위 문서**: [`README.md`](../README.md) · [`pass-a-readme.md`](../pass-a-readme.md)
+> **상위 문서**: [`README.md`](../../../../README.md) · [`pass-a-readme.md`](pass-a-readme.md)
 
 ## 메타
 - 크기: 3.6 MB

@@ -9,7 +9,7 @@ verdict: LIVE_SMOKE_PASS
 
 # Phase 5 §5.18 Step G — Obsidian CDP 라이브 cycle smoke
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.18`](../../docs/planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md`](../../docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md) · [`docs/sessions/phase-5/phase-5-result.md §5.18`](./phase-5-result.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.18`](../../planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md`](../../planning/phase-5/phase-5-spec-5.18-query-citation-ux.md) · [`docs/sessions/phase-5/phase-5-result.md §5.18`](./phase-5-result.md)
 
 ## 1. 환경
 

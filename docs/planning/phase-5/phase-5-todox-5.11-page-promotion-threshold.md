@@ -10,7 +10,7 @@ version: v2.5
 
 # Phase 5 §5.11 Page Promotion Threshold (Issue B) v2.5 — SDD+TDD + 의미·관련도 + 원문 언어 alias + codex cycle #1+#2+#3+#4 fix
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../docs/sessions/phase-5/phase-5-result.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../sessions/phase-5/phase-5-result.md)
 >
 > **버전 이력**:
 > - v1 (2026-05-05 session 18 commit c311561, occurrence ≥ 2 gate)

@@ -6,7 +6,7 @@ date: 2026-04-25
 type: resultx
 ---
 
-> **상위 문서**: [`../docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) · [`../docs/planning/phase-5/phase-5-todo.md`](../../docs/planning/phase-5/phase-5-todo.md)
+> **상위 문서**: [`../docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) · [`../docs/planning/phase-5/phase-5-todo.md`](../../planning/phase-5/phase-5-todo.md)
 
 ## 1. 목적
 

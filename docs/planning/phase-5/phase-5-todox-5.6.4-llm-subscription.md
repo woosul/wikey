@@ -111,10 +111,10 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai]
 > **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.6.4`](./phase-5-todo.md) (실행 단일 소스 — 체크박스 mirror)
 >
 > **관련 문서**:
-> - [`wikey.schema.md`](../../wikey.schema.md) — BYOAI 원칙 (4 원칙 #4), 시스템 언어 영문 LOCK (#6)
-> - [`wikey-core/src/llm-client.ts`](../../wikey-core/src/llm-client.ts) — 4 provider switch (`callGemini` / `callAnthropic` / `callOpenAI` / `callOllama`)
-> - [`wikey-core/src/types.ts`](../../wikey-core/src/types.ts) — `LLMCallOptions` (9 field at line 138~156 + v0.5 추가 `onAuthFallback?` → keyof 10, path-support row 8) + `WikeyConfig`
-> - [`wikey-obsidian/src/settings-tab.ts`](../../wikey-obsidian/src/settings-tab.ts) — provider 카드 / model dropdown / API key 입력 UI
+> - [`wikey.schema.md`](../../../wikey.schema.md) — BYOAI 원칙 (4 원칙 #4), 시스템 언어 영문 LOCK (#6)
+> - [`wikey-core/src/llm-client.ts`](../../../wikey-core/src/llm-client.ts) — 4 provider switch (`callGemini` / `callAnthropic` / `callOpenAI` / `callOllama`)
+> - [`wikey-core/src/types.ts`](../../../wikey-core/src/types.ts) — `LLMCallOptions` (9 field at line 138~156 + v0.5 추가 `onAuthFallback?` → keyof 10, path-support row 8) + `WikeyConfig`
+> - [`wikey-obsidian/src/settings-tab.ts`](../../../wikey-obsidian/src/settings-tab.ts) — provider 카드 / model dropdown / API key 입력 UI
 > - `~/.config/wikey/credentials.json` — API key 저장 (Read 금지 / schema 확장 대상)
 > - `docs/planning/phase-5/phase-5-todox-5.6.5` (예정) — Ollama Cloud 통합 (본 §5.6.4 종결 후 후속)
 >

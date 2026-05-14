@@ -1024,17 +1024,17 @@ v1 시점에는 wikilink 뒤 `[원본]` / 📄 보조 마커가 chat UI 에 atta
 
 ## 14. 관련 문서
 
-- [`wikey.schema.md`](../wikey.schema.md) — 마스터 스키마 (단일 진실 소스, Karpathy 4 원칙)
-- [`llm-wiki.md`](../llm-wiki.md) — Karpathy 원문 패턴
+- [`wikey.schema.md`](../../wikey.schema.md) — 마스터 스키마 (단일 진실 소스, Karpathy 4 원칙)
+- [`llm-wiki.md`](../../llm-wiki.md) — Karpathy 원문 패턴
 - [`docs/architecture/wikey-ingest-pipeline.md`](./wikey-ingest-pipeline.md) — v1 (이전 버전, 2026-05-05)
 - [`docs/architecture/ingest-decomposition.md`](./ingest-decomposition.md) — 분해 전략 예시·운영 원칙
-- [`docs/planning/plan-full.md`](../docs/planning/plan-full.md) — 전체 로드맵 + Phase 별 spec
-- [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — D-wide paradigm shift
-- [`docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md) — Page Promotion Threshold v2
-- [`docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md`](../docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md) — Source Wikilink Format
-- [`docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md`](../docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md) — A1+B2+C4+D 5 follow-up
-- [`docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md`](../docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md) — TDD-BLUE refactor + 본체 종결
-- [`docs/sessions/phase-5/phase-5-result.md`](../docs/sessions/phase-5/phase-5-result.md) — Phase 5 진행 timeline
+- [`docs/planning/plan-full.md`](../planning/plan-full.md) — 전체 로드맵 + Phase 별 spec
+- [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — D-wide paradigm shift
+- [`docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md) — Page Promotion Threshold v2
+- [`docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md`](../planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md) — Source Wikilink Format
+- [`docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md`](../planning/phase-5/phase-5-todox-5.13-residual-followups.md) — A1+B2+C4+D 5 follow-up
+- [`docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md`](../planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md) — TDD-BLUE refactor + 본체 종결
+- [`docs/sessions/phase-5/phase-5-result.md`](../sessions/phase-5/phase-5-result.md) — Phase 5 진행 timeline
 
 ---
 

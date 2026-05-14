@@ -10,7 +10,7 @@ session: 20
 
 # §5.14 — retrospective TDD-BLUE refactor (Tier 2-4 narrow, Session 20)
 
-> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) §5.14 · [`docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md`](../../docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md) v1
+> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) §5.14 · [`docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md`](../../planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md) v1
 >
 > **세션 종결 요약** (2026-05-06 session 20):
 > - Tier 2 (core 6 file) 본격 BLUE refactor — extract / dedup / cleanup

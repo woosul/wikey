@@ -10,7 +10,7 @@ version: v8
 
 # Phase 5 §5.7.4 Orama 마이그레이션 — qmd CLI 대체 (Spec, WHAT)
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.7.4`](./phase-5-todo.md) (실행 단일 소스, 체크박스) · [`docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../../docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md) (PoC 4 단계 evidence + 7 dimension 비교) · [`docs/planning/phase-5/phase-5-todox-5.7.4-orama-migration.md`](./phase-5-todox-5.7.4-orama-migration.md) (Todo, HOW — mirror)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.7.4`](./phase-5-todo.md) (실행 단일 소스, 체크박스) · [`docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../../sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md) (PoC 4 단계 evidence + 7 dimension 비교) · [`docs/planning/phase-5/phase-5-todox-5.7.4-orama-migration.md`](./phase-5-todox-5.7.4-orama-migration.md) (Todo, HOW — mirror)
 >
 > **버전 이력**:
 > - v1 (2026-05-09 session 28, 초안): PoC §7 의 26 todo 후보 (A1~A9 / B1~B6 / C1~C6 / D1~D5) 4-question 검증 + 삼지선다 분류.

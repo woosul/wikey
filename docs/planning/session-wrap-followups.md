@@ -394,7 +394,7 @@
 >
 > 단일 진실 source: spec → todox → master phase-5-todo cascade ([phase-5-spec-5.7.4-orama-migration.md](./phase-5/phase-5-spec-5.7.4-orama-migration.md) + [phase-5-todox-5.7.4-orama-migration.md](./phase-5/phase-5-todox-5.7.4-orama-migration.md) + [phase-5-todo.md](./phase-5/phase-5-todo.md) §5.7.4).
 >
-> 직전 session 27 (2026-05-09) 에서 §5.7.3 research + PoC 4 단계 (Kiwi WASM sandbox / Orama Electron renderer / Kiwi+Orama 통합 / 10 query benchmark) 모두 PASS + 7 dimension 비교 (6/7 Orama 우세) + 사용자 §5.7.4 진입 결정. 결과 문서: [`docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md).
+> 직전 session 27 (2026-05-09) 에서 §5.7.3 research + PoC 4 단계 (Kiwi WASM sandbox / Orama Electron renderer / Kiwi+Orama 통합 / 10 query benchmark) 모두 PASS + 7 dimension 비교 (6/7 Orama 우세) + 사용자 §5.7.4 진입 결정. 결과 문서: [`docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md).
 >
 > 직전 session 26 (2026-05-08) §5.7.1 종결 + §5.7.2 abandon 처리. (process 결함 4 항목 master 의무 영구 등록 — architecture 변경 시 5분 PoC / runtime limitation web search / baseline measurement / codex 정적 한계 인지)
 >
@@ -837,7 +837,7 @@ cat ~/.claude/projects/-Users-denny-Project-wikey/memory/project_phase5_status.m
 
 **MEMORY.md 인덱스** (한 줄 추가):
 ```
-- [§5.1 done](project_phase5_status.md) — 구조적 PII commit 2da88cb (2026-04-25)
+- §5.1 done (memory) — 구조적 PII commit 2da88cb (2026-04-25)
 ```
 
 ### ⑥ phase-5-todo.md §5.1 잔여 체크박스 mark

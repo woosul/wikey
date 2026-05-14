@@ -1,6 +1,6 @@
 # Phase 4.1.3 — Bitmap OCR 본문 오염 차단 + 검증 모듈 설계 확장
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../docs/sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.1.3 (Bitmap OCR 본문 오염 차단 플랜) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.1.3 (Bitmap OCR 본문 오염 차단 플랜) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 > 작성: 2026-04-22
@@ -239,7 +239,7 @@ describe('buildDoclingArgs — §4.1.3.1 mode parameter', () => {
 
 기준 3 가지 (2 이상 true → pollution 판정):
 1. **기준 A — 마커 근접 파편 클러스터**:
-   - `<!-- image -->` 또는 `![image](../...)` placeholder 마커의 전후 ±5 라인 윈도우.
+   - `<!-- image -->` 또는 `![image](../../)` placeholder 마커의 전후 ±5 라인 윈도우.
    - 해당 윈도우 내 비어있지 않은 라인 중 **<20 자 라인이 3 개 이상 연속** 출현.
 2. **기준 B — 파편 라인 비율**:
    - 전체 비어있지 않은 라인 중 "1-3 단어 + 총 20 자 미만" 패턴 비율.

@@ -9,11 +9,11 @@
 
 ## 관련 문서
 
-- **Result mirror**: [`docs/sessions/phase-2/phase-2-result.md`](../../docs/sessions/phase-2/phase-2-result.md)
+- **Result mirror**: [`docs/sessions/phase-2/phase-2-result.md`](../../sessions/phase-2/phase-2-result.md)
 - **Phase 2 보조 문서** (섹션 번호 순):
   - §2.Step3-0 한국어 사전조사: [`docs/planning/phase-2/phase-2-todox-2.Step3-0-research-report.md`](./phase-2-todox-2.Step3-0-research-report.md)
-  - §2.Step5 비용 분석: [`docs/sessions/phase-2/phase-2-resultx-2.Step5-cost-analysis.md`](../../docs/sessions/phase-2/phase-2-resultx-2.Step5-cost-analysis.md) · [`docs/sessions/phase-2/phase-2-resultx-2.Step5-cost-log.md`](../../docs/sessions/phase-2/phase-2-resultx-2.Step5-cost-log.md)
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../plan_wikey-enterprise-kb.md).
+  - §2.Step5 비용 분석: [`docs/sessions/phase-2/phase-2-resultx-2.Step5-cost-analysis.md`](../../sessions/phase-2/phase-2-resultx-2.Step5-cost-analysis.md) · [`docs/sessions/phase-2/phase-2-resultx-2.Step5-cost-log.md`](../../sessions/phase-2/phase-2-resultx-2.Step5-cost-log.md)
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../ref/plan_wikey-enterprise-kb.md).
 
 ---
 

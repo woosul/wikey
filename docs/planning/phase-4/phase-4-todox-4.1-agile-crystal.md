@@ -1,6 +1,6 @@
 # Phase 4.1 — 문서 전처리 파이프라인 재편 (Docling 메인화 + unhwp + MarkItDown 강등)
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../docs/sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.1 (문서 전처리 파이프라인 재편 (agile/crystal 메서드)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.1 (문서 전처리 파이프라인 재편 (agile/crystal 메서드)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 ## Context

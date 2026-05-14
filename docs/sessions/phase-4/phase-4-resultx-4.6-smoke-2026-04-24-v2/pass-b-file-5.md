@@ -1,6 +1,6 @@
 # Pass B File 5: 스마트공장 HWP (Audit panel)
 
-> **상위 문서**: [`README.md`](../README.md) · [`pass-b-readme.md`](../pass-b-readme.md)
+> **상위 문서**: [`README.md`](../../../../README.md) · [`pass-b-readme.md`](pass-b-readme.md)
 
 ## 메타
 - 진입: Audit 패널

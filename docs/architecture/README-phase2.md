@@ -50,7 +50,7 @@ setup.sh가 자동으로 확인/설치하는 것:
 # WIKEY_BASIC_MODEL=ollama        ← 완전 오프라인 (무료)
 ```
 
-상세 가이드: [`docs/model/model-selection-guide.md`](docs/model/model-selection-guide.md)
+상세 가이드: [`docs/model/model-selection-guide.md`](../model/model-selection-guide.md)
 
 ### 3. 첫 인제스트
 
@@ -147,4 +147,4 @@ wikey/
 
 ## License
 
-[MIT](LICENSE)
+[MIT](../../LICENSE)

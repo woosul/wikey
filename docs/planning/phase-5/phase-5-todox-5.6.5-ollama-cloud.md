@@ -40,18 +40,18 @@ tags: [provider-auth, ollama-cloud, benchmark, byoai, model-selection]
 > **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.6.5`](./phase-5-todo.md) (실행 단일 소스 — 체크박스 mirror)
 >
 > **관련 문서**:
-> - [`wikey.schema.md`](../../wikey.schema.md) — 4 원칙 (Explicit / Yours / File over app / BYOAI) + 시스템 언어 영문 LOCK (#6) + LLM 참여형 다층 검색 (§"검색/인덱스 확장 전략") + 분해 정책 D-wide (§"분해 정책")
+> - [`wikey.schema.md`](../../../wikey.schema.md) — 4 원칙 (Explicit / Yours / File over app / BYOAI) + 시스템 언어 영문 LOCK (#6) + LLM 참여형 다층 검색 (§"검색/인덱스 확장 전략") + 분해 정책 D-wide (§"분해 정책")
 > - [`docs/planning/phase-5/phase-5-spec-5.6.5-ollama-cloud.md`](./phase-5-spec-5.6.5-ollama-cloud.md) — Spec 6 요소 (Goal / Invariants / AC / DoD / TestCases / Dependencies / Risks)
 > - [`docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md`](./phase-5-todox-5.6.4-llm-subscription.md) — 직전 cycle, provider 추상화 결과 활용 (`AuthMode` / `AuthPath` / `SubscriptionProvider` / `CLI_OPTION_SUPPORT` 48-cell matrix / `LLMCliOptionField` 8-field)
-> - [`wikey-core/src/types.ts`](../../wikey-core/src/types.ts) — `LLMProvider` (line 145, 현재 4 element) / `AuthMode` (158) / `SubscriptionProvider` (167, `Exclude<LLMProvider,'ollama'>`)
-> - [`wikey-core/src/provider-cli-options.ts`](../../wikey-core/src/provider-cli-options.ts) — 48-cell matrix (3 provider × 2 path × 8 field). §5.6.5.3 = ollama-cloud row 추가 후 64 cell (4 provider × 2 path × 8 field)
-> - [`wikey-core/src/auth-resolver.ts`](../../wikey-core/src/auth-resolver.ts) — `resolveAuthMode` (line 87) / `getConfiguredAuthPath` (69) / `detectFallbackTrigger` (133)
-> - [`wikey-core/src/adaptive-json-mode.ts`](../../wikey-core/src/adaptive-json-mode.ts) — line 43 `if (provider === 'ollama') return true` (local 가정, cloud 모델 별 jsonMode 차이 재검토 의무)
-> - [`wikey-core/src/llm-client.ts`](../../wikey-core/src/llm-client.ts) — `callOllama` (line 509, `OLLAMA_URL` env 기반)
-> - [`wikey-core/src/provider-defaults.ts`](../../wikey-core/src/provider-defaults.ts) — `PROVIDER_CHAT_DEFAULTS` (line 23, `ollama: 'qwen3:8b'`) / `PROVIDER_CONTEXT_BUDGETS` (75) / `PROVIDER_VISION_DEFAULTS` (35)
-> - [`wikey-obsidian/src/settings-tab.ts`](../../wikey-obsidian/src/settings-tab.ts) — `renderApiKeysSection` (line 1221, 3 provider subsection) / `renderProviderSubsection` (1281, helper)
-> - [`wikey-core/src/scripts/benchmark-search.ts`](../../wikey-core/src/scripts/benchmark-search.ts) — 기존 search benchmark harness pattern (§5.6.5.4 mirror 후보)
-> - [`docs/samples/`](../../docs/samples/) — fixture corpus (Korean ROHM Wi-SUN PDF + English rp1 peripherals + 한글 HWPX Examples + 한글 PMS 제품소개 + 사업자등록증 PDF + GOODSTREAM Solutions md + 스마트공장 hwp.md)
+> - [`wikey-core/src/types.ts`](../../../wikey-core/src/types.ts) — `LLMProvider` (line 145, 현재 4 element) / `AuthMode` (158) / `SubscriptionProvider` (167, `Exclude<LLMProvider,'ollama'>`)
+> - [`wikey-core/src/provider-cli-options.ts`](../../../wikey-core/src/provider-cli-options.ts) — 48-cell matrix (3 provider × 2 path × 8 field). §5.6.5.3 = ollama-cloud row 추가 후 64 cell (4 provider × 2 path × 8 field)
+> - [`wikey-core/src/auth-resolver.ts`](../../../wikey-core/src/auth-resolver.ts) — `resolveAuthMode` (line 87) / `getConfiguredAuthPath` (69) / `detectFallbackTrigger` (133)
+> - [`wikey-core/src/adaptive-json-mode.ts`](../../../wikey-core/src/adaptive-json-mode.ts) — line 43 `if (provider === 'ollama') return true` (local 가정, cloud 모델 별 jsonMode 차이 재검토 의무)
+> - [`wikey-core/src/llm-client.ts`](../../../wikey-core/src/llm-client.ts) — `callOllama` (line 509, `OLLAMA_URL` env 기반)
+> - [`wikey-core/src/provider-defaults.ts`](../../../wikey-core/src/provider-defaults.ts) — `PROVIDER_CHAT_DEFAULTS` (line 23, `ollama: 'qwen3:8b'`) / `PROVIDER_CONTEXT_BUDGETS` (75) / `PROVIDER_VISION_DEFAULTS` (35)
+> - [`wikey-obsidian/src/settings-tab.ts`](../../../wikey-obsidian/src/settings-tab.ts) — `renderApiKeysSection` (line 1221, 3 provider subsection) / `renderProviderSubsection` (1281, helper)
+> - [`wikey-core/src/scripts/benchmark-search.ts`](../../../wikey-core/src/scripts/benchmark-search.ts) — 기존 search benchmark harness pattern (§5.6.5.4 mirror 후보)
+> - [`docs/samples/`](../../samples/) — fixture corpus (Korean ROHM Wi-SUN PDF + English rp1 peripherals + 한글 HWPX Examples + 한글 PMS 제품소개 + 사업자등록증 PDF + GOODSTREAM Solutions md + 스마트공장 hwp.md)
 >
 > **wiki 재생성 없음 확증 (예상)**: provider 추가 + jsonMode adaptive + UI subsection 만. wiki 본문 / frontmatter / 페이지 / log.md 형식 변경 0. 벤치마크 산출물 = `docs/model/ollama-cloud-benchmark-result.md` (wiki 외부, plan/activity 영역).
 >

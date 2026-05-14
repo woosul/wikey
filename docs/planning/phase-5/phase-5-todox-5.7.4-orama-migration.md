@@ -10,7 +10,7 @@ version: v8
 
 # Phase 5 §5.7.4 Orama 마이그레이션 — qmd CLI 대체 (Todo, HOW)
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.7.4`](./phase-5-todo.md) (실행 단일 소스 — 체크박스 mirror) · [`docs/planning/phase-5/phase-5-spec-5.7.4-orama-migration.md`](./phase-5-spec-5.7.4-orama-migration.md) (Spec, WHAT — 4-question 검증 + AC + Risk) · [`docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../../docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md) (PoC evidence)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.7.4`](./phase-5-todo.md) (실행 단일 소스 — 체크박스 mirror) · [`docs/planning/phase-5/phase-5-spec-5.7.4-orama-migration.md`](./phase-5-spec-5.7.4-orama-migration.md) (Spec, WHAT — 4-question 검증 + AC + Risk) · [`docs/sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md`](../../sessions/phase-5/phase-5-resultx-5.7.3-orama-poc-2026-05-09.md) (PoC evidence)
 >
 > **버전 이력**:
 > - v1 (2026-05-09 session 28, 초안): SDD+TDD 흐름 mirror (§5.11 v2.5 양식) + 검증 의무 매트릭스 + Step A~D 단계별 체크박스 + 자체 7-anchor self-check.

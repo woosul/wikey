@@ -9,7 +9,7 @@ session: 19
 
 # Phase 5 §5.12 — Source Wikilink Format 결과
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md`](../../docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md) v3 · [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md`](../../planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md) v3 · [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md)
 
 ## 1. 본질
 

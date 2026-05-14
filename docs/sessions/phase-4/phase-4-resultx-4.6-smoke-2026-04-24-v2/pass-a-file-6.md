@@ -1,6 +1,6 @@
 # Pass A File 6: Examples.hwpx
 
-> **상위 문서**: [`README.md`](../README.md) · [`pass-a-readme.md`](../pass-a-readme.md)
+> **상위 문서**: [`README.md`](../../../../README.md) · [`pass-a-readme.md`](pass-a-readme.md)
 
 ## 메타
 - 크기: 1.2 MB

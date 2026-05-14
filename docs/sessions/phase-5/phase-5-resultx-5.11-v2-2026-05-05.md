@@ -9,7 +9,7 @@ session: 19
 
 # Phase 5 §5.11 v2 — 의미·관련도 + 원문 언어 alias + 환경 초기화 결과
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../../docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md) v2.5 · [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../../planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md) v2.5 · [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md)
 
 ## 1. 사용자 6 chain raise (2026-05-05 session 18~19)
 

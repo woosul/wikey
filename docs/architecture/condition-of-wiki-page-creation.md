@@ -409,8 +409,8 @@ Hook 2 (`extractUserMarkers`) 의 scope 를 entity/concept 까지 확장 — 단
 
 - [`docs/architecture/wikey-ingest-pipeline.md §6, §7`](./wikey-ingest-pipeline.md) — Step 6 canonicalize, Step 7 page write 상세
 - [`docs/architecture/step8-self-extending-analysis.md`](./step8-self-extending-analysis.md) — §5.4 Step 8 폐기 가능성 (별 issue)
-- [`wikey.schema.md "인제스트 분할 전략" / "핵심 원칙"`](../wikey.schema.md)
-- [`llm-wiki.md "The core idea" / "Operations"`](../llm-wiki.md) — Karpathy 원문
-- [`wikey-core/src/canonicalizer.ts`](../wikey-core/src/canonicalizer.ts) — `buildCanonicalizerPrompt`, `buildPageContent`, `applyCrossLinks`
-- [`wikey-core/src/wiki-ops.ts`](../wikey-core/src/wiki-ops.ts) — `createPage`, `injectProvenance`, `updateIndex`, `appendLog`
-- [`wikey-core/src/incremental-reingest.ts`](../wikey-core/src/incremental-reingest.ts) — Hook 1/2 (사용자 marker 보호)
+- [`wikey.schema.md "인제스트 분할 전략" / "핵심 원칙"`](../../wikey.schema.md)
+- [`llm-wiki.md "The core idea" / "Operations"`](../../llm-wiki.md) — Karpathy 원문
+- [`wikey-core/src/canonicalizer.ts`](../../wikey-core/src/canonicalizer.ts) — `buildCanonicalizerPrompt`, `buildPageContent`, `applyCrossLinks`
+- [`wikey-core/src/wiki-ops.ts`](../../wikey-core/src/wiki-ops.ts) — `createPage`, `injectProvenance`, `updateIndex`, `appendLog`
+- [`wikey-core/src/incremental-reingest.ts`](../../wikey-core/src/incremental-reingest.ts) — Hook 1/2 (사용자 marker 보호)

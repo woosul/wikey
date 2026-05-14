@@ -9,7 +9,7 @@ version: v0.5
 
 # Phase 5 §5.21 Ingest pipeline mention guard — Result (2026-05-13 session 40)
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.21`](../../docs/planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.21-ingest-mention-guard.md`](../../docs/planning/phase-5/phase-5-spec-5.21-ingest-mention-guard.md) (v0.3) · [`docs/planning/phase-5/phase-5-todox-5.21-ingest-mention-guard.md`](../../docs/planning/phase-5/phase-5-todox-5.21-ingest-mention-guard.md) (v0.3) #ingest #mention-guard #canonicalizer #done
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.21`](../../planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.21-ingest-mention-guard.md`](../../planning/phase-5/phase-5-spec-5.21-ingest-mention-guard.md) (v0.3) · [`docs/planning/phase-5/phase-5-todox-5.21-ingest-mention-guard.md`](../../planning/phase-5/phase-5-todox-5.21-ingest-mention-guard.md) (v0.3) #ingest #mention-guard #canonicalizer #done
 
 ## 1. 종결 요약
 

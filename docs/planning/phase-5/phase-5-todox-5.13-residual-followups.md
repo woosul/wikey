@@ -10,7 +10,7 @@ version: v2
 
 # Phase 5 §5.13 — §5.12 잔존 follow-up 3 항목 (정식 todox)
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../docs/sessions/phase-5/phase-5-result.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../sessions/phase-5/phase-5-result.md)
 >
 > **이슈 출처**: §5.12 종결 시 scope 외 분리 항목 3개. `phase-5-resultx-5.12-...md §5` + `phase-5-todox-5.12-...md §9` + `session-wrap-followups.md` 다음 세션 액션 마지막 줄에 분산 기록 → 본 §5.13 으로 정식 등록 (사용자 요청 2026-05-06).
 >
@@ -69,7 +69,7 @@ raw/3_resources/pmbok-overview.md (원문) 열림
 - [[pmbok-overview.md|원문]]
 ```
 
-v0.1 의 plain markdown link `[raw](../raw/3_resources/pmbok-overview.md)` 에서 wikilink 으로 paradigm 변경한 이유:
+v0.1 의 plain markdown link `raw (raw/3_resources/, 옛 dead)` 에서 wikilink 으로 paradigm 변경한 이유:
 
 1. **B2 매칭과 결합**: B2 의 `find raw -name "${link}"` (link 자체) 가 raw/<bucket>/pmbok-overview.md 매칭 → validator PASS.
 2. **Obsidian native**: basename matcher 가 raw/<bucket>/pmbok-overview.md 자동 매칭 → 클릭 1 회 raw 원문 열림.
@@ -105,7 +105,7 @@ source 페이지 frontmatter 에 `raw_path: raw/3_resources/pmbok-overview.md` �
 
 ## 원문
 
-- [raw/3_resources/pmbok-overview.md](../raw/3_resources/pmbok-overview.md)
+- raw/3_resources/pmbok-overview.md (raw/3_resources/, 옛 dead)
 ```
 
 장점: 단순. 단점: raw 이동 시 stale.

@@ -9,12 +9,12 @@
 
 ## 관련 문서
 
-- **Result mirror**: [`docs/sessions/phase-4/phase-4-result.md`](../../docs/sessions/phase-4/phase-4-result.md) — 관련 보조 문서 전체 목록은 여기 `## 관련 문서` 섹션 참조 (중복 기재 회피).
+- **Result mirror**: [`docs/sessions/phase-4/phase-4-result.md`](../../sessions/phase-4/phase-4-result.md) — 관련 보조 문서 전체 목록은 여기 `## 관련 문서` 섹션 참조 (중복 기재 회피).
 - **직접 링크**:
   - §4.6 D.0 Critical Fix 계획서: [`docs/planning/phase-4/phase-4-todox-4.6-critical-fix-plan.md`](./phase-4-todox-4.6-critical-fix-plan.md)
-  - §4.6 통합 smoke 계획서: [`docs/planning/phase-4/phase-4-todox-4.6-integrated-test.md`](./phase-4-todox-4.6-integrated-test.md) · 실행 리포트: [`docs/sessions/phase-4/phase-4-resultx-4.6-smoke-2026-04-23/`](../../docs/sessions/phase-4/phase-4-resultx-4.6-smoke-2026-04-23/)
+  - §4.6 통합 smoke 계획서: [`docs/planning/phase-4/phase-4-todox-4.6-integrated-test.md`](./phase-4-todox-4.6-integrated-test.md) · 실행 리포트: [`docs/sessions/phase-4/phase-4-resultx-4.6-smoke-2026-04-23/`](../../sessions/phase-4/phase-4-resultx-4.6-smoke-2026-04-23/)
   - §4.1 / §4.1.3 / §4.2 / §4.3 / §4.5.1.5 플랜·리포트: result 의 관련 문서 섹션 참조.
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../plan_wikey-enterprise-kb.md) · [`docs/planning/session-wrap-followups.md`](../session-wrap-followups.md).
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../ref/plan_wikey-enterprise-kb.md) · [`docs/planning/session-wrap-followups.md`](../session-wrap-followups.md).
 
 ---
 

@@ -7,8 +7,8 @@
 
 ## 관련 문서
 
-- **Result mirror**: [`docs/sessions/phase-1/phase-1-result.md`](../../docs/sessions/phase-1/phase-1-result.md) — 상세 타임라인·수치·커밋.
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../plan_wikey-enterprise-kb.md).
+- **Result mirror**: [`docs/sessions/phase-1/phase-1-result.md`](../../sessions/phase-1/phase-1-result.md) — 상세 타임라인·수치·커밋.
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../ref/plan_wikey-enterprise-kb.md).
 - **보조 문서**: 없음.
 
 ---

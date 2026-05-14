@@ -14,7 +14,7 @@
 - [-] **Step F — codex post-impl review**: 사용자 "계획 필요 없음" → master 1차 검증으로 종결
 - [x] **Step G — master grep 확증**: UI string `[가-힣]` 0 (comment / regex / test description 제외)
 
-진행 완료 (v0.2). 결과: [`docs/sessions/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md`](../../docs/sessions/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md)
+진행 완료 (v0.2). 결과: [`docs/sessions/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md`](../../sessions/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md)
 
 ## 의문점 (Step A LOCK 대상)
 

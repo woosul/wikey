@@ -1,6 +1,6 @@
 ---
 
-> **상위 문서**: [`docs/sessions/phase-2/phase-2-result.md`](./phase-2-result.md) · [`docs/planning/phase-2/phase-2-todo.md`](../../docs/planning/phase-2/phase-2-todo.md) — 본 문서는 §2.Step5 (LLM 비용 로그) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-2/phase-2-result.md`](./phase-2-result.md) · [`docs/planning/phase-2/phase-2-todo.md`](../../planning/phase-2/phase-2-todo.md) — 본 문서는 §2.Step5 (LLM 비용 로그) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 title: LLM 비용 로그
 type: log

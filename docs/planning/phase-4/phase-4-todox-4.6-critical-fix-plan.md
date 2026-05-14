@@ -1,6 +1,6 @@
 # Phase 4 본체 완성 D.0 — Critical Fix 보완 계획서 (v6 — 구현 착수 가능)
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../docs/sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.6 D.0 (Critical Fix 보완 계획서 v6) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.6 D.0 (Critical Fix 보완 계획서 v6) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 > **목적**: 2026-04-23 통합 smoke 의 5 Critical (C1~C5) + CDP 5 UX (C6.1~C6.5) 를 해결하고 Phase 4 본체 완성 선언 (D 블록) 재시도 가능 상태 만들기.

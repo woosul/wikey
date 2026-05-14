@@ -262,9 +262,9 @@ wikey.schema.md "핵심 원칙" 5 가지:
 
 ### 6.3 관련 문서
 
-- [`wikey.schema.md §표준 분해 self-extending 구조`](../wikey.schema.md) — 현재 상태 사실 기록
+- [`wikey.schema.md §표준 분해 self-extending 구조`](../../wikey.schema.md) — 현재 상태 사실 기록
 - [`docs/architecture/wikey-ingest-pipeline.md §9`](./wikey-ingest-pipeline.md) — Step 8 운영 위치
-- [`docs/planning/phase-5/phase-5-todox-5.4-integration.md`](../docs/planning/phase-5/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10 codex APPROVE)
-- [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — paradigm shift 보조 plan
-- [`docs/sessions/phase-5/phase-5-result.md §5.4 / §5.10`](../docs/sessions/phase-5/phase-5-result.md) — 진행 timeline + issue 등록 trace
-- [`llm-wiki.md`](../llm-wiki.md) — Karpathy 원문 (Step 8 같은 layer 미언급, *원형 정합 근거*)
+- [`docs/planning/phase-5/phase-5-todox-5.4-integration.md`](../planning/phase-5/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10 codex APPROVE)
+- [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — paradigm shift 보조 plan
+- [`docs/sessions/phase-5/phase-5-result.md §5.4 / §5.10`](../sessions/phase-5/phase-5-result.md) — 진행 timeline + issue 등록 trace
+- [`llm-wiki.md`](../../llm-wiki.md) — Karpathy 원문 (Step 8 같은 layer 미언급, *원형 정합 근거*)

@@ -11,7 +11,7 @@ tags: [phase-5, ingest, smoke, cdp, e2e, 5.17, ceiling, batch-yield, assess-conv
 
 # Phase 5 §5.17 Step G — 라이브 cycle smoke 결과 (2026-05-12)
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.17`](../../docs/planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](../../docs/planning/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md) (v0.3) · [`docs/planning/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](../../docs/planning/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.17`](../../planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](../../planning/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md) (v0.3) · [`docs/planning/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](../../planning/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md)
 > **참조 skill**: `~/.claude/skills/obsidian-cdp/SKILL.md` (Brief Proceed + Processing polling + Preview Approve & Write 의무 사이클)
 
 ## 1. 환경

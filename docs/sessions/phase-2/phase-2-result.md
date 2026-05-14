@@ -8,12 +8,12 @@
 
 ## 관련 문서
 
-- **Todo mirror**: [`docs/planning/phase-2/phase-2-todo.md`](../../docs/planning/phase-2/phase-2-todo.md)
+- **Todo mirror**: [`docs/planning/phase-2/phase-2-todo.md`](../../planning/phase-2/phase-2-todo.md)
 - **Phase 2 보조 문서** (섹션 번호 순):
-  - §2.Step3-0 한국어 검색 사전조사 (Step 3 진입 전): [`docs/planning/phase-2/phase-2-todox-2.Step3-0-research-report.md`](../../docs/planning/phase-2/phase-2-todox-2.Step3-0-research-report.md)
+  - §2.Step3-0 한국어 검색 사전조사 (Step 3 진입 전): [`docs/planning/phase-2/phase-2-todox-2.Step3-0-research-report.md`](../../planning/phase-2/phase-2-todox-2.Step3-0-research-report.md)
   - §2.Step5 멀티 LLM 비용 효율: [`docs/sessions/phase-2/phase-2-resultx-2.Step5-cost-analysis.md`](./phase-2-resultx-2.Step5-cost-analysis.md)
   - §2.Step5 LLM 비용 로그: [`docs/sessions/phase-2/phase-2-resultx-2.Step5-cost-log.md`](./phase-2-resultx-2.Step5-cost-log.md)
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../../docs/planning/ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../docs/planning/ref/plan_wikey-enterprise-kb.md).
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../../planning/ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../planning/ref/plan_wikey-enterprise-kb.md).
 
 ---
 

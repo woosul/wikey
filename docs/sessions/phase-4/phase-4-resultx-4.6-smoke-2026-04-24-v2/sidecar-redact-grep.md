@@ -1,6 +1,6 @@
 # D.0.m — PDF Sidecar Redact Grep 증거
 
-> **상위 문서**: [`README.md`](../README.md) — Phase 4 smoke 최종 집계
+> **상위 문서**: [`README.md`](../../../../README.md) — Phase 4 smoke 최종 집계
 
 ## 목적
 D.0 Critical Fix Plan v6 §4.1~§4.5 에서 구현한 PII redact (2-layer gate: `piiGuardEnabled` + `allowPiiIngest`, mask mode 기본) 가 **sidecar `.md`** 에 실제로 적용되는지 grep 기반 검증.

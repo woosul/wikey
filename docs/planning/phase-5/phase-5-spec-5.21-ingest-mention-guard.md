@@ -14,7 +14,7 @@ version: v0.5
 
 ## 0. Context
 
-**도출 source**: §5.19 v0.4 세션 마지막 broken wikilink **585건 (de-duped)** 철저 분석 — 3 근본 원인 (Session 38, 2026-05-12). Evidence 위치: [`docs/sessions/phase-5/phase-5-result.md §5.19.7`](../../docs/sessions/phase-5/phase-5-result.md) (라인 ~4188+ "세션 마지막 broken wikilink 철저 분석").
+**도출 source**: §5.19 v0.4 세션 마지막 broken wikilink **585건 (de-duped)** 철저 분석 — 3 근본 원인 (Session 38, 2026-05-12). Evidence 위치: [`docs/sessions/phase-5/phase-5-result.md §5.19.7`](../../sessions/phase-5/phase-5-result.md) (라인 ~4188+ "세션 마지막 broken wikilink 철저 분석").
 
 **근본 원인 분포** (baseline = 585 de-duped):
 

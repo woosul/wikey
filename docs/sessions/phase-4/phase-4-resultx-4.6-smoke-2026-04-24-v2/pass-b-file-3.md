@@ -1,6 +1,6 @@
 # Pass B File 3: SK바이오텍 계약서 (Audit panel)
 
-> **상위 문서**: [`README.md`](../README.md) · [`pass-b-readme.md`](../pass-b-readme.md)
+> **상위 문서**: [`README.md`](../../../../README.md) · [`pass-b-readme.md`](pass-b-readme.md)
 
 ## 메타
 - 진입: Audit 패널

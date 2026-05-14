@@ -1,6 +1,6 @@
 # Phase 5 §5.1 — 구조적 (Multi-line 폼) PII 탐지 보조 계획서
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../docs/sessions/phase-5/phase-5-result.md) — 본 문서는 §5.1 (Multi-line 폼 label↔name 상관 해결, P0 긴급) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `docs/maintenance/docs-organization.md` 참조.
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../sessions/phase-5/phase-5-result.md) — 본 문서는 §5.1 (Multi-line 폼 label↔name 상관 해결, P0 긴급) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `docs/maintenance/docs-organization.md` 참조.
 
 > **작성일**: 2026-04-25
 > **버전**: v4

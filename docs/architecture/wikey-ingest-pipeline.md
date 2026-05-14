@@ -691,14 +691,14 @@ const rawAnswer = await llm.call(prompt, { provider, model })
 
 ## 13. 관련 문서
 
-- [`wikey.schema.md`](../wikey.schema.md) — 마스터 스키마 (단일 진실 소스)
-- [`llm-wiki.md`](../llm-wiki.md) — Karpathy 원문 패턴
+- [`wikey.schema.md`](../../wikey.schema.md) — 마스터 스키마 (단일 진실 소스)
+- [`llm-wiki.md`](../../llm-wiki.md) — Karpathy 원문 패턴
 - [`docs/architecture/ingest-decomposition.md`](./ingest-decomposition.md) — 분해 전략 예시·운영 원칙
 - [`docs/architecture/graphify-analysis.md`](./graphify-analysis.md) — wiki 그래프 구조 분석
-- [`docs/planning/plan-full.md`](../docs/planning/plan-full.md) — 전체 로드맵 + Phase 별 spec
-- [`docs/planning/phase-5/phase-5-todox-5.4-integration.md`](../docs/planning/phase-5/phase-5-todox-5.4-integration.md) — §5.4 4 Stage 통합 plan
-- [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — paradigm shift 보조 plan
-- [`docs/sessions/phase-5/phase-5-result.md`](../docs/sessions/phase-5/phase-5-result.md) — Phase 5 진행 timeline (§5.4 / §5.10)
+- [`docs/planning/plan-full.md`](../planning/plan-full.md) — 전체 로드맵 + Phase 별 spec
+- [`docs/planning/phase-5/phase-5-todox-5.4-integration.md`](../planning/phase-5/phase-5-todox-5.4-integration.md) — §5.4 4 Stage 통합 plan
+- [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — paradigm shift 보조 plan
+- [`docs/sessions/phase-5/phase-5-result.md`](../sessions/phase-5/phase-5-result.md) — Phase 5 진행 timeline (§5.4 / §5.10)
 
 ---
 

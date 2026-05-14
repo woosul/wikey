@@ -11,9 +11,9 @@ tags: [provider-auth, subscription, byoai, google, anthropic, openai, done]
 
 > **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md §5.6.4`](./phase-5-result.md)
 >
-> **상위 plan**: [`docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md`](../../docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md) v0.7
+> **상위 plan**: [`docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md`](../../planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md) v0.7
 >
-> **mirror todo**: [`docs/planning/phase-5/phase-5-todo.md §5.6.4`](../../docs/planning/phase-5/phase-5-todo.md)
+> **mirror todo**: [`docs/planning/phase-5/phase-5-todo.md §5.6.4`](../../planning/phase-5/phase-5-todo.md)
 
 ## 1. Overview
 

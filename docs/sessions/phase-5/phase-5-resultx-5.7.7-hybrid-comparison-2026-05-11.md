@@ -9,7 +9,7 @@ updated: 2026-05-11
 # Phase 5 §5.7.7 — HYBRID 라이브 ablation comparison (10 suite query + 5 신규 query, master 직접)
 
 > **상위 문서**:
-> - [`docs/planning/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](../../docs/planning/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.3 (status: closed)
+> - [`docs/planning/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](../../planning/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.3 (status: closed)
 > - [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) §5.7.7
 > - [`docs/sessions/phase-5/phase-5-resultx-5.7.8-query-comparison-scenario-2026-05-10.md`](./phase-5-resultx-5.7.8-query-comparison-scenario-2026-05-10.md) v1.1 (선행 §5.7.8 시나리오 — query suite + framework 자산 재사용)
 > - [`~/.claude/skills/obsidian-cdp/SKILL.md`](~/.claude/skills/obsidian-cdp/SKILL.md) v2 (skill self-contained 이관 후, 2026-05-11)
@@ -232,7 +232,7 @@ updated: 2026-05-11
 - md5: `cc70e957bd7478e2b83405083795a448`
 - 명령 = `set_hybrid(mode) → clear_chat (/clear) → ask_query → wait_response (polling 4s × N, stable 2회) → extract_result`
 - selector v1 → v2 정정: `.wikey-message-assistant` → `.wikey-chat-assistant` (실 DOM)
-- citation regex: `(?:wiki[\\/])?(?:concepts|entities|sources|analyses)[\\/]([^.\\/#?]+)` + fallback textContent slugify
+- citation regex: `(?:wiki[\\/])?(?:concepts|entities|sources|analyses)[\\/](#?]+)` + fallback textContent slugify
 - timeout per query = 180s (LLM 응답 ≤ 30~60s, polling stable 8s buffer)
 - 영구 보관 = `~/.claude/skills/obsidian-cdp/scripts/wikey-cdp-wrap.sh` 의존 (claude-harness-helper)
 

@@ -1,6 +1,6 @@
 # Phase 5 §5.2.1 — Entity ↔ Concept Cross-link 자동 생성 보조 계획서
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.2.1`](./phase-5-todo.md#521-entity--concept-cross-link-자동-생성--답변-풍부도-결정적-fix) · [`docs/sessions/phase-5/phase-5-result.md`](../../docs/sessions/phase-5/phase-5-result.md) — 본 문서는 §5.2.1 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` — `docs/maintenance/docs-organization.md` 참조.
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.2.1`](./phase-5-todo.md#521-entity--concept-cross-link-자동-생성--답변-풍부도-결정적-fix) · [`docs/sessions/phase-5/phase-5-result.md`](../../sessions/phase-5/phase-5-result.md) — 본 문서는 §5.2.1 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` — `docs/maintenance/docs-organization.md` 참조.
 
 > **작성일**: 2026-04-25
 > **버전**: v1 (초안 — analyst, 사용자 승인 전)

@@ -15,7 +15,7 @@ version: v1.3
 > - [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) §5.7.7.0~6 (Background / Decision rationale + Spec preview — 본 spec 의 진입 결정 source)
 > - [`docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](./phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.5 (선행 paradigm — query 단계 LLM filter/rewrite/expand. 본 §5.7.7 는 *retrieval 단계* 의 vector layer 추가. 두 layer 가 settings UI Advanced query tuning section 안 *통합 노출*)
 > - [`docs/planning/phase-5/phase-5-spec-5.7.4-orama-migration.md`](./phase-5-spec-5.7.4-orama-migration.md) (선행 — Orama schema 안 `embedding: vector[768]` column 가 *기 추가됨* — 본 cycle = 실 데이터 채우기 + 호출 라인 활성)
-> - [`wikey.schema.md`](../../wikey.schema.md) §"LLM 참여형 다층 검색" line 374~389 + §"검색 코어의 안정성" line 390~415 (Qwen3-Embedding 0.6B 명시 mirror)
+> - [`wikey.schema.md`](../../../wikey.schema.md) §"LLM 참여형 다층 검색" line 374~389 + §"검색 코어의 안정성" line 390~415 (Qwen3-Embedding 0.6B 명시 mirror)
 >
 > **분리 정당화**: §5.7.6 ABANDON / §5.7.8 v1.5 종결 (LLM per-query stopword) / §5.7.9 v1.0 종결 (gemini thinking fix) — 모두 *query 전처리* layer 영역. 본 §5.7.7 = *retrieval backend* layer 영역 (Orama vector column populate + RRF 융합) — 직교 변경. paradigm 자체 새 layer 도입 + 변경 면 추정 ≥ 5 file → testing.md §3 "Big" 레이어 — spec/todox **합본 1 file** (§5.7.8 / §5.7.9 mirror, master 검증 단일성).
 >

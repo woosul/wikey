@@ -1,6 +1,6 @@
 # Pass A File 2: 사업자등록증C_(주)굿스트림_***-**-*****(2015).pdf
 
-> **상위 문서**: [`README.md`](../README.md) · [`pass-a-readme.md`](../pass-a-readme.md)
+> **상위 문서**: [`README.md`](../../../../README.md) · [`pass-a-readme.md`](pass-a-readme.md)
 
 ## 메타
 - 크기: 316 KB (316,259 bytes)

@@ -1,6 +1,6 @@
 # Pass A vs Pass B 교차 대조 (2026-04-24)
 
-> **상위 문서**: [`README.md`](../README.md) — 최종 집계.
+> **상위 문서**: [`README.md`](../../../../README.md) — 최종 집계.
 
 ## 결정론적 일치 항목 (tier-label / 분류 depth)
 

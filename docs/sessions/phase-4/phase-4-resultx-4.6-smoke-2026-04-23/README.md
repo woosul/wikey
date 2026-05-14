@@ -1,6 +1,6 @@
 # Phase 4 통합 smoke — 최종 집계 (2026-04-23)
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](../../../docs/planning/phase-4/phase-4-todo.md) — 본 문서는 §4.6 (통합 smoke 2-pass 실행 리포트 (2026-04-23)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](../../../planning/phase-4/phase-4-todo.md) — 본 문서는 §4.6 (통합 smoke 2-pass 실행 리포트 (2026-04-23)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 **실행 주체**: Claude (CDP localhost:9222 + scripts/wikey-cdp-wrap.sh)

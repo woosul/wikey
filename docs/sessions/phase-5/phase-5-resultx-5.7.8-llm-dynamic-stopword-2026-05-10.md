@@ -8,7 +8,7 @@ updated: 2026-05-10
 
 # §5.7.8 LLM per-query dynamic stopword paradigm — post-impl evidence
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 · [`docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.4
+> **상위 문서**: [`docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 · [`docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.4
 
 ## AC-L1 baseline 회귀 측정 (master 직접, 2026-05-10)
 

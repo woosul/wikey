@@ -1,6 +1,6 @@
 # §4.C — 팔레트·모달 덤 smoke
 
-> **상위 문서**: [`README.md`](../README.md) — Phase 4 smoke 최종 집계
+> **상위 문서**: [`README.md`](../../../../README.md) — Phase 4 smoke 최종 집계
 
 ## 목적
 Phase 4.5.2 의 운영 안전 장치 (삭제 / 초기화) UI 가 팔레트에 7 entries 로 노출되고, 각 modal 이 typing gate 직전까지 정상 동작하는지 확인. **파괴 실행은 skip**.

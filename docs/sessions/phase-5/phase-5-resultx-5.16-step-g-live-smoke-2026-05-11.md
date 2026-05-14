@@ -10,7 +10,7 @@ version: v1.1
 
 # Phase 5 §5.16 Step G master 라이브 cycle smoke — 2026-05-11
 
-> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) · [`docs/planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](../../docs/planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md) v0.2 · [`docs/planning/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](../../docs/planning/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md) v0.2
+> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) · [`docs/planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](../../planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md) v0.2 · [`docs/planning/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](../../planning/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md) v0.2
 >
 > **선행 단계**: Step B (tester RED 18 test) → Step C (developer GREEN 18 PASS) → Step D (Phase 3a 회귀 wikey-core 808 + wikey-obsidian 121 = 929 PASS) → Step E (BLUE 3b refactor developer self-apply).
 

@@ -1,6 +1,6 @@
 # Phase 4 통합 smoke — Pass A (2026-04-24)
 
-> **상위 문서**: [`README.md`](../README.md) — 최종 집계. 관련 문서: [`pass-b-readme.md`](../pass-b-readme.md), [`cross-compare.md`](../cross-compare.md).
+> **상위 문서**: [`README.md`](../../../../README.md) — 최종 집계. 관련 문서: [`pass-b-readme.md`](pass-b-readme.md), [`cross-compare.md`](cross-compare.md).
 
 **진입 경로**: Ingest 패널
 **autoMoveFromInbox**: false (view-side handler `runIngest + movePair`)

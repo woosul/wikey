@@ -10,23 +10,23 @@
 
 ## 관련 문서
 
-- **Todo mirror**: [`docs/planning/phase-5/phase-5-todo.md`](../../docs/planning/phase-5/phase-5-todo.md)
+- **Todo mirror**: [`docs/planning/phase-5/phase-5-todo.md`](../../planning/phase-5/phase-5-todo.md)
 - **§5.1 보조 문서**:
-  - [`docs/planning/phase-5/phase-5-todox-5.1-structural-pii.md`](../../docs/planning/phase-5/phase-5-todox-5.1-structural-pii.md) — 구조적 PII 탐지 계획 (v4 codex APPROVE)
+  - [`docs/planning/phase-5/phase-5-todox-5.1-structural-pii.md`](../../planning/phase-5/phase-5-todox-5.1-structural-pii.md) — 구조적 PII 탐지 계획 (v4 codex APPROVE)
   - [`docs/sessions/phase-5/phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md`](./phase-5-resultx-5.1-cdp-cycle-smoke-2026-04-25.md) — Obsidian CDP UI 1-cycle smoke 실측 (NanoVNA 1 파일, master 직접)
 - **§5.3 보조 문서**:
-  - [`docs/planning/phase-5/phase-5-todox-5.3.1-incremental-reingest.md`](../../docs/planning/phase-5/phase-5-todox-5.3.1-incremental-reingest.md) — §5.3.1 + §5.3.2 결합 설계 (v11 codex Mode D **APPROVE_WITH_CHANGES**, 11 cycle 수렴 P1 0건)
+  - [`docs/planning/phase-5/phase-5-todox-5.3.1-incremental-reingest.md`](../../planning/phase-5/phase-5-todox-5.3.1-incremental-reingest.md) — §5.3.1 + §5.3.2 결합 설계 (v11 codex Mode D **APPROVE_WITH_CHANGES**, 11 cycle 수렴 P1 0건)
 - **§5.4 보조 문서** (2026-04-26 session 13 종결 + session 14 §10 / §11 보강):
-  - [`docs/planning/phase-5/phase-5-todox-5.4-integration.md`](../../docs/planning/phase-5/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10, codex post-impl Cycle #6 APPROVE) + §10 v6 실 qmd embeddings 통합 + §11 v7 Suggestions panel UI 개선 (session 14)
-  - [`docs/planning/phase-5/phase-5-todox-5.4.1-self-extending.md`](../../docs/planning/phase-5/phase-5-todox-5.4.1-self-extending.md) — Stage 1 단독 plan (v7, codex Cycle #9 APPROVE)
+  - [`docs/planning/phase-5/phase-5-todox-5.4-integration.md`](../../planning/phase-5/phase-5-todox-5.4-integration.md) — 4 Stage 통합 plan (v10, codex post-impl Cycle #6 APPROVE) + §10 v6 실 qmd embeddings 통합 + §11 v7 Suggestions panel UI 개선 (session 14)
+  - [`docs/planning/phase-5/phase-5-todox-5.4.1-self-extending.md`](../../planning/phase-5/phase-5-todox-5.4.1-self-extending.md) — Stage 1 단독 plan (v7, codex Cycle #9 APPROVE)
   - [`docs/sessions/phase-5/phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md`](./phase-5-resultx-5.4-integration-cycle-smoke-2026-04-26.md) — AC21 라이브 cycle smoke + Stage 3 inspect + Stage 4 alpha v1 wire 검증 (master 직접)
 - **§5.10 보조 문서** (2026-04-26 session 14 paradigm shift issue 등록 + 2026-05-04 v2~v5.4 D-wide 채택 + cycle #1~#8 진행 + C5 신규):
-  - [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../../docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — graph emergent + LLM-only ontology paradigm shift 보조 plan. **v5.4 (2026-05-04, D-wide cycle #8 final + C5 신규)**: 사용자 5 concern (C1~C5) 추가 등록 + 사용자 D-wide 결정 (7-type schema gate `ENTITY_TYPES`/`CONCEPT_TYPES`/`buildSchemaPromptBlock` 까지 deprecate, LLM 자율 type 분류 + ripple R0~R8) + cycle #1~#7 master fix (7 cycle 누적, minor stale 패턴) + cycle #8 마지막 시도. codex cycle #8 검증 대기. **이력**: v1 (4 옵션) → v2 (C1~C4) → v3 (D-wide) → v4 (ripple R1~R8) → v5 (C5 신규) → v5.1 (numbering) → v5.2 (§14.2 본문) → v5.3 (§7+mirror migration cost+panel-dispatch fix) → v5.4 (§8 next action+§9.4+mirror 상단). **추가 fix (v5.3)**: panel-dispatch.sh `start_codex` update notification auto-skip 통합 (글로벌 skill 영구 fix).
+  - [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../../planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — graph emergent + LLM-only ontology paradigm shift 보조 plan. **v5.4 (2026-05-04, D-wide cycle #8 final + C5 신규)**: 사용자 5 concern (C1~C5) 추가 등록 + 사용자 D-wide 결정 (7-type schema gate `ENTITY_TYPES`/`CONCEPT_TYPES`/`buildSchemaPromptBlock` 까지 deprecate, LLM 자율 type 분류 + ripple R0~R8) + cycle #1~#7 master fix (7 cycle 누적, minor stale 패턴) + cycle #8 마지막 시도. codex cycle #8 검증 대기. **이력**: v1 (4 옵션) → v2 (C1~C4) → v3 (D-wide) → v4 (ripple R1~R8) → v5 (C5 신규) → v5.1 (numbering) → v5.2 (§14.2 본문) → v5.3 (§7+mirror migration cost+panel-dispatch fix) → v5.4 (§8 next action+§9.4+mirror 상단). **추가 fix (v5.3)**: panel-dispatch.sh `start_codex` update notification auto-skip 통합 (글로벌 skill 영구 fix).
 - **§5.6.4 보조 문서** (Session 42, 2026-05-13~14 LLM Provider subscription auth 통합):
-  - [`docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md`](../../docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md) — v0.7 (codex Mode D Panel plan cycle #1a~#1i 9 cycle 수렴) 3-provider OAuth + API fallback + 48-cell CLI option matrix
+  - [`docs/planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md`](../../planning/phase-5/phase-5-todox-5.6.4-llm-subscription.md) — v0.7 (codex Mode D Panel plan cycle #1a~#1i 9 cycle 수렴) 3-provider OAuth + API fallback + 48-cell CLI option matrix
   - [`docs/sessions/phase-5/phase-5-resultx-5.6.4-llm-subscription-2026-05-14.md`](./phase-5-resultx-5.6.4-llm-subscription-2026-05-14.md) — 4 commit 통합 + 12 AC line-by-line evidence + I1~I11 cross-check + codex 9 cycle plan 검증 학습
 - **추후 보조 문서**: `phase-5-todox-<section>-<topic>.md` · `phase-5-resultx-<section>-<topic>-<date>.md` 형식 (`CLAUDE.md §문서 명명규칙·조직화` 참조).
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../../docs/planning/ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../docs/planning/ref/plan_wikey-enterprise-kb.md).
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../../planning/ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../planning/ref/plan_wikey-enterprise-kb.md).
 
 ---
 
@@ -1347,7 +1347,7 @@ cmux Panel Mode D (codex `gpt-5.5 xhigh`) 6 fresh-pick + close-after-cycle (rule
 
 #### 배경 + 동기
 
-- 2026-04-22 Phase 4 §4.5.2 에서 §5.7.1 + §5.7.2 (qmd SDK) 두 항목으로 이관. 사용자 직접 경험: ingest 후 query 결과 0 회귀 발생 — 메모리 [`feedback_qmd_node_abi.md`](../memory) 의 6 layer silent fail (binding MOD / 다중 node / PATH 우선순위 / findQmdBin / collection path / waitUntilFresh) 중 reindex 의 python script silent-fail 도 origin 중 하나로 의심.
+- 2026-04-22 Phase 4 §4.5.2 에서 §5.7.1 + §5.7.2 (qmd SDK) 두 항목으로 이관. 사용자 직접 경험: ingest 후 query 결과 0 회귀 발생 — 메모리 `feedback_qmd_node_abi.md` (~/.claude memory) 의 6 layer silent fail (binding MOD / 다중 node / PATH 우선순위 / findQmdBin / collection path / waitUntilFresh) 중 reindex 의 python script silent-fail 도 origin 중 하나로 의심.
 - `wikey-core/src/scripts-runner.ts` 가 기존 `child_process.execFile` 로 4 .sh spawn — plugin runtime 이 매번 bash 띄움 (Obsidian + Node 에서 5 분 timeout 위험). production 에서 in-process 호출로 전환하면 (a) timeout 0 (Promise.race + AbortController 자체 제어) (b) cross-platform OK (Windows 도 작동) (c) 타입 안전성 (return type 직접) (d) test 가능성 (mock fs + writable callback).
 
 #### Specification (합본 §Spec, conversation 명시)
@@ -1603,7 +1603,7 @@ obsidian-cdp 라이브 (ingest 90s + write 15s + query 정확 + Settings 5/5)
 ### 5.7.5 Orama upstream sync 자동화 + LOW 잔여 + PoC cleanup + Developer Update UI ✅ (Session 31, 2026-05-09)
 > tag: #search, #orama, #kiwi-nlp, #upstream-sync, #poc-cleanup, #developer-ui, #phase5
 
-**상위 spec**: [`docs/planning/phase-5/phase-5-spec-5.7.5-orama-update-sync.md`](../../docs/planning/phase-5/phase-5-spec-5.7.5-orama-update-sync.md) v1.4 + [`docs/planning/phase-5/phase-5-todox-5.7.5-orama-update-sync.md`](../../docs/planning/phase-5/phase-5-todox-5.7.5-orama-update-sync.md) v1.4. Detail evidence: [`docs/sessions/phase-5/phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md`](./phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md).
+**상위 spec**: [`docs/planning/phase-5/phase-5-spec-5.7.5-orama-update-sync.md`](../../planning/phase-5/phase-5-spec-5.7.5-orama-update-sync.md) v1.4 + [`docs/planning/phase-5/phase-5-todox-5.7.5-orama-update-sync.md`](../../planning/phase-5/phase-5-todox-5.7.5-orama-update-sync.md) v1.4. Detail evidence: [`docs/sessions/phase-5/phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md`](./phase-5-resultx-5.7.5-orama-update-sync-2026-05-09.md).
 
 **§5.7.4 종결 후 deferred 27 입력 항목** (UI 7 + B 7 + LOW 4 + PoC 3 + C 4 + 비목표 2) 의 4-question 검증 + 본 cycle 처리. 사용자 결정 9건 모두 v1.4 잠금 (#1 (A) settings 토글 / #2 opt-in / #3 wikey 기본 BYOAI / #4 code lowercase 유지 + docs / #5 C5/C6 본 cycle 포함, 부가 4 = schema 별 commit / harness-helper 별 repo / Kiwi 사전 본 cycle / POC-1 cleanup).
 
@@ -1782,7 +1782,7 @@ revert (paradigm 위반):
 #### 5.7.8.0 진행 상태 (session 34 종결, 2026-05-10)
 
 - **plan APPROVE_WITH_NOTES (v1.3, session 33, commit `922cd6d`)** → **SDD+TDD impl 진입 (session 34)** → **post-impl codex multi-cycle fix loop** (점진 수렴, 모든 finding closed — 정확 history = spec/todox v1.4 변경 이력 + resultx) → **종결 (v1.4)**.
-- 단일 소스: [`docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 + [`docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.4 + [`docs/sessions/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md`](./phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md).
+- 단일 소스: [`docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](../../planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 + [`docs/planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md`](../../planning/phase-5/phase-5-todox-5.7.8-llm-dynamic-stopword.md) v1.4 + [`docs/sessions/phase-5/phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md`](./phase-5-resultx-5.7.8-llm-dynamic-stopword-2026-05-10.md).
 - 검증 결과: wikey-core 781/784 + wikey-obsidian 100/100 PASS / tsc strict + build 0 errors / validate-wiki + check-licenses + check-kiwi-vendor-sync PASS / anchor (k) hardcoded 0 hit / baseline 회귀 0 (Top-1 66.7% / Top-3 86.3% / MRR 0.829, §5.7.6 baseline byte-equal). augmented path 코드 구현 (`WIKEY_BENCHMARK_LAYERS=filter,rewrite,expand` env flag) — 임계 측정 (Top-1 ≥ 70%) 사용자 수동 (real Gemini API + credentials.json 보안 정책 deferral).
 
 #### 5.7.8.1 paradigm v1.3 핵심
@@ -1849,7 +1849,7 @@ verdict: paradigm 작동 자체는 PASS — cache 생성 / token classification 
 
 §5.7.8 라이브 비교 검증 결과 (PASS-A 7/10 + PASS-C 정의 모호) → §5.7.9 신설 → master 직접 SDD+TDD (mid-sized 합본 spec/todo). impl 직후 fresh CDP verify ALL PASS.
 
-- 단일 소스: [`docs/planning/phase-5/phase-5-spec-5.7.9-gemini-thinking-and-latency-clarify.md`](../../docs/planning/phase-5/phase-5-spec-5.7.9-gemini-thinking-and-latency-clarify.md) v1.0
+- 단일 소스: [`docs/planning/phase-5/phase-5-spec-5.7.9-gemini-thinking-and-latency-clarify.md`](../../planning/phase-5/phase-5-spec-5.7.9-gemini-thinking-and-latency-clarify.md) v1.0
 - §5.7.8 spec mirror: v1.4 → v1.5 (line 91 trade-off + line 235 안내 본문에 *"분석 LLM only — 답변 LLM 별 측정"* 명시)
 
 #### 5.7.9.1 — gemini-2.5 thinkingBudget=0 (CRITICAL)
@@ -2431,7 +2431,7 @@ LLM call 시간:
 
 #### 5.10.5.7 보조 plan + 산출
 
-- 보조 plan (신규): [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../../docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — 4 옵션 detail spec + 옵션 D migration script + 회귀 plan + 라이브 검증 + §9 정당성 검증 매트릭스
+- 보조 plan (신규): [`docs/planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md`](../../planning/phase-5/phase-5-todox-5.10-graph-emergent-ontology.md) — 4 옵션 detail spec + 옵션 D migration script + 회귀 plan + 라이브 검증 + §9 정당성 검증 매트릭스
 - todo 단일 소스: `docs/planning/phase-5/phase-5-todo.md §5.10`
 - 코드 변경: 0 (issue 등록만)
 - 다음 진입점: 사용자 다음 세션 시작 시 옵션 A/B/C/D 명시 후 진입
@@ -2702,7 +2702,7 @@ LLM call 시간:
 
 ## 5.11 Page Promotion Threshold (Issue B) — Session 18 (2026-05-05) ✅ Unit GREEN
 
-> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.11`](../../docs/planning/phase-5/phase-5-todo.md#511-page-promotion-threshold-issue-b--2026-05-05-session-18--unit-green) · 보조 plan: [`docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../../docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md)
+> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.11`](../../planning/phase-5/phase-5-todo.md#511-page-promotion-threshold-issue-b--2026-05-05-session-18--unit-green) · 보조 plan: [`docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../../planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md)
 
 ### 5.11.1 배경
 
@@ -2746,7 +2746,7 @@ LLM call 시간:
 
 ## 5.11 Page Promotion Threshold v2 — Session 19 (2026-05-05) ✅ Live Smoke Done
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../../docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md) v2.5 · 상세: [`docs/sessions/phase-5/phase-5-resultx-5.11-v2-2026-05-05.md`](./phase-5-resultx-5.11-v2-2026-05-05.md)
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md`](../../planning/phase-5/phase-5-todox-5.11-page-promotion-threshold.md) v2.5 · 상세: [`docs/sessions/phase-5/phase-5-resultx-5.11-v2-2026-05-05.md`](./phase-5-resultx-5.11-v2-2026-05-05.md)
 
 세션 19 에서 §5.11 v1 (occurrence ≥ 2 gate) 의 한계를 사용자 6 chain raise 로 확장: 의미·관련도 기반 promotion + 원문 언어 중심 alias + wiki/raw/cache 완전 초기화 + log.md 의미 재정의 + overview.md 폐기. SDD+TDD Phase 0~9, codex 5 cycle (4 plan + 1 post-impl) 누적 검증, 17 finding 처리 (12 fix + 5 dispute, sourceBody 인자 추가 거부 — Karpathy Simplicity 정합).
 
@@ -2781,7 +2781,7 @@ LLM call 시간:
 
 ## 5.12 Source Wikilink Format — `## 출처` wikilink wiki/sources/source-<base>.md 매칭 (Session 19, 2026-05-05) ✅ 완료
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md`](../../docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md) v3 · 상세: [`docs/sessions/phase-5/phase-5-resultx-5.12-source-wikilink-format-2026-05-05.md`](./phase-5-resultx-5.12-source-wikilink-format-2026-05-05.md)
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md`](../../planning/phase-5/phase-5-todox-5.12-source-wikilink-format.md) v3 · 상세: [`docs/sessions/phase-5/phase-5-resultx-5.12-source-wikilink-format-2026-05-05.md`](./phase-5-resultx-5.12-source-wikilink-format-2026-05-05.md)
 
 §5.11 v2 post-impl codex P1-#ω 가 분리 등록한 pre-existing latent bug 해결. canonicalizer.ts:489 의 `## 출처` wikilink (`[[<base>.md]]`) 가 validate-wiki.sh resolver 와 mismatch — 12 broken links 상시 발생 (wiki/ .gitignore 라 발견 안 됨). §5.3 follow-up #11 의 raw sidecar 매칭 의도 자체가 validator 와 mismatch 였음 확증 → 폐기.
 
@@ -2811,7 +2811,7 @@ LLM call 시간:
 
 ## 5.13 잔존 follow-up 3 항목 (A1 + B2 + C4) — 완료 (Session 21, 2026-05-07) ✅
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md`](../../docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md) v2 · status: **completed** · 상세: [`docs/sessions/phase-5/phase-5-resultx-5.13-completion-2026-05-07.md`](./phase-5-resultx-5.13-completion-2026-05-07.md)
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md`](../../planning/phase-5/phase-5-todox-5.13-residual-followups.md) v2 · status: **completed** · 상세: [`docs/sessions/phase-5/phase-5-resultx-5.13-completion-2026-05-07.md`](./phase-5-resultx-5.13-completion-2026-05-07.md)
 
 §5.12 paradigm 보강. 사용자 결정 (A1 + B2 + C4) 그대로 진행. SDD+TDD 5단계 (Spec → Todo → RED → GREEN → BLUE 3a/3b) 분리.
 
@@ -2854,7 +2854,7 @@ LLM call 시간:
 
 ## 5.14 retrospective TDD-BLUE refactor — Tier 2-4 narrow 완료 (Session 20, 2026-05-06)
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md`](../../docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md) v1 · status: **completed** · 상세: [`docs/sessions/phase-5/phase-5-resultx-5.14-tier-2-4-blue-2026-05-06.md`](./phase-5-resultx-5.14-tier-2-4-blue-2026-05-06.md)
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md`](../../planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md) v1 · status: **completed** · 상세: [`docs/sessions/phase-5/phase-5-resultx-5.14-tier-2-4-blue-2026-05-06.md`](./phase-5-resultx-5.14-tier-2-4-blue-2026-05-06.md)
 
 §5.11 v2 + §5.12 SDD+TDD 진행 시 RED + GREEN 명시 진행했으나 **BLUE (Refactor) 누락** (Phase 3 가 회귀 검증으로만 그침). 사용자 raise 2026-05-06 (session 19) → 정식 todox + 영구 정책 등록 → session 20 본격 진행 (Tier 2-4 narrow 완료).
 
@@ -2954,7 +2954,7 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 ### 5.14 본체 종결 — 잔존 4 항목 의도적 유지 결정 (Session 23, 2026-05-07) ✅
 
 > **사용자 명시**: "5.14 의 잔존 작업 'UI E2E test 의존' 과 관련해서 진행해줘. 이제 본체 관련된 모든 작업은 이것으로 종결되어야 함."
-> 상세 분석 + 항목별 정량 근거: [`docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md §9`](../../docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md)
+> 상세 분석 + 항목별 정량 근거: [`docs/planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md §9`](../../planning/phase-5/phase-5-todox-5.14-retrospective-blue-refactor.md)
 
 **근거 cross-check**:
 - **Test 인프라**: `wikey-obsidian/package.json` vitest/jest 의존성·`test` script 0건. UI 코드 unit test 인프라 자체 부재 → deep split 안전망 = 라이브 obsidian-cdp full cycle smoke (5 패널 render + console 0 error) 만 가용.
@@ -2979,7 +2979,7 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 
 ## 5.15 Pipeline v2 후속 — draft 등록 (Session 23, 2026-05-07)
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md`](../../docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v0 · status: **draft / 다음 세션 후보 (P2)**
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md`](../../planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v0 · status: **draft / 다음 세션 후보 (P2)**
 > 도출: `docs/architecture/wikey-ingest-pipeline-v2.md §15.4 단점·리스크 + §15.6 v3 후보`
 
 3 sub-section 분리 + 효과 정량화:
@@ -2996,7 +2996,7 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 
 ## 5.15.D inline media strip + audit row UI fix + wikilink whitelist sanitize ✅ (Session 23, 2026-05-07, §5.15 sub-section)
 
-> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.15.D`](../../docs/planning/phase-5/phase-5-todo.md) · 합본 spec (Bug fix 분류, testing.md §3 매트릭스)
+> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.15.D`](../../planning/phase-5/phase-5-todo.md) · 합본 spec (Bug fix 분류, testing.md §3 매트릭스)
 > 이전 §5.16 자리에서 §5.15.D 로 통합 (사용자 결정 — Pipeline v2 후속 항목들과 묶음)
 
 ### 5.15.D 본질 — 사용자 raise 와 진단
@@ -3092,7 +3092,7 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 
 ## 5.11 v3 paradigm 회귀 fix — alias 카운트 inflation + Layer 1 prompt 강화 ✅ (Session 23, 2026-05-07)
 
-> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.11 v3`](../../docs/planning/phase-5/phase-5-todo.md) · 합본 spec (paradigm regression fix 분류)
+> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.11 v3`](../../planning/phase-5/phase-5-todo.md) · 합본 spec (paradigm regression fix 분류)
 
 ### 5.11 v3 사용자 raise
 
@@ -3143,7 +3143,7 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 
 ## 5.15.D footer display — 원문 title 노출 ✅ (Session 23, 2026-05-07)
 
-> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.15.D`](../../docs/planning/phase-5/phase-5-todo.md) · 사용자 raise 2026-05-07
+> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.15.D`](../../planning/phase-5/phase-5-todo.md) · 사용자 raise 2026-05-07
 
 ### 사용자 raise
 
@@ -3224,7 +3224,7 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 
 ## 5.15.C citation 마커 dead code cleanup ✅ (Session 24, 2026-05-07, §5.15 sub-section)
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §10`](../../docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v1 · [`docs/planning/phase-5/phase-5-todo.md §5.15.A/B/C/D`](../../docs/planning/phase-5/phase-5-todo.md)
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §10`](../../planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v1 · [`docs/planning/phase-5/phase-5-todo.md §5.15.A/B/C/D`](../../planning/phase-5/phase-5-todo.md)
 > 분류: **hygiene** (Karpathy Surgical Changes — 본인이 만든 잔재 정리). plan §6 추천 순서 C → B → A 의 첫 단계.
 
 ### 5.15.C 본질 — 사용자 정책의 코드 완결
@@ -3272,7 +3272,7 @@ post-fix verify: query 응답 31 HTML links + ground truth 정확 인용. `hasEm
 
 ## 5.15.E LLM hang UX hardening — F1/F2/F3/F4 ✅ (Session 24, 2026-05-07, §5.15 sub-section)
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §11`](../../docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v2
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §11`](../../planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v2
 >
 > **이슈 출처**: 사용자 raise 2026-05-07 session 24 — "MarkItDown 으로 모든 문서를 마크다운으로 변환하기.md ingest 실패한듯 + 에러 문구 없음 + linebar 빨강 아님" + 추가 raise "파일 하나씩 ingest 할 때마다 에러" 근본 진단 요청.
 
@@ -3359,7 +3359,7 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 
 ## 5.15.B PROMOTION_THRESHOLD override ✅ (Session 24, 2026-05-07, §5.15 sub-section)
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §12`](../../docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v3 · 합본 spec (Mid-sized 분류, testing.md §3 매트릭스)
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §12`](../../planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v3 · 합본 spec (Mid-sized 분류, testing.md §3 매트릭스)
 >
 > 이전 §5.15.C / §5.15.E 와 함께 §5.15 P2 draft v0 → v3 으로 진행. **§5.15.A 만 잔존** (UI E2E test 인프라, 1000~1600 LOC, 3~5 cycle).
 
@@ -3428,7 +3428,7 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 
 ## 5.15.A Cycle 1 (UI E2E test 인프라 — vitest + happy-dom + Obsidian mock 5 인터페이스) ✅ (Session 24, 2026-05-07, §5.15 sub-section)
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §13`](../../docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v4 · 합본 spec (Mid-sized — testing.md §3 매트릭스)
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §13`](../../planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v4 · 합본 spec (Mid-sized — testing.md §3 매트릭스)
 >
 > Cycle 1 (인프라) 만. Cycle 2~5 (sidebar-chat / main.ts deep split test + §5.14 잔존 4 항목 재평가) 다음 세션 후보.
 
@@ -3502,7 +3502,7 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 
 ## 5.15.A Cycle 2 (sidebar-chat helper 5 export + 21 unit tests — AC-A3 충족) ✅ (Session 25, 2026-05-08, §5.15 sub-section)
 
-> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §14`](../../docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v5 · 합본 spec (Mid-sized — testing.md §3 매트릭스)
+> mirror: [`docs/planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md §14`](../../planning/phase-5/phase-5-todox-5.15-pipeline-v2-followups.md) v5 · 합본 spec (Mid-sized — testing.md §3 매트릭스)
 >
 > Cycle 2 = renderAuditSection 핵심 helper 5종 (computeRowPct / showRowError / showRowCancelled / loadAuditScriptOutput / applyPairedSidecarToAudit) export + unit test. renderAuditSection 자체는 closure state heavy (12+ field) 라 instantiate test 는 Cycle 4~5 deep split 후 진행.
 
@@ -3577,7 +3577,7 @@ showRowError 호출 X (guard) + row class = wikey-audit-row-cancelled
 ## 5.7.7 HYBRID Stage 2 vector reroute — BM25 + Qwen3-Embedding 0.6B + RRF 융합 ✅ (Session 35, 2026-05-11)
 > tag: #core, #engine, #eval, #infra
 
-> mirror: [`docs/planning/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](../../docs/planning/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.2 (status: approved → closed, spec/todox 합본 — testing.md §3 mid-sized 패턴)
+> mirror: [`docs/planning/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md`](../../planning/phase-5/phase-5-spec-5.7.7-vector-hybrid-reroute.md) v1.2 (status: approved → closed, spec/todox 합본 — testing.md §3 mid-sized 패턴)
 >
 > SDD+TDD Step A (plan APPROVE v1.2 session 34) → Step B (TDD RED 25) → Step C (TDD GREEN production) → Step D (회귀 + Phase 3a/3b) → Step F (codex post-impl 7 cycle: NEEDS_REVISION 6 → master fix loop → cycle #7 APPROVE) → Step E (라이브 master cold reindex + 51 query benchmark ablation, master 직접). 본 entry = 7 cycle 누적 + 라이브 smoke 결과 상세.
 
@@ -3877,7 +3877,7 @@ new (5 × 2 = 10 runs):
 
 ## 5.16 Audit / Ingest panel refresh reliability + sidecar pair label 회귀 fix ✅ (Session 36, 2026-05-11)
 
-> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.16`](../../docs/planning/phase-5/phase-5-todo.md) · spec v0.3 ([`docs/planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](../../docs/planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md)) · todox v0.3 ([`docs/planning/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](../../docs/planning/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md)) · Step G live smoke v1.1 ([`phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md`](./phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md))
+> mirror: [`docs/planning/phase-5/phase-5-todo.md §5.16`](../../planning/phase-5/phase-5-todo.md) · spec v0.3 ([`docs/planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md`](../../planning/phase-5/phase-5-spec-5.16-audit-refresh-reliability.md)) · todox v0.3 ([`docs/planning/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md`](../../planning/phase-5/phase-5-todox-5.16-audit-refresh-reliability.md)) · Step G live smoke v1.1 ([`phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md`](./phase-5-resultx-5.16-step-g-live-smoke-2026-05-11.md))
 >
 > 사용자 본체 완성 시점 테스트 (2026-05-11) 보고 9 이슈 중 INGEST P0 3건 (1-1·1-2·1-4) 통합 cycle. 진행 순서 "2 > 1 > 2 업데이트 > 3" (사용자 결정): spec/todox 신규 등재 → obsidian-cdp Step "1" master test → spec v0.2 보강 → SDD+TDD 진입.
 
@@ -3961,7 +3961,7 @@ new (5 × 2 = 10 runs):
 
 > 라이브 evidence: case A 복제본 ingest 59 proposed → 51 selected (cap formula `floor(77505/1500)=51` 정확 발화) + write latency 180s → 63s (-65%). codex 3 cycle: #1 NEEDS_REVISION 6 finding → developer fix → #2 NEEDS_REVISION 3 finding → master fix → #3 APPROVE.
 >
-> 상위 plan: [`docs/planning/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](../../docs/planning/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md) v0.3 · [`docs/planning/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](../../docs/planning/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md) v0.3 · [`docs/sessions/phase-5/phase-5-resultx-5.17-live-smoke-2026-05-12.md`](./phase-5-resultx-5.17-live-smoke-2026-05-12.md)
+> 상위 plan: [`docs/planning/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md`](../../planning/phase-5/phase-5-spec-5.17-ingest-balance-calibration.md) v0.3 · [`docs/planning/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md`](../../planning/phase-5/phase-5-todox-5.17-ingest-balance-calibration.md) v0.3 · [`docs/sessions/phase-5/phase-5-resultx-5.17-live-smoke-2026-05-12.md`](./phase-5-resultx-5.17-live-smoke-2026-05-12.md)
 
 ### 5.17.1 진행 매트릭스 (Step A~G)
 
@@ -4003,7 +4003,7 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 
 > 라이브 evidence: Scenario A citation list `\n- [[path|name]] (md)` + ext badge dynamic derive. Scenario B `<details>참조 페이지 (19/98)` collapse default + truncation. Scenario C `Citation Registry Diagnostic` Modal + `1 mismatch / 14 sourceIds, 38 pages affected` (§5.17 case A 복제본 dangling 정확 노출). codex 2 cycle: #1 FAIL 4 finding → developer fix → #2 ✅ APPROVE. **추가 사용자 raise 3 cycle (v0.4/v0.5/v0.6)** — wiki/ 3계층 scope filter → raw/ 제외 + (+) badge + "참고" reword → 답변 footer 3 layer 분리 (`원본:` / `참고:` / `확장:`).
 >
-> 상위 plan: [`docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md`](../../docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md) v0.6 · [`docs/planning/phase-5/phase-5-todox-5.18-query-citation-ux.md`](../../docs/planning/phase-5/phase-5-todox-5.18-query-citation-ux.md) v0.2 · [`docs/sessions/phase-5/phase-5-resultx-5.18-live-smoke-2026-05-12.md`](./phase-5-resultx-5.18-live-smoke-2026-05-12.md)
+> 상위 plan: [`docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md`](../../planning/phase-5/phase-5-spec-5.18-query-citation-ux.md) v0.6 · [`docs/planning/phase-5/phase-5-todox-5.18-query-citation-ux.md`](../../planning/phase-5/phase-5-todox-5.18-query-citation-ux.md) v0.2 · [`docs/sessions/phase-5/phase-5-resultx-5.18-live-smoke-2026-05-12.md`](./phase-5-resultx-5.18-live-smoke-2026-05-12.md)
 
 ### 5.18.1 진행 매트릭스 (Step A~G)
 
@@ -4092,7 +4092,7 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 >
 > codex 5 cycle (#1 NEEDS_REVISION 6 finding → #5 ✅ APPROVE No findings). 누적 18 finding 모두 fix (5 HIGH + 10 MED + 3 LOW). 특히 #3 `.gitignore wiki/` silent kill (master 직접 fix, `wikey-core/src/wiki/` false-match 방지 root anchor). Step G 1차 FAIL → master fix (WikiFS.walk 신규 method, R5 cross-process pattern 회귀) → 2차 PASS.
 >
-> 상위 plan: [`docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](../../docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md) v0.3 · [`docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md) v0.2 · [`docs/sessions/phase-5/phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md`](./phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md)
+> 상위 plan: [`docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](../../planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md) v0.3 · [`docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md) v0.2 · [`docs/sessions/phase-5/phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md`](./phase-5-resultx-5.19-wiki-maintenance-suite-2026-05-12.md)
 
 ### 5.19.1 진행 매트릭스 (Step A~G)
 
@@ -4225,7 +4225,7 @@ case A 복제본 ingest 중 entity merge 동작으로 기존 38 entity/concept �
 
 > tag: #ui, #i18n, #english, #done
 >
-> **상위 plan**: [`docs/planning/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](../../docs/planning/phase-5/phase-5-spec-5.22-ui-english-sweep.md) · [`docs/planning/phase-5/phase-5-todox-5.22-ui-english-sweep.md`](../../docs/planning/phase-5/phase-5-todox-5.22-ui-english-sweep.md)
+> **상위 plan**: [`docs/planning/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](../../planning/phase-5/phase-5-spec-5.22-ui-english-sweep.md) · [`docs/planning/phase-5/phase-5-todox-5.22-ui-english-sweep.md`](../../planning/phase-5/phase-5-todox-5.22-ui-english-sweep.md)
 > **상세 cycle log**: [`docs/sessions/phase-5/phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md`](./phase-5-resultx-5.22-ui-english-sweep-2026-05-12.md)
 
 ### 5.22.1 결정 배경
@@ -4286,7 +4286,7 @@ Session 39 사용자 추가 명시: "시스템 언어는 '영문'을 기준 문�
 
 > tag: #maintenance, #ux, #done
 >
-> **상위 plan**: [`docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md)
+> **상위 plan**: [`docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md)
 > **상세 cycle log**: [`docs/sessions/phase-5/phase-5-resultx-5.19-v0.5-raise-fix-2026-05-13.md`](./phase-5-resultx-5.19-v0.5-raise-fix-2026-05-13.md)
 
 ### 5.19.9 v0.5 결정 배경

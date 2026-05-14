@@ -1,6 +1,6 @@
 # Phase 3 — Obsidian E2E Test Results
 
-> **상위 문서**: [`docs/sessions/phase-3/phase-3-result.md`](./phase-3-result.md) · [`docs/planning/phase-3/phase-3-todo.md`](../../docs/planning/phase-3/phase-3-todo.md) — 본 문서는 §3.B (Obsidian E2E 테스트 결과) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-3/phase-3-result.md`](./phase-3-result.md) · [`docs/planning/phase-3/phase-3-todo.md`](../../planning/phase-3/phase-3-todo.md) — 본 문서는 §3.B (Obsidian E2E 테스트 결과) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 > 실행 일시: 2026-04-18

@@ -8,16 +8,16 @@
 
 ## 관련 문서
 
-- **Todo mirror**: [`docs/planning/phase-3/phase-3-todo.md`](../../docs/planning/phase-3/phase-3-todo.md)
+- **Todo mirror**: [`docs/planning/phase-3/phase-3-todo.md`](../../planning/phase-3/phase-3-todo.md)
 - **Phase 3 보조 문서** (섹션 번호 순):
-  - §3.B Obsidian E2E 테스트 플랜: [`docs/planning/phase-3/phase-3-todox-3.B-obsidian-test.md`](../../docs/planning/phase-3/phase-3-todox-3.B-obsidian-test.md)
+  - §3.B Obsidian E2E 테스트 플랜: [`docs/planning/phase-3/phase-3-todox-3.B-obsidian-test.md`](../../planning/phase-3/phase-3-todox-3.B-obsidian-test.md)
   - §3.B Obsidian E2E 테스트 결과: [`docs/sessions/phase-3/phase-3-resultx-3.B-test-results.md`](./phase-3-resultx-3.B-test-results.md)
-  - §3.C 인제스트 파이프라인 v6 재설계 플랜: [`docs/planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md`](../../docs/planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md)
+  - §3.C 인제스트 파이프라인 v6 재설계 플랜: [`docs/planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md`](../../planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md)
   - §3.C 결정성 측정 (v6 Greendale): [`docs/sessions/phase-3/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md`](./phase-3-resultx-3.C-determinism-greendale-2026-04-20.md)
   - §3.C 결정성 측정 (v7 PMS post-v7): [`docs/sessions/phase-3/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md`](./phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md)
   - §3.C 인제스트 v1/v2/v3 비교: [`docs/sessions/phase-3/phase-3-resultx-3.C-ingest-comparison/README.md`](./phase-3-resultx-3.C-ingest-comparison/README.md)
-  - Phase 3 기간 중 분석 (2026-04-14): [`activity/graphify-analysis.md`](../graphify-analysis.md)
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../../docs/planning/ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../docs/planning/ref/plan_wikey-enterprise-kb.md).
+  - Phase 3 기간 중 분석 (2026-04-14): [`activity/graphify-analysis.md`](../../architecture/graphify-analysis.md)
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../../planning/ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../planning/ref/plan_wikey-enterprise-kb.md).
 
 ---
 
@@ -119,7 +119,7 @@ Phase 3 B-1 #2(인제스트 품질 검증) 수행 → Ingest 패널 CDP E2E 중 
 
 > **참조**: 정량 비교 데이터·v1~v6 진동·결정성 통계·6회 실행 결과 → [`docs/sessions/phase-3/phase-3-resultx-3.C-ingest-comparison/README.md`](./phase-3-resultx-3.C-ingest-comparison/README.md)
 
-> **참조**: Plan 본체·Phase 분해·위험 분석·검증 기준 → [`docs/planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md`](../../docs/planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md)
+> **참조**: Plan 본체·Phase 분해·위험 분석·검증 기준 → [`docs/planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md`](../../planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md)
 
 ### 3.1.6 배경
 

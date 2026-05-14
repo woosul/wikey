@@ -1,6 +1,6 @@
 # Phase 4.1.3.4 — Tier chain 5 코퍼스 회귀 벤치마크
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](./phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](../../docs/planning/phase-4/phase-4-todo.md) — 본 문서는 §4.1.3 (Bitmap OCR fix 벤치마크) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](./phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](../../planning/phase-4/phase-4-todo.md) — 본 문서는 §4.1.3 (Bitmap OCR fix 벤치마크) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 실행일: 2026-04-22

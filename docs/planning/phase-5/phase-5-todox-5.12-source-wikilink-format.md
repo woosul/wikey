@@ -10,7 +10,7 @@ version: v3
 
 # Phase 5 §5.12 Source Wikilink Format — SDD+TDD + master 1차 + codex 2차 + 라이브 smoke
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../docs/sessions/phase-5/phase-5-result.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../sessions/phase-5/phase-5-result.md)
 >
 > **버전 이력**:
 > - v1 (2026-05-05 session 19, 첫 작성)

@@ -9,7 +9,7 @@ session: 21
 
 # §5.13 잔존 follow-up 3 항목 — 완료 (Session 21, 2026-05-07)
 
-> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) · [`docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md`](../../docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md) v2
+> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md`](./phase-5-result.md) · [`docs/planning/phase-5/phase-5-todox-5.13-residual-followups.md`](../../planning/phase-5/phase-5-todox-5.13-residual-followups.md) v2
 
 §5.12 paradigm 보강 — `## 출처` raw wikilink + validator robust + LLM filename drift 방어. 사용자 결정 (A1 + B2 + C4) 그대로 진행. SDD+TDD 5단계 (Spec → Todo → RED → GREEN → BLUE Phase 3a/3b) 분리.
 

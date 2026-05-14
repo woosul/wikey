@@ -1,6 +1,6 @@
 # Phase 4.2 구현 계획 v3 — ID foundation 우선, URI 는 derive, 이동·분류·listener 는 그 위에
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../docs/sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.2 (source-registry + URI derive + 이동/분류 플랜 v3) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.2 (source-registry + URI derive + 이동/분류 플랜 v3) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 > 작성: 2026-04-22 (v3, codex 2차 검증 반영) / 대상: `docs/planning/phase-4/phase-4-todo.md` §4.2.1 · §4.2.2 + §4.1.1.9 두 번째 체크박스.

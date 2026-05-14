@@ -9,11 +9,11 @@
 
 ## 관련 문서
 
-- **Result mirror**: [`docs/sessions/phase-3/phase-3-result.md`](../../docs/sessions/phase-3/phase-3-result.md)
+- **Result mirror**: [`docs/sessions/phase-3/phase-3-result.md`](../../sessions/phase-3/phase-3-result.md)
 - **Phase 3 보조 문서** (섹션 번호 순):
-  - §3.B Obsidian E2E 플랜/결과: [`docs/planning/phase-3/phase-3-todox-3.B-obsidian-test.md`](./phase-3-todox-3.B-obsidian-test.md) · [`docs/sessions/phase-3/phase-3-resultx-3.B-test-results.md`](../../docs/sessions/phase-3/phase-3-resultx-3.B-test-results.md)
-  - §3.C 인제스트 v6 재설계: [`docs/planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md`](./phase-3-todox-3.C-ingest-core-rebuild.md) · [`docs/sessions/phase-3/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md`](../../docs/sessions/phase-3/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md) · [`docs/sessions/phase-3/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md`](../../docs/sessions/phase-3/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md) · [`docs/sessions/phase-3/phase-3-resultx-3.C-ingest-comparison/`](../../docs/sessions/phase-3/phase-3-resultx-3.C-ingest-comparison/)
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../plan_wikey-enterprise-kb.md).
+  - §3.B Obsidian E2E 플랜/결과: [`docs/planning/phase-3/phase-3-todox-3.B-obsidian-test.md`](./phase-3-todox-3.B-obsidian-test.md) · [`docs/sessions/phase-3/phase-3-resultx-3.B-test-results.md`](../../sessions/phase-3/phase-3-resultx-3.B-test-results.md)
+  - §3.C 인제스트 v6 재설계: [`docs/planning/phase-3/phase-3-todox-3.C-ingest-core-rebuild.md`](./phase-3-todox-3.C-ingest-core-rebuild.md) · [`docs/sessions/phase-3/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md`](../../sessions/phase-3/phase-3-resultx-3.C-determinism-greendale-2026-04-20.md) · [`docs/sessions/phase-3/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md`](../../sessions/phase-3/phase-3-resultx-3.C-determinism-pms-post-v7-2026-04-21.md) · [`docs/sessions/phase-3/phase-3-resultx-3.C-ingest-comparison/`](../../sessions/phase-3/phase-3-resultx-3.C-ingest-comparison/)
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../ref/plan_wikey-enterprise-kb.md).
 
 ---
 

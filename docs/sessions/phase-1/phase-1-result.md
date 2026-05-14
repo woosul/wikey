@@ -6,8 +6,8 @@
 
 ## 관련 문서
 
-- **Todo mirror**: [`docs/planning/phase-1/phase-1-todo.md`](../../docs/planning/phase-1/phase-1-todo.md) — 이 결과와 번호·제목 1:1 대응.
-- **프로젝트 공통** (Phase 중립): [`docs/planning/ref/decisions.md`](../../docs/planning/ref/decisions.md) 전체 ADR · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../docs/planning/ref/plan_wikey-enterprise-kb.md) 초기 로드맵 v2.
+- **Todo mirror**: [`docs/planning/phase-1/phase-1-todo.md`](../../planning/phase-1/phase-1-todo.md) — 이 결과와 번호·제목 1:1 대응.
+- **프로젝트 공통** (Phase 중립): [`docs/planning/ref/decisions.md`](../../planning/ref/decisions.md) 전체 ADR · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../planning/ref/plan_wikey-enterprise-kb.md) 초기 로드맵 v2.
 - **보조 문서**: 없음 (Phase 1 은 단일 중심 문서로 완결).
 
 ---

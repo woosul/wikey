@@ -1,6 +1,6 @@
 # Ablation 측정 — PMS_제품소개_R10_20220815.pdf
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](./phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](../../docs/planning/phase-4/phase-4-todo.md) — 본 문서는 §4.5 (Ablation 비교 (PMS)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](./phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](../../planning/phase-4/phase-4-todo.md) — 본 문서는 §4.5 (Ablation 비교 (PMS)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 > 일시: 2026-04-22

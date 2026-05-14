@@ -11,7 +11,7 @@ priority: P0 (종결)
 
 # Phase 5 §5.14 — retrospective TDD-BLUE refactor (본체 종결)
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../docs/sessions/phase-5/phase-5-result.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../sessions/phase-5/phase-5-result.md)
 >
 > **이슈 출처**: 사용자 raise 2026-05-06 — §5.11 v2 + §5.12 SDD+TDD 진행 시 RED + GREEN 은 명시 진행했으나 **BLUE (Refactor)** 가 사실상 누락 (Phase 3 가 회귀 검증만 수행, 코드 quality 개선 활동 X). retrospective 으로 BLUE 단계를 별도 cycle 로 보강.
 >

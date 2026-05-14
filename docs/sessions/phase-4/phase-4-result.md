@@ -8,20 +8,20 @@
 
 ## 관련 문서
 
-- **Todo mirror**: [`docs/planning/phase-4/phase-4-todo.md`](../../docs/planning/phase-4/phase-4-todo.md)
+- **Todo mirror**: [`docs/planning/phase-4/phase-4-todo.md`](../../planning/phase-4/phase-4-todo.md)
 - **Phase 4 보조 문서** (섹션 번호 순 — 명명규칙 `phase-4-todox-<section>-<topic>.md` / `phase-4-resultx-<section>-<topic>-<date>.md`):
-  - §4.1 converter 재편 (agile 메서드): [`docs/planning/phase-4/phase-4-todox-4.1-agile-crystal.md`](../../docs/planning/phase-4/phase-4-todox-4.1-agile-crystal.md) · [`docs/sessions/phase-4/phase-4-resultx-4.1-converter-benchmark.md`](./phase-4-resultx-4.1-converter-benchmark.md)
-  - §4.1.3 Bitmap OCR 본문 오염 차단: [`docs/planning/phase-4/phase-4-todox-4.1.3-bitmap-ocr-fix.md`](../../docs/planning/phase-4/phase-4-todox-4.1.3-bitmap-ocr-fix.md) · [`docs/sessions/phase-4/phase-4-resultx-4.1.3-benchmark-2026-04-22.md`](./phase-4-resultx-4.1.3-benchmark-2026-04-22.md) · [`docs/sessions/phase-4/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`](./phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md)
-  - §4.2 source-registry + 이동/분류: [`docs/planning/phase-4/phase-4-todox-4.2-plan.md`](../../docs/planning/phase-4/phase-4-todox-4.2-plan.md)
-  - §4.3 인제스트 본체 + provenance: [`docs/planning/phase-4/phase-4-todox-4.3-plan.md`](../../docs/planning/phase-4/phase-4-todox-4.3-plan.md)
+  - §4.1 converter 재편 (agile 메서드): [`docs/planning/phase-4/phase-4-todox-4.1-agile-crystal.md`](../../planning/phase-4/phase-4-todox-4.1-agile-crystal.md) · [`docs/sessions/phase-4/phase-4-resultx-4.1-converter-benchmark.md`](./phase-4-resultx-4.1-converter-benchmark.md)
+  - §4.1.3 Bitmap OCR 본문 오염 차단: [`docs/planning/phase-4/phase-4-todox-4.1.3-bitmap-ocr-fix.md`](../../planning/phase-4/phase-4-todox-4.1.3-bitmap-ocr-fix.md) · [`docs/sessions/phase-4/phase-4-resultx-4.1.3-benchmark-2026-04-22.md`](./phase-4-resultx-4.1.3-benchmark-2026-04-22.md) · [`docs/sessions/phase-4/phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md`](./phase-4-resultx-4.1.3.5-pms-10run-clean-2026-04-22.md)
+  - §4.2 source-registry + 이동/분류: [`docs/planning/phase-4/phase-4-todox-4.2-plan.md`](../../planning/phase-4/phase-4-todox-4.2-plan.md)
+  - §4.3 인제스트 본체 + provenance: [`docs/planning/phase-4/phase-4-todox-4.3-plan.md`](../../planning/phase-4/phase-4-todox-4.3-plan.md)
   - §4.5 결정성 측정 (Phase 3→4 carryover): [`docs/sessions/phase-4/phase-4-resultx-4.5-ablation-exp1-pms-2026-04-22.md`](./phase-4-resultx-4.5-ablation-exp1-pms-2026-04-22.md) · [`docs/sessions/phase-4/phase-4-resultx-4.5-ablation-pms-2026-04-22.md`](./phase-4-resultx-4.5-ablation-pms-2026-04-22.md) · [`docs/sessions/phase-4/phase-4-resultx-4.5-smoke-3run-pms-0025.md`](./phase-4-resultx-4.5-smoke-3run-pms-0025.md)
   - §4.5.1 LLM extraction variance: [`docs/sessions/phase-4/phase-4-resultx-4.5.1-determinism-pms-auto-2026-04-21.md`](./phase-4-resultx-4.5.1-determinism-pms-auto-2026-04-21.md) · [`docs/sessions/phase-4/phase-4-resultx-4.5.1-determinism-pms-v7-4514-2026-04-21.md`](./phase-4-resultx-4.5.1-determinism-pms-v7-4514-2026-04-21.md) · [`docs/sessions/phase-4/phase-4-resultx-4.5.1-determinism-pms-v7-4514-prompt-attempt-2026-04-21.md`](./phase-4-resultx-4.5.1-determinism-pms-v7-4514-prompt-attempt-2026-04-21.md)
-  - §4.5.1.5 Phase A/B/C 이행 (RAG chunk 폐지): [`docs/planning/phase-4/phase-4-todox-4.5.1.5-change-phase-abc.md`](../../docs/planning/phase-4/phase-4-todox-4.5.1.5-change-phase-abc.md) · [`docs/sessions/phase-4/phase-4-resultx-4.5.1.5-pms-30run-2026-04-22.md`](./phase-4-resultx-4.5.1.5-pms-30run-2026-04-22.md)
+  - §4.5.1.5 Phase A/B/C 이행 (RAG chunk 폐지): [`docs/planning/phase-4/phase-4-todox-4.5.1.5-change-phase-abc.md`](../../planning/phase-4/phase-4-todox-4.5.1.5-change-phase-abc.md) · [`docs/sessions/phase-4/phase-4-resultx-4.5.1.5-pms-30run-2026-04-22.md`](./phase-4-resultx-4.5.1.5-pms-30run-2026-04-22.md)
   - §4.5.1.6 결정성 측정 (N=30): [`docs/sessions/phase-4/phase-4-resultx-4.5.1.6-pms-10run-2026-04-22.md`](./phase-4-resultx-4.5.1.6-pms-10run-2026-04-22.md) · [`docs/sessions/phase-4/phase-4-resultx-4.5.1.6-pms-30run-final-2026-04-22.md`](./phase-4-resultx-4.5.1.6-pms-30run-final-2026-04-22.md)
-  - §4.6 통합 smoke 계획서: [`docs/planning/phase-4/phase-4-todox-4.6-integrated-test.md`](../../docs/planning/phase-4/phase-4-todox-4.6-integrated-test.md)
+  - §4.6 통합 smoke 계획서: [`docs/planning/phase-4/phase-4-todox-4.6-integrated-test.md`](../../planning/phase-4/phase-4-todox-4.6-integrated-test.md)
   - §4.6 통합 smoke 실행 리포트 (2026-04-23): [`docs/sessions/phase-4/phase-4-resultx-4.6-smoke-2026-04-23/README.md`](./phase-4-resultx-4.6-smoke-2026-04-23/README.md)
-  - §4.6 D.0 Critical Fix 계획서 (v6): [`docs/planning/phase-4/phase-4-todox-4.6-critical-fix-plan.md`](../../docs/planning/phase-4/phase-4-todox-4.6-critical-fix-plan.md)
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../../docs/planning/ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../docs/planning/ref/plan_wikey-enterprise-kb.md) · [`docs/planning/session-wrap-followups.md`](../../docs/planning/session-wrap-followups.md).
+  - §4.6 D.0 Critical Fix 계획서 (v6): [`docs/planning/phase-4/phase-4-todox-4.6-critical-fix-plan.md`](../../planning/phase-4/phase-4-todox-4.6-critical-fix-plan.md)
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../../planning/ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../../planning/ref/plan_wikey-enterprise-kb.md) · [`docs/planning/session-wrap-followups.md`](../../planning/session-wrap-followups.md).
 
 ---
 
@@ -523,7 +523,7 @@ tier 1 docling 실행
 
 **감지 로직 (v2, 실측 기반)**:
 - 필수 필터: `bodyChars ≥ 2000` AND `markerCount ≥ 5` — 소규모 문서(사업자등록증 등) false positive 방어.
-- 기준 A: `[image]` / `![...](../...)` / `<!-- image -->` placeholder ±5 window 내 <20자 라인 3연속 (리스트 마커 제외).
+- 기준 A: `[image]` / `![...](../../)` / `<!-- image -->` placeholder ±5 window 내 <20자 라인 3연속 (리스트 마커 제외).
 - 기준 B: 전체 비어있지 않은 라인 중 <20자 파편 비율 > 50%.
 - A 또는 B 만족 시 pollution 판정, score −0.4.
 

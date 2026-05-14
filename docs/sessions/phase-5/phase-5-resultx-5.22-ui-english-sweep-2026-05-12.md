@@ -1,6 +1,6 @@
 # Phase 5 §5.22 — 시스템 UI 영문화 sweep (Activity)
 
-> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md §5.22`](./phase-5-result.md) · [`docs/planning/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](../../docs/planning/phase-5/phase-5-spec-5.22-ui-english-sweep.md)
+> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md §5.22`](./phase-5-result.md) · [`docs/planning/phase-5/phase-5-spec-5.22-ui-english-sweep.md`](../../planning/phase-5/phase-5-spec-5.22-ui-english-sweep.md)
 >
 > **날짜**: 2026-05-12 session 39
 

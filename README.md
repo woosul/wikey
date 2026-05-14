@@ -116,7 +116,7 @@ wikey/                          ← 이 폴더 = Obsidian 볼트 = Git 저장소
 |------|------|
 | [설치 및 활용 가이드](docs/guides/getting-started.md) | 초보자를 위한 단계별 가이드 |
 | [모델 선택 가이드](docs/model/model-selection-guide.md) | 프로바이더별 비교, 비용, 시나리오 |
-| [Phase 3 UX 아키텍처](docs/planning/phase3-ux-architecture.md) | Obsidian 플러그인 → 웹 확장 계획 |
+| Phase 3 UX 아키텍처 *(Phase 3 종결 후 산출 예정)* | Obsidian 플러그인 → 웹 확장 계획 |
 
 ## 영감
 

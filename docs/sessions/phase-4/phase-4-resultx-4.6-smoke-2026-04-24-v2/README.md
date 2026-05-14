@@ -1,16 +1,16 @@
 # Phase 4 통합 smoke v2 (2026-04-24) — D.0.l 실행 결과
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](../../../docs/planning/phase-4/phase-4-todo.md) · [`docs/planning/phase-4/phase-4-todox-4.6-integrated-test.md`](../../../docs/planning/phase-4/phase-4-todox-4.6-integrated-test.md) — 본 문서는 §4.6 v6 2-pass 통합 smoke 의 **2nd 실행** (D.0.a~k 구현 이후, 2026-04-23 1차 smoke 에서 도출된 5 Critical 중 `piiGuardEnabled` + `allowPiiIngest` 2-layer gate + `1a-docling-no-ocr` retry 확증).
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](../../../planning/phase-4/phase-4-todo.md) · [`docs/planning/phase-4/phase-4-todox-4.6-integrated-test.md`](../../../planning/phase-4/phase-4-todox-4.6-integrated-test.md) — 본 문서는 §4.6 v6 2-pass 통합 smoke 의 **2nd 실행** (D.0.a~k 구현 이후, 2026-04-23 1차 smoke 에서 도출된 5 Critical 중 `piiGuardEnabled` + `allowPiiIngest` 2-layer gate + `1a-docling-no-ocr` retry 확증).
 
 ## 관련 문서
 
-- §5.1 [`pass-a-readme.md`](../pass-a-readme.md) — Pass A (Ingest 패널, 6 files) 매트릭스
-- §5.2 [`pass-b-readme.md`](../pass-b-readme.md) — Pass B (Audit 패널, 6 files) 매트릭스
-- §5.3 [`cross-compare.md`](../cross-compare.md) — A/B 교차 대조
-- §5.4 [`sidecar-redact-grep.md`](../sidecar-redact-grep.md) — D.0.m PII sidecar redact grep 증거
-- §5.5 [`boundary-2b-guard-off.md`](../boundary-2b-guard-off.md) — 2-layer gate boundary 2b (Guard OFF)
-- §5.6 [`boundary-3b-allow-off.md`](../boundary-3b-allow-off.md) — 2-layer gate boundary 3b (Allow OFF)
-- §5.7 [`palette-modal-smoke.md`](../palette-modal-smoke.md) — §4.C palette / DeleteImpact / ResetImpact modal smoke
+- §5.1 [`pass-a-readme.md`](pass-a-readme.md) — Pass A (Ingest 패널, 6 files) 매트릭스
+- §5.2 [`pass-b-readme.md`](pass-b-readme.md) — Pass B (Audit 패널, 6 files) 매트릭스
+- §5.3 [`cross-compare.md`](cross-compare.md) — A/B 교차 대조
+- §5.4 [`sidecar-redact-grep.md`](sidecar-redact-grep.md) — D.0.m PII sidecar redact grep 증거
+- §5.5 [`boundary-2b-guard-off.md`](boundary-2b-guard-off.md) — 2-layer gate boundary 2b (Guard OFF)
+- §5.6 [`boundary-3b-allow-off.md`](boundary-3b-allow-off.md) — 2-layer gate boundary 3b (Allow OFF)
+- §5.7 [`palette-modal-smoke.md`](palette-modal-smoke.md) — §4.C palette / DeleteImpact / ResetImpact modal smoke
 - 파일별 리포트 (12): `pass-a-file-{1..6}.md`, `pass-b-file-{1..6}.md`
 - 증거: `dump/pass-{a,b}-file-{1..6}.log`, `dump/boundary-{2b,3b}.log`
 

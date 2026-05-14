@@ -10,7 +10,7 @@
 
 - **Result mirror**: `activity/phase-6-result.md` (착수 시 생성).
 - **보조 문서**: 착수 시 `phase-6-todox-<section>-<topic>.md` · `phase-6-resultx-<section>-<topic>-<date>.md` 형식으로 추가.
-- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../plan_wikey-enterprise-kb.md).
+- **프로젝트 공통**: [`docs/planning/ref/decisions.md`](../ref/decisions.md) · [`docs/planning/ref/plan_wikey-enterprise-kb.md`](../ref/plan_wikey-enterprise-kb.md).
 
 ---
 

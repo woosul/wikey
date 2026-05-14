@@ -1,6 +1,6 @@
 # Phase 4 통합 smoke — Pass B (2026-04-24)
 
-> **상위 문서**: [`README.md`](../README.md) — 최종 집계. 관련 문서: [`pass-a-readme.md`](../pass-a-readme.md), [`cross-compare.md`](../cross-compare.md).
+> **상위 문서**: [`README.md`](../../../../README.md) — 최종 집계. 관련 문서: [`pass-a-readme.md`](pass-a-readme.md), [`cross-compare.md`](cross-compare.md).
 
 **진입 경로**: Audit 패널
 **autoMoveFromInbox**: true (core `runIngestCore` 분기)
@@ -45,7 +45,7 @@
 - **file 6 분류 variance**: 동일 HWPX 에 대해 Pass A `20_report`, Pass B `60_note` — LLM 판단 비결정적
 
 ## Critical 이슈
-- **Pass A 와 완전 동일 root cause**. D.0.m sidecar redact 는 양 pass 결정적 일치, 차이는 wiki entity 생성 단계. 상세 [`pass-a-readme.md#Critical 이슈`](../pass-a-readme.md).
+- **Pass A 와 완전 동일 root cause**. D.0.m sidecar redact 는 양 pass 결정적 일치, 차이는 wiki entity 생성 단계. 상세 [`pass-a-readme.md#Critical 이슈`](pass-a-readme.md).
 
 ## Stage 3 IV.B sampling
 - 시간 제약상 Pass B IV.B sampling 은 **DEFERRED** (plan v6 §6.1 필수 조건 Pass A/B 각 1건 중 Pass A 만 완수, Pass B 는 Pass A 와 구조적으로 동일한 경로이므로 reconcile behavior 동일 기대 — Phase 5 후속 측정으로 이관).

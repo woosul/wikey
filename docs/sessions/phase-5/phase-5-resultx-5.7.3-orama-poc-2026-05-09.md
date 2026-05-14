@@ -1,6 +1,6 @@
 # §5.7.3 Orama PoC + qmd 대체 결정 자료 — 통합 결과 (2026-05-09 session 27)
 
-> **상위 문서**: [docs/planning/phase-5/phase-5-todo.md](../../docs/planning/phase-5/phase-5-todo.md) §5.7.2 abandon log (line 816~889) → §5.7.3 (본 문서, research + PoC + 비교 분석).
+> **상위 문서**: [docs/planning/phase-5/phase-5-todo.md](../../planning/phase-5/phase-5-todo.md) §5.7.2 abandon log (line 816~889) → §5.7.3 (본 문서, research + PoC + 비교 분석).
 > **상태**: PoC 4 단계 완료. 결정 전 research + PoC 결과 단계 → activity-only 보존. 사용자 결정 후 §5.7.4 spec 으로 승격 시 docs/planning/phase-5/phase-5-todox-5.7.4-orama-migration.md 신규 작성.
 > **session**: 26~27 (2026-05-08 ~ 2026-05-09). master 직접 진행 (analyst/developer/tester 위임 X — research + 라이브 PoC 성격).
 > #qmd-alternative #orama #kiwi-wasm #electron-renderer #poc #path-a #qmd-vs-orama-comparison
@@ -529,7 +529,7 @@ Q5 회귀는 §5.7.4-C1 (smart_tokenize 정밀화) 으로 보완.
 
 ## 12. Sources (research 핵심 출처)
 
-- [phase-5-todo.md](../../docs/planning/phase-5/phase-5-todo.md) §5.7.2 abandon log (line 816~889)
+- [phase-5-todo.md](../../planning/phase-5/phase-5-todo.md) §5.7.2 abandon log (line 816~889)
 - [oramasearch/orama (GitHub)](https://github.com/oramasearch/orama) Apache-2.0
 - [Orama Issue #277 — CommonJS imports fail in Electron renderer](https://github.com/oramasearch/orama/issues/277)
 - [Orama Issue #695 — persistence 후 결과 정확도](https://github.com/oramasearch/orama/issues/695)

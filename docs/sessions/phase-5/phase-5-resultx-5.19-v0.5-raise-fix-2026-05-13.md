@@ -1,6 +1,6 @@
 # Phase 5 §5.19 v0.5 — 사용자 raise R1~R7 처리 (Activity)
 
-> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md §5.19`](./phase-5-result.md) · [`docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md)
+> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md §5.19`](./phase-5-result.md) · [`docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md)
 >
 > **날짜**: 2026-05-13 session 39 (계속)
 

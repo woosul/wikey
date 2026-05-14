@@ -11,11 +11,11 @@ tags: [provider-auth, ollama-cloud, benchmark, byoai, paradigm-shift, done]
 
 > **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md §5.6.5`](./phase-5-result.md)
 >
-> **상위 plan**: [`docs/planning/phase-5/phase-5-todox-5.6.5-ollama-cloud.md`](../../docs/planning/phase-5/phase-5-todox-5.6.5-ollama-cloud.md) v0.5
+> **상위 plan**: [`docs/planning/phase-5/phase-5-todox-5.6.5-ollama-cloud.md`](../../planning/phase-5/phase-5-todox-5.6.5-ollama-cloud.md) v0.5
 >
-> **mirror todo**: [`docs/planning/phase-5/phase-5-todo.md §5.6.5`](../../docs/planning/phase-5/phase-5-todo.md)
+> **mirror todo**: [`docs/planning/phase-5/phase-5-todo.md §5.6.5`](../../planning/phase-5/phase-5-todo.md)
 >
-> **spec**: [`docs/planning/phase-5/phase-5-spec-5.6.5-ollama-cloud.md`](../../docs/planning/phase-5/phase-5-spec-5.6.5-ollama-cloud.md) v0.5
+> **spec**: [`docs/planning/phase-5/phase-5-spec-5.6.5-ollama-cloud.md`](../../planning/phase-5/phase-5-spec-5.6.5-ollama-cloud.md) v0.5
 
 ## 1. Overview
 

@@ -50,7 +50,7 @@ LLM이 하는 일:
 | **Gemini** | 거의 무료 | 대용량 PDF에 최강 |
 | **Ollama (Qwen3/Gemma4)** | 완전 무료 | 오프라인, Qwen3.6 사용 시 품질 격차 축소 |
 
-상세 비교: [`docs/model/model-selection-guide.md`](../docs/model/model-selection-guide.md)
+상세 비교: [`docs/model/model-selection-guide.md`](../model/model-selection-guide.md)
 
 ---
 

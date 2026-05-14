@@ -1,7 +1,7 @@
 # 인제스트 분할 전략 (Ingest Decomposition)
 
 > raw/ 소스 1개가 wiki/ 페이지 여러 개로 분해되는 이유와 구조.
-> 기반 철학: [`llm-wiki.md`](../llm-wiki.md) — "A single source might touch 10-15 wiki pages."
+> 기반 철학: [`llm-wiki.md`](../../llm-wiki.md) — "A single source might touch 10-15 wiki pages."
 
 ---
 
@@ -121,8 +121,8 @@ Wiki 섹션의 총합이 Raw 원본 수를 크게 앞지르는 것은 **정상**
 
 ## 관련 파일
 
-- [`llm-wiki.md`](../llm-wiki.md) — 기반 철학
-- [`wikey.schema.md`](../wikey.schema.md) — 3계층 아키텍처 + 워크플로우 상세
+- [`llm-wiki.md`](../../llm-wiki.md) — 기반 철학
+- [`wikey.schema.md`](../../wikey.schema.md) — 3계층 아키텍처 + 워크플로우 상세
 - `wikey-core/src/ingest-pipeline.ts` — JSON 추출 구현
 - `wikey-core/src/wiki-ops.ts` — createPage / updateIndex 멱등 구현
 - `prompts/ingest.txt` — 분할 규칙 프롬프트

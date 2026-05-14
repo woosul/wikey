@@ -1,6 +1,6 @@
 # Boundary 3b — Allow OFF (Guard ON)
 
-> **상위 문서**: [`README.md`](../README.md) — Phase 4 smoke 최종 집계
+> **상위 문서**: [`README.md`](../../../../README.md) — Phase 4 smoke 최종 집계
 
 ## 목적
 `piiGuardEnabled=true` + `allowPiiIngest=false` 조합에서 PII 문서 ingest 시도 시:

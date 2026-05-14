@@ -1,7 +1,7 @@
 # Phase 5 §5.4 통합 라이브 cycle smoke (2026-04-26)
 
-> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md §5.4`](./phase-5-result.md), [`docs/planning/phase-5/phase-5-todo.md §5.4.5`](../../docs/planning/phase-5/phase-5-todo.md)
-> 단일 소스: [`docs/planning/phase-5/phase-5-todox-5.4-integration.md §5 AC21`](../../docs/planning/phase-5/phase-5-todox-5.4-integration.md)
+> **상위 문서**: [`docs/sessions/phase-5/phase-5-result.md §5.4`](./phase-5-result.md), [`docs/planning/phase-5/phase-5-todo.md §5.4.5`](../../planning/phase-5/phase-5-todo.md)
+> 단일 소스: [`docs/planning/phase-5/phase-5-todox-5.4-integration.md §5 AC21`](../../planning/phase-5/phase-5-todox-5.4-integration.md)
 
 ## 1. 진행 절차
 

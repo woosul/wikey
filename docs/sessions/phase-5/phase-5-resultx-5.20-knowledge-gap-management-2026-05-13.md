@@ -9,7 +9,7 @@ version: v0.6
 
 # Phase 5 §5.20 Knowledge Gap management — Result (2026-05-13 session 41)
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.20`](../../docs/planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](../../docs/planning/phase-5/phase-5-spec-5.20-knowledge-gap-management.md) (v0.4) · [`docs/planning/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](../../docs/planning/phase-5/phase-5-todox-5.20-knowledge-gap-management.md) (v0.3.1) #knowledge-gap #analytics #report #done
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.20`](../../planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.20-knowledge-gap-management.md`](../../planning/phase-5/phase-5-spec-5.20-knowledge-gap-management.md) (v0.4) · [`docs/planning/phase-5/phase-5-todox-5.20-knowledge-gap-management.md`](../../planning/phase-5/phase-5-todox-5.20-knowledge-gap-management.md) (v0.3.1) #knowledge-gap #analytics #report #done
 
 ## 1. 종결 요약
 

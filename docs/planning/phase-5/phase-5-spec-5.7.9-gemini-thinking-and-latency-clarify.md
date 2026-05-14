@@ -13,7 +13,7 @@ version: v1.0
 > **상위 문서**:
 > - [`docs/planning/plan-full.md`](../plan-full.md) §5.7.9 (Phase 5 잔여 항목)
 > - [`docs/planning/phase-5/phase-5-spec-5.7.8-llm-dynamic-stopword.md`](./phase-5-spec-5.7.8-llm-dynamic-stopword.md) v1.4 (선행 paradigm)
-> - [`docs/sessions/phase-5/phase-5-resultx-5.7.8-query-comparison-scenario-2026-05-10.md`](../../docs/sessions/phase-5/phase-5-resultx-5.7.8-query-comparison-scenario-2026-05-10.md) v1.1 (라이브 측정 → §5.7.9 candidate 도출 source)
+> - [`docs/sessions/phase-5/phase-5-resultx-5.7.8-query-comparison-scenario-2026-05-10.md`](../../sessions/phase-5/phase-5-resultx-5.7.8-query-comparison-scenario-2026-05-10.md) v1.1 (라이브 측정 → §5.7.9 candidate 도출 source)
 >
 > **트리거**: 2026-05-10 master 직접 라이브 비교 (10 query × 3 mode) 결과:
 > - PASS-A 7/10 (gemini-2.5-flash thinking 모드가 default `maxTokens=500` 소진 → 응답 40 chars 절단 → filter `'llm-fail'` fallback)

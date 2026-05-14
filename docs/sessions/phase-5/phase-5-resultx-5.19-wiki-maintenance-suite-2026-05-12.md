@@ -9,7 +9,7 @@ verdict: LIVE_SMOKE_PASS (38 → 0 dangling cleanup 결정적 확증)
 
 # Phase 5 §5.19 Step F + Step G — codex post-impl 5 cycle + Obsidian CDP 라이브 smoke 2 cycle
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.19`](../../docs/planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](../../docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md) v0.3 · [`docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md) v0.2 · [`docs/sessions/phase-5/phase-5-result.md §5.19`](./phase-5-result.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md §5.19`](../../planning/phase-5/phase-5-todo.md) · [`docs/planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md`](../../planning/phase-5/phase-5-spec-5.19-wiki-maintenance-suite.md) v0.3 · [`docs/planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md`](../../planning/phase-5/phase-5-todox-5.19-wiki-maintenance-suite.md) v0.2 · [`docs/sessions/phase-5/phase-5-result.md §5.19`](./phase-5-result.md)
 
 ## 1. 환경
 

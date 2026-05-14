@@ -11,7 +11,7 @@ priority: 종결
 
 # Phase 5 §5.15 — Pipeline v2 후속 3 항목
 
-> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../docs/sessions/phase-5/phase-5-result.md) · [`docs/architecture/wikey-ingest-pipeline-v2.md §15.6`](../../docs/architecture/wikey-ingest-pipeline-v2.md)
+> **상위 문서**: [`docs/planning/phase-5/phase-5-todo.md`](./phase-5-todo.md) · [`docs/sessions/phase-5/phase-5-result.md`](../../sessions/phase-5/phase-5-result.md) · [`docs/architecture/wikey-ingest-pipeline-v2.md §15.6`](../../architecture/wikey-ingest-pipeline-v2.md)
 >
 > **이슈 출처**: 2026-05-07 session 23 — `docs/architecture/wikey-ingest-pipeline-v2.md` 작성 시 §15.4 단점·리스크 + §15.6 v3 후보 로 도출된 3 항목. 사용자가 §5.15 로 정식 등록 결정.
 >

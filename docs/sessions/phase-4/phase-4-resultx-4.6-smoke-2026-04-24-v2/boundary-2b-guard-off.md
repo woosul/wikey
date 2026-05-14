@@ -1,6 +1,6 @@
 # Boundary 2b — Guard OFF
 
-> **상위 문서**: [`README.md`](../README.md) — Phase 4 smoke 최종 집계
+> **상위 문서**: [`README.md`](../../../../README.md) — Phase 4 smoke 최종 집계
 
 ## 목적
 `piiGuardEnabled=false` 로 설정 시:

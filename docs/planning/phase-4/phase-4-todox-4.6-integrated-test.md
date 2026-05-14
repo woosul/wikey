@@ -1,6 +1,6 @@
 # Phase 4 통합 smoke 테스트 계획서 (v6 — IV.A 관찰 강등 + snippet 복붙 실행 가능)
 
-> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../docs/sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.6 (통합 smoke 테스트 계획서 v6) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-4/phase-4-result.md`](../../sessions/phase-4/phase-4-result.md) · [`docs/planning/phase-4/phase-4-todo.md`](./phase-4-todo.md) — 본 문서는 §4.6 (통합 smoke 테스트 계획서 v6) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 > **체크박스 주의**: 본 문서 내부의 `- [ ]` 는 설계 당시의 플래닝 아티팩트이며 **실 todo 아님**. 실제 추적은 `plan/phase-N/phase-N-todo.md` 의 해당 section 에서 수행. (sync 스킬 Phase 0-4.6 의 "미이관 결정 케이스" — historical plan)
 

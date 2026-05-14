@@ -1,6 +1,6 @@
 # Step 3-0 사전 조사 종합 보고서
 
-> **상위 문서**: [`docs/sessions/phase-2/phase-2-result.md`](../../docs/sessions/phase-2/phase-2-result.md) · [`docs/planning/phase-2/phase-2-todo.md`](./phase-2-todo.md) — 본 문서는 §2.Step3-0 (한국어 검색 사전조사 (Step 3 진입 전 정밀 조사)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
+> **상위 문서**: [`docs/sessions/phase-2/phase-2-result.md`](../../sessions/phase-2/phase-2-result.md) · [`docs/planning/phase-2/phase-2-todo.md`](./phase-2-todo.md) — 본 문서는 §2.Step3-0 (한국어 검색 사전조사 (Step 3 진입 전 정밀 조사)) 보조 자료. 명명규칙: `phase-N-todox-<section>-<topic>.md` / `phase-N-resultx-<section>-<topic>-<date>.md` — `CLAUDE.md §문서 명명규칙·조직화` 참조.
 
 
 > 작성일: 2026-04-11
