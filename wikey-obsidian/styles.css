@@ -281,10 +281,60 @@
 /* ── Error ── */
 
 .wikey-chat-error {
-  padding: 10px 14px;
+  padding: 12px 14px;
   margin: 0;
-  background: rgba(255, 60, 60, 0.08);
+  background: rgba(255, 60, 60, 0.12);
   border-left: 3px solid var(--text-error);
+}
+
+/* §5.6.6 v0.7 live UX fix 2026-05-15 — error header (icon + title) gives
+   immediate signal that the message is an error, not raw stack trace.
+   Font-size 통일: 모두 0.81em (이전 .wikey-chat-error-detail 기준 유지). */
+.wikey-chat-error-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-error);
+  font-weight: 600;
+  font-size: 0.81em;
+  margin-bottom: 4px;
+}
+
+.wikey-chat-error-title {
+  flex: 1;
+  word-break: keep-all;
+}
+
+.wikey-chat-error-hint {
+  color: var(--text-normal);
+  font-size: 0.81em;
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+
+.wikey-chat-error-hint-lead {
+  margin-bottom: 2px;
+}
+
+.wikey-chat-error-hint-list {
+  margin: 0;
+  padding-left: 18px;
+  list-style-type: disc;
+}
+
+.wikey-chat-error-hint-list li {
+  margin: 2px 0;
+}
+
+.wikey-chat-error-details {
+  font-size: 0.81em;
+  color: var(--text-muted);
+}
+
+.wikey-chat-error-details summary {
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
 }
 
 .wikey-chat-error-detail {
@@ -292,7 +342,7 @@
   word-break: break-all;
   font-family: var(--font-monospace);
   font-size: 0.81em;
-  margin: 0;
+  margin: 4px 0 0;
   max-height: 200px;
   overflow-y: auto;
   color: var(--text-error);

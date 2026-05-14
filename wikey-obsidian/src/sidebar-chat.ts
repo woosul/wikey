@@ -20,6 +20,79 @@ export const WIKEY_CHAT_VIEW = 'wikey-chat'
 interface ChatMessage {
   readonly role: 'user' | 'assistant' | 'error'
   readonly content: string
+  readonly meta?: ChatErrorMeta
+}
+
+/** §5.6.6 v0.7 live UX fix 2026-05-15 — friendly error metadata
+ *  (title + hint) for `.wikey-chat-error` rendering. Raw stack trace 는
+ *  details 안에 collapse. */
+interface ChatErrorMeta {
+  readonly title: string
+  /** Single-paragraph hint when no structured list is needed. */
+  readonly hint?: string
+  /** Bullet list (user UI request 2026-05-15) — each item on its own line,
+   *  indented bullets. Either `hint` or `hintItems` is used, not both. */
+  readonly hintItems?: ReadonlyArray<string>
+}
+
+/** Classify a chat error into a user-friendly title + recovery hint. Falls
+ *  back to a generic header when the error is not a recognized vendor
+ *  fallback. */
+function classifyChatError(err: unknown, fullText: string): ChatErrorMeta {
+  // wikey.schema.md §"핵심 원칙" #6 (LOCK 2026-05-12) — system messages = English only.
+  const message = err instanceof Error ? err.message : String(err)
+  const reason = (err as { reason?: string })?.reason
+  const lower = `${message} ${fullText}`.toLowerCase()
+  if (reason === 'quota-exceeded' || /vendor returned 429|429/.test(lower) || /quota/.test(lower) || /rate.?limit/.test(lower)) {
+    const vendor = /provider=(\w+)/.exec(fullText)?.[1] ?? 'LLM'
+    return {
+      title: `${vendor} subscription quota exceeded (429)`,
+      hint: 'Try:',
+      hintItems: [
+        'Switch to another provider/model (Anthropic / OpenAI).',
+        'Settings → Auth Mode → API Key.',
+        'Wait until quota resets.',
+        'Subscription Mode → CLI.',
+      ],
+    }
+  }
+  if (reason === 'auth-missing' || /please.*(?:log|sign)\s*in|not logged in|authentication required/.test(lower)) {
+    return {
+      title: 'Authentication required (auth-missing)',
+      hint: 'Re-login via vendor CLI (gemini /auth, claude /login, codex login). Or Settings → Auth Mode → API Key.',
+    }
+  }
+  if (reason === 'jsonMode-unsupported') {
+    return {
+      title: 'JSON mode not supported on subscription path',
+      hint: 'This vendor’s subscription path does not support jsonMode. Switch Auth Mode to API Key, or disable jsonMode for this query.',
+    }
+  }
+  if (reason === 'timeout' || /timeout/.test(lower)) {
+    return {
+      title: 'Response timeout',
+      hint: 'Check network / vendor service status, then retry. Try another provider if persistent.',
+    }
+  }
+  if (reason === 'server-error' || /5\d\d|server.error|failed \(status=4\d\d\)/.test(lower)) {
+    return {
+      title: 'Vendor server error',
+      hint: 'Vendor returned an error response. Try another provider or retry after a short delay.',
+    }
+  }
+  if (reason === 'mode-pending') {
+    return {
+      title: 'Subscription Mode pending (Step A0 not decided)',
+      hint: 'Settings → Subscription Mode: select REST or CLI.',
+    }
+  }
+  if (reason === 'spawn-failed') {
+    return {
+      title: 'CLI spawn failed',
+      hint: 'Vendor CLI not installed or cannot be launched. macOS Keychain may also need permission.',
+    }
+  }
+  return { title: 'Error' }
 }
 
 // Bootstrap SVG icons (inline, 16x16)
@@ -778,7 +851,13 @@ export class WikeyChatView extends ItemView {
       else if (typeof err === 'object') fullError = JSON.stringify(err, null, 2)
       else fullError = String(err)
       if (!fullError?.trim()) fullError = '[Wikey] Empty error — check Cmd+Option+I console'
-      const errorMsg: ChatMessage = { role: 'error', content: fullError }
+      // §5.6.6 v0.7 live UX fix 2026-05-15 — friendly error header + reason
+      // classification + recovery hint. Raw stack trace 는 details 안에 collapse.
+      const errorMsg: ChatMessage = {
+        role: 'error',
+        content: fullError,
+        meta: classifyChatError(err, fullError),
+      }
       this.plugin.chatHistory.push(errorMsg)
       this.plugin.scheduleChatSave()
       this.renderMessage(errorMsg)
@@ -793,8 +872,24 @@ export class WikeyChatView extends ItemView {
 
   private renderMessage(msg: ChatMessage) {
     if (msg.role === 'error') {
+      const meta = msg.meta
       const el = this.messagesEl.createDiv({ cls: 'wikey-chat-error' })
-      el.createEl('pre', { cls: 'wikey-chat-error-detail', text: msg.content })
+      const header = el.createDiv({ cls: 'wikey-chat-error-header' })
+      header.createSpan({
+        cls: 'wikey-chat-error-title',
+        text: meta?.title ?? 'Error',
+      })
+      if (meta?.hint || meta?.hintItems?.length) {
+        const hintBlock = el.createDiv({ cls: 'wikey-chat-error-hint' })
+        if (meta.hint) hintBlock.createDiv({ cls: 'wikey-chat-error-hint-lead', text: meta.hint })
+        if (meta.hintItems?.length) {
+          const list = hintBlock.createEl('ul', { cls: 'wikey-chat-error-hint-list' })
+          for (const item of meta.hintItems) list.createEl('li', { text: item })
+        }
+      }
+      const details = el.createEl('details', { cls: 'wikey-chat-error-details' })
+      details.createEl('summary', { text: 'Show details (stack trace)' })
+      details.createEl('pre', { cls: 'wikey-chat-error-detail', text: msg.content })
       this.scrollToBottom()
       return
     }
