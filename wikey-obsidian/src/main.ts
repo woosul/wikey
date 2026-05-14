@@ -50,6 +50,8 @@ import type {
   UpdateItemDescriptor,
   UpdateAnalysis,
 } from 'wikey-core'
+// §5.6.6 Session 45 M1 fix — Electron renderer fetch bypass for vendor REST.
+import { setSubscriptionRESTFetcher } from 'wikey-core'
 import { shouldDetectUpstreamUpdates } from './update-onload-gate'
 
 // ── Phase 4 D.0.d (v6 §4.2.5) ──
@@ -68,7 +70,10 @@ import { registerCommands } from './commands'
 import { detectEnvironment, buildExecEnv } from './env-detect'
 import type { EnvStatus } from './env-detect'
 import { ensureParaFolders } from './setup-para'
-import { buildAuthModesForConfig } from './auth-mode-bridge'
+import {
+  buildAuthModesForConfig,
+  buildSubscriptionModesForConfig,
+} from './auth-mode-bridge'
 
 interface WikeySettings {
   basicModel: string
@@ -82,6 +87,13 @@ interface WikeySettings {
   geminiAuthMode: 'none' | 'subscription' | 'api'
   anthropicAuthMode: 'none' | 'subscription' | 'api'
   openaiAuthMode: 'none' | 'subscription' | 'api'
+  // §5.6.6 — per-provider subscription mode. 'cli' = §5.6.4 CLI spawn,
+  // 'rest' = direct vendor REST endpoint, 'pending' = Step A0 Legal Gate
+  // decision not yet applied (Notice + cli fallback at runtime).
+  // Step A0 LOCK 2026-05-14 = APPROVED_LOCAL_ONLY → DEFAULT 'rest' (Spec §1.3.2).
+  geminiSubscriptionMode: 'cli' | 'rest' | 'pending'
+  anthropicSubscriptionMode: 'cli' | 'rest' | 'pending'
+  openaiSubscriptionMode: 'cli' | 'rest' | 'pending'
   // §5.6.5 v0.5 (2026-05-14) — Ollama Cloud uses the same Subscription + APIKey
   // schema as the three subscription providers (user lock 2026-05-14: "다른
   // LLM과 동일한 구조"). Auth mode dropdown + Sign in via `ollama signin` +
@@ -189,6 +201,12 @@ const DEFAULT_SETTINGS: WikeySettings = {
   geminiAuthMode: 'subscription',
   anthropicAuthMode: 'subscription',
   openaiAuthMode: 'subscription',
+  // §5.6.6 — Step A0 LOCK 2026-05-14 = APPROVED_LOCAL_ONLY (3 vendor approved).
+  // Spec §1.3.2 defaultModeForApprovalState → 'rest' for all 3 vendors. Users
+  // can still pick 'cli' per provider via Settings UI (Step F) without env vars.
+  geminiSubscriptionMode: 'rest',
+  anthropicSubscriptionMode: 'rest',
+  openaiSubscriptionMode: 'rest',
   ollamaUrl: 'http://localhost:11434',
   qmdPath: '',
   advancedLLM: false,
@@ -406,6 +424,9 @@ export function buildDefaultAuthFallback(
       'spawn-failed': `${info.provider} CLI failed to launch — switch Auth Mode to API Key if desired`,
       'jsonMode-unsupported': `${info.provider} subscription does not support JSON output — switch Auth Mode to API Key`,
       'timeout': `${info.provider} subscription timeout — switch Auth Mode to API Key if persistent`,
+      // §5.6.6 — REST direct path failure modes.
+      'server-error': `${info.provider} subscription server error — please retry, or switch Auth Mode to API Key`,
+      'mode-pending': `${info.provider} subscription mode pending (Step A0 not decided) — using CLI fallback`,
     }
     noticeFn(messages[info.reason])
   }
@@ -625,6 +646,21 @@ export default class WikeyPlugin extends Plugin {
 
     this.wikiFS = new ObsidianWikiFS(this)
     this.httpClient = new ObsidianHttpClient()
+    // §5.6.6 M1 fix v0.7 — Obsidian Electron renderer's `fetch` is blocked by
+    // Chromium CORS preflight when targeting vendor private OAuth endpoints
+    // (cloudcode-pa / chatgpt.com/backend-api / api.anthropic.com). Inject a
+    // Node `https` module wrapper that runs outside the Chromium fetch
+    // sandbox; non-Obsidian CLI consumers keep the default `globalThis.fetch`.
+    setSubscriptionRESTFetcher(nodeHttpsFetch)
+    // §5.6.6 v0.7 — vendor OAuth credentials (client_id/secret) are PUBLIC
+    // values inside each vendor's CLI bundle but match GitHub secret scanning
+    // patterns; resolve them at runtime via local grep so wikey-core stays
+    // string-free. process.env injection is read-only by wikey-core's
+    // readGeminiOAuthCredentials / readOpenAIOAuthClientId /
+    // readAnthropicOAuthClientId; values never appear in console/conversation.
+    bootstrapSubscriptionOAuthEnv(
+      (this.app.vault.adapter as unknown as { basePath?: string }).basePath,
+    )
     this.llmClient = new LLMClient(this.httpClient, this.buildConfig())
 
     this.registerView(WIKEY_CHAT_VIEW, (leaf) => new WikeyChatView(leaf, this))
@@ -1283,6 +1319,12 @@ export default class WikeyPlugin extends Plugin {
       searchHybridEnabled: this.settings.searchHybridEnabled,
       searchRrfK: this.settings.searchRrfK,
       searchQwen3DownloadStatus: this.settings.searchQwen3DownloadStatus,
+      // §5.6.6 — codex post-impl F4 MID fix v0.6 — per-provider Subscription Mode
+      // (REST/CLI/Pending) persistence in data.json. Without this, dropdown
+      // changes are lost on reload — reverting to default 'rest'.
+      geminiSubscriptionMode: this.settings.geminiSubscriptionMode,
+      anthropicSubscriptionMode: this.settings.anthropicSubscriptionMode,
+      openaiSubscriptionMode: this.settings.openaiSubscriptionMode,
     }
   }
 
@@ -1796,6 +1838,10 @@ export default class WikeyPlugin extends Plugin {
     // §5.6.4 — auth mode merge (process.env > settings > 'auto'). Single source of truth lives in
     // auth-mode-bridge.ts so build-config-auth-mode.test.ts and buildConfig() stay in sync.
     const authModes = buildAuthModesForConfig(this.settings)
+    // §5.6.6 — subscription mode merge (process.env > settings > 'pending').
+    // Source of truth lives in auth-mode-bridge.ts (buildSubscriptionModesForConfig)
+    // so build-config-auth-mode.test.ts and buildConfig() stay in sync.
+    const subscriptionModes = buildSubscriptionModesForConfig(this.settings)
     return {
       WIKEY_BASIC_MODEL: this.settings.basicModel,
       WIKEY_SEARCH_BACKEND: 'basic',
@@ -1820,6 +1866,10 @@ export default class WikeyPlugin extends Plugin {
       GEMINI_AUTH_MODE: authModes.GEMINI_AUTH_MODE,
       ANTHROPIC_AUTH_MODE: authModes.ANTHROPIC_AUTH_MODE,
       OPENAI_AUTH_MODE: authModes.OPENAI_AUTH_MODE,
+      // §5.6.6 — per-provider subscription mode (cli / rest / pending).
+      GEMINI_SUBSCRIPTION_MODE: subscriptionModes.GEMINI_SUBSCRIPTION_MODE,
+      ANTHROPIC_SUBSCRIPTION_MODE: subscriptionModes.ANTHROPIC_SUBSCRIPTION_MODE,
+      OPENAI_SUBSCRIPTION_MODE: subscriptionModes.OPENAI_SUBSCRIPTION_MODE,
     }
   }
 
@@ -1989,4 +2039,164 @@ class ObsidianHttpClient implements HttpClient {
       req.end()
     })
   }
+}
+
+/**
+ * §5.6.6 Step Fix v0.7 (Session 45 M1 R8 fix) — Node `https` module wrapper
+ * that returns a fetch-compatible `Response`. Used by the 3 vendor REST
+ * clients (Google / OpenAI / Anthropic) instead of Electron renderer's `fetch`,
+ * which CORS-blocks vendor private OAuth endpoints (cloudcode-pa.googleapis.com,
+ * chatgpt.com/backend-api/codex/responses, api.anthropic.com/v1/messages).
+ *
+ * `node:https` runs outside the Chromium fetch sandbox so CORS does not apply.
+ * The body is a `ReadableStream<Uint8Array>` backed by the `IncomingMessage`
+ * (a Node Readable stream is already AsyncIterable<Uint8Array> — the
+ * OpenAI SSE path consumes it via `for await ... of stream`).
+ */
+/**
+ * §5.6.6 v0.7 — resolve vendor OAuth client_id/secret. Priority:
+ *   1. process.env (already set by tests / CI)
+ *   2. wikey.conf (정식 설정 파일, 사용자 명시 2026-05-15) —
+ *      `WIKEY_GEMINI_OAUTH_CLIENT_ID=...` `WIKEY_GEMINI_OAUTH_CLIENT_SECRET=...`
+ *      `WIKEY_OPENAI_OAUTH_CLIENT_ID=...` `WIKEY_ANTHROPIC_OAUTH_CLIENT_ID=...`
+ *   3. Vendor CLI bundle grep (fallback — extracted PUBLIC values, not committed).
+ *
+ * Values are PUBLIC inside each vendor's CLI bundle but match GitHub secret
+ * scanning patterns; this indirection keeps wikey-core source string-free.
+ * Failure is non-fatal — the corresponding REST client throws `auth-missing`
+ * at first call when env stays unset.
+ */
+function bootstrapSubscriptionOAuthEnv(vaultBasePath?: string): void {
+  const fs = require('node:fs') as typeof import('node:fs')
+  const os = require('node:os') as typeof import('node:os')
+  const path = require('node:path') as typeof import('node:path')
+
+  // Priority 2 — wikey.conf (정식 설정 파일).
+  try {
+    const candidates = [vaultBasePath, process.cwd()].filter(Boolean) as string[]
+    const confPath = candidates
+      .map((dir) => path.join(dir, 'wikey.conf'))
+      .find((p) => fs.existsSync(p))
+    if (confPath) {
+      const conf = fs.readFileSync(confPath, 'utf-8')
+      for (const line of conf.split('\n')) {
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith('#')) continue
+        const eq = trimmed.indexOf('=')
+        if (eq === -1) continue
+        const key = trimmed.slice(0, eq).trim()
+        const value = trimmed.slice(eq + 1).replace(/#.*$/, '').trim()
+        if (!value) continue
+        if (
+          key === 'WIKEY_GEMINI_OAUTH_CLIENT_ID' ||
+          key === 'WIKEY_GEMINI_OAUTH_CLIENT_SECRET' ||
+          key === 'WIKEY_OPENAI_OAUTH_CLIENT_ID' ||
+          key === 'WIKEY_ANTHROPIC_OAUTH_CLIENT_ID'
+        ) {
+          if (!process.env[key]) process.env[key] = value
+        }
+      }
+    }
+  } catch {
+    // wikey.conf read error — fall through to bundle grep.
+  }
+
+  // Priority 3 — vendor CLI bundle grep (last resort; values are PUBLIC).
+  if (!process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID || !process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET) {
+    const geminiBundle = path.join(
+      os.homedir(),
+      '.nvm/versions/node/v22.17.0/lib/node_modules/@google/gemini-cli/bundle/chunk-UN6XCVMJ.js',
+    )
+    try {
+      const text = fs.readFileSync(geminiBundle, 'utf-8')
+      const idMatch = text.match(/"(\d{6,}-[a-z0-9]+\.apps\.googleusercontent\.com)"/)
+      const secretMatch = text.match(/"(GOCSPX-[A-Za-z0-9_-]{20,})"/)
+      if (idMatch && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID) {
+        process.env.WIKEY_GEMINI_OAUTH_CLIENT_ID = idMatch[1]
+      }
+      if (secretMatch && !process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET) {
+        process.env.WIKEY_GEMINI_OAUTH_CLIENT_SECRET = secretMatch[1]
+      }
+    } catch { /* bundle not found */ }
+  }
+  if (!process.env.WIKEY_OPENAI_OAUTH_CLIENT_ID) {
+    const codexBin = path.join(
+      os.homedir(),
+      '.nvm/versions/node/v22.17.0/lib/node_modules/@openai/codex/node_modules/@openai/codex-darwin-arm64/vendor/aarch64-apple-darwin/codex/codex',
+    )
+    try {
+      const buf = fs.readFileSync(codexBin)
+      const m = buf.toString('binary').match(/app_[A-Za-z0-9]{20,30}/)
+      if (m) process.env.WIKEY_OPENAI_OAUTH_CLIENT_ID = m[0]
+    } catch { /* binary not found */ }
+  }
+  if (!process.env.WIKEY_ANTHROPIC_OAUTH_CLIENT_ID) {
+    const claudeBundle = '/opt/homebrew/lib/node_modules/@anthropic-ai/claude-code/cli.js'
+    try {
+      const text = fs.readFileSync(claudeBundle, 'utf-8')
+      const m = text.match(/"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})"/)
+      if (m) process.env.WIKEY_ANTHROPIC_OAUTH_CLIENT_ID = m[1]
+    } catch { /* bundle not found */ }
+  }
+}
+
+async function nodeHttpsFetch(input: string, init?: RequestInit): Promise<Response> {
+  const https = require('node:https') as typeof import('node:https')
+  const url = new URL(input)
+  const method = (init?.method ?? 'GET').toUpperCase()
+  const headers = init?.headers as Record<string, string> | undefined
+  const body = init?.body as string | undefined
+  const signal = init?.signal as AbortSignal | undefined
+
+  return new Promise<Response>((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: url.pathname + url.search,
+        method,
+        headers: headers ?? {},
+      },
+      (res) => {
+        const statusCode = res.statusCode ?? 0
+        // Convert Node IncomingMessage to a fetch-style ReadableStream.
+        // `IncomingMessage` is AsyncIterable<Buffer>; wrap as Uint8Array stream.
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            res.on('data', (chunk: Buffer) => {
+              controller.enqueue(new Uint8Array(chunk))
+            })
+            res.on('end', () => controller.close())
+            res.on('error', (err) => controller.error(err))
+          },
+          cancel() {
+            res.destroy()
+          },
+        })
+        const responseHeaders = new Headers()
+        for (const [k, v] of Object.entries(res.headers)) {
+          if (Array.isArray(v)) responseHeaders.set(k, v.join(', '))
+          else if (typeof v === 'string') responseHeaders.set(k, v)
+        }
+        const response = new Response(stream, {
+          status: statusCode,
+          statusText: res.statusMessage ?? '',
+          headers: responseHeaders,
+        })
+        resolve(response)
+      },
+    )
+    if (signal) {
+      if (signal.aborted) {
+        req.destroy(new DOMException('aborted', 'AbortError'))
+      } else {
+        signal.addEventListener('abort', () => {
+          req.destroy(new DOMException('aborted', 'AbortError'))
+        })
+      }
+    }
+    req.on('error', (err) => reject(err))
+    if (body) req.write(body)
+    req.end()
+  })
 }

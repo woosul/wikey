@@ -5,7 +5,7 @@ title: Subscription REST direct — 3 vendor unified paradigm (CLI agentic bypas
 status: planning
 created: 2026-05-14
 updated: 2026-05-14
-version: v0.5
+version: v0.6
 ---
 
 # Phase 5 §5.6.6 Subscription REST direct — Todox (HOW)
@@ -42,6 +42,10 @@ version: v0.5
 >   - **F7 fix**: Step C OpenAI implementation snippet 의 `instructions: '... Do not use any tools.'` 텍스트 폐기 (raw substring "tools" false hit). AC-S13 schema field/event 검증만 명시
 >   - **F8 fix**: I17 atomic write `tmp + rename only` (single fs.writeFile은 atomic 아님)
 >   - **신규 branch fix**: docs sweep "README.md 변경 0 (단 `APPROVED_LOCAL_ONLY` 시 disclaimer 추가)". Step G "30 measurement" → "approved vendor × N=10 (state-aware)"
+> - **v0.6 (2026-05-14, Session 45 잔여 5 fix LOCK)** — Spec v0.6 mirror, 구현 진입 전 최종 sweep:
+>   - **X1 HIGH fix v0.6**: §0 작업 분할 표 Step E dependency "B/C/D" → "approved vendor steps only + rejected vendor cli stub/forced cli branch" (`APPROVED_PARTIAL` 분기 정합). §9 의존성 순서도 동일 패턴 — E 는 approved vendor steps 만 의존, rejected vendor 강제 cli (`resolveSubscriptionMode` 반환 `'cli'`) + T-E1~T-E11 안 rejected vendor RESTClient 호출 spy 0건 확증.
+>   - **X2 MID fix v0.6**: §7.2 9번 kill-switch test — Gemini env 1 종 → 3 vendor env 모두 명시 (Gemini + Anthropic + OpenAI 각각 라이브 smoke + 독립성 확증). Spec AC-S23 (v0.3 부터 3 vendor 일관) 과 mirror.
+>   - (F5/F6/X3 는 Spec 측 단독 sweep — 본 todox 영향 0).
 
 ## 0. 작업 분할 개요 (Step A0 ~ H, codex F1+F9 fix v0.2 → AC count v0.4)
 
@@ -54,7 +58,7 @@ version: v0.5
 | **B** | Google REST client (`google-rest-client.ts`) | ~150 | A | spike 직접 reproduce |
 | **C** | OpenAI REST client (`openai-rest-client.ts` + SSE helper) | ~200 | A | SSE parsing + private backend 용어 |
 | **D** | Anthropic REST client (`anthropic-rest-client.ts`) | ~150 | A | Keychain access + macOS detect |
-| **E** | `llm-client.ts` integration (`subscriptionMode` 분기) + WikeyConfig 3 field + buildConfig + auth-mode-bridge | ~150 | B/C/D | 기존 callXxxSubscription 분기 + core config |
+| **E** | `llm-client.ts` integration (`subscriptionMode` 분기) + WikeyConfig 3 field + buildConfig + auth-mode-bridge | ~150 | approved B/C/D + rejected vendor cli stub/forced cli branch (`APPROVED_PARTIAL` 분기, codex X1 fix v0.6) | 기존 callXxxSubscription 분기 + core config |
 | **F** | Settings UI (per-provider toggle + label + kill-switch UX) | ~80 | E | settings-tab 3 row |
 | **G** | 회귀 검증 + master CDP smoke 3 vendor + latency SLO N=10 + endpoint hash drift smoke | — | A~F | 라이브 |
 | **H** | BLUE 3b refactor + commit/push (6 활동) | — | G | 정리 |
@@ -627,7 +631,11 @@ openaiSubscriptionMode?: 'rest' | 'cli' | 'pending'
 6. **transport-level grep** (codex F7 정정 v0.2) — wikey 가 send 한 request body capture (test mode 또는 console.debug) → `tools` field 0건. response stream event 안 `tool_use` / `function_call` 0건. 자연어 답변 본문 grep 폐기.
 7. 응답 footer Referenced 정상 (§5.18 v0.7 한 줄 inline 형식)
 8. `subscriptionMode = 'cli'` 1 vendor 만 변경 → 기존 cli path 회귀 OK (AC-S20)
-9. **kill-switch test** (codex F2): env `WIKEY_GEMINI_REST_DISABLE=1` 시 Settings dropdown 'rest' 무시 + 강제 cli path 확증.
+9. **kill-switch test 3 vendor 일관** (codex F2/X2 fix v0.6 — 3 vendor env 모두 라이브 smoke):
+   - **Gemini**: env `WIKEY_GEMINI_REST_DISABLE=1` + Settings `geminiSubscriptionMode='rest'` → 라이브 chat 호출 시 cli path 강제 (마스터 console.debug 또는 transport-level grep 으로 cli-spawn 확증).
+   - **Anthropic**: env `WIKEY_ANTHROPIC_REST_DISABLE=1` + Settings `anthropicSubscriptionMode='rest'` → 동일 패턴 — cli path 강제.
+   - **OpenAI**: env `WIKEY_OPENAI_REST_DISABLE=1` + Settings `openaiSubscriptionMode='rest'` → 동일 패턴 — cli path 강제.
+   - 3 vendor env 독립성 확증 — gemini disable 시 anthropic/openai 영향 0, 동시 disable 가능 (예: gemini+openai disable + anthropic rest 잔존).
 10. **drift smoke** (codex F6 신설 v0.2): vendor CLI bundle 의 endpoint URL string 수동 변경 (예: `cloudcode-pa.googleapis.com` → `xxx-pa.googleapis.com`) 시 version-guard.ts 가 Notice emit 확증. 실제 깨지지 않게 baseline 으로 복구.
 
 ### 7.3 Acceptance
@@ -682,8 +690,8 @@ A0 (Legal Gate, BLOCKING) → A (shared) → B (Google) ↘
 
 - **A0 통과 결과** = `APPROVED_EXPERIMENTAL` / `APPROVED_LOCAL_ONLY` / `APPROVED_PARTIAL` / `REJECTED`. 각 시점에 따라 vendor 별 진행 여부 다름.
 - **병렬 가능**: B / C / D 는 A 종결 후 동시 작업 가능 (각 vendor 독립).
-- **순차 의무**: E 는 B/C/D 모두 종결 후 (WikeyConfig + buildConfig 통합). F 는 E 후. G 는 F 후. H 는 G 후.
-- **`APPROVED_PARTIAL` 시**: 거부된 vendor 의 Step (B/C/D 중 하나) 는 skip + 해당 vendor 의 cli path 만 유지. E 의 분기 시 거부 vendor 는 강제 cli.
+- **순차 의무** (codex X1 fix v0.6): E 는 **approved vendor steps only** (B/C/D 중 A0 approved) 종결 후 (WikeyConfig + buildConfig 통합). 거부된 vendor 의 Step (B/C/D 중) 는 skip — E 안 강제 cli branch (rejected vendor 의 RESTClient class 자체 미import + llm-client.ts 분기 시 cli path forced). F 는 E 후. G 는 F 후. H 는 G 후.
+- **`APPROVED_PARTIAL` 시**: 거부된 vendor 의 Step (B/C/D 중 하나) 는 skip + 해당 vendor 의 cli path 만 유지. E 의 분기 시 거부 vendor 는 강제 cli (`resolveSubscriptionMode` 가 rejected vendor 에 대해 강제 `'cli'` 반환). T-E1~T-E11 안 rejected vendor 의 RESTClient 호출 spy = 0건 확증.
 
 ## 10. 문서 sweep
 

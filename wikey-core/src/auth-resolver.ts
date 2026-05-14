@@ -111,6 +111,51 @@ export function resolveAuthMode(
   return 'api'
 }
 
+// ── §5.6.6 — per-provider subscription mode resolver ─────────────────────
+
+/** Subset of SubscriptionProvider that has a REST direct paradigm (Spec §1.1). */
+export type RESTSubscriptionProvider = 'gemini' | 'anthropic' | 'openai'
+
+const SUBSCRIPTION_MODE_KEY: Record<RESTSubscriptionProvider, keyof WikeyConfig> = {
+  gemini: 'GEMINI_SUBSCRIPTION_MODE',
+  anthropic: 'ANTHROPIC_SUBSCRIPTION_MODE',
+  openai: 'OPENAI_SUBSCRIPTION_MODE',
+}
+
+const REST_DISABLE_ENV: Record<RESTSubscriptionProvider, string> = {
+  gemini: 'WIKEY_GEMINI_REST_DISABLE',
+  anthropic: 'WIKEY_ANTHROPIC_REST_DISABLE',
+  openai: 'WIKEY_OPENAI_REST_DISABLE',
+}
+
+/**
+ * §5.6.6 — resolve per-provider subscription mode (cli / rest / pending).
+ *
+ * Priority (highest first):
+ *   1. Kill-switch env `WIKEY_<PROVIDER>_REST_DISABLE=1` → forced 'cli' (Spec I16).
+ *   2. `config.<PROVIDER>_SUBSCRIPTION_MODE`            → caller's choice.
+ *   3. 'pending'                                         → Step A0 Legal Gate
+ *      not yet decided. Caller (llm-client.ts) translates to a 'cli' fallback
+ *      with a Notice (Spec §1.3.2 defaultModeForApprovalState).
+ *
+ * Pure function — no fs / network access. `ollama-cloud` is intentionally
+ * excluded (§5.6.5 uses HTTP API + Bearer header, not the REST direct
+ * paradigm — separate cycle).
+ */
+export function resolveSubscriptionMode(
+  provider: RESTSubscriptionProvider,
+  config: WikeyConfig,
+): 'cli' | 'rest' | 'pending' {
+  if (process.env[REST_DISABLE_ENV[provider]] === '1') return 'cli'
+  const value = config[SUBSCRIPTION_MODE_KEY[provider]] as
+    | 'cli'
+    | 'rest'
+    | 'pending'
+    | undefined
+  if (value === 'cli' || value === 'rest' || value === 'pending') return value
+  return 'pending'
+}
+
 /**
  * §3.9 — classify a subscription-path failure signal into AuthFallbackInfo.reason.
  *

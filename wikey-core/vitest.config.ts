@@ -10,5 +10,6 @@ export default defineConfig({
   test: {
     include: ['src/__tests__/**/*.test.ts'],
     exclude: ['node_modules/**', 'dist/**', 'vendor/**'],
+    setupFiles: ['src/__tests__/setup-subscription-rest-env.ts'],
   },
 })

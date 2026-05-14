@@ -35,7 +35,7 @@ declare global {
     createDiv(opts?: string | { cls?: string | string[]; text?: string; attr?: Record<string, string> }): HTMLDivElement
     createEl<K extends keyof HTMLElementTagNameMap>(
       tag: K,
-      opts?: string | { cls?: string | string[]; text?: string; attr?: Record<string, string>; href?: string },
+      opts?: string | { cls?: string | string[]; text?: string; attr?: Record<string, string>; href?: string; value?: string },
     ): HTMLElementTagNameMap[K]
     createSpan(opts?: string | { cls?: string | string[]; text?: string }): HTMLSpanElement
   }
@@ -43,7 +43,7 @@ declare global {
 
 function applyOpts(
   el: HTMLElement,
-  opts?: string | { cls?: string | string[]; text?: string; attr?: Record<string, string>; href?: string },
+  opts?: string | { cls?: string | string[]; text?: string; attr?: Record<string, string>; href?: string; value?: string },
 ): void {
   if (typeof opts === 'string') {
     if (opts) el.classList.add(...opts.split(/\s+/).filter((s) => s.length > 0))
@@ -59,6 +59,10 @@ function applyOpts(
     for (const [k, v] of Object.entries(opts.attr)) el.setAttribute(k, v)
   }
   if (opts.href !== undefined && el instanceof HTMLAnchorElement) el.href = opts.href
+  // §5.6.6 Step F — `<option value="...">` shape. Production Obsidian's createEl
+  // forwards opts.value to HTMLOptionElement; mirror so option DOM is queryable
+  // by .value / select.value setter (settings-tab.renderSubscriptionModeRow).
+  if (opts.value !== undefined && el instanceof HTMLOptionElement) el.value = opts.value
 }
 
 // happy-dom 의 HTMLElement.prototype — 1회만 augment (idempotent guard)
@@ -370,11 +374,62 @@ export class FuzzySuggestModal<T> extends Modal {
 
 export class Setting {
   containerEl: HTMLElement
+  /** Created DOM container so tests can query the Setting rendering. */
+  settingEl: HTMLDivElement
+  /** Most recently constructed Setting's dropdown handle (test helper). */
+  static __lastDropdown?: {
+    el: HTMLSelectElement
+    options: Array<{ value: string; text: string }>
+    onChangeCb?: (value: string) => unknown
+  }
+  /** Setting.controlEl exposes the `.setting-item-control` lazy-created div
+   *  (matches Obsidian's `Setting` class surface used by code that does
+   *  `setting.controlEl.appendChild(customSelect)`). */
+  get controlEl(): HTMLElement {
+    let control = this.settingEl.querySelector('.setting-item-control') as HTMLElement | null
+    if (!control) {
+      control = document.createElement('div')
+      control.classList.add('setting-item-control')
+      this.settingEl.appendChild(control)
+    }
+    return control
+  }
   constructor(containerEl: HTMLElement) {
     this.containerEl = containerEl
+    this.settingEl = document.createElement('div')
+    this.settingEl.classList.add('setting-item')
+    containerEl.appendChild(this.settingEl)
   }
-  setName(_name: string): this { return this }
-  setDesc(_desc: string): this { return this }
+  setName(name: string): this {
+    const info = this.settingEl.querySelector('.setting-item-info') ?? this.settingEl.appendChild((() => {
+      const d = document.createElement('div')
+      d.classList.add('setting-item-info')
+      return d
+    })())
+    let nameEl = info.querySelector('.setting-item-name') as HTMLElement | null
+    if (!nameEl) {
+      nameEl = document.createElement('div')
+      nameEl.classList.add('setting-item-name')
+      info.appendChild(nameEl)
+    }
+    nameEl.textContent = name
+    return this
+  }
+  setDesc(desc: string): this {
+    const info = this.settingEl.querySelector('.setting-item-info') ?? this.settingEl.appendChild((() => {
+      const d = document.createElement('div')
+      d.classList.add('setting-item-info')
+      return d
+    })())
+    let descEl = info.querySelector('.setting-item-description') as HTMLElement | null
+    if (!descEl) {
+      descEl = document.createElement('div')
+      descEl.classList.add('setting-item-description')
+      info.appendChild(descEl)
+    }
+    descEl.textContent = desc
+    return this
+  }
   addText(_cb: (text: { setValue(v: string): unknown; onChange(cb: (v: string) => void): unknown }) => void): this {
     return this
   }
@@ -384,6 +439,47 @@ export class Setting {
   addButton(_cb: (btn: { setButtonText(t: string): unknown; onClick(cb: () => void): unknown }) => void): this {
     return this
   }
+  addDropdown(cb: (dropdown: DropdownHandle) => void): this {
+    const control = document.createElement('div')
+    control.classList.add('setting-item-control')
+    this.settingEl.appendChild(control)
+    const select = document.createElement('select')
+    select.classList.add('dropdown')
+    control.appendChild(select)
+    const options: Array<{ value: string; text: string }> = []
+    const handle: DropdownHandle = {
+      addOption(value: string, text: string): DropdownHandle {
+        const opt = document.createElement('option')
+        opt.value = value
+        opt.textContent = text
+        select.appendChild(opt)
+        options.push({ value, text })
+        return handle
+      },
+      setValue(v: string): DropdownHandle {
+        select.value = v
+        return handle
+      },
+      onChange(fn: (v: string) => unknown): DropdownHandle {
+        select.addEventListener('change', () => { void fn(select.value) })
+        Setting.__lastDropdown = { el: select, options, onChangeCb: fn }
+        return handle
+      },
+      getValue(): string { return select.value },
+      selectEl: select,
+    }
+    Setting.__lastDropdown = { el: select, options }
+    cb(handle)
+    return this
+  }
+}
+
+export interface DropdownHandle {
+  addOption(value: string, text: string): DropdownHandle
+  setValue(v: string): DropdownHandle
+  onChange(fn: (v: string) => unknown): DropdownHandle
+  getValue(): string
+  selectEl: HTMLSelectElement
 }
 
 export function setIcon(_el: HTMLElement, _icon: string): void {

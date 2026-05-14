@@ -932,9 +932,9 @@
   - WikeyConfig.COST_LIMIT + WikeySettings.costLimit + renderCostSection + parseWikeyConf / buildConfig / saveToWikeyConf 모두 제거
   - 회귀 baseline 동일 (wikey-core 1184 / wikey-obsidian 230 / build 0 errors / validate-wiki PASS)
 
-### 5.6.6 Subscription REST direct — 3 vendor unified paradigm (CLI agentic bypass) (Session 44 plan v0.5, 2026-05-14)
+### 5.6.6 Subscription REST direct — 3 vendor unified paradigm (CLI agentic bypass) (Session 44~45 plan v0.6, 2026-05-14)
 
-> **status**: §5.6.4 + §5.6.5 종결 후 진입. Session 44 PoC §1~§4 (3 vendor 검증 완료) 기반 plan 작성 + codex Mode D Panel 4 cycle 검증 — #1 NEEDS_REVISION 9 finding (v0.2) → #2 NEEDS_REVISION 8 finding (v0.3) → #3 NEEDS_REVISION 7 finding (v0.4) → #4 4 OK + 5 PARTIAL (v0.5 작은 정합성 sweep) → **plan v0.5** (`docs/planning/phase-5/phase-5-spec-5.6.6-subscription-rest.md` + `phase-5-todox-5.6.6-subscription-rest.md` + spike `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` + SPIKE.md). **다음 세션 = Step A0 (Legal Gate, BLOCKING) → A~H 구현 cycle**.
+> **status**: §5.6.4 + §5.6.5 종결 후 진입. Session 44 PoC §1~§4 (3 vendor 검증 완료) 기반 plan 작성 + codex Mode D Panel 5 cycle 검증 — #1 NEEDS_REVISION 9 finding (v0.2) → #2 NEEDS_REVISION 8 finding (v0.3) → #3 NEEDS_REVISION 7 finding (v0.4) → #4 4 OK + 5 PARTIAL (v0.5) → #5 v0.5 검토 (7 OK + 2 PARTIAL + 3 X) → **Session 45 잔여 5 fix LOCK = plan v0.6** (`docs/planning/phase-5/phase-5-spec-5.6.6-subscription-rest.md` + `phase-5-todox-5.6.6-subscription-rest.md` + spike `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` + SPIKE.md 안 sha256 baseline 실 측정). **Session 45 = Step A0 (Legal Gate, BLOCKING) → A~H 구현 cycle**.
 >
 > **사용자 결정 LOCK (Session 44, 2026-05-14)**:
 > - 옵션 D (REST direct) 채택 — gemini CLI / claude CLI / codex CLI 의 agentic loop bypass
@@ -951,15 +951,16 @@
 >
 > **codex cycle #1 fix (v0.2)**: F1 Step A0 / F2 OpenAI 용어 + R1/R2 HIGH + R9 신설 / F3 WikeyConfig 3 field / F4 REST option matrix / F5 AC↔T 매핑표 + 누락 test 보강 / F6 spike 보존 + version-guard / F7 transport-level tool 0 + I3 SLO 강등 / F8 refresh rotation / F9 Step H mirror 일관
 
-- [ ] **§5.6.6.A0** Legal/Terms Gate (BLOCKING, codex F1 신설 v0.2) — 사용자 explicit 결정 + 4-state byte-level 기록
-- [ ] **§5.6.6.A** shared abstraction (`subscription-rest-shared.ts` + `subscription-rest-version-guard.ts` + `mapOptionsToRESTOptions`, ~180 LOC) + spike 보존 — 12 unit case (T-A1~T-A12)
-- [ ] **§5.6.6.B** Google REST client (`google-rest-client.ts`, ~150 LOC, PoC 1:1) — **11 unit case (T-B1~T-B11)** (codex F9 fix v0.4)
-- [ ] **§5.6.6.C** OpenAI **private Codex backend** REST client (`openai-rest-client.ts` + SSE helper, ~200 LOC) — **12 unit case (T-C1~T-C12)** (codex F9 fix v0.4)
-- [ ] **§5.6.6.D** Anthropic REST client (`anthropic-rest-client.ts`, ~150 LOC, Keychain access + macOS detect) — **15 unit case (T-D1~T-D15)** (codex F9 fix v0.4)
-- [ ] **§5.6.6.E** `llm-client.ts` integration — `subscriptionMode = 'cli' \| 'rest' \| 'pending'` 분기 + WikeyConfig 3 field + buildConfig + auth-mode-bridge (~150 LOC) — **11 case (T-E1~T-E11)** (codex F9 + F1/F3 fix v0.4)
-- [ ] **§5.6.6.F** Settings UI per-provider Subscription Mode toggle + kill-switch UX (~80 LOC) — **4 case (T-F1~T-F4)** (codex F5+F9 fix v0.4)
-- [ ] **§5.6.6.G** 회귀 + master CDP smoke 3 vendor (BLUE 3a) + latency SLO N=10 + endpoint hash drift smoke + kill-switch test — `docs/sessions/phase-5/phase-5-resultx-5.6.6-rest-direct-<date>.md`
-- [ ] **§5.6.6.H** BLUE 3b refactor + commit/push (6 활동 + commit prefix policy)
+- [x] **§5.6.6.A0** Legal/Terms Gate (BLOCKING, codex F1 신설 v0.2) — **Step A0 결정 (Session 45, 2026-05-14, 사용자 explicit): `APPROVED_LOCAL_ONLY`** (gemini=APPROVED, anthropic=APPROVED, openai=APPROVED — local 개인 사용 한정, public 배포 금지). README.md disclaimer 추가 의무 (Step G 종결 시 docs sweep). 3 vendor 모두 rest default. Step A~H 진행 승인.
+- [x] **§5.6.6.A** shared abstraction (`subscription-rest-shared.ts` 131 LOC + `subscription-rest-version-guard.ts` 74 LOC + `mapOptionsToRESTOptions`) + spike 보존 — **17 case PASS** (T-A1~T-A12 + sub-case)
+- [x] **§5.6.6.B** Google REST client (`google-rest-client.ts` 209 LOC, PoC 1:1) — **11 case PASS** (T-B1~T-B11)
+- [x] **§5.6.6.C** OpenAI **private Codex backend** REST client (`openai-rest-client.ts` 260 LOC + SSE helper) — **12 active + 1 skip PASS** (T-C1~T-C12)
+- [x] **§5.6.6.D** Anthropic REST client (`anthropic-rest-client.ts` 226 LOC, Keychain access + macOS detect) — **16 case PASS** (T-D1~T-D15 + T-D12b win32)
+- [x] **§5.6.6.E** `llm-client.ts` integration — `subscriptionMode = 'cli' \| 'rest' \| 'pending'` 분기 + WikeyConfig 3 field + buildConfig + auth-mode-bridge (+247 lines 5 file) — **16 case PASS** (10 wikey-core + 6 wikey-obsidian)
+- [x] **§5.6.6.F** Settings UI per-provider Subscription Mode toggle + kill-switch UX (+54 lines) + 사용자 UI raise 2026-05-15 (shared note + REST/CLI/PENDING 간단 라벨 + 오른쪽 정렬) — **5 case PASS** (T-F1~T-F4 + scope-out)
+- [x] **§5.6.6.G** 회귀 + master CDP smoke 3 vendor (BLUE 3a) + UI smoke PASS — `docs/sessions/phase-5/phase-5-resultx-5.6.6-rest-direct-2026-05-15.md`. **PARTIAL** — Settings UI smoke PASS (3 vendor dropdown 가시 + change + buildConfig 일관성), LLM live call PARTIAL (M1 R8 Electron renderer fetch 차단 finding, Session 46 deferred)
+- [x] **§5.6.6.H** BLUE 3b refactor + commit/push (6 활동 + commit prefix policy + README disclaimer 추가)
+- [-] **§5.6.6 Session 46 후속** (deferred): codex post-impl cycle #1 fix v0.6 (F1 config default / F2 version-guard wire / F3 SSE timeout / F4 settings persistence) 모두 완료. **M1 (R8 HIGH)** = wikey-core RESTClient `fetch` → HttpClient injection 또는 Node https paradigm 변경 (~3 vendor file refactor) — Session 46 진입 의무.
 
 ---
 

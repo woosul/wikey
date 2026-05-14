@@ -11,6 +11,7 @@ import { PROVIDER_CHAT_DEFAULTS } from './provider-defaults.js'
 import {
   detectFallbackTrigger,
   resolveAuthMode,
+  resolveSubscriptionMode,
   type CredentialPresence,
 } from './auth-resolver.js'
 import {
@@ -23,6 +24,10 @@ import { mapOptionsToCliArgs } from './provider-cli-options.js'
 import { parseSubscriptionOutput } from './cli-parser.js'
 import { isCloudModel, lookupCloudModel } from './ollama-model-catalog.js'
 import { notifyOllamaUsage } from './ollama-usage-hook.js'
+import type {
+  RESTCallOptions,
+  SubscriptionRESTClient,
+} from './subscription-rest-shared.js'
 
 const DEFAULT_TIMEOUT = 300_000
 const DEFAULT_MAX_TOKENS = 65_536
@@ -47,7 +52,27 @@ export interface SubscriptionDeps {
   readonly fileExists?: (path: string) => boolean
   /** Override `~` resolution (default = `node:os.homedir()`). Tests inject a fixture path. */
   readonly homeDir?: () => string
+  /**
+   * §5.6.6 — REST direct clients (test override). Lazy-constructed in
+   * `callGeminiSubscription` / `callAnthropicSubscription` /
+   * `callOpenAISubscription` so production never instantiates them unless
+   * `<PROVIDER>_SUBSCRIPTION_MODE='rest'` is resolved. Anthropic constructor
+   * throws on non-darwin (R10) — lazy ctor preserves that gate.
+   */
+  readonly googleRESTClient?: SubscriptionRESTClient
+  readonly openaiRESTClient?: SubscriptionRESTClient
+  readonly anthropicRESTClient?: SubscriptionRESTClient
 }
+
+/**
+ * §5.6.6 — internal narrowing of `SubscriptionDeps`. Mandatory deps
+ * (`spawnCliPrompt` / `fileExists` / `homeDir`) get defaults at construction;
+ * the three REST client slots stay optional so we lazy-construct them only
+ * when REST mode is actually selected (Anthropic ctor throws on non-darwin).
+ */
+type ResolvedSubscriptionDeps =
+  Required<Pick<SubscriptionDeps, 'spawnCliPrompt' | 'fileExists' | 'homeDir'>> &
+  Pick<SubscriptionDeps, 'googleRESTClient' | 'openaiRESTClient' | 'anthropicRESTClient'>
 
 /**
  * §5.6.4 §3.9 — auth-missing reason for force-subscription failures. Reused by
@@ -56,7 +81,7 @@ export interface SubscriptionDeps {
 type FallbackReason = AuthFallbackInfo['reason']
 
 export class LLMClient {
-  private readonly subscriptionDeps: Required<SubscriptionDeps>
+  private readonly subscriptionDeps: ResolvedSubscriptionDeps
 
   constructor(
     private readonly httpClient: HttpClient,
@@ -79,6 +104,64 @@ export class LLMClient {
           const os = require('node:os') as typeof import('node:os')
           return os.homedir()
         }),
+      // §5.6.6 — REST clients stay optional + lazy-constructed at call site
+      // (preserve Anthropic non-darwin ctor throw, avoid eager fetch import
+      // for cli-only bundles).
+      googleRESTClient: subscriptionDeps.googleRESTClient,
+      openaiRESTClient: subscriptionDeps.openaiRESTClient,
+      anthropicRESTClient: subscriptionDeps.anthropicRESTClient,
+    }
+  }
+
+  /**
+   * §5.6.6 — lazy-construct the production REST client for a given provider.
+   * Lazy because (a) Anthropic's ctor throws on non-darwin (R10), and (b)
+   * cli-only bundles should not pay the import cost when REST mode is never
+   * selected. Reused defaults are stashed on the deps surface so successive
+   * calls share state (token cache lives inside the client).
+   */
+  private getDefaultRESTClient(
+    provider: 'gemini' | 'anthropic' | 'openai',
+  ): SubscriptionRESTClient {
+    if (provider === 'gemini') {
+      const mod = require('./google-rest-client.js') as typeof import('./google-rest-client.js')
+      const client = new mod.GoogleRESTClient()
+      ;(this.subscriptionDeps as { googleRESTClient?: SubscriptionRESTClient }).googleRESTClient =
+        client
+      return client
+    }
+    if (provider === 'openai') {
+      const mod = require('./openai-rest-client.js') as typeof import('./openai-rest-client.js')
+      const client = new mod.OpenAIRESTClient()
+      ;(this.subscriptionDeps as { openaiRESTClient?: SubscriptionRESTClient }).openaiRESTClient =
+        client
+      return client
+    }
+    const mod = require('./anthropic-rest-client.js') as typeof import('./anthropic-rest-client.js')
+    const client = new mod.AnthropicRESTClient()
+    ;(this.subscriptionDeps as { anthropicRESTClient?: SubscriptionRESTClient }).anthropicRESTClient =
+      client
+    return client
+  }
+
+  /**
+   * §5.6.6 — translate LLMCallOptions to the shared `RESTCallOptions` shape
+   * (Spec §1.3.1 matrix). 6 forwarded fields + `timeout`. `signal` is not on
+   * `LLMCallOptions` today; vendor clients honor an undefined `signal` by
+   * creating their own AbortController on `timeout`.
+   */
+  private mapLLMOptionsToREST(opts: LLMCallOptions | undefined): RESTCallOptions {
+    return {
+      timeout: opts?.timeout,
+      temperature: opts?.temperature,
+      seed: opts?.seed,
+      maxTokens: opts?.maxTokens,
+      responseMimeType:
+        opts?.responseMimeType === 'application/json' || opts?.responseMimeType === 'text/plain'
+          ? opts.responseMimeType
+          : undefined,
+      jsonMode: opts?.jsonMode,
+      thinkingBudget: opts?.thinkingBudget,
     }
   }
 
@@ -191,6 +274,20 @@ export class LLMClient {
    *   - nonzero exit       → throw raw stderr (api fallback can recover in auto mode)
    */
   private async callGeminiSubscription(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    // §5.6.6 — REST direct dispatch (Spec §1.3 Inputs + §1.5 AC-S1/S16/S17/S23/S25).
+    // mode='rest' → vendor REST client (no CLI spawn). 'cli' / 'pending' fall
+    // through to the existing §5.6.4 path (Spec §1.3.2 graceful — pending is
+    // silent cli fallback until Step A0 decision is wired into Settings UI).
+    if (resolveSubscriptionMode('gemini', this.config) === 'rest') {
+      const client = this.subscriptionDeps.googleRESTClient ?? this.getDefaultRESTClient('gemini')
+      const result = await client.call(
+        prompt,
+        opts?.model ?? PROVIDER_CHAT_DEFAULTS.gemini,
+        this.mapLLMOptionsToREST(opts),
+      )
+      return result.text
+    }
+
     const mapped = mapOptionsToCliArgs('gemini', 'subscription', opts ?? {})
     if (mapped.unsupported === 'jsonMode') {
       throw new SubscriptionFallbackError('jsonMode-unsupported', 'gemini subscription does not support jsonMode')
@@ -314,6 +411,20 @@ export class LLMClient {
    * (claude prints no banner / footer).
    */
   private async callAnthropicSubscription(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    // §5.6.6 — REST direct dispatch. mapOptionsToRESTOptions inside the
+    // Anthropic client throws `jsonMode-unsupported` (Spec §1.3.1) without
+    // needing a wikey-side guard; matches mapOptionsToCliArgs invariant.
+    if (resolveSubscriptionMode('anthropic', this.config) === 'rest') {
+      const client =
+        this.subscriptionDeps.anthropicRESTClient ?? this.getDefaultRESTClient('anthropic')
+      const result = await client.call(
+        prompt,
+        opts?.model ?? PROVIDER_CHAT_DEFAULTS.anthropic,
+        this.mapLLMOptionsToREST(opts),
+      )
+      return result.text
+    }
+
     const mapped = mapOptionsToCliArgs('anthropic', 'subscription', opts ?? {})
     if (mapped.unsupported === 'jsonMode') {
       throw new SubscriptionFallbackError(
@@ -435,6 +546,17 @@ export class LLMClient {
    * extraction (`\ncodex\n` ↔ `\ntokens used` sandwich; cli-parser.ts).
    */
   private async callOpenAISubscription(prompt: string, opts?: LLMCallOptions): Promise<string> {
+    // §5.6.6 — REST direct dispatch (private Codex backend, Spec §0 R9).
+    if (resolveSubscriptionMode('openai', this.config) === 'rest') {
+      const client = this.subscriptionDeps.openaiRESTClient ?? this.getDefaultRESTClient('openai')
+      const result = await client.call(
+        prompt,
+        opts?.model ?? PROVIDER_CHAT_DEFAULTS.openai,
+        this.mapLLMOptionsToREST(opts),
+      )
+      return result.text
+    }
+
     const mapped = mapOptionsToCliArgs('openai', 'subscription', opts ?? {})
     if (mapped.unsupported === 'jsonMode') {
       throw new SubscriptionFallbackError(

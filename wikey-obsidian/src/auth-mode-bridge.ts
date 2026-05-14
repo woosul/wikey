@@ -72,3 +72,75 @@ export function buildAuthModesForConfig(settings: WikeySettings): AuthModesConfi
     OPENAI_AUTH_MODE: resolveMode(process.env.WIKEY_OPENAI_AUTH_MODE, settings.openaiAuthMode),
   }
 }
+
+// ── §5.6.6 — Subscription mode bridge (cli / rest / pending) ──────────────
+
+type SubscriptionMode = 'cli' | 'rest' | 'pending'
+
+/**
+ * Env var names that override per-provider subscription mode. Listed so the
+ * security test in build-config-subscription-mode.test.ts can verify the
+ * scripts-runner inject list never leaks these (parity with AUTH_MODE_ENV_KEYS).
+ */
+export const SUBSCRIPTION_MODE_ENV_KEYS = [
+  'WIKEY_GEMINI_SUBSCRIPTION_MODE',
+  'WIKEY_ANTHROPIC_SUBSCRIPTION_MODE',
+  'WIKEY_OPENAI_SUBSCRIPTION_MODE',
+] as const
+
+function normalizeSubMode(
+  raw: string | undefined,
+  fallback: SubscriptionMode,
+): SubscriptionMode {
+  if (raw === 'cli' || raw === 'rest' || raw === 'pending') return raw
+  return fallback
+}
+
+function resolveSubMode(
+  envValue: string | undefined,
+  settingsValue: SubscriptionMode | undefined,
+): SubscriptionMode {
+  // env: only valid §5.6.6 values are accepted (no silent acceptance of typos).
+  if (envValue === 'cli' || envValue === 'rest' || envValue === 'pending') return envValue
+  // settings: legacy installs (pre-§5.6.6) carry no field — fall back to 'pending'
+  // so resolveSubscriptionMode in wikey-core surfaces Step A0 not-decided state.
+  return normalizeSubMode(settingsValue, 'pending')
+}
+
+export interface SubscriptionModesConfigSlice {
+  readonly GEMINI_SUBSCRIPTION_MODE: SubscriptionMode
+  readonly ANTHROPIC_SUBSCRIPTION_MODE: SubscriptionMode
+  readonly OPENAI_SUBSCRIPTION_MODE: SubscriptionMode
+}
+
+/**
+ * §5.6.6 — Build the subscription-mode triplet to merge into WikeyConfig.
+ * Called by buildConfig() in main.ts and verified by
+ * build-config-subscription-mode.test.ts. Override priority:
+ *
+ *   1. process.env.WIKEY_<PROVIDER>_SUBSCRIPTION_MODE  (test / CI / dev)
+ *   2. settings.<provider>SubscriptionMode             (Settings UI / data.json)
+ *   3. 'pending'                                       (Step A0 not yet applied)
+ *
+ * Kill-switch envs (WIKEY_<PROVIDER>_REST_DISABLE=1) are honored in
+ * wikey-core/auth-resolver.ts:resolveSubscriptionMode, *not* here — that
+ * forces 'cli' regardless of what this bridge resolves, matching Spec I16.
+ */
+export function buildSubscriptionModesForConfig(
+  settings: WikeySettings,
+): SubscriptionModesConfigSlice {
+  return {
+    GEMINI_SUBSCRIPTION_MODE: resolveSubMode(
+      process.env.WIKEY_GEMINI_SUBSCRIPTION_MODE,
+      settings.geminiSubscriptionMode,
+    ),
+    ANTHROPIC_SUBSCRIPTION_MODE: resolveSubMode(
+      process.env.WIKEY_ANTHROPIC_SUBSCRIPTION_MODE,
+      settings.anthropicSubscriptionMode,
+    ),
+    OPENAI_SUBSCRIPTION_MODE: resolveSubMode(
+      process.env.WIKEY_OPENAI_SUBSCRIPTION_MODE,
+      settings.openaiSubscriptionMode,
+    ),
+  }
+}

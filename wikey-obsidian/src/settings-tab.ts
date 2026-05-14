@@ -36,6 +36,14 @@ interface ProviderSubsectionSpec {
     | 'anthropicAuthMode'
     | 'openaiAuthMode'
     | 'ollamaCloudAuthMode'
+  // §5.6.6 Step F — REST/CLI subscription mode per vendor (gemini/anthropic/openai
+  // only; ollama-cloud is scope-out per Spec I15 — REST direct paradigm is for
+  // the three subscription providers backed by CLI-style OAuth). When the field
+  // is undefined the renderSubscriptionModeRow is skipped.
+  readonly subscriptionModeField?:
+    | 'geminiSubscriptionMode'
+    | 'anthropicSubscriptionMode'
+    | 'openaiSubscriptionMode'
   readonly apiKeyPlaceholder: string
   readonly signInLabel: string
   readonly signInCommand: string
@@ -1240,11 +1248,20 @@ export class WikeySettingTab extends PluginSettingTab {
       cls: 'wikey-auth-section-note',
     })
 
+    // §5.6.6 Step F — user UI request 2026-05-15 — shared Subscription Mode
+    // description note. Placed just above the Google block (12pt deepgrey,
+    // referenced once for all three providers).
+    containerEl.createEl('div', {
+      text: 'Subscription Mode — REST: direct API call (faster, no tool use). CLI: external CLI (agentic loop). PENDING: Legal Gate not yet decided (auto CLI fallback).',
+      cls: 'wikey-subscription-mode-note',
+    })
+
     this.renderProviderSubsection(containerEl, {
       provider: 'gemini',
       heading: 'Google',
       apiKeyField: 'geminiApiKey',
       authModeField: 'geminiAuthMode',
+      subscriptionModeField: 'geminiSubscriptionMode',
       apiKeyPlaceholder: 'AIza...',
       signInLabel: 'Sign in with Google',
       signInCommand: 'gemini login',
@@ -1256,6 +1273,7 @@ export class WikeySettingTab extends PluginSettingTab {
       heading: 'Anthropic',
       apiKeyField: 'anthropicApiKey',
       authModeField: 'anthropicAuthMode',
+      subscriptionModeField: 'anthropicSubscriptionMode',
       apiKeyPlaceholder: 'sk-ant-...',
       signInLabel: 'Sign in with Claude',
       signInCommand: 'claude /login',
@@ -1267,6 +1285,7 @@ export class WikeySettingTab extends PluginSettingTab {
       heading: 'OpenAI',
       apiKeyField: 'openaiApiKey',
       authModeField: 'openaiAuthMode',
+      subscriptionModeField: 'openaiSubscriptionMode',
       apiKeyPlaceholder: 'sk-...',
       signInLabel: 'Sign in with ChatGPT',
       signInCommand: 'codex login',
@@ -1335,12 +1354,47 @@ export class WikeySettingTab extends PluginSettingTab {
     this.renderApiKeyRow(block, spec)
   }
 
+  /**
+   * §5.6.6 Step F — Subscription Mode (rest / cli / pending) selectbox.
+   * User UI request 2026-05-15 (final) — no separate row/block. Inline next
+   * to the 'Subscription' label inside `renderSubscriptionRow` with 16px
+   * margin. Rendered only when spec.subscriptionModeField is defined
+   * (gemini/anthropic/openai); ollama-cloud is scope-out per Spec I15.
+   */
+  private buildSubscriptionModeSelect(spec: ProviderSubsectionSpec): HTMLSelectElement | null {
+    if (!spec.subscriptionModeField) return null
+    const field = spec.subscriptionModeField
+    const select = document.createElement('select')
+    select.classList.add('wikey-select', 'wikey-subscription-mode-select')
+    const current = this.plugin.settings[field] ?? 'pending'
+    const options: ReadonlyArray<{ value: 'rest' | 'cli' | 'pending'; text: string }> = [
+      { value: 'rest', text: 'REST' },
+      { value: 'cli', text: 'CLI' },
+      { value: 'pending', text: 'PENDING' },
+    ]
+    for (const opt of options) {
+      const o = document.createElement('option')
+      o.value = opt.value
+      o.textContent = opt.text
+      if (opt.value === current) o.selected = true
+      select.appendChild(o)
+    }
+    select.addEventListener('change', async () => {
+      const value = select.value
+      if (value === 'rest' || value === 'cli' || value === 'pending') {
+        this.plugin.settings[field] = value
+        await this.plugin.saveSettings()
+      }
+    })
+    return select
+  }
+
   /** Auth Mode dropdown row. */
   private renderAuthModeRow(block: HTMLElement, spec: ProviderSubsectionSpec): void {
     const row = block.createDiv({ cls: 'wikey-auth-block-row' })
     row.createSpan({ cls: 'wikey-auth-block-label', text: 'Auth Mode' })
     const controls = row.createDiv({ cls: 'wikey-auth-block-controls' })
-    const select = controls.createEl('select', { cls: 'wikey-auth-mode-select dropdown' })
+    const select = controls.createEl('select', { cls: 'wikey-select wikey-auth-mode-select' })
     const current = this.plugin.settings[spec.authModeField] ?? 'subscription'
     const options: ReadonlyArray<{ value: 'none' | 'subscription' | 'api'; text: string }> = [
       { value: 'none', text: 'None (disabled)' },
@@ -1360,11 +1414,21 @@ export class WikeySettingTab extends PluginSettingTab {
     })
   }
 
-  /** Subscription row: badge (signed-in / not-detected) immediately before Sign in/out button. */
+  /** Subscription row: badge (signed-in / not-detected) immediately before Sign in/out button.
+   *  §5.6.6 — user UI request 2026-05-15 (final) — Subscription Mode selectbox is
+   *  inlined after the 'Subscription' label (16px margin) on the same row.
+   *  Layout: `Subscription [16px] [Mode select] ... [badge] [Sign in/out]`. */
   private renderSubscriptionRow(block: HTMLElement, spec: ProviderSubsectionSpec): void {
     const detected = spec.detectSubscription()
     const row = block.createDiv({ cls: 'wikey-auth-block-row' })
-    row.createSpan({ cls: 'wikey-auth-block-label', text: 'Subscription' })
+    const labelEl = row.createSpan({ cls: 'wikey-auth-block-label', text: 'Subscription' })
+    // Subscription Mode select sits immediately after the label (gemini/anthropic/openai
+    // only — ollama-cloud has no subscriptionModeField, Spec I15).
+    const modeSelect = this.buildSubscriptionModeSelect(spec)
+    if (modeSelect) {
+      modeSelect.classList.add('wikey-subscription-mode-inline')
+      labelEl.insertAdjacentElement('afterend', modeSelect)
+    }
     const controls = row.createDiv({ cls: 'wikey-auth-block-controls' })
 
     // Badge sits immediately before the button per user spec.

@@ -38,6 +38,15 @@ export {
 export type { CacheKeyInput, CacheIndexEntry } from './convert-cache.js'
 export { LLMClient, fetchModelList, SubscriptionFallbackError } from './llm-client.js'
 export type { SubscriptionDeps } from './llm-client.js'
+// §5.6.6 — Subscription REST direct (Session 45). M1 fix: Electron renderer
+// fetch bypass via fetcher injection (Obsidian plugin sets a Node `https`
+// wrapper at startup; non-Obsidian CLI tests keep default `globalThis.fetch`).
+export {
+  setSubscriptionRESTFetcher,
+  resetSubscriptionRESTFetcher,
+  vendorFetch,
+} from './subscription-rest-fetcher.js'
+export type { Fetcher } from './subscription-rest-fetcher.js'
 // §5.6.4 v0.7 — dynamic CLI binary resolver surfaced for plugin Settings UI
 // detectXxxSubscription() so the renderer probes the same path the runtime spawn will use.
 export { resolveCliBinary, CLI_DEFAULT_BINARY } from './cli-spawn.js'

@@ -118,6 +118,17 @@ export interface WikeyConfig {
   readonly OPENAI_AUTH_MODE?: AuthMode
   // §5.6.5 v0.5 (2026-05-14, user lock "다른 LLM과 동일한 구조").
   readonly OLLAMA_CLOUD_AUTH_MODE?: AuthMode
+
+  // §5.6.6 — per-provider subscription mode (cli / rest / pending).
+  // 'pending' = Step A0 Legal Gate decision not yet applied; llm-client.ts
+  // falls back to cli path with a Notice (Spec §1.3.2 defaultModeForApprovalState).
+  // 'rest'    = direct vendor REST endpoint (cloudcode-pa / chatgpt.com backend /
+  //             api.anthropic.com OAuth).
+  // 'cli'     = §5.6.4 cli-spawn path (legacy default).
+  // Kill-switch env (Spec I16): WIKEY_<PROVIDER>_REST_DISABLE=1 → forced 'cli'.
+  readonly GEMINI_SUBSCRIPTION_MODE?: 'cli' | 'rest' | 'pending'
+  readonly ANTHROPIC_SUBSCRIPTION_MODE?: 'cli' | 'rest' | 'pending'
+  readonly OPENAI_SUBSCRIPTION_MODE?: 'cli' | 'rest' | 'pending'
 }
 
 // ── Provenance (§4.3.2 Part A, Phase 4.3) ──
@@ -206,6 +217,8 @@ export interface AuthFallbackInfo {
     | 'spawn-failed'         // child_process error
     | 'jsonMode-unsupported' // F1: subscription CLI cannot enforce JSON
     | 'timeout'              // spawn timeout / AbortController abort
+    | 'server-error'         // §5.6.6: vendor REST 5xx (no retry)
+    | 'mode-pending'         // §5.6.6: Step A0 Legal Gate not yet decided
   readonly originalError?: Error
 }
 

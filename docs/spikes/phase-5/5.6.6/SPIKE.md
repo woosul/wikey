@@ -28,9 +28,31 @@ created: 2026-05-14
 
 **실 값 추출**: 위 bundle 위치에서 `grep -oE "OAUTH_CLIENT_ID = \"[^\"]+\"|var OAUTH_CLIENT_ID = \"[^\"]+\"|CLIENT_ID:\"[^\"]+\""` 또는 implementation 단계에서 const block 직접 사용. SPIKE.md 자체에는 마스킹 — GitHub secret scanning push protection 회피. spike `.mjs` file 도 동일 이유로 `.gitignore` (실 값 포함, on-disk 보존만).
 
-## 3. version-guard.ts baseline hash
+## 3. version-guard.ts baseline hash (Session 45 측정, 2026-05-14)
 
-Step A 의 `subscription-rest-version-guard.ts` 가 process start 시 본 baseline 과 vendor CLI bundle 의 endpoint string sha256 hash 비교. mismatch 시 Notice "Vendor CLI updated — REST path may break" emit. 구체 hash 는 plan v0.4 진입 시 측정 + 본 SPIKE.md 갱신.
+Step A 의 `subscription-rest-version-guard.ts` 가 process start 시 본 baseline 과 vendor CLI bundle 의 endpoint string sha256 hash 비교. mismatch 시 Notice "Vendor CLI updated — REST path may break" emit.
+
+**측정 명령** (재현 가능):
+```bash
+echo -n "https://cloudcode-pa.googleapis.com"             | shasum -a 256
+echo -n "https://chatgpt.com/backend-api/codex/responses" | shasum -a 256
+echo -n "https://api.anthropic.com/v1/messages"           | shasum -a 256
+```
+
+**baseline 값** (Session 45 측정):
+
+| vendor | endpoint canonical | sha256 hash |
+|--------|--------------------|-------------|
+| Google | `https://cloudcode-pa.googleapis.com` | `e82c46235e87015f6d07e3f6ea66e67a3d48dc80289b6f08840c1e8c021c9bbe` |
+| OpenAI | `https://chatgpt.com/backend-api/codex/responses` | `1897faf097db8edfa5c0c6765abb12be180ed7aff633203298e6c0c28fcb16e5` |
+| Anthropic | `https://api.anthropic.com/v1/messages` | `dd9dd182b406f181aa1efb245fd4182c6588c3430bcab8d7db04199ab682acbc` |
+
+**vendor CLI bundle endpoint 존재 검증** (Session 45 grep):
+- Google bundle `chunk-UN6XCVMJ.js` (14.5MB) — `cloudcode-pa.googleapis.com` 문자열 3+ 위치 존재
+- OpenAI bundle `codex` Mach-O binary (199MB) — `chatgpt.com/backend-api` 문자열 strings extract 다수 위치 존재
+- Anthropic bundle `cli.js` (7.6MB) — `console.anthropic.com/v1/oauth/token` (refresh URL) + `console.anthropic.com/oauth/authorize` 명시. `api.anthropic.com/v1/messages` 는 native HTTPS API (subscription OAuth Bearer header 사용)
+
+`subscription-rest-version-guard.ts` 가 본 baseline 과 vendor CLI bundle 의 endpoint string 출현 sha256 (canonical hash 위 값) 비교 — Step A 의 `T-A10` 가 본 hash 변동 시 Notice 발화 확증.
 
 ## 4. 휘발 path history
 

@@ -5,7 +5,7 @@ title: Subscription REST direct — 3 vendor unified paradigm (CLI agentic bypas
 status: planning
 created: 2026-05-14
 updated: 2026-05-14
-version: v0.5
+version: v0.6
 ---
 
 # Phase 5 §5.6.6 Subscription REST direct — 3 vendor unified paradigm (Spec, WHAT)
@@ -48,6 +48,13 @@ version: v0.5
 >   - **F5 fix v0.5**: todox 각 Step Acceptance "T-X1~T-Xn PASS" 라인 갱신 (T-A12, T-B11, T-C12, T-D15, T-E11, T-F4)
 >   - **F6 fix v0.5**: 실제 spike 파일 mv 완료 (Session 44 시점 / Step A0 전이지만 plan reference 정합성 위해 미리) — `/tmp/poc-{cloudcode,codex,anthropic}.mjs` → `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` + `SPIKE.md` 신설
 >   - **F9 fix v0.5**: phase-5-todo §5.6.6 title "plan v0.3" → "plan v0.5" 정정
+> - **Step A0 결정 LOCK (2026-05-14 Session 45, 사용자 explicit)**: **`APPROVED_LOCAL_ONLY`** — byte-level: `gemini=APPROVED, anthropic=APPROVED, openai=APPROVED` (3 vendor 모두 local 개인 사용 한정 승인). README.md disclaimer 추가 의무 (Step G docs sweep). Step A~H 구현 승인.
+> - **v0.6 (2026-05-14, Session 45 잔여 5 fix LOCK)** — cycle #5 PARTIAL + X1~X3 = 5 finding 모두 마무리 (구현 진입 직전 최종 sweep):
+>   - **F5 PARTIAL fix v0.6**: Spec §1.5 본문에 AC-S25 시나리오 명시 신설 (`LLMCallOptions pass-through` Happy path + OpenAI mapping + Anthropic jsonMode throw + silent ignore graceful degradation + pass-through 측정 위치). 이전엔 매핑표 §1.5.0 만 존재, §1.5 본문 부재 → §1.5 끝 Endpoint hash drift 직후에 신규 subsection 추가.
+>   - **F6 PARTIAL fix v0.6**: `docs/spikes/phase-5/5.6.6/SPIKE.md` 안 sha256 baseline 실 측정값 갱신 — Session 45 측정 명령 + 3 vendor 의 endpoint canonical hash 표 + vendor CLI bundle endpoint 존재 grep 확증. Google `e82c46..bbe` / OpenAI `1897fa..6e5` / Anthropic `dd9dd1..dbc`.
+>   - **X1 HIGH fix v0.6**: `phase-5-todox-5.6.6` §0 작업 분할 표 + §9 의존성 순서 — Step E dependency "B/C/D 모두 완료" → "approved vendor steps only + rejected vendor cli stub/forced cli branch" (`APPROVED_PARTIAL` 분기 정합).
+>   - **X2 MID fix v0.6**: `phase-5-todox-5.6.6` §7.2 9번 kill-switch test — Gemini env 1 종 → **3 vendor env 모두 명시** (Gemini + Anthropic + OpenAI 각각 라이브 smoke + 독립성 확증). Spec AC-S23 의 3 vendor 일관 (이미 v0.3) 과 mirror.
+>   - **X3 LOW fix v0.6**: Spec §3 Self_Check 옛 ID sweep — `I1~I15` → `I1~I18` / `AC-S1~S20` → `AC-S1~S25` / `R1~R8` → `R1~R10`. §4 PoC reference `~600 LOC` → `~900 LOC + ~250 test = ~1150 LOC` (I12 + Regression LOW fix mirror).
 >
 > **본 §5.6.6 = §5.6.4 (LLM Provider subscription auth, Session 42 종결 commit `e68c53d`) + §5.6.5 (Ollama Cloud, Session 43 종결 commit `2731353`) 후속**. 사용자 라이브 raise (Session 44, 2026-05-14) — gemini-2.5-flash chat 패널 응답 latency 30-60초+ 관찰 → root cause = gemini CLI agentic loop (자체 tool 호출 + retry). 사용자 결정 옵션 D (REST direct).
 
@@ -337,6 +344,14 @@ Step A0 4-state 결정 → vendor 별 default `subscriptionMode` 단일 함수. 
 **Endpoint hash drift** (codex F6 fix v0.2):
 - **(AC-S24)** `subscription-rest-version-guard.ts` (Step A) 가 vendor CLI bundle 내 endpoint URL string sha256 hash 를 plan 의 baseline 과 비교 → mismatch detect 시 Notice "Vendor CLI updated — REST path may break, please report. Fallback to CLI mode recommended". guard 자체 import 는 1회 (process start), 실패 시 graceful (Notice 만, throw X — production 회귀 0).
 
+**LLMCallOptions pass-through** (codex F4 fix v0.3 → 본문 명시 v0.6):
+- **(AC-S25)** `LLMClient.call` 호출 시 `LLMCallOptions` 의 6 option 필드 (`temperature`, `seed`, `maxTokens`, `responseMimeType`, `jsonMode`, `thinkingBudget`) 가 vendor REST client 의 fetch body 에 정확하게 매핑 (§1.3.1 matrix 단일 source).
+  - **Happy path**: gemini rest + `{temperature: 0.7, maxTokens: 2048, seed: 42, jsonMode: true}` 호출 → fetch body 안 `request.generationConfig.temperature === 0.7` / `.maxOutputTokens === 2048` / `.seed === 42` / `.responseMimeType === 'application/json'` 모두 확증.
+  - **OpenAI mapping**: openai rest + `{temperature: 0.5, maxTokens: 1024, jsonMode: true}` 호출 → body `temperature === 0.5` / `max_output_tokens === 1024` / `text.format === 'json_object'` 확증.
+  - **Anthropic jsonMode throw**: anthropic rest + `{jsonMode: true}` 호출 → `SubscriptionFallbackError('jsonMode-unsupported')` throw (§5.6.4 v0.7 R2 mirror, Anthropic Messages API 가 native json_object 미지원).
+  - **silent ignore (graceful degradation)**: openai rest + `{thinkingBudget: 100, responseMimeType: 'text/plain'}` → body 에 미반영 (OpenAI matrix unsupported), throw 0건, debug log 1건.
+  - **pass-through 측정 위치**: `LLMClient.call → callXxxSubscription → resolveSubscriptionMode === 'rest' → vendor RESTClient.call(prompt, model, opts) → mapOptionsToRESTOptions(vendor, opts) → fetch body`. 6 option × 3 vendor = 18 case (단 Anthropic jsonMode = throw case).
+
 ### 1.6 Out-of-Scope
 
 - 새 vendor 추가 (xAI / Mistral / Cohere)
@@ -393,14 +408,14 @@ Step A0 4-state 결정 → vendor 별 default `subscriptionMode` 단일 함수. 
 
 - (1) Goal 의 모든 verb 가 측정 가능 — ✅ "REST direct path 추가" / "Settings UI toggle" / "라이브 cycle smoke" 모두 검증 가능
 - (2) Non-Goal 명시 — ✅ §1.1 Non-Goal 8 항목
-- (3) Invariants 가 LOCK (변경 X 항목) — ✅ I1~I15 모두 변경 차단 표기
+- (3) Invariants 가 LOCK (변경 X 항목) — ✅ I1~I18 모두 변경 차단 표기 (codex X3 fix v0.6 — I15→I18 sweep)
 - (4) Inputs / Outputs side effects 명시 — ✅ §1.3, §1.4
-- (5) Acceptance Scenarios 가 1:1 test mapping 가능 — ✅ AC-S1~S20, todox §3 Test Spec 에서 1:1 매핑 예정
+- (5) Acceptance Scenarios 가 1:1 test mapping 가능 — ✅ AC-S1~S25 + AC-S6b/S6c/S10b/S12-vendor/S19-vendor/S23-vendor (codex X3 fix v0.6 — S20→S25 sweep), todox §3 Test Spec 에서 1:1 매핑 완료
 - (6) Out-of-Scope 가 분리되어 있음 — ✅ §1.6
 - (7) Dependencies 외부 source 명시 — ✅ §1.7
-- (8) Risks + 완화 — ✅ §2 R1~R8
+- (8) Risks + 완화 — ✅ §2 R1~R10 (codex X3 fix v0.6 — R8→R10 sweep, R9 OpenAI private backend coupling + R10 macOS-only 추가)
 - (9) wiki/raw/schema 영향 X — ✅ I2 보존, schema 변경 0
-- (10) 사용자 explicit 승인 — ⏳ 본 spec 종결 후 사용자 결정. codex Mode D Panel 검증 후 시점.
+- (10) 사용자 explicit 승인 — ⏳ 본 spec 종결 후 Step A0 사용자 결정. codex Mode D Panel 검증 5 cycle 종결 + v0.6 잔여 5 fix 완료 시점.
 
 ---
 
@@ -414,9 +429,9 @@ Step A0 4-state 결정 → vendor 별 default `subscriptionMode` 단일 함수. 
 | `docs/spikes/phase-5/5.6.6/poc-openai.mjs` | OpenAI | `loadAuth` `refreshTokenViaRefreshGrant` `callResponses` (SSE parse) | `openai-rest-client.ts` 의 동일 함수 3개 + SSE helper |
 | `docs/spikes/phase-5/5.6.6/poc-anthropic.mjs` | Anthropic | `loadFromKeychain` `saveToKeychain` `refreshAccessToken` `ensureFreshToken` `callMessages` | `anthropic-rest-client.ts` 의 동일 함수 5개 |
 
-**Session 44 history** (휘발 path, mv 전): `/tmp/poc-cloudcode.mjs` `/tmp/poc-codex.mjs` `/tmp/poc-anthropic.mjs` — Step A0 통과 후 `docs/spikes/phase-5/5.6.6/` 로 mv. 이후 spec/todox 의 모든 reference = canonical path.
+**Session 44 history** (휘발 path, mv 전): `/tmp/poc-cloudcode.mjs` `/tmp/poc-codex.mjs` `/tmp/poc-anthropic.mjs` — Step A0 통과 전 (Session 44 v0.5 작업 시) 미리 `docs/spikes/phase-5/5.6.6/` 로 mv 완료 (vendor 명 통일). 이후 spec/todox 의 모든 reference = canonical path.
 
-3 spike file 합 ~360 LOC. wikey-core 통합 시 공통 helper (`subscription-rest-shared.ts` ~100 LOC) + vendor-specific (~150 LOC each) = ~600 LOC 추정. 실 작업 시 spike 의 paradigm 그대로 + wikey-core 의 typing / error class / settings binding 추가.
+3 spike file 합 ~360 LOC. wikey-core 통합 시 공통 helper (`subscription-rest-shared.ts` ~120 LOC + `subscription-rest-version-guard.ts` ~60 LOC) + vendor-specific (~150 LOC each) + integration (`llm-client.ts` ~150 LOC) + Settings UI (~80 LOC) = **~900 LOC + ~250 test LOC = ~1150 LOC** (codex X3 fix v0.6 — Regression LOW fix mirror, I12 동일). 실 작업 시 spike 의 paradigm 그대로 + wikey-core 의 typing / error class / settings binding / version-guard 추가.
 
 ---
 

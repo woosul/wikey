@@ -177,6 +177,10 @@ Row UI:
 
 상세 라이선스 의무 (LGPL §6 4 항목 + relink mechanism) 는 [`NOTICE`](NOTICE) 참조.
 
+## Subscription REST direct disclaimer (§5.6.6)
+
+`subscriptionMode = 'rest'` (default since 2026-05-15) uses vendor private OAuth endpoints (Google Code Assist `cloudcode-pa.googleapis.com` / OpenAI private Codex backend `chatgpt.com/backend-api/codex/responses` / Anthropic Claude OAuth `api.anthropic.com/v1/messages` with `anthropic-beta: oauth-2025-04-20`) by reusing the OAuth `client_id` shipped inside each vendor's CLI bundle. Step A0 Legal/Terms Gate decision (2026-05-14): **`APPROVED_LOCAL_ONLY`** — local personal use only. Public distribution prohibited; redistributors must surface an equivalent disclaimer or pin `subscriptionMode = 'cli'`. The kill-switch envs `WIKEY_GEMINI_REST_DISABLE=1` / `WIKEY_ANTHROPIC_REST_DISABLE=1` / `WIKEY_OPENAI_REST_DISABLE=1` force the corresponding vendor back to the CLI agentic path.
+
 ## 라이선스
 
 [MIT](LICENSE)

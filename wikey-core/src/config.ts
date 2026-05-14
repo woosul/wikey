@@ -38,6 +38,13 @@ const DEFAULTS: WikeyConfig = {
   GEMINI_AUTH_MODE: 'subscription',
   ANTHROPIC_AUTH_MODE: 'subscription',
   OPENAI_AUTH_MODE: 'subscription',
+  // §5.6.6 — per-provider subscription mode defaults.
+  // Step A0 결정 (2026-05-14, APPROVED_LOCAL_ONLY): 3 vendor REST direct enabled
+  // for local personal use. Public distribution prohibited (README disclaimer).
+  // Non-Obsidian CLI users get the same default — codex post-impl F1 HIGH fix v0.6.
+  GEMINI_SUBSCRIPTION_MODE: 'rest',
+  ANTHROPIC_SUBSCRIPTION_MODE: 'rest',
+  OPENAI_SUBSCRIPTION_MODE: 'rest',
 }
 
 /**
