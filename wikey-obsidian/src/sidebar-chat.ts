@@ -45,14 +45,17 @@ function classifyChatError(err: unknown, fullText: string): ChatErrorMeta {
   const lower = `${message} ${fullText}`.toLowerCase()
   if (reason === 'quota-exceeded' || /vendor returned 429|429/.test(lower) || /quota/.test(lower) || /rate.?limit/.test(lower)) {
     const vendor = /provider=(\w+)/.exec(fullText)?.[1] ?? 'LLM'
+    // User raise 2026-05-15 — quota is vendor-side: REST → CLI keeps the same
+    // subscription quota, so do not suggest mode toggle. Real alternatives =
+    // switch provider (different vendor quota) / API Key (different billing
+    // bucket) / wait for reset.
     return {
       title: `${vendor} subscription quota exceeded (429)`,
       hint: 'Try:',
       hintItems: [
-        'Switch to another provider/model (Anthropic / OpenAI).',
-        'Settings → Auth Mode → API Key.',
-        'Wait until quota resets.',
-        'Subscription Mode → CLI.',
+        'Switch to another provider/model (different vendor quota).',
+        'Settings → Auth Mode → API Key (different billing bucket).',
+        'Wait until subscription quota resets.',
       ],
     }
   }

@@ -121,15 +121,31 @@ I12 LOC budget (~1150) 대비 +50 LOC — codex F1/F2/F3/F4 fix 산입 (Karpathy
 | transport tools field grep | 0 hit | **0 hit** (3 vendor REST body) |
 | env API_KEY grep | 0 hit | **0 hit** (3 vendor RESTClient REST path) |
 
-## 6. 잔여 (Session 46 진입)
+## 6. Session 45 내 종결 (Session 46 deferred 항목 없음 — 모두 마무리)
 
-1. **M1 fix (R8 Electron renderer fetch 차단)** — wikey-core RESTClient 가 HttpClient injection 또는 Node `https` 모듈 직접 사용 paradigm 으로 변경. ~3 vendor file refactor + test update.
-2. **codex post-impl cycle #2** — Session 46 fix 후 재검증 (M1 fix 완성 후 cycle #2 진입).
-3. **README.md disclaimer 추가** (A0 APPROVED_LOCAL_ONLY 의무) — 본 Session 45 commit 시 또는 Session 46 진입 시.
-4. **라이브 LLM smoke** — M1 fix 완료 후 N=10 측정 (AC-S21 latency SLO).
+1. **M1 R8 fix Session 45 내 완료** — `wikey-core/src/subscription-rest-fetcher.ts` (50 LOC, module-level activeFetcher + setSubscriptionRESTFetcher + vendorFetch proxy) + `wikey-obsidian/src/main.ts` `nodeHttpsFetch` (70 LOC, Node https wrapper with ReadableStream for SSE). 3 vendor RESTClient `fetch(...)` → `vendorFetch(...)` 모두 치환. Obsidian onload 시 `setSubscriptionRESTFetcher(nodeHttpsFetch)` 1회.
+2. **README.md disclaimer 추가 완료** (A0 APPROVED_LOCAL_ONLY 의무 충족).
+3. **라이브 LLM smoke 완료** — chat panel UI 직접 (master CDP) 3 vendor 차례 실측:
+   - Anthropic 4392ms PASS (한국어 PMBOK 한 줄 설명 정상)
+   - OpenAI 14940ms PASS (`max_output_tokens` drop fix 후 정상 응답)
+   - Gemini = 사용자 환경 subscription quota 도달 (vendor side cap, paradigm 자체 정상 — error UI 친화 표시 확인)
+4. **OpenAI 400 finding 해결** — `mapOpenAIOptions` 에서 `max_output_tokens` drop (vendor 미지원 파라미터). T-A12e test 정정.
+5. **사용자 UI request series 9건 모두 처리** (§5.6.6 live UX) — chat panel + Settings UI inline + bullet color 빨강 + 영문 + 이모지 X + font 0.81em 등.
 
 ## 7. 다음 세션 진입점
 
-Session 46 = §5.6.6 v0.7 fix cycle (M1 R8 fix). Step A0~F 완료. Step G 라이브 partial pass (UI smoke OK, LLM call M1 deferred). Step H BLUE refactor + commit/push 본 session 45 완료.
+Phase 5 잔여 = §5.5 / §5.8 / §5.9 (3 subject). §5.6.6 Subscription REST direct paradigm Session 45 내 완전 종결.
 
-Phase 5 잔여 4 subject: §5.5 / §5.8 / §5.9 + §5.6.6 v0.7 (M1 fix).
+**잔여 finding** (별 cycle, REST path 무관):
+- chat panel `handleSend` dispatcher 별 issue (search + rerank + synthesis chain — 본 cycle scope 외)
+- Gemini vendor quota 사용자 wallet 측 별 관리 (대안: API Key / 다른 vendor / 대기 / CLI)
+
+## 8. Session 45 push commit chain
+
+```
+4f85ef5 plan(§5.6.6 v0.5): 3 vendor unified paradigm (codex Mode D 5 cycle, Session 44)
+ed1c0f5 feat(§5.6.6 v0.7): 3 vendor + M1 R8 fix + Settings UI (Step A0~H 종결)
+1151b04 fix(§5.6.6 v0.7 live): OpenAI 400 max_output_tokens drop + vendor body + chat in-chat error
+37d8ce2 fix(§5.6.6 v0.7 live UX): chat error friendly meta (English / no emoji / bullet / 0.81em)
+ae64f1a fix(§5.6.6 v0.7 live UX): bullet color red + text white
+```

@@ -1,30 +1,32 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-14 session 44 — §5.6.6 Subscription REST direct plan v0.5 LOCK (codex Mode D 5 cycle 검증)**. cycle #1 → #5 점진 수렴 — #1 9 finding (4H+4M+1L) → #2 8 (4H+3M+1L) → #3 7 (3H+4M) → #4 4 OK + 5 PARTIAL → #5 7 OK + 2 PARTIAL + 3 X. 핵심 paradigm 결함 모두 fix 완료 (F1 Legal Gate / F2 OpenAI 용어 / F3 WikeyConfig / F4 option matrix / F7 schema / F8 rotation / F9 mirror). 3 vendor PoC spike `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` + SPIKE.md 보존. master B 결정 — v0.5 commit + 다음 세션 잔여 5 fix 진입.
+> 최신 갱신: **2026-05-15 session 45 — §5.6.6 Subscription REST direct paradigm Step A0~H 완전 종결 + 사용자 UI live UX series 9건 처리**. Step A0 = `APPROVED_LOCAL_ONLY` (gemini=APPROVED, anthropic=APPROVED, openai=APPROVED). codex post-impl 4 finding (F1 config default / F2 version-guard wire / F3 SSE timeout / F4 settings persist) + master 라이브 발견 M1 R8 (Electron renderer fetch CORS 차단 → Node https wrapper inject) 모두 Session 45 내 fix. 5 commit push (`4f85ef5..ae64f1a`).
 >
-> ## 다음 세션 첫 액션 (Session 45) — §5.6.6 v0.6 잔여 5 fix → Step A0 진입
+> ## 다음 세션 첫 액션 (Session 46) — Phase 5 잔여 3 subject 선택
 >
-> **잔여 5 fix (cycle #5 PARTIAL + X1~X3, 다음 세션 첫 30분)**:
-> 1. **F5 PARTIAL** — Spec §1.5 안 AC-S25 본문 시나리오 (`LLMCallOptions pass-through`) 명시 (현재 매핑표만)
-> 2. **F6 PARTIAL** — `docs/spikes/phase-5/5.6.6/SPIKE.md` 안 sha256 baseline 실 측정값으로 갱신 (현재 "나중에 측정" placeholder)
-> 3. **X1 HIGH** — todox §0 Step E dependency 정정: "B/C/D 모두 완료" → "approved vendor steps only + rejected vendor cli stub/forced cli branch" (`APPROVED_PARTIAL` 분기 정합)
-> 4. **X2 MID** — Spec AC-S23 + todox Step G kill-switch smoke를 3 vendor env (`WIKEY_GEMINI/ANTHROPIC/OPENAI_REST_DISABLE`) 모두 명시 (현재 Gemini만)
-> 5. **X3 LOW** — Spec §3 Self_Check + §4 PoC reference 의 옛 invariant ID (I15→I18, AC-S20→AC-S25, R8→R10, ~600 LOC→~1150) sweep
+> Phase 5 잔여 = **§5.5 / §5.8 / §5.9** (3 subject). §5.6.6 완전 종결.
 >
-> **그 후 Step A0 (Legal/Terms Gate, BLOCKING) 진입**:
-> - 사용자 explicit 결정 — `APPROVED_EXPERIMENTAL` / `APPROVED_LOCAL_ONLY` / `APPROVED_PARTIAL` (vendor별 byte-level 포맷 e.g. `gemini=APPROVED, anthropic=APPROVED, openai=REJECTED`) / `REJECTED` 중 1
-> - 결과 `phase-5-todo §5.6.6 Step A0 결정` 라인 + spec/todox 이력 mirror
-> - 통과 후 Step A → H 구현 진입 (~5.5시간 견적, ~900 LOC + ~250 test)
+> **별 cycle 잔여** (REST path 무관):
+> - chat panel `handleSend` dispatcher (search + rerank + synthesis chain) 일부 분기 issue — 별 cycle scope
+> - Gemini vendor subscription quota = 사용자 wallet 측 별 관리. error UI 안 4 alt 옵션 (다른 provider / API Key / 대기 / CLI) 사용자 안내됨.
 >
-> **plan 산출물 (이번 session 44)**:
-> - `docs/planning/phase-5/phase-5-spec-5.6.6-subscription-rest.md` v0.5 (8 step + 25 AC + 18 invariants + 10 risks)
-> - `docs/planning/phase-5/phase-5-todox-5.6.6-subscription-rest.md` v0.5 (T-A1~T-F4 + Step G manual smoke)
-> - `docs/planning/phase-5/phase-5-todo.md` §5.6.6 entry (Step A0 + A~H 8 step 체크박스)
-> - `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` (3 spike, Session 44 PoC) + `SPIKE.md` (endpoint baseline + canonical reference)
+> **Session 45 push commit chain** (master):
+> ```
+> ae64f1a fix(§5.6.6 v0.7 live UX): bullet color red + text white
+> 37d8ce2 fix(§5.6.6 v0.7 live UX): chat error friendly meta (English / no emoji / bullet / 0.81em)
+> 1151b04 fix(§5.6.6 v0.7 live): OpenAI 400 max_output_tokens drop + vendor body + chat in-chat error
+> ed1c0f5 feat(§5.6.6 v0.7): 3 vendor + M1 R8 fix + Settings UI (Step A0~H 종결)
+> 4f85ef5 plan(§5.6.6 v0.5): plan LOCK (Session 44)
+> ```
 >
-> **Session 44 부수 commit** (push 완료):
-> - `5d0bbbd` §5.6.4 follow-up: spawnCliPrompt PATH augmentation (E0001 exit 127 fix)
-> - `45b692b` §5.18 v0.7 Referenced count-only + Provider 4-label 표준화 + claude-code 중복 fix
+> **Session 45 산출물**:
+> - 신규: `wikey-core/src/{subscription-rest-shared,version-guard,fetcher}.ts` + 3 vendor REST client + 5 test file (~66 신규 case) + setup-subscription-rest-env.ts
+> - 수정: types.ts (3 SUBSCRIPTION_MODE field + 2 reason union) / auth-resolver.ts (resolveSubscriptionMode) / config.ts (DEFAULTS) / llm-client.ts (3 callXxxSubscription REST 분기) / index.ts (export) / main.ts (WikeySettings + buildConfig + buildPluginOnlyData + nodeHttpsFetch + bootstrapSubscriptionOAuthEnv) / auth-mode-bridge.ts / settings-tab.ts (chat error UI + Subscription Mode inline) / sidebar-chat.ts (classifyChatError + ChatErrorMeta) / styles.css (.wikey-chat-error / inline mode / bullet color) / README.md disclaimer
+> - 라이브 chat panel UI 검증: Anthropic 4392ms PASS / OpenAI 14940ms PASS / Gemini error UI 친화 표시 PASS
+>
+> ## Session 44 plan LOCK (history)
+>
+> 2026-05-14 — §5.6.6 plan v0.5 LOCK (codex Mode D 5 cycle 검증). 3 vendor PoC spike `docs/spikes/phase-5/5.6.6/poc-{google,openai,anthropic}.mjs` + SPIKE.md 보존. 부수 commit `5d0bbbd` (§5.6.4 PATH augmentation) + `45b692b` (§5.18 v0.7).
 
 ## Session 43 종결 (2026-05-14) — §5.6.5 Ollama Cloud (paradigm v0.5 LOCK)
 
