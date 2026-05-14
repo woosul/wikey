@@ -789,7 +789,7 @@
 > **이슈 출처**: 사용자 raise 2026-05-13 — 현재 Google Gemini / Anthropic Claude / OpenAI Codex 3 provider 모두 API key 로 연결. 비용 부담으로 Gemini 2.5 Flash 만 사용 중. 사용자가 3 provider 모두 구독 ID 보유 → **구독형 로그인 우선, 구독형 불가 시 API key fallback**. 단일 todox: `plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md` 에 SDD+TDD spec + sub-step.
 > **이전 번호**: `was §5.6.3.A` (Subscription 모델 통합).
 > **분류**: P3 design + impl / BYOAI 확장 (Karpathy 4 원칙 #4)
-> **status**: plan 진입 (analyst Step A LOCK 대상, v0.7 — cycle #1h NEEDS_REVISION 2 finding 해소: codex marker-based parser + commit prefix lock)
+> **status**: ✅ **종결** (Session 42, 2026-05-13~14) — 14 commit push 완료 (`6ead5fb..e68c53d` origin/master). codex Mode D Panel plan 단계 9 cycle (#1c~#1i, v0.2→v0.7 수렴) + post-impl 단계 6 cycle (#2~#6, finding 누적 fix) + master CDP 라이브 ingest 11 wiki 페이지 확증.
 > **상세 spec**: [`plan/phase-5/phase-5-todox-5.6.4-llm-subscription.md`](./phase-5-todox-5.6.4-llm-subscription.md) (v0.7)
 > **우선순위**: 1) Google → 2) Anthropic → 3) OpenAI 순. 각 provider 별 cycle 종결 후 다음 provider 진입.
 
@@ -862,9 +862,27 @@
   - phase-5-resultx-5.6.4-llm-subscription-<date>.md 작성 — 12 AC + 5 buildConfig 회귀 + **nested 48-cell matrix golden (`SubscriptionProvider` × `AuthPath` × `LLMCliOptionField`) + 13 fixture files / 8 units / 11 parser cases + codex marker-based parser (v0.7 #1h H1, master 실측 golden `codex-ok-hi`) + prompt sentinel leak 회귀 + bodylike leak 회귀 + CLI version `--strict` drift check + waiver review trail** (v0.7 #1h H1 + v0.6 #1g G1 + v0.5 #1f F2 / F5) evidence
   - **CLAUDE.md §LLM 설정** 동기화 (사용자 승인 후) — DESIGN.md sync 폐기 (v0.3 F7 drift fix — Settings UI 카드 추가는 디자인 토큰 변경 0)
   - **wikey.schema.md §LLM 에이전트의 역할** BYOAI 표에 "구독 / API key 동시 등록 시 구독 우선" 한 줄 (사용자 승인 후)
-  - local commit 4 (push X) — `feat(§5.6.4 v0.7): 3-provider integration + BLUE refactor + docs sync`
-  - **codex Mode D Panel cycle #2 post-impl APPROVE** → master verdict 결정 → 사용자 사전 보고 → **push** (F9 LOCK)
+  - local commit 4 — `67c5e48` `feat(§5.6.4 v0.7): 3-provider integration + BLUE refactor + docs sync`
+  - **codex Mode D Panel post-impl 6 cycle (#2~#6)** — NEEDS_REVISION + 누적 finding fix (commit 5~13 documents + commit 6 binary resolver / 7 UI block / 8 storage note / 9 provider heading outside / 10 Notice 문구 / 11~13 resultx mirror). master 자율 결정 push (사용자 명시 "승인 없이 완료까지").
 - [x] **wiki 재생성 없음 확증**: provider auth path 추가만, frontmatter / data model 무관, `wiki/` git diff = 0
+
+#### 5.6.4.6 Session 42 라이브 사용자 raise 7 항목 — 모두 처리 + push 완료
+
+- [x] **R1 §5.6.5 Ollama Cloud jsonMode 확인 사항 등록** (사용자 명시 등록 요청) — §5.6.5.2 신규 항목 등록 완료
+- [x] **R2 gemini-2.5-pro subscription jsonMode 미지원 에러** — commit 15 (`cda9ff7`) adaptive jsonMode 처리 (matrix `jsonMode: 'unsupported'` 시 flag strip + prompt 강제 JSON instruction). canonicalizer.ts:698 + ingest-pipeline.ts 통합 분기. 신규 11 test PASS. `wikey-core/src/adaptive-json-mode.ts` 단일 source of truth
+- [x] **R3 md 파일 ingest modal 늦게 뜸 (16초)** — commit 18 (`994bf0e`) 처리. 근본 원인 = `commands.ts:487 sanitizeRawFilenameIfNeeded` 가 modal.open() 전 await 차단. fix = modal.open() 을 sanitize 이전으로 이동 + setSourcePath() 후행 갱신. CDP 확증 16s → **0ms**
+- [x] **R4 stale model error state** (HIGH) — commit 15 (adaptive jsonMode) + commit 16 (CLI timeout 600s) 후 **자연 해소**. 7 영역 code stale state grep 미발견. 실제 root cause = 동일 error (timeout/jsonMode) 가 새 model 에서도 재발하여 사용자 "동일 에러" 인지. master CDP smoke = anthropic subscription Preview READY 정상
+- [x] **R5 gemini CLI timeout abort (gemini-2.5-pro ingest)** — commit 16 (`e92b170`) 처리. `CLI_DEFAULT_TIMEOUT_MS` 60s → **600s** (10분) + ingest-pipeline:1538 + classify.ts:361 LLM timeout 600000. 라이브 ingest 151s Processing 정상 완료
+- [x] **R6 CDP smoke 검증 깊이 부족 (실 ingest 누락)** — 본 turn master 직접 실 md ingest cycle smoke 수행: 116KB md 파일 → modal 등장 → Brief → Proceed → Processing 151s → Preview → Approve & Write → wiki 11 페이지 (concepts 7 / source 1 / entity 1 / log+index)
+- [x] **R7 CLI install status badge** — commit 17 (`13e179c`) 처리. provider subsection title 행 오른쪽에 `installed (green)` / `not detected (orange)` badge 추가 (`resolveCliBinary(provider) !== null`). CDP 확증 3 provider 모두 `installed` (rgb(68,207,110) green)
+
+**14 commit push 매트릭스** (`6ead5fb..e68c53d` origin/master):
+- commit 1~4: `e901b84` (Step A+B Google) / `f4cf417` (Step C Anthropic) / `14b53f4` (Step D OpenAI) / `67c5e48` (Step E 통합 + BLUE 3b)
+- commit 5~6: `356a44f` (Settings UI provider-centric + AuthMode 'none' polish out 'auto') / `35f777d` (cycle #2 6 finding fix + UI rename 'API Keys' → 'LLM Model Authentication')
+- commit 7~9: `608ee14` (UI 통합 block + badge + 24px margin) / `94340ea` (section heading 오른쪽 storage note 13pt deep grey) / `8836ff9` (provider heading outside + right-align controls + plain badge)
+- commit 10~12: `f19f313` (cycle #3 F1 Notice 문구 'auto' 폐기 일치) / `0bde7b7` (cycle #3 F2 resultx 11 commit) / `d8b71d7` (cycle #4 3 finding — AC 'auto' 폐기 mirror + A0 PASS + traceability)
+- commit 13~14: `0384353` (cycle #5 §1/§3 auto 폐기 mirror + 12 commit + test count) / `1bf17a5` (cycle #6 LOW + .gitignore query-log glob)
+- commit 15~19: `cda9ff7` (R2 adaptive jsonMode) / `e92b170` (R5 CLI timeout 600s) / `13e179c` (R7 CLI install badge + 실 ingest smoke) / `994bf0e` (R3 md modal 0ms) / `e68c53d` (§5.13 entry 삭제 — X1/X2 해소)
 
 ### 5.6.5 Ollama Cloud model 통합 (Session 42 raise, 2026-05-13)
 

@@ -1,10 +1,34 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-13 session 41 — §5.20 v0.6 종결 + Help UI 5 follow-up (총 9 commit)**. v0.3.1 (SDD+TDD base + codex 3 cycle) → v0.4 (Summary/Statistics/3 entry points) → v0.5 (per-gap query list) → v0.6 (year-partitioned log + range filter) + Help UI 5 commit. 회귀 core 939/942 + obsidian 191/191 + build 0 + validate-wiki PASS. master CDP smoke 5 entry point ALL PASS.
+> 최신 갱신: **2026-05-14 session 42 — §5.6.4 LLM Provider subscription auth 종결 (14 commit push, `6ead5fb..e68c53d`)**. Google Gemini / Anthropic Claude / OpenAI Codex 3 provider subscription OAuth 통합 + Settings UI provider-centric 재구성 (LLM Model Authentication / 통합 block / installed-not-detected badge / Sign in-out + Auth Mode dropdown) + AuthMode 'auto' 폐기 → explicit `'none'|'subscription'|'api'`. plan cycle 9 + post-impl cycle 6 + 사용자 라이브 raise 7 R 모두 처리. 라이브 ingest 11 wiki 페이지 (116KB md / Processing 151s) CDP 확증. wikey-core 1104 / wikey-obsidian 215 PASS.
 >
-> ## 다음 세션 첫 액션 (Session 42) — Phase 5 잔여 4 subject 진입
+> ## 다음 세션 첫 액션 (Session 43) — Phase 5 잔여 4 subject 진입
 >
-> **Phase 5 잔여 = §5.5 / §5.6 / §5.8 / §5.9** (4 subject). 우선순위 결정 → analyst Step A LOCK 진입.
+> **Phase 5 잔여 = §5.5 / §5.6.5 (Ollama Cloud) / §5.8 / §5.9** (4 subject). 우선순위 결정 → analyst Step A LOCK 진입.
+>
+> §5.6.5 Ollama Cloud 는 Session 42 사용자 R1 raise 로 §5.6.5.2 항목 신규 등록 — Ollama Cloud endpoint jsonMode 지원 여부 + adaptive matrix 확장 + `provider-cli-options.ts CLI_OPTION_SUPPORT` 의 ollama row 추가 검토.
+
+## Session 42 종결 종합 (2026-05-14) — §5.6.4 LLM Provider subscription auth
+
+**§5.6.4** ✅ 14 commit push (`6ead5fb..e68c53d` origin/master). Karpathy BYOAI 원칙 강화 — 3 provider 모두 사용자 명시 (`subscription`/`api`/`none`) explicit 선택 + fallback 0 정책 (실패 시 Notice + throw, 자동 retry 폐기).
+
+| 영역 | commit | 핵심 |
+|------|--------|------|
+| Step A~E | 1~4 | provider 추상화 layer + Google/Anthropic/OpenAI subscription + BLUE 3b `callWithFallback` |
+| UI + AuthMode polish | 5 | provider-centric + 'auto' 폐기 |
+| post-impl cycle #2~#6 | 6~14 | binary resolver / Chat fallback / UI 통합 block / signed-in badge / heading note 오른쪽 / provider heading outside / Notice 문구 정정 / resultx mirror |
+| Session 42 라이브 R 처리 | 15~19 | adaptive jsonMode / CLI timeout 600s / CLI install badge / md modal 0ms / §5.13 정리 |
+
+**라이브 사용자 raise 7 R**:
+- R1 §5.6.5 Ollama Cloud — 등록 (사용자 명시)
+- R2 gemini-2.5-pro subscription jsonMode — commit 15 adaptive (`adaptive-json-mode.ts` matrix lookup)
+- R3 md modal 16초 늦음 — commit 18 (sanitize ↔ modal.open() 순서 swap, **16s → 0ms**)
+- R4 stale model state — commit 15+16 자연 해소 (실 root = 동일 error 재발)
+- R5 gemini CLI timeout abort — commit 16 (60s → **600s**)
+- R6 CDP smoke 실 ingest 누락 — 본 turn master 직접 116KB md ingest cycle smoke (11 wiki)
+- R7 CLI install badge — commit 17 (3 provider 모두 installed green)
+
+**다음 액션**: Session 43 첫 turn = Phase 5 잔여 4 우선순위 결정.
 
 ## Session 41 종결 종합 (2026-05-13) — §5.20 v0.6 + Help UI
 

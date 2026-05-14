@@ -4404,12 +4404,33 @@ Karpathy 4 원칙 cross-check:
 - [x] Step B (§5.6.4.2) — Google Gemini subscription (gemini CLI + `~/.gemini/oauth_creds.json`) + 16 test (commit `e901b84`)
 - [x] Step C (§5.6.4.3) — Anthropic Claude subscription (`claude -p` CLI + Keychain — binary-only presence) + 16 test (commit `f4cf417`)
 - [x] Step D (§5.6.4.4) — OpenAI Codex subscription (`codex exec -` CLI + `~/.codex/auth.json` + marker-based parser) + 16 test (commit `14b53f4`)
-- [x] Step E (§5.6.4.5) — BLUE 3b refactor (`callWithFallback` helper) + routing matrix 8 case smoke + 문서 동기화 (commit 4, 본 turn)
-- [ ] master CDP smoke (별도 turn, 사용자 책임)
-- [ ] codex Mode D Panel cycle #2 post-impl + push (사용자 사전 보고 후)
+- [x] Step E (§5.6.4.5) — BLUE 3b refactor (`callWithFallback` helper) + routing matrix 8 case smoke + 문서 동기화 (commit 4 `67c5e48`)
+- [x] Settings UI + AuthMode polish (commit 5 `356a44f`) — provider-centric subsection + AuthMode 'auto' 폐기 → 'none'/'subscription'/'api' explicit 사용자 선택
+- [x] codex Mode D Panel post-impl 6 cycle (#2~#6) + finding 누적 fix (commit 6~14)
+  - commit 6 `35f777d`: cycle #2 6 finding (binary resolver / Chat fallback / save-credentials test / R3 isolation / A0 gate / commit traceability) + UI rename 'API Keys' → 'LLM Model Authentication'
+  - commit 7 `608ee14`: UI 통합 block (3 분리 Setting → 1 wikey-auth-block) + signed-in/not-detected badge + 24px provider margin
+  - commit 8 `94340ea`: section heading 오른쪽 storage note (13pt deep grey)
+  - commit 9 `8836ff9`: provider heading block 밖 (15px / weight 300 / accent color) + controls 우측 정렬 + plain badge + 16px section margin
+  - commit 10 `f19f313`: cycle #3 F1 Notice 문구 'auto' 폐기 일치 ("Switched to API key" → "subscription failed — switch Auth Mode")
+  - commit 11~13 `0bde7b7`/`d8b71d7`/`0384353`: cycle #3/#4/#5 finding fix (resultx 11~13 commit mirror / AC 표 auto 폐기 mirror / A0 gate PASS / commit traceability / test count)
+  - commit 14 `1bf17a5`: cycle #6 LOW + `.gitignore` query-log glob
+- [x] master CDP smoke (commit 9 후 직접 실측, 2026-05-14) — 3 provider 모두 `signed-in` green / UI layout 10 항목 PASS / binary resolver 실효성 확증
+- [x] **Session 42 라이브 사용자 raise 7 항목** — 모두 처리 + push 완료 (commit 15~19)
+  - R1 §5.6.5 Ollama Cloud jsonMode 등록 (사용자 명시 등록 요청)
+  - R2 gemini-2.5-pro subscription jsonMode 미지원 → **commit 15 `cda9ff7`** adaptive jsonMode (matrix lookup → flag strip + prompt 강제 JSON instruction). `adaptive-json-mode.ts` 신규 single source + canonicalizer + ingest-pipeline 양쪽 분기. 11 신규 test PASS
+  - R3 md 파일 ingest modal 16초 늦음 → **commit 18 `994bf0e`** modal.open() 을 sanitize 이전으로 이동. CDP 측정 16s → **0ms** 확증
+  - R4 stale model error state → commit 15+16 자연 해소 (7 영역 code grep stale 미발견. 실제 root cause = 동일 timeout/jsonMode 가 새 model 에서도 재발). §5.13 X1/X2 신규 entry 삭제 (commit 19)
+  - R5 gemini CLI timeout abort → **commit 16 `e92b170`** `CLI_DEFAULT_TIMEOUT_MS` 60s → 600s + ingest-pipeline/classify LLM timeout 동일
+  - R6 CDP smoke 실 ingest 누락 → 본 turn 116KB md 실 cycle smoke (Brief → Proceed → Processing **151s** → Preview → Approve & Write → wiki 11 페이지: concepts 7 / source 1 / entity 1 / log+index)
+  - R7 CLI install status badge → **commit 17 `13e179c`** provider title 행 오른쪽에 `installed (green)` / `not detected (orange)`. 3 provider 모두 `installed (rgb(68,207,110))` CDP 확증
+  - commit 19 `e68c53d`: §5.13 신규 X1/X2 entry 삭제 — 모두 해소 ([x])
+- [x] **wiki 재생성 없음 확증**: `git diff 6ead5fb..HEAD -- wiki/` = 0 (provider call path 추가만, frontmatter / data model 무관). 본 turn 실 ingest 의 wiki 11 페이지 = 정상 ingest 결과 (test fixture 아님)
 
 배운 점:
-- **codex Mode D Panel plan 9 cycle 누적** — 매 cycle 마다 hallucination 차단 (가짜 separator 모델링 / 가짜 type 단언 / quote-mark 인용 패턴 분리) — master 실측 evidence 단일 source 의무 (`plan/phase-5/fixtures/cycle-codex-golden/`) 가 9 cycle 째 안정화. plan 단계 codex review = 코드 단계 못지않게 finding 다발.
+- **codex Mode D Panel plan 9 cycle + post-impl 6 cycle 누적** — 매 cycle 마다 hallucination 차단 (가짜 separator 모델링 / 가짜 type 단언 / quote-mark 인용 패턴 분리) — master 실측 evidence 단일 source 의무 (`plan/phase-5/fixtures/cycle-codex-golden/`) 가 안정화.
 - **공통 helper extract 가 BLUE 3b 의 표본** — Step E refactor 가 3 provider 동일 try/catch/retry shape 을 단일 site 으로 모음. invariant I1+I2+I3 cross-check 가 한 site 에서 가능 + test 0 변경 확증.
+- **adaptive matrix 가 fallback 폐기 정책의 실효 fix** — R2 gemini-2.5-pro subscription jsonMode 미지원 = matrix `unsupported` cell 기반 prompt-instructed JSON 으로 우회. fallback 0 정책 유지 (자동 API retry 도입 X).
+- **stale state 의 실 root cause = 동일 error 의 재발** — 7 영역 code grep 결과 stale instance 미발견. timeout + jsonMode 강제 fix 후 자연 해소. UX 영향 가설 (Notice 12s duration) 은 별 영역.
+- **master CDP 실 ingest smoke 의무** — 사용자 raise "CDP smoke 왜 이런 검증 안 했어" 정당. UI 렌더만 검증 → 실 cycle (modal → Processing → wiki write) 까지 의무 (R6 처리 후 LOCK).
 
-→ **§5.6.4 v0.7 종결**. Phase 5 잔여 = §5.5 / §5.6 (나머지) / §5.8 / §5.9 / §5.20 (5 subject).
+→ **§5.6.4 v0.7 종결**. **14 commit push 완료** (`6ead5fb..e68c53d` origin/master). Phase 5 잔여 = §5.5 / §5.6.5 (Ollama Cloud) / §5.8 / §5.9 (4 subject).

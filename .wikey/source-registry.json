@@ -355,7 +355,28 @@
         "at": "2026-05-12T23:47:54.844Z"
       }
     ],
-    "tombstone": true,
+    "tombstone": false,
+    "last_action": "force"
+  },
+  "sha256:a918da1fcff63664": {
+    "vault_path": "raw/3_resources/60_note/500_technology/산업용 데이터 수집-연계 플랫폼 - peak9-anchor.md",
+    "hash": "a918da1fcff636644d5e248955f59b81b53bee7ffa5d8e490b3d6ed16fe79023",
+    "size": 116953,
+    "first_seen": "2026-05-14T01:08:16.507Z",
+    "ingested_pages": [
+      "wiki/sources/source-peak9-anchor.md"
+    ],
+    "path_history": [
+      {
+        "vault_path": "raw/0_inbox/산업용 데이터 수집-연계 플랫폼 - peak9-anchor.md",
+        "at": "2026-05-14T01:08:16.507Z"
+      },
+      {
+        "vault_path": "raw/3_resources/60_note/500_technology/산업용 데이터 수집-연계 플랫폼 - peak9-anchor.md",
+        "at": "2026-05-14T01:10:02.802Z"
+      }
+    ],
+    "tombstone": false,
     "last_action": "force"
   }
 }
