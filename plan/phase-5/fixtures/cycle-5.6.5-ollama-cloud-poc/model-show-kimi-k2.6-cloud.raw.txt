@@ -1,0 +1,13 @@
+  Model
+    architecture        kimi-k2          
+    parameters          1042000000000    
+    context length      262144           
+    embedding length    2048             
+    quantization        INT4             
+
+  Capabilities
+    vision        
+    thinking      
+    completion    
+    tools         
+

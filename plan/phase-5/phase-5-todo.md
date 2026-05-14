@@ -884,20 +884,25 @@
 - commit 13~14: `0384353` (cycle #5 §1/§3 auto 폐기 mirror + 12 commit + test count) / `1bf17a5` (cycle #6 LOW + .gitignore query-log glob)
 - commit 15~19: `cda9ff7` (R2 adaptive jsonMode) / `e92b170` (R5 CLI timeout 600s) / `13e179c` (R7 CLI install badge + 실 ingest smoke) / `994bf0e` (R3 md modal 0ms) / `e68c53d` (§5.13 entry 삭제 — X1/X2 해소)
 
-### 5.6.5 Ollama Cloud model 통합 (Session 42 raise, 2026-05-13)
+### 5.6.5 Ollama Cloud model 통합 (Session 42 raise, 2026-05-13 / Session 43 plan v0.3 진입 2026-05-14)
 
 > **이전 번호**: `was §5.6.3.B`.
-> **status**: §5.6.4 종결 후 진입. provider 추상화 layer 확장 결과 활용.
+> **status**: §5.6.4 종결 후 진입. provider 추상화 layer 확장 결과 활용. **plan v0.3 작성 중** (Session 43, 2026-05-14) — `plan/phase-5/phase-5-todox-5.6.5-ollama-cloud.md` + `phase-5-spec-5.6.5-ollama-cloud.md` + analyst 위임 `docs/ollama-cloud-benchmark.md`.
 > **참고**: 기존 §5.6.3.C (Stage-aware routing) 는 본 리넘버링에서 **제외** — provider 추상화 + subscription 우선 routing 만으로 cost trade-off 충분.
+>
+> **사용자 결정 LOCK (2026-05-14 라이브 raise 1~12)**:
+> - **Q1 = (b) 별 `'ollama-cloud'` provider key** (raise 2 LOCK — local + cloud 병행 사용)
+> - 모델 식별자 자동 구분 (`isCloudModel` helper const block, raise 3)
+> - 기존 ollama (local) 13 source file 회귀 검증 의무 (raise 1)
+> - 벤치마크 핵심 목적 = wikey 도메인 best-fit 모델 1개 발견 (raise 6) + community 평가 reference (raise 7)
+> - §5.6.5.4 Step D = analyst → developer → master 3-agent 위임 (raise 4/5/11/12) + analyst 산출 `docs/ollama-cloud-benchmark.md` (raise 8)
 
-- [ ] **§5.6.5.1** Ollama Cloud 대형 모델 (`llama3-70b-cloud` / `qwen3-72b-cloud` 같은 호스팅 대형 모델)
+- [ ] **§5.6.5.1** Ollama Cloud 대형 모델 통합 (Q1=b LOCK)
   - 현재: Ollama = 로컬 only. 대형 모델 (≥ 30B) 은 로컬 GPU/RAM 부족으로 사실상 활용 불가
   - **Ollama Cloud (2025년 출시)**: ollama.com 의 hosted endpoint — 로컬 ollama 명령으로 cloud 모델 호출 가능 (`ollama run llama3:70b` 등)
   - 비용: subscription 기반 (Ollama Pro 등) 또는 token 기반. Anthropic 보다 저렴, 로컬 ollama 호환성 그대로
-  - 옵션:
-    - (a) Ollama Cloud 가입 후 `provider: 'ollama'` + `OLLAMA_HOST` 를 cloud endpoint 로 — 코드 변경 0 (`provider-defaults.ts` 의 ollama budget config 만 cloud 용으로 update)
-    - (b) wikey config 에 `ollama_cloud` 별 provider key 추가 — local + cloud 분리 운영 (local fallback)
-  - 가능성: ingest 의 canonicalize 단계만 cloud 70B 사용 + brief/mention 은 local 8B → 비용 효율 + 품질 균형
+  - **결정** (Q1=b LOCK 2026-05-14): wikey config 에 `'ollama-cloud'` 별 provider key 추가. UI 4번째 subsection 표시 + local + cloud 병행 사용 가능. 내부 dispatch 는 모델 식별자 자동 구분 (`isCloudModel` helper).
+  - 가능성: ingest 의 canonicalize 단계만 cloud 70B 사용 + brief/mention 은 local 8B → 비용 효율 + 품질 균형 (Q5 결정)
 
 - [ ] **§5.6.5.2** Ollama Cloud jsonMode 처리 (사용자 raise 2026-05-14)
   - §5.6.4 commit 15 (`cda9ff7`) 에서 anthropic / openai / gemini subscription 의 jsonMode 'unsupported' → prompt 강제 JSON 적응 처리 도입. Ollama Cloud 도 동일 검토 필요:

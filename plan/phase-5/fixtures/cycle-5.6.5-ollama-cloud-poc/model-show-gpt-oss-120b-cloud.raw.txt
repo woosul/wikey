@@ -1,0 +1,12 @@
+  Model
+    architecture        gptoss          
+    parameters          116829156672    
+    context length      131072          
+    embedding length    2880            
+    quantization        MXFP4           
+
+  Capabilities
+    completion    
+    tools         
+    thinking      
+

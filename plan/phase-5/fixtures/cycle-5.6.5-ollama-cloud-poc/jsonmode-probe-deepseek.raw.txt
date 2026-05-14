@@ -1,0 +1,1 @@
+{"model":"deepseek-v3.1:671b","created_at":"2026-05-14T03:01:15.384169771Z","message":{"role":"assistant","content":"{\"status\":\"ok\"}"},"done":true,"done_reason":"stop","total_duration":515059397,"prompt_eval_count":15,"eval_count":6}
