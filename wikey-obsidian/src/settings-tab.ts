@@ -228,10 +228,10 @@ export class WikeySettingTab extends PluginSettingTab {
       'BYOAI — used only for the search-time filter. DEFAULT inherits the Default Model.',
       [
         { value: '', label: 'DEFAULT' },
-        { value: 'ollama', label: 'Local (Ollama)' },
-        { value: 'gemini', label: 'Google Gemini' },
-        { value: 'anthropic', label: 'Anthropic Claude' },
-        { value: 'openai', label: 'OpenAI Codex' },
+        { value: 'ollama', label: 'Ollama' },
+        { value: 'gemini', label: 'Google' },
+        { value: 'anthropic', label: 'Anthropic' },
+        { value: 'openai', label: 'OpenAI' },
       ],
       this.plugin.settings.advancedQueryTuningProvider,
       async (v) => {
@@ -620,12 +620,14 @@ export class WikeySettingTab extends PluginSettingTab {
       containerEl,
       'Provider / Model',
       'Default LLM for all tasks. Per-task overrides live in Advanced settings.',
+      // 'claude-code' alias entry 폐기 — Session 44 (2026-05-14) 사용자 raise:
+      // 동일 label 'Anthropic'으로 중복 노출되던 버그 수정. backend alias는
+      // wikey-core/config.ts 에서 처리.
       [
-        { value: 'ollama', label: 'Local (Ollama)' },
-        { value: 'gemini', label: 'Google Gemini' },
-        { value: 'anthropic', label: 'Anthropic Claude' },
-        { value: 'openai', label: 'OpenAI Codex' },
-        { value: 'claude-code', label: 'Anthropic Claude' },
+        { value: 'ollama', label: 'Ollama' },
+        { value: 'gemini', label: 'Google' },
+        { value: 'anthropic', label: 'Anthropic' },
+        { value: 'openai', label: 'OpenAI' },
       ],
       this.plugin.settings.basicModel,
       async (value) => {
@@ -806,10 +808,10 @@ export class WikeySettingTab extends PluginSettingTab {
       'Provider + model for document ingestion. DEFAULT inherits Default Model.',
       [
         { value: '', label: 'DEFAULT' },
-        { value: 'ollama', label: 'Local (Ollama)' },
-        { value: 'gemini', label: 'Google Gemini' },
-        { value: 'openai', label: 'OpenAI Codex' },
-        { value: 'anthropic', label: 'Anthropic Claude' },
+        { value: 'ollama', label: 'Ollama' },
+        { value: 'gemini', label: 'Google' },
+        { value: 'openai', label: 'OpenAI' },
+        { value: 'anthropic', label: 'Anthropic' },
       ],
       this.plugin.settings.ingestProvider,
       async (value) => {
@@ -1198,10 +1200,10 @@ export class WikeySettingTab extends PluginSettingTab {
       'Vision-capable LLM used when text-layer extraction fails. DEFAULT inherits Default Model.',
       [
         { value: '', label: 'DEFAULT' },
-        { value: 'ollama', label: 'Local (Ollama)' },
-        { value: 'gemini', label: 'Google Gemini' },
-        { value: 'openai', label: 'OpenAI Codex' },
-        { value: 'anthropic', label: 'Anthropic Claude' },
+        { value: 'ollama', label: 'Ollama' },
+        { value: 'gemini', label: 'Google' },
+        { value: 'openai', label: 'OpenAI' },
+        { value: 'anthropic', label: 'Anthropic' },
       ],
       this.plugin.settings.ocrProvider || '',
       async (value) => {
@@ -1240,7 +1242,7 @@ export class WikeySettingTab extends PluginSettingTab {
 
     this.renderProviderSubsection(containerEl, {
       provider: 'gemini',
-      heading: 'Google Gemini',
+      heading: 'Google',
       apiKeyField: 'geminiApiKey',
       authModeField: 'geminiAuthMode',
       apiKeyPlaceholder: 'AIza...',
@@ -1251,7 +1253,7 @@ export class WikeySettingTab extends PluginSettingTab {
     })
     this.renderProviderSubsection(containerEl, {
       provider: 'anthropic',
-      heading: 'Anthropic Claude',
+      heading: 'Anthropic',
       apiKeyField: 'anthropicApiKey',
       authModeField: 'anthropicAuthMode',
       apiKeyPlaceholder: 'sk-ant-...',
@@ -1262,7 +1264,7 @@ export class WikeySettingTab extends PluginSettingTab {
     })
     this.renderProviderSubsection(containerEl, {
       provider: 'openai',
-      heading: 'OpenAI Codex',
+      heading: 'OpenAI',
       apiKeyField: 'openaiApiKey',
       authModeField: 'openaiAuthMode',
       apiKeyPlaceholder: 'sk-...',
@@ -1698,10 +1700,10 @@ export class WikeySettingTab extends PluginSettingTab {
 
     const providerOptions: Record<string, string> = {
       '': 'DEFAULT',
-      'ollama': 'Local (Ollama)',
-      'gemini': 'Google Gemini',
-      'anthropic': 'Anthropic Claude',
-      'openai': 'OpenAI Codex',
+      'ollama': 'Ollama',
+      'gemini': 'Google',
+      'anthropic': 'Anthropic',
+      'openai': 'OpenAI',
     }
 
     for (const [key, label, desc] of [

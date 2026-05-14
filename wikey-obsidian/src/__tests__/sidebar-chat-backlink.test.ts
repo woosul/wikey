@@ -1,17 +1,23 @@
 /**
- * §5.18 Step B (RED) — Spec 2 wiki backlink section
+ * §5.18 Spec 2 — wiki backlink section (v0.7 count-only label, 2026-05-14)
  *
- * Spec: docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.6 §1 Spec 2
+ * Spec: docs/planning/phase-5/phase-5-spec-5.18-query-citation-ux.md v0.7
+ * §1 Spec 2 — 사용자 결정 (Session 44, 옵션 B): 답변 footer Referenced/Extended
+ * 섹션을 한 줄 inline count label 로 단순화. 펼침 list / `<details>` / Obsidian
+ * backlink panel 안내 폐기. 이유: 그래프 connectivity 카운트 외에 추가 정보 효과
+ * 미미. cmd+click 으로 Obsidian backlink panel 직접 접근 가능하므로 footer 에서
+ * 5 entry 노출은 cost-effective 하지 않음.
  *
  * Invariants under test:
  *   - I4: backlink 조회는 resolvedLinks 역방향 lookup (pure function on map).
- *   - I4a (v0.6): scope filter — 'wiki' (default) / 'extended' (opt-in), raw/ 항상 제외.
+ *   - I4a: scope filter — 'wiki' (default) / 'extended' (opt-in), raw/ 항상 제외.
  *     collectBacklinks 반환 = `{ wiki: string[], external: string[] }` (BacklinkResult).
- *   - I5: 2 section 분리 — `참고 (N)` (wiki/) + `확장 (M)` (external, extended scope only).
- *   - I5a: default collapse — <details> 에 open attribute 없음.
- *   - I6: 빈 section 미출력 (wiki 0 → 참고 생략, external 0 → 확장 생략).
- *   - I7: list ≤ 5, 초과 시 truncation 안내 텍스트.
+ *   - I5 (v0.7 변경): 한 줄 inline label — `Referenced: N` (wiki/) + `Extended: M` (external).
+ *     `<details>` markup / 5 entry list / truncation 안내 모두 폐기.
+ *   - I6: 빈 section 미출력 (wiki 0 → Referenced 생략, external 0 → Extended 생략).
  *   - I7a: self-reference 회피 — 답변 본문 안 mention 된 wiki page 는 backlink list 에서 제외.
+ *   - I7 (v0.7 폐기): list ≤ 5, 초과 시 truncation 안내 — count label 만 노출하므로 무관.
+ *   - I5a (v0.7 폐기): default collapse `<details>` — markup 자체 폐기.
  */
 
 import { describe, it, expect } from 'vitest'
@@ -111,82 +117,69 @@ describe('§5.18 Spec 2 — collectBacklinks (resolvedLinks 역방향 lookup)', 
   })
 })
 
-describe('§5.18 Spec 2 — buildBacklinkSection (HTML <details> 2 section 분리, v0.6)', () => {
-  // T10 ↔ I5a — default collapse: <details> 에 open attribute 없음
-  it('T10: I5a — default collapse → <details> + Referenced summary + open attribute 없음', () => {
+describe('§5.18 Spec 2 — buildBacklinkSection (v0.7 count-only inline label)', () => {
+  // T10 ↔ I5 (v0.7) — count label only, no <details>/<summary>/list
+  it('T10: I5 (v0.7) — wiki backlink → "Referenced: N" 한 줄, no <details>', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/a.md', 'wiki/entities/b.md', 'wiki/entities/c.md'],
       external: [],
     })
-    expect(markup).toMatch(/<details>/)
-    expect(markup).toMatch(/<summary>Referenced/)
-    expect(markup).not.toMatch(/<details\s+[^>]*\bopen\b/)
+    expect(markup).toBe('Referenced: 3')
+    expect(markup).not.toMatch(/<details/)
+    expect(markup).not.toMatch(/<summary/)
   })
 
-  // T10b ↔ I5 — section header = `Referenced (N)`
-  it('T10b: I5 — `Referenced` summary 에 wiki backlink count N 표시', () => {
+  // T10b ↔ I5 (v0.7) — count is N (wiki array length)
+  it('T10b: I5 (v0.7) — `Referenced: N` count = wiki array length', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/a.md', 'wiki/entities/b.md', 'wiki/entities/c.md'],
       external: [],
     })
-    expect(markup).toMatch(/Referenced\s*\(3\)/)
+    expect(markup).toMatch(/^Referenced: 3$/)
   })
 
-  // T10c ↔ I7 — truncation: 8 backlink → 5 list + 안내 텍스트
-  it('T10c: I7 — 8 wiki backlink → 5 list 줄 + "8 total" truncation 안내', () => {
-    const wiki = [
-      'wiki/entities/a.md', 'wiki/entities/b.md', 'wiki/entities/c.md',
-      'wiki/entities/d.md', 'wiki/entities/e.md', 'wiki/entities/f.md',
-      'wiki/entities/g.md', 'wiki/entities/h.md',
-    ]
+  // T10c ↔ I7 (v0.7 폐기) — list/truncation 자체 없음. 100건이어도 한 줄.
+  it('T10c: I7 (v0.7 폐기) — 100 wiki backlink 도 "Referenced: 100" 한 줄, list/truncation 없음', () => {
+    const wiki = Array.from({ length: 100 }, (_, i) => `wiki/entities/p${i}.md`)
     const markup = buildBacklinkSection({ wiki, external: [] })
-    expect(markup).toMatch(/\[\[wiki\/entities\/a\.md\]\]/)
-    expect(markup).toMatch(/\[\[wiki\/entities\/e\.md\]\]/)
-    expect(markup).not.toMatch(/\[\[wiki\/entities\/f\.md\]\]/)
-    expect(markup).not.toMatch(/\[\[wiki\/entities\/h\.md\]\]/)
-    expect(markup).toMatch(/8 total/)
-    expect(markup).toMatch(/Obsidian backlink panel/)
+    expect(markup).toBe('Referenced: 100')
+    expect(markup).not.toMatch(/\[\[/)
+    expect(markup).not.toMatch(/total/)
+    expect(markup).not.toMatch(/Obsidian backlink panel/)
   })
 
-  // T11b ↔ I6 — 양쪽 0 → 빈 string
+  // T11b ↔ I6 — 양쪽 0 → 빈 string (변경 없음)
   it('T11b: I6 — wiki=0 + external=0 → buildBacklinkSection 빈 string', () => {
     const markup = buildBacklinkSection({ wiki: [], external: [] })
     expect(markup).toBe('')
   })
 
-  // T16 ↔ Spec 2 I5 (v0.6) — 2 section 분리: `Referenced` (wiki) + `Extended` (external)
-  it('T16: I5 (v0.6) — wiki + external 모두 있으면 `Referenced` + `Extended` 두 section 분리 출현', () => {
+  // T16 ↔ I5 (v0.7) — 2 줄 분리: `Referenced: N` + `Extended: M`
+  it('T16: I5 (v0.7) — wiki + external 모두 있으면 두 줄 (Referenced: N / Extended: M)', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/jeff.md'],
       external: ['docs/planning/phase-5/phase-5-todo.md', 'docs/sessions/phase-5/note.md'],
     })
-    expect(markup).toMatch(/<summary>Referenced\s*\(1\)/)
-    expect(markup).toMatch(/<summary>Extended\s*\(2\)/)
-    // (+) badge 폐기 — section 자체로 구분
-    expect(markup).not.toMatch(/\(\+\)/)
-    // 각 section 안 entry 정확
-    expect(markup).toMatch(/\[\[wiki\/entities\/jeff\.md\]\]/)
-    expect(markup).toMatch(/\[\[docs\/planning\/phase-5\/phase-5-todo\.md\]\]/)
-    expect(markup).toMatch(/\[\[docs\/sessions\/phase-5\/note\.md\]\]/)
+    expect(markup).toBe('Referenced: 1\nExtended: 2')
+    // 답변 본문에 wikilink markup 없음 (count label only)
+    expect(markup).not.toMatch(/\[\[/)
   })
 
-  // T17 ↔ Spec 2 I6 (v0.6) — wiki=0 + external>0 → `Extended` 만 출현
-  it('T17: I6 — wiki=0 + external>0 → `Referenced` 미출력, `Extended` 만 출현', () => {
+  // T17 ↔ I6 — wiki=0 + external>0 → `Extended: M` 만
+  it('T17: I6 — wiki=0 + external>0 → `Referenced` 미출력, `Extended: M` 만', () => {
     const markup = buildBacklinkSection({
       wiki: [],
       external: ['docs/planning/phase-5/phase-5-todo.md'],
     })
-    expect(markup).not.toMatch(/<summary>Referenced/)
-    expect(markup).toMatch(/<summary>Extended\s*\(1\)/)
+    expect(markup).toBe('Extended: 1')
   })
 
-  // T18 ↔ Spec 2 I6 (v0.6) — wiki>0 + external=0 → `Referenced` 만 출현 (wiki scope default 케이스)
-  it('T18: I6 — wiki>0 + external=0 → `Referenced` 만 출현 (scope=wiki default 케이스)', () => {
+  // T18 ↔ I6 — wiki>0 + external=0 → `Referenced: N` 만
+  it('T18: I6 — wiki>0 + external=0 → `Referenced: N` 만 (scope=wiki default)', () => {
     const markup = buildBacklinkSection({
       wiki: ['wiki/entities/jeff.md'],
       external: [],
     })
-    expect(markup).toMatch(/<summary>Referenced\s*\(1\)/)
-    expect(markup).not.toMatch(/<summary>Extended/)
+    expect(markup).toBe('Referenced: 1')
   })
 })

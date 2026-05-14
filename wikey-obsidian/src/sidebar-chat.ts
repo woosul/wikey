@@ -38,24 +38,30 @@ const ICONS = {
 
 type PanelName = 'chat' | 'dashboard' | 'audit' | 'ingest' | 'help'
 
+// Provider label display names (Session 44, 2026-05-14 사용자 raise: 단순화 +
+// chat dropdown Anthropic 중복 제거). 'claude-code'는 wikey-core/config.ts
+// alias (ANTHROPIC_API_KEY 있으면 anthropic, 아니면 ollama) — 단순 anthropic
+// 으로 보여 주면 사용자에게 충분.
 const PROVIDER_PRETTY_NAMES: Readonly<Record<string, string>> = {
-  gemini: 'Google Gemini',
-  anthropic: 'Anthropic Claude',
-  'claude-code': 'Anthropic Claude',
-  openai: 'OpenAI Codex',
-  ollama: 'Local (Ollama)',
+  gemini: 'Google',
+  anthropic: 'Anthropic',
+  'claude-code': 'Anthropic',
+  openai: 'OpenAI',
+  ollama: 'Ollama',
 }
 
 function prettyProvider(p: string): string {
   return PROVIDER_PRETTY_NAMES[p] ?? p
 }
 
+// Chat panel provider dropdown (4 entries). 'claude-code' alias entry 폐기 —
+// 동일 label 'Anthropic'으로 중복 노출되던 버그 수정 (Session 44 사용자 raise).
+// claude-code는 wikey-core가 backend alias로 처리, UI에서는 별도 노출 X.
 const PROVIDER_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: 'ollama', label: 'Local (Ollama)' },
-  { value: 'gemini', label: 'Google Gemini' },
-  { value: 'anthropic', label: 'Anthropic Claude' },
-  { value: 'openai', label: 'OpenAI Codex' },
-  { value: 'claude-code', label: 'Anthropic Claude' },
+  { value: 'ollama', label: 'Ollama' },
+  { value: 'gemini', label: 'Google' },
+  { value: 'anthropic', label: 'Anthropic' },
+  { value: 'openai', label: 'OpenAI' },
 ]
 
 /**
@@ -322,30 +328,21 @@ export function collectBacklinks(
   }
 }
 
-const BACKLINK_DISPLAY_LIMIT = 5
-
 /**
- * backlink result → HTML `<details>` markup (default collapse, 2 section 분리).
+ * backlink result → 한 줄 inline count label (v0.7, 사용자 결정 Session 44, 2026-05-14).
  *
- * v0.6 (사용자 raise 2026-05-12) — 답변 footer 3 layer 명확 구분:
- *   - `원본:` (Spec 1 appendOriginalLinks, raw)
- *   - `참고:` (wiki/ backlink, 정식 지식 layer)
- *   - `확장:` (external backlink, extended scope opt-in 시만 — 단순 참조)
+ * v0.6 (`<details>` + 5 entry list + truncation 안내) 폐기 — 사용자 결정 옵션 B:
+ * 답변 footer 3 layer 중 Referenced/Extended 의 5 entry 노출은 cost-effective 하지
+ * 않음. cmd+click 으로 Obsidian backlink panel 직접 접근 가능하므로 footer 에서는
+ * graph connectivity 카운트만 표시.
  *
- * - I5a: default closed (`<details>` 에 `open` attribute 없음).
- * - I5: `<summary>참고 (N)</summary>` + `<summary>확장 (M)</summary>` 분리.
- * - I7: 각 section 5 항목 + 초과 시 truncation 안내 텍스트.
- * - I6: 빈 array → section 미출력 (wiki 0 이면 `참고` 생략, external 0 이면 `확장` 생략).
+ * - I5: 한 줄 inline label `Referenced: N` (wiki/) + `Extended: M` (external).
+ * - I6: 빈 array → 라벨 미출력 (wiki 0 → Referenced 생략, external 0 → Extended 생략).
+ * - 답변 footer 3 layer 유지: `원본:` (Spec 1) / `Referenced: N` / `Extended: M`.
  */
-function renderBacklinkBlock(label: string, items: readonly string[]): string {
+function renderBacklinkLabel(label: string, items: readonly string[]): string {
   if (items.length === 0) return ''
-  const total = items.length
-  const head = items.slice(0, BACKLINK_DISPLAY_LIMIT)
-  const lines = head.map((p) => `- [[${p}]]`)
-  if (total > BACKLINK_DISPLAY_LIMIT) {
-    lines.push(`- ... (${total} total, see Obsidian backlink panel for the full list)`)
-  }
-  return `<details><summary>${label} (${total})</summary>\n\n${lines.join('\n')}\n</details>`
+  return `${label}: ${items.length}`
 }
 
 export function buildBacklinkSection(input: BacklinkResult | readonly string[]): string {
@@ -361,10 +358,10 @@ export function buildBacklinkSection(input: BacklinkResult | readonly string[]):
     wiki = [...input.wiki]
     external = [...input.external]
   }
-  const wikiBlock = renderBacklinkBlock('Referenced', wiki)
-  const externalBlock = renderBacklinkBlock('Extended', external)
-  if (!wikiBlock && !externalBlock) return ''
-  return [wikiBlock, externalBlock].filter(Boolean).join('\n')
+  const wikiLabel = renderBacklinkLabel('Referenced', wiki)
+  const externalLabel = renderBacklinkLabel('Extended', external)
+  if (!wikiLabel && !externalLabel) return ''
+  return [wikiLabel, externalLabel].filter(Boolean).join('\n')
 }
 
 export class WikeyChatView extends ItemView {
@@ -1442,10 +1439,10 @@ Click [[page name]] in answers to navigate to the wiki page.
     const providerSelect = providerBar.createEl('select', { cls: 'wikey-select' })
     const providerOptions = [
       { value: '', text: 'DEFAULT' },
-      { value: 'ollama', text: 'Local' },
-      { value: 'gemini', text: 'Google Gemini' },
-      { value: 'openai', text: 'OpenAI Codex' },
-      { value: 'anthropic', text: 'Anthropic Claude' },
+      { value: 'ollama', text: 'Ollama' },
+      { value: 'gemini', text: 'Google' },
+      { value: 'openai', text: 'OpenAI' },
+      { value: 'anthropic', text: 'Anthropic' },
     ]
     const currentIngestProvider = this.plugin.settings.ingestProvider || ''
     for (const opt of providerOptions) {
@@ -2394,10 +2391,10 @@ Click [[page name]] in answers to navigate to the wiki page.
     const inboxProviderSelect = providerBar.createEl('select', { cls: 'wikey-select' })
     const inboxProviderOptions = [
       { value: '', text: 'DEFAULT' },
-      { value: 'ollama', text: 'Local' },
-      { value: 'gemini', text: 'Google Gemini' },
-      { value: 'openai', text: 'OpenAI Codex' },
-      { value: 'anthropic', text: 'Anthropic Claude' },
+      { value: 'ollama', text: 'Ollama' },
+      { value: 'gemini', text: 'Google' },
+      { value: 'openai', text: 'OpenAI' },
+      { value: 'anthropic', text: 'Anthropic' },
     ]
     const curInboxProvider = this.plugin.settings.ingestProvider || ''
     for (const opt of inboxProviderOptions) {
