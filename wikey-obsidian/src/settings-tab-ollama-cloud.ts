@@ -46,6 +46,15 @@ export interface OllamaCloudSubsectionDeps {
   readonly onSignin: () => void
   /** Invoked when user clicks the [Sign out] button (signinDetected=true). */
   readonly onSignout: () => void
+  /**
+   * §5.6.5 옵션 A v2 — current `__Secure-session` cookie from ollama.com/settings.
+   * Empty string when user has not pasted yet. Stored in credentials.json.
+   */
+  readonly sessionCookie?: string
+  /** Invoked when user updates the cookie input. Caller persists via saveCredentials. */
+  readonly onCookieChange?: (value: string) => void
+  /** Invoked when user clicks [Open Dashboard] — opens ollama.com/settings in browser. */
+  readonly onOpenDashboard?: () => void
 }
 
 export function renderOllamaCloudSubsection(
@@ -91,4 +100,32 @@ export function renderOllamaCloudSubsection(
     if (deps.signinDetected) deps.onSignout()
     else deps.onSignin()
   })
+
+  // §5.6.5 옵션 A v2 — Session Cookie row (CodexBar paradigm).
+  // ollama.com has no quota API yet (issue #15663). Pasting the
+  // `__Secure-session` cookie lets wikey poll ollama.com/settings to show
+  // session% / weekly% in the statusbar. Empty = statusbar chip hides
+  // cloud quota figures (still shows local-model name).
+  if (deps.onCookieChange !== undefined) {
+    const cookieRow = block.createDiv({ cls: 'wikey-auth-block-row' })
+    cookieRow.createSpan({ cls: 'wikey-auth-block-label', text: 'Session Cookie' })
+    const cookieControls = cookieRow.createDiv({ cls: 'wikey-auth-block-controls' })
+
+    const cookieInput = cookieControls.createEl('input', {
+      cls: 'wikey-api-key-input',
+      attr: { type: 'password', placeholder: '__Secure-session=...' },
+    })
+    cookieInput.value = deps.sessionCookie ?? ''
+    cookieInput.addEventListener('change', () => {
+      deps.onCookieChange?.(cookieInput.value)
+    })
+
+    if (deps.onOpenDashboard !== undefined) {
+      const dashBtn = cookieControls.createEl('button', {
+        text: 'Open Dashboard',
+        cls: 'wikey-auth-block-btn',
+      })
+      dashBtn.addEventListener('click', () => deps.onOpenDashboard?.())
+    }
+  }
 }

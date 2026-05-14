@@ -1268,6 +1268,8 @@ export class WikeySettingTab extends PluginSettingTab {
     // row / no Endpoint URL row). Rendered via a dedicated helper rather than
     // bolted onto ProviderSubsectionSpec to avoid 3 optional fields the
     // shared helper never reads (Karpathy "no speculative flexibility").
+    // §5.6.5 옵션 A v2 — adds the Session Cookie row + Open Dashboard for the
+    // CodexBar paradigm statusbar chip (ollama.com/settings polling).
     renderOllamaCloudSubsection(containerEl, {
       ollamaCliInstalled: this.detectOllamaCliInstalled(),
       signinDetected: this.detectOllamaCloudSignin(),
@@ -1284,6 +1286,14 @@ export class WikeySettingTab extends PluginSettingTab {
           'Sign out',
           'Run "ollama signout" in your terminal.',
         ).open()
+      },
+      sessionCookie: this.plugin.settings.ollamaCloudSessionCookie ?? '',
+      onCookieChange: async (value) => {
+        this.plugin.settings.ollamaCloudSessionCookie = value
+        await this.plugin.saveSettings()
+      },
+      onOpenDashboard: () => {
+        window.open('https://ollama.com/settings')
       },
     })
   }

@@ -165,6 +165,12 @@ interface WikeySettings {
    * entries are preserved (deletion is a separate command, out of scope here).
    */
   knowledgeGapLogEnabled: boolean
+  // ── §5.6.5 옵션 A v2 — Ollama Cloud usage statusbar (CodexBar paradigm) ──
+  // `__Secure-session` cookie copied from ollama.com/settings; wikey fetches
+  // the same page on a 5min poll and displays session % + weekly % in a
+  // statusbar chip. Stored in credentials.json (security-sensitive — never
+  // logged, never Read by Claude per CLAUDE.md). Empty = chip hidden.
+  ollamaCloudSessionCookie: string
 }
 
 const DEFAULT_SETTINGS: WikeySettings = {
@@ -225,6 +231,8 @@ const DEFAULT_SETTINGS: WikeySettings = {
   searchQwen3DownloadStatus: 'idle',
   // §5.20 — knowledge gap log default ON (I2 LOCK).
   knowledgeGapLogEnabled: true,
+  // §5.6.5 옵션 A v2 — default empty; user pastes from ollama.com/settings.
+  ollamaCloudSessionCookie: '',
 }
 
 export type { WikeySettings }
@@ -318,7 +326,8 @@ export function parseCredentialsPayload(
 ): Pick<
   WikeySettings,
   'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey' |
-  'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode'
+  'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode' |
+  'ollamaCloudSessionCookie'
 > {
   const auth = (data.auth as Record<string, { mode?: string }> | undefined) ?? {}
   const migrateMode = (m: string | undefined): WikeySettings['geminiAuthMode'] => {
@@ -332,6 +341,8 @@ export function parseCredentialsPayload(
     geminiAuthMode: migrateMode(auth.gemini?.mode),
     anthropicAuthMode: migrateMode(auth.anthropic?.mode),
     openaiAuthMode: migrateMode(auth.openai?.mode),
+    // §5.6.5 옵션 A v2 — round-trip Ollama Cloud session cookie (CodexBar paradigm).
+    ollamaCloudSessionCookie: (data.ollamaCloudSessionCookie as string | undefined) ?? '',
   }
 }
 
@@ -347,7 +358,8 @@ export function serializeCredentialsPayload(
   settings: Pick<
     WikeySettings,
     'geminiApiKey' | 'anthropicApiKey' | 'openaiApiKey' |
-    'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode'
+    'geminiAuthMode' | 'anthropicAuthMode' | 'openaiAuthMode' |
+    'ollamaCloudSessionCookie'
   >,
   credentialsRaw: Record<string, unknown>,
 ): Record<string, unknown> {
@@ -361,6 +373,9 @@ export function serializeCredentialsPayload(
       anthropic: { mode: settings.anthropicAuthMode ?? 'subscription' },
       openai: { mode: settings.openaiAuthMode ?? 'subscription' },
     },
+    // §5.6.5 옵션 A v2 — persist Ollama Cloud session cookie alongside API keys
+    // (same security tier; CodexBar precedent). Never written elsewhere.
+    ollamaCloudSessionCookie: settings.ollamaCloudSessionCookie ?? '',
   }
 }
 
