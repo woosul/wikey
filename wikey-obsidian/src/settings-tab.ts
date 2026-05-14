@@ -1531,6 +1531,19 @@ export class WikeySettingTab extends PluginSettingTab {
           if (resp.status === 200) { new Notice('OpenAI connected'); return true }
           new Notice(`OpenAI error: ${resp.status}`); return false
         }
+        case 'ollama-cloud': {
+          const key = this.plugin.settings.ollamaCloudApiKey
+          if (!key) { new Notice('Enter Ollama Cloud API key first.'); return false }
+          const baseUrl = (this.plugin.settings.ollamaUrl || 'http://localhost:11434').replace(/\/$/, '')
+          const resp = await requestUrl({
+            url: `${baseUrl}/api/tags`,
+            method: 'GET',
+            headers: { Authorization: `Bearer ${key}` },
+            throw: false,
+          })
+          if (resp.status === 200) { new Notice('Ollama Cloud connected'); return true }
+          new Notice(`Ollama Cloud error: ${resp.status}`); return false
+        }
         default: return false
       }
     } catch (err: any) {
