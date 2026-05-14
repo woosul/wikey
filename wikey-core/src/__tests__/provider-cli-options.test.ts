@@ -106,9 +106,13 @@ const EXPECTED: Record<SubscriptionProvider, Record<AuthPath, Record<LLMCliOptio
   },
 }
 
-describe('§5.6.4 CLI_OPTION_SUPPORT — 48-cell nested matrix (golden)', () => {
-  it('cardinality: 3 providers × 2 paths × 8 fields', () => {
-    expect(Object.keys(CLI_OPTION_SUPPORT).sort()).toEqual(['anthropic', 'gemini', 'openai'])
+describe('§5.6.4 CLI_OPTION_SUPPORT — 48-cell SubscriptionProvider golden (regression scope)', () => {
+  // §5.6.5 Step C (2026-05-14) widened the matrix to 4 rows (added
+  // ollama-cloud). This test still covers the 3 SubscriptionProvider rows
+  // byte-equal to v0.7 — the ollama-cloud row is asserted in
+  // provider-cli-options-ollama-cloud.test.ts.
+  it('cardinality: 4 rows total (3 SubscriptionProvider + ollama-cloud), each with 2 paths × 8 fields', () => {
+    expect(Object.keys(CLI_OPTION_SUPPORT).sort()).toEqual(['anthropic', 'gemini', 'ollama-cloud', 'openai'])
     for (const p of PROVIDERS) {
       expect(Object.keys(CLI_OPTION_SUPPORT[p]).sort()).toEqual(['api', 'subscription'])
       for (const path of PATHS) {

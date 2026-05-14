@@ -22,7 +22,7 @@
  * on API path — the user switches mode via the Settings dropdown if needed.
  */
 
-import type { SubscriptionProvider, WikeyConfig } from './types.js'
+import type { CliOptionMatrixProvider, SubscriptionProvider, WikeyConfig } from './types.js'
 import { getConfiguredAuthPath } from './auth-resolver.js'
 import { CLI_OPTION_SUPPORT } from './provider-cli-options.js'
 
@@ -40,9 +40,22 @@ export const JSON_ONLY_PROMPT_PREFIX =
  */
 export function resolveJsonModeNative(provider: string, config?: WikeyConfig): boolean {
   if (!config) return true
+  // §5.6.5 Step C (2026-05-14) — local Ollama keeps its native jsonMode via
+  // `/api/chat` `format:json`. Local has no CLI matrix row at all (callOllama
+  // bypasses the matrix), so we short-circuit before the lookup.
   if (provider === 'ollama') return true
+  // §5.6.5 Step C — ollama-cloud DOES have a matrix row (4th provider, 64-cell
+  // matrix), but its sole supported auth path is `api` (subscription column is
+  // all 'na' — SSH+signin lives outside the CLI flow). Look up the api cell
+  // directly so getConfiguredAuthPath isn't asked to migrate ollama-cloud
+  // through SubscriptionProvider semantics.
+  if (provider === 'ollama-cloud') {
+    return CLI_OPTION_SUPPORT['ollama-cloud'].api.jsonMode === 'native'
+  }
   const sub = provider as SubscriptionProvider
-  const matrixRow = CLI_OPTION_SUPPORT[sub]
+  const matrixRow = CLI_OPTION_SUPPORT[sub] as
+    | (typeof CLI_OPTION_SUPPORT)[CliOptionMatrixProvider]
+    | undefined
   if (!matrixRow) return true
   const authPath = getConfiguredAuthPath(sub, config)
   return matrixRow[authPath].jsonMode === 'native'

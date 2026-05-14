@@ -170,6 +170,21 @@ export type AuthPath = 'subscription' | 'api'
 export type SubscriptionProvider = Exclude<LLMProvider, 'ollama' | 'ollama-cloud'>
 
 /**
+ * §5.6.5 §5.6.5.3 Step C — providers that have a row in the
+ * `CLI_OPTION_SUPPORT` matrix (provider × path × field → SupportLevel).
+ *
+ * `SubscriptionProvider` (3) + `'ollama-cloud'` (1) = 4 rows × 2 paths ×
+ * 8 fields = 64 cells (was 48 in §5.6.4). ollama-cloud's `subscription`
+ * column is all 'na' — it uses SSH+signin auth, not the CLI OAuth path
+ * gemini/anthropic/openai share.
+ *
+ * Local ollama (`'ollama'`) stays out — it has no CLI subscription path
+ * at all, so callOllama directly issues HTTP without consulting the
+ * matrix.
+ */
+export type CliOptionMatrixProvider = SubscriptionProvider | 'ollama-cloud'
+
+/**
  * §5.6.4 — single source of truth for the path-support matrix row union.
  * Excludes:
  *   - `provider` : selects the *column-set* itself (meta)

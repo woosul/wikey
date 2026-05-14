@@ -24,13 +24,22 @@ import type {
   LLMCallOptions,
   LLMCliOptionField,
   SubscriptionProvider,
+  CliOptionMatrixProvider,
 } from './types.js'
 
 export type SupportLevel = 'native' | 'flag' | 'ignore' | 'unsupported' | 'na'
 
-/** §3.7 matrix — 3 providers × 2 paths × 8 fields = 48 cells. */
+/**
+ * §3.7 matrix — 4 providers × 2 paths × 8 fields = 64 cells.
+ *
+ * §5.6.5 Step C (2026-05-14) — ollama-cloud row added (PoC §0 §4 LOCK).
+ * Cloud uses SSH+signin auth, no CLI OAuth path → subscription column all 'na'.
+ * The api column reflects the `/api/chat` HTTP body fields callOllama already
+ * builds (model / temperature / num_predict / format:json), with 'na' for
+ * Ollama-internal absent concepts (seed, responseMimeType).
+ */
 export const CLI_OPTION_SUPPORT: Record<
-  SubscriptionProvider,
+  CliOptionMatrixProvider,
   Record<AuthPath, Record<LLMCliOptionField, SupportLevel>>
 > = {
   gemini: {
@@ -99,6 +108,32 @@ export const CLI_OPTION_SUPPORT: Record<
       timeout: 'native',
     },
   },
+  // §5.6.5 Step C — ollama-cloud row (PoC §0 §4 LOCK, 2026-05-14).
+  // api column = HTTP body fields callOllama already wires. subscription
+  // column = all 'na' (Ollama Cloud has no CLI OAuth path, signin is
+  // SSH-key + browser OAuth handled outside the CLI option flow).
+  'ollama-cloud': {
+    api: {
+      model: 'native',           // body.model
+      temperature: 'native',     // body.options.temperature
+      maxTokens: 'native',       // body.options.num_predict
+      seed: 'na',                // Ollama API has no deterministic seed field
+      responseMimeType: 'na',    // not a concept in /api/chat
+      jsonMode: 'native',        // body.format='json' (M5 markdown-wrap stripped post-fetch)
+      thinkingBudget: 'na',      // body.think bool only, no numeric budget
+      timeout: 'native',         // HTTP request timeout
+    },
+    subscription: {
+      model: 'na',
+      temperature: 'na',
+      maxTokens: 'na',
+      seed: 'na',
+      responseMimeType: 'na',
+      jsonMode: 'na',
+      thinkingBudget: 'na',
+      timeout: 'na',
+    },
+  },
 }
 
 /**
@@ -110,6 +145,8 @@ export const CLI_VERSION_SNAPSHOT = {
   gemini: { major: 0, minor: 40, patch: 1, probedAt: '2026-05-13' },
   anthropic: { major: 2, minor: 1, patch: 140, probedAt: '2026-05-13' },
   openai: { major: 0, minor: 128, patch: 0, probedAt: '2026-05-13' },
+  // §5.6.5 Step C — PoC §0 §0 probe (master direct, 2026-05-14).
+  ollama: { major: 0, minor: 22, patch: 1, probedAt: '2026-05-14' },
 } as const
 
 /**
