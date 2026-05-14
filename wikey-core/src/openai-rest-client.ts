@@ -220,8 +220,14 @@ export class OpenAIRESTClient implements SubscriptionRESTClient {
         }
         throw new OpenAIRetryAfterRefresh()
       }
+      // §5.6.6 v0.7 follow-up — include vendor response body in error message
+      // so 400 / 5xx diagnosis is possible (in-chat error block shows the
+      // exact vendor rejection reason). Token values are never in error body.
+      let vendorBody = ''
+      try { vendorBody = (await res.text()).slice(0, 500) } catch { /* ignore */ }
       throw classifyHTTPFailure(res.status) ?? new SubscriptionFallbackError(
-        'server-error', `OpenAI /responses failed (status=${res.status})`)
+        'server-error',
+        `OpenAI /responses failed (status=${res.status})${vendorBody ? `: ${vendorBody}` : ''}`)
     }
 
     // codex post-impl F3 MID fix v0.6 — SSE body consumption may stall;

@@ -149,7 +149,13 @@ function mapOpenAIOptions(opts: RESTCallOptions): VendorMappedOptions {
   const body: Record<string, unknown> = {}
   if (opts.temperature !== undefined) body.temperature = opts.temperature
   if (opts.seed !== undefined) body.seed = opts.seed
-  if (opts.maxTokens !== undefined) body.max_output_tokens = opts.maxTokens
+  // §5.6.6 v0.7 live fix 2026-05-15 — the private Codex backend
+  // (chatgpt.com/backend-api/codex/responses) rejects `max_output_tokens`
+  // with HTTP 400 {"detail":"Unsupported parameter: max_output_tokens"}.
+  // Drop the parameter (silent ignore + debug log). Vendor-imposed cap.
+  if (opts.maxTokens !== undefined) {
+    debugIgnoredOptions('openai', { ...opts, maxTokens: opts.maxTokens } as Record<string, unknown>)
+  }
   if (opts.jsonMode === true) body.text = { format: 'json_object' }
   // responseMimeType / thinkingBudget unsupported on OpenAI — silent ignore.
   if (opts.responseMimeType !== undefined || opts.thinkingBudget !== undefined) {

@@ -257,7 +257,9 @@ describe('§5.6.6 Step A — mapOptionsToRESTOptions matrix (Spec §1.3.1)', () 
     })
   })
 
-  it('T-A12e: openai matrix — temperature/seed/maxTokens map; responseMimeType/thinkingBudget silent ignore', () => {
+  it('T-A12e: openai matrix — temperature/seed map; maxTokens/responseMimeType/thinkingBudget silent ignore (live fix v0.7)', () => {
+    // §5.6.6 v0.7 live fix 2026-05-15 — private Codex backend rejects
+    // `max_output_tokens` with HTTP 400. mapOpenAIOptions drops the field.
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {})
     const mapped = mapOptionsToRESTOptions('openai', {
       temperature: 0.5,
@@ -269,9 +271,7 @@ describe('§5.6.6 Step A — mapOptionsToRESTOptions matrix (Spec §1.3.1)', () 
     expect(mapped.body).toEqual({
       temperature: 0.5,
       seed: 1,
-      max_output_tokens: 1024,
     })
-    // debug log emitted once for ignored options.
     expect(debugSpy).toHaveBeenCalled()
   })
 

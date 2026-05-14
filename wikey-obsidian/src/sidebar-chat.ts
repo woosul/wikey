@@ -1,6 +1,9 @@
 import { ItemView, MarkdownRenderer, Notice, WorkspaceLeaf } from 'obsidian'
 import type WikeyPlugin from './main'
-import { buildDefaultAuthFallback } from './main'
+// §5.6.6 — chat panel no longer surfaces auth-fallback as toast Notice
+// (handleSend's catch already renders an in-chat red error block).
+// buildDefaultAuthFallback import removed; the inline replacement is a noop
+// callback that satisfies LLMClient.call's optional onAuthFallback contract.
 import {
   query, resolveProvider, classifyFile, classifyFileAsync, moveFile, movePair,
   fetchModelList, LLMClient,
@@ -676,10 +679,13 @@ export class WikeyChatView extends ItemView {
       // toggle is OFF or the user opted out via `!nofilter`). Each layer is fail-open
       // inside wikey-core/orama-index — getQueryLayerOpts itself catches setup failures.
       const layerOpts = await this.plugin.getQueryLayerOpts(skipFilter)
-      // §5.6.4 v0.7 (codex cycle #2 F2 fix) — primary Chat path now forwards a
-      // Notice-surfacing auth-fallback callback to LLMClient.call, matching the
-      // filter / rewriter / expander coverage (AC-S4 UI Notice on Chat).
-      const chatAuthFallback = buildDefaultAuthFallback((msg) => new Notice(msg))
+      // §5.6.6 user UI request 2026-05-15 — chat panel suppresses the toast
+      // Notice for auth-fallback (quota/timeout/auth-missing/jsonMode-unsupported/
+      // server-error/mode-pending). The catch-block below already appends a
+      // full red error block (`.wikey-chat-error`) inside chat history; the
+      // toast was redundant. Other surfaces (ingest, filter, rewriter, expander)
+      // keep their Notice path via buildDefaultAuthFallback.
+      const chatAuthFallback = (_info: { reason: string }): void => { /* in-chat only */ }
       const result = await query(question, config, this.plugin.httpClient, {
         basePath, wikiFS: this.plugin.wikiFS,
         execEnv: this.plugin.getExecEnv(),
