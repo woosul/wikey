@@ -96,7 +96,15 @@ rm docs/planning/phase-5/phase-5-todox-5.6.6.I-google-oauth-signin.md
 
 **Token file 삭제**: `~/.config/wikey/google-oauth.json` removed (paradigm 한계로 무용).
 
-**credentials.json 부분 유지**: `gemini.oauthClientId` / `oauthClientSecret` / `cloudProject` 는 §5.6.6 본체 paradigm (gemini CLI bundle 추출 fallback) 에서 활용되므로 keep.
+**credentials.json `gemini` 블록 처리 — Session 47 (2026-05-15) cleanup**: Session 46 종결 시점에서 `gemini.oauthClientId` / `oauthClientSecret` / `cloudProject` 가 §5.6.6 본체에서 활용된다고 판단해 keep 했으나, **이 값들은 §5.6.6.I 시도 때 사용자가 직접 입력한 wikey 자체 OAuth client (`818938387936-adti...`) 의 leftover 였음**. §5.6.6 본체 paradigm 은 gemini CLI bundle 의 hardcoded OAuth client (`681255809395-...`) 만 사용 가능. credentials.json 에 잘못된 client 가 남으면 `bootstrapSubscriptionOAuthEnv` Priority 2 (reference resolution) 가 그 값으로 env 주입 → Priority 3 (bundle grep) skip → `doRefresh` 시 `unauthorized_client` (401).
+
+**Session 47 fix** (사용자 옵션 1 결정 + 라이브 PASS):
+- `jq 'del(.gemini)' ~/.config/wikey/credentials.json` 으로 블록 surgical 제거 (backup: `credentials.json.bak-20260515-164612`)
+- Plugin reload 후 Priority 3 bundle grep 으로 정확한 `681255809395-...` + `GOCSPX-...` env 주입 확증
+- 외부 refresh attempt: HTTP 200 OK, expires_in=3599s, atomic write 성공
+- CDP 라이브 chat smoke: "2 더하기 3은?" → "5입니다. 참고: 위키에 아직 관련 내용이 없어요" + citation (`test-stage3-cobit (md)`) PASS
+- **장점 (사용자 직관)**: Priority 3 self-healing 으로 최초 로그인 / 로그아웃-로그인 / OAuth client rotation 시에도 사용자 액션 0. credentials.json 의 explicit OAuth client 저장은 §5.6.6 본체 paradigm 과 부합하지 않음.
+- `wikey.conf` 의 `${credentials.gemini.*}` reference 라인은 그대로 둬도 무해 (resolve 실패 → Priority 3 fallback chain 정상 작동).
 
 ## 6. 학습 (paradigm 발견 가치)
 

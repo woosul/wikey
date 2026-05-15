@@ -1,10 +1,23 @@
 # 다음 세션 후속 작업
 
-> 최신 갱신: **2026-05-15 session 46 종결 — §5.6.6.I wikey 내장 Google OAuth sign-in flow paradigm 한계 발견 후 완전 원복 (옵션 A 사용자 결정)**.
+> 최신 갱신: **2026-05-15 session 47 — Session 46 §5.6.6.I 옵션 A 원복의 마지막 cleanup (credentials.json `gemini` 블록 leftover 삭제) + 라이브 PASS**.
 >
-> ## 다음 세션 첫 액션 (Session 47) — Phase 5 잔여 3 subject 우선순위 결정
+> ## 다음 세션 첫 액션 (Session 48) — Phase 5 잔여 3 subject 우선순위 결정
 >
-> **Phase 5 잔여**: §5.5 / §5.8 / §5.9 (3 subject). Session 47 첫 turn 에서 master 가 사용자에게 우선순위 raise + 진입 결정.
+> **Phase 5 잔여**: §5.5 / §5.8 / §5.9 (3 subject). Session 48 첫 turn 에서 master 가 사용자에게 우선순위 raise + 진입 결정.
+>
+> ### Session 47 산출물 (Google subscription auth 회복)
+>
+> 사용자 raise: "google gemini 에 login 상태인데 Authentication required 에러" → 진단 후 root cause = `~/.config/wikey/credentials.json` 의 `gemini.oauthClientId/oauthClientSecret` 가 §5.6.6.I 시도 때 사용자가 직접 입력한 wikey 자체 OAuth client (`818938387936-adti...`) 의 leftover. Session 46 옵션 A "완전 원복" 이 git tracked file 만 mirror, 사용자 config 파일 (`credentials.json` 은 룰상 master read 금지) mirror 누락.
+>
+> **fix (사용자 옵션 1 결정)**:
+> - `jq 'del(.gemini)' ~/.config/wikey/credentials.json` — gemini 블록 surgical 삭제 (backup: `credentials.json.bak-20260515-164612`)
+> - Plugin reload → `bootstrapSubscriptionOAuthEnv` Priority 2 reference resolve 실패 → Priority 3 (bundle grep) 자동 진입 → 정확한 gemini CLI client (`681255809395-...` + `GOCSPX-...`) env 주입
+> - 외부 refresh attempt: HTTP 200 OK, expires_in=3599s, atomic write OK
+> - CDP 라이브 chat smoke: "2 더하기 3은?" → "5입니다." + wiki fallback hint + citation PASS
+> - **사용자 직관 확증**: Priority 3 self-healing 으로 최초 로그인 / 로그아웃-로그인 / OAuth client rotation 시에도 사용자 액션 0. credentials.json 의 explicit OAuth client 저장이 오히려 §5.6.6 본체 paradigm 과 부합하지 않음 (옵션 1 권장).
+>
+> 상세: [`docs/sessions/phase-5/phase-5-resultx-5.6.6.I-google-oauth-signin-abandoned-2026-05-15.md`](../sessions/phase-5/phase-5-resultx-5.6.6.I-google-oauth-signin-abandoned-2026-05-15.md) §5 cleanup subsection.
 >
 > ### Session 46 산출물 (§5.6.6.I ABANDONED)
 >
